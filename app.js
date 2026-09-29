@@ -290,7 +290,6 @@ function fitChoices() {
   if (!g.offsetWidth || g.offsetWidth < 120) return;             // laid out at (near) zero width (Swap hides it): keep the last answer
   const was = g.classList.contains("inline");
   let fits = g.children.length >= 2 && g.children.length <= 3;
-  g.classList.add("nofx");                                        // no padding transition while measuring
   if (fits) {
     g.classList.add("inline");
     for (const c of g.children) {
@@ -302,7 +301,6 @@ function fitChoices() {
     }
   }
   g.classList.toggle("inline", fits);
-  requestAnimationFrame(() => g.classList.remove("nofx"));
   if (fits !== was) layoutFreeze();
 }
 function opts() { return [...document.querySelectorAll("#q .opt")]; }

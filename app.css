@@ -169,12 +169,11 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
    shows its check where the arrow was. */
 .choices.inline { display: flex; gap: var(--s2); }
 .choices.inline .ch { flex: 1 1 auto; min-width: 3rem; }
-.choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); transition: border-color .12s ease-out, background-color .12s ease-out, padding-right .15s ease-out; }
+.choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
 .choices.inline .opt .badge { display: none; }
 .choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: 56px; }
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
-.choices.inline.nofx .opt { transition: none; }
 
 .ff {
   display: flex; align-items: center; height: 52px; padding-left: var(--s3);
