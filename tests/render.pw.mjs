@@ -235,6 +235,32 @@ async function run(browserType, label, opts = {}) {
       if (SHOTS && vname === "phone") await page.locator("#work").screenshot({ path: `${SHOTS}/app-copy-free-390.png` });
     });
 
+    await step(`${label} ${vname} text + multi + 2-choice mc`, async () => {
+      await open("CSCI26_Q8C");                                              // text: how line above the box, graded as text
+      assert.match(await page.locator("#how").textContent(), /Type ~ for/);
+      await page.fill("#ans", "q -> p"); await page.press("#ans", "Enter");
+      await page.locator("#fb .cluck").waitFor();
+      await page.fill("#ans", "~Q->~P"); await page.press("#ans", "Enter");
+      await page.locator("#fb .verdict.ok").waitFor();
+
+      await open("CSCI26_M5V");                                              // multi: arrow off until every box is filled
+      const boxes = page.locator("#q .ans");
+      assert.equal(await boxes.count(), 2);
+      await boxes.nth(0).fill("14");
+      assert.ok(await page.locator("#ansGo").isDisabled(), "arrow must wait for box B");
+      await boxes.nth(0).press("Enter");                                   // Enter jumps to the empty box
+      assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#q .ans")[1]), true);
+      await boxes.nth(1).fill("11");
+      if (SHOTS) await page.screenshot({ path: `${SHOTS}/multi-${vname}.png` });
+      await page.click("#ansGo");
+      await page.locator("#fb .verdict.ok").waitFor();
+
+      await open("CSCI26_TF3");                                              // 2 choices, authored order (shuffle: false)
+      assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);
+      assert.deepEqual(await page.locator("#q .opt .txt").allTextContents(), ["TRUE", "FALSE"]);
+      if (SHOTS) await page.screenshot({ path: `${SHOTS}/tf-${vname}.png` });
+    });
+
     if (label === "chromium" && vname === "desktop") {
       await step(`${label} copy payload`, async () => {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);

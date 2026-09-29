@@ -146,7 +146,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   transition: border-color .12s ease-out, background-color .12s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--edge); }
-.opt .badge {
+.opt .badge, .part .badge {
   flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%;
   border: 2px solid var(--edge); color: var(--muted); font-weight: 700; font-size: 1rem;
 }
@@ -178,6 +178,15 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff.ok { border-color: var(--ok); }
 .ff.done input { color: var(--ok); }
 .preview:empty { display: none; }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
+.how code { color: var(--ink); }
+/* multi: the boxes share one field and one arrow */
+.ff.multi { height: auto; min-height: 52px; padding-left: var(--s2); }
+.ff.multi .parts { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); column-gap: var(--s3); }
+.ff.multi .part { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.ff.multi .part input { padding-right: 0; }
+.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s3); }
+.boxed .q { margin-top: 0; padding: 0 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: 1rem; }
 
 /* feedback */

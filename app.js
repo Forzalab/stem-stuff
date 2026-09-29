@@ -54,41 +54,49 @@ async function check(code, answer) {
   return { verdict: "pending" };
 }
 /* mirror of serve.py grade(): keep the two in step */
+const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
+function unitSig(u, t) {                                  // serve.py signature()
+  if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
+  if (/^\s*(dne|does not exist)\s*$/i.test(t)) return "dne";
+  const v = u.var || "x", c = math.compile(t.replace(/ln\s*\(/gi, "log(").replace(/π/g, "pi").replace(/∞/g, "Infinity"));
+  const at = x => { let r = c.evaluate({ [v]: x }); if (typeof r !== "number") r = math.number(r); if (Number.isNaN(r)) throw 0; return r; };
+  return u.type === "expr" ? u.points.map(at) : at(undefined);
+}
+const same = (a, b, tol) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol))
+  : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
+  : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
+const unitOk = (u, g) => u.type === "text" ? [u.answer, ...(u.accept || [])].map(squash).includes(g)
+  : same(g, u.answer === "dne" ? "dne" : unitSig(u, u.answer), u.tol ?? 1e-6);
+function unitHit(u, t, g) {                               // re entries first, then match
+  const w = u.wrong || [];
+  return w.find(x => x.re && new RegExp(x.re, "i").test(t))
+    || w.find(x => { try { return x.match != null && same(g, unitSig(u, x.match), u.tol ?? 1e-6); } catch { return false; } });
+}
 function gradeLocal(key, answer) {
   const st = localState.get(key.code) || { wrong: [], done: false };
   localState.set(key.code, st);
   const left = () => MAX_TRIES - st.wrong.length;
   if (st.done || left() <= 0) return { verdict: "locked", triesLeft: 0 };
-  let hit = null, correct = false, repeat = false;
-  if ("choice" in answer) {
-    if (!key.choices.some(c => c.id === answer.choice)) return { verdict: "invalid", triesLeft: left() };
-    correct = answer.choice === key.correct;
-    hit = (key.wrong || []).find(w => w.choice === answer.choice);
-    repeat = st.wrong.includes(answer.choice);
-    if (!correct && !repeat) st.wrong.push(answer.choice);
+  let hit = null, correct, sig;
+  if (key.type === "mc") {
+    sig = answer.choice;
+    if (!shown(key).some(c => c.id === sig)) return { verdict: "invalid", triesLeft: left() };
+    correct = sig === key.correct;
+    if (!correct) hit = (key.wrong || []).find(w => w.choice === sig);
   } else {
-    const typed = String(answer.answer).trim(), tol = key.tol ?? 1e-6, v = key.var || "x";
-    const isDne = t => /^\s*(dne|does not exist)\s*$/i.test(t);
-    const sig = t => {
-      if (isDne(t)) return "dne";
-      const c = math.compile(t.replace(/ln\s*\(/gi, "log(").replace(/π/g, "pi").replace(/∞/g, "Infinity"));
-      const at = x => { let r = c.evaluate({ [v]: x }); if (typeof r !== "number") r = math.number(r); if (Number.isNaN(r)) throw 0; return r; };
-      return key.type === "expr" ? key.points.map(at) : at(undefined);
-    };
-    const same = (a, b) => Array.isArray(a) ? a.length === b.length && a.every((x, i) => same(x, b[i]))
-      : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
-      : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
-    let val;
-    try { val = sig(typed); } catch { return { verdict: "invalid", triesLeft: left() }; }
-    correct = same(val, key.answer === "dne" ? "dne" : sig(key.answer));
-    if (!correct) {
-      hit = (key.wrong || []).find(w => w.re && new RegExp(w.re, "i").test(typed))
-         || (key.wrong || []).find(w => { try { return w.match != null && same(val, sig(w.match)); } catch { return false; } });
-      repeat = st.wrong.some(w => same(val, w));
-      if (!repeat) st.wrong.push(val);
-    }
+    const units = key.type === "multi" ? key.parts : [key];
+    const texts = key.type === "multi" ? answer.parts : [answer.answer];
+    if (!Array.isArray(texts) || texts.length !== units.length) return { verdict: "invalid", triesLeft: left() };
+    let oks;
+    try { sig = units.map((u, i) => unitSig(u, String(texts[i]))); oks = units.map((u, i) => unitOk(u, sig[i])); }
+    catch { return { verdict: "invalid", triesLeft: left() }; }
+    correct = oks.every(Boolean);
+    if (!correct) for (let i = 0; i < units.length && !hit; i++) if (!oks[i]) hit = unitHit(units[i], String(texts[i]), sig[i]);
   }
   if (correct) { st.done = true; return { verdict: "correct", triesLeft: left() }; }
+  const tol = Math.max(...(key.parts || [key]).map(u => u.tol ?? 1e-6));
+  const repeat = st.wrong.some(w => same(sig, w, tol));
+  if (!repeat) st.wrong.push(sig);
   const out = { verdict: "wrong", triesLeft: left(), hint: hit ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
   if (hit) out.error = hit.error;
   if (repeat) out.repeat = true;
@@ -189,8 +197,10 @@ function drawFigures() {
 const LETTERS = "ABCDE";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
+  $("#freezeIn").classList.toggle("boxed", p.type === "multi");      // multi: question + boxes in one box (Tony's sketch)
   if (p.type === "mc") {
-    q.innerHTML = `<div class="choices" role="radiogroup" aria-label="Choices">${shown(p).map((c, i) => `
+    const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
+    q.innerHTML = `${howLine(p)}<div class="choices" role="radiogroup" aria-label="Choices">${list.map((c, i) => `
       <div class="ch" data-id="${esc(c.id)}">
         <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}">
           <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md, true)}</span>
@@ -199,16 +209,45 @@ function renderQuestion() {
       </div>`).join("")}</div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
+  } else if (p.type === "multi") {
+    /* one box per part, side by side; one arrow, off until every box is filled (SCHEMA.md "Grading") */
+    q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
+        <div class="parts">${p.parts.map((u, i) => { const l = esc(u.label || LETTERS[i]); return `
+          <label class="part"><span class="badge" aria-hidden="true">${l}</span>
+            <input class="ans" type="text" aria-label="Answer ${l}" ${INPUT_ATTRS}></label>`; }).join("")}</div>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answers" disabled>${icon("i-go")}</button>
+      </div>`;
+    wireFF();
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
-    q.innerHTML = `<div class="ff" id="ff">${lead}
-        <input id="ans" type="text" inputmode="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"
-          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="${p.type === "expr" ? "in terms of " + v : "e.g. 9/2, sqrt(3), dne"}">
+    const ph = p.type === "expr" ? "in terms of " + v : p.type === "num" ? "e.g. 9/2, sqrt(3), dne" : "";
+    q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
+        <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
+          ${INPUT_ATTRS} placeholder="${ph}">
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
+}
+const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
+/* the problem's "how to type the answer" line, right above the answer box */
+const howLine = p => p.how ? `<p class="how" id="how">${md(p.how, true)}</p>` : "";
+const off = () => window.stemOffline && window.stemOffline.has(S.code);
+/* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
+function localSeed() {
+  try { let s = localStorage.getItem("stem-seed"); if (!s) { s = Math.random().toString(36).slice(2); localStorage.setItem("stem-seed", s); } return s; }
+  catch { return "stem"; }
+}
+function shuffled(choices, seed) {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+  const free = choices.map((c, i) => c.lock ? -1 : i).filter(i => i >= 0), moved = free.map(i => choices[i]);
+  for (let i = moved.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [moved[i], moved[j]] = [moved[j], moved[i]]; }
+  const out = [...choices];
+  free.forEach((i, k) => { out[i] = moved[k]; });
+  return out;
 }
 /* 5 choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
    same rule here: the right one, locked ones, then the rest, in authored order */
@@ -271,24 +310,35 @@ async function submitMC() {
 
 /* ---------- freeform: the same arrow, flush inside the input ---------- */
 function wireFF() {
-  const inp = $("#ans"), go = $("#ansGo"), pv = $("#preview");
-  inp.addEventListener("input", () => {
-    go.disabled = !inp.value.trim();
-    pv.innerHTML = "";
-    const t = inp.value.trim(); if (!t || typeof math === "undefined") return;
-    try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
-  });
-  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitFF(); } });
+  const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo"), pv = $("#preview"), mathy = /^(num|expr)$/.test(S.prob.type);
+  for (const inp of ins) {
+    inp.addEventListener("input", () => {
+      go.disabled = ins.some(x => !x.value.trim());
+      if (!pv) return;
+      pv.innerHTML = "";
+      const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
+      try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
+    });
+    /* Enter: next empty box first, submit when all are filled */
+    inp.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const empty = ins.find(x => !x.value.trim());
+      if (empty) empty.focus(); else submitFF();
+    });
+  }
   go.addEventListener("click", submitFF);
 }
 let busy = false;
 async function submitFF() {
-  const inp = $("#ans"), t = inp.value.trim(); if (!t || S.finished || busy) return;
+  const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
+  if (vals.some(v => !v) || S.finished || busy) return;
   busy = true;
+  const multi = S.prob.type === "multi", t = vals.join(" , ");
   try {
-    const r = await check(S.code, { answer: t });
-    if (r.verdict !== "invalid") { record({ a: t }, r); $("#preview").innerHTML = ""; }
-    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); inp.readOnly = true; $("#ansGo").hidden = true; finish(); }
+    const r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
+    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); ins.forEach(x => { x.readOnly = true; }); $("#ansGo").hidden = true; finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish(true);
     feedback(r, t);
   } finally { busy = false; }
@@ -306,7 +356,7 @@ function finish(out) {
   S.finished = true;
   opts().forEach(o => { o.disabled = true; });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
-  if (out) { const inp = $("#ans"); if (inp) inp.readOnly = true; }
+  if (out) document.querySelectorAll("#q .ans").forEach(x => { x.readOnly = true; });
 }
 function feedback(r, typed) {
   const fb = $("#fb");
