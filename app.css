@@ -251,10 +251,11 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   .p { padding: var(--s3) var(--s4); }
 }
 /* ---------- top bar steps away while the scratchpad has focus (design/SWAP.md) ----------
-   The nav row (and, on desktop, the entry box) slides up and fades. It keeps its space, so nothing below it moves under the finger.
-   The phone entry box is the bottom dock, not this bar. Swap's toggle is in <main>, so it is never inside the hidden bar. */
-.qnav, .qlist, html:not(.dock-bottom) .dock > * { transition: transform .2s ease, opacity .2s ease, visibility 0s; }
-html.bar-off .qnav, html.bar-off .qlist, html.bar-off:not(.dock-bottom) .dock > * {
+   Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
+   its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
+   Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .2s ease, opacity .2s ease, visibility 0s; }
+html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
   transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
   transition: transform .2s ease, opacity .2s ease, visibility 0s .2s;
 }

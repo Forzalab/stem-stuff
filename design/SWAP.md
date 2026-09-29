@@ -42,7 +42,7 @@ The switch is a 220ms ease crossfade, the browser's View Transition on the page 
 
 ## Top bar
 
-While `#scratch` has focus, the top bar (the nav row, and on desktop the entry box) slides up and fades out in 200ms (`html.bar-off`). It keeps its space: nothing moves under the finger. It comes back on blur. With `prefers-reduced-motion` it hides and shows instantly. It applies with the keyboard down and up; with the keyboard up the stage covers it anyway, and the toggle lives in `<main>`, not in the bar. The phone's entry box is the bottom dock, not this bar.
+On phones and touch layouts, while `#scratch` has focus, the top bar (the nav row: Questions list and the arrows) slides up and fades out in 200ms (`html.bar-off`). It keeps its space: nothing moves under the finger. It comes back on blur. With `prefers-reduced-motion` it hides and shows instantly. It applies with the keyboard down and up; with the keyboard up the stage covers it anyway, and the toggle lives in `<main>`, not in the bar. The phone's entry box is the bottom dock, not this bar. Not on desktop: there the bar holds the entry box (and the nav beside it), which a mouse must reach while the scratchpad still has focus, so it stays.
 
 ## Line numbers
 
