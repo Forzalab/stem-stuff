@@ -15,11 +15,11 @@ All inline in `index.html`: the CSS in the head, the markup and a small script a
 ## When it leaves
 
 - `body[aria-busy="true"]` from the first line of the script until it leaves.
-- Ready = `load` (stylesheets, KaTeX, the deferred scripts) + the three Atkinson faces loaded + `stemOffline.ready` (the saved bank restored from IndexedDB, design/RELOAD.md). A failed restore or font counts as done.
+- Ready = `load` (stylesheets, KaTeX, the deferred scripts) + the three Atkinson faces loaded + `stemOffline.ready` (the saved bank restored from IndexedDB, design/RELOAD.md) + `stemFirst` (app.js: the `#CODE` problem opened or failed; no code = at once), then two animation frames so it has painted. A failed restore, font or fetch counts as done.
 - At least 300 ms on screen, then a 200 ms opacity fade and removal.
 - Hard cap 4 s from the script, whatever is still pending.
 - `prefers-reduced-motion`: the static mark (no animation), and it goes without a fade.
 - `pageshow` with `persisted` (bfcache): removed at once, no fade. There is no unload or beforeunload handler, so bfcache still works. A restored page normally has no splash left anyway.
 - `noscript`: hidden.
 
-It does not wait for the first problem to render (`#CODE` fetch): the entry box is usable underneath. Say so if you want that included.
+Tony (Sep 29): the page must be whole when the splash goes, never the empty entry state first. So it waits for the `#CODE` problem too (above). The 4 s cap still wins on a slow network.
