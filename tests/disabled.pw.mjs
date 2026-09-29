@@ -89,8 +89,8 @@ async function run(w, h) {
     if (!ONLY_SHOTS) await assertDead(page, "#ff");
   });
   await step(`${w} multi: locked`, async () => {
-    await open(page, "CSCI26_M5V", WRONG2);
-    for (const v of ["1", "2"]) { for (const i of await page.$$("#q .ans")) await i.fill(v); await page.click("#ansGo"); await page.waitForTimeout(150); }
+    await open(page, "CSCI26_M5V", [...WRONG2, ...WRONG2]);
+    for (const part of [0, 1]) for (const v of ["1", "2"]) { await page.locator("#q .ans").nth(part).fill(v); await page.click(`#go${part}`); await page.waitForTimeout(150); }   // each part has its own tries
     await waitFb(page);
     await shot("multi-locked");
     if (!ONLY_SHOTS) await assertDead(page);
