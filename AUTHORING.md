@@ -53,7 +53,7 @@ cd tests && npm install && npm test
 - `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`. Never hex.
 - `label` is plain text with optional `$..$`. Keep it to **6 labels or fewer per graph**.
 - `anchor` says which side of the point the label sits on: `n ne e se s sw w nw c`.
-- `dash: true` draws a dashed line. Use it for asymptotes, guides and "ghost" forces.
+- `dash: true` draws a dashed line. Use it for asymptotes, guides and "ghost" forces. A force acting on the body is always solid; dashed forces are only ones NOT acting on it (a force whose `at` is a `body` mark's `at` must not be dashed; tests enforce this).
 
 ## kind: cartesian (calc plots, and x-t, v-t, a-t graphs)
 The axes are in world units, with y up.

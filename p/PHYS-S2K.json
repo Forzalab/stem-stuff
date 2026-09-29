@@ -18,7 +18,7 @@
         { "mark": "body", "shape": "box", "at": [2.23, 1.371], "w": 0.8, "h": 0.6, "angle": 25 },
         { "mark": "force", "at": [2.23, 1.371], "angle": 270, "len": 1.2, "color": "c1", "label": "$m\\vec g$" },
         { "mark": "force", "at": [2.23, 1.371], "frame": 25, "angle": 90, "len": 1.09, "color": "c2", "label": "$\\vec N$" },
-        { "mark": "force", "at": [2.23, 1.371], "frame": 25, "angle": 0, "len": 0.9, "color": "c3", "label": "$\\vec F_s$", "anchor": "se", "dash": true }
+        { "mark": "force", "at": [2.23, 1.371], "frame": 25, "angle": 0, "len": 0.9, "color": "c3", "label": "$\\vec F_s$", "anchor": "se" }
       ] },
     { "type": "text", "md": [
       "| quantity | value |",

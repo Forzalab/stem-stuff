@@ -53,7 +53,7 @@ One geometry: length `L = max(8, 4w)`, width `0.75 L`, where `w` is the shaft wi
 | ghost force | 8 5 | **a force that does NOT act on this body**: a component, the other half of a third-law pair, a force on a different body. |
 | trajectory | 0 7 (dots) | path traced by a moving object |
 
-A force that acts on the body is always solid. `p/PHYS-S2K.json` draws the spring force dashed; that is a bug in the example (the specimen shows it solid).
+A force that acts on the body is always solid. Enforced by `tests/schema.test.mjs` (a dashed force at a `body` mark's `at` fails).
 
 ## 5. Labels
 
