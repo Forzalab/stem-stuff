@@ -163,8 +163,58 @@ async function run(browserType, label, opts = {}) {
         await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
         await page.fill("#code", typed); await page.press("#code", "Enter");
         await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_A9R");
-        assert.equal(await page.inputValue("#code"), "CALC1_A9R");
+        assert.equal(await page.inputValue("#code"), "", "box empties after opening");
+        assert.equal(await page.getAttribute("#code", "placeholder"), "CALC1_A9R");
       }
+    });
+
+    if (label === "chromium") await step(`${label} ${vname} paste: a code pasted elsewhere lands in the code box; paste button; placeholder`, async () => {
+      await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+      await open("CALC1_T6B");
+      const clip = t => page.evaluate(x => navigator.clipboard.writeText(x), t);
+      const code = page.locator("#code"), go = page.locator("#codeGo"), pasteBtn = page.locator("#codePaste");
+      // placeholder = open problem's code, in the hint color; box empty; paste button shown, arrow hidden
+      assert.equal(await code.getAttribute("placeholder"), "CALC1_T6B"); assert.equal(await code.inputValue(), "");
+      assert.equal(await page.evaluate(() => window.__drill.state.code), "CALC1_T6B");
+      assert.ok(await pasteBtn.isVisible() && await go.isHidden());
+      assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
+      assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), [48, 48]);
+      if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
+      // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
+      for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
+        await page.locator(sel).fill("keep"); await clip(txt); await page.locator(sel).focus();
+        await page.keyboard.press("Control+V");
+        assert.equal(await code.inputValue(), want, `${sel} paste of ${JSON.stringify(txt)}`);
+        assert.equal(await page.locator(sel).inputValue(), "keep", `${sel} changed`);
+        assert.ok(await page.evaluate(() => document.activeElement.id === "code"), "code box not focused");
+        assert.ok(await go.isVisible() && await pasteBtn.isHidden(), "arrow not shown");
+        assert.equal(await page.evaluate(() => document.querySelector("#pcode").textContent), "CALC1_T6B", "auto-opened");
+        await code.fill(""); assert.ok(await pasteBtn.isVisible(), "paste button not back after emptying");
+      }
+      if (SHOTS && vname === "phone") { await page.locator("#scratch").fill("keep"); await clip("PHYS_F3N"); await page.locator("#scratch").focus(); await page.keyboard.press("Control+V"); await page.screenshot({ path: `${SHOTS}/paste-redirected-390.png` }); await code.fill(""); }
+      // normal text, and a code inside longer text, paste normally
+      for (const txt of ["3.20 m/s", "see CALC1_A9R for this", "CALC1_A9R and PHYS_F3N"]) {
+        await page.locator("#scratch").fill(""); await clip(txt); await page.locator("#scratch").focus();
+        await page.keyboard.press("Control+V");
+        assert.equal(await page.locator("#scratch").inputValue(), txt);
+        assert.equal(await code.inputValue(), "", "code box changed for ordinary text");
+      }
+      await code.fill(""); await page.locator("#scratch").focus();
+      // the paste button reads the clipboard: code fills the box, arrow appears, press it to open
+      await clip("physs2k"); await pasteBtn.click();
+      await page.waitForFunction(() => document.querySelector("#code").value === "PHYS_S2K");
+      assert.equal(await code.inputValue(), "PHYS_S2K");
+      assert.ok(await go.isVisible() && await pasteBtn.isHidden());
+      if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-button-filled-390.png` });
+      await go.click();
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_S2K");
+      assert.equal(await code.inputValue(), ""); assert.equal(await code.getAttribute("placeholder"), "PHYS_S2K");
+      assert.ok(await pasteBtn.isVisible() && await go.isHidden());
+      // not a code on the clipboard: nothing is filled, the box is focused for a manual paste
+      await clip("hello"); await pasteBtn.click(); await page.waitForFunction(() => document.activeElement.id === "code");
+      assert.equal(await code.inputValue(), ""); assert.ok(await page.evaluate(() => document.activeElement.id === "code"));
     });
 
     await step(`${label} ${vname} upload one problems.json: every problem loads, graded from the file`, async () => {

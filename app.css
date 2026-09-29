@@ -47,6 +47,7 @@ button:disabled { cursor: default; }
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
+.code-box input::placeholder { color: var(--hint); opacity: 1; }   /* the open problem's code */
 .entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: 1rem; }
 .entry-msg:empty { display: none; }
 
