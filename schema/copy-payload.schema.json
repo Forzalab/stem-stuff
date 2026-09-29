@@ -51,6 +51,6 @@
     "iso": { "type": "string", "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(\\.\\d+)?Z$" },
     "t": { "type": "number", "minimum": 0 },
     "letter": { "enum": ["A", "B", "C", "D", "E"] },
-    "verdict": { "enum": ["correct", "wrong", "invalid", "locked", "egg"] }
+    "verdict": { "enum": ["correct", "wrong", "invalid", "locked", "egg", "pending"], "description": "pending: recorded before server grading exists (no POST /check yet)" }
   }
 }
