@@ -40,7 +40,6 @@
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4.5 8h14M15 4.5L18.5 8 15 11.5M19.5 16h-14M9 12.5L5.5 16 9 19.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M9.5 6H20M9.5 12H20M9.5 18H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4.75" cy="6" r="1.25" fill="currentColor"/><circle cx="4.75" cy="12" r="1.25" fill="currentColor"/><circle cx="4.75" cy="18" r="1.25" fill="currentColor"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -85,10 +84,9 @@
 
 <main id="main">
   <div id="sentinel" aria-hidden="true"></div>
-  <!-- Swap (design/SWAP.md): only while the phone keyboard is up. One icon toggle: document | swap | pencil. -->
+  <!-- Swap (design/SWAP.md): only while the phone keyboard is up. One icon toggle: document | pencil. -->
   <button type="button" class="btn btn-tgl" id="swap" data-pane="problem" aria-label="Show the scratchpad" hidden>
     <svg class="ico t-doc" aria-hidden="true"><use href="#i-doc"/></svg>
-    <svg class="ico t-swap" aria-hidden="true"><use href="#i-swap"/></svg>
     <svg class="ico t-pen" aria-hidden="true"><use href="#i-pen"/></svg>
   </button>
   <!-- #stage is display:contents on the page as you know it; Swap turns it into the one-pane stage above the keyboard -->
@@ -109,11 +107,10 @@
 
   <section class="work" id="work" hidden>
     <div class="xb" id="xb">
-      <label class="xb-label" for="scratch"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg>Scratchpad</label>
+      <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg>Scratchpad</div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
       <div class="xb-field" id="xbField">
-        <div class="xb-gutter" id="xbGutter"></div>
         <button type="button" class="btn xb-cut" id="cut" aria-label="Cut all: copy answer, scratchpad and history, then clear the scratchpad" title="Cut all">
           <svg class="ico" aria-hidden="true"><use href="#i-cut"/></svg>
         </button>

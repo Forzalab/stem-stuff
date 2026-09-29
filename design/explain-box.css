@@ -15,7 +15,7 @@
   scroll-padding-bottom: 56px; /* keep the caret line above the corner buttons when the box scrolls */
   margin: 0;
   padding: 0.75rem 0.9rem;
-  font: 400 1.125rem/1.6 var(--mono, "Atkinson Hyperlegible Mono", ui-monospace, monospace);
+  font: 400 1rem/1.6 var(--mono, "Atkinson Hyperlegible Mono", ui-monospace, monospace);
   color: var(--ink);
   background: var(--field);
   border: 2px solid var(--edge);
