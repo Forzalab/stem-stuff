@@ -42,34 +42,54 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 | key | for | meaning | served to the browser |
 |---|---|---|---|
 | `code` | all | `CALC1_K4M` | yes |
-| `type` | all | `num`: one value. `expr`: a function of `var`. `mc`: pick one of 5 choices. | yes |
+| `title` | all, optional | brief plain-text title for the question list (≤ 60 chars, never the answer) | yes |
+| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes answered together | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
+| `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
-| `choices` | `mc` | 5–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
-| `answer` | `num`, `expr` | math.js string, or exactly `"dne"` | **no** |
+| `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
+| `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order. | yes |
+| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. | label + type only |
+| `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
+| `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
 | `tol` | `num`, `expr` | relative tolerance. Default 1e-6. Use `0.01` for physics numbers. | **no** |
 | `correct` | `mc` | id of the right choice | **no** |
-| `wrong` | all (required for `mc`) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
-| `nudge` | `num`, `expr` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
+| `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
+| `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
 
-**Never put the answer in `body`, a graph's `alt`, a choice's text beyond the choice itself, or a hint.**
+**Never put the answer in `body`, a graph's `alt`, `title`, `how`, a choice's text beyond the choice itself, or a hint.**
+
+## Converting a worksheet (rules)
+- **One number** → `num`. **A formula** → `expr`.
+- **A fixed set of options** → `mc` with exactly those options, no filler:
+  - TRUE / FALSE → **2 choices**. T / F / MAYBE → **3 choices**. MODUS PONENS / MODUS TOLLENS / NEITHER → 3. Four named options → 4. Five or more → 5–8.
+  - Every non-correct choice still needs its `wrong` entry (error + hint).
+- **A free word, phrase, symbol or code line** (□¬P, `if (!a || b)`) → `text`, with `how` saying exactly what to type and in what form (symbols: say how to type them on a keyboard, e.g. "Type `[]` for □, `<>` for ◇, `~` for ¬", and list those spellings in `accept`).
+- **Several answers to one question** ("write both, in that order") → one `multi` problem, one part per blank, in the worksheet's order. Never split it into separate problems. Each part picks its own type.
+- A worksheet's strict **form** rule (".2", not "0.2") → a `text` part, with the form in `how`. `num` accepts every equal value.
+- Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
 - 2 attempts per problem. A repeat of the same wrong answer, or text that can't be read, does not count.
-- MC: the answer is the choice id. Freeform: the typed value must equal `answer` within `tol` (`expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
+- `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` (`expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
+- `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
+- `multi`: the submit arrow stays off until every box is filled. The attempt is correct only if every part is right; one attempt = the whole set. Nothing says which part was wrong, except the hint of the first wrong part that matched a `wrong` entry.
 - A wrong answer gets the hint of the first `wrong` entry it matches (`re` entries first, then `match`), else `nudge`, else a default nudge.
 - Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
+- Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
 
 ## Wrong answers and hints
 Author in this order:
-1. **Vet the choices first.** Write the correct answer. Build each MC distractor (and each known freeform wrong answer) from a named error type. No filler distractors: if you can't name the mistake, replace the choice.
+1. **Vet the choices first.** Write the correct answer. Build each MC distractor (and each known freeform wrong answer) from a named error type. No filler distractors: if you can't name the mistake, replace the choice (or use fewer choices).
 2. **Then write one hint per wrong answer** in Cluck's voice: starts `QUACK.`, one pointed question or action that names the error, never the answer, about 25 words max.
 
-`wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (a value, equal within `tol`) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
+`wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components`, `misread`, `other`. Add to the enum (in the schema below) rather than overusing `other`.
+Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
+
+Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components`, `misread`, `fallacy`, `quantifier`, `negation`, `counting`, `off-by-one`, `format`, `other`. Add to the enum (in the schema below) rather than overusing `other`.
 
 ## Blocks
 - Text: `{ "type": "text", "md": "..." }` or `"md": ["line", "", "line"]`.
@@ -92,7 +112,7 @@ Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-fa
 - Names that work: `e`, `pi`, `sqrt()`, `abs()`, `sin(30 deg)`.
 - Numbers in graphs may be strings: `"pi/3"`.
 - Check a physics answer by writing it as a formula, for example `"2.0*9.8*sin(25 deg)/150"`, with `tol: 0.01`.
-- The server grades with its own small evaluator that reads the same syntax: numbers, `+ - * / ^`, parentheses, implicit multiplication (`2x`, `3pi`), `pi`, `e`, `deg`, `sqrt abs exp ln log log10 sin cos tan asin acos atan sec csc cot sinh cosh tanh`. Stick to these in `answer`, `match` and `points`.
+- The server grades with **sympy** (`deploy.sh` installs it). It reads the same syntax, but only these tokens get through: numbers, `+ - * / ^`, parentheses, implicit multiplication (`2x`, `3pi`), `pi`, `e`, `deg`, `sqrt abs exp ln log log10 sin cos tan asin acos atan sec csc cot sinh cosh tanh`. Stick to these in `answer`, `match` and `points`.
 
 ## Colors, labels, anchors
 - `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`. Never hex.
@@ -234,7 +254,7 @@ Values can be negative.
     "s_arc": {"type": "object", "required": ["mark", "at", "r", "from", "to"], "additionalProperties": false, "properties": {"mark": {"const": "arc"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "r": {"type": "number", "exclusiveMinimum": 0}, "from": {"type": "number", "description": "Degrees, counterclockwise from +x"}, "to": {"type": "number", "description": "Degrees, counterclockwise from +x"}, "arrow": {"type": "boolean", "default": false, "description": "Arrowhead at the 'to' end (rotation sense)"}}},
     "s_poly": {"type": "object", "required": ["mark", "pts"], "additionalProperties": false, "properties": {"mark": {"const": "poly"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "pts": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/pt"}}, "fill": {"type": "boolean", "default": false}}},
     "s_text": {"type": "object", "required": ["mark", "at", "text"], "additionalProperties": false, "properties": {"mark": {"const": "text"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "text": {"$ref": "#/$defs/label"}}},
-    "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "other"]},
+    "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "other", "fallacy", "quantifier", "negation", "counting", "off-by-one", "format"]},
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
@@ -251,11 +271,19 @@ Values can be negative.
           "type": "string",
           "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$"
         },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Brief plain-text title for the question list. Never the answer."
+        },
         "type": {
           "enum": [
             "num",
             "expr",
-            "mc"
+            "text",
+            "mc",
+            "multi"
           ]
         },
         "var": {
@@ -271,18 +299,46 @@ Values can be negative.
             "$ref": "#/$defs/block"
           }
         },
+        "how": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120,
+          "description": "text/multi: how to type the answer, shown right above the answer box. Plain text + $..$ + `code`."
+        },
         "choices": {
           "type": "array",
-          "minItems": 5,
+          "minItems": 2,
           "maxItems": 8,
           "items": {
             "$ref": "#/$defs/choice"
           }
         },
+        "shuffle": {
+          "type": "boolean",
+          "default": true,
+          "description": "mc: shuffle choices per browser (locked ones keep their slot). false = authored order."
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/part"
+          },
+          "description": "multi: the answer boxes, in order"
+        },
         "answer": {
           "type": "string",
           "minLength": 1,
           "description": "math.js syntax (ln ok, e^(-6), pi, sqrt(), sin(30 deg)) or exactly \"dne\""
+        },
+        "accept": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "text: other spellings that also count as correct"
         },
         "points": {
           "type": "array",
@@ -336,7 +392,10 @@ Values can be negative.
               "points": false,
               "tol": false,
               "var": false,
-              "nudge": false
+              "nudge": false,
+              "parts": false,
+              "how": false,
+              "accept": false
             }
           }
         },
@@ -356,7 +415,10 @@ Values can be negative.
               "choices": false,
               "correct": false,
               "points": false,
-              "var": false
+              "var": false,
+              "parts": false,
+              "shuffle": false,
+              "accept": false
             }
           }
         },
@@ -375,8 +437,139 @@ Values can be negative.
             ],
             "properties": {
               "choices": false,
-              "correct": false
+              "correct": false,
+              "parts": false,
+              "shuffle": false,
+              "accept": false
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "answer",
+              "how"
+            ],
+            "properties": {
+              "choices": false,
+              "correct": false,
+              "points": false,
+              "tol": false,
+              "var": false,
+              "parts": false,
+              "shuffle": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "multi"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "parts",
+              "how"
+            ],
+            "properties": {
+              "choices": false,
+              "correct": false,
+              "answer": false,
+              "points": false,
+              "tol": false,
+              "var": false,
+              "accept": false,
+              "shuffle": false,
+              "wrong": false
+            }
+          }
+        }
+      ]
+    },
+    "part": {
+      "type": "object",
+      "required": [
+        "type",
+        "answer"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12,
+          "description": "Shown in the box; default A, B, C, D"
+        },
+        "type": {
+          "enum": [
+            "num",
+            "expr",
+            "text"
+          ]
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accept": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "text: other spellings that also count as correct"
+        },
+        "points": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "number"
+          },
+          "description": "expr only: sample values of var"
+        },
+        "tol": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 0.05,
+          "default": 1e-06,
+          "description": "Relative tolerance. ~0.01 for physics."
+        },
+        "var": {
+          "type": "string",
+          "pattern": "^[a-z]$",
+          "default": "x",
+          "description": "expr only: the variable in answer"
+        },
+        "wrong": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/wrong"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "expr"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "points"
+            ]
           }
         }
       ]

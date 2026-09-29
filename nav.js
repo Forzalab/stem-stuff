@@ -1,0 +1,153 @@
+/* nav.js: Prev / Next and the questions list (design/NAV.md).
+   Only for an uploaded problems.json: the list is window.stemOffline.codes(), in file order. With problems from the
+   server there is no list (codes are the gate), so the nav stays hidden.
+   Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
+const MAX = 60;
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+
+/* ---------- titles: problem.title, else the first paragraph of the first text block as plain text ---------- */
+const SYM = { mu: "μ", pi: "π", theta: "θ", alpha: "α", beta: "β", gamma: "γ", delta: "δ", Delta: "Δ", omega: "ω", lambda: "λ",
+  sigma: "σ", rho: "ρ", phi: "φ", tau: "τ", epsilon: "ε", varepsilon: "ε", cdot: "·", times: "×", div: "÷", le: "≤", leq: "≤",
+  ge: "≥", geq: "≥", ne: "≠", neq: "≠", infty: "∞", to: "→", approx: "≈", pm: "±", circ: "°", degree: "°", ldots: "…", dots: "…",
+  cap: "∩", cup: "∪", setminus: "∖", subseteq: "⊆", subset: "⊂", in: "∈", notin: "∉", emptyset: "∅", forall: "∀", exists: "∃",
+  neg: "¬", lnot: "¬", land: "∧", wedge: "∧", lor: "∨", vee: "∨", oplus: "⊕", rightarrow: "→", Rightarrow: "⇒", leftrightarrow: "↔",
+  therefore: "∴", Box: "□", Diamond: "◇", square: "□", lozenge: "◇", vert: "|", mid: "|" };
+const SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+const wrap = x => /^[\w.]+$/.test(x) ? x : `(${x})`;
+export function texText(src) {
+  let s = String(src);
+  s = s.replace(/\^\s*\{?\\circ\}?/g, "°");
+  for (let i = 0; i < 4; i++) {                                    // innermost first, so nesting unwinds
+    s = s.replace(/\\(?:text|mathrm|mathbf|mathit|textbf|operatorname)\s*\{([^{}]*)\}/g, "$1")
+         .replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_, a, b) => `${wrap(a)}/${wrap(b)}`)
+         .replace(/\\sqrt\s*\{([^{}]*)\}/g, (_, a) => `√${wrap(a)}`);
+  }
+  s = s.replace(/\^\s*\{(-?\d+)\}|\^(\d)/g, (_, a, b) => [...(a ?? b)].map(c => SUP[c]).join(""))
+       .replace(/\\(left|right)\b/g, "")
+       .replace(/\\[,;: ]|~/g, " ").replace(/\\!/g, "")
+       .replace(/\\([{}])/g, "$1")
+       .replace(/\\([A-Za-z]+)/g, (_, n) => SYM[n] ?? n)
+       .replace(/[{}]/g, "").replace(/_/g, "");
+  return s.replace(/\s+/g, " ").trim();
+}
+/* markdown marks out, TeX to plain text; "\$" is a literal dollar (same cut as app.js md()) */
+export function plain(md) {
+  const math = [];
+  let s = String(md).replace(/\\\$/g, () => { math.push("$"); return `\u0001${math.length - 1}\u0002`; });
+  s = s.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_, a, b) => { math.push(texText(a ?? b)); return `\u0001${math.length - 1}\u0002`; });
+  s = s.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")                   // links, images
+       .replace(/`([^`]*)`/g, "$1")
+       .replace(/(\*\*|__|\*|_|~~)(?=\S)([\s\S]*?\S)\1/g, "$2")     // emphasis
+       .replace(/^\s*(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
+       .replace(/<[^>]*>/g, "");
+  return s.replace(/\u0001(\d+)\u0002/g, (_, i) => math[+i]).replace(/\s+/g, " ").trim();
+}
+export function clip(s, n = MAX) {
+  if (s.length <= n) return s;
+  const cut = s.slice(0, n - 1), sp = cut.lastIndexOf(" ");
+  return (sp > n / 2 ? cut.slice(0, sp) : cut).replace(/[\s,.;:(—-]+$/, "") + "…";
+}
+export function titleOf(p) {
+  if (!p) return "";
+  if (typeof p.title === "string" && p.title.trim()) return clip(p.title.trim().replace(/\s+/g, " "));
+  const b = (p.body || []).find(x => x && x.type === "text" && x.md);
+  if (!b) return "";
+  const para = [];
+  for (const line of (Array.isArray(b.md) ? b.md.join("\n") : String(b.md)).split("\n")) {
+    if (/^\s*\|/.test(line) || /^\s*\$\$\s*$/.test(line)) break;     // a table or a display block ends the title
+    if (!line.trim()) { if (para.length) break; continue; }
+    para.push(line.trim());
+  }
+  return sentences(plain(para.join(" ")));
+}
+/* too long: end at the last full sentence that fits, else cut at a word */
+function sentences(s, n = MAX) {
+  if (s.length <= n) return s;
+  let end = -1;
+  for (const m of s.matchAll(/[.?!](?=\s)/g)) { if (m.index >= n) break; end = m.index; }
+  return end >= n / 3 ? s.slice(0, end + 1) : clip(s, n);
+}
+
+/* ---------- the nav ---------- */
+if (typeof document !== "undefined" && document.getElementById("qnav")) init();
+
+function init() {
+  const $ = s => document.querySelector(s);
+  const root = document.documentElement;
+  const nav = $("#qnav"), btn = $("#qlistBtn"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
+  const off = () => window.stemOffline;
+  let codes = [], cur = null;
+
+  function update(code) {
+    cur = code;
+    const o = off();
+    codes = o && o.codes ? o.codes() : [];
+    const on = codes.length > 0;
+    nav.hidden = !on;
+    root.classList.toggle("qnav-on", on);
+    if (!on) { close(false); return; }
+    const i = codes.indexOf(cur), focused = document.activeElement;
+    prev.disabled = i <= 0;
+    next.disabled = i < 0 || i >= codes.length - 1;
+    if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
+      if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
+    }
+    list.innerHTML = codes.map((c, k) => {
+      const t = titleOf(o.get(c)) || c;
+      return `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}"${c === cur ? ' aria-current="true"' : ""}>` +
+        `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(t)}</span></a></li>`;
+    }).join("");
+  }
+
+  const rows = () => [...list.querySelectorAll("a")];
+  function open() {
+    if (!panel.hidden) return;
+    panel.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    const a = list.querySelector("[aria-current]") || rows()[0];
+    if (!a) return;
+    panel.scrollTop = Math.max(0, a.offsetTop - (panel.clientHeight - a.offsetHeight) / 2);
+    a.focus({ preventScroll: true });
+  }
+  function close(back) {
+    if (panel.hidden) return;
+    panel.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    if (back) btn.focus();
+  }
+  function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
+  function go(d) {
+    const i = codes.indexOf(cur), c = codes[i + d];
+    if (i < 0 || !c) return;
+    close(false);
+    location.hash = c;                                               // app.js: hashchange -> load(c)
+    say(`${i + d + 1} of ${codes.length}. ${titleOf(off().get(c))}`);
+  }
+
+  btn.addEventListener("click", () => { if (panel.hidden) open(); else close(false); });
+  btn.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); open(); } });
+  prev.addEventListener("click", () => go(-1));
+  next.addEventListener("click", () => go(1));
+  list.addEventListener("click", e => { if (e.target.closest("a")) close(true); });   // the link itself navigates (#CODE)
+  panel.addEventListener("keydown", e => {
+    const r = rows(), i = r.indexOf(document.activeElement);
+    const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: r.length - 1 }[e.key];
+    if (e.key === "Escape") { e.preventDefault(); close(true); }
+    else if (to !== undefined && r.length) { e.preventDefault(); r[Math.max(0, Math.min(r.length - 1, to))].focus(); }
+  });
+  /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
+     pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
+  /* [ and ]: previous / next. Not while typing, not over the file picker dialog, not with Ctrl/Cmd (AltGr layouts still work) */
+  document.addEventListener("keydown", e => {
+    if ((e.key !== "[" && e.key !== "]") || nav.hidden || e.defaultPrevented) return;
+    if (e.metaKey || (e.ctrlKey && !(e.getModifierState && e.getModifierState("AltGraph")))) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (document.querySelector(".so:not([hidden])")) return;
+    e.preventDefault();
+    go(e.key === "]" ? 1 : -1);
+  });
+  addEventListener("drill:problem", e => update(e.detail && e.detail.code));
+  const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
+  if (s) update(s.code);
+}

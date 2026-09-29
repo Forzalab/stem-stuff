@@ -26,11 +26,16 @@ test("problems.json: has problems", () => assert.ok(problems.length > 0));
 for (const p of problems) {
   const f = p.code;
 
-  test(`${f}: answer evaluates`, () => {
-    if (p.type === "mc" || p.answer === "dne") return;
-    const c = compile(norm(p.answer));
-    const scope = p.type === "expr" ? { [p.var ?? "x"]: p.points[0] } : {};
-    assert.ok(Number.isFinite(Number(c.evaluate(scope))), p.answer);
+  // answer units: the problem itself, or each part of a multi
+  const units = p.type === "multi" ? p.parts : p.type === "mc" ? [] : [p];
+  const squash = t => String(t).toLowerCase().replace(/\s+/g, "");
+  test(`${f}: answers evaluate`, () => {
+    for (const u of units) {
+      if (u.type === "text" || u.answer === "dne") continue;
+      const c = compile(norm(u.answer));
+      const scope = u.type === "expr" ? { [u.var ?? "x"]: u.points[0] } : {};
+      assert.ok(Number.isFinite(Number(c.evaluate(scope))), u.answer);
+    }
   });
 
   test(`${f}: TeX renders`, () => {
@@ -65,23 +70,35 @@ for (const p of problems) {
       assert.ok(got.every(Boolean), "mc wrong entries use choice, not match/re");
       assert.deepEqual([...got].sort(), ids.filter(i => i !== p.correct).sort());
     });
-  } else {
-    test(`${f}: known wrong answers evaluate and are actually wrong`, () => {
-      const tol = p.tol ?? 1e-6, ans = p.answer === "dne" ? NaN : num(p.answer);
-      for (const w of p.wrong ?? []) {
+  }
+  test(`${f}: known wrong answers read and are actually wrong`, () => {
+    for (const u of units) {
+      const tol = u.tol ?? 1e-6;
+      for (const w of u.wrong ?? []) {
         assert.ok(!w.choice, "freeform wrong entries use match/re");
         if (w.re) { new RegExp(w.re, "i"); continue; }
-        const v = num(w.match);
+        if (u.type === "text") {
+          assert.ok(![u.answer, ...(u.accept ?? [])].map(squash).includes(squash(w.match)), `${w.match} equals the answer`);
+          continue;
+        }
+        const ans = u.answer === "dne" ? NaN : num(u.answer), v = num(w.match);
         assert.ok(Number.isFinite(v), w.match);
         assert.ok(!(Math.abs(v - ans) <= tol * Math.max(1, Math.abs(ans))), `${w.match} equals the answer`);
       }
-    });
-  }
+    }
+  });
 
+  // loose on purpose (SCHEMA.md "Hint check"): only answers of 2+ chars the body doesn't already show
   test(`${f}: hints never state the answer`, () => {
-    const answer = p.type === "mc" ? p.choices.find(c => c.id === p.correct).md.replace(/\$/g, "") : p.answer;
-    const re = new RegExp(`(^|[^0-9.])${answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9.]|$)`);
-    for (const h of [...(p.wrong ?? []).map(w => w.hint), p.nudge ?? ""]) assert.ok(!re.test(h.replace(/\$/g, "")), h);
+    const answers = p.type === "mc" ? [p.choices.find(c => c.id === p.correct).md] : units.flatMap(u => [u.answer, ...(u.accept ?? [])]);
+    const bodyText = squash(JSON.stringify(p.body).replace(/\$/g, ""));
+    const hints = [...(p.wrong ?? []), ...units.flatMap(u => u.wrong ?? [])].map(w => w.hint).concat(p.nudge ?? []);
+    for (const raw of answers) {
+      const ans = squash(raw.replace(/\$/g, ""));
+      if (ans.length < 2 || bodyText.includes(ans)) continue;
+      const re = new RegExp(`(^|[^0-9.a-z])${ans.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9.a-z]|$)`);
+      for (const h of hints) assert.ok(!re.test(squash(h.replace(/\$/g, ""))), h);
+    }
   });
 
   test(`${f}: graph math compiles, <= 6 labels`, () => {

@@ -68,9 +68,39 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="z")["verdict"], "invalid")
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="b")["verdict"], "correct")
 
+    def test_text(self):
+        r = self.g("CSCI26_Q8C", "t1", answer="q -> p")
+        self.assertEqual((r["verdict"], r["error"]), ("wrong", "fallacy"))
+        self.assertEqual(self.g("CSCI26_Q8C", "t1", answer="  ")["verdict"], "invalid")
+        self.assertEqual(self.g("CSCI26_Q8C", "t1", answer="~Q->~P")["verdict"], "correct")   # case + spaces ignored
+        self.assertEqual(self.g("CSCI26_Q8C", "t2", answer="¬q → ¬p")["verdict"], "correct")  # accept list
+
+    def test_multi(self):
+        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14"])["verdict"], "invalid")      # all boxes or nothing
+        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14", "x+"])["verdict"], "invalid")
+        r = self.g("CSCI26_M5V", "m1", parts=["17", "11"])
+        self.assertEqual((r["verdict"], r["triesLeft"], r["error"]), ("wrong", 1, "counting"))
+        self.assertTrue(self.g("CSCI26_M5V", "m1", parts=["17", "11.0"])["repeat"])
+        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14", "11"])["verdict"], "correct")
+
+    def test_two_choices(self):
+        r = self.g("CSCI26_TF3", "c1", choice="f")
+        self.assertEqual((r["verdict"], r["triesLeft"]), ("wrong", 1))
+        self.assertEqual(self.g("CSCI26_TF3", "c1", choice="t")["verdict"], "correct")
+
+    def test_shuffle(self):
+        p = BANK["CALC1_X2P"]
+        order = lambda sid: [c["id"] for c in serve.public(p, sid)["choices"]]  # noqa: E731
+        self.assertEqual(order("s1"), order("s1"))                      # same browser, same order
+        self.assertGreater(len({tuple(order(f"s{i}")) for i in range(20)}), 3)   # browsers differ
+        self.assertEqual(sorted(order("s1")), sorted(c["id"] for c in p["choices"]))
+        locked = dict(p, choices=[*p["choices"][:4], dict(p["choices"][4], lock=True)])
+        self.assertTrue(all(serve.public(locked, f"s{i}")["choices"][4]["id"] == p["choices"][4]["id"] for i in range(20)))
+        self.assertEqual([c["id"] for c in serve.public(BANK["CSCI26_TF3"], "s9")["choices"]], ["t", "f"])  # shuffle: false
+
     def test_reply_never_has_the_answer(self):
         for code, p in BANK.items():
-            for body in ({"answer": "0"}, {"choice": "a"}, {"answer": "1"}, {"choice": "c"}):
+            for body in ({"answer": "0"}, {"choice": "a"}, {"answer": "1"}, {"choice": "c"}, {"parts": ["1", "2"]}):
                 r = json.dumps(serve.grade(p, "leak-" + code, body))
                 for k in ("answer", "correct", "points"):
                     self.assertNotIn(f'"{k}"', r)
@@ -78,7 +108,8 @@ class Grade(unittest.TestCase):
     def test_public_strips_keys(self):
         for p in BANK.values():
             pub = serve.public(p)
-            self.assertFalse({"answer", "points", "tol", "correct", "wrong", "nudge"} & set(pub), p["code"])
+            self.assertFalse({"answer", "accept", "points", "tol", "correct", "wrong", "nudge"} & set(pub), p["code"])
+            self.assertNotIn("answer", json.dumps(pub.get("parts", [])))
             self.assertEqual(pub["body"], p["body"])
 
 

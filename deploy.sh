@@ -16,6 +16,12 @@ die() { echo "error: $*" >&2; exit 1; }
 ask() { local a; read -r -p "$1" a </dev/tty 2>/dev/null || a=""; echo "$a"; }
 
 for c in git python3; do command -v "$c" >/dev/null || die "$c not installed"; done
+# the server grades with sympy
+python3 -c "import sympy" 2>/dev/null || {
+  echo "installing sympy (the server's math library)"
+  python3 -m pip install --user -q sympy 2>/dev/null || python3 -m pip install --user -q --break-system-packages sympy \
+    || die "sympy missing: python3 -m pip install --user sympy"
+}
 
 DIR="$(realpath -m "$DIR")"
 case "$DIR" in
