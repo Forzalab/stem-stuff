@@ -84,8 +84,12 @@
     return ["e", "ne", "n", "nw", "w", "sw", "s", "se"][Math.floor(a / 45)];
   }
   const labelColor = c => ["c1", "c2", "c3", "ok", "bad", "mark"].includes(c) ? col(c) : col("ink");
+  /* Locked rule: every force arrow is c1. Only velocity (c2) and acceleration (c3) keep their own colour;
+     a "force" mark is treated as one of those only when its label is \vec v... or \vec a... */
+  const KIN = /^\$?\\vec\s*\{?\s*[va](?![a-zA-Z])/;
   function vecStyle(m) {
-    const c = m.color || "c1";
+    const kin = typeof m.label === "string" && KIN.test(m.label.trim());
+    const c = kin ? (m.color || "c1") : "c1";
     if (c === "c2") return { c, w: SW.vec, head: "open" };
     if (c === "c3") return { c, w: SW.vec, head: "double" };
     return { c, w: m.dash ? SW.out : SW.force, head: "fill" };
@@ -173,7 +177,7 @@
       draw(m, k) {
         const v = vecStyle(m), a = k.X(m.at), b = k.X(forceTip(m));
         if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), v.c);
-        return arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "");
+        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}">${arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "")}</g>`;
       }
     },
     arrow: {
