@@ -1,3 +1,5 @@
-/* Atkinson Hyperlegible 400/700, latin subset, @fontsource/atkinson-hyperlegible 5.3.0. License: OFL.txt. Kept one rule per line, no space after @font-face (tools/bundle.py inlines it). */
+/* Atkinson Hyperlegible 400/700, latin subset, @fontsource/atkinson-hyperlegible 5.3.0. License: OFL.txt. Mono: @fontsource/atkinson-hyperlegible-mono 5.3.0, OFL-mono.txt. Kept one rule per line, no space after @font-face (tools/bundle.py inlines it). */
 @font-face{font-family:"Atkinson Hyperlegible";font-style:normal;font-weight:400;font-display:swap;src:url(atkinson-hyperlegible-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Atkinson Hyperlegible";font-style:normal;font-weight:700;font-display:swap;src:url(atkinson-hyperlegible-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:400;font-display:swap;src:url(atkinson-hyperlegible-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible Mono";font-style:normal;font-weight:700;font-display:swap;src:url(atkinson-hyperlegible-mono-latin-700-normal.woff2) format("woff2")}
