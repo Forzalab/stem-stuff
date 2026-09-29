@@ -1,0 +1,29 @@
+/* Done questions (design/DONE.md): proposed additions. Mockup-only scaffolding is marked "mock". */
+
+/* mock: stand-in for the real top bar / list placement (nav.css places them per layout) */
+.mock-nav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.mock-nav .btn:nth-child(2) { margin-left: auto; }
+.mock-list { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; max-height: none; }
+.mock-note { color: var(--muted); font-size: 1rem; margin: 0; }
+
+/* marks: a tick for correct, one X per wrong try. Icons only, 20px, no text (screen readers get an sr-only phrase) */
+.qlist .mk { flex: none; display: inline-flex; gap: 2px; align-self: center; }
+.qlist .mk .ico { width: 20px; height: 20px; }
+.qlist .mk-x { color: var(--bad); }
+.qlist .mk-ok { color: var(--ok); }
+/* A: marks at the row's right edge */
+.var-a .mk { margin-left: auto; padding-left: var(--s2); }
+/* B: marks in a fixed column between the number and the title, so titles still line up */
+.var-b a { align-items: center; }
+.var-b .mk { order: -1; width: 42px; justify-content: flex-start; }
+.var-b .qn { order: -2; }
+
+/* can't be answered any more (correct, or out of tries): crossed out + greyed, still a link (tappable, not disabled) */
+.qlist a.gone .qt { color: var(--hint); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--hint); }
+.qlist a.gone .qn { color: var(--hint); }
+.qlist a.gone .mk { opacity: 0.8; }
+.qlist a.gone[aria-current] .qn { color: var(--c1); }
+
+/* reopened done question: read-only, choices don't look choosable */
+.opt:disabled:not(.wrong):not(.right) { color: var(--muted); border-color: var(--line); cursor: default; }
+.opt:disabled:not(.wrong):not(.right) .badge { border-color: var(--line); color: var(--hint); }
