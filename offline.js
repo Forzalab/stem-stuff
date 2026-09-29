@@ -3,7 +3,7 @@
  * - wraps fetch for p/<CODE>.json: if the server can't be reached (or file://),
  *   asks the student for problems.json on disk and answers the fetch from it
  * - ONE file holds every problem ({ v: 1, problems: [...] }, SCHEMA.md); picking it loads them all
- * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, get, codes } */
+ * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, get, codes, doneGet, donePut, doneDrop } */
 (() => {
   if (window.stemOffline) return;
   const FILE = location.protocol === "file:";
@@ -40,14 +40,15 @@
   };
 
   /* ---------- the uploaded bank survives reloads: IndexedDB stem-stuff / bank / "files" = [{ name, text }] ---------- */
-  function idb(mode, fn) {
+  /* v2 adds the "done" store: one record per bank + code (design/DONE.md) */
+  function idb(mode, fn, store = "bank") {
     return new Promise((resolve, reject) => {
       if (!window.indexedDB) return reject(new Error("no idb"));
-      const o = indexedDB.open("stem-stuff", 1);
-      o.onupgradeneeded = () => o.result.createObjectStore("bank");
+      const o = indexedDB.open("stem-stuff", 2);
+      o.onupgradeneeded = () => { for (const n of ["bank", "done"]) if (!o.result.objectStoreNames.contains(n)) o.result.createObjectStore(n); };
       o.onerror = () => reject(o.error);
       o.onsuccess = () => {
-        const db = o.result, tx = db.transaction("bank", mode), r = fn(tx.objectStore("bank"));
+        const db = o.result, tx = db.transaction(store, mode), r = fn(tx.objectStore(store));
         tx.oncomplete = () => { db.close(); resolve(r && r.result); };
         tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
       };
@@ -62,7 +63,50 @@
     const { got } = await ingest(files.map(f => ({ name: f.name, size: f.text.length, text: async () => f.text })), false);
     return got.length > 0;
   }
-  api.ready = restore().catch(() => false);
+
+  /* ---------- done questions: IndexedDB stem-stuff / done, key = bank + code (design/DONE.md) ----------
+     Upload: "u:<hash of that problem's JSON>:<CODE>" (same file again keeps it, an edited problem starts fresh).
+     Server: "s:<CODE>" (IndexedDB is per origin already). The record never holds the answer or the right choice. */
+  const done = new Map();
+  const hash = str => {                                   // cyrb53: crypto.subtle needs https, the live site is http
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  };
+  const keys = new Map();                                 // code -> upload key (the problem object never changes once read)
+  function doneKey(code) {
+    const p = local.get(code);
+    if (!p) return "s:" + code;
+    if (!keys.has(code) || keys.get(code).p !== p) keys.set(code, { p, k: `u:${hash(JSON.stringify(p))}:${code}` });
+    return keys.get(code).k;
+  }
+  async function loadDone() {
+    try {
+      await idb("readonly", s => {
+        const r = s.openCursor();
+        r.onsuccess = () => { const c = r.result; if (c) { done.set(c.key, c.value); c.continue(); } };
+        return null;
+      }, "done");
+    } catch (e) { /* blocked storage: the Map is this page's only copy */ }
+  }
+  const changed = code => dispatchEvent(new CustomEvent("drill:state", { detail: { code } }));
+  api.doneKey = doneKey;
+  api.doneGet = code => done.get(doneKey(code)) || null;
+  api.donePut = (code, rec) => {
+    const k = doneKey(code); done.set(k, rec);
+    idb("readwrite", s => s.put(rec, k), "done").catch(() => {});
+    changed(code);
+  };
+  api.doneDrop = code => {
+    const k = doneKey(code); done.delete(k);
+    idb("readwrite", s => s.delete(k), "done").catch(() => {});
+    changed(code);
+  };
+
+  const doneLoaded = loadDone();
+  api.ready = Promise.all([restore().catch(() => false), doneLoaded]).then(([r]) => r);
   addEventListener("pageshow", e => { if (e.persisted && !local.size) api.ready = restore().catch(() => false); });
 
   if (CAN_SW) navigator.serviceWorker.register("sw.js").catch(() => { api.mode = "online"; });

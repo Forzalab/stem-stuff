@@ -69,6 +69,7 @@ async function run(type, label, launchOpts) {
     let stall = true, n = 0;
     await page.route("**/check", r => { n++; if (stall) return; r.continue(); });
     await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
+    const before = await page.evaluate(() => window.__drill.state.tries.length);   // (b)'s try is kept across reloads (design/DONE.md)
     const t0 = Date.now();
     await answer(page, "7");
     await page.waitForSelector("#retry", { timeout: 12000 });
@@ -76,7 +77,7 @@ async function run(type, label, launchOpts) {
     assert.ok(dt >= 7500 && dt < 10000, `timed out after ${dt} ms`);
     assert.match(await page.textContent("#fb"), /took too long/);
     assert.equal(await page.inputValue("#ans"), "7", "typed answer kept");
-    assert.equal(await page.evaluate(() => window.__drill.state.tries.length), 0, "a timeout is not a try: " + JSON.stringify(await page.evaluate(() => window.__drill.state.tries)));
+    assert.equal(await page.evaluate(() => window.__drill.state.tries.length), before, "a timeout is not a try: " + JSON.stringify(await page.evaluate(() => window.__drill.state.tries)));
     if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.waitForTimeout(100); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }
     stall = false;
     await page.click("#retry");

@@ -43,6 +43,7 @@ for (const [W, H] of SIZES) {
   const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };
   const open = async code => {
     await page.setViewportSize({ width: W, height: H });
+    await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
     await page.goto("about:blank");
     await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });

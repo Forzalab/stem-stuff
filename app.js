@@ -202,7 +202,11 @@ async function load(code) {
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
+  const rec = doneStore() ? doneStore().doneGet(code) : null;
+  if (rec && off()) localState.set(code, { wrong: (rec.sigs || []).slice(), done: rec.done === "correct" });   // upload: grading picks up where it was
   render();
+  if (rec) paint(rec);
+  if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
 }
 
@@ -424,6 +428,72 @@ function record(a, r) {
   S.tries.push({ t, ...a, v: r.verdict });
   if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, n: S.tries.filter(x => x.v === "wrong").length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
+  if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
+  else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
+}
+
+/* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
+   Record: { v, x: wrong tries, done: "open"|"correct"|"out", tries, hints, hint, gen, sigs? }. Never the answer or the right
+   choice: a reopened question shows only what the student did. */
+const doneStore = () => window.stemOffline && window.stemOffline.doneGet ? window.stemOffline : null;
+function saveDone(r) {
+  const st = doneStore(); if (!st) return;
+  const max = maxTries(S.prob), x = Math.max(0, max - S.triesLeft), old = st.doneGet(S.code) || {};
+  const rec = { v: 1, x, done: r.verdict === "correct" ? "correct" : x >= max ? "out" : "open",
+    tries: S.tries.filter(t => t.v === "correct" || t.v === "wrong"), hints: S.hints.slice(),
+    hint: r.verdict === "wrong" ? r.hint || null : old.hint || null,     // the hint for the student's own wrong answer
+    gen: typeof r.gen === "number" ? r.gen : old.gen || 0 };
+  if (off()) rec.sigs = ((localState.get(S.code) || {}).wrong || []).slice();
+  st.donePut(S.code, rec);
+}
+/* show a record on the freshly rendered question: struck wrong choices, the student's right one, their last typed answer;
+   done = read-only (finish()). The right choice is never marked unless the student picked it. */
+function paint(rec) {
+  const p = S.prob, max = maxTries(p);
+  S.tries = (rec.tries || []).slice(); S.hints = (rec.hints || []).slice();
+  S.triesLeft = Math.max(0, max - (rec.x || 0));
+  if (p.type === "mc") {
+    for (const t of S.tries) {
+      const o = opts().find(x => x.dataset.id === t.c); if (!o) continue;
+      if (t.v === "wrong") { o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); }
+      else if (t.v === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+    }
+    const live = opts().find(x => !x.disabled); if (live) roving(live);
+  } else {
+    const last = S.tries[S.tries.length - 1], ins = [...document.querySelectorAll("#q .ans")];
+    if (last && typeof last.a === "string") {
+      const vals = ins.length > 1 ? last.a.split(" , ") : [last.a];
+      ins.forEach((x, i) => { x.value = vals[i] || ""; });
+      const go = $("#ansGo"); if (go) go.disabled = ins.some(x => !x.value.trim());
+    }
+    if (rec.done === "correct") $("#ff").classList.add("ok", "done");
+  }
+  if (rec.done !== "open") finish();
+  if (rec.done === "correct") feedback({ verdict: "correct" });
+  else if (rec.x > 0 || rec.done === "out") feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: rec.hint || undefined });
+}
+function repaint(rec) {
+  Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
+  renderQuestion(); $("#fb").innerHTML = "";
+  if (rec) paint(rec);
+  layoutFreeze();
+}
+/* server mode: the server is the source of truth for tries, the record is a display cache.
+   Server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
+async function syncServer(mine) {
+  const st = doneStore(); if (!st || !mine || off()) return;
+  let s;
+  try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) return; s = await r.json(); }
+  catch { return; }                                            // unreachable or slow: the cache stands
+  if (S !== mine || busy || typeof s.wrong !== "number") return;
+  const max = maxTries(mine.prob), c = st.doneGet(mine.code), cx = c ? c.x : 0, cd = c ? c.done : "open";
+  const sd = s.done ? "correct" : s.wrong >= max ? "out" : "open";
+  if (s.wrong > cx || (sd !== "open" && cd === "open") || (sd === "correct" && cd !== "correct")) {
+    const rec = { v: 1, tries: [], hints: [], hint: null, ...(c || {}), x: s.wrong, done: sd, gen: s.gen };
+    st.donePut(mine.code, rec); repaint(rec);
+  } else if (cx > s.wrong || (cd !== "open" && sd === "open")) {
+    if (s.gen > ((c && c.gen) || 0)) { st.doneDrop(mine.code); repaint(null); }
+  } else if (c && c.gen !== s.gen) st.donePut(mine.code, { ...c, gen: s.gen });
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
