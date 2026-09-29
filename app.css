@@ -148,7 +148,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   transition: border-color .12s ease-out, background-color .12s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--edge); }
-.opt .badge, .part .badge {
+.opt .badge {
   flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%;
   border: 2px solid var(--edge); color: var(--muted); font-weight: 700; font-size: 1rem;
 }
@@ -200,16 +200,40 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
 .how code { color: var(--ink); }
-/* multi: the boxes share one field and one arrow */
-.ff.multi { height: auto; min-height: 52px; padding-left: var(--s2); }
-.ff.multi .parts { flex: 1 1 auto; min-width: 0; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); column-gap: var(--s3); }
-.ff.multi .part { position: relative; display: flex; align-items: center; gap: var(--s2); min-width: 0; }
-.ff.multi .part input { padding-right: 0; }
-/* divider between parts: 1px, inset 10px from the field border, centred in the column gap. At the start of a wrapped row it lies
-   outside .parts (overflow hidden), so no dangling line. */
-.ff.multi .part + .part::before { content: ""; position: absolute; left: calc(var(--s3) / -2 - 0.5px); top: 10px; bottom: 10px; width: 1px; background: var(--line); }
-.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s3); }
-.boxed .q { margin-top: 0; padding: 0 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
+/* multi: one row per part (design/mockups/multi-prompts.html). Phone: "a)" and its sub-question, its own box under the text (aligned to
+   the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (hidden while the box is empty, like the code box's) and
+   shows its own verdict: ok (green, read-only), bad (dashed red + this part's hint under the row), shut (out of tries: dim). */
+.mparts { display: grid; gap: var(--s4); }
+.mparts .part {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  column-gap: var(--s2); row-gap: var(--s2); align-items: start;
+}
+.mparts .part.nopr { grid-template-areas: "mk bx"; }
+.mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
+.mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
+.mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
+.mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
+.mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
+.mparts .ff { grid-area: bx; position: relative; padding-right: 48px; }   /* the arrow's room is always reserved: nothing jumps when it appears */
+.mparts .ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders) */
+.mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
+.phint:empty { display: none; }
+@media (min-width: 40rem) {
+  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 16rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
+  .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
+  .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
+  .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
+  .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
+}
+.ff.bad { border-color: var(--bad); border-style: dashed; }
+/* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
+.ff.shut, .ff.shut input { cursor: not-allowed; }
+.ff.shut:not(.ok) { opacity: 0.5; }
+.ff.shut:hover { border-color: var(--edge); }
+.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
+.ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: 1rem; }
 
 /* feedback */
