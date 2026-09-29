@@ -192,7 +192,7 @@ async function run(browserType, label, opts = {}) {
       if (vname === "phone") {
         assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
         assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
-      } else if (vname === "desktop") assert.ok(d.top < 60, `box not at the top: ${d.top}`);
+      } else if (vname === "desktop") assert.ok(d.top < viewport.height * 0.2, `box not in the upper part (desktop offset scales with the window height, app.css): ${d.top}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
@@ -229,7 +229,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
-      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), [48, 48]);
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [56, 56] : [48, 48]);   // desktop 1920x1080: --btn 56px (app.css), the same for every .btn
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
       for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
