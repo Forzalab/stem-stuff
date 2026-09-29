@@ -1,3 +1,6 @@
 node_modules/
 .host.pid
 host.log
+stem-stuff.html
+stem-stuff.html.tmp
+__pycache__/

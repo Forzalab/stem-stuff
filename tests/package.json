@@ -2,10 +2,14 @@
   "name": "stem-stuff-tests",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test" },
+  "scripts": {
+    "test": "node --test",
+    "e2e": "node --test --test-concurrency=1 e2e/offline.e2e.mjs"
+  },
   "devDependencies": {
     "ajv": "^8.17.1",
     "katex": "0.16.9",
-    "mathjs": "12.4.2"
+    "mathjs": "12.4.2",
+    "playwright-core": "^1.56.1"
   }
 }
