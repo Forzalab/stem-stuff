@@ -21,6 +21,15 @@ const EXPR = new Set(["y", "f", "g", "of", "x", "fn"]);
 const norm = s => s.replace(/ln\s*\(/g, "log(");
 
 test("problems.json: schema", () => assert.ok(validate(B), JSON.stringify(validate.errors, null, 1)));
+test("part.prompt: string or lines validate; other types and unknown keys do not", () => {
+  const withPart = part => ({ ...B, problems: [{ ...B.problems.find(p => p.type === "multi"), parts: [part, part] }] });
+  const base = { type: "num", answer: "1" };
+  assert.ok(validate(withPart({ ...base, prompt: "How many? $x$" })), JSON.stringify(validate.errors));
+  assert.ok(validate(withPart({ ...base, prompt: ["line one", "", "line two"] })), JSON.stringify(validate.errors));
+  assert.ok(!validate(withPart({ ...base, prompt: 5 })));
+  assert.ok(!validate(withPart({ ...base, prompt: "" })));
+  assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
+});
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
 
 for (const p of problems) {
@@ -44,6 +53,7 @@ for (const p of problems) {
       if (k === "md" && par?.type === "text") srcs.push(md(par));
       if (["label", "text", "unit"].includes(k) && typeof v === "string" && par?.type !== "text") srcs.push(v);
     }
+    for (const u of p.parts ?? []) if (u.prompt) srcs.push(md({ md: u.prompt }));   // sub-question text: same TeX rules
     for (const s of srcs) for (const m of s.matchAll(MATH))
       katex.renderToString(m[1] ?? m[2], { throwOnError: true, displayMode: !!m[1] });
   });

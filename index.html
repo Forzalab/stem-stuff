@@ -7,12 +7,33 @@
 <meta name="theme-color" content="#151d2b">
 <meta name="color-scheme" content="dark">
 <title>STEM drill</title>
+<!-- Loading splash (design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
+     No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
+<style>
+html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
+#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #151d2b; transition: opacity .2s ease-out; }
+#splash.out { opacity: 0; pointer-events: none; }
+#splash svg { display: block; width: 64px; height: 64px; }
+#splash .sp-tile { fill: #1d2839; }   /* --sheet */
+#splash .sp-curve { fill: none; stroke: #7ab8ff; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 1.1; animation: sp-draw 2.2s infinite; }   /* --c1 */
+#splash .sp-dot { fill: #e7edf6; transform-box: fill-box; transform-origin: center; animation: sp-dot 2.2s infinite; }   /* --ink */
+@keyframes sp-draw {
+  0% { stroke-dashoffset: 1.05; animation-timing-function: cubic-bezier(.3, 0, .2, 1); }
+  32%, 74% { stroke-dashoffset: 0; animation-timing-function: cubic-bezier(.5, 0, .75, 0); }
+  92%, 100% { stroke-dashoffset: -1.05; }
+}
+@keyframes sp-dot {
+  0%, 20% { transform: scale(0); animation-timing-function: cubic-bezier(.25, 1, .5, 1); }
+  34%, 74% { transform: scale(1); animation-timing-function: cubic-bezier(.5, 0, .75, 0); }
+  86%, 100% { transform: scale(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #splash { transition: none; }
+  #splash .sp-curve, #splash .sp-dot { animation: none; }
+}
+</style>
+<noscript><style>#splash { display: none; }</style></noscript>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d2839'/%3E%3Cpath d='M6 24C12 24 14 8 26 8' fill='none' stroke='%237ab8ff' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23e7edf6'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="vendor/fonts/atkinson.css">
-<link rel="stylesheet" href="vendor/katex/katex.min.css">
-<link rel="stylesheet" href="design/explain-box.css">
-<link rel="stylesheet" href="app.css">
-<link rel="stylesheet" href="nav.css">
 <script src="vendor/katex/katex.min.js" defer></script>
 <script src="vendor/math.min.js" defer></script>
 <script src="vendor/marked.min.js" defer></script>
@@ -24,6 +45,42 @@
 <script src="offline.js" defer></script>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg viewBox="0 0 32 32" focusable="false"><rect class="sp-tile" width="32" height="32" rx="7"/><path class="sp-curve" pathLength="1" d="M6 24C12 24 14 8 26 8"/><circle class="sp-dot" cx="16" cy="16" r="3"/></svg>
+</div>
+<script>
+/* Splash: shown at least 300 ms, gone when fonts, KaTeX (the page load) and the saved-bank restore (stemOffline.ready) are done,
+   never later than 4 s. Fades out in 200 ms; with reduced motion it just goes. A bfcache restore never shows it. */
+(function () {
+  var el = document.getElementById("splash"), t0 = performance.now(), over = false;
+  if (!el) return;
+  document.body.setAttribute("aria-busy", "true");
+  var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function end(now) {
+    if (over) return; over = true;
+    document.body.removeAttribute("aria-busy");
+    if (now || still) { el.remove(); return; }
+    el.classList.add("out");
+    setTimeout(function () { el.remove(); }, 220);
+  }
+  addEventListener("pageshow", function (e) { if (e.persisted) end(true); });
+  setTimeout(end, 4000);
+  var loaded = document.readyState === "complete" ? Promise.resolve() : new Promise(function (r) { addEventListener("load", r, { once: true }); });
+  function fonts() {
+    var f = ['400 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible"', '700 1em "Atkinson Hyperlegible Mono"'];
+    return document.fonts ? Promise.all(f.map(function (x) { return document.fonts.load(x); })) : 0;
+  }
+  loaded.then(function () { return Promise.all([fonts(), window.stemOffline && window.stemOffline.ready]); }).catch(function () {}).then(function () {
+    setTimeout(end, Math.max(0, 300 - (performance.now() - t0)));
+  });
+})();
+</script>
+<!-- The stylesheets sit here, after the splash and its script, on purpose: in the head they hold back the first paint, down here they only hold back what follows. -->
+<link rel="stylesheet" href="vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<link rel="stylesheet" href="design/explain-box.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="nav.css">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>

@@ -268,7 +268,7 @@ for (const [W, H] of SIZES) {
     await page.locator("#swap").click(); await settle();
     assert.equal(await paneNow(), "problem");
     const boxes = page.locator("#q .ans");
-    for (let i = 0; i < 3; i++) { await boxes.nth(i).focus(); await mustBeInside(`#q .part:nth-child(${i + 1}) .ans`); await mustBeInside("#ansGo"); }
+    for (let i = 0; i < 3; i++) { await boxes.nth(i).focus(); await boxes.nth(i).fill("1"); await mustBeInside(`#q .part:nth-child(${i + 1}) .ans`); await mustBeInside(`#go${i}`); }   // the arrow shows once there is text
     await shot("swap-problem-multi");
     await clean("multi in problem pane");
     await kbDown();
