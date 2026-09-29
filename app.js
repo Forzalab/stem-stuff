@@ -230,6 +230,7 @@ function renderQuestion() {
       </div>`).join("")}</div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
+    fitChoices();
   } else if (p.type === "multi") {
     /* one box per part, side by side; one arrow, off until every box is filled (SCHEMA.md "Grading") */
     q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
@@ -279,6 +280,30 @@ function shown(p) {
   keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, 5 - keep.length)));
   return ch.filter(c => keep.includes(c));
 }
+/* One row of pills for 2 choices, or 3 short ones. Decided by measuring, not by guessing lengths: lay the row out, then for each
+   pill in turn give it the selected look (its 56px arrow room) and check nothing wraps, clips or overflows the row.
+   Any pill failing means today's stacked list. Re-run when the width changes and when fonts arrive (the answer depends on both). */
+function fitChoices() {
+  const g = document.querySelector("#q .choices");
+  if (!g || !S || S.prob.type !== "mc") return;
+  if (!g.offsetWidth || g.offsetWidth < 120) return;             // laid out at (near) zero width (Swap hides it): keep the last answer
+  const was = g.classList.contains("inline");
+  let fits = g.children.length >= 2 && g.children.length <= 3;
+  g.classList.add("nofx");                                        // no padding transition while measuring
+  if (fits) {
+    g.classList.add("inline");
+    for (const c of g.children) {
+      c.classList.add("probe");
+      const o = c.querySelector(".opt"), t = o.querySelector(".txt");
+      if (g.scrollWidth > g.clientWidth + 0.5 || o.scrollWidth > o.clientWidth + 0.5 || t.scrollWidth > t.clientWidth + 0.5) fits = false;
+      c.classList.remove("probe");
+      if (!fits) break;
+    }
+  }
+  g.classList.toggle("inline", fits);
+  requestAnimationFrame(() => g.classList.remove("nofx"));
+  if (fits !== was) layoutFreeze();
+}
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
 function select(o) {
   S.selected = o ? o.dataset.id : null;
@@ -305,8 +330,8 @@ function wireMC(q) {
     else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
     else if (e.key === "Enter") { e.preventDefault(); if (o.getAttribute("aria-checked") === "true") submitMC(); else select(o); }
     else if (e.key === " ") { e.preventDefault(); select(o.getAttribute("aria-checked") === "true" ? null : o); }
-    else if (/^[a-e]$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const n = opts().find(x => x.dataset.l === e.key.toUpperCase());
+    else if (/^([a-e]|[1-5])$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {         // A-E or 1-5 jump to that choice
+      const n = opts().find(x => x.dataset.l === (/\d/.test(e.key) ? LETTERS[+e.key - 1] : e.key.toUpperCase()));
       if (n && !n.disabled) { e.preventDefault(); roving(n); n.focus(); select(n); }
     }
   });
@@ -398,6 +423,7 @@ function feedback(r, typed) {
 function mountBox() {
   if (S.box) S.box.destroy();
   if (S.corner) S.corner.destroy();
+  if (S.nums) S.nums.destroy();
   const field = $("#xbField"); field.querySelector("textarea")?.remove();
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
@@ -407,6 +433,7 @@ function mountBox() {
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0 });
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
+  S.nums = ExplainBox.lineNumbers(ta, $("#xbGutter"));      // line numbers in a gutter over the left padding
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
@@ -518,11 +545,13 @@ more.addEventListener("click", () => {
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
 new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));
+let qW = 0;
+new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
 
 /* ================= boot ================= */
 const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) load(n.code); };
 addEventListener("hashchange", fromHash);
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); layoutFreeze(); } });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
 layoutDock();
 fromHash();
 window.__drill = { check, get state() { return S; } };   // for tests/e2e
