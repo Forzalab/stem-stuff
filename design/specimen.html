@@ -34,12 +34,11 @@
   --c2: #ffb86b;
   --c3: #ff8fc8;
   --grid: var(--line);
-  --body: #313c4c;   /* variant A: ink 10% over sheet */
-  --ramp: #273242;   /* variant A: ink 5% over sheet */
+  --body: var(--sheet);   /* bodies are outline only (Tony: variant B) */
+  --ramp: var(--sheet);
   --knock: rgb(29 40 57 / 0.85);
   color-scheme: dark;
 }
-:root[data-body="b"] { --body: var(--sheet); --ramp: var(--sheet); }
 *, *::before, *::after { box-sizing: border-box; }
 body {
   margin: 0;
@@ -54,7 +53,6 @@ header { background: var(--paper); border-bottom: 2px solid var(--line); }
 }
 h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; font-weight: 700; flex: 1 1 auto; }
 h2 { margin: 0.5rem 0 0.25rem; font-size: 1.2rem; line-height: 1.3; }
-.seg { display: flex; gap: 0.5rem; align-items: center; font-size: 1rem; color: var(--muted); }
 button {
   font: inherit; font-weight: 700; color: var(--ink); background: transparent;
   border: 2px solid var(--line); border-radius: 6px; padding: 0.25rem 0.9rem; cursor: pointer;
@@ -96,22 +94,9 @@ main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
 <header>
   <div class="bar">
     <h1>Figure language specimen</h1>
-    <div class="seg" role="group" aria-label="Body fill variant">Bodies
-      <button type="button" data-v="a" aria-pressed="true">A fill</button>
-      <button type="button" data-v="b" aria-pressed="false">B outline</button>
-    </div>
   </div>
 </header>
 <main>
-  <section class="p">
-    <span class="code">BODIES</span>
-    <h2>Variant A and variant B, side by side</h2>
-    <div class="two">
-      <div><div class="fig" data-fig="f3n" data-body="a"></div><p class="cap">A: 2px ink outline, ink 10% fill</p></div>
-      <div><div class="fig" data-fig="f3n" data-body="b"></div><p class="cap">B: 2px ink outline only</p></div>
-    </div>
-  </section>
-
   <section class="p">
     <span class="code">KIT</span>
     <h2>Primitives</h2>
@@ -626,15 +611,10 @@ const F = {
 
 function renderAll() {
   document.querySelectorAll(".fig").forEach(el => {
-    if (el.dataset.body) el.style.cssText += el.dataset.body === "b" ? ";--body:var(--sheet);--ramp:var(--sheet)" : ";--body:#313c4c;--ramp:#273242";
     mount(el, F[el.dataset.fig]);
   });
 }
 document.querySelectorAll(".p > p, .note").forEach(p => { if (p.textContent.includes("$")) p.innerHTML = tex(p.textContent); });
-document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
-  document.documentElement.dataset.body = b.dataset.v;
-  document.querySelectorAll(".seg button").forEach(o => o.setAttribute("aria-pressed", o === b));
-}));
 let lastW = 0;
 new ResizeObserver(() => { if (document.body.clientWidth !== lastW) { lastW = document.body.clientWidth; renderAll(); } }).observe(document.body);
 document.fonts.ready.then(renderAll);

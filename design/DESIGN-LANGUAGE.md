@@ -63,14 +63,11 @@ A force that acts on the body is always solid. Enforced by `tests/schema.test.mj
 - Knockout: `rgb(29 40 57 / 0.85)` background, 3px side padding, 3px radius, so a label can cross a line and stay readable. No text stroke/halo.
 - Layout pass measures labels and grows figure padding (min 16px) until nothing is clipped, max 3 passes.
 
-## 6. Bodies (Tony picks one)
+## 6. Bodies
 
-| | outline | fill |
-|---|---|---|
-| **A** | 2px ink | ink 10% over sheet = #313c4c (incline 5% = #273242) |
-| **B** | 2px ink | none (sheet shows through, covers lines behind it) |
+Outline only (Tony picked variant B): 2px ink outline, no fill. The body is filled with the sheet color, so the sheet shows through and the body still covers lines behind it. The incline uses the same sheet fill.
 
-`fill: true` on a body overrides either: its color at 22% opacity (same as shaded regions). Dot bodies are solid ink, radius at least 6px. Disk and pulley get a 2.5px center dot; ring adds an inner circle 5px in.
+`fill: true` on a body overrides the default: its color at 22% opacity (same as shaded regions). Dot bodies are solid ink, radius at least 6px. Disk and pulley get a 2.5px center dot; ring adds an inner circle 5px in.
 
 ## 7. Scene primitives
 
