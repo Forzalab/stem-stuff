@@ -25,3 +25,10 @@ No repro on Tony's machine yet, so every cause below was tested here (headless C
 3. **Resume** (`pageshow` persisted, `visibilitychange` to visible): abort requests older than 8 s (background timers are throttled, so the timeout may not have fired), clear `busy`, re-enable the controls that should be live (arrow enabled when every box is filled and the problem isn't finished; the selected choice's arrow shown), drop Swap / dock-away / bar-off unless a field still has focus, and rerun `layoutDock` / `layoutFreeze` / `fitChoices`. On `pageshow` persisted also restore the bank if it is missing.
 
 Tests: `tests/reload.pw.mjs` (needs a server, like render.pw.mjs): (a) upload, close the context, reopen with the same storage state + IndexedDB → bank restored, status line back, submit works; (b) stall a request, dispatch `pageshow` persisted → submit works; (c) route that never answers → timeout at 8 s → retry works.
+
+## Results (Chromium; Firefox is not installed in /opt/pw-browsers, so reload.pw.mjs prints "skip firefox")
+
+- `tests/reload.pw.mjs`: (a) bank restored after closing and reopening a persistent profile, "File mine.json in use." back, nav back, submit grades, Next works; (b) stalled request + `pageshow` persisted: submit sends again and grades; (c) stalled `/check` shows the retry line at ~8 s, the typed answer is kept, no try counted, retry grades; (c2) stalled problem load: message + retry in the entry row, retry opens it.
+- `render.pw.mjs` now clears the IndexedDB bank on every page load (its steps assume a fresh page has no upload) and ignores hidden children of `#entry`. All pass; `swap.pw.mjs` all pass; `npm test` 80/80.
+- `npm run e2e` test 2 ("server down -> file picker") times out at 30 s; it does the same on the base commit, so it is older than this change.
+- Impeccable: 0 findings static (index.html, app.css, nav.css) and live at 390x844 and 1920x1080.
