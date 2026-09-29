@@ -4,11 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Figure language specimen</title>
+<link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<link rel="stylesheet" href="explain-box.css">
+<script src="explain-box.js" defer></script>
 <style>
 :root {
   /* calc1 tokens, unchanged */
@@ -21,6 +24,8 @@
   --blue: #3a67d8;
   --blue-hi: #2c55bd;
   --focus: #8fb0ff;
+  --edge: #6b7f9e;   /* input boundary, 3.64:1 on sheet */
+  --hint: #7d8ea8;   /* placeholder, 5.33:1 on field */
   --mark: #ffd84a;
   --ok: #5fd394;
   --bad: #ff7a7a;
@@ -63,8 +68,8 @@ main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
   padding: 1.1rem 1.25rem 1rem; margin: 0 0 1rem;
 }
 .code { display: inline-block; font-weight: 700; font-size: 0.95rem; padding: 0.1rem 0.5rem; border-radius: 4px; color: var(--muted); }
-.p > p { margin: 0.25rem 0 0.75rem; }
-.note { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 0; }
+.p > p { margin: 0.25rem 0 0.75rem; max-width: 58ch; }
+.note { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 0; max-width: 58ch; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem 1.25rem; }
 .cap { margin: 0.25rem 0 0; font-size: 0.95rem; color: var(--muted); text-align: center; }
@@ -73,7 +78,7 @@ main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .lbl {
-  position: absolute; left: 0; top: 0; white-space: nowrap; pointer-events: none;
+  position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap;
   font-size: 16px; line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock);
 }
 .lbl .katex { font-size: 1.1em; }
@@ -111,7 +116,7 @@ main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
     <span class="code">KIT</span>
     <h2>Primitives</h2>
     <div class="tiles">
-      <div><div class="fig" data-fig="t_force"></div><p class="cap">force, 3px, filled head</p></div>
+      <div><div class="fig" data-fig="t_force"></div><p class="cap">force 3px filled head; dashed = not acting on the body</p></div>
       <div><div class="fig" data-fig="t_vel"></div><p class="cap">velocity, 2.5px, open head</p></div>
       <div><div class="fig" data-fig="t_acc"></div><p class="cap">acceleration, 2.5px, double head</p></div>
       <div><div class="fig" data-fig="t_dash"></div><p class="cap">asymptote, guide, ghost, trajectory</p></div>
@@ -133,6 +138,11 @@ main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
     <span class="code">PHYS-F3N</span>
     <p>A $4.0\ \text{kg}$ block slides down a $30^\circ$ ramp with $\mu_k = 0.20$.</p>
     <div class="fig" data-fig="f3n"></div>
+    <label class="xb">
+      <span class="xb-label">Your explanation</span>
+      <textarea id="explain" rows="4" spellcheck="true" autocapitalize="sentences" autocomplete="off" placeholder="Say what you did and why, in your own words."></textarea>
+      <span class="xb-hint">Plain text. The box grows as you write. Component: explain-box.html</span>
+    </label>
   </section>
 
   <section class="p">
@@ -189,6 +199,7 @@ const deg = Math.PI / 180;
 const col = c => `var(--${c || "ink"})`;
 
 function tex(s) {
+  if (typeof katex === "undefined") return String(s).replace(/[&<>$]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "$": "" })[ch]);   // CDN blocked: plain text, figures still draw
   return String(s).split("$").map((t, i) => i % 2
     ? katex.renderToString(t, { throwOnError: false })
     : t.replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch])).join("");
@@ -335,8 +346,8 @@ const S = {
         const t = (x - a[0]) * ux + (y - a[1]) * uy, c = [a[0] + t * ux, a[1] + t * uy], dist = Math.hypot(c[0] - x, c[1] - y);
         if (dist > 0.5 && dist < 40) { d = norm(c[0] - x, c[1] - y); h = Math.max(10, dist); }
       }
-      const bx = x + h * d[0], by = y + h * d[1];
-      return `<polygon points="${P([[x, y], [bx - 8 * d[1], by + 8 * d[0]], [bx + 8 * d[1], by - 8 * d[0]]])}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
+      const bx = x + h * d[0], by = y + h * d[1], hw = Math.max(8, 0.6 * h);   // base sits flush on the surface, width grows with height
+      return `<polygon points="${P([[x, y], [bx - hw * d[1], by + hw * d[0]], [bx + hw * d[1], by - hw * d[0]]])}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
         `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
     }
   },
@@ -541,7 +552,7 @@ const F = {
   f3n: scene([
     { mark: "incline", at: [0, 0], base: 4, angle: 30, label: "$30^\\circ$" },
     box([1.755, 1.36], 30),
-    { mark: "force", at: [1.755, 1.36], angle: 270, len: 1.2, label: "$m\\vec g$" },
+    { mark: "force", at: [1.755, 1.36], angle: 270, len: 1.0, label: "$m\\vec g$", anchor: "e" },
     { mark: "force", at: [1.755, 1.36], frame: 30, angle: 90, len: 1.04, label: "$\\vec N$" },
     { mark: "force", at: [1.755, 1.36], frame: 30, angle: 0, len: 0.35, label: "$\\vec f_k$" }]),
   s2k: scene([
@@ -549,7 +560,7 @@ const F = {
     { mark: "surface", from: [4.531, 2.113], to: [4.277, 2.657], side: "right" },
     { mark: "spring", from: [2.592, 1.54], to: [4.405, 2.385], coils: 9, width: 0.22, label: "$k$", anchor: "nw" },
     box([2.23, 1.371], 25),
-    { mark: "force", at: [2.23, 1.371], angle: 270, len: 1.2, label: "$m\\vec g$" },
+    { mark: "force", at: [2.23, 1.371], angle: 270, len: 1.0, label: "$m\\vec g$", anchor: "e" },
     { mark: "force", at: [2.23, 1.371], frame: 25, angle: 90, len: 1.09, label: "$\\vec N$" },
     { mark: "force", at: [2.23, 1.371], frame: 25, angle: 0, len: 0.9, label: "$\\vec F_s$", anchor: "se" }]),
   pend: scene([
@@ -605,7 +616,7 @@ const F = {
   t_dash: scene([{ mark: "seg", from: [0, 1.5], to: [2, 1.5], sty: "asym" }, { mark: "seg", from: [0, 1], to: [2, 1], sty: "guide" },
     { mark: "force", at: [0, 0.5], angle: 0, len: 2, dash: true }, { mark: "seg", from: [0, 0], to: [2, 0], sty: "traj" }], { maxH: 150 }),
   t_surf: scene([{ mark: "surface", from: [0, 0], to: [2, 0], side: "right" }, { mark: "pivot", at: [1, 0.3] }, { mark: "body", shape: "rod", at: [1.5, 0.3], w: 1, h: 0.05 }], { maxH: 150 }),
-  t_spring: scene([{ mark: "surface", from: [0, -0.4], to: [0, 0.4], side: "right" }, { mark: "spring", from: [0, 0], to: [1.6, 0], coils: 8, width: 0.25 }, box([1.95, 0], 0, { w: 0.7, h: 0.6 })], { maxH: 150 }),
+  t_spring: scene([{ mark: "surface", from: [0, -0.4], to: [0, 0.4], side: "left" }, { mark: "spring", from: [0, 0], to: [1.6, 0], coils: 8, width: 0.25 }, box([1.95, 0], 0, { w: 0.7, h: 0.6 })], { maxH: 150 }),
   t_pulley: scene([{ mark: "surface", from: [-0.7, 1], to: [0.7, 1], side: "left" }, { mark: "pulley", at: [0, 0.35], r: 0.3, mount: [0, 1] },
     { mark: "rope", pts: [[-0.3, 0.35], [-0.3, -0.4]] }, { mark: "rope", pts: [[0.3, 0.35], [0.3, -0.4]] }], { maxH: 150 }),
   t_bodies: scene([box([0, 0], 0, { w: 0.6, h: 0.6 }), { mark: "body", shape: "disk", at: [0.95, 0], r: 0.3 }, { mark: "body", shape: "ring", at: [1.85, 0], r: 0.3 },
@@ -627,6 +638,7 @@ document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click"
 let lastW = 0;
 new ResizeObserver(() => { if (document.body.clientWidth !== lastW) { lastW = document.body.clientWidth; renderAll(); } }).observe(document.body);
 document.fonts.ready.then(renderAll);
+addEventListener("DOMContentLoaded", () => { window.explainBox = ExplainBox.mount(document.getElementById("explain")); });
 </script>
 </body>
 </html>

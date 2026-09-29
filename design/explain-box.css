@@ -1,0 +1,29 @@
+/* Explanation box. Tokens from calc1 (see DESIGN-LANGUAGE.md); --edge added for a 3:1 input boundary. */
+.xb { display: block; margin: 0.75rem 0 0; }
+.xb-label { display: block; font-weight: 700; font-size: 1rem; margin: 0 0 0.35rem; color: var(--ink); }
+.xb-hint { display: block; font-size: 0.95rem; color: var(--muted); margin: 0.35rem 0 0; }
+.xb textarea {
+  display: block;
+  width: 100%;                 /* fixed to the column; never wider */
+  box-sizing: border-box;
+  field-sizing: content;       /* grow with the text (Chromium 123+, Safari 26+) */
+  min-height: calc(4lh + 1.5rem + 4px);  /* 4 lines + padding + border */
+  min-height: calc(4 * 1.6em + 1.5rem + 4px);
+  max-height: none;
+  resize: none;                /* grows by itself: no drag handle */
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font: 400 1.125rem/1.6 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--field);
+  border: 2px solid var(--edge);
+  border-radius: 6px;
+  caret-color: var(--focus);
+  tab-size: 4;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.xb textarea::placeholder { color: var(--hint); opacity: 1; }
+.xb textarea:hover { border-color: var(--muted); }
+.xb textarea:focus { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
