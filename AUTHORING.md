@@ -53,7 +53,7 @@ cd tests && npm install && npm test
 - `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`. Never hex.
 - `label` is plain text with optional `$..$`. Keep it to **6 labels or fewer per graph**.
 - `anchor` says which side of the point the label sits on: `n ne e se s sw w nw c`.
-- `dash: true` draws a dashed line. Use it for asymptotes, guides and "ghost" forces.
+- `dash: true` draws a dashed line. Use it for asymptotes, guides and "ghost" forces. A force acting on the body is always solid; dashed forces are only ones NOT acting on it (a force whose `at` is a `body` mark's `at` must not be dashed; tests enforce this).
 
 ## kind: cartesian (calc plots, and x-t, v-t, a-t graphs)
 The axes are in world units, with y up.
@@ -120,6 +120,12 @@ Recipes (sketches, not full files):
               { "label": "final",   "bars": [ { "label": "$K$", "value": 8, "color": "c1" }, { "label": "$U_g$", "value": 0 } ] } ] }
 ```
 Values can be negative.
+
+## Wrong answers and hints (after the k/ split; see MC.md section 6)
+Author in this order:
+1. **Vet the choices first.** Write the correct answer. Build each MC distractor (and each known freeform wrong answer) from a named error type: `sign`, `op-swap`, `units`, `off-by-factor`, `chain-rule`, ... (full enum in `MC.md`). No filler distractors: if you can't name the mistake, replace the choice.
+2. **Then write one hint per wrong answer** in Cluck's voice: starts `QUACK.`, one pointed question or action that names the error, never the answer, about 25 words max.
+3. `tests/key.test.mjs` fails if a distractor has no `{error, hint}`, a hint doesn't start with QUACK, or a hint contains the answer.
 
 ## Checklist before commit
 1. `cd tests && npm test` passes. It checks the schema, the filename, that the answer evaluates, that the TeX renders, that the graph math compiles, the label count, and that suffixes are unique.

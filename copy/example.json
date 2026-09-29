@@ -1,0 +1,21 @@
+{
+  "v": 1, "code": "CALC1-T6B", "subject": "CALC1",
+  "start": "2026-09-29T20:00:00.000Z", "copied": "2026-09-29T20:06:40.000Z",
+  "final": {"a":"12","v":"correct"},
+  "tries": [
+    {"t":95,"a":"4","v":"wrong"},
+    {"t":140,"a":"12","v":"correct"}
+  ],
+  "hints": [
+    {"t":95,"n":1,"kind":"algebra"}
+  ],
+  "explain": "plugging in 2 gives 0/0 so factor x^3-8 = (x-2)(x^2+2x+4), cancel, plug in: 4+4+4 = 12",
+  "hist": { "n": 6, "kept": 6, "edits": [
+      {"t":20,"at":0,"del":0,"ins":"plug in"},
+      {"t":50,"at":7,"del":0,"ins":" 2 gives 0/0"},
+      {"t":80,"at":19,"del":0,"ins":" so factor"},
+      {"t":110,"at":4,"del":25,"ins":"ging in 2 gives 0/0 so factor x^3-8"},
+      {"t":140,"at":39,"del":0,"ins":" = (x-2)(x^2+2x+4)"},
+      {"t":170,"at":57,"del":0,"ins":", cancel, plug in: 4+4+4 = 12"}
+    ] }
+}

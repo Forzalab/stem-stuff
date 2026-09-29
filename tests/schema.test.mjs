@@ -45,6 +45,19 @@ for (const f of files) {
       katex.renderToString(m[1] ?? m[2], { throwOnError: true, displayMode: !!m[1] });
   });
 
+  // A force drawn from a body's point acts on that body: it must be solid.
+  // Dashed forces are only ones NOT acting on the body (drawn elsewhere).
+  test(`${f}: forces acting on a body are solid`, () => {
+    for (const b of p.body.filter(b => b.type === "graph")) {
+      const bodies = (b.marks ?? []).filter(m => m.mark === "body" && Array.isArray(m.at));
+      for (const m of b.marks ?? []) {
+        if (m.mark !== "force" || !m.dash) continue;
+        const on = bodies.some(o => Math.hypot(o.at[0] - m.at[0], o.at[1] - m.at[1]) < 1e-6);
+        assert.ok(!on, `force ${m.label ?? ""} at [${m.at}] acts on a body but is dashed`);
+      }
+    }
+  });
+
   test(`${f}: graph math compiles, <= 6 labels`, () => {
     for (const b of p.body.filter(b => b.type === "graph")) {
       let labels = 0;

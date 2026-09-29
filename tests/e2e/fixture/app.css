@@ -1,0 +1,3 @@
+:root{--ink:#e7edf6;--muted:#a2b3cb;--sheet:#1d2839;--edge:#6b7f9e;--focus:#8fb0ff}
+body{margin:0;padding:16px;background:#141c28;color:var(--ink);font:400 1.0625rem/1.5 system-ui,sans-serif}
+input,button{font:inherit;min-height:44px}

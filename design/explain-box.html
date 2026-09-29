@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Explanation box</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="explain-box.css">
+<style>
+:root {
+  --paper: #151d2b; --sheet: #1d2839; --field: #111826; --ink: #e7edf6; --muted: #a2b3cb;
+  --line: #34445d; --focus: #8fb0ff;
+  --edge: #6b7f9e;   /* input boundary, 3.64:1 on sheet */
+  --hint: #7d8ea8;   /* placeholder, 5.33:1 on field */
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.125rem/1.5 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif; }
+main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
+h1 { margin: 0 0 1rem; font-size: 1.5rem; line-height: 1.2; }
+.p { background: var(--sheet); border: 2px solid var(--line); border-radius: 10px; padding: 1.1rem 1.25rem 1rem; margin: 0 0 1rem; }
+.code { font-weight: 700; font-size: 0.95rem; color: var(--muted); }
+.p > p { margin: 0.25rem 0 0.75rem; max-width: 58ch; }
+h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+ol { margin: 0; padding-left: 1.5rem; font-size: 1rem; color: var(--muted); }
+ol li { margin: 0 0 0.5rem; }
+time { font-variant-numeric: tabular-nums; color: var(--ink); }
+.empty { font-size: 1rem; color: var(--muted); margin: 0; }
+@media (max-width: 34rem) { main { padding: 1rem 1rem 3rem; } .p { padding: 1rem 1rem 0.9rem; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Explanation box</h1>
+  <section class="p">
+    <span class="code">PHYS-F3N</span>
+    <p>A 4.0 kg block slides down a 30° ramp with a kinetic friction coefficient of 0.20. Find its acceleration.</p>
+    <label class="xb">
+      <span class="xb-label">Scratchpad</span>
+      <textarea id="explain" rows="4" spellcheck="true" autocapitalize="sentences" autocomplete="off"
+        placeholder="Paste GPT answer here, but me be sad..."></textarea>
+      <span class="xb-hint">Plain text. The box grows as you write.</span>
+    </label>
+  </section>
+  <section class="p" aria-live="polite">
+    <h2>Edit history</h2>
+    <p class="empty" id="none">No snapshots yet. One is saved after 2 s without typing, and when you leave the box.</p>
+    <ol id="hist"></ol>
+  </section>
+</main>
+<script src="explain-box.js"></script>
+<script>
+const box = ExplainBox.mount(document.getElementById("explain"));
+const ol = document.getElementById("hist"), none = document.getElementById("none");
+box.onHistory((entry, all) => {
+  none.hidden = true;
+  const li = document.createElement("li"), t = document.createElement("time");
+  const iso = new Date(entry.t).toISOString(); t.dateTime = iso; t.textContent = iso.slice(11, 19);
+  li.append(t, " · " + entry.text.length + " chars");
+  ol.append(li);
+});
+</script>
+</body>
+</html>
