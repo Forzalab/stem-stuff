@@ -236,6 +236,7 @@ function drawFigures() {
 const LETTERS = "ABCDE";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
+  q.classList.remove("closed");
   $("#freezeIn").classList.toggle("boxed", p.type === "multi");      // multi: question + boxes in one box (Tony's sketch)
   if (p.type === "mc") {
     const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
@@ -329,8 +330,13 @@ function select(o) {
     x.parentElement.querySelector(".send").hidden = !on;
   }
 }
+/* #q outlives every problem (only its innerHTML changes), so wire it ONCE: a listener per load stacked up and one tap
+   ran select() twice (select, then "tap again = deselect"), leaving the choice with only its hover border. */
 function wireMC(q) {
+  if (q.dataset.mcWired) return;
+  q.dataset.mcWired = "1";
   q.addEventListener("click", e => {
+    if (!S || S.prob.type !== "mc") return;
     if (S.finished) return;
     const send = e.target.closest(".send");
     if (send) { submitMC(); return; }
@@ -339,7 +345,7 @@ function wireMC(q) {
     roving(o);
   });
   q.addEventListener("keydown", e => {
-    const o = e.target.closest(".opt"); if (!o || S.finished) return;
+    const o = e.target.closest(".opt"); if (!o || !S || S.finished) return;
     const live = opts().filter(x => !x.disabled), i = live.indexOf(o);
     const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); select(n); };
     if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); move(1); }
@@ -368,9 +374,9 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish(true);
+    if (r.triesLeft <= 0) finish();
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
-  else if (r.verdict === "locked") finish(true);
+  else if (r.verdict === "locked") finish();
   feedback(r);
 }
 
@@ -405,8 +411,8 @@ async function submitFF() {
     if (S !== mine) return;
     if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
-    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); ins.forEach(x => { x.readOnly = true; }); $("#ansGo").hidden = true; finish(); }
-    else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish(true);
+    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
+    else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -419,11 +425,13 @@ function record(a, r) {
   if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, n: S.tries.filter(x => x.v === "wrong").length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
 }
-function finish(out) {
+/* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
+   Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
+function finish() {
   S.finished = true;
-  opts().forEach(o => { o.disabled = true; });
+  $("#q").classList.add("closed");
+  document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
-  if (out) document.querySelectorAll("#q .ans").forEach(x => { x.readOnly = true; });
 }
 function feedback(r, typed) {
   const fb = $("#fb");
