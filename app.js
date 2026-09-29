@@ -459,14 +459,47 @@ function mountBox() {
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbLabel");
+  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbName");
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0,
     cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
   mounted = { box: S.box, corner: S.corner };
+  autosave(ta);
 }
+/* ---------- scratchpad autosave (design/shots/autosave-*.png): draft per bank + code in localStorage.
+   3 s after the last edit: "saving" (a light band sweeps through it), then "saved", gone after 2 s. Reduced motion: no sweep. */
+const SAVE_IDLE = 3000, SAVE_SHOW = 700, SAVED_SHOW = 2000;
+const padKey = code => "stem-pad:" + ((window.stemOffline && window.stemOffline.fileName && window.stemOffline.fileName(code)) || "server") + ":" + code;
+function padGet(code) { try { return localStorage.getItem(padKey(code)) || ""; } catch { return ""; } }
+function padPut(code, v) { try { if (v) localStorage.setItem(padKey(code), v); else localStorage.removeItem(padKey(code)); return true; } catch { return false; } }
+let saveTimers = [], savePending = null;
+function autosave(ta) {
+  const st = $("#xbSave"), code = S.code;
+  for (const t of saveTimers) clearTimeout(t);
+  saveTimers = []; st.className = "xb-save"; st.textContent = "";
+  const draft = padGet(code);
+  if (draft) { ta.value = draft; ta.dispatchEvent(new Event("xb-refit")); ta.dispatchEvent(new Event("xb-cap")); }
+  const flush = () => { if (savePending) { padPut(savePending.code, savePending.ta.value); savePending = null; } };
+  flush();
+  ta.addEventListener("input", () => {
+    for (const t of saveTimers) clearTimeout(t);
+    st.className = "xb-save"; st.textContent = "";
+    savePending = { code, ta };
+    saveTimers = [setTimeout(() => {
+      flush();
+      st.className = "xb-save saving"; st.textContent = "saving";
+      saveTimers = [setTimeout(() => {
+        st.className = "xb-save"; st.textContent = "saved";
+        saveTimers = [setTimeout(() => { st.textContent = ""; }, SAVED_SHOW)];
+      }, SAVE_SHOW)];
+    }, SAVE_IDLE)];
+  });
+  autosave.flush = flush;
+}
+addEventListener("pagehide", () => autosave.flush && autosave.flush());
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && autosave.flush) autosave.flush(); });
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
   /* plain-http LAN (serve.py): no async clipboard, use a hidden textarea */

@@ -233,6 +233,16 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .freeze:has(.more:not([hidden])) + .work { margin-top: calc(48px + var(--s1) + var(--s2)); }
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
+/* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
+.xb-save { margin-left: var(--s1); font-size: 0.875rem; font-weight: 400; color: var(--hint); }
+.xb-save.saving {
+  color: var(--ink);
+  -webkit-mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  animation: xb-sweep 1.4s linear infinite;
+}
+@keyframes xb-sweep { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .xb-save.saving { animation: none; -webkit-mask: none; mask: none; color: var(--hint); } }
 /* Tony: limit line length and wrap. ch is measured in the textarea's own font. */
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
