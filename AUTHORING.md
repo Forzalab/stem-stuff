@@ -7,6 +7,12 @@ The schema lives in `schema/problem.schema.json`. Validate against it before eve
 cd tests && npm install && npm test
 ```
 
+## Content rule (Tony, standing)
+- MINIMAL. Textbook language. State the givens and the ask, nothing else.
+- No table unless the data is a table (e.g. a limit table of x vs f(x)). Givens go in the sentence.
+- No bold/emphasis, no chatty lead-ins, no restating what the figure shows.
+- Units in the ask: "Find the stretch of the spring, in $\\text{m}$."
+
 ## Codes
 - Format is `PREFIX-SUFFIX`. Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math).
 - The suffix is 3 characters, A–Z and 0–9. Don't use O/0 or I/1.
