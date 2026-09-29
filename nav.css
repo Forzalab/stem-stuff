@@ -1,0 +1,48 @@
+/* Question nav: Prev / Next and the questions list (design/NAV.md). Tokens and .btn come from app.css. */
+
+/* .btn with a word: same 48px height, border, radius, hover and focus; width follows the label */
+.btn-label {
+  width: auto; padding: 0 var(--s4) 0 var(--s3); display: inline-flex; align-items: center; gap: var(--s2);
+  font-size: 1rem; font-weight: 700; line-height: 1; white-space: nowrap;
+}
+.qnav { display: flex; gap: var(--s2); }
+.qnav .btn:disabled { opacity: 0.45; cursor: default; }
+.qnav .btn:disabled:hover { background: var(--sheet); border-color: var(--edge); }
+.qnav .btn:disabled:active { transform: none; }
+#qlistBtn[aria-expanded="true"] { background: var(--raised); border-color: var(--muted); }
+
+/* phones and touch (entry dock at the bottom): the nav is the top bar. List left, arrows right. */
+.dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.dock-bottom #qprev { margin-left: auto; }
+.dock-bottom .qlist { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; }
+
+/* desktop: entry box and nav share one row; the list is a full-width row under them.
+   .dock's children become grid items (status / entry + nav / message / list). */
+.qnav-on:not(.dock-bottom) .top {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2);
+  max-width: 52rem; margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
+}
+.qnav-on:not(.dock-bottom) .dock { display: contents; }
+.qnav-on:not(.dock-bottom) .file-status { grid-row: 1; grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom) .entry { grid-row: 2; grid-column: 1; }
+.qnav-on:not(.dock-bottom) .qnav { grid-row: 2; grid-column: 2; }
+.qnav-on:not(.dock-bottom) .entry-msg { grid-row: 3; grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom) .qlist { grid-row: 4; grid-column: 1 / -1; margin-top: var(--s3); }
+
+/* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
+.qlist {
+  position: relative; max-height: min(32rem, 60svh); overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s2); background: var(--sheet); border-radius: 10px;
+}
+.qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.qlist a {
+  display: flex; align-items: baseline; gap: var(--s3); min-height: 48px; padding: var(--s3);
+  border-radius: 8px; color: var(--ink); text-decoration: none; line-height: 1.35;
+  transition: background-color .12s ease-out;
+}
+.qlist a:hover { background: var(--raised); }
+.qlist a:focus-visible { outline-offset: -3px; }
+.qlist .qn { flex: none; min-width: 2ch; text-align: right; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.qlist .qt { min-width: 0; overflow-wrap: anywhere; }
+.qlist a[aria-current] { background: var(--raised); }
+.qlist a[aria-current] .qn { color: var(--c1); }

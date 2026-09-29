@@ -186,6 +186,75 @@ async function run(browserType, label, opts = {}) {
       assert.equal((await page.evaluate(c => window.__drill.check(c, { answer: "3.20" }), f3n)).verdict, "correct", "graded from the file");
     });
 
+    await step(`${label} ${vname} nav: hidden for server problems; upload -> list, click a row, next, prev, keys`, async () => {
+      await open("CALC1_T6B");
+      assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
+      const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
+      bank.problems[1].title = "Area between a parabola and a line";
+      const codes = bank.problems.map(p => p.code), n = codes.length;
+      const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+      await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
+      const at = c => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, c, { timeout: 8000 });
+      await at(codes[0]);
+      const nav = page.locator("#qnav"), btn = page.locator("#qlistBtn"), prev = page.locator("#qprev"), next = page.locator("#qnext");
+      assert.ok(await nav.isVisible(), "nav hidden after upload");
+      assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
+      for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      assert.equal((await btn.textContent()).trim(), "Questions list");
+      assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
+      // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
+      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main") }; });
+      if (vname === "desktop") assert.ok(Math.abs(g.nav.top - g.entry.top) < 1 && g.nav.left > g.entry.right, "nav not beside the entry box");
+      else assert.ok(g.nav.bottom <= g.main.top + 1 && g.nav.top < 80, `nav not the top bar: ${g.nav.top}`);
+      if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-closed-${viewport.width}.png` });
+      // list: bare numbers + titles, current marked, focus on the current row
+      await btn.click();
+      const rows = page.locator("#qlist a");
+      assert.ok(await page.locator("#qlist").isVisible());
+      assert.equal(await btn.getAttribute("aria-expanded"), "true");
+      assert.equal(await rows.count(), n);
+      assert.deepEqual(await page.locator("#qlist .qn").allTextContents(), codes.map((_, i) => String(i + 1)));
+      assert.equal(await rows.nth(1).locator(".qt").textContent(), "Area between a parabola and a line");
+      for (const t of await page.locator("#qlist .qt").allTextContents()) assert.ok(t.length <= 60 && !/[\\$]/.test(t), `title ${t}`);
+      assert.equal(await rows.nth(0).getAttribute("aria-current"), "true");
+      assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-current")), "true", "focus not on the current row");
+      // in the flow: the list pushes the problem down and covers nothing
+      const lr = await page.locator("#qlist").boundingBox(), fr = await page.locator("#freeze").boundingBox();
+      assert.ok(lr.y + lr.height <= fr.y, "list covers the problem");
+      if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-open-${viewport.width}.png` });
+      await rows.nth(2).click();
+      await at(codes[2]);
+      assert.ok(await page.locator("#qlist").isHidden(), "list stays open after a pick");
+      await btn.click();
+      assert.equal(await rows.nth(2).getAttribute("aria-current"), "true");
+      assert.equal(await page.locator("#qlist [aria-current]").count(), 1);
+      await page.keyboard.press("Escape");
+      assert.ok(await page.locator("#qlist").isHidden());
+      assert.equal(await page.evaluate(() => document.activeElement.id), "qlistBtn", "Escape: focus not back on the button");
+      await next.click(); await at(codes[3]);
+      if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-next-${viewport.width}.png` });
+      await prev.click(); await at(codes[2]);
+      // keys: ] and [ outside fields; typed into the scratchpad they stay text
+      await page.locator("#problem").click();
+      await page.keyboard.press("]"); await at(codes[3]);
+      await page.keyboard.press("["); await at(codes[2]);
+      await page.locator("#scratch").click(); await page.keyboard.type("a[i]");
+      await page.waitForTimeout(150);
+      assert.equal(await page.locator("#pcode").textContent(), codes[2], "[ ] navigated while typing");
+      assert.equal(await page.inputValue("#scratch"), "a[i]");
+      // last question: next off; the list works from the keyboard
+      await page.evaluate(c => { location.hash = c; }, codes[n - 1]); await at(codes[n - 1]);
+      assert.ok(await next.isDisabled() && await prev.isEnabled(), "last question: next off, prev on");
+      await btn.focus(); await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("Home"); await page.keyboard.press("Enter");
+      await at(codes[0]);
+      // a server problem after the upload: list stays, nothing marked, arrows off
+      await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
+      assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
+      assert.equal(await page.locator("#qlist [aria-current]").count(), 0);
+    });
+
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
       await open("CALC1_T6B");
       const ta = page.locator("#scratch");
