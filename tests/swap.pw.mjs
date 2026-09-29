@@ -146,10 +146,10 @@ for (const [W, H] of SIZES) {
     assert.equal(await paneNow(), "problem", "focusing the answer did not show PROBLEM");
     await page.evaluate(() => document.querySelector("#scratch").focus()); await settle();
     assert.equal(await paneNow(), "scratch", "focusing the scratchpad did not show SCRATCHPAD");
-    // the toggle is one 48px button, no text, doc / swap / pen in that order
+    // the toggle is one 48px button, no text, doc / pen in that order
     const t = await page.evaluate(() => { const b = document.querySelector("#swap"), r = b.getBoundingClientRect(); return { h: r.height, w: r.width, text: b.textContent.trim(), icons: [...b.querySelectorAll("use")].map(u => u.getAttribute("href")), label: b.getAttribute("aria-label") }; });
     assert.equal(t.h, 48); assert.ok(t.w >= 48); assert.equal(t.text, "");
-    assert.deepEqual(t.icons, ["#i-doc", "#i-swap", "#i-pen"]);
+    assert.deepEqual(t.icons, ["#i-doc", "#i-pen"]);
     assert.ok(/problem/i.test(t.label), `label ${t.label}`);
     // keyboard down: back to exactly the page as it was
     await kbDown();
@@ -208,39 +208,6 @@ for (const [W, H] of SIZES) {
   });
 
   /* ================= line numbers ================= */
-  await step(`${T} line numbers: one per logical line, on the first visual row, scrolling with the text`, async () => {
-    await open("CALC1_T6B");
-    const ta = page.locator("#scratch");
-    const lines = ["first", "a long second line that wraps around onto a second and even a third visual row of the narrow box, at every phone width", "", "fourth after a blank line", "x"];
-    await ta.fill(lines.join("\n")); await page.waitForTimeout(250);
-    const r = await page.evaluate(() => {
-      const t = document.querySelector("#scratch"), cs = getComputedStyle(t), nums = [...document.querySelectorAll("#xbGutter .xb-nums > div")];
-      const lh = parseFloat(cs.lineHeight), pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom), tr = t.getBoundingClientRect();
-      return { texts: nums.map(n => n.textContent), heights: nums.map(n => n.getBoundingClientRect().height), tops: nums.map(n => n.getBoundingClientRect().top - tr.top + t.scrollTop), lh, pt, pb, sh: t.scrollHeight, hidden: document.querySelector("#xbGutter").getAttribute("aria-hidden"), ptr: getComputedStyle(document.querySelector("#xbGutter")).pointerEvents,
-        fs: getComputedStyle(document.querySelector("#xbGutter")).fontSize, tab: getComputedStyle(document.querySelector("#xbGutter")).fontVariantNumeric, ta: getComputedStyle(nums[0]).textAlign };
-    });
-    assert.deepEqual(r.texts, ["1", "2", "3", "4", "5"]);
-    assert.ok(r.heights[1] >= 2 * r.lh - 1, `wrapped line is one row high: ${r.heights[1]}`);
-    for (const i of [0, 2, 3, 4]) assert.ok(Math.abs(r.heights[i] - r.lh) < 1, `line ${i + 1} height ${r.heights[i]}`);
-    // independent check: the textarea's own layout height equals the gutter's rows + its padding
-    const sum = r.heights.reduce((a, b) => a + b, 0);
-    assert.ok(Math.abs(r.pt + sum + r.pb - r.sh) <= 1.5, `gutter rows ${sum} + padding ${r.pt + r.pb} != textarea scrollHeight ${r.sh}`);
-    // number i starts where line i's first row starts
-    let y = r.pt; r.heights.forEach((h, i) => { assert.ok(Math.abs(r.tops[i] - 2 - y) <= 1.5, `number ${i + 1} at ${r.tops[i]} expected ~${y}`); y += h; });
-    assert.equal(r.hidden, "true"); assert.equal(r.ptr, "none"); assert.ok(parseFloat(r.fs) <= 14); assert.match(r.tab, /tabular-nums/); assert.equal(r.ta, "right");
-    await shot("swap-line-numbers");
-    // scrolls with the text; follows an edit; empty box still shows 1
-    await ta.fill(Array.from({ length: 60 }, (_, i) => `l${i + 1}`).join("\n"));
-    await ta.evaluate(t => { t.scrollTop = 300; }); await page.waitForTimeout(80);
-    const s = await page.evaluate(() => { const t = document.querySelector("#scratch"), n = document.querySelector("#xbGutter .xb-nums"); return { st: t.scrollTop, tf: getComputedStyle(n).transform, count: n.children.length }; });
-    assert.equal(s.count, 60); assert.ok(s.st > 100 && s.tf === `matrix(1, 0, 0, 1, 0, ${-s.st})`, `gutter did not follow the scroll: ${s.st} ${s.tf}`);
-    await ta.fill(""); await page.waitForTimeout(150);
-    assert.equal(await page.locator("#xbGutter .xb-nums > div").count(), 1);
-    // Cut all clears it too
-    await ta.fill("a\nb"); await page.locator("#cut").click(); await page.waitForSelector("#cut.done"); await page.waitForTimeout(100);
-    assert.equal(await page.locator("#xbGutter .xb-nums > div").count(), 1);
-  });
-
   /* ================= long question: peek starts at the first line; pane shows the question from the start ================= */
   for (const code of ["PHYS_F3N", "CSCI26_CE3", "CSCI26_LQ1"]) {
     await step(`${T} swap: ${code}: the peek shows the question FROM ITS START; problem pane too; answer pinned`, async () => {
@@ -394,7 +361,9 @@ for (const [W, H] of SIZES) {
       await clean(`${code} idle`);
     });
   }
-  await step(`${T} mc row: TRUE/FALSE selected, wrong (struck), right (check where the arrow was); keys A-E and 1-5; roving focus`, async () => {
+  await step(`${T} mc row: 2 choices = one try (wrong locks, struck); 3 choices: keys A-E and 1-5, roving focus, wrong then right`, async () => {
+    const ids = () => page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.dataset.id));   // choices are shuffled: read the order
+    const foc = () => page.evaluate(() => document.activeElement.dataset.id);
     await open("CSCI26_TF3");
     await page.locator('.opt[data-id="f"]').click(); await page.waitForTimeout(250);
     await shot("mc-row-tf-selected");
@@ -403,25 +372,30 @@ for (const [W, H] of SIZES) {
     await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
     const w = await page.evaluate(() => { const o = document.querySelector(".opt.wrong"), c = getComputedStyle(o), t = getComputedStyle(o.querySelector(".txt")); return { dis: o.disabled, bs: c.borderStyle, td: t.textDecorationLine, col: c.borderColor, aria: o.getAttribute("aria-disabled") }; });
     assert.ok(w.dis && w.bs === "dashed" && /line-through/.test(w.td) && w.col === "rgb(255, 122, 122)", JSON.stringify(w));
-    assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "t", "focus did not move to the next live choice");
+    assert.equal(await page.locator(".opt:not([disabled])").count(), 0, "2-choice mc: one wrong answer must lock every choice");
     await shot("mc-row-tf-wrong");
-    await page.keyboard.press("a"); assert.equal(await page.locator('.opt[data-id="t"]').getAttribute("aria-checked"), "true");
-    await page.locator('.opt[data-id="t"]').click(); await page.keyboard.press("1");            // 1 = first choice = TRUE; toggling via key selects it
-    assert.equal(await page.locator('.opt[data-id="t"]').getAttribute("aria-checked"), "true");
+    await open("CSCI26_TFM");                                            // keys + arrows + roving (order is shuffled: follow the DOM)
+    const o = await ids();
+    assert.deepEqual([...o].sort(), ["f", "m", "t"]);
+    await page.locator(`.opt[data-id="${o[0]}"]`).focus();
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[1]);
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[2]);
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[0]);
+    await page.keyboard.press("3"); assert.equal(await page.locator(`.opt[data-id="${o[2]}"]`).getAttribute("aria-checked"), "true");
+    await page.keyboard.press("b"); assert.equal(await page.locator(`.opt[data-id="${o[1]}"]`).getAttribute("aria-checked"), "true");
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.tabIndex)), [-1, 0, -1]);
+    await shot("mc-row-tfm-selected");
+    const pick = async id => { const l = page.locator(`.opt[data-id="${id}"]`); await l.click(); if (await l.getAttribute("aria-checked") !== "true") await l.click(); };   // a tap on the selected one deselects
+    await pick("t");                                                     // 3 choices: a wrong answer leaves a second try
     await page.locator('.ch[data-id="t"] .send').click();
+    await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
+    assert.notEqual(await foc(), "t", "focus did not move to a live choice");
+    await pick("m");
+    await page.locator('.ch[data-id="m"] .send').click();
     await page.waitForSelector(".opt.right"); await page.waitForTimeout(250);
     const r = await page.evaluate(() => { const o = document.querySelector(".opt.right"), b = o.querySelector(".badge").getBoundingClientRect(), r = o.getBoundingClientRect(), t = o.querySelector(".txt").getBoundingClientRect(); return { br: b.right, or: r.right, bl: b.left, tr: t.right, col: getComputedStyle(o).borderColor, bd: getComputedStyle(o.querySelector(".badge")).display }; });
     assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(95, 211, 148)", JSON.stringify(r));
     await shot("mc-row-tf-right");
-    await open("CSCI26_TFM");                                            // keys + arrows + roving
-    await page.locator('.opt[data-id="t"]').focus();
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "f");
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "m");
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "t");
-    await page.keyboard.press("3"); assert.equal(await page.locator('.opt[data-id="m"]').getAttribute("aria-checked"), "true");
-    await page.keyboard.press("b"); assert.equal(await page.locator('.opt[data-id="f"]').getAttribute("aria-checked"), "true");
-    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.tabIndex)), [-1, 0, -1]);
-    await shot("mc-row-tfm-selected");
   });
   await step(`${T} mc row: falls back when the width shrinks, returns when it grows (measured, not guessed)`, async () => {
     await open("CSCI26_TFM");
@@ -444,8 +418,7 @@ for (const [W, H] of SIZES) {
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_N6B", null, { timeout: 8000 });
     assert.ok(await page.locator("#qnav").isVisible(), "nav not shown");
-    assert.equal(await page.locator("#xbGutter .xb-nums").count(), 1, "a second problem load left a second gutter");
-    assert.equal(await page.locator("#xbGutter .xb-nums > div").count(), 1);
+    assert.equal(await page.locator("#scratch").count(), 1, "a second problem load left a second scratchpad");
     const st = () => page.evaluate(() => { const n = document.querySelector("#qnav"), c = getComputedStyle(n), ta = document.querySelector("#scratch").getBoundingClientRect(), fz = document.querySelector("#freeze").getBoundingClientRect(); return { op: +c.opacity, vis: c.visibility, ty: c.transform, taTop: ta.top, fzTop: fz.top, y: scrollY, off: document.documentElement.classList.contains("bar-off"), qr: n.getBoundingClientRect().bottom }; });
     await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(100);
     const a = await st();

@@ -1,5 +1,6 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers, code (columns line up) */
   --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
@@ -43,7 +44,7 @@ button:disabled { cursor: default; }
 .code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
@@ -184,12 +185,18 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: 3rem; margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: inherit; font-size: 1.125rem; font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--mono); font-size: 1.125rem; font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
 .ff.ok { border-color: var(--ok); }
 .ff.done input { color: var(--ok); }
+/* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
+.q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
+.q.closed .opt:not(.right), .q.closed .ff:not(.ok) { opacity: 0.5; }
+.q.closed .ff:hover { border-color: var(--edge); }
+.q.closed .ff.ok { border-color: var(--ok); }
+.q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
 .how code { color: var(--ink); }
@@ -230,19 +237,10 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
    stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
-.xb-field { --gw: 2.25rem; position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1.125rem; }
-/* line numbers (ExplainBox.lineNumbers): hint colour, small, tabular, right-aligned in a gutter over the textarea's left padding.
-   Each number sits on the first row of its logical line; the numbers scroll with the text. Decorative: aria-hidden, no pointer events. */
-.xb-gutter {
-  position: absolute; z-index: 1; left: 2px; top: 2px; bottom: 2px; width: var(--gw); overflow: hidden; pointer-events: none;
-  border-radius: 4px 0 0 4px; color: var(--hint); font: 400 0.8125rem/1.6 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-  font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none;
-}
-.xb-nums { will-change: transform; }
-.xb-nums > div { box-sizing: border-box; padding: 0 0.5rem 0 0; text-align: right; line-height: 1.8rem; overflow: hidden; }   /* 1.8rem = the textarea's 1.6 x 18px line */
-.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); padding-left: calc(var(--gw) + 0.5rem); transition: none; }
-/* free padding 28px: last line (28.8px) + 28px >= button (48) + inset (6), so only the LAST line can reach the button */
-.xb-field textarea.xb-free { padding-bottom: 1.75rem; }
+.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1rem; }   /* 16px: smaller, still no iOS focus zoom */
+.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
+/* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
+.xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
 .xb-cut { right: calc(6px + 48px + 6px + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
 #copy.done, #cut.done { color: var(--ok); border-color: var(--ok); }
@@ -275,8 +273,7 @@ html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
 .btn-tgl:hover { background: var(--sheet); }
 .btn-tgl .ico { position: relative; color: var(--muted); transition: color .22s ease, transform .22s ease; }
 .btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--c1); }
-.btn-tgl[data-pane="scratch"]::before { transform: translateX(72px); }
-.btn-tgl[data-pane="scratch"] .t-swap { transform: rotate(180deg); }
+.btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
 
 html.swap { overflow: hidden; overscroll-behavior: none; }
 html.swap body { min-height: var(--swap-doc-h, 100dvh); }            /* keeps the page's scroll position while <main> leaves the flow */
