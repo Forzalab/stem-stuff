@@ -329,8 +329,13 @@ function select(o) {
     x.parentElement.querySelector(".send").hidden = !on;
   }
 }
+/* #q outlives every problem (only its innerHTML changes), so wire it ONCE: a listener per load stacked up and one tap
+   ran select() twice (select, then "tap again = deselect"), leaving the choice with only its hover border. */
 function wireMC(q) {
+  if (q.dataset.mcWired) return;
+  q.dataset.mcWired = "1";
   q.addEventListener("click", e => {
+    if (!S || S.prob.type !== "mc") return;
     if (S.finished) return;
     const send = e.target.closest(".send");
     if (send) { submitMC(); return; }
@@ -339,7 +344,7 @@ function wireMC(q) {
     roving(o);
   });
   q.addEventListener("keydown", e => {
-    const o = e.target.closest(".opt"); if (!o || S.finished) return;
+    const o = e.target.closest(".opt"); if (!o || !S || S.finished) return;
     const live = opts().filter(x => !x.disabled), i = live.indexOf(o);
     const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); select(n); };
     if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); move(1); }
