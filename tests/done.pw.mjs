@@ -46,7 +46,8 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
+const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
+  && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout: 8000 });
 const go = async (page, code) => { await page.goto("about:blank"); await page.goto(`${BASE}/#${code}`); await opened(page, code); };
 const fb = page => page.waitForSelector("#fb .verdict", { timeout: 4000 }).then(() => page.textContent("#fb"));
 async function typed(page, v) { await page.fill("#ans", v); await page.click("#ansGo"); await fb(page); await page.waitForTimeout(150); }

@@ -5,7 +5,23 @@ Tony (brain, Sep 29 ~01:00-01:05 PT):
 - question list: crossed out + greyed (NOT disabled), tick for correct, one X per wrong try;
 - "for the XXs, cross them out too, bcs technically u cannot answer that anymore": crossed out = can't be answered any more. One X with a try left stays un-crossed.
 
-Status: **design only**. Mockups below; nothing is built until Tony picks.
+Status: **built** (Tony approved variant A, tries.json, and re-showing the old hint). 2-choice = 1 try came from main (#10).
+
+## As built (differences from the plan below)
+
+- Record: `{ v: 2, units: [{ x, done, hint, gen, sigs? }], x, done, tries, hints }`. One unit per problem, **one per part for a
+  multi** (main #17 grades each part alone). Top level feeds the list: `x` = all wrong tries, `done` = `correct` when every
+  unit is right, `out` when every unit is closed and one isn't. `sigs` (upload only) are the wrong answers' signatures so
+  grading resumes after a reload (repeats still don't count).
+- `hint` is the Cluck hint for the student's own last wrong answer; reopening a question (or part) with tries used shows it again.
+- `/state/<CODE>` returns `{wrong, done, gen}`, or `{parts: [...]}` for a multi. `/check` replies carry `gen`.
+- tries.json: `{ "gen": N, "tries": { "<sid> <CODE>": {...}, "<sid> <CODE> <part>": {...} } }`, written atomically after
+  every graded try; `$STEM_TRIES` overrides the path (tests). Blocked from serving, git-ignored; deploy.sh's checkout keeps it.
+- Code: `offline.js` (store `done`, DB v2, `doneGet/donePut/doneDrop`, `drill:state`), `app.js` (`saveDone`, `paint`,
+  `syncServer`, `seedLocal`), `nav.js`/`nav.css` (marks), `serve.py` (`state`, `_load_tries/_save_tries`, gen).
+- Tests: `tests/done.pw.mjs` (starts and restarts its own server), `tests/test_serve.py` (`Persist`, `/state`).
+  render/swap tests clear cookies per page (a new sid = fresh server tries, now that tries outlive a page).
+
 
 ## 1. What a question's state is
 

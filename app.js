@@ -574,7 +574,7 @@ function repaint(rec) {
 async function syncServer(mine) {
   const st = doneStore(); if (!st || !mine || off()) return;
   let s;
-  try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) return; s = await r.json(); }
+  try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) { r.text().catch(() => {}); return; } s = await r.json(); }   // drain a 404 so the request completes
   catch { return; }                                            // unreachable or slow: the cache stands
   if (S !== mine || busy) return;
   const p = mine.prob, max = maxTries(p), c = st.doneGet(mine.code), us = units(c, p), ss = s.parts || [s];
