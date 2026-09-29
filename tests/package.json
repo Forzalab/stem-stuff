@@ -1,0 +1,11 @@
+{
+  "name": "stem-stuff-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "katex": "0.16.9",
+    "mathjs": "12.4.2"
+  }
+}

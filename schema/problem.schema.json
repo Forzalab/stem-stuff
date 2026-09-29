@@ -1,0 +1,2008 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "problem.schema.json",
+  "title": "stem-stuff drill problem. One file per code: p/<CODE>.json",
+  "type": "object",
+  "required": [
+    "code",
+    "type",
+    "answer",
+    "body"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$"
+    },
+    "type": {
+      "enum": [
+        "num",
+        "expr"
+      ]
+    },
+    "answer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "math.js syntax (ln ok, e^(-6), pi, sqrt(), sin(30 deg)) or exactly \"dne\""
+    },
+    "var": {
+      "type": "string",
+      "pattern": "^[a-z]$",
+      "default": "x",
+      "description": "expr only: the variable in answer"
+    },
+    "points": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "number"
+      },
+      "description": "expr only: sample values of var"
+    },
+    "tol": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 0.05,
+      "default": 1e-06,
+      "description": "Relative tolerance. ~0.01 for physics."
+    },
+    "body": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/block"
+      }
+    }
+  },
+  "if": {
+    "properties": {
+      "type": {
+        "const": "expr"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "points"
+    ]
+  },
+  "else": {
+    "properties": {
+      "points": false,
+      "var": false
+    }
+  },
+  "$defs": {
+    "num": {
+      "type": [
+        "number",
+        "string"
+      ],
+      "minLength": 1,
+      "description": "Number, or math.js constant expression like \"pi/3\""
+    },
+    "pt": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/num"
+        },
+        {
+          "$ref": "#/$defs/num"
+        }
+      ],
+      "items": false,
+      "minItems": 2
+    },
+    "range": {
+      "$ref": "#/$defs/pt"
+    },
+    "expr": {
+      "type": "string",
+      "minLength": 1,
+      "description": "math.js expression in x (fn/shade/tangent) or t (param)"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "Plain text with optional $..$ KaTeX"
+    },
+    "color": {
+      "enum": [
+        "c1",
+        "c2",
+        "c3",
+        "ink",
+        "muted",
+        "ok",
+        "bad",
+        "mark"
+      ],
+      "description": "Token name; never hex"
+    },
+    "anchor": {
+      "enum": [
+        "c",
+        "n",
+        "ne",
+        "e",
+        "se",
+        "s",
+        "sw",
+        "w",
+        "nw"
+      ],
+      "description": "Which side of the point the label sits on"
+    },
+    "md": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "Lines, joined with \\n"
+        }
+      ]
+    },
+    "text": {
+      "type": "object",
+      "required": [
+        "type",
+        "md"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "text"
+        },
+        "md": {
+          "$ref": "#/$defs/md"
+        }
+      }
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "description": "Graph block",
+      "properties": {
+        "kind": {
+          "enum": [
+            "cartesian",
+            "scene",
+            "bars"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "cartesian"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/kind_cartesian"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "scene"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/kind_scene"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "bars"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/kind_bars"
+          }
+        }
+      ]
+    },
+    "block": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "graph"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "graph"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/graph"
+          }
+        }
+      ]
+    },
+    "cmark": {
+      "type": "object",
+      "required": [
+        "mark"
+      ],
+      "description": "Cartesian mark",
+      "properties": {
+        "mark": {
+          "enum": [
+            "fn",
+            "param",
+            "shade",
+            "tangent",
+            "vline",
+            "hline",
+            "point",
+            "seg",
+            "arrow",
+            "arc",
+            "poly",
+            "text"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "fn"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_fn"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "param"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_param"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "shade"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_shade"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "tangent"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_tangent"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "vline"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_vline"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "hline"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_hline"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "point"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_point"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "seg"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_seg"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "arrow"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_arrow"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "arc"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_arc"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "poly"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_poly"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/c_text"
+          }
+        }
+      ]
+    },
+    "smark": {
+      "type": "object",
+      "required": [
+        "mark"
+      ],
+      "description": "Scene mark",
+      "properties": {
+        "mark": {
+          "enum": [
+            "body",
+            "spring",
+            "pulley",
+            "rope",
+            "surface",
+            "incline",
+            "force",
+            "path",
+            "pivot",
+            "axes",
+            "point",
+            "seg",
+            "arrow",
+            "arc",
+            "poly",
+            "text"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "body"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_body"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "spring"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_spring"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "pulley"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_pulley"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "rope"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_rope"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "surface"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_surface"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "incline"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_incline"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "force"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_force"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "path"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_path"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "pivot"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_pivot"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "axes"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_axes"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "point"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_point"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "seg"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_seg"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "arrow"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_arrow"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "arc"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_arc"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "poly"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_poly"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mark": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/s_text"
+          }
+        }
+      ]
+    },
+    "kind_cartesian": {
+      "type": "object",
+      "required": [
+        "type",
+        "kind",
+        "alt",
+        "x",
+        "y",
+        "marks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "graph"
+        },
+        "kind": {
+          "const": "cartesian"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 10,
+          "description": "One sentence describing the figure. Must NOT give away the answer. Screen readers + copy bundle."
+        },
+        "x": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "$ref": "#/$defs/num"
+            },
+            "max": {
+              "$ref": "#/$defs/num"
+            },
+            "step": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Tick spacing. 0 = no ticks. Omit = auto."
+            },
+            "label": {
+              "$ref": "#/$defs/label"
+            },
+            "ticks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "at",
+                  "label"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "at": {
+                    "$ref": "#/$defs/num"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/label"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "y": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "$ref": "#/$defs/num"
+            },
+            "max": {
+              "$ref": "#/$defs/num"
+            },
+            "step": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Tick spacing. 0 = no ticks. Omit = auto."
+            },
+            "label": {
+              "$ref": "#/$defs/label"
+            },
+            "ticks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "at",
+                  "label"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "at": {
+                    "$ref": "#/$defs/num"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/label"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "axes": {
+          "type": "boolean",
+          "default": true
+        },
+        "grid": {
+          "type": "boolean",
+          "default": true
+        },
+        "equal": {
+          "type": "boolean",
+          "default": false,
+          "description": "1:1 scale. Needed for true angles/arcs."
+        },
+        "marks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/cmark"
+          }
+        }
+      }
+    },
+    "kind_scene": {
+      "type": "object",
+      "required": [
+        "type",
+        "kind",
+        "alt",
+        "marks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "graph"
+        },
+        "kind": {
+          "const": "scene"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 10,
+          "description": "One sentence describing the figure. Must NOT give away the answer. Screen readers + copy bundle."
+        },
+        "marks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/smark"
+          }
+        }
+      }
+    },
+    "kind_bars": {
+      "type": "object",
+      "required": [
+        "type",
+        "kind",
+        "alt",
+        "groups"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "graph"
+        },
+        "kind": {
+          "const": "bars"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 10,
+          "description": "One sentence describing the figure. Must NOT give away the answer. Screen readers + copy bundle."
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/label"
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "bars"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "$ref": "#/$defs/label"
+              },
+              "bars": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "label",
+                    "value"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "label": {
+                      "$ref": "#/$defs/label"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "color": {
+                      "$ref": "#/$defs/color"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "c_fn": {
+      "type": "object",
+      "required": [
+        "mark",
+        "y"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "fn"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "y": {
+          "$ref": "#/$defs/expr"
+        },
+        "domain": {
+          "$ref": "#/$defs/range"
+        },
+        "labelAt": {
+          "$ref": "#/$defs/num"
+        }
+      }
+    },
+    "c_param": {
+      "type": "object",
+      "required": [
+        "mark",
+        "x",
+        "y",
+        "t"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "param"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "x": {
+          "$ref": "#/$defs/expr"
+        },
+        "y": {
+          "$ref": "#/$defs/expr"
+        },
+        "t": {
+          "$ref": "#/$defs/range"
+        },
+        "labelAt": {
+          "$ref": "#/$defs/num"
+        }
+      }
+    },
+    "c_shade": {
+      "type": "object",
+      "required": [
+        "mark",
+        "f",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "shade"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "f": {
+          "$ref": "#/$defs/expr"
+        },
+        "g": {
+          "$ref": "#/$defs/expr",
+          "default": "0"
+        },
+        "from": {
+          "$ref": "#/$defs/num"
+        },
+        "to": {
+          "$ref": "#/$defs/num"
+        },
+        "var": {
+          "enum": [
+            "x",
+            "y"
+          ],
+          "default": "x",
+          "description": "y: f and g are x = f(y), shade between them for y in [from, to]"
+        }
+      }
+    },
+    "c_tangent": {
+      "type": "object",
+      "required": [
+        "mark",
+        "of",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "tangent"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "of": {
+          "$ref": "#/$defs/expr"
+        },
+        "at": {
+          "$ref": "#/$defs/num"
+        },
+        "len": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "point": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "c_vline": {
+      "type": "object",
+      "required": [
+        "mark",
+        "x"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "vline"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "x": {
+          "$ref": "#/$defs/num"
+        }
+      }
+    },
+    "c_hline": {
+      "type": "object",
+      "required": [
+        "mark",
+        "y"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "hline"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "y": {
+          "$ref": "#/$defs/num"
+        }
+      }
+    },
+    "c_point": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "point"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "open": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "c_seg": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "seg"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        }
+      }
+    },
+    "c_arrow": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "arrow"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        },
+        "both": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "c_arc": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "r",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "arc"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "r": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "from": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x"
+        },
+        "to": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x"
+        },
+        "arrow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Arrowhead at the 'to' end (rotation sense)"
+        }
+      }
+    },
+    "c_poly": {
+      "type": "object",
+      "required": [
+        "mark",
+        "pts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "poly"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "pts": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/pt"
+          }
+        },
+        "fill": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "c_text": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "text"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "text": {
+          "$ref": "#/$defs/label"
+        }
+      }
+    },
+    "s_body": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "shape"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "body"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "shape": {
+          "enum": [
+            "box",
+            "dot",
+            "disk",
+            "ring",
+            "rod"
+          ]
+        },
+        "w": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "h": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "r": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "angle": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x",
+          "default": 0
+        },
+        "fill": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "s_spring": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "spring"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        },
+        "coils": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 30,
+          "default": 8
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.3
+        }
+      }
+    },
+    "s_pulley": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "r"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "pulley"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "r": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "mount": {
+          "$ref": "#/$defs/pt",
+          "description": "Draws a bracket from the axle to this point (ceiling/wall). Omit for a movable pulley."
+        }
+      }
+    },
+    "s_rope": {
+      "type": "object",
+      "required": [
+        "mark",
+        "pts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "rope"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "pts": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/pt"
+          }
+        }
+      }
+    },
+    "s_surface": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "surface"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        },
+        "side": {
+          "enum": [
+            "right",
+            "left"
+          ],
+          "default": "right",
+          "description": "Hatch side, looking from 'from' to 'to'. Floor drawn left→right: right = hatch below."
+        }
+      }
+    },
+    "s_incline": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "base",
+        "angle"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "incline"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt",
+          "description": "Vertex holding the angle"
+        },
+        "base": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "angle": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 90
+        },
+        "flip": {
+          "type": "boolean",
+          "default": false,
+          "description": "Rise to the left instead of the right"
+        }
+      }
+    },
+    "s_force": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "angle",
+        "len"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "force"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "angle": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x"
+        },
+        "len": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "frame": {
+          "type": "number",
+          "default": 0,
+          "description": "Basis rotation in degrees; angle is measured in this tilted frame (e.g. 30 = incline axes)"
+        }
+      }
+    },
+    "s_path": {
+      "type": "object",
+      "required": [
+        "mark"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "path"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "pts": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/pt"
+          }
+        },
+        "x": {
+          "$ref": "#/$defs/expr"
+        },
+        "y": {
+          "$ref": "#/$defs/expr"
+        },
+        "t": {
+          "$ref": "#/$defs/range"
+        },
+        "domain": {
+          "$ref": "#/$defs/range"
+        },
+        "fn": {
+          "$ref": "#/$defs/expr"
+        },
+        "labelAt": {
+          "$ref": "#/$defs/num"
+        },
+        "arrow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Arrowhead at the end"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "pts"
+          ]
+        },
+        {
+          "required": [
+            "fn",
+            "domain"
+          ]
+        },
+        {
+          "required": [
+            "x",
+            "y",
+            "t"
+          ]
+        }
+      ]
+    },
+    "s_pivot": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "pivot"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "size": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "s_axes": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "axes"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "angle": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x",
+          "default": 0
+        },
+        "len": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "x": {
+          "$ref": "#/$defs/label"
+        },
+        "y": {
+          "$ref": "#/$defs/label"
+        }
+      }
+    },
+    "s_point": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "point"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "open": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "s_seg": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "seg"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        }
+      }
+    },
+    "s_arrow": {
+      "type": "object",
+      "required": [
+        "mark",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "arrow"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "from": {
+          "$ref": "#/$defs/pt"
+        },
+        "to": {
+          "$ref": "#/$defs/pt"
+        },
+        "both": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "s_arc": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "r",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "arc"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "r": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "from": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x"
+        },
+        "to": {
+          "type": "number",
+          "description": "Degrees, counterclockwise from +x"
+        },
+        "arrow": {
+          "type": "boolean",
+          "default": false,
+          "description": "Arrowhead at the 'to' end (rotation sense)"
+        }
+      }
+    },
+    "s_poly": {
+      "type": "object",
+      "required": [
+        "mark",
+        "pts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "poly"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "pts": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/pt"
+          }
+        },
+        "fill": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "s_text": {
+      "type": "object",
+      "required": [
+        "mark",
+        "at",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mark": {
+          "const": "text"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "dash": {
+          "type": "boolean",
+          "default": false
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "at": {
+          "$ref": "#/$defs/pt"
+        },
+        "text": {
+          "$ref": "#/$defs/label"
+        }
+      }
+    }
+  }
+}
