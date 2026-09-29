@@ -32,7 +32,7 @@
     "hints": {
       "type": "array", "maxItems": 10,
       "items": { "type": "object", "required": ["t", "n", "kind"], "additionalProperties": false,
-        "properties": { "t": { "$ref": "#/$defs/t" }, "n": { "type": "integer", "minimum": 1 }, "kind": { "type": "string", "pattern": "^[a-z]+$" } } }
+        "properties": { "t": { "$ref": "#/$defs/t" }, "n": { "type": "integer", "minimum": 1 }, "kind": { "type": "string", "pattern": "^[a-z]+(-[a-z]+)*$", "description": "error type from MC.md section 6, or nudge" } } }
     },
     "explain": { "type": "string" },
     "hist": {

@@ -21,7 +21,7 @@ The Copy button puts one JSON object on the clipboard. It replaces v1's plain "c
     {"t":140,"a":"12","v":"correct"}
   ],
   "hints": [
-    {"t":100,"n":1,"kind":"concept"}
+    {"t":95,"n":1,"kind":"algebra"}
   ],
   "explain": "plugging in 2 gives 0/0 so factor x^3-8 = (x-2)(x^2+2x+4), cancel, plug in: 4+4+4 = 12",
   "hist": { "n": 6, "kept": 6, "edits": [
@@ -32,7 +32,7 @@ The Copy button puts one JSON object on the clipboard. It replaces v1's plain "c
 }
 ```
 
-Read it as: opened at 20:00, started writing at 0:20, typed 4 at 1:35 (wrong), took hint 1 at 1:40, typed 12 at 2:20 (correct).
+Read it as: opened at 20:00, started writing at 0:20, typed 4 at 1:35 (wrong, Cluck diagnosed `algebra`), typed 12 at 2:20 (correct).
 
 ## Fields
 
@@ -44,7 +44,7 @@ Read it as: opened at 20:00, started writing at 0:20, typed 4 at 1:35 (wrong), t
 | `copied` | when Copy was pressed |
 | `final` | the last try `{a, l?, v}`, or `null` |
 | `tries[]` | every `/check`, in order: `a` typed text (MC: choice text), `c` MC choice id, `l` letter shown, `v` verdict `correct / wrong / invalid / locked / egg` |
-| `hints[]` | `{t, n, kind}`: hint number and kind (`MC.md` §6). Not the hint text (server-only). |
+| `hints[]` | `{t, n, kind}`: `n` = which attempt produced the hint, `kind` = diagnosed error type (`MC.md` §6), or `nudge` if unmatched. Not the hint text. |
 | `explain` | explanation box text at copy time, full, never cut |
 | `hist` | explanation edit history as diffs (below) |
 
@@ -66,4 +66,4 @@ Formatting: `stringify()` prints one try/hint/edit per line so the paste is read
 ## Contract with the explain box (other agent)
 
 - `getHistory()` returns snapshots oldest first, `{t: epoch ms, text: string}`. Snapshot on pause (~2 s idle) or blur, not every keystroke.
-- The page keeps `start`, `tries`, `hints` in memory for the current problem (they come back from `/check` and `/hint`), and calls `build({code, start, tries, hints, explain, history})`, then `stringify()`, then `navigator.clipboard.writeText`.
+- The page keeps `start`, `tries`, `hints` in memory for the current problem (they come back from `/check`; a wrong verdict's `error` becomes a `hints[]` entry), and calls `build({code, start, tries, hints, explain, history})`, then `stringify()`, then `navigator.clipboard.writeText`.

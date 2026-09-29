@@ -7,7 +7,7 @@ Goal: McKay can't get answers by guessing, scripting, or reading files. This is 
 - `p/<CODE>.json` stays public (fetched when the code is typed) but **has no answer** (see `SCHEMA-SPLIT.md`).
 - `k/<CODE>.json` holds answer, tol, points, MC correct id, hints, misconception feedback. Never served.
 - `serve.py` serves an **allowlist** (`index.html`, `p/*.json`, static assets), not a blocklist like v1. Everything else is 404, including `k/`, `log/`, `serve.py`.
-- Endpoints: `POST /check`, `POST /hint` (JSON in/out, shapes in `MC.md` §7). Responses never include the answer, and take the same time whether right or wrong.
+- Endpoints: `POST /check` (JSON in/out; hints come back with wrong verdicts, no `/hint`, shapes in `MC.md` §7). Responses never include the answer, and take the same time whether right or wrong.
 
 ## 2. Who is this? (cookie, then IP, then fingerprint)
 
@@ -23,7 +23,7 @@ Written as `c:<first 8 of sid>|ip:<ip>|fp:<fp>` in logs. Matching rule: two requ
 
 ## 3. Limits (not trips)
 
-- Per problem+user: 2 hints, 2 wrong tries (MC: distinct choices; freeform: distinct values, parse errors free). See `MC.md` §5.
+- Per problem+user: 2 attempts (MC: distinct choices; freeform: distinct values, parse errors free). Each wrong attempt returns the hint for that answer; no separate hint cap. See `MC.md` §5.
 - After the limit: `verdict: "locked"`, UI says "ask Tony, code X". Locking writes an incident with `status: "locked"` so Tony can reset it the same way.
 
 ## 4. Checks that trip (the easter egg)
@@ -46,7 +46,7 @@ On trip, the server replies once:
 ```
 
 The UI shows the message as-is (no celebration, no sock), with the code.
-After that, **no security for that problem+user**: unlimited checks, no rate limit, no further trips. Grading still works normally, the answer is still never sent. (Open question: do hints also become unlimited? Default: no, still 2.)
+After that, **no security for that problem+user**: unlimited checks, no rate limit, no further trips. Grading still works normally, the answer is still never sent. Each further wrong answer still gets its matching Cluck hint.
 
 ## 5. Incident log and reset
 
@@ -58,7 +58,7 @@ File: `log/incidents.jsonl`, one JSON object per line, one line per problem+user
 
 - `status`: `locked` (hit the limit) or `tripped` (egg shown, security off).
 - `tries`: what was submitted, for Tony's curiosity.
-- Tries/hint counters live in `log/state.json` (server-owned, don't edit).
+- Attempt counters live in `log/state.json` (server-owned, don't edit).
 
 **Reset:** Tony deletes the line and saves. The server re-reads the file when its mtime changes; for any problem+user whose line disappeared it clears tries, hints and the trip flag in `state.json`. Next visit is a fresh start with full security. Other users/problems untouched.
 Writes: append under a lock file, rewrite through a temp file + rename, so a hand edit and a server write can't interleave badly (worst case Tony's delete is re-done once; the server logs a warning if a parse fails and keeps the old copy as `incidents.jsonl.bad`).

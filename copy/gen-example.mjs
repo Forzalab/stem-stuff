@@ -7,7 +7,7 @@ const drafts = ["plug in", "plug in 2 gives 0/0", "plug in 2 gives 0/0 so factor
 console.log(stringify(build({
   code: "CALC1-T6B", start: t0,
   tries: [{ t: s(95), a: "4", v: "wrong" }, { t: s(140), a: "12", v: "correct" }],
-  hints: [{ t: s(100), n: 1, kind: "concept" }],
+  hints: [{ t: s(95), n: 1, kind: "algebra" }],
   explain: drafts.at(-1),
   history: drafts.map((text, k) => ({ t: s(20 + k * 30), text })),
 }, s(400))));

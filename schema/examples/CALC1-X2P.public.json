@@ -1,0 +1,11 @@
+{
+  "code": "CALC1-X2P", "type": "mc",
+  "body": [ { "type": "text", "md": "Solve for $x$: $$x+2=11$$" } ],
+  "choices": [
+    { "id": "a", "md": "$13$" },
+    { "id": "b", "md": "$9$" },
+    { "id": "c", "md": "$\\dfrac{11}{2}$" },
+    { "id": "d", "md": "$-9$" },
+    { "id": "e", "md": "$22$" }
+  ]
+}

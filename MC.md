@@ -12,7 +12,7 @@ Design for the `mc` problem type and for hints on every type. Grading and hints 
 | PrairieLearn `pl-multiple-choice` | `order="random"` default; `number-answers` draws a subset from a larger pool of wrong answers | Per variant; new variant after tries | Points decrease per attempt on exams | Per-choice `feedback` |
 | Gradescope online assignments | Fixed | Resubmit until deadline | Rubric | No per-try verdict unless released |
 
-Takeaways we adopt: Moodle's "hints are tied to tries" model, Canvas's lockable positions, PrairieLearn's distractor pool, WeBWorK's per-student seed. We do not need grades or penalties: this is a drill site, not a gradebook.
+Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieLearn per-choice feedback (our hints are keyed to the specific wrong answer), Canvas's lockable positions, PrairieLearn's distractor pool, WeBWorK's per-student seed. We do not need grades or penalties: this is a drill site, not a gradebook.
 
 ## 2. Problem shape (public file)
 
@@ -42,52 +42,66 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model, Canvas's lockable 
 ## 4. UI
 
 - Five full-width rows, `A`–`E` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`E` keys jump).
-- One **Check** button. Nothing is graded on click of a row.
-- A wrong pick is struck through and disabled (can't pick it twice; the attempt count is for distinct picks).
-- Hint button beside Check shows `Hint (2 left)`. Hints appear in a stacked list under the problem, oldest first, each labeled with its kind.
-- Correct: existing v1 celebration. Out of tries: card says "out of tries: ask Tony, code CALC1-M3Q". The answer is **not** revealed (Tony explains it).
+- One **Check** button. Nothing is graded on click of a row. There is **no Hint button**: hints come only from wrong attempts.
+- A wrong pick is struck through and disabled, and Cluck's hint for that pick appears under the problem (duck badge, labeled with the error type, e.g. `sign`).
+- Correct: existing v1 celebration. Out of attempts: card says "out of tries: ask Tony, code CALC1-M3Q". The answer is **not** revealed (Tony explains it).
 
-## 5. Attempt and hint rules (recommended default)
-
-Tony: "MANY hint types, 2 times only." Ambiguous. Recommended reading, Moodle-style:
+## 5. Attempt rules (Tony: "2 times only" = 2 attempts)
 
 | | MC | Freeform (`num`, `expr`) |
 |---|---|---|
-| Hints | 2 per problem | 2 per problem |
-| Checks | 2 wrong picks, then locked | 2 wrong **distinct** answers, then locked (see below) |
-| Auto hint | a wrong try unlocks (does not force) the next hint | same |
+| Attempts | 2 | 2 **distinct** answers |
+| Hint | each wrong attempt returns the hint for **that** wrong answer | same; unmatched wrong answer gets a generic nudge |
+| After 2nd wrong | hint shown, then locked | same |
 
-- Why 2 tries on MC: with 5 options, 2 tries is already a 40% blind-guess win. 3 tries would be 60%, which is guessing, not math.
-- Freeform "distinct": answers that are equivalent (same value within tol, or same `expr` samples) count once. Parse errors ("can't read `2x+`") do **not** count; they're free.
-- Locked means: server returns `locked`, UI shows "ask Tony". Tony resets by deleting the entry (SECURITY.md §5).
-- **Open question for Tony:** is "2 times" 2 hints, 2 tries, or both? The table above does both. Alternative: 2 hints and 3 tries (Moodle's tries = hints + 1).
+- No separate hint cap: at most one hint per wrong attempt, so at most 2 per problem.
+- With 5 options, 2 attempts is already a 40% blind-guess win; that's the ceiling.
+- Freeform "distinct": answers equal within `tol` (or same `expr` samples) count once. Parse errors ("can't read `2x+`") don't count.
+- Locked: server returns `locked`, UI shows "ask Tony". Tony resets by deleting the incident line (`SECURITY.md` §5).
 
-## 6. Hint catalog
+## 6. Hints are keyed to the wrong answer
 
-Each hint in the key has a `kind`. The author lists them in order; the server hands out the next one. Kinds, from lightest to heaviest:
+Tony: "hint is spec by answer choices." A hint diagnoses the specific mistake behind the answer the student gave.
 
-| kind | what it gives | example |
+Example problem: solve $x+2=11$ (answer $9$).
+
+| wrong answer | error type | why someone gets it |
 |---|---|---|
-| `nudge` | A question back, no math | "What happens to the fraction at $x=2$ if you just plug in?" |
-| `concept` | Names the idea | "This is a $0/0$ form: factor." |
-| `formula` | A formula to use | "$a^3-b^3=(a-b)(a^2+ab+b^2)$" |
-| `step` | The first line of work | "$\\dfrac{x^3-8}{x-2}=x^2+2x+4$ for $x\\neq2$" |
-| `check` | A way to check yourself | "Your answer should agree with the table." |
-| `units` | Units / dimension sanity (PHYS) | "An acceleration has units m/s²; does yours?" |
-| `range` | Magnitude only | "The answer is between 10 and 15." |
-| `sign` | Direction/sign only | "It's negative: the block slows down." |
-| `eliminate` | MC only: strike 2 wrong choices | server picks 2 distractors, never the locked one |
-| `scaffold` | Code of an easier warm-up problem | "Try CALC1-A3F first." (v1 scaffold map) |
-| `figure` | Highlights marks in the graph | `{ "kind":"figure", "marks":[2,4] }` (index in the graph's `marks`) |
-| `misconception` | Feedback tied to the last wrong answer | per-distractor text in MC; per-trap value in freeform (`"trap":"4", "md":"You canceled $x-2$ wrong"`) |
+| $13$ | `sign` | added 2 instead of subtracting |
+| $11/2$ | `op-swap` | treated $+2$ as $\times 2$ and divided |
+| $-9$ | `sign` | flipped the sign of the result |
+| anything else | (none) | generic nudge |
 
-`misconception` is special: it is shown **with the wrong verdict** and does not use a hint slot, because it is feedback on what they typed, not new information. Every MC distractor should have one. Freeform traps come from v1's `key.md` "traps".
+- **MC:** every distractor maps to one error type + one hint.
+- **Freeform:** `k/` has a `wrong` list of known wrong answers (a value compared within `tol`, or a regex on the typed text) → error type + hint. A wrong answer that matches nothing gets the problem's `nudge` (or the server's default nudge).
+
+### Error types (enum)
+`sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components` (vector/trig decomposition), `misread`, `other`. Add to the enum rather than overusing `other`.
+
+### Voice: Cluck
+Hints are said by **Cluck**, a terse, quacking duck professor. Rules:
+- Opens with "QUACK." (or "Quack.").
+- One pointed question or one action. Names the diagnosed error. Never gives the answer or the next number.
+- Socratic: make them look at their own step.
+- Max ~25 words, TeX allowed.
+
+Examples:
+- $x+2=11$, answered $13$ (`sign`): "QUACK. You *added* 2 to both sides. What undoes $+2$?"
+- $x+2=11$, answered $11/2$ (`op-swap`): "QUACK. Dividing by 2 undoes $\times 2$. Is there a $\times$ anywhere in $x+2$?"
+- $\frac{d}{dx}\sin(3x)$, answered $\cos(3x)$ (`chain-rule`): "QUACK. The inside is $3x$, not $x$. What's its derivative, and where did it go?"
+- Block on 30° incline, answered with $mg\cos 30^\circ$ for the along-slope force (`components`): "QUACK. Which component points *down the slope*: the one next to the angle or opposite it?"
+- Generic nudge: "QUACK. Plug your answer back into the problem. Does it work?"
+
+### Authoring order (required)
+1. **Vet the choices first.** Write the correct answer, then each distractor *from* a named error type. A distractor with no believable error behind it gets replaced, not kept as filler.
+2. **Then write Cluck's hint** for each distractor / known freeform wrong answer.
+3. Tests enforce it: every MC distractor id has `{error, hint}` in the key, and every hint starts with "QUACK" (`tests/key.test.mjs`).
 
 ## 7. Server replies (shape)
 
-`POST /check {code, answer | choice}` → `{ "verdict": "correct" | "wrong" | "invalid" | "locked" | "egg", "triesLeft": 1, "feedback": "...", "hintsLeft": 2 }`
-
-`POST /hint {code}` → `{ "n": 1, "kind": "concept", "md": "...", "hintsLeft": 1 }` or `{ "verdict": "locked" }`.
+`POST /check {code, answer | choice}` →
+`{ "verdict": "correct" | "wrong" | "invalid" | "locked" | "egg", "triesLeft": 1, "error": "sign", "hint": "QUACK. ..." }`
+(`error`/`hint` only on `wrong`; `error` is absent for a generic nudge.) There is no `/hint` endpoint.
 
 ## Sources
 - Canvas New Quizzes (shuffle, lock, partial credit): https://celt.iastate.edu/learning-teaching-technology/new-quizzes-canvas , https://community.canvaslms.com/docs/DOC-15039
