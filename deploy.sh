@@ -4,6 +4,9 @@
 #   or:  bash <(curl -fsSL <raw deploy.sh url>) [dir] [port] [branch]
 # Every run force-stops the old server (pid file, then anything still on the port) and starts a new one.
 # STEM_PROBLEMS=/path/problems.json uses a bank outside the checkout (default: problems.json in the checkout).
+# The whole script sits in { ... }: bash reads all of it before running, so updating the checkout (which rewrites
+# this very file) cannot change the lines still to run.
+{
 set -euo pipefail
 
 DIR="${1:-$HOME/stem-stuff-site}"
@@ -79,8 +82,14 @@ if [ -d "$DIR/.git" ] && git -C "$DIR" remote get-url origin 2>/dev/null | grep 
     if [ "$(key 'update the live site now? [Y/n]: ')" = "n" ]; then
       echo "kept current version"
     else
+      OLD_SELF="$(git -C "$DIR" rev-parse HEAD:deploy.sh 2>/dev/null || true)"
       git -C "$DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
       echo "updated -> $(git -C "$DIR" log --oneline -1)"
+      # this script just replaced itself: finish with the NEW version (once), so new deploy steps run today
+      if [ -z "${STEM_REEXEC:-}" ] && [ "$OLD_SELF" != "$(git -C "$DIR" rev-parse HEAD:deploy.sh)" ]; then
+        echo "deploy.sh changed -> restarting with the new version"
+        exec env STEM_REEXEC=1 bash "$DIR/deploy.sh" "$DIR" "$PORT" "$BRANCH"
+      fi
     fi
   fi
 elif [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
@@ -111,3 +120,5 @@ if kill -0 "$(cat .host.pid)" 2>/dev/null && port_busy; then
 else
   echo "failed:"; cat host.log; rm -f .host.pid; exit 1
 fi
+exit
+}
