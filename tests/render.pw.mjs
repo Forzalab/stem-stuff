@@ -424,9 +424,9 @@ async function run(browserType, label, opts = {}) {
       await page.click("#ansGo");
       await page.locator("#fb .verdict.ok").waitFor();
 
-      await open("CSCI26_TF3");                                              // 2 choices, authored order (shuffle: false)
+      await open("CSCI26_TF3");                                              // 2 choices, shuffled by default (order varies, the set does not)
       assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);
-      assert.deepEqual(await page.locator("#q .opt .txt").allTextContents(), ["TRUE", "FALSE"]);
+      assert.deepEqual((await page.locator("#q .opt .txt").allTextContents()).sort(), ["FALSE", "TRUE"]);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/tf-${vname}.png` });
     });
 

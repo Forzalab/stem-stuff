@@ -5,7 +5,7 @@ import { build, stringify } from "./copy/payload.mjs";
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
 const CODE_RE = /^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$/;
-const MAX_TRIES = 2;
+const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
@@ -54,6 +54,7 @@ async function check(code, answer) {
   return { verdict: "pending" };
 }
 /* mirror of serve.py grade(): keep the two in step */
+const maxTries = p => p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES;   // serve.py max_tries(): 2-choice mc = ONE try, else two
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -75,7 +76,7 @@ function unitHit(u, t, g) {                               // re entries first, t
 function gradeLocal(key, answer) {
   const st = localState.get(key.code) || { wrong: [], done: false };
   localState.set(key.code, st);
-  const left = () => MAX_TRIES - st.wrong.length;
+  const left = () => maxTries(key) - st.wrong.length;
   if (st.done || left() <= 0) return { verdict: "locked", triesLeft: 0 };
   let hit = null, correct, sig;
   if (key.type === "mc") {
@@ -184,7 +185,7 @@ async function load(code) {
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
-  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: MAX_TRIES, finished: false, selected: null, box: null };
+  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   render();
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
 }

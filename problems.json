@@ -355,7 +355,6 @@
       "code": "CSCI26_TF3",
       "title": "Even or odd",
       "type": "mc",
-      "shuffle": false,
       "body": [
         {
           "type": "text",
@@ -453,7 +452,6 @@
       "code": "CSCI26_TFM",
       "title": "Modus ponens, backwards",
       "type": "mc",
-      "shuffle": false,
       "body": [
         {
           "type": "text",
