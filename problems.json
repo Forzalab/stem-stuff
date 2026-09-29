@@ -3,6 +3,7 @@
   "problems": [
     {
       "code": "CALC1_T6B",
+      "title": "Limit from a table",
       "type": "num",
       "body": [
         {
@@ -45,6 +46,7 @@
     },
     {
       "code": "CALC1_A9R",
+      "title": "Area between curves",
       "type": "num",
       "body": [
         {
@@ -103,6 +105,7 @@
     },
     {
       "code": "CALC1_X2P",
+      "title": "Solve for x",
       "type": "mc",
       "body": [
         {
@@ -158,6 +161,7 @@
     },
     {
       "code": "PHYS_F3N",
+      "title": "Block sliding down a ramp",
       "type": "num",
       "body": [
         {
@@ -238,6 +242,7 @@
     },
     {
       "code": "PHYS_S2K",
+      "title": "Spring holding a block on a ramp",
       "type": "num",
       "body": [
         {
@@ -345,6 +350,104 @@
       "answer": "2.0*9.8*sin(25 deg)/150",
       "tol": 0.01,
       "wrong": []
+    },
+    {
+      "code": "CSCI26_TF3",
+      "title": "Even or odd",
+      "type": "mc",
+      "shuffle": false,
+      "body": [
+        {
+          "type": "text",
+          "md": "Every integer is even or odd."
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "TRUE"
+        },
+        {
+          "id": "f",
+          "md": "FALSE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "f",
+          "error": "misread",
+          "hint": "QUACK. Pick any integer. Is it ever neither?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_Q8C",
+      "title": "Contrapositive",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Write the contrapositive of $p \\to q$."
+        }
+      ],
+      "how": "Type ~ for ¬ and -> for →, like: ~a -> b",
+      "answer": "~q -> ~p",
+      "accept": [
+        "¬q → ¬p",
+        "¬q -> ¬p",
+        "not q -> not p"
+      ],
+      "wrong": [
+        {
+          "match": "q -> p",
+          "error": "fallacy",
+          "hint": "QUACK. That's the converse. Where did the two nots go?"
+        },
+        {
+          "match": "~p -> ~q",
+          "error": "fallacy",
+          "hint": "QUACK. That's the inverse. Contrapositive flips AND negates. Did you flip?"
+        }
+      ],
+      "nudge": "QUACK. Contrapositive: swap the sides, then negate both. Which side is on the left now?"
+    },
+    {
+      "code": "CSCI26_M5V",
+      "title": "Two-set count",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "$|A| = 10$, $|B| = 7$, $|A \\cap B| = 3$. How many elements are in $A \\cup B$? How many are in exactly one of the sets?"
+        }
+      ],
+      "how": "Two whole numbers, in the order asked.",
+      "parts": [
+        {
+          "type": "num",
+          "answer": "14",
+          "wrong": [
+            {
+              "match": "17",
+              "error": "counting",
+              "hint": "QUACK. You counted the overlap twice. How many times should it count?"
+            }
+          ]
+        },
+        {
+          "type": "num",
+          "answer": "11",
+          "wrong": [
+            {
+              "match": "14",
+              "error": "misread",
+              "hint": "QUACK. Exactly one. Should the overlap be in that count at all?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Draw the two circles. Fill the middle first."
     }
   ]
 }
