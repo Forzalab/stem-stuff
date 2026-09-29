@@ -95,11 +95,11 @@ async function run(browserType, label, opts = {}) {
         });
         let g = await hit();
         assert.deepEqual(g.bad, [], `${code} closed: #more covers ${g.bad}`);
-        assert.ok(Math.abs(g.cx - g.vw / 2) < 2 && g.w === 48 && g.h === 48, "tab not centred 48px");
+        assert.ok(Math.abs(g.cx - g.vw / 2) < 2 && g.w === 88 && g.h === 44, "grab handle not centred 88x44");   // Tony: variant A (pill, 44px touch area)
         if (SHOTS && code === "CALC1_X2P") await page.screenshot({ path: `${SHOTS}/more-fix-closed-${viewport.width}.png` });
-        const wk = await page.evaluate(() => { const m = document.querySelector("#more").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), l = document.querySelector(".xb-label").getBoundingClientRect(); return { gap: l.top - m.bottom, wk: w.top - m.bottom }; });
+        const wk = await page.evaluate(() => { const m = document.querySelector("#more").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), l = document.querySelector(".xb-label").getBoundingClientRect(); const pill = m.top + parseFloat(getComputedStyle(document.querySelector("#more")).paddingTop) + 4; return { gap: l.top - pill, wk: w.top - m.bottom }; });   // the visible pill; the rest of the touch area may lie over the (non-control) title
         if (!closedOnly) {
-          assert.ok(wk.gap >= 4, `tab within ${wk.gap}px of the Scratchpad label`);
+          assert.ok(wk.gap >= 4, `pill within ${wk.gap}px of the Scratchpad label`);
           await page.locator("#more").click(); await page.waitForTimeout(200);
           g = await hit();
           assert.deepEqual(g.bad, [], `${code} open: #more covers ${g.bad}`);
@@ -219,6 +219,7 @@ async function run(browserType, label, opts = {}) {
       await open("CALC1_T6B");
       const clip = t => page.evaluate(x => navigator.clipboard.writeText(x), t);
       const code = page.locator("#code"), go = page.locator("#codeGo"), pasteBtn = page.locator("#codePaste");
+      if (vname !== "desktop") { await page.waitForSelector("#barTab", { state: "visible" }); await page.click("#barTab"); await page.waitForSelector("#code", { state: "visible", timeout: 3000 }); }   // touch: the bar rests as a strip while a problem is open
       // placeholder = open problem's code, in the hint color; box empty; paste button shown, arrow hidden
       assert.equal(await code.getAttribute("placeholder"), "CALC1_T6B"); assert.equal(await code.inputValue(), "");
       assert.equal(await page.evaluate(() => window.__drill.state.code), "CALC1_T6B");
@@ -256,6 +257,7 @@ async function run(browserType, label, opts = {}) {
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-button-filled-390.png` });
       await go.click();
       await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_S2K");
+      if (vname !== "desktop") { assert.ok(await code.isHidden(), "bar back to its strip after opening"); await page.click("#barTab"); }
       assert.equal(await code.inputValue(), ""); assert.equal(await code.getAttribute("placeholder"), "PHYS_S2K");
       assert.ok(await pasteBtn.isVisible() && await go.isHidden());
       // not a code on the clipboard: nothing is filled, the box is focused for a manual paste
@@ -269,13 +271,15 @@ async function run(browserType, label, opts = {}) {
       // a bank with codes the server doesn't have: the upload is the only source
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_Q");
-      const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+      if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
+    const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const first = bank.problems[0].code;
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
       assert.equal(await page.locator("#fileStatus").textContent(), "File my-problems.json in use.");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
       const f3n = bank.problems.find(p => p.code.startsWith("PHYS_Q3N") || p.code.endsWith("3N")).code;
+      if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", f3n); await page.press("#code", "Enter");
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, f3n);
       assert.ok(await page.locator("#freeze .fig svg").count() > 0, "figure from the uploaded file");
@@ -289,7 +293,8 @@ async function run(browserType, label, opts = {}) {
       for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
       bank.problems[1].title = "Area between a parabola and a line";
       const codes = bank.problems.map(p => p.code), n = codes.length;
-      const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+      if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
+    const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const at = c => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, c, { timeout: 8000 });
       await at(codes[0]);
@@ -346,6 +351,7 @@ async function run(browserType, label, opts = {}) {
       await page.keyboard.press("Home"); await page.keyboard.press("Enter");
       await at(codes[0]);
       // a server problem after the upload: list stays, nothing marked, arrows off
+      if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
       assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
       assert.equal(await page.locator("#qlist [aria-current]").count(), 0);

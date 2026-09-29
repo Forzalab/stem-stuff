@@ -413,6 +413,7 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
     for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
+    if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_N6B", null, { timeout: 8000 });

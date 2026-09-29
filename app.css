@@ -65,6 +65,22 @@ button:disabled { cursor: default; }
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
 .dock-bottom.dock-away .dock { display: none; }
 .dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
+/* bar strip (phones, a problem open): 44px (the tap target) with an up-chevron. Revealed, the full bar lies OVER the page (--dock-h stays the strip's),
+   so nothing under it moves or shrinks; its top edge holds the same tab, chevron down, to put it away. No problem open: the full bar. */
+.bar-tab { display: none; }
+html.bar-mini .bar-tab {
+  display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
+  background: none; border: 0; color: var(--muted); touch-action: none;
+}
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .2s ease; }
+html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
+html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
+html.bar-mini.bar-open .dock { padding-top: 0; }
+html.bar-mini.bar-open .bar-tab { margin-bottom: var(--s1); }
+html.bar-mini.bar-open .bar-tab .ico { transform: none; }
+/* the text keeps clear of where the revealed bar lies (--bar-over: its height above the strip, measured on reveal), so revealing it
+   never hides the caret: the box's bottom band (already there for Cut / Copy) is at least that tall */
+html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { padding-bottom: max(56px, calc(var(--bar-over, 76px) + 4px)); }
 
 /* ---------- one button system ----------
    Every button on the page (upload, submit arrows, copy, expand, file picker) is .btn:
@@ -113,9 +129,14 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .freeze.open { position: relative; top: 0; }
 .freeze.open .freeze-in { max-height: none; overflow: visible; }
 /* expand chevron: a centred pull-tab hanging fully BELOW the layer, so it never covers the answer controls (submit arrows are on the right edge) */
-.more { position: absolute; left: 50%; top: calc(100% + var(--s1)); transform: translateX(-50%); z-index: 1; box-shadow: var(--shadow-1); }
-.more:active { transform: translate(-50%, 1px); }
-.freeze.open .more .ico { transform: rotate(180deg); }
+/* grab handle (Tony: variant A): a 36x4 pill 8px under the strip's bottom edge; the touch area (88x44) hangs below the edge, invisible,
+   so it never covers an answer control; below it is only the Scratchpad title (not a control) */
+.more {
+  position: absolute; left: 50%; top: 100%; width: 88px; height: 44px; margin-left: -44px; z-index: 3;
+  display: grid; place-items: start center; padding: var(--s2) 0 0; background: none; border: 0; border-radius: 8px; touch-action: none;
+}
+.more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .12s ease-out; }
+.more:hover::before { background: var(--muted); }
 
 .p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
@@ -257,7 +278,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
-.freeze:has(.more:not([hidden])) + .work { margin-top: calc(48px + var(--s1) + var(--s2)); }
+.freeze:has(.more:not([hidden])) + .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
