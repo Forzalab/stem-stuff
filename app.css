@@ -201,7 +201,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
 .how code { color: var(--ink); }
 /* multi: one row per part (design/mockups/multi-prompts.html). Phone: "a)" and its sub-question, its own box under the text (aligned to
-   the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (the .ff pattern) and
+   the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (hidden while the box is empty, like the code box's) and
    shows its own verdict: ok (green, read-only), bad (dashed red + this part's hint under the row), shut (out of tries: dim). */
 .mparts { display: grid; gap: var(--s4); }
 .mparts .part {
@@ -214,7 +214,8 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
-.mparts .ff { grid-area: bx; }
+.mparts .ff { grid-area: bx; position: relative; padding-right: 48px; }   /* the arrow's room is always reserved: nothing jumps when it appears */
+.mparts .ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders) */
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
 @media (min-width: 40rem) {

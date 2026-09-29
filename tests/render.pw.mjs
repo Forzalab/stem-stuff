@@ -431,15 +431,20 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll");
       assert.match(await boxes.nth(0).evaluate(e => getComputedStyle(e).fontFamily), /Atkinson Hyperlegible Mono/);
       assert.match(await boxes.nth(1).getAttribute("aria-labelledby"), /mk1 pr1/);
-      for (const i of [0, 1]) {                                            // each arrow is nested inside its own box, off while that box is empty
-        const go = page.locator(`#go${i}`), inp = boxes.nth(i);
-        assert.ok(await go.isDisabled(), `arrow ${i} waits for its own box`);
-        const g = await go.boundingBox(), f = await page.locator("#q .part .ff").nth(i).boundingBox();
-        assert.ok(g.x + g.width <= f.x + f.width && g.x >= f.x && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, `arrow ${i} not inside its box`);
-        assert.equal(await inp.evaluate((e, id) => e.parentElement.contains(document.getElementById(id)), `go${i}`), true);
+      const arrows = () => page.locator("#q .part .send:visible").count();
+      assert.equal(await arrows(), 0, "no arrow in an empty box");
+      await boxes.nth(1).fill("14");                                       // typing in b shows only b's arrow, nested in b's box, flush right
+      assert.equal(await arrows(), 1);
+      assert.ok(await page.locator("#go0").isHidden() && await page.locator("#go1").isVisible());
+      {
+        const g = await page.locator("#go1").boundingBox(), f = await page.locator("#q .part .ff").nth(1).boundingBox(), t = await boxes.nth(1).boundingBox();
+        assert.ok(g.x + g.width <= f.x + f.width && g.x >= f.x && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside its box");
+        assert.ok(t.x + t.width <= g.x + 0.5, "the text field ends where the arrow begins (room reserved, text never under it)");
+        assert.equal(await boxes.nth(1).evaluate(e => e.parentElement.contains(document.getElementById("go1"))), true);
       }
-      await boxes.nth(1).fill("14");                                       // typing in b enables only b's arrow
-      assert.ok(await page.locator("#go0").isDisabled() && await page.locator("#go1").isEnabled());
+      await boxes.nth(1).fill(""); assert.equal(await arrows(), 0, "emptying the box hides the arrow");
+      await boxes.nth(1).fill("14");
+      await boxes.nth(0).fill("1"); assert.equal(await arrows(), 2, "arrows = non-empty unlocked boxes"); await boxes.nth(0).fill("");
       // b wrong twice -> only b locks (its hint is its own wrong entry, then the nudge)
       await boxes.nth(1).press("Enter");                                   // Enter submits THIS box
       await page.locator("#q .part").nth(1).locator(".phint .cluck").waitFor();
@@ -447,8 +452,9 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
       assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
       assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
-      await boxes.nth(1).fill("9"); await page.click("#go1");
+      await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='1'] .ff.shut"));
+      assert.equal(await arrows(), 0, "a locked part shows no arrow");
       assert.match(await page.locator("#ph1").textContent(), /Out of tries/);
       const dead = await page.evaluate(() => { const i = document.querySelectorAll("#q .ans")[1], b = document.querySelector("#go1"); return { d: i.disabled, a: i.getAttribute("aria-disabled"), cur: getComputedStyle(i).cursor, op: getComputedStyle(i.closest(".ff")).opacity, go: b.hidden }; });
       assert.deepEqual(dead, { d: true, a: "true", cur: "not-allowed", op: "0.5", go: true }, "b is locked with the disabled look");
@@ -460,6 +466,7 @@ async function run(browserType, label, opts = {}) {
       assert.match(await page.locator("#ph0").textContent(), /overlap twice/);
       await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
+      assert.equal(await arrows(), 0, "a correct part shows no arrow");
       assert.equal(await page.evaluate(() => window.__drill.state.finished), true, "finished when every part is right or locked");
       assert.equal(await page.evaluate(() => window.__drill.state.solved), false, "a locked part means not solved");
       assert.match(await page.locator("#fb").textContent(), /1 of 2 right/);

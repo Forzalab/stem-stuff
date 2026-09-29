@@ -256,7 +256,7 @@ function renderQuestion() {
       const l = esc(u.label || LETTERS[i].toLowerCase());
       return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
-          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Submit ${l}" disabled>${icon("i-go")}</button></div>
+          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Submit ${l}" hidden>${icon("i-go")}</button></div>
         <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
     }).join("")}</div>`;
     wireParts();
@@ -424,7 +424,7 @@ function wireParts() {
   S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
-    inp.addEventListener("input", () => { go.disabled = !inp.value.trim(); box.classList.remove("bad"); });
+    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); });   // the arrow appears once there is text (like the code box)
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });
@@ -441,7 +441,7 @@ function partFeedback(i, r, typed) {
   const { hint, box } = partEls(i), row = hint.parentElement;
   let h = "";
   if (r.verdict === "wrong") {
-    box.classList.add("bad");
+    if (!S.parts[i].shut) box.classList.add("bad");
     h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
   } else if (r.verdict === "locked") h = `<p class="verdict lock">${icon("i-lock")}<span>Out of tries.</span></p>`;
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
@@ -763,7 +763,7 @@ function resume(fromCache) {
   if (S && !S.finished) {
     const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
     if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
-    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = false; e.go.disabled = !e.inp.value.trim(); } });
+    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim(); } });
     for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
     if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
   }
