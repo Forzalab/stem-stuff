@@ -20,6 +20,9 @@ The list opens **in the flow**, under the top bar: it pushes the problem down an
 
 Nothing else: no counter ("3 / 12"), no heading on the list, no close button. Refactoring UI, "Labels are a last resort" (p. 41) and "Don't design too much" (p. 13).
 
+> **Update (design/BANK.md):** the list is now the open practice bank (`BANK_XXX`), else the uploaded file. The list
+> button shows a checklist icon and the bank code (upload: the file name without `.json`), nothing else.
+
 ## Which questions: upload only (decision)
 
 The nav exists **only when problems were uploaded** (a `problems.json` read by `offline.js`). The list is `stemOffline.codes()` in file order (a second upload appends its new codes after the first file's). With problems from the server, the nav is hidden, not disabled.

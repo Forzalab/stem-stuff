@@ -303,7 +303,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await nav.isVisible(), "nav hidden after upload");
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
       for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
-      assert.equal((await btn.textContent()).trim(), "Questions list");
+      assert.equal((await btn.textContent()).trim(), "bank", "list button: the file name, nothing else (design/BANK.md)");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
       const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main") }; });
