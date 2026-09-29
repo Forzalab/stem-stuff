@@ -104,7 +104,8 @@ function gradeLocal(key, answer) {
 }
 
 /* ================= entry box: code bar + upload ================= */
-const codeIn = $("#code"), dock = $("#dock");
+const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
+let swapOn = false, lostAt = 0;          // Swap state (see "Swap" below)
 /* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
@@ -431,7 +432,8 @@ function mountBox() {
   ta.id = "scratch";
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
-  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0 });
+  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0,
+    cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
   S.nums = ExplainBox.lineNumbers(ta, $("#xbGutter"));      // line numbers in a gutter over the left padding
 }
@@ -477,9 +479,16 @@ function layoutDock() {
   tallest = Math.max(tallest, innerHeight, h);
   root.classList.toggle("dock-bottom", bottom);
   const inDock = dock.contains(document.activeElement);
-  const kb = bottom && editing() && tallest && h < tallest * 0.8;
+  const shrunk = bottom && !!tallest && h < tallest * 0.8;
+  const kb = shrunk && editing();
+  /* Swap (design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
+     (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
+  const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
+  const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
+  const swapNext = !!S && !freeze.hidden && shrunk && ((inMain && (editing() || swapOn)) || (swapOn && grace));
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
-  root.classList.toggle("dock-away", !!kb && !inDock);
+  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext);
+  if (swapNext !== swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
@@ -491,6 +500,7 @@ new ResizeObserver(() => layoutDock()).observe(dock);
 function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
+  if (swapOn) { layoutSwap(); return; }                                         // one pane above the keyboard: none of the strip logic applies
   const dockH = root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0;
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
@@ -512,7 +522,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden) return;
+  if (!S || freeze.hidden || swapOn) return;
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
@@ -522,6 +532,7 @@ function stuck() {
 /* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
    the question is what you answer while writing; the problem start is one small scroll up. */
 function showQuestion() {
+  if (swapOn) return;
   const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
   const end = Math.max(bottom($("#q")), bottom($("#fb")));
   freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
@@ -532,8 +543,8 @@ if (vv) { vv.addEventListener("resize", onView); vv.addEventListener("scroll", o
 addEventListener("resize", onView);
 addEventListener("scroll", () => stuck(), { passive: true });
 document.addEventListener("focusin", onView);
-document.addEventListener("focusout", () => setTimeout(onView, 60));
-freezeIn.addEventListener("scroll", () => { const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
+document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
+freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
 more.addEventListener("click", () => {
   const open = !freeze.classList.contains("open");
   freeze.classList.toggle("open", open);
@@ -542,6 +553,103 @@ more.addEventListener("click", () => {
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 });
+/* ================= Swap (design/SWAP.md) =================
+   Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
+   scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
+   picks the pane too. layoutDock() decides when it is on; CSS (html.swap, .swap-problem, .swap-scratch) does the layout;
+   this code sets the pane, the sizes CSS cannot know (--vv-h, --peek-max, the scratchpad's cap) and moves focus. */
+const swapBtn = $("#swap"), stage = $("#stage"), problemEl = $("#problem"), work = $("#work");
+const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
+let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
+const GAP = 10;                                                                  // between the peek and the scratchpad: clears the box's 5px focus ring
+const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
+function setSwap(on) {
+  swapOn = on;
+  if (on) {
+    swapY = scrollY;
+    root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");              // the page keeps its height, so its scroll position survives
+    const p = paneOf(document.activeElement); if (p) pane = p;
+    root.classList.add("swap");
+    swapBtn.hidden = false;
+    applyPane();
+  } else {
+    root.classList.remove("swap", "swap-problem", "swap-scratch");
+    swapBtn.hidden = true; swapPadMax = null;
+    freeze.classList.remove("clipped", "no-peek");
+    if (scrollY !== swapY) scrollTo(0, swapY);
+    requestAnimationFrame(() => { if (S && S.box) S.box.limit(); });
+  }
+}
+/* the DOM change: classes, toggle, scroll positions, sizes */
+function applyPane() {
+  shownPane = pane;
+  root.classList.toggle("swap-problem", pane === "problem");
+  root.classList.toggle("swap-scratch", pane === "scratch");
+  swapBtn.dataset.pane = pane;
+  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show the scratchpad" : "Show the problem");
+  freezeIn.scrollTop = 0; problemEl.scrollTop = 0;                                 // the question always shows from its start
+  layoutSwap();
+}
+/* crossfade between panes (View Transitions where supported), instant with reduced motion or without support.
+   Focus has already moved (it must, in the tap, for the keyboard to stay), so the fields are focusable in both states. */
+function setPane(p) {
+  if (p === pane) return;
+  pane = p;
+  if (!swapOn) return;
+  if (document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyPane); else applyPane();
+}
+function layoutSwap() {
+  if (!swapOn || !S) return;
+  const h = vv ? vv.height : innerHeight;
+  root.style.setProperty("--vv-h", Math.round(h) + "px");
+  root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+  const cell = stage.clientHeight - 6;                                             // minus the stage's focus-ring room
+  const padMin = parseFloat(getComputedStyle(S.box.el).minHeight) || 130;         // 3 lines
+  const peekMax = Math.max(0, Math.min(Math.round(h * 0.6), cell - padMin - GAP));
+  root.style.setProperty("--peek-max", peekMax + "px");
+  const noPeek = peekMax < 40;
+  freeze.classList.toggle("no-peek", noPeek);
+  let peek = 0;
+  if (!noPeek) {
+    if (shownPane === "scratch") peek = freeze.offsetHeight;
+    else { const how = $("#how"); peek = Math.min(peekMax, problemEl.scrollHeight + (how ? how.offsetHeight + 16 : 0) + 8); }   // what the peek will be
+  }
+  swapPadMax = Math.max(padMin, cell - (peek ? peek + GAP : 0));
+  root.style.setProperty("--pad-max", swapPadMax + "px");
+  S.box.limit();
+  swapFade();
+}
+/* subtle bottom fade on whichever box is scrolling (the peek, or the question in the problem pane) while it has more below */
+function swapFade() {
+  if (!swapOn) return;
+  const sc = shownPane === "scratch" ? freezeIn : problemEl;
+  freeze.classList.toggle("clipped", sc.scrollHeight > sc.clientHeight + 2 && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2);
+}
+problemEl.addEventListener("scroll", swapFade, { passive: true });
+/* the main field of a pane: the scratchpad; or the first empty answer box, or the picked / current choice */
+function focusField(p) {
+  let el = null;
+  if (p === "scratch") el = S.box && S.box.el;
+  else {
+    const ins = [...document.querySelectorAll("#q .ans")];
+    el = ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
+      : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled);
+  }
+  if (!el) return false;
+  el.focus({ preventScroll: true });
+  return document.activeElement === el;
+}
+/* the toggle must not take focus from the field (that would drop the keyboard): pointerdown/mousedown are cancelled, and the click puts
+   focus straight into the other pane's field, in the same tap */
+for (const ev of ["pointerdown", "mousedown"]) swapBtn.addEventListener(ev, e => e.preventDefault());
+swapBtn.addEventListener("click", () => { const next = pane === "problem" ? "scratch" : "problem"; focusField(next); setPane(next); });
+/* focus picks the pane; focusing the scratchpad also sends the top bar away (nav row: slides up and fades, keeps its space) */
+document.addEventListener("focusin", e => {
+  root.classList.toggle("bar-off", e.target.id === "scratch");
+  const p = paneOf(e.target); if (p) setPane(p);
+});
+document.addEventListener("focusout", e => { if (e.target.id === "scratch" && (!e.relatedTarget || e.relatedTarget.id !== "scratch")) root.classList.remove("bar-off"); });
+
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
 new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));

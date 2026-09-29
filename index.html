@@ -83,6 +83,14 @@
 
 <main id="main">
   <div id="sentinel" aria-hidden="true"></div>
+  <!-- Swap (design/SWAP.md): only while the phone keyboard is up. One icon toggle: document | swap | pencil. -->
+  <button type="button" class="btn btn-tgl" id="swap" data-pane="problem" aria-label="Show the scratchpad" hidden>
+    <svg class="ico t-doc" aria-hidden="true"><use href="#i-doc"/></svg>
+    <svg class="ico t-swap" aria-hidden="true"><use href="#i-swap"/></svg>
+    <svg class="ico t-pen" aria-hidden="true"><use href="#i-pen"/></svg>
+  </button>
+  <!-- #stage is display:contents on the page as you know it; Swap turns it into the one-pane stage above the keyboard -->
+  <div class="stage" id="stage">
   <section class="freeze" id="freeze" aria-labelledby="pcode" hidden>
     <div class="freeze-in" id="freezeIn">
       <article class="p" id="problem">
@@ -113,6 +121,7 @@
       </div>
     </div>
   </section>
+  </div>
 </main>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 </body>
