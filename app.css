@@ -33,7 +33,6 @@ button:disabled { cursor: default; }
 /* ---------- top bar ---------- */
 .top { border-bottom: 2px solid var(--line); padding-top: env(safe-area-inset-top); }
 .bar { max-width: 52rem; margin: 0 auto; padding: var(--s3) var(--gut); display: flex; align-items: center; gap: var(--s2); }
-.logo { flex: none; display: block; border-radius: 10px; line-height: 0; }
 .entry { flex: 1 1 auto; display: flex; gap: var(--s2); min-width: 0; max-width: 26rem; margin-left: auto; }
 .subj { position: relative; flex: none; }
 .menu {
@@ -201,8 +200,14 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* Tony: limit line length and wrap. ch is measured in the textarea's own font. */
-.xb textarea { max-width: calc(68ch + 1.8rem + 4px); }
-.actions { display: flex; justify-content: flex-end; max-width: calc((68ch + 1.8rem + 4px) * 1.125); margin-top: var(--s3); }
+/* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
+   + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
+   stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
+.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1.125rem; }
+.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
+/* free padding 28px: last line (28.8px) + 28px >= button (48) + inset (6), so only the LAST line can reach the button */
+.xb-field textarea.xb-free { padding-bottom: 1.75rem; }
+.xb-copy { position: absolute; right: 6px; bottom: 6px; }
 #copy.done { color: var(--ok); border-color: var(--ok); }
 
 @media (max-width: 34rem) {

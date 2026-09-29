@@ -43,6 +43,7 @@ box.getHistory()  // [{t, text}], t = epoch ms, oldest first (a copy)
 box.onHistory(fn) // the onchange-history hook; returns an unsubscribe function
 box.snapshot()    // snapshot now (call before building the copy payload)
 box.destroy()
+ExplainBox.reserveCorner(textarea, button, { gap: 4, hysteresis: 8, freePadding: "1.75rem" })  // -> { update(), destroy(), free }
 ```
 
 Snapshots are taken after 2 s without typing and on blur. A snapshot is skipped if the text hasn't changed, and the empty starting text is not recorded. Field names and timing follow `copy/COPY-PAYLOAD.md` ("Contract with the explain box"). That doc turns snapshots into `hist` diffs.
@@ -55,3 +56,17 @@ Snapshots are taken after 2 s without typing and on blur. A snapshot is skipped 
 ## Drill page (index.html)
 
 The page labels the box **Scratchpad**. The line-length cap lives in `app.css` (`.xb textarea { max-width }`), so the demo pages here stay full width. The textarea is re-created for each problem so its edit history starts empty.
+
+## Copy button inside the box (`ExplainBox.reserveCorner`)
+
+Tony: Copy sits inside the Scratchpad's bottom-right corner, and text wraps as if the button physically blocks that corner.
+
+- Markup: `.xb-field` (`position: relative`, same width as the textarea) holds the `<textarea id="scratch">` and `#copy` (the standard 48px `.btn`, `right: 6px; bottom: 6px`, inside the 2px border).
+- A textarea can't use float or `shape-outside`. But it auto-grows and never scrolls, so only the lines at the bottom can reach the button.
+- `ExplainBox.reserveCorner(textarea, button)` lays the text out in a hidden mirror div with the same font, width, padding, border and wrapping (`pre-wrap`, `overflow-wrap: anywhere`), plus a zero-width end marker so a trailing newline counts as a line. When the box is empty it measures the placeholder instead. Range rects give each visual line's box.
+  - If any line comes within 4px (horizontally) of the button, the textarea keeps the **reserved** bottom band: `padding-bottom: 56px` = button 48 + inset 6 + gap 4 − border 2. That puts the last line above the button.
+  - Otherwise it gets `.xb-free`: `padding-bottom: 28px`. That is chosen so line (28.8px) + padding ≥ button + inset (54px). In the free layout, only the **last** line shares the button's height band.
+- **No JS:** the reserved band is the CSS default, so text never runs under the button.
+- **Hysteresis:** once reserved, the band is freed only when the lines clear the button by a further 8px. `padding` has no transition.
+- **When it recomputes:** synchronously on `input` (no frame shows text under the button), on width changes (ResizeObserver) and on `document.fonts.ready`. In the JS-growth path it fires `xb-refit` so `mount()` refits the height.
+- **Test:** `tests/render.pw.mjs`, step "copy button inside the scratchpad", at 390/1024/1920. It checks that no line box ever intersects the button while typing 40 words. It checks that a long last line turns the band on and a short last line (`\nok`) turns it off. It checks the padding toggles no more than twice per line change. Screenshots: `shots/app-copy-reserved-390.png`, `shots/app-copy-free-390.png`.

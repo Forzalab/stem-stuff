@@ -109,7 +109,7 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
       await open(`PHYS-S2K`);
       await page.waitForSelector(".fig svg");
-      const ta = page.locator("#xb textarea");
+      const ta = page.locator("#scratch");
       await ta.click();
       await ta.fill(Array.from({ length: 60 }, (_, i) => `line ${i + 1}: resolve mg along the slope, then balance with kx.`).join("\n"));
       await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
@@ -126,8 +126,65 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} line length: scratchpad <= ~70ch`, async () => {
-      const w = await page.evaluate(() => { const t = document.querySelector("#xb textarea"); const cs = getComputedStyle(t); const c = document.createElement("span"); c.style.font = cs.font; c.textContent = "0".repeat(70); document.body.append(c); const r = c.offsetWidth; c.remove(); return { box: t.clientWidth, ch70: r }; });
+      const w = await page.evaluate(() => { const t = document.querySelector("#scratch"); const cs = getComputedStyle(t); const c = document.createElement("span"); c.style.font = cs.font; c.textContent = "0".repeat(70); document.body.append(c); const r = c.offsetWidth; c.remove(); return { box: t.clientWidth, ch70: r }; });
       assert.ok(w.box <= w.ch70 + 40, `textarea ${w.box}px vs 70ch ${w.ch70}px`);
+    });
+
+    await step(`${label} ${vname} top bar: subject, code box, download only (no logo)`, async () => {
+      await open("CALC1-T6B");
+      assert.equal(await page.locator("header .logo").count(), 0);
+      const kids = await page.evaluate(() => [...document.querySelector("header .bar").children].map(e => e.id || e.className));
+      assert.deepEqual(kids.slice(0, 1), ["entry"], kids.join(","));
+    });
+
+    await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
+      await open("CALC1-T6B");
+      const ta = page.locator("#scratch");
+      // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
+      const clear = () => page.evaluate(() => {
+        const t = document.querySelector("#scratch"), b = document.querySelector("#copy"), cs = getComputedStyle(t);
+        const m = document.createElement("div");
+        for (const k of ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "lineHeight", "paddingTop", "paddingLeft", "paddingRight",
+          "paddingBottom", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth", "boxSizing", "whiteSpace", "overflowWrap", "wordBreak", "tabSize"]) m.style[k] = cs[k];
+        Object.assign(m.style, { position: "absolute", left: "0", top: "0", visibility: "hidden", borderStyle: "solid", width: t.offsetWidth + "px", height: t.offsetHeight + "px" });
+        m.textContent = (t.value || t.placeholder) + "\u200b"; document.body.append(m);
+        const r = document.createRange(); r.selectNodeContents(m.firstChild);
+        const mr = m.getBoundingClientRect(), tr = t.getBoundingClientRect(), br = b.getBoundingClientRect();
+        const bx = br.left - tr.left, by = br.top - tr.top;
+        const hits = [...r.getClientRects()].filter(q => q.width && q.right - mr.left > bx && q.bottom - mr.top > by && q.top - mr.top < by + br.height);
+        m.remove();
+        return { hits: hits.length, free: t.classList.contains("xb-free"), inside: br.right <= tr.right && br.bottom <= tr.bottom && br.left >= tr.left };
+      });
+      let c = await clear();
+      assert.ok(c.inside, "button not inside the textarea box");
+      assert.equal(c.hits, 0, "placeholder under the button");
+      // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
+      await ta.click();
+      // legit toggles: at most on (last line reaches the corner) and off (it wraps) once per new line
+      let toggles = 0, prev = (await clear()).free, lines = 0, h = await ta.evaluate(t => t.offsetHeight);
+      for (let i = 0; i < 40; i++) {
+        await page.keyboard.type(i ? " slope" : "resolve mg along the slope then balance with kx and check units");
+        c = await clear();
+        assert.equal(c.hits, 0, `text under the button after ${i} words`);
+        if (c.free !== prev) { toggles++; prev = c.free; }
+        const nh = await ta.evaluate(t => t.offsetHeight); if (nh !== h) { lines++; h = nh; }
+      }
+      assert.ok(toggles <= 2 * lines + 2, `padding flickered: ${toggles} toggles for ${lines} height changes`);
+      // last line runs into the corner -> reserved
+      const reserved = await page.evaluate(async () => {
+        const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
+        for (let n = 1; n < 400; n++) { t.value = base.repeat(3) + "x".repeat(n); t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
+        return false;
+      });
+      assert.ok(reserved, "never reserved the band for a long last line");
+      assert.equal((await clear()).hits, 0);
+      if (SHOTS && vname === "phone") await page.locator("#work").screenshot({ path: `${SHOTS}/app-copy-reserved-390.png` });
+      // short last line -> normal padding
+      await page.evaluate(() => { const t = document.querySelector("#scratch"); t.value = t.value + "\nok"; t.dispatchEvent(new Event("input")); });
+      c = await clear();
+      assert.ok(c.free, "short last line still reserves the band");
+      assert.equal(c.hits, 0);
+      if (SHOTS && vname === "phone") await page.locator("#work").screenshot({ path: `${SHOTS}/app-copy-free-390.png` });
     });
 
     if (label === "chromium" && vname === "desktop") {
@@ -135,7 +192,7 @@ async function run(browserType, label, opts = {}) {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
         await open(`CALC1-A9R`);
         await page.locator("#ans").fill("9/2"); await page.locator("#ans").press("Enter");
-        await page.locator("#xb textarea").fill("area between: integrate (4x-x^2) - x from 0 to 3");
+        await page.locator("#scratch").fill("area between: integrate (4x-x^2) - x from 0 to 3");
         await page.locator("#copy").click();
         const txt = await page.evaluate(() => navigator.clipboard.readText());
         const p = JSON.parse(txt);

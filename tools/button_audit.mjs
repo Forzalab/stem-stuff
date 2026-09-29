@@ -50,7 +50,7 @@ await page.fill("#ans", "12"); await page.mouse.move(0, 899); await page.waitFor
 await page.evaluate(() => document.activeElement.blur());
 await grab("freeform", [["freeform arrow", "#ansGo"]]);
 
-await page.setViewportSize({ width: 390, height: 844 });
+await page.setViewportSize({ width: 390, height: 600 });   // short screen so the problem clips and the chevron shows
 await open("PHYS-S2K");
 await page.evaluate(() => scrollTo(0, 400)); await page.waitForTimeout(300);
 await grab("more", [["expand chevron", "#more"]]);

@@ -343,12 +343,15 @@ function feedback(r, typed) {
 /* ---------- scratchpad + Copy ---------- */
 function mountBox() {
   if (S.box) S.box.destroy();
-  const label = $("#xb"); label.querySelector("textarea")?.remove();
+  if (S.corner) S.corner.destroy();
+  const field = $("#xbField"); field.querySelector("textarea")?.remove();
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  label.append(ta);
+  ta.id = "scratch";
+  field.prepend(ta);
   S.box = ExplainBox.mount(ta);
+  S.corner = ExplainBox.reserveCorner(ta, $("#copy"));
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
