@@ -112,7 +112,7 @@ Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-fa
 - Names that work: `e`, `pi`, `sqrt()`, `abs()`, `sin(30 deg)`.
 - Numbers in graphs may be strings: `"pi/3"`.
 - Check a physics answer by writing it as a formula, for example `"2.0*9.8*sin(25 deg)/150"`, with `tol: 0.01`.
-- The server grades with its own small evaluator that reads the same syntax: numbers, `+ - * / ^`, parentheses, implicit multiplication (`2x`, `3pi`), `pi`, `e`, `deg`, `sqrt abs exp ln log log10 sin cos tan asin acos atan sec csc cot sinh cosh tanh`. Stick to these in `answer`, `match` and `points`.
+- The server grades with **sympy** (`deploy.sh` installs it). It reads the same syntax, but only these tokens get through: numbers, `+ - * / ^`, parentheses, implicit multiplication (`2x`, `3pi`), `pi`, `e`, `deg`, `sqrt abs exp ln log log10 sin cos tan asin acos atan sec csc cot sinh cosh tanh`. Stick to these in `answer`, `match` and `points`.
 
 ## Colors, labels, anchors
 - `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`. Never hex.

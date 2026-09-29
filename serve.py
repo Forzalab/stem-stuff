@@ -4,10 +4,10 @@
 - Reads the whole problem bank from ONE file (default: problems.json next to this script; SCHEMA.md).
   Edit or replace the file: the next request re-reads it (mtime check), no restart.
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
+- Math: sympy (pip install sympy), behind a token allowlist.
 - POST /check          -> grades {code, answer | choice | parts}; 2 attempts per problem per browser (cookie).
 - The bank file itself, keys, logs and server files are never served.
 """
-import ast
 import hashlib
 import http.cookies
 import http.server
@@ -20,6 +20,9 @@ import secrets
 import socketserver
 import sys
 import threading
+
+import sympy
+from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
 try:
@@ -101,21 +104,23 @@ def public(p, sid=""):
     return out
 
 
-# ---------------- math: a small safe evaluator for math.js-style answers ----------------
-FUNCS = {
-    "sqrt": math.sqrt, "abs": abs, "exp": math.exp, "ln": math.log, "log": math.log, "log10": math.log10,
-    "sin": math.sin, "cos": math.cos, "tan": math.tan, "asin": math.asin, "acos": math.acos, "atan": math.atan,
-    "sec": lambda x: 1 / math.cos(x), "csc": lambda x: 1 / math.sin(x), "cot": lambda x: 1 / math.tan(x),
-    "sinh": math.sinh, "cosh": math.cosh, "tanh": math.tanh,
+# ---------------- math: sympy does the math ----------------
+# sympy's parse_expr runs eval(), so text reaches it only after to_python() has allowed every token:
+# numbers, the names below, the variable, + - * / ^ ( ) and commas. Nothing else gets through.
+S = sympy
+NAMES = {
+    "sqrt": S.sqrt, "abs": S.Abs, "exp": S.exp, "ln": S.log, "log": S.log, "log10": lambda x: S.log(x, 10),
+    "sin": S.sin, "cos": S.cos, "tan": S.tan, "asin": S.asin, "acos": S.acos, "atan": S.atan,
+    "sec": S.sec, "csc": S.csc, "cot": S.cot, "sinh": S.sinh, "cosh": S.cosh, "tanh": S.tanh,
+    "pi": S.pi, "e": S.E, "deg": S.pi / 180, "inf": S.oo, "infinity": S.oo,
 }
-CONSTS = {"pi": math.pi, "e": math.e, "deg": math.pi / 180, "inf": math.inf, "infinity": math.inf}
+FUNCS = {k for k, v in NAMES.items() if callable(v) and not isinstance(v, S.Basic)}
 TOKEN = re.compile(r"\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+(?:e[+-]?\d+)?)|([a-z_][a-z0-9_]*)|(\*\*|[-+*/^(),]))")
-OPS = {ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b, ast.Mult: lambda a, b: a * b,
-       ast.Div: lambda a, b: a / b, ast.Pow: lambda a, b: a ** b}
+GLOBALS = {"__builtins__": {}, "Integer": S.Integer, "Float": S.Float, "Rational": S.Rational, "Add": S.Add, "Mul": S.Mul, "Pow": S.Pow}
 
 
 def to_python(src, var):
-    """math.js-ish text -> Python expression text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'."""
+    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'."""
     s = src.strip().lower().replace("π", "pi").replace("∞", "inf").replace("·", "*").replace("×", "*")
     toks, i = [], 0
     while i < len(s):
@@ -125,63 +130,49 @@ def to_python(src, var):
                 break
             raise ValueError("bad character")
         num, name, op = m.groups()
-        if name and name not in FUNCS and name not in CONSTS and name != var:
+        if name and name not in NAMES and name != var:
             raise ValueError("unknown name " + name)
         kind = "num" if num else "name" if name else op
         text = num or name or ("**" if op == "^" else op)
         if toks:
             pk, pt = toks[-1]
             ends_value = pk == "num" or pk == ")" or (pk == "name" and pt not in FUNCS)
-            starts_value = kind in ("num", "name", "(")
-            if ends_value and starts_value:
+            if ends_value and kind in ("num", "name", "("):
                 toks.append(("*", "*"))
         toks.append((kind, text))
         i = m.end()
     return " ".join(t for _, t in toks)
 
 
-def _eval(node, env):
-    if isinstance(node, ast.Expression):
-        return _eval(node.body, env)
-    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
-        return float(node.value)
-    if isinstance(node, ast.Name):
-        if node.id in env:
-            return env[node.id]
-        raise ValueError("name")
-    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
-        v = _eval(node.operand, env)
-        return -v if isinstance(node.op, ast.USub) else v
-    if isinstance(node, ast.BinOp) and type(node.op) in OPS:
-        a, b = _eval(node.left, env), _eval(node.right, env)
-        r = OPS[type(node.op)](a, b)
-        if isinstance(r, complex):
-            raise ValueError("complex")
-        return r
-    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FUNCS and not node.keywords:
-        args = [_eval(a, env) for a in node.args]
-        if node.func.id == "log" and len(args) == 2:  # math.js log(x, base)
-            return math.log(args[0], args[1])
-        if len(args) != 1:
-            raise ValueError("arity")
-        return float(FUNCS[node.func.id](args[0]))
-    raise ValueError("not allowed")
-
-
 def evaluate(src, var="x", at=None):
-    """Value of a math.js-style expression (at var = at). Raises ValueError/ArithmeticError if unreadable."""
+    """Value (float) of a math.js-style expression, at var = at. Raises ValueError/ArithmeticError if unreadable."""
     if len(src) > 200:
         raise ValueError("too long")
-    tree = ast.parse(to_python(src, var), mode="eval")
-    env = dict(CONSTS)
+    text = to_python(src, var)
+    if not text:
+        raise ValueError("empty")
+    loc = dict(NAMES, **{var: S.Symbol(var)})
+    expr = parse_expr(text, local_dict=loc, global_dict=GLOBALS, transformations=(auto_number,), evaluate=False)
+    if not isinstance(expr, S.Basic):
+        raise ValueError("not an expression")
+    for p in expr.atoms(S.Pow):  # 9^9^9^9: refuse before sympy tries to build it
+        if p.exp.is_number and abs(complex(p.exp.evalf(15))) > 1000:
+            raise ValueError("exponent too big")
     if at is not None:
-        env[var] = float(at)
-    return _eval(tree, env)
+        expr = expr.subs(loc[var], S.Float(at))
+    v = expr.evalf(30)
+    if v.free_symbols:
+        raise ValueError("unknown left")
+    if v in (S.oo, -S.oo):
+        return math.inf if v == S.oo else -math.inf
+    if v is S.nan or v is S.zoo or not v.is_real:
+        raise ValueError("not a real number")
+    return float(v)
 
 
 # ---------------- grading ----------------
 DNE = re.compile(r"^\s*(dne|does not exist)\s*$", re.I)
-UNREADABLE = (ValueError, ArithmeticError, SyntaxError, TypeError, RecursionError, MemoryError)
+UNREADABLE = (ValueError, ArithmeticError, SyntaxError, TypeError, AttributeError, IndexError, RecursionError, MemoryError, sympy.SympifyError)
 
 
 def squash(text):
