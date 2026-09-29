@@ -108,9 +108,9 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 }
 .freeze.open { position: relative; top: 0; }
 .freeze.open .freeze-in { max-height: none; overflow: visible; }
-/* expand chevron: a .btn that overlaps the frozen layer's edge (Refactoring UI: overlap to show layers) */
-.more { position: absolute; right: var(--gut); bottom: -24px; z-index: 1; box-shadow: var(--shadow-1); }
-.more:active { transform: translateY(1px); }
+/* expand chevron: a centred pull-tab hanging fully BELOW the layer, so it never covers the answer controls (submit arrows are on the right edge) */
+.more { position: absolute; left: 50%; top: calc(100% + var(--s1)); transform: translateX(-50%); z-index: 1; box-shadow: var(--shadow-1); }
+.more:active { transform: translate(-50%, 1px); }
 .freeze.open .more .ico { transform: rotate(180deg); }
 
 .p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
@@ -195,9 +195,12 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .how code { color: var(--ink); }
 /* multi: the boxes share one field and one arrow */
 .ff.multi { height: auto; min-height: 52px; padding-left: var(--s2); }
-.ff.multi .parts { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); column-gap: var(--s3); }
-.ff.multi .part { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.ff.multi .parts { flex: 1 1 auto; min-width: 0; overflow: hidden; display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); column-gap: var(--s3); }
+.ff.multi .part { position: relative; display: flex; align-items: center; gap: var(--s2); min-width: 0; }
 .ff.multi .part input { padding-right: 0; }
+/* divider between parts: 1px, inset 10px from the field border, centred in the column gap. At the start of a wrapped row it lies
+   outside .parts (overflow hidden), so no dangling line. */
+.ff.multi .part + .part::before { content: ""; position: absolute; left: calc(var(--s3) / -2 - 0.5px); top: 10px; bottom: 10px; width: 1px; background: var(--line); }
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s3); }
 .boxed .q { margin-top: 0; padding: 0 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: 1rem; }
@@ -215,10 +218,10 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .cluck .md p { margin: 0; }
 
 /* ---------- scratchpad + copy ---------- */
-/* 16px from the question to the scratchpad (12 freeze padding + 4); more when the chevron hangs below the layer */
+/* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
-.freeze:has(.more:not([hidden])) + .work { margin-top: var(--s5); }
+.freeze:has(.more:not([hidden])) + .work { margin-top: calc(48px + var(--s1) + var(--s2)); }
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* Tony: limit line length and wrap. ch is measured in the textarea's own font. */

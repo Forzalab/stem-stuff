@@ -65,6 +65,49 @@ async function run(browserType, label, opts = {}) {
       });
     }
 
+    if (vname !== "ipad") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
+      const tab = async (code, closedOnly) => {
+        await open(code);
+        if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
+        if (code === "CSCI26_M5V") await page.locator("#q .ans").nth(0).fill("14");
+        // closed: shrink the viewport until the strip is clipped and the tab shows
+        let shown = false;
+        for (const h of vname === "phone" ? [600, 500, 400, 320] : [500, 400, 320, 260]) {
+          await page.setViewportSize({ width: viewport.width, height: h });
+          await page.waitForTimeout(150);
+          if (await page.locator("#more").isVisible()) { shown = true; break; }
+        }
+        assert.ok(shown, `${code}: #more never appeared`);
+        const hit = () => page.evaluate(() => {
+          const m = document.querySelector("#more").getBoundingClientRect(), strip = document.querySelector("#freezeIn").getBoundingClientRect();
+          const open = document.querySelector("#freeze").classList.contains("open");
+          const bad = [];
+          for (const el of document.querySelectorAll(".send, #ansGo, .opt, .ans, .ff")) {
+            const cs = getComputedStyle(el); if (el.hidden || cs.display === "none" || cs.visibility === "hidden") continue;
+            let r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+            if (!open) r = { left: r.left, right: r.right, top: Math.max(r.top, strip.top), bottom: Math.min(r.bottom, strip.bottom) };   // clipped by the strip's own scroll
+            if (r.right > m.left && r.left < m.right && r.bottom > m.top && r.top < m.bottom) bad.push(el.className || el.id);
+          }
+          return { bad, top: m.top, stripBottom: strip.bottom, w: m.width, h: m.height, cx: (m.left + m.right) / 2, vw: innerWidth };
+        });
+        let g = await hit();
+        assert.deepEqual(g.bad, [], `${code} closed: #more covers ${g.bad}`);
+        assert.ok(Math.abs(g.cx - g.vw / 2) < 2 && g.w === 48 && g.h === 48, "tab not centred 48px");
+        if (SHOTS && code === "CALC1_X2P") await page.screenshot({ path: `${SHOTS}/more-fix-closed-${viewport.width}.png` });
+        const wk = await page.evaluate(() => { const m = document.querySelector("#more").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), l = document.querySelector(".xb-label").getBoundingClientRect(); return { gap: l.top - m.bottom, wk: w.top - m.bottom }; });
+        if (!closedOnly) {
+          assert.ok(wk.gap >= 4, `tab within ${wk.gap}px of the Scratchpad label`);
+          await page.locator("#more").click(); await page.waitForTimeout(200);
+          g = await hit();
+          assert.deepEqual(g.bad, [], `${code} open: #more covers ${g.bad}`);
+          assert.ok((await page.locator("#more").getAttribute("aria-expanded")) === "true");
+          if (SHOTS && code === "CALC1_X2P") await page.screenshot({ path: `${SHOTS}/more-fix-open-${viewport.width}.png` });
+        }
+        await page.setViewportSize(viewport);
+      };
+      for (const c of ["CALC1_X2P", "CSCI26_M5V", "CALC1_T6B"]) await tab(c, false);
+    });
+
     await step(`${label} ${vname} MC: select shows arrow, reselect hides it, wrong strikes`, async () => {
       await open(`CALC1_X2P`);
       await page.waitForSelector(".opt");
