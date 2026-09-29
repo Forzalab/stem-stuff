@@ -78,7 +78,8 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: the submit arrow stays off until every box is filled. The attempt is correct only if every part is right; one attempt = the whole set. Nothing says which part was wrong, except the hint of the first wrong part that matched a `wrong` entry.
 - A wrong answer gets the hint of the first `wrong` entry it matches (`re` entries first, then `match`), else `nudge`, else a default nudge.
-- Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
+- Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "gen": 7, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
+- `GET /state/<CODE>` (same cookie): `{ "wrong": 1, "done": false, "gen": 7 }`. Tries live in `tries.json` and survive a restart; `gen` lets the page tell a hand reset from a lost file (design/DONE.md).
 - Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
 
 ## Wrong answers and hints
