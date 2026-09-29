@@ -1,6 +1,6 @@
 # Multiple choice (A–E) and hints
 
-Design for the `mc` problem type and for hints on every type. Grading and hints are server-side (see `SECURITY.md`, `SCHEMA-SPLIT.md`).
+Design for the `mc` problem type and for hints on every type. Grading and hints are server-side (see `SECURITY.md`). File format: `SCHEMA.md` (one `problems.json`).
 
 ## 1. What other systems do
 
@@ -29,7 +29,7 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
 ```
 
 - Exactly 5 shown (A–E). Authors may write 5–8 choices; the server picks the correct one + 4 distractors (PrairieLearn-style pool).
-- `id` is a stable lowercase id. **The correct id lives only in the server key** (`k/<CODE>.json`), never in the public file.
+- `id` is a stable lowercase id. **The correct id (`correct`) stays on the server**: `GET /p/<CODE>.json` never includes it.
 - `lock: true` pins that choice to its authored slot (for "none of these" / "DNE").
 - Single-answer only in v2. Multiple-answer is an open question (Canvas-style "exact match" would be the default).
 
@@ -73,7 +73,7 @@ Example problem: solve $x+2=11$ (answer $9$).
 | anything else | (none) | generic nudge |
 
 - **MC:** every distractor maps to one error type + one hint.
-- **Freeform:** `k/` has a `wrong` list of known wrong answers (a value compared within `tol`, or a regex on the typed text) → error type + hint. A wrong answer that matches nothing gets the problem's `nudge` (or the server's default nudge).
+- **Freeform:** the problem has a `wrong` list of known wrong answers (a value compared within `tol`, or a regex on the typed text) → error type + hint. A wrong answer that matches nothing gets the problem's `nudge` (or the server's default nudge).
 
 ### Error types (enum)
 `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components` (vector/trig decomposition), `misread`, `other`. Add to the enum rather than overusing `other`.

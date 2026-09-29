@@ -100,12 +100,12 @@ test("localhost: service worker caches shell + opened problem, works with server
     // Not opened before -> picker, then a file from disk answers the fetch.
     const pending = getProblem(page, "PHYS_S2K");
     await page.locator(".so:not([hidden])").waitFor();
-    await page.locator(".so input[type=file]").first().setInputFiles(join(repo, "p", "PHYS_S2K.json"));
+    await page.locator(".so input[type=file]").first().setInputFiles(join(repo, "problems.json"));
     assert.equal(await pending, "PHYS_S2K");
   } finally { await ctx.close(); if (s.proc.exitCode === null && !s.proc.signalCode) await stop(s); }
 });
 
-test("plain http (no SW): server down -> file picker loads p/*.json, rejects junk", { skip, timeout: 30000 }, async () => {
+test("plain http (no SW): server down -> file picker loads problems.json, rejects junk", { skip, timeout: 30000 }, async () => {
   const s = await serve();
   const ctx = await browser.newContext({ serviceWorkers: "block" });
   const page = await ctx.newPage();
@@ -117,9 +117,9 @@ test("plain http (no SW): server down -> file picker loads p/*.json, rejects jun
     const input = page.locator(".so input[type=file]").first();
     await input.setInputFiles({ name: "junk.json", mimeType: "application/json", buffer: Buffer.from('{"a":1}') });
     await page.locator(".so-msg.bad").waitFor();
-    await input.setInputFiles([join(repo, "p", "PHYS_F3N.json"), join(repo, "p", CODE + ".json")]);
+    await input.setInputFiles(join(repo, "problems.json"));
     assert.equal(await pending, CODE);
-    assert.equal(await getProblem(page, "PHYS_F3N"), "PHYS_F3N", "second picked file kept in memory");
+    assert.equal(await getProblem(page, "PHYS_F3N"), "PHYS_F3N", "every problem in the file kept in memory");
     // Cancel -> fetch rejects (app shows its own error).
     const cancelled = page.evaluate(() => fetch("p/CALC1_A9R.json").then(() => "ok", () => "rejected"));
     await page.locator(".so:not([hidden])").waitFor();
@@ -146,16 +146,17 @@ test("bundle: served stem-stuff.html opens from file:// and loads a problem via 
     assert.ok(!ext.some(u => /katex|app\.js|offline\.js/i.test(u)), "no external app/KaTeX loads: " + ext);
     const pending = getProblem(page2, CODE);
     await page2.locator(".so:not([hidden])").waitFor();
-    await page2.locator(".so input[type=file]").first().setInputFiles(join(repo, "p", CODE + ".json"));
+    await page2.locator(".so input[type=file]").first().setInputFiles(join(repo, "problems.json"));
     assert.equal(await pending, CODE);
     await rendersMath(page2, CODE);
   } finally { await ctx.close(); await stop(s); }
 });
 
-test("serve.py: HEAD and GET on k/ are 404", { skip, timeout: 30000 }, async () => {
+test("serve.py: HEAD and GET on k/ and problems.json are 404", { skip, timeout: 30000 }, async () => {
   const s = await serve();
   try {
     for (const method of ["GET", "HEAD"]) assert.equal((await fetch(s.url + "k/x.json", { method })).status, 404, method);
     assert.equal((await fetch(s.url + "serve.py", { method: "HEAD" })).status, 404);
+    assert.equal((await fetch(s.url + "problems.json")).status, 404);
   } finally { await stop(s); }
 });

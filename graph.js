@@ -1,4 +1,4 @@
-/* graph.js: renders a problem "graph" block (schema/problem.schema.json) into an element.
+/* graph.js: renders a problem "graph" block (SCHEMA.md) into an element.
    Ported from design/specimen.html; every number comes from design/DESIGN-LANGUAGE.md.
    Needs math.js (expressions) and KaTeX (labels) as globals; draws plain-text labels if KaTeX is missing.
 

@@ -25,7 +25,7 @@ test("shell: cache-first", () => {
   for (const p of ["", "index.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs",
     "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css"])
     assert.equal(r(p), "shell", p);
-  for (const p of ["sw.js", "tests/x.js", "tools/bundle.py", "schema/examples/CALC1_X2P.key.json", "serve.py"]) assert.equal(r(p), "pass", p);
+  for (const p of ["sw.js", "tests/x.js", "tools/bundle.py", "problems.json", "SCHEMA.md", "serve.py"]) assert.equal(r(p), "pass", p);
 });
 test("offline.js never stores or reads k/", () => {
   const off = readFileSync(new URL("../offline.js", import.meta.url), "utf8");

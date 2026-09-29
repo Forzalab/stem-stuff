@@ -1,8 +1,9 @@
 /* stem-stuff offline layer. Contract in OFFLINE.md.
  * - registers sw.js where allowed (https or localhost), else runs without it
  * - wraps fetch for p/<CODE>.json: if the server can't be reached (or file://),
- *   asks the student for the JSON file(s) on disk and answers the fetch with it
- * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, codes } */
+ *   asks the student for problems.json on disk and answers the fetch from it
+ * - ONE file holds every problem ({ v: 1, problems: [...] }, SCHEMA.md); picking it loads them all
+ * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, get, codes } */
 (() => {
   if (window.stemOffline) return;
   const FILE = location.protocol === "file:";
@@ -10,7 +11,7 @@
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const CODE = /^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$/;
   const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$/;
-  const MAX = 2 * 1024 * 1024;
+  const MAX = 8 * 1024 * 1024;
 
   const local = new Map();      // code -> problem picked from disk
   const listeners = [];
@@ -20,6 +21,7 @@
   const api = window.stemOffline = {
     mode: FILE ? "file" : CAN_SW ? "sw" : "online",
     has: code => local.has(code),
+    get: code => local.get(code),
     codes: () => [...local.keys()],
     onProblemLoaded(cb) { if (typeof cb === "function") listeners.push(cb); },
     openPicker: code => pick(code || null),
@@ -160,8 +162,8 @@
     const p = new Promise((resolve, reject) => { waiting = code ? { code, resolve, reject } : null; });
     el.querySelector("#so-t").textContent = FILE ? "Offline copy" : "Server offline";
     el.querySelector("#so-d").innerHTML = code
-      ? "Open <code>" + code + ".json</code> from your files."
-      : "Open problem files (<code>.json</code>) from your files.";
+      ? "Open <code>problems.json</code> (it has " + code + ") from your files."
+      : "Open <code>problems.json</code> from your files.";
     say("");
     if (el.hidden) { lastFocus = document.activeElement; el.hidden = false; }
     el.querySelector("input").focus();
@@ -175,19 +177,18 @@
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
 
-  // Parse picked files into the in-memory store. Shared by the dialog and by pickFile().
+  // Parse picked problems.json file(s) into the in-memory store. Shared by the dialog and by pickFile().
   const names = new Map();      // code -> file name it came from
   async function ingest(list) {
-    const files = [...(list || [])].filter(f => /\.json$/i.test(f.name) && !/(^|\/)k\//.test(f.webkitRelativePath || ""));
+    const files = [...(list || [])].filter(f => /\.json$/i.test(f.name));
     const got = [], bad = [];
     for (const f of files) {
       try {
         if (f.size > MAX) throw 0;
-        const p = JSON.parse(await f.text());
-        if (validate(p)) throw 0;
-        local.set(p.code, p);
-        names.set(p.code, f.name);
-        got.push(p);
+        const bank = JSON.parse(await f.text());
+        const ps = bank && Array.isArray(bank.problems) ? bank.problems.filter(p => !validate(p)) : [];
+        if (!ps.length) throw 0;
+        for (const p of ps) { local.set(p.code, p); names.set(p.code, f.name); got.push(p); }
       } catch (e) { bad.push(f.name); }
     }
     return { files, got, bad };
@@ -196,7 +197,7 @@
   async function read(list) {
     const { files, got, bad } = await ingest(list);
     if (!files.length) { say("No .json files there.", "bad"); return; }
-    if (!got.length) { say((bad.length === 1 ? bad[0] + " is" : "Those files are") + " not a problem file.", "bad"); return; }
+    if (!got.length) { say((bad.length === 1 ? bad[0] + " is" : "Those files are") + " not a problems.json.", "bad"); return; }
     if (waiting) {
       const hit = local.get(waiting.code);
       if (!hit) { say("Loaded " + got.length + ", but no " + waiting.code + " in them.", "bad"); return; }
@@ -207,8 +208,8 @@
     emit(got[0]);
   }
 
-  // Direct upload (the page's upload button): the OS file dialog, no modal. Resolves
-  // { problem, name } for the first valid file (and emits it), { error } otherwise, null if cancelled.
+  // Direct upload (the page's upload button): the OS file dialog, no modal. Loads every problem in the file.
+  // Resolves { problem, name, count } (and emits the first problem), { error } otherwise, null if cancelled.
   let upInput = null;
   function pickFile() {
     if (!upInput) {
@@ -221,9 +222,9 @@
         const { files, got, bad } = await ingest(upInput.files);
         upInput.value = "";
         if (!files.length) return resolve({ error: "No .json file there." });
-        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problem file." });
+        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problems.json." });
         emit(got[0]);
-        resolve({ problem: got[0], name: names.get(got[0].code) });
+        resolve({ problem: got[0], name: names.get(got[0].code), count: got.length });
       };
       upInput.click();
     });

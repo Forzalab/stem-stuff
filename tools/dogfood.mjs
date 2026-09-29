@@ -8,12 +8,12 @@ const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const [BASE = "http://localhost:8812", OUT = "design/shots"] = process.argv.slice(2);
 
-// a problem file on "disk" for the upload flow (a real problem under a code the server doesn't have)
+// a problems.json on "disk" for the upload flow (a real problem under a code the server doesn't have)
 const dir = mkdtempSync(join(tmpdir(), "dog-"));
-const prob = JSON.parse(readFileSync(new URL("../p/PHYS_F3N.json", import.meta.url)));
+const prob = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url))).problems.find(p => p.code === "PHYS_F3N");
 prob.code = "PHYS_Q7W";
-const file = join(dir, "PHYS_Q7W.json");
-writeFileSync(file, JSON.stringify(prob));
+const file = join(dir, "problems.json");
+writeFileSync(file, JSON.stringify({ v: 1, problems: [prob] }));
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 for (const [w, h] of [[390, 844], [1920, 1080]]) {

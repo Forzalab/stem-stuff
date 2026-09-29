@@ -4,13 +4,14 @@
 // Not part of `npm test` (that one needs no server or browser).
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
 const BASE = process.argv[2] || "http://localhost:8812";
 const SHOTS = process.argv[3] || "";
-const CODES = ["CALC1_T6B", "CALC1_A9R", "PHYS_F3N", "PHYS_S2K", "CALC1_X2P"];   // X2P = the MC example (schema/examples)
+const CODES = ["CALC1_T6B", "CALC1_A9R", "PHYS_F3N", "PHYS_S2K", "CALC1_X2P"];   // X2P = the MC example
 const RAW = [/\\vec\b/, /\^\\circ/, /\\frac/, /\\text\b/, /\\dfrac/, /\$/, /\\lim/, /\\mu/];
 const VIEWS = { phone: { width: 390, height: 844 }, ipad: { width: 1024, height: 1366 }, desktop: { width: 1920, height: 1080 } };
 
@@ -29,9 +30,7 @@ async function run(browserType, label, opts = {}) {
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
-    // expected 404s: schema/examples/<CODE>.key.json (dev grading stub probes for a key) and p/CALC1_X2P.json
-    // (the MC example lives only in schema/examples until the k/ split)
-    page.on("response", r => { if (r.status() >= 400 && !/schema\/examples\/|p\/CALC1_X2P\.json|offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
+    page.on("response", r => { if (r.status() >= 400 && !/offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     const open = async code => {
@@ -167,15 +166,23 @@ async function run(browserType, label, opts = {}) {
       }
     });
 
-    await step(`${label} ${vname} upload a problem file: status line + render`, async () => {
+    await step(`${label} ${vname} upload one problems.json: every problem loads, graded from the file`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       assert.ok(await page.locator("#fileStatus").isHidden());
-      const p = JSON.parse(await (await fetch(`${BASE}/p/PHYS_F3N.json`)).text()); p.code = "PHYS_Q7W";
+      // a bank with codes the server doesn't have: the upload is the only source
+      const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
+      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_Q");
       const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
-      await ch.setFiles({ name: "my-problem.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(p)) });
-      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_Q7W");
-      assert.equal(await page.locator("#fileStatus").textContent(), "File my-problem.json in use.");
-      assert.ok(await page.locator("#freeze .fig svg").count() > 0 && await page.locator("#freeze .katex").count() > 0);
+      await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
+      const first = bank.problems[0].code;
+      await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
+      assert.equal(await page.locator("#fileStatus").textContent(), "File my-problems.json in use.");
+      assert.ok(await page.locator("#freeze .katex").count() > 0);
+      const f3n = bank.problems.find(p => p.code.startsWith("PHYS_Q3N") || p.code.endsWith("3N")).code;
+      await page.fill("#code", f3n); await page.press("#code", "Enter");
+      await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, f3n);
+      assert.ok(await page.locator("#freeze .fig svg").count() > 0, "figure from the uploaded file");
+      assert.equal((await page.evaluate(c => window.__drill.check(c, { answer: "3.20" }), f3n)).verdict, "correct", "graded from the file");
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
@@ -238,7 +245,8 @@ async function run(browserType, label, opts = {}) {
         const txt = await page.evaluate(() => navigator.clipboard.readText());
         const p = JSON.parse(txt);
         assert.equal(p.v, 1); assert.equal(p.code, "CALC1_A9R"); assert.equal(p.tries.length, 1);
-        assert.equal(p.tries[0].v, "pending"); assert.ok(p.explain.startsWith("area between"));
+        // tries[0].v: graded by serve.py POST /check
+        assert.equal(p.tries[0].v, "correct"); assert.ok(p.explain.startsWith("area between"));
       });
     }
     await step(`${label} ${vname} no page errors`, async () => { assert.deepEqual(errors, [], errors.join(" | ")); });
