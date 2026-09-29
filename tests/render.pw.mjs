@@ -29,8 +29,9 @@ async function run(browserType, label, opts = {}) {
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
-    // 404s on schema/examples/<CODE>.key.json are expected (dev grading stub probes for a key); web fonts may be blocked
-    page.on("response", r => { if (r.status() >= 400 && !/schema\/examples\/|offline\.js|fonts\.g/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
+    // expected 404s: schema/examples/<CODE>.key.json (dev grading stub probes for a key) and p/CALC1-X2P.json
+    // (the MC example lives only in schema/examples until the k/ split)
+    page.on("response", r => { if (r.status() >= 400 && !/schema\/examples\/|p\/CALC1-X2P\.json|offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     const open = async code => {

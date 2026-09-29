@@ -35,3 +35,12 @@ test("copy: long history is thinned and capped, last snapshot kept", () => {
   assert.equal(p.hist.n, 2000);
   assert.deepEqual(JSON.parse(stringify(p)), p);
 });
+
+test("copy: 'pending' verdict (tries made before server grading exists) is valid", () => {
+  const p = build({ code: "PHYS-F3N", start: 0, explain: "", history: [],
+    tries: [{ t: 4000, a: "3.2", v: "pending" }] }, 9000);
+  ok(p);
+  assert.deepEqual(p.final, { a: "3.2", v: "pending" });
+  const bad = structuredClone(p); bad.tries[0].v = "maybe";
+  assert.equal(validate(bad), false);
+});

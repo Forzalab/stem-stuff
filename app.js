@@ -57,7 +57,7 @@ function md(text, inline = false) {
    `answer` is { answer: "typed text" } or { choice: "b" }. */
 const devKeys = new Map(), devState = new Map();
 async function devKey(code) {
-  if (!devKeys.has(code)) devKeys.set(code, fetch(`schema/examples/${code}.key.json`).then(r => r.ok ? r.json() : null).catch(() => null));
+  if (!devKeys.has(code)) devKeys.set(code, fetch(`schema/examples/${code}.key.json`).then(r => r.ok ? r.json() : r.text().then(() => null)).catch(() => null));
   return devKeys.get(code);
 }
 async function check(code, answer) {
@@ -103,8 +103,9 @@ let subject = PREFIXES.includes(getCookie("subj")) ? getCookie("subj") : "CALC1"
 
 const subjBtn = $("#subjBtn"), menu = $("#subjMenu"), codeIn = $("#code");
 function buildMenu() {
-  menu.innerHTML = `<ul>${SUBJECTS.map(g => `<li class="grp"><div class="grp-head">${icon(g.icon)}<span>${esc(g.name)}</span></div>
-    <ul>${g.items.map(i => `<li><button type="button" class="item" data-subj="${i.id}" aria-current="${i.id === subject}" aria-label="${esc(i.name)}" title="${esc(i.name)}">${icon("s-" + i.id)}<span>${i.id}</span></button></li>`).join("")}</ul></li>`).join("")}</ul>`;
+  /* icons only (Tony): the name lives in aria-label and the title tooltip */
+  menu.innerHTML = SUBJECTS.map(g => `<div class="grp" role="group" aria-label="${esc(g.name)}"><span class="grp-head" title="${esc(g.name)}">${icon(g.icon)}</span>
+    ${g.items.map(i => `<button type="button" class="btn item" data-subj="${i.id}" aria-current="${i.id === subject}" aria-label="${esc(i.name)}" title="${esc(i.name)}">${icon("s-" + i.id)}</button>`).join("")}</div>`).join("");
 }
 function setSubject(id, save = true) {
   subject = id;
@@ -123,7 +124,8 @@ subjBtn.addEventListener("click", () => openMenu(menu.hidden));
 menu.addEventListener("click", e => { const b = e.target.closest(".item"); if (!b) return; setSubject(b.dataset.subj); openMenu(false); codeIn.focus(); });
 menu.addEventListener("keydown", e => {
   const items = [...menu.querySelectorAll(".item")], i = items.indexOf(document.activeElement);
-  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
+  const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+  if (d) { e.preventDefault(); items[(i + d + items.length) % items.length].focus(); }
   else if (e.key === "Home") { e.preventDefault(); items[0].focus(); }
   else if (e.key === "End") { e.preventDefault(); items.at(-1).focus(); }
   else if (e.key === "Escape") { e.preventDefault(); openMenu(false); subjBtn.focus(); }
@@ -159,6 +161,7 @@ let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, 
 async function fetchProblem(code) {
   const r = await fetch(`p/${code}.json`);
   if (r.ok) return r.json();
+  r.text().catch(() => {});   // drain the 404 body so the request completes
   /* DEV-ONLY: draft MC problems live in schema/examples until the k/ split lands (SCHEMA-SPLIT.md). */
   const d = await fetch(`schema/examples/${code}.public.json`).catch(() => null);
   if (d && d.ok) return d.json();
@@ -218,7 +221,7 @@ function renderQuestion() {
         <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}">
           <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md, true)}</span>
         </button>
-        <button type="button" class="send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>
       </div>`).join("")}</div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -228,7 +231,7 @@ function renderQuestion() {
     q.innerHTML = `<div class="ff" id="ff">${lead}
         <input id="ans" type="text" inputmode="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="${p.type === "expr" ? "in terms of " + v : "e.g. 9/2, sqrt(3), dne"}">
-        <button type="button" class="send" id="ansGo" aria-label="Submit answer" hidden>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" hidden>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
@@ -384,9 +387,10 @@ function layoutFreeze() {
   tallest = Math.max(tallest, innerHeight, h);
   const kb = editing() && h < tallest * 0.8;                            // software keyboard is up
   const inFreeze = freeze.contains(document.activeElement);
+  const kbWas = root.classList.contains("kb");
   root.classList.toggle("kb", kb);
   root.style.setProperty("--kb-top", kb && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
-  const frac = kb && !inFreeze ? 0.34 : h < 720 ? 0.5 : 0.6;
+  const frac = kb && !inFreeze ? 0.34 : h < 720 ? 0.5 : h < 960 ? 0.6 : 0.7;
   root.style.setProperty("--freeze-max", Math.round(Math.max(kb ? 96 : 180, h * frac)) + "px");
   requestAnimationFrame(() => {
     const clipped = !freeze.classList.contains("open") && freezeIn.scrollHeight > freezeIn.clientHeight + 2;
@@ -395,12 +399,23 @@ function layoutFreeze() {
     more.hidden = !clipped && !freeze.classList.contains("open");
     root.style.setProperty("--freeze-h", freeze.classList.contains("open") ? "0px" : freeze.offsetHeight + "px");
     stuck();
+    if (kb && !kbWas && !inFreeze) showQuestion();
   });
 }
 function stuck() {
   if (!S || freeze.hidden) return;
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
-  freeze.classList.toggle("stuck", !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5);
+  const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
+  const was = freeze.classList.contains("stuck");
+  freeze.classList.toggle("stuck", now);
+  if (now && !was) showQuestion();
+}
+/* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
+   the question is what you answer while writing; the problem start is one small scroll up. */
+function showQuestion() {
+  const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
+  const end = Math.max(bottom($("#q")), bottom($("#fb")));
+  freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
 }
 let raf = 0;
 const onView = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(layoutFreeze); };

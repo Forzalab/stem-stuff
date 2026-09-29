@@ -81,7 +81,8 @@
     x: '<path d="M6 6l12 12M18 6L6 18"/>',
     down: '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>'
   };
-  const svg = n => '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + "</svg>";
+  /* buttons use the page's one button system (.btn / .btn-go in app.css): 48px, 8px radius, 24px icon, 2px stroke */
+  const svg = n => '<svg class="ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + "</svg>";
 
   const CSS = `
 .so{--so-ink:var(--ink,#e7edf6);--so-muted:var(--muted,#a2b3cb);--so-sheet:var(--sheet,#1d2839);--so-edge:var(--edge,#6b7f9e);--so-focus:var(--focus,#8fb0ff);--so-bad:var(--bad,#ff7a7a);--so-ok:var(--ok,#5fd394);
@@ -90,24 +91,15 @@
 .so[hidden]{display:none}
 .so-card{position:relative;box-sizing:border-box;width:100%;max-width:26rem;padding:1.5rem 1.25rem 1.25rem;background:var(--so-sheet);border:1px solid #34445d;border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.45)}
 .so-card.drag{border-color:var(--so-focus);outline:2px dashed var(--so-focus);outline-offset:-8px}
-.so h2{margin:0 2.5rem .35rem 0;font-size:1.25rem;line-height:1.3;font-weight:700}
+.so h2{margin:0 3.75rem .35rem 0;font-size:1.25rem;line-height:1.3;font-weight:700}
 .so p{margin:0 0 1.1rem;color:var(--so-muted)}
 .so code{font:600 .95em ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--so-ink);overflow-wrap:anywhere}
-.so-row{display:flex;gap:.75rem;flex-wrap:wrap}
-.so-btn{position:relative;flex:1 1 9rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:48px;padding:.6rem 1rem;box-sizing:border-box;border-radius:8px;cursor:pointer;font-weight:700;color:var(--so-ink);background:#273242;border:2px solid var(--so-edge);-webkit-tap-highlight-color:transparent}
-.so-btn:hover{border-color:var(--so-muted)}
-.so-btn.main{background:#3a67d8;border-color:#3a67d8;color:#fff}
-.so-btn.main:hover{background:#4574e6;border-color:#4574e6}
-.so-btn:focus-within{outline:3px solid var(--so-focus);outline-offset:2px}
-.so-btn input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%)}
-.so-x{position:absolute;top:.5rem;right:.5rem;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:8px;background:none;color:var(--so-muted);cursor:pointer}
-.so-x:hover{color:var(--so-ink);background:#273242}
-.so-x:focus-visible{outline:3px solid var(--so-focus);outline-offset:0}
+.so-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.so-btn input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%)}
+.so-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.so-x{position:absolute;top:.75rem;right:.75rem}
 .so-msg{min-height:1.5em;margin:.9rem 0 0;font-size:.95rem;color:var(--so-muted)}
 .so-msg.bad{color:var(--so-bad)}.so-msg.ok{color:var(--so-ok)}
-.so-dl{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:8px;color:var(--muted,#a2b3cb);text-decoration:none}
-.so-dl:hover{color:var(--ink,#e7edf6);background:#273242}
-.so-dl:focus-visible{outline:3px solid var(--focus,#8fb0ff);outline-offset:2px}
 .so-dl[hidden]{display:none}
 @media (max-width:480px){.so{align-items:flex-end;padding:0}.so-card{max-width:none;border-radius:14px 14px 0 0;padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))}}
 @media (prefers-reduced-motion:no-preference){.so-card{animation:so-in .16s ease-out}@keyframes so-in{from{transform:translateY(8px);opacity:0}}}`;
@@ -128,11 +120,11 @@
     const dir = !IOS && "webkitdirectory" in document.createElement("input");
     el.innerHTML =
       '<div class="so-card">' +
-      '<button type="button" class="so-x" aria-label="Close">' + svg("x") + "</button>" +
+      '<button type="button" class="btn so-x" aria-label="Close" title="Close">' + svg("x") + "</button>" +
       '<h2 id="so-t"></h2><p id="so-d"></p>' +
       '<div class="so-row">' +
-      '<label class="so-btn main">' + svg("file") + '<span>Open file</span><input type="file" accept=".json,application/json" multiple></label>' +
-      (dir ? '<label class="so-btn">' + svg("folder") + '<span>Open folder</span><input type="file" webkitdirectory multiple></label>' : "") +
+      '<label class="btn btn-go so-btn main" title="Open file">' + svg("file") + '<span class="so-sr">Open file</span><input type="file" accept=".json,application/json" multiple></label>' +
+      (dir ? '<label class="btn so-btn" title="Open folder">' + svg("folder") + '<span class="so-sr">Open folder</span><input type="file" webkitdirectory multiple></label>' : "") +
       "</div>" +
       '<p class="so-msg" role="status" aria-live="polite"></p></div>';
     document.body.appendChild(el);
@@ -209,7 +201,7 @@
   /* ---------- download ---------- */
   function downloadButton() {
     const a = document.createElement("a");
-    a.className = "so-dl";
+    a.className = "btn so-dl";
     a.href = "stem-stuff.html";
     a.setAttribute("download", "stem-stuff.html");
     a.setAttribute("aria-label", "Download for offline use");
