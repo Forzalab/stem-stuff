@@ -551,6 +551,7 @@ function layoutDock() {
   const swapNext = !!S && !freeze.hidden && shrunk && ((inMain && (editing() || swapOn)) || (swapOn && grace));
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext);
+  root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
   if (swapNext !== swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
@@ -624,7 +625,7 @@ more.addEventListener("click", () => {
 const swapBtn = $("#swap"), stage = $("#stage"), problemEl = $("#problem"), work = $("#work");
 const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
 let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
-const GAP = 10;                                                                  // between the peek and the scratchpad: clears the box's 5px focus ring
+const GAP = 8;                                                                   // between the peek and the scratchpad: small, the box has no outside ring
 const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
 function setSwap(on) {
   swapOn = on;
@@ -667,7 +668,7 @@ function layoutSwap() {
   root.style.setProperty("--vv-h", Math.round(h) + "px");
   root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
   const cell = stage.clientHeight - 6;                                             // minus the stage's focus-ring room
-  const padMin = parseFloat(getComputedStyle(S.box.el).minHeight) || 130;         // 3 lines
+  const cs = getComputedStyle(S.box.el), padMin = 3 * parseFloat(cs.lineHeight) + parseFloat(cs.paddingTop) + 28 + 4 || 130;   // 3 lines (not min-height: Swap sets it to the cap)
   const peekMax = Math.max(0, Math.min(Math.round(h * 0.6), cell - padMin - GAP));
   root.style.setProperty("--peek-max", peekMax + "px");
   const noPeek = peekMax < 40;
@@ -711,7 +712,7 @@ document.addEventListener("focusin", e => {
   root.classList.toggle("bar-off", e.target.id === "scratch");
   const p = paneOf(e.target); if (p) setPane(p);
 });
-document.addEventListener("focusout", e => { if (e.target.id === "scratch" && (!e.relatedTarget || e.relatedTarget.id !== "scratch")) root.classList.remove("bar-off"); });
+document.addEventListener("focusout", () => setTimeout(() => root.classList.toggle("bar-off", document.activeElement && document.activeElement.id === "scratch"), 0));
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
