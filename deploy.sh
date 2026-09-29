@@ -25,9 +25,27 @@ stop_old() {
 }
 
 if [ -d "$DIR/.git" ] && git -C "$DIR" remote get-url origin 2>/dev/null | grep -q stem-stuff; then
-  echo "existing install at $DIR -> updating ($BRANCH)"
+  echo "existing install at $DIR ($BRANCH)"
   git -C "$DIR" fetch -q origin "$BRANCH"
-  git -C "$DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
+  OLD_SERVE="$(git -C "$DIR" rev-parse HEAD:serve.py)"
+  if [ "$(git -C "$DIR" rev-parse HEAD)" = "$(git -C "$DIR" rev-parse "origin/$BRANCH")" ]; then
+    echo "already up to date"
+  else
+    echo "incoming:"
+    git -C "$DIR" log --oneline "HEAD..origin/$BRANCH" | head -n 20
+    if [ "$(ask 'update the live site now? [Y/n]: ')" = "n" ]; then
+      echo "kept current version"
+    else
+      git -C "$DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
+      echo "updated -> $(git -C "$DIR" log --oneline -1)"
+    fi
+  fi
+  # Files are served from disk: a running server shows the update live.
+  # Restart only if serve.py changed or the server is down.
+  if [ "$OLD_SERVE" = "$(git -C "$DIR" rev-parse HEAD:serve.py)" ] \
+     && [ -f "$DIR/.host.pid" ] && kill -0 "$(cat "$DIR/.host.pid")" 2>/dev/null; then
+    echo "live, no restart  pid $(cat "$DIR/.host.pid")"; exit 0
+  fi
 elif [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
   echo "WARNING: $DIR is not empty:"
   ls -A "$DIR" | head -n 10
