@@ -19,6 +19,12 @@ ask() {
   if { : >/dev/tty; } 2>/dev/null; then printf '%s' "$1" >/dev/tty; read -r a </dev/tty || a=""; fi
   echo "$a"
 }
+# one key, no Enter (y / n / 1 / 2); Enter alone = the default
+key() {
+  local a=""
+  if { : >/dev/tty; } 2>/dev/null; then printf '%s' "$1" >/dev/tty; read -r -s -n 1 a </dev/tty || a=""; printf '%s\n' "$a" >/dev/tty; fi
+  echo "$a" | tr '[:upper:]' '[:lower:]'
+}
 
 for c in git python3; do command -v "$c" >/dev/null || die "$c not installed"; done
 # the server grades with sympy
@@ -70,7 +76,7 @@ if [ -d "$DIR/.git" ] && git -C "$DIR" remote get-url origin 2>/dev/null | grep 
   else
     echo "incoming:"
     git -C "$DIR" log --oneline "HEAD..origin/$BRANCH" | head -n 20
-    if [ "$(ask 'update the live site now? [Y/n]: ')" = "n" ]; then
+    if [ "$(key 'update the live site now? [Y/n]: ')" = "n" ]; then
       echo "kept current version"
     else
       git -C "$DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
@@ -83,7 +89,7 @@ elif [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
   echo
   echo "  1) Exit (default)"
   echo "  2) Wipe dir and install"
-  [ "$(ask 'choose [1/2]: ')" = "2" ] || { echo "exit, nothing touched"; exit 0; }
+  [ "$(key 'choose [1/2]: ')" = "2" ] || { echo "exit, nothing touched"; exit 0; }
   echo "This DELETES everything in $DIR. Cannot be undone."
   [ "$(ask "type the folder name '$(basename "$DIR")' to confirm: ")" = "$(basename "$DIR")" ] \
     || { echo "no match, exit, nothing touched"; exit 0; }
