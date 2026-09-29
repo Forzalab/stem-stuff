@@ -119,8 +119,9 @@ async function run(browserType, label, opts = {}) {
         const q = document.querySelector("#q").getBoundingClientRect();
         return { top: f.top, bottom: f.bottom, stuck: document.querySelector("#freeze").classList.contains("stuck"), qTop: q.top, vh: innerHeight };
       });
-      assert.ok(Math.abs(r.top) < 1.5, `freeze top ${r.top}`);
-      assert.ok(r.stuck, "not marked stuck");
+      // the scratchpad now stops at the visible bottom and scrolls inside itself, so the page may have little or nothing left
+      // to scroll: then the layer is simply in view (stuck once the page does scroll past it)
+      assert.ok(r.top >= -1.5 && r.bottom <= r.vh, `freeze out of view: ${r.top}..${r.bottom}`);
       assert.ok(r.bottom < r.vh * 0.75, `frozen layer too tall: ${r.bottom}/${r.vh}`);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/app-freeze-${viewport.width}.png` });
     });
@@ -190,21 +191,27 @@ async function run(browserType, label, opts = {}) {
       const ta = page.locator("#scratch");
       // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
       const clear = () => page.evaluate(() => {
-        const t = document.querySelector("#scratch"), b = document.querySelector("#copy"), cs = getComputedStyle(t);
+        const t = document.querySelector("#scratch"), bs = ["#cut", "#copy"].map(q => document.querySelector(q)), cs = getComputedStyle(t);
         const m = document.createElement("div");
         for (const k of ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "lineHeight", "paddingTop", "paddingLeft", "paddingRight",
           "paddingBottom", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth", "boxSizing", "whiteSpace", "overflowWrap", "wordBreak", "tabSize"]) m.style[k] = cs[k];
         Object.assign(m.style, { position: "absolute", left: "0", top: "0", visibility: "hidden", borderStyle: "solid", width: t.offsetWidth + "px", height: t.offsetHeight + "px" });
         m.textContent = (t.value || t.placeholder) + "\u200b"; document.body.append(m);
         const r = document.createRange(); r.selectNodeContents(m.firstChild);
-        const mr = m.getBoundingClientRect(), tr = t.getBoundingClientRect(), br = b.getBoundingClientRect();
-        const bx = br.left - tr.left, by = br.top - tr.top;
-        const hits = [...r.getClientRects()].filter(q => q.width && q.right - mr.left > bx && q.bottom - mr.top > by && q.top - mr.top < by + br.height);
+        const mr = m.getBoundingClientRect(), tr = t.getBoundingClientRect(), rects = [...r.getClientRects()];
+        let hits = 0, inside = true;
+        for (const b of bs) {   // neither Cut nor Copy may have a line box under it
+          const br = b.getBoundingClientRect(), bx = br.left - tr.left, by = br.top - tr.top;
+          hits += rects.filter(q => q.width && q.right - mr.left > bx && q.bottom - mr.top > by && q.top - mr.top < by + br.height).length;
+          inside = inside && br.right <= tr.right && br.bottom <= tr.bottom && br.left >= tr.left;
+        }
+        const [cut, copy] = bs.map(b => b.getBoundingClientRect());
         m.remove();
-        return { hits: hits.length, free: t.classList.contains("xb-free"), inside: br.right <= tr.right && br.bottom <= tr.bottom && br.left >= tr.left };
+        // once the box is capped at the viewport bottom it scrolls: lines pass under the buttons, but the last one rests above them
+        return { hits: t.scrollHeight > t.clientHeight + 1 ? 0 : hits, free: t.classList.contains("xb-free"), inside, apart: cut.right <= copy.left };
       });
       let c = await clear();
-      assert.ok(c.inside, "button not inside the textarea box");
+      assert.ok(c.inside && c.apart, "Cut and Copy not both inside the textarea box, side by side");
       assert.equal(c.hits, 0, "placeholder under the button");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
       await ta.click();
@@ -260,6 +267,63 @@ async function run(browserType, label, opts = {}) {
       assert.deepEqual(await page.locator("#q .opt .txt").allTextContents(), ["TRUE", "FALSE"]);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/tf-${vname}.png` });
     });
+
+    if (label === "chromium" && vname === "phone") {
+      await step(`${label} ${vname} scratchpad stops at the visible bottom and scrolls; Cut all copies then clears`, async () => {
+        await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+        await open("CALC1_T6B");
+        const ta = page.locator("#scratch");
+        await ta.click();
+        await ta.fill(Array.from({ length: 60 }, (_, i) => `line ${i + 1}: resolve mg along the slope, then balance with kx.`).join("\n"));
+        await page.keyboard.type("!");   // typing (not fill) scrolls the caret line into view, above the corner buttons
+        const geo = () => page.evaluate(() => {
+          const t = document.querySelector("#scratch"), vv = window.visualViewport, r = t.getBoundingClientRect();
+          const dk = document.querySelector("#dock"), dockUp = document.documentElement.classList.contains("dock-bottom") && !document.documentElement.classList.contains("dock-away");
+          return { bottom: r.bottom, limit: vv.offsetTop + vv.height - (dockUp ? dk.offsetHeight : 0), sh: t.scrollHeight, ch: t.clientHeight, h: r.height, ov: getComputedStyle(t).overflowY };
+        });
+        let g = await geo();
+        assert.ok(g.bottom <= g.limit + 0.5, `textarea bottom ${g.bottom} > visible bottom ${g.limit}`);
+        assert.ok(g.sh > g.ch, `not scrollable: ${g.sh} <= ${g.ch}`);
+        assert.equal(g.ov, "auto");
+        if (SHOTS) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `${SHOTS}/pad-long-390.png` }); }
+        // a smaller visible area (keyboard, address bar) re-caps the box
+        await page.setViewportSize({ width: 390, height: 520 });
+        await page.waitForTimeout(250);
+        g = await geo();
+        assert.ok(g.bottom <= g.limit + 0.5, `after resize: textarea bottom ${g.bottom} > visible bottom ${g.limit}`);
+        assert.ok(g.h >= 4 * 1.6 * 18, `below 4 rows: ${g.h}`);
+        if (SHOTS) await page.screenshot({ path: `${SHOTS}/pad-short-390x520.png` });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForTimeout(250);
+        // both buttons are visible in the box's bottom-right corner
+        const vis = await page.evaluate(() => ["#cut", "#copy"].map(q => { const r = document.querySelector(q).getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; }));
+        assert.deepEqual(vis, [true, true]);
+        // failed copy: nothing is cleared
+        await page.evaluate(() => { window.__w = navigator.clipboard.writeText; navigator.clipboard.writeText = () => Promise.reject(new Error("no")); window.__e = document.execCommand; document.execCommand = () => false; });
+        await page.locator("#cut").click();
+        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-x");
+        assert.ok((await ta.inputValue()).startsWith("line 1:"), "failed copy cleared the text");
+        await page.evaluate(() => { navigator.clipboard.writeText = window.__w; document.execCommand = window.__e; });
+        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-cut", null, { timeout: 4000 });
+        // Cut all: payload has the text, box empties, done feedback, history keeps the clear
+        await page.locator("#cut").click();
+        await page.waitForSelector("#cut.done");
+        assert.equal(await ta.inputValue(), "");
+        assert.equal(await page.evaluate(() => document.querySelector("#cut use").getAttribute("href")), "#i-ok");
+        const p1 = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+        assert.ok(p1.explain.startsWith("line 1:") && p1.explain.includes("line 60:"), "payload lacks the scratchpad");
+        assert.ok(/^\d+px$/.test(await ta.evaluate(t => t.style.maxHeight)) && await ta.evaluate(t => t.offsetHeight) >= 4 * 28.8, "box collapsed below 4 rows");
+        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-cut", null, { timeout: 4000 });
+        await page.locator("#copy").click();
+        await page.waitForSelector("#copy.done");
+        const p2 = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+        const { replay } = await import("../copy/payload.mjs");
+        const snaps = replay(p2).map(x => x.text);
+        assert.equal(p2.explain, ""); assert.ok(p2.hist.n >= 2, "history lost");
+        assert.ok(snaps.at(-2).includes("line 60:") && snaps.at(-1) === "", "the clear is not recorded as an edit");
+        if (SHOTS) { await ta.click(); await page.keyboard.type("after the cut"); await page.locator("#work").screenshot({ path: `${SHOTS}/pad-after-cut-390.png` }); }
+      });
+    }
 
     if (label === "chromium" && vname === "desktop") {
       await step(`${label} copy payload`, async () => {

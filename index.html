@@ -28,6 +28,7 @@
     <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.6 7.5L20 18M8.6 16.5L20 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -79,6 +80,9 @@
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
       <div class="xb-field" id="xbField">
+        <button type="button" class="btn xb-cut" id="cut" aria-label="Cut all: copy answer, scratchpad and history, then clear the scratchpad" title="Cut all">
+          <svg class="ico" aria-hidden="true"><use href="#i-cut"/></svg>
+        </button>
         <button type="button" class="btn xb-copy" id="copy" aria-label="Copy answer, scratchpad and history" title="Copy">
           <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>
         </button>

@@ -70,3 +70,7 @@ Tony: Copy sits inside the Scratchpad's bottom-right corner, and text wraps as i
 - **Hysteresis:** once reserved, the band is freed only when the lines clear the button by a further 8px. `padding` has no transition.
 - **When it recomputes:** synchronously on `input` (no frame shows text under the button), on width changes (ResizeObserver) and on `document.fonts.ready`. In the JS-growth path it fires `xb-refit` so `mount()` refits the height.
 - **Test:** `tests/render.pw.mjs`, step "copy button inside the scratchpad", at 390/1024/1920. It checks that no line box ever intersects the button while typing 40 words. It checks that a long last line turns the band on and a short last line (`\nok`) turns it off. It checks the padding toggles no more than twice per line change. Screenshots: `shots/app-copy-reserved-390.png`, `shots/app-copy-free-390.png`.
+
+## Update (Sep 29): height cap + Cut
+- The box grows only until its bottom reaches the bottom of the visible viewport (visualViewport, minus the phone code dock); then it scrolls inside (`overflow-y: auto`). Minimum 4 rows. Code: `limit()` in explain-box.js, called from app.js `layoutFreeze`.
+- Cut (scissors, left of Copy): copies the same payload as Copy, then empties the box; the clear is kept in the edit history. A failed copy clears nothing.
