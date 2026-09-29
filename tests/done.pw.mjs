@@ -37,7 +37,9 @@ const BANK = { v: 1, problems: [
     choices: [{ id: "t", md: "True" }, { id: "f", md: "False" }], wrong: [{ choice: "f", hint: "HINT-D05" }] },
   num("CALC1_D06", "6", "X then tick: 3 + 3"),
   { code: "CALC1_D07", type: "mc", correct: "b", shuffle: false, body: [{ type: "text", md: "Out: pick B" }],
-    choices: [{ id: "a", md: "one" }, { id: "b", md: "two" }, { id: "c", md: "three" }] }] };
+    choices: [{ id: "a", md: "one" }, { id: "b", md: "two" }, { id: "c", md: "three" }] },
+  { code: "CALC1_D08", type: "multi", body: [{ type: "text", md: "Multi" }],
+    parts: [{ type: "num", answer: "1", prompt: "one" }, { type: "num", answer: "2", prompt: "two", wrong: [{ match: "3", hint: "HINT-D08b" }] }] }] };
 
 let failures = 0;
 async function step(name, fn) {
@@ -89,6 +91,29 @@ try {
     await go(page, "CALC1_D07"); await pick(page, "a"); await pick(page, "c");
   });
 
+  const part = async (pg, i, v) => {
+    await pg.fill(`#q .part[data-i="${i}"] .ans`, v); await pg.press(`#q .part[data-i="${i}"] .ans`, "Enter"); await pg.waitForTimeout(250);
+  };
+  const partState = pg => pg.$$eval("#q .part", ps => ps.map(p => ({ shut: p.querySelector(".ff").classList.contains("shut"),
+    ok: p.querySelector(".ff").classList.contains("ok"), val: p.querySelector(".ans").value, dis: p.querySelector(".ans").disabled,
+    hint: p.querySelector(".phint").textContent })));
+  await step("upload multi: parts keep their own state across a reload", async () => {
+    await go(page, "CALC1_D08"); await part(page, 0, "1"); await part(page, 1, "3");
+    await page.reload(); await opened(page, "CALC1_D08");
+    const ps = await partState(page);
+    assert.ok(ps[0].shut && ps[0].ok && ps[0].dis, "part a right, closed");
+    assert.ok(!ps[1].shut && !ps[1].dis, "part b still open"); assert.match(ps[1].hint, /HINT-D08b/);
+    assert.equal((await qstate(page)).finished, false);
+    await openList(page); const r = await rows(page);
+    assert.equal(r[7].x, 1); assert.equal(r[7].gone, false);
+    await part(page, 1, "5");
+    await page.reload(); await opened(page, "CALC1_D08");
+    const s2 = await qstate(page); assert.ok(s2.finished); assert.match(s2.fb, /1 of 2 right/);
+    await openList(page); const r2 = await rows(page);
+    assert.equal(r2[7].x, 2); assert.equal(r2[7].gone, true); assert.match(r2[7].label, /Out of tries\.$/);
+    await page.click('#qlistBtn');
+  });
+
   const expectRows = async () => {
     await openList(page);
     const r = await rows(page);
@@ -107,7 +132,7 @@ try {
   await step("upload: list marks, before reload", expectRows);
 
   await step("upload: list marks survive a reload", async () => {
-    await page.reload(); await opened(page, "CALC1_D07");
+    await page.reload(); await opened(page, "CALC1_D08");
     await expectRows();
     if (SHOTS) {
       await page.screenshot({ path: `${SHOTS}/done-list-390.png` });
@@ -202,6 +227,19 @@ try {
     assert.ok(s.finished); assert.deepEqual(s.right, []); assert.match(s.fb, /Out of tries/);
     await sp.waitForTimeout(500);
     assert.ok((await qstate(sp)).finished, "still locked after /state");
+  });
+
+  await step("server multi: a wrong part survives a restart; the other part stays open", async () => {
+    await go(sp, "CSCI26_M5V");
+    await sp.fill('#q .part[data-i="0"] .ans', "17"); await sp.press('#q .part[data-i="0"] .ans', "Enter"); await sp.waitForTimeout(300);
+    const before = await sp.$eval('#q .part[data-i="0"] .phint', e => e.textContent);
+    await restart();
+    await sp.reload(); await opened(sp, "CSCI26_M5V"); await sp.waitForTimeout(400);
+    const st = await sstate(sctx, "CSCI26_M5V");
+    assert.ok(Array.isArray(st.parts)); assert.equal(st.parts[0].wrong, 1); assert.match(before, /overlap twice/);
+    const hint = await sp.$eval('#q .part[data-i="0"] .phint', e => e.textContent);
+    assert.equal(hint, before, "same feedback after reload");
+    assert.equal(await sp.$eval('#q .part[data-i="1"] .ans', e => e.disabled), false);
   });
 
   await step("server: correct answer reopens read-only after a reload", async () => {

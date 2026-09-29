@@ -38,10 +38,10 @@ function md(text, inline = false) {
 
 /* ================= grading: THE one place =================
    Server problems: POST /check grades (answers never reach the browser). Reply shape (SCHEMA.md "Grading"):
-     { verdict: "correct"|"wrong"|"invalid"|"locked", triesLeft, error?, hint?, repeat? }
+     { verdict: "correct"|"wrong"|"invalid"|"locked", triesLeft, error?, hint?, repeat?, part? }
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
-   `answer` is { answer: "typed text" } or { choice: "b" }. */
+   `answer` is { answer: "typed text" } or { choice: "b" }; a multi grades one part at a time: { part: i, answer: "typed text" }. */
 /* every request goes through net(): aborted after 8 s, so nothing can wait forever (design/RELOAD.md).
    In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
 const TIMEOUT = 8000;
@@ -85,11 +85,14 @@ function unitHit(u, t, g) {                               // re entries first, t
   return w.find(x => x.re && new RegExp(x.re, "i").test(t))
     || w.find(x => { try { return x.match != null && same(g, unitSig(u, x.match), u.tol ?? 1e-6); } catch { return false; } });
 }
-function gradeLocal(key, answer) {
-  const st = localState.get(key.code) || { wrong: [], done: false };
-  localState.set(key.code, st);
+function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
+  const multi = key.type === "multi", idx = answer.part;
+  if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
+  const sk = multi ? `${key.code}#${idx}` : key.code, st = localState.get(sk) || { wrong: [], done: false };
+  localState.set(sk, st);
+  const R = o => multi ? { ...o, part: idx } : o;
   const left = () => maxTries(key) - st.wrong.length;
-  if (st.done || left() <= 0) return { verdict: "locked", triesLeft: 0 };
+  if (st.done || left() <= 0) return R({ verdict: "locked", triesLeft: 0 });
   let hit = null, correct, sig;
   if (key.type === "mc") {
     sig = answer.choice;
@@ -97,23 +100,19 @@ function gradeLocal(key, answer) {
     correct = sig === key.correct;
     if (!correct) hit = (key.wrong || []).find(w => w.choice === sig);
   } else {
-    const units = key.type === "multi" ? key.parts : [key];
-    const texts = key.type === "multi" ? answer.parts : [answer.answer];
-    if (!Array.isArray(texts) || texts.length !== units.length) return { verdict: "invalid", triesLeft: left() };
-    let oks;
-    try { sig = units.map((u, i) => unitSig(u, String(texts[i]))); oks = units.map((u, i) => unitOk(u, sig[i])); }
-    catch { return { verdict: "invalid", triesLeft: left() }; }
-    correct = oks.every(Boolean);
-    if (!correct) for (let i = 0; i < units.length && !hit; i++) if (!oks[i]) hit = unitHit(units[i], String(texts[i]), sig[i]);
+    const u = multi ? key.parts[idx] : key, text = String(answer.answer ?? "").slice(0, 200);
+    try { sig = unitSig(u, text); correct = unitOk(u, sig); }
+    catch { return R({ verdict: "invalid", triesLeft: left() }); }
+    if (!correct) hit = unitHit(u, text, sig);
   }
-  if (correct) { st.done = true; return { verdict: "correct", triesLeft: left() }; }
-  const tol = Math.max(...(key.parts || [key]).map(u => u.tol ?? 1e-6));
+  if (correct) { st.done = true; return R({ verdict: "correct", triesLeft: left() }); }
+  const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
   if (!repeat) st.wrong.push(sig);
   const out = { verdict: "wrong", triesLeft: left(), hint: hit ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
   if (hit) out.error = hit.error;
   if (repeat) out.repeat = true;
-  return out;
+  return R(out);
 }
 
 /* ================= entry box: code bar + upload ================= */
@@ -193,7 +192,7 @@ async function load(code) {
   retryLoad.hidden = true;
   try { prob = await fetchProblem(code); }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "The server took too long." : "Couldn't load that. Check your connection.";
+    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -203,7 +202,7 @@ async function load(code) {
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   const rec = doneStore() ? doneStore().doneGet(code) : null;
-  if (rec && off()) localState.set(code, { wrong: (rec.sigs || []).slice(), done: rec.done === "correct" });   // upload: grading picks up where it was
+  if (rec && off()) seedLocal(code, rec, prob);
   render();
   if (rec) paint(rec);
   if (!off()) syncServer(S);
@@ -255,14 +254,16 @@ function renderQuestion() {
     wireMC(q);
     fitChoices();
   } else if (p.type === "multi") {
-    /* one box per part, side by side; one arrow, off until every box is filled (SCHEMA.md "Grading") */
-    q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
-        <div class="parts">${p.parts.map((u, i) => { const l = esc(u.label || LETTERS[i]); return `
-          <label class="part"><span class="badge" aria-hidden="true">${l}</span>
-            <input class="ans" type="text" aria-label="Answer ${l}" ${INPUT_ATTRS}></label>`; }).join("")}</div>
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answers" disabled>${icon("i-go")}</button>
-      </div>`;
-    wireFF();
+    /* one row per part: "a)", its sub-question (if it has one), its own box with its own arrow inside (the freeform pattern).
+       Each part is graded alone, with its own tries and lockout (SCHEMA.md "Grading"). */
+    q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
+      const l = esc(u.label || LETTERS[i].toLowerCase());
+      return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
+        <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
+          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Submit ${l}" hidden>${icon("i-go")}</button></div>
+        <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
+    }).join("")}</div>`;
+    wireParts();
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
@@ -409,9 +410,9 @@ async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
   if (vals.some(v => !v) || S.finished || busy) return;
   busy = true;
-  const multi = S.prob.type === "multi", t = vals.join(" , ");
+  const t = vals.join(" , ");
   try {
-    const mine = S, r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    const mine = S, r = await check(S.code, { answer: vals[0] });
     if (S !== mine) return;
     if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
@@ -421,37 +422,131 @@ async function submitFF() {
   } finally { busy = false; }
 }
 
+/* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
+const partEls = i => { const r = document.querySelector(`#q .part[data-i="${i}"]`); return { row: r, box: r.querySelector(".ff"), inp: r.querySelector(".ans"), go: r.querySelector(".send"), hint: r.querySelector(".phint") }; };
+function wireParts() {
+  S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
+  S.prob.parts.forEach((_, i) => {
+    const { inp, go, box } = partEls(i);
+    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); });   // the arrow appears once there is text (like the code box)
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
+    go.addEventListener("click", () => submitPart(i));
+  });
+}
+/* a part is closed for good: right (green) or out of tries (dim). Disabled, not read-only: a tap doesn't focus it. */
+function shutPart(i, ok) {
+  const { box, inp, go } = partEls(i);
+  S.parts[i].shut = true; S.parts[i].ok = ok;
+  box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
+  for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
+  go.hidden = true;
+}
+function partFeedback(i, r, typed) {
+  const { hint, box } = partEls(i), row = hint.parentElement;
+  let h = "";
+  if (r.verdict === "wrong") {
+    if (!S.parts[i].shut) box.classList.add("bad");
+    h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
+  } else if (r.verdict === "locked") h = `<p class="verdict lock">${icon("i-lock")}<span>Out of tries.</span></p>`;
+  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
+  hint.innerHTML = h;
+  row.classList.toggle("hinted", !!h);
+  const again = hint.querySelector(".retry");
+  if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); layoutFreeze(); submitPart(i); });
+  say((partEls(i).row.querySelector(".mk").textContent + " " + (r.verdict === "correct" ? "Correct. " : "") + hint.textContent).replace(/\s+/g, " ").trim());
+}
+async function submitPart(i) {
+  const { inp, hint } = partEls(i), v = inp.value.trim();
+  if (!v || S.parts[i].shut || S.finished || busy) return;
+  busy = true;
+  try {
+    const mine = S, r = await check(S.code, { part: i, answer: v });
+    if (S !== mine) return;
+    if (r.verdict === "timeout") { partFeedback(i, r); layoutFreeze(); return; }   // not a try: the text stays, retry resends it
+    if (r.verdict !== "invalid") record({ a: v, part: i }, r);
+    const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
+    if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
+    else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
+    else partFeedback(i, r, v);
+    if (mine.parts.every(x => x.shut)) settle();
+    else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
+    layoutFreeze();
+  } finally { busy = false; }
+}
+/* every part right or locked: the problem is finished. It counts as correct only if every part is right. */
+function settle() {
+  const right = S.parts.filter(x => x.ok).length, n = S.parts.length;
+  S.solved = right === n;
+  finish();
+  $("#fb").innerHTML = S.solved ? `<p class="verdict ok">${icon("i-ok")}<span>Correct</span></p>`
+    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
+  say($("#fb").textContent.replace(/\s+/g, " ").trim());
+}
+
 /* ---------- attempts, feedback ---------- */
 function record(a, r) {
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
-  if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, n: S.tries.filter(x => x.v === "wrong").length, kind: r.error || "nudge" });
+  const mine = x => x.part === a.part;        // a multi counts wrong tries per part; the others have part undefined
+  if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
-   Record: { v, x: wrong tries, done: "open"|"correct"|"out", tries, hints, hint, gen, sigs? }. Never the answer or the right
-   choice: a reopened question shows only what the student did. */
+   Record: { v: 2, units: [{ x, done, hint, gen, sigs? }], x, done, tries, hints }. One unit per problem, one per part for a multi.
+   x = wrong tries, done = "open" | "correct" | "out". Top level (for the list): x = all wrong tries, done = "correct" when every
+   unit is right, "out" when every unit is closed and one isn't, else "open".
+   Never the answer or the right choice: a reopened question shows only what the student did. */
 const doneStore = () => window.stemOffline && window.stemOffline.doneGet ? window.stemOffline : null;
+const unitCount = p => p.type === "multi" ? p.parts.length : 1;
+const freshUnit = () => ({ x: 0, done: "open", hint: null, gen: 0 });
+function units(rec, p) {
+  const n = unitCount(p), u = rec && Array.isArray(rec.units) ? rec.units : [];
+  return Array.from({ length: n }, (_, i) => ({ ...freshUnit(), ...(u[i] || {}) }));
+}
+function wrapRec(us, tries, hints) {
+  const x = us.reduce((a, u) => a + u.x, 0);
+  const done = us.every(u => u.done === "correct") ? "correct" : us.every(u => u.done !== "open") ? "out" : "open";
+  return { v: 2, units: us, x, done, tries, hints };
+}
 function saveDone(r) {
   const st = doneStore(); if (!st) return;
-  const max = maxTries(S.prob), x = Math.max(0, max - S.triesLeft), old = st.doneGet(S.code) || {};
-  const rec = { v: 1, x, done: r.verdict === "correct" ? "correct" : x >= max ? "out" : "open",
-    tries: S.tries.filter(t => t.v === "correct" || t.v === "wrong"), hints: S.hints.slice(),
-    hint: r.verdict === "wrong" ? r.hint || null : old.hint || null,     // the hint for the student's own wrong answer
-    gen: typeof r.gen === "number" ? r.gen : old.gen || 0 };
-  if (off()) rec.sigs = ((localState.get(S.code) || {}).wrong || []).slice();
-  st.donePut(S.code, rec);
+  const p = S.prob, max = maxTries(p), i = p.type === "multi" ? r.part ?? 0 : 0, us = units(st.doneGet(S.code), p);
+  const x = Math.max(0, max - (typeof r.triesLeft === "number" ? r.triesLeft : max)), u = us[i];
+  Object.assign(u, { x, done: r.verdict === "correct" ? "correct" : x >= max ? "out" : "open" });
+  if (r.verdict === "wrong") u.hint = r.hint || null;                  // the hint for the student's own wrong answer
+  if (typeof r.gen === "number") u.gen = r.gen;
+  if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
+  st.donePut(S.code, wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice()));
+}
+/* upload mode: gradeLocal picks up where it was */
+function seedLocal(code, rec, p) {
+  units(rec, p).forEach((u, i) => { if (u.sigs || u.done !== "open") localState.set(p.type === "multi" ? `${code}#${i}` : code, { wrong: (u.sigs || []).slice(), done: u.done === "correct" }); });
 }
 /* show a record on the freshly rendered question: struck wrong choices, the student's right one, their last typed answer;
-   done = read-only (finish()). The right choice is never marked unless the student picked it. */
+   closed = read-only. The right choice is never marked unless the student picked it. */
 function paint(rec) {
-  const p = S.prob, max = maxTries(p);
+  const p = S.prob, max = maxTries(p), us = units(rec, p);
   S.tries = (rec.tries || []).slice(); S.hints = (rec.hints || []).slice();
-  S.triesLeft = Math.max(0, max - (rec.x || 0));
+  if (p.type === "multi") {
+    us.forEach((u, i) => {
+      const last = S.tries.filter(t => t.part === i).pop(), { inp, go } = partEls(i);
+      if (last && typeof last.a === "string") { inp.value = last.a; go.hidden = u.done !== "open"; }
+      if (u.done !== "open") shutPart(i, u.done === "correct");
+      if (u.done === "correct") partFeedback(i, { verdict: "correct" });
+      else if (u.x > 0) partFeedback(i, { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined });
+    });
+    if (S.parts.every(x => x.shut)) settle();
+    return;
+  }
+  const u = us[0];
+  S.triesLeft = Math.max(0, max - u.x);
   if (p.type === "mc") {
     for (const t of S.tries) {
       const o = opts().find(x => x.dataset.id === t.c); if (!o) continue;
@@ -460,17 +555,13 @@ function paint(rec) {
     }
     const live = opts().find(x => !x.disabled); if (live) roving(live);
   } else {
-    const last = S.tries[S.tries.length - 1], ins = [...document.querySelectorAll("#q .ans")];
-    if (last && typeof last.a === "string") {
-      const vals = ins.length > 1 ? last.a.split(" , ") : [last.a];
-      ins.forEach((x, i) => { x.value = vals[i] || ""; });
-      const go = $("#ansGo"); if (go) go.disabled = ins.some(x => !x.value.trim());
-    }
-    if (rec.done === "correct") $("#ff").classList.add("ok", "done");
+    const last = S.tries[S.tries.length - 1], inp = $("#ans");
+    if (last && typeof last.a === "string" && inp) { inp.value = last.a; const go = $("#ansGo"); if (go) go.disabled = !inp.value.trim(); }
+    if (u.done === "correct") $("#ff").classList.add("ok", "done");
   }
-  if (rec.done !== "open") finish();
-  if (rec.done === "correct") feedback({ verdict: "correct" });
-  else if (rec.x > 0 || rec.done === "out") feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: rec.hint || undefined });
+  if (u.done !== "open") finish();
+  if (u.done === "correct") feedback({ verdict: "correct" });
+  else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
 }
 function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
@@ -478,22 +569,33 @@ function repaint(rec) {
   if (rec) paint(rec);
   layoutFreeze();
 }
-/* server mode: the server is the source of truth for tries, the record is a display cache.
-   Server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
+/* server mode: the server is the source of truth for tries, the record is a display cache. Per unit:
+   server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
 async function syncServer(mine) {
   const st = doneStore(); if (!st || !mine || off()) return;
   let s;
   try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) return; s = await r.json(); }
   catch { return; }                                            // unreachable or slow: the cache stands
-  if (S !== mine || busy || typeof s.wrong !== "number") return;
-  const max = maxTries(mine.prob), c = st.doneGet(mine.code), cx = c ? c.x : 0, cd = c ? c.done : "open";
-  const sd = s.done ? "correct" : s.wrong >= max ? "out" : "open";
-  if (s.wrong > cx || (sd !== "open" && cd === "open") || (sd === "correct" && cd !== "correct")) {
-    const rec = { v: 1, tries: [], hints: [], hint: null, ...(c || {}), x: s.wrong, done: sd, gen: s.gen };
-    st.donePut(mine.code, rec); repaint(rec);
-  } else if (cx > s.wrong || (cd !== "open" && sd === "open")) {
-    if (s.gen > ((c && c.gen) || 0)) { st.doneDrop(mine.code); repaint(null); }
-  } else if (c && c.gen !== s.gen) st.donePut(mine.code, { ...c, gen: s.gen });
+  if (S !== mine || busy) return;
+  const p = mine.prob, max = maxTries(p), c = st.doneGet(mine.code), us = units(c, p), ss = s.parts || [s];
+  if (ss.length !== us.length || ss.some(x => typeof x.wrong !== "number")) return;
+  let tries = c ? (c.tries || []).slice() : [], hints = c ? (c.hints || []).slice() : [], shown = false, quiet = false;
+  ss.forEach((su, i) => {
+    const u = us[i], sd = su.done ? "correct" : su.wrong >= max ? "out" : "open";
+    const mineOf = t => p.type === "multi" ? t.part === i : true;
+    if (su.wrong > u.x || (sd !== "open" && u.done === "open") || (sd === "correct" && u.done !== "correct")) {
+      Object.assign(u, { x: su.wrong, done: sd, gen: su.gen }); shown = true;
+    } else if (u.x > su.wrong || (u.done !== "open" && sd === "open")) {
+      if (su.gen > (u.gen || 0)) {                             // Tony reset it by hand
+        us[i] = { ...freshUnit(), gen: su.gen }; shown = true;
+        tries = tries.filter(t => !mineOf(t)); hints = hints.filter(t => !mineOf(t));
+      }
+    } else if (u.gen !== su.gen) { u.gen = su.gen; quiet = true; }
+  });
+  if (!shown && !quiet) return;
+  const rec = wrapRec(us, tries, hints);
+  if (!rec.x && rec.done === "open" && !tries.length) st.doneDrop(mine.code); else st.donePut(mine.code, rec);
+  if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
@@ -510,7 +612,7 @@ function feedback(r, typed) {
   else if (r.verdict === "wrong") h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>timeout</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
@@ -767,6 +869,7 @@ function resume(fromCache) {
   if (S && !S.finished) {
     const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
     if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
+    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim(); } });
     for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
     if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
   }

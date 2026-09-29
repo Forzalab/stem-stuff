@@ -416,17 +416,75 @@ async function run(browserType, label, opts = {}) {
       await page.fill("#ans", "~Q->~P"); await page.press("#ans", "Enter");
       await page.locator("#fb .verdict.ok").waitFor();
 
-      await open("CSCI26_M5V");                                              // multi: arrow off until every box is filled
+      await open("CSCI26_M5V");                                              // multi: every part has its own arrow, verdict, tries and lockout
       const boxes = page.locator("#q .ans");
       assert.equal(await boxes.count(), 2);
-      await boxes.nth(0).fill("14");
-      assert.ok(await page.locator("#ansGo").isDisabled(), "arrow must wait for box B");
-      await boxes.nth(0).press("Enter");                                   // Enter jumps to the empty box
-      assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#q .ans")[1]), true);
+      assert.equal(await page.locator("#ansGo").count(), 0, "no shared arrow any more");
+      const marks = await page.locator("#q .mparts .mk").allTextContents();           // sub-questions: "a)" "b)" each with its own text and box
+      assert.deepEqual(marks, ["a)", "b)"]);
+      assert.match(await page.locator("#q .part").nth(0).locator(".pr").textContent(), /How many are in/);
+      assert.equal(await page.locator("#q .part .pr .katex").count(), 1, "prompt TeX renders");
+      assert.match(await page.locator("#q .part").nth(1).locator(".pr").textContent(), /exactly one set/);
+      const rows = await page.evaluate(() => [...document.querySelectorAll("#q .part")].map(r => { const b = r.getBoundingClientRect(), t = r.querySelector(".pr").getBoundingClientRect(), x = r.querySelector(".ff").getBoundingClientRect(); return { top: b.top, pr: t.top, ptxt: t.bottom, box: x.top, boxL: x.left, prL: t.left, prR: t.right, w: x.width }; }));
+      assert.ok(rows[1].top > rows[0].top, "rows stack");
+      if (vname === "phone") assert.ok(rows[0].box >= rows[0].ptxt - 1, "phone: box under its prompt");
+      else assert.ok(rows[0].boxL >= rows[0].prR - 1 && Math.abs(rows[0].box - rows[0].pr) < 20, "wide: box beside its prompt");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll");
+      assert.match(await boxes.nth(0).evaluate(e => getComputedStyle(e).fontFamily), /Atkinson Hyperlegible Mono/);
+      assert.match(await boxes.nth(1).getAttribute("aria-labelledby"), /mk1 pr1/);
+      const arrows = () => page.locator("#q .part .send:visible").count();
+      assert.equal(await arrows(), 0, "no arrow in an empty box");
+      await boxes.nth(1).fill("14");                                       // typing in b shows only b's arrow, nested in b's box, flush right
+      assert.equal(await arrows(), 1);
+      assert.ok(await page.locator("#go0").isHidden() && await page.locator("#go1").isVisible());
+      {
+        const g = await page.locator("#go1").boundingBox(), f = await page.locator("#q .part .ff").nth(1).boundingBox(), t = await boxes.nth(1).boundingBox();
+        assert.ok(g.x + g.width <= f.x + f.width && g.x >= f.x && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside its box");
+        assert.ok(t.x + t.width <= g.x + 0.5, "the text field ends where the arrow begins (room reserved, text never under it)");
+        assert.equal(await boxes.nth(1).evaluate(e => e.parentElement.contains(document.getElementById("go1"))), true);
+      }
+      await boxes.nth(1).fill(""); assert.equal(await arrows(), 0, "emptying the box hides the arrow");
+      await boxes.nth(1).fill("14");
+      await boxes.nth(0).fill("1"); assert.equal(await arrows(), 2, "arrows = non-empty unlocked boxes"); await boxes.nth(0).fill("");
+      // b wrong twice -> only b locks (its hint is its own wrong entry, then the nudge)
+      await boxes.nth(1).press("Enter");                                   // Enter submits THIS box
+      await page.locator("#q .part").nth(1).locator(".phint .cluck").waitFor();
+      assert.match(await page.locator("#ph1").textContent(), /Exactly one/);
+      assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
+      assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
+      assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
+      await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");
+      await page.waitForFunction(() => document.querySelector("#q .part[data-i='1'] .ff.shut"));
+      assert.equal(await arrows(), 0, "a locked part shows no arrow");
+      assert.match(await page.locator("#ph1").textContent(), /Out of tries/);
+      const dead = await page.evaluate(() => { const i = document.querySelectorAll("#q .ans")[1], b = document.querySelector("#go1"); return { d: i.disabled, a: i.getAttribute("aria-disabled"), cur: getComputedStyle(i).cursor, op: getComputedStyle(i.closest(".ff")).opacity, go: b.hidden }; });
+      assert.deepEqual(dead, { d: true, a: "true", cur: "not-allowed", op: "0.5", go: true }, "b is locked with the disabled look");
+      assert.equal(await boxes.nth(0).isEnabled(), true, "locking b does not lock a");
+      assert.equal(await page.evaluate(() => window.__drill.state.finished), false, "not finished: a is still open");
+      // a wrong then right
+      await boxes.nth(0).fill("17"); await boxes.nth(0).press("Enter");
+      await page.locator("#q .part").nth(0).locator(".phint .cluck").waitFor();
+      assert.match(await page.locator("#ph0").textContent(), /overlap twice/);
+      await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
+      await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
+      assert.equal(await arrows(), 0, "a correct part shows no arrow");
+      assert.equal(await page.evaluate(() => window.__drill.state.finished), true, "finished when every part is right or locked");
+      assert.equal(await page.evaluate(() => window.__drill.state.solved), false, "a locked part means not solved");
+      assert.match(await page.locator("#fb").textContent(), /1 of 2 right/);
+      assert.equal(await page.locator("#fb .verdict.ok").count(), 0);
+      assert.deepEqual(await page.evaluate(() => window.__drill.state.tries.map(t => [t.part, t.a, t.v])),
+        [[1, "14", "wrong"], [1, "9", "wrong"], [0, "17", "wrong"], [0, "14", "correct"]]);
+      await page.context().clearCookies();                                 // a new browser: fresh tries per part
+      await open("CSCI26_M5V");                                            // both right: Correct
+      await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
+      await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
+      assert.equal(await page.evaluate(() => window.__drill.state.finished), false);
+      assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#q .ans")[1]), true, "focus moves to the next open box");
       await boxes.nth(1).fill("11");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/multi-${vname}.png` });
-      await page.click("#ansGo");
+      await page.click("#go1");
       await page.locator("#fb .verdict.ok").waitFor();
+      assert.equal(await page.evaluate(() => window.__drill.state.solved), true);
 
       await open("CSCI26_TF3");                                              // 2 choices, shuffled by default (order varies, the set does not)
       assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);

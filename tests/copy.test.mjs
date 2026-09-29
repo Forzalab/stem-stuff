@@ -43,3 +43,15 @@ test("copy: 'pending' verdict (tries made before server grading exists) is valid
   const bad = structuredClone(p); bad.tries[0].v = "maybe";
   assert.equal(validate(bad), false);
 });
+
+test("copy: a multi try carries its part (final, tries, hints); part is 0..3", () => {
+  const p = build({ code: "CSCI26_M5V", start: 0, explain: "", history: [],
+    tries: [{ t: 2000, a: "17", part: 0, v: "wrong" }, { t: 5000, a: "11", part: 1, v: "correct" }],
+    hints: [{ t: 2000, part: 0, n: 1, kind: "counting" }] }, 9000);
+  ok(p);
+  assert.deepEqual(p.tries.map(x => x.part), [0, 1]);
+  assert.deepEqual(p.final, { a: "11", part: 1, v: "correct" });
+  assert.equal(p.hints[0].part, 0);
+  assert.deepEqual(JSON.parse(stringify(p)), p);
+  for (const bad of [4, -1, "0", 0.5]) { const q = structuredClone(p); q.tries[0].part = bad; assert.equal(validate(q), false, String(bad)); }
+});
