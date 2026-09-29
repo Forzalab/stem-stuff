@@ -10,7 +10,7 @@ test("every problem in problems.json gets a short plain title: no TeX, no markdo
   for (const p of bank.problems) {
     const t = titleOf({ ...p, title: undefined });
     assert.ok(t.length > 0 && t.length <= 60, `${p.code}: ${t}`);
-    assert.ok(!/[\\$|*`{}]/.test(t), `${p.code} not plain: ${t}`);
+    assert.ok(!/[\\$*`{}]/.test(t), `${p.code} not plain: ${t}`);   // "|" is fine: |A| is plain text
   }
 });
 test("fallback reads like the problem", () => {
