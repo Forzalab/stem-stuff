@@ -39,3 +39,34 @@ test("typed answers keep two tries; a right choice still grades right", () => {
   assert.equal(gradeLocal(n, { answer: "2" }).triesLeft, 0);
   assert.equal(gradeLocal(mk("mc", 2, { code: "T_ok" }), { choice: "a" }).verdict, "correct");
 });
+
+// multi: each part is graded alone (SCHEMA.md "Grading"); same cases as tests/test_serve.py test_multi_*
+const multi = code => ({ type: "multi", code, nudge: "QUACK. Draw it.", parts: [
+  { type: "num", answer: "14", wrong: [{ match: "17", error: "counting", hint: "QUACK. Twice." }] },
+  { type: "num", answer: "11", wrong: [{ match: "14", error: "misread", hint: "QUACK. Exactly one." }] }] });
+test("multi: a part is graded alone; a right part stays done", () => {
+  const p = multi("T_m1");
+  let r = gradeLocal(p, { part: 0, answer: "17" });
+  assert.deepEqual([r.verdict, r.triesLeft, r.error, r.part, r.hint], ["wrong", 1, "counting", 0, "QUACK. Twice."]);
+  assert.equal(gradeLocal(p, { part: 0, answer: "17.0" }).repeat, true);
+  assert.equal(gradeLocal(p, { part: 1, answer: "11" }).verdict, "correct");
+  assert.equal(gradeLocal(p, { part: 1, answer: "11" }).verdict, "locked");
+  const a = gradeLocal(p, { part: 0, answer: "14" });
+  assert.deepEqual([a.verdict, a.part], ["correct", 0]);
+});
+test("multi: one part locks by itself, the others keep their tries", () => {
+  const p = multi("T_m2");
+  assert.equal(gradeLocal(p, { part: 1, answer: "14" }).hint, "QUACK. Exactly one.");        // b's own entry
+  const r = gradeLocal(p, { part: 1, answer: "10" });
+  assert.deepEqual([r.verdict, r.triesLeft, r.part, r.hint, r.error], ["wrong", 0, 1, "QUACK. Draw it.", undefined]);   // nudge, not a's entry
+  assert.equal(gradeLocal(p, { part: 1, answer: "11" }).verdict, "locked");
+  const a = gradeLocal(p, { part: 0, answer: "14" });
+  assert.deepEqual([a.verdict, a.triesLeft], ["correct", 2]);
+});
+test("multi: the whole-set body, a missing or bad part, and unreadable text are invalid (no try spent)", () => {
+  const p = multi("T_m3");
+  for (const b of [{ parts: ["14", "11"] }, { answer: "14" }, { part: 2, answer: "1" }, { part: -1, answer: "1" }, { part: "0", answer: "14" }, { part: 0.5, answer: "14" }])
+    assert.equal(gradeLocal(p, b).verdict, "invalid", JSON.stringify(b));
+  assert.equal(gradeLocal(p, { part: 0, answer: "x+" }).verdict, "invalid");
+  assert.equal(gradeLocal(p, { part: 0, answer: "1" }).triesLeft, 1);
+});

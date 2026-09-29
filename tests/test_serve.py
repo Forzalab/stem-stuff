@@ -75,13 +75,39 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CSCI26_Q8C", "t1", answer="~Q->~P")["verdict"], "correct")   # case + spaces ignored
         self.assertEqual(self.g("CSCI26_Q8C", "t2", answer="¬q → ¬p")["verdict"], "correct")  # accept list
 
-    def test_multi(self):
-        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14"])["verdict"], "invalid")      # all boxes or nothing
-        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14", "x+"])["verdict"], "invalid")
-        r = self.g("CSCI26_M5V", "m1", parts=["17", "11"])
-        self.assertEqual((r["verdict"], r["triesLeft"], r["error"]), ("wrong", 1, "counting"))
-        self.assertTrue(self.g("CSCI26_M5V", "m1", parts=["17", "11.0"])["repeat"])
-        self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14", "11"])["verdict"], "correct")
+    def test_multi_is_graded_per_part(self):
+        r = self.g("CSCI26_M5V", "m1", part=0, answer="17")
+        self.assertEqual((r["verdict"], r["triesLeft"], r["error"], r["part"]), ("wrong", 1, "counting", 0))
+        self.assertTrue(self.g("CSCI26_M5V", "m1", part=0, answer="17.0")["repeat"])          # same value again: a repeat, no try spent
+        self.assertEqual(self.g("CSCI26_M5V", "m1", part=1, answer="11")["verdict"], "correct")   # b is right on its own
+        r = self.g("CSCI26_M5V", "m1", part=0, answer="14")
+        self.assertEqual((r["verdict"], r["part"]), ("correct", 0))
+        self.assertEqual(self.g("CSCI26_M5V", "m1", part=1, answer="11")["verdict"], "locked")     # a part that is done stays done
+        for bad in ({"parts": ["14", "11"]}, {"answer": "14"}, {"part": 2, "answer": "1"}, {"part": -1, "answer": "1"},
+                    {"part": "0", "answer": "14"}, {"part": True, "answer": "14"}, {"part": 0.0, "answer": "14"}):
+            self.assertEqual(self.g("CSCI26_M5V", "m9", **bad)["verdict"], "invalid", bad)   # the old whole-set body is refused
+        self.assertEqual(self.g("CSCI26_M5V", "m9", part=0, answer="x+")["verdict"], "invalid")   # unreadable: not a try
+        self.assertEqual(self.g("CSCI26_M5V", "m9", part=0, answer="")["verdict"], "invalid")
+        self.assertEqual(self.g("CSCI26_M5V", "m9", part=0, answer="14")["verdict"], "correct")
+
+    def test_multi_lockout_is_per_part(self):
+        self.assertEqual(self.g("CSCI26_M5V", "m2", part=1, answer="14")["triesLeft"], 1)          # b: known wrong answer, hint of b's entry
+        r = self.g("CSCI26_M5V", "m2", part=1, answer="10")
+        self.assertEqual((r["verdict"], r["triesLeft"], r["part"]), ("wrong", 0, 1))
+        self.assertIn("hint", r)
+        self.assertNotIn("error", r)                                                                # no wrong entry matched: the problem nudge
+        self.assertEqual(self.g("CSCI26_M5V", "m2", part=1, answer="11")["verdict"], "locked")     # b is locked, even for the right answer
+        r = self.g("CSCI26_M5V", "m2", part=0, answer="14")                                        # a is untouched
+        self.assertEqual((r["verdict"], r["triesLeft"]), ("correct", 2))
+        self.assertEqual(self.g("CSCI26_M5V", "m3", part=0, answer="1")["triesLeft"], 1)          # another browser starts fresh
+        self.assertEqual(self.g("CSCI26_M5V", "m3", part=1, answer="1")["triesLeft"], 1)          # and part a's tries are not part b's
+
+    def test_multi_hint_is_the_parts_own(self):
+        self.assertEqual(self.g("CSCI26_M5V", "m4", part=0, answer="14.5")["hint"], BANK["CSCI26_M5V"]["nudge"])
+        self.assertIn("overlap twice", self.g("CSCI26_M5V", "m4", part=0, answer="17")["hint"])
+        self.assertIn("Exactly one", self.g("CSCI26_M5V", "m4", part=1, answer="14")["hint"])
+        self.assertIn("Exactly one", self.g("CSCI26_M5V", "m5", part=1, answer="14")["hint"])
+        self.assertNotIn("overlap twice", self.g("CSCI26_M5V", "m5", part=1, answer="17")["hint"])   # a's entry does not apply to b
 
     def test_two_choices_one_try(self):
         r = self.g("CSCI26_TF3", "c1", choice="f")

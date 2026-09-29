@@ -22,7 +22,7 @@ function thin(snaps, max) {
   return out;
 }
 
-// s = { code, start (ms), tries:[{t,a,c?,l?,v}], hints:[{t,n,kind}], explain, history:[{t,text}] }
+// s = { code, start (ms), tries:[{t,a,c?,l?,part?,v}], hints:[{t,part?,n,kind}], explain, history:[{t,text}] }
 export function build(s, now = Date.now()) {
   const t0 = s.start;
   const raw = (s.history ?? []).filter((h, k, arr) => k === 0 || h.text !== arr[k - 1].text);
@@ -38,9 +38,9 @@ export function build(s, now = Date.now()) {
       subject: s.code.split("_")[0],
       start: new Date(t0).toISOString(),
       copied: new Date(now).toISOString(),
-      final: last ? { a: last.a, ...(last.l ? { l: last.l } : {}), v: last.v } : null,
-      tries: (s.tries ?? []).map(x => ({ t: secs(x.t, t0), a: x.a, ...(x.c ? { c: x.c } : {}), ...(x.l ? { l: x.l } : {}), v: x.v })),
-      hints: (s.hints ?? []).map(h => ({ t: secs(h.t, t0), n: h.n, kind: h.kind })),
+      final: last ? { a: last.a, ...(last.l ? { l: last.l } : {}), ...(last.part != null ? { part: last.part } : {}), v: last.v } : null,
+      tries: (s.tries ?? []).map(x => ({ t: secs(x.t, t0), a: x.a, ...(x.c ? { c: x.c } : {}), ...(x.l ? { l: x.l } : {}), ...(x.part != null ? { part: x.part } : {}), v: x.v })),
+      hints: (s.hints ?? []).map(h => ({ t: secs(h.t, t0), ...(h.part != null ? { part: h.part } : {}), n: h.n, kind: h.kind })),
       explain: s.explain ?? "",
       hist: { n: raw.length, kept: kept.length, edits },
     };

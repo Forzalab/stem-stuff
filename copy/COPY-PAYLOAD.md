@@ -42,9 +42,9 @@ Read it as: opened at 20:00, started writing at 0:20, typed 4 at 1:35 (wrong, Cl
 | `code`, `subject` | problem code and its prefix |
 | `start` | when the problem was opened (ISO UTC). **Every `t` is seconds after `start`**, 0.1 s precision. Short numbers, easy to read. |
 | `copied` | when Copy was pressed |
-| `final` | the last try `{a, l?, v}`, or `null` |
-| `tries[]` | every `/check`, in order: `a` typed text (MC: choice text), `c` MC choice id, `l` letter shown, `v` verdict `correct / wrong / invalid / locked / egg / pending`. `pending` (Tony approved): the try was recorded before server grading exists (no `POST /check` yet), so it has no verdict. |
-| `hints[]` | `{t, n, kind}`: `n` = which attempt produced the hint, `kind` = diagnosed error type (`MC.md` §6), or `nudge` if unmatched. Not the hint text. |
+| `final` | the last try `{a, l?, part?, v}`, or `null` |
+| `tries[]` | every `/check`, in order: `a` typed text (MC: choice text), `c` MC choice id, `l` letter shown, `part` (multi only: 0 = a, 1 = b...; each part is graded alone, so each try belongs to one part), `v` verdict `correct / wrong / invalid / locked / egg / pending`. `pending` (Tony approved): the try was recorded before server grading exists (no `POST /check` yet), so it has no verdict. |
+| `hints[]` | `{t, part?, n, kind}`: `n` = which attempt produced the hint (for a multi: which attempt at that `part`), `kind` = diagnosed error type (`MC.md` §6), or `nudge` if unmatched. Not the hint text. |
 | `explain` | explanation box text at copy time, full, never cut |
 | `hist` | explanation edit history as diffs (below) |
 

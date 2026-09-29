@@ -43,14 +43,14 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 |---|---|---|---|
 | `code` | all | `CALC1_K4M` | yes |
 | `title` | all, optional | brief plain-text title for the question list (≤ 60 chars, never the answer) | yes |
-| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes answered together | yes |
+| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
 | `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
 | `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). | label + prompt + type only |
-| `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it). Put the shared givens in `body` and each question in its part's `prompt`. With no `prompt` anywhere, the boxes sit side by side under `body`, badge only (A, B). Keep `how` for typing instructions, not questions. | yes |
+| `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it), each box with its own submit arrow. Put the shared givens in `body` and each question in its part's `prompt`. A part without a `prompt` is just its "a)" and its box. Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
@@ -74,10 +74,10 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
-- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text`/`multi` get TWO. There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
+- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**. There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
 - `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` (`expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
-- `multi`: the submit arrow stays off until every box is filled. The attempt is correct only if every part is right; one attempt = the whole set. Nothing says which part was wrong, except the hint of the first wrong part that matched a `wrong` entry.
+- `multi`: **each part is graded alone.** `POST /check` takes `{ code, part: i, answer }` (`i` = 0 for a, 1 for b...) and the reply carries `part: i`. Each part has its own tries (the `num`/`expr`/`text` rule: TWO), its own repeat check and its own lockout, keyed by (browser, code, part): a part locks by itself when its tries run out and never locks the others. The old whole-set body `{ parts: [...] }` is not accepted (`invalid`). Every box has its own inline submit arrow, off while that box is empty; Enter in a box submits that box. A right part turns green and read-only; a wrong part shows the hint of the first of *its own* `wrong` entries it matched, else the problem `nudge`, else the default nudge. The problem is finished when every part is right or locked, and counts as correct only if every part is right.
 - A wrong answer gets the hint of the first `wrong` entry it matches (`re` entries first, then `match`), else `nudge`, else a default nudge.
 - Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
 - Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
@@ -650,6 +650,12 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
             "l": {
               "$ref": "#/$defs/letter"
             },
+            "part": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3,
+              "description": "multi: which part (0 = a) this try was for"
+            },
             "v": {
               "$ref": "#/$defs/verdict"
             }
@@ -685,6 +691,12 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
           "l": {
             "$ref": "#/$defs/letter"
           },
+          "part": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "multi: which part (0 = a) this try was for"
+          },
           "v": {
             "$ref": "#/$defs/verdict"
           }
@@ -705,6 +717,12 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
         "properties": {
           "t": {
             "$ref": "#/$defs/t"
+          },
+          "part": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "description": "multi: which part (0 = a) the hint was for; n then counts that part's wrong tries"
           },
           "n": {
             "type": "integer",
