@@ -328,8 +328,9 @@
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
       const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
-      const maxH = Math.min(440, 0.9 * W);
-      const s = Math.min((W - pad.l - pad.r) / (x1 - x0 || 1), (maxH - pad.t - pad.b) / (y1 - y0 || 1));
+      /* scenes are capped (320px tall, 560px wide) and centred, so a diagram never outweighs the text on desktop */
+      const maxH = Math.min(320, 0.9 * W), maxW = Math.min(W, 560);
+      const s = Math.min((maxW - pad.l - pad.r) / (x1 - x0 || 1), (maxH - pad.t - pad.b) / (y1 - y0 || 1));
       const ox = pad.l + ((W - pad.l - pad.r) - (x1 - x0) * s) / 2;
       const H = Math.round((y1 - y0) * s + pad.t + pad.b);
       Object.assign(k, { s, marks, X: p => [ox + (p[0] - x0) * s, pad.t + (y1 - p[1]) * s] });

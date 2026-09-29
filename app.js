@@ -196,7 +196,7 @@ function renderQuestion() {
     q.innerHTML = `<div class="ff" id="ff">${lead}
         <input id="ans" type="text" inputmode="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="${p.type === "expr" ? "in terms of " + v : "e.g. 9/2, sqrt(3), dne"}">
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" hidden>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
@@ -255,7 +255,7 @@ async function submitMC() {
 function wireFF() {
   const inp = $("#ans"), go = $("#ansGo"), pv = $("#preview");
   inp.addEventListener("input", () => {
-    go.hidden = !inp.value.trim();
+    go.disabled = !inp.value.trim();
     pv.innerHTML = "";
     const t = inp.value.trim(); if (!t || typeof math === "undefined") return;
     try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }

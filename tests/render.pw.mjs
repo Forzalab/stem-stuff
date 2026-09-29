@@ -95,9 +95,10 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} freeform: arrow inside input, wrong then right`, async () => {
       await open(`CALC1-T6B`);
       const inp = page.locator("#ans"), go = page.locator("#ansGo");
-      assert.equal(await go.isVisible(), false);
+      assert.ok(await go.isVisible(), "arrow must always show inside the field");
+      assert.ok(await go.isDisabled(), "arrow should be dimmed/disabled while empty");
       await inp.fill("4");
-      assert.ok(await go.isVisible());
+      assert.ok(await go.isEnabled());
       const g = await go.boundingBox(), f = await page.locator("#ff").boundingBox();
       assert.ok(g.x + g.width <= f.x + f.width && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside the field");
       await go.click();
