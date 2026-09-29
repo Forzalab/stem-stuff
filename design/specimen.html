@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Figure language specimen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
+:root {
+  /* calc1 tokens, unchanged */
+  --paper: #151d2b;
+  --sheet: #1d2839;
+  --field: #111826;
+  --ink: #e7edf6;
+  --muted: #a2b3cb;
+  --line: #34445d;
+  --blue: #3a67d8;
+  --blue-hi: #2c55bd;
+  --focus: #8fb0ff;
+  --mark: #ffd84a;
+  --ok: #5fd394;
+  --bad: #ff7a7a;
+  /* figure tokens (DESIGN-LANGUAGE.md section 1) */
+  --c1: #7ab8ff;
+  --c2: #ffb86b;
+  --c3: #ff8fc8;
+  --grid: var(--line);
+  --body: #313c4c;   /* variant A: ink 10% over sheet */
+  --ramp: #273242;   /* variant A: ink 5% over sheet */
+  --knock: rgb(29 40 57 / 0.85);
+  color-scheme: dark;
+}
+:root[data-body="b"] { --body: var(--sheet); --ramp: var(--sheet); }
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1.125rem/1.5 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+header { background: var(--paper); border-bottom: 2px solid var(--line); }
+.bar {
+  max-width: 52rem; margin: 0 auto; padding: 0.9rem 1.25rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem;
+}
+h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; font-weight: 700; flex: 1 1 auto; }
+h2 { margin: 0.5rem 0 0.25rem; font-size: 1.2rem; line-height: 1.3; }
+.seg { display: flex; gap: 0.5rem; align-items: center; font-size: 1rem; color: var(--muted); }
+button {
+  font: inherit; font-weight: 700; color: var(--ink); background: transparent;
+  border: 2px solid var(--line); border-radius: 6px; padding: 0.25rem 0.9rem; cursor: pointer;
+}
+button[aria-pressed="true"] { color: #fff; background: var(--blue); border-color: var(--blue); }
+button:hover { border-color: var(--focus); }
+button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+main { max-width: 52rem; margin: 0 auto; padding: 1.25rem 1.25rem 4rem; }
+.p {
+  background: var(--sheet); border: 2px solid var(--line); border-radius: 10px;
+  padding: 1.1rem 1.25rem 1rem; margin: 0 0 1rem;
+}
+.code { display: inline-block; font-weight: 700; font-size: 0.95rem; padding: 0.1rem 0.5rem; border-radius: 4px; color: var(--muted); }
+.p > p { margin: 0.25rem 0 0.75rem; }
+.note { font-size: 1rem; color: var(--muted); margin: 0.5rem 0 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem 1.25rem; }
+.cap { margin: 0.25rem 0 0; font-size: 0.95rem; color: var(--muted); text-align: center; }
+/* figure = svg + label layer; no frame (Q4) */
+.fig { position: relative; width: 100%; margin: 0.5rem 0; }
+.fig svg { display: block; overflow: visible; }
+.fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.lbl {
+  position: absolute; left: 0; top: 0; white-space: nowrap; pointer-events: none;
+  font-size: 16px; line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock);
+}
+.lbl .katex { font-size: 1.1em; }
+.lbl.tick { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 34rem) {
+  .bar { padding: 0.75rem 1rem; }
+  main { padding: 1rem 1rem 3rem; }
+  .p { padding: 1rem 1rem 0.9rem; }
+  .two { grid-template-columns: 1fr; gap: 0.5rem; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Figure language specimen</h1>
+    <div class="seg" role="group" aria-label="Body fill variant">Bodies
+      <button type="button" data-v="a" aria-pressed="true">A fill</button>
+      <button type="button" data-v="b" aria-pressed="false">B outline</button>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="p">
+    <span class="code">BODIES</span>
+    <h2>Variant A and variant B, side by side</h2>
+    <div class="two">
+      <div><div class="fig" data-fig="f3n" data-body="a"></div><p class="cap">A: 2px ink outline, ink 10% fill</p></div>
+      <div><div class="fig" data-fig="f3n" data-body="b"></div><p class="cap">B: 2px ink outline only</p></div>
+    </div>
+  </section>
+
+  <section class="p">
+    <span class="code">KIT</span>
+    <h2>Primitives</h2>
+    <div class="tiles">
+      <div><div class="fig" data-fig="t_force"></div><p class="cap">force, 3px, filled head</p></div>
+      <div><div class="fig" data-fig="t_vel"></div><p class="cap">velocity, 2.5px, open head</p></div>
+      <div><div class="fig" data-fig="t_acc"></div><p class="cap">acceleration, 2.5px, double head</p></div>
+      <div><div class="fig" data-fig="t_dash"></div><p class="cap">asymptote, guide, ghost, trajectory</p></div>
+      <div><div class="fig" data-fig="t_surf"></div><p class="cap">surface hatch, pivot</p></div>
+      <div><div class="fig" data-fig="t_spring"></div><p class="cap">spring, 8 coils</p></div>
+      <div><div class="fig" data-fig="t_pulley"></div><p class="cap">pulley with mount</p></div>
+      <div><div class="fig" data-fig="t_bodies"></div><p class="cap">box, disk, ring, rod, dot</p></div>
+      <div><div class="fig" data-fig="t_axes"></div><p class="cap">tilted axes</p></div>
+    </div>
+  </section>
+
+  <section class="p">
+    <span class="code">CALC1-A9R</span>
+    <p>The region $R$ is bounded by $y = 4x - x^2$ and $y = x$.</p>
+    <div class="fig" data-fig="a9r"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">PHYS-F3N</span>
+    <p>A $4.0\ \text{kg}$ block slides down a $30^\circ$ ramp with $\mu_k = 0.20$.</p>
+    <div class="fig" data-fig="f3n"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">PHYS-S2K</span>
+    <p>A $2.0\ \text{kg}$ block on a frictionless $25^\circ$ incline, held by a spring from a post.</p>
+    <div class="fig" data-fig="s2k"></div>
+    <p class="note">$\vec F_s$ is drawn solid: a spring force acts on the block (fix for p/PHYS-S2K.json, which has it dashed).</p>
+  </section>
+
+  <section class="p">
+    <span class="code">PENDULUM</span>
+    <div class="fig" data-fig="pend"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">ATWOOD</span>
+    <div class="fig" data-fig="atwood"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">CIRCULAR</span>
+    <div class="fig" data-fig="circ"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">PROJECTILE</span>
+    <div class="fig" data-fig="proj"></div>
+  </section>
+
+  <section class="p">
+    <span class="code">MOTION</span>
+    <p>Position and velocity of the same cart.</p>
+    <div class="two">
+      <div class="fig" data-fig="xt"></div>
+      <div class="fig" data-fig="vt"></div>
+    </div>
+  </section>
+
+  <section class="p">
+    <span class="code">ENERGY</span>
+    <p>A spring launches a block up a rough ramp.</p>
+    <div class="fig" data-fig="bars"></div>
+  </section>
+</main>
+<script>
+/* ===== Reference kit: every number below is from DESIGN-LANGUAGE.md ===== */
+const SW = { grid: 1, axis: 1.5, con: 1.5, rope: 1.5, out: 2, curve: 2.5, vec: 2.5, force: 3 };
+const DASH = { asym: "6 4", guide: "2 4", ghost: "8 5", traj: "0 7" };
+const HATCH = { len: 10, gap: 8, inset: 4 };
+const OFF = 6;              // label gap, px
+const PAD = 16;             // minimum figure padding, px
+const FILL = 0.22;          // region / poly / highlighted body fill opacity
+const deg = Math.PI / 180;
+const col = c => `var(--${c || "ink"})`;
+
+function tex(s) {
+  return String(s).split("$").map((t, i) => i % 2
+    ? katex.renderToString(t, { throwOnError: false })
+    : t.replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch])).join("");
+}
+const n2 = v => +v.toFixed(2);
+const P = (a) => a.map(p => n2(p[0]) + "," + n2(p[1])).join(" ");
+const norm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
+function line(pts, st, w, dash, extra = "") {
+  return `<polyline points="${P(pts)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""} ${extra}/>`;
+}
+/* one arrowhead geometry: L = max(8, 4w), W = 0.75 L */
+function arrow(a, b, w, st, head = "fill", dash) {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const [ux, uy] = norm(b[0] - a[0], b[1] - a[1]), nx = -uy, ny = ux;
+  let L = Math.max(8, 4 * w); if (len < 1.6 * L) L = len / 1.6;
+  const W = 0.75 * L;
+  const wedge = t => { const bx = t[0] - L * ux, by = t[1] - L * uy;
+    return `<polygon points="${P([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`; };
+  let cut = head === "fill" ? 0.6 * L : head === "double" ? 1.35 * L : head === "open" ? 0.3 * w : 0;
+  let s = line([a, [b[0] - cut * ux, b[1] - cut * uy]], st, w, dash);
+  if (head === "fill") s += wedge(b);
+  if (head === "double") s += wedge(b) + wedge([b[0] - 0.75 * L * ux, b[1] - 0.75 * L * uy]);
+  if (head === "open") { const bx = b[0] - L * ux, by = b[1] - L * uy;
+    s += line([[bx + W / 2 * nx, by + W / 2 * ny], b, [bx - W / 2 * nx, by - W / 2 * ny]], st, w); }
+  return s;
+}
+/* anchor from a screen direction: the label sits on that side */
+function dirAnchor(dx, dy) {
+  const a = (Math.atan2(-dy, dx) / deg + 360 + 22.5) % 360;
+  return ["e", "ne", "n", "nw", "w", "sw", "s", "se"][Math.floor(a / 45)];
+}
+const labelColor = c => ["c1", "c2", "c3", "ok", "bad", "mark"].includes(c) ? col(c) : col("ink");
+
+/* force kind by color token (DESIGN-LANGUAGE.md 3.1) */
+function vecStyle(m) {
+  const c = m.color || "c1";
+  if (c === "c2") return { c, w: SW.vec, head: "open" };
+  if (c === "c3") return { c, w: SW.vec, head: "double" };
+  return { c, w: m.dash ? SW.out : SW.force, head: "fill" };
+}
+
+/* ---- scene marks: world points for fitting, and draw(ctx) ---- */
+const rot = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
+const add = (p, q) => [p[0] + q[0], p[1] + q[1]];
+function forceTip(m) { const a = (m.angle + (m.frame || 0)) * deg; return add(m.at, [m.len * Math.cos(a), m.len * Math.sin(a)]); }
+function inclinePts(m) {
+  const sx = m.flip ? -1 : 1, B = add(m.at, [sx * m.base, 0]);
+  return [m.at, B, add(B, [0, m.base * Math.tan(m.angle * deg)])];
+}
+function sample(m, n = 160) {
+  if (m.pts) return m.pts;
+  const out = [], [t0, t1] = m.t;
+  for (let i = 0; i <= n; i++) { const t = t0 + (t1 - t0) * i / n; out.push([m.x(t), m.y(t)]); }
+  return out;
+}
+const LAYER = { surface: 0, incline: 1, seg: 2, arc: 2, path: 3, rope: 4, spring: 4, pulley: 5, body: 6, pivot: 7, point: 8, axes: 8, force: 9, arrow: 9, text: 10 };
+
+const S = {
+  surface: {
+    pts: m => [m.from, m.to],
+    draw(m, k) {
+      const a = k.X(m.from), b = k.X(m.to);
+      return line([a, b], col(m.color), SW.out) + hatch(a, b, m.side);
+    }
+  },
+  incline: {
+    pts: inclinePts,
+    draw(m, k) {
+      const v = inclinePts(m).map(k.X);
+      let s = `<polygon points="${P(v)}" style="fill:var(--ramp);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+      s += hatch(v[0], v[1], m.flip ? "left" : "right");
+      const r = 30, a0 = m.flip ? 180 - m.angle : 0, a1 = m.flip ? 180 : m.angle;
+      s += arcPath(v[0], r, a0, a1, col("muted"), SW.con);
+      const mid = (a0 + a1) / 2 * deg, d = [Math.cos(mid), -Math.sin(mid)];
+      if (m.label) k.label(m.label, [v[0][0] + d[0] * (r + 2), v[0][1] + d[1] * (r + 2)], dirAnchor(d[0], d[1]), "ink");
+      return s;
+    }
+  },
+  body: {
+    pts: m => { const h = m.h || 2 * (m.r || 0), w = m.w || 2 * (m.r || 0);
+      return [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(p => add(m.at, rot(p, (m.angle || 0) * deg))); },
+    draw(m, k) {
+      const [x, y] = k.X(m.at), st = col(m.color);
+      const fill = m.fill ? `fill:${col(m.color || "c1")};fill-opacity:${FILL}` : "fill:var(--body)";
+      let s;
+      if (m.shape === "box" || m.shape === "rod") {
+        const w = m.w * k.s, h = Math.max(m.h * k.s, m.shape === "rod" ? 6 : 0), rx = m.shape === "rod" ? Math.min(h / 2, 3) : 2;
+        s = `<rect x="${n2(-w / 2)}" y="${n2(-h / 2)}" width="${n2(w)}" height="${n2(h)}" rx="${rx}" transform="translate(${n2(x)} ${n2(y)}) rotate(${-(m.angle || 0)})" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+      } else if (m.shape === "dot") {
+        s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(6, (m.r || 0) * k.s))}" style="fill:${st}"/>`;
+      } else {
+        const r = m.r * k.s;
+        s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+        if (m.shape === "ring") s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r - 5)}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>`;
+        s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="2.5" style="fill:${st}"/>`;
+      }
+      if (m.label) k.label(m.label, [x, y], m.anchor || (m.shape === "dot" ? "ne" : "c"), m.color);
+      return s;
+    }
+  },
+  force: {
+    pts: m => [m.at, forceTip(m)],
+    draw(m, k) {
+      const v = vecStyle(m), a = k.X(m.at), b = k.X(forceTip(m));
+      if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), v.c);
+      return arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "");
+    }
+  },
+  spring: {
+    pts: m => [m.from, m.to],
+    draw(m, k) {
+      const a = k.X(m.from), b = k.X(m.to), L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const [ux, uy] = norm(b[0] - a[0], b[1] - a[1]), nx = -uy, ny = ux;
+      const A = Math.min(10, Math.max(5, (m.width || 0.2) * k.s / 2)), lead = Math.min(16, Math.max(6, 0.12 * L));
+      const n = 2 * (m.coils || 8), pts = [a, [a[0] + lead * ux, a[1] + lead * uy]];
+      for (let i = 0; i < n; i++) { const t = lead + (L - 2 * lead) * (i + 0.5) / n, sg = i % 2 ? -1 : 1;
+        pts.push([a[0] + t * ux + sg * A * nx, a[1] + t * uy + sg * A * ny]); }
+      pts.push([b[0] - lead * ux, b[1] - lead * uy], b);
+      if (m.label) { const side = (m.anchor === "se" || m.anchor === "s" || m.anchor === "sw") ? -1 : 1;
+        k.label(m.label, [(a[0] + b[0]) / 2 - side * (A + 2) * nx, (a[1] + b[1]) / 2 - side * (A + 2) * ny], m.anchor || dirAnchor(-nx, -ny), m.color); }
+      return line(pts, col(m.color), SW.out);
+    }
+  },
+  pulley: {
+    pts: m => [add(m.at, [-m.r, -m.r]), add(m.at, [m.r, m.r])].concat(m.mount ? [m.mount] : []),
+    draw(m, k) {
+      const [x, y] = k.X(m.at), r = m.r * k.s, st = col(m.color);
+      let s = "";
+      if (m.mount) { const q = k.X(m.mount), [ux, uy] = norm(q[0] - x, q[1] - y);
+        s += `<polygon points="${P([[x, y], [q[0] - 7 * uy, q[1] + 7 * ux], [q[0] + 7 * uy, q[1] - 7 * ux]])}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`; }
+      s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
+      s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r - 4)}" fill="none" style="stroke:var(--muted)" stroke-width="${SW.con}"/>`;
+      s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:${st}"/>`;
+      return s;
+    }
+  },
+  rope: { pts: m => m.pts, draw: (m, k) => line(m.pts.map(k.X), col(m.color), SW.rope) },
+  pivot: {
+    pts: m => [m.at],
+    draw(m, k) {
+      const [x, y] = k.X(m.at); let d = [0, 1], h = 14;
+      for (const o of k.marks.filter(o => o.mark === "surface")) {   // base faces the nearest surface
+        const a = k.X(o.from), b = k.X(o.to), [ux, uy] = norm(b[0] - a[0], b[1] - a[1]);
+        const t = (x - a[0]) * ux + (y - a[1]) * uy, c = [a[0] + t * ux, a[1] + t * uy], dist = Math.hypot(c[0] - x, c[1] - y);
+        if (dist > 0.5 && dist < 40) { d = norm(c[0] - x, c[1] - y); h = Math.max(10, dist); }
+      }
+      const bx = x + h * d[0], by = y + h * d[1];
+      return `<polygon points="${P([[x, y], [bx - 8 * d[1], by + 8 * d[0]], [bx + 8 * d[1], by - 8 * d[0]]])}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
+        `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+    }
+  },
+  path: {
+    pts: m => sample(m),
+    draw(m, k) {
+      const pts = sample(m).map(k.X);
+      let s = line(pts, col(m.color || "muted"), 3, DASH.traj);
+      if (m.label) { const i = Math.floor(pts.length * (m.labelAt ?? 0.5)); k.label(m.label, pts[i], m.anchor || "n", m.color); }
+      return s;
+    }
+  },
+  seg: {
+    pts: m => [m.from, m.to],
+    draw(m, k) {
+      const a = k.X(m.from), b = k.X(m.to);
+      if (m.label) k.label(m.label, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], m.anchor || "n", m.color);
+      if (m.sty) return line([a, b], col(m.color || "muted"), m.sty === "traj" ? 3 : SW.con, DASH[m.sty]);
+      return line([a, b], col(m.color || (m.dash ? "muted" : "ink")), m.dash ? SW.con : SW.out, m.dash ? DASH.guide : "");
+    }
+  },
+  arc: {
+    pts: m => [add(m.at, [-m.r, -m.r]), add(m.at, [m.r, m.r])],
+    draw(m, k) {
+      const c = k.X(m.at), r = m.r * k.s, st = col(m.color || "muted");
+      const mid = (m.from + m.to) / 2 * deg, d = [Math.cos(mid), -Math.sin(mid)];
+      if (m.label) k.label(m.label, [c[0] + d[0] * (r + 2), c[1] + d[1] * (r + 2)], m.anchor || dirAnchor(d[0], d[1]), m.color);
+      return arcPath(c, r, m.from, m.to, st, SW.con, m.dash ? DASH.guide : "");
+    }
+  },
+  point: {
+    pts: m => [m.at],
+    draw(m, k) {
+      const [x, y] = k.X(m.at);
+      if (m.label) k.label(m.label, [x, y], m.anchor || "ne", m.color);
+      return pointSvg(x, y, m);
+    }
+  },
+  axes: {
+    pts: m => [m.at, add(m.at, rot([m.len || 1, 0], m.angle * deg)), add(m.at, rot([0, m.len || 1], m.angle * deg))],
+    draw(m, k) {
+      const o = k.X(m.at), ex = k.X(add(m.at, rot([m.len || 1, 0], m.angle * deg))), ey = k.X(add(m.at, rot([0, m.len || 1], m.angle * deg)));
+      if (m.x) k.label(m.x, ex, dirAnchor(ex[0] - o[0], ex[1] - o[1]), "muted");
+      if (m.y) k.label(m.y, ey, dirAnchor(ey[0] - o[0], ey[1] - o[1]), "muted");
+      return arrow(o, ex, SW.axis, col("muted")) + arrow(o, ey, SW.axis, col("muted"));
+    }
+  },
+  text: { pts: m => [m.at], draw(m, k) { k.label(m.text, k.X(m.at), m.anchor || "c", m.color); return ""; } }
+};
+function pointSvg(x, y, m) {
+  return m.open
+    ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`
+    : `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:${col(m.color)}"/>`;
+}
+function arcPath(c, r, a0, a1, st, w, dash = "") {
+  const p = a => [c[0] + r * Math.cos(a * deg), c[1] - r * Math.sin(a * deg)];
+  const [s, e] = [p(a0), p(a1)], big = Math.abs(a1 - a0) > 180 ? 1 : 0;
+  return `<path d="M${n2(s[0])} ${n2(s[1])}A${n2(r)} ${n2(r)} 0 ${big} 0 ${n2(e[0])} ${n2(e[1])}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
+}
+/* hatch: 1.5px muted, 10px long, 8px apart, 45 deg leaning back toward "from", on `side` */
+function hatch(a, b, side) {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]), [ux, uy] = norm(b[0] - a[0], b[1] - a[1]);
+  const sg = side === "left" ? -1 : 1, nx = -uy * sg, ny = ux * sg;   // right-hand normal in screen coords (y down)
+  const hx = (nx - ux) * Math.SQRT1_2, hy = (ny - uy) * Math.SQRT1_2;
+  let s = "";
+  for (let t = HATCH.inset + HATCH.len * Math.SQRT1_2; t <= L - HATCH.inset + 0.01; t += HATCH.gap) {
+    const q = [a[0] + t * ux, a[1] + t * uy];
+    s += `<line x1="${n2(q[0])}" y1="${n2(q[1])}" x2="${n2(q[0] + HATCH.len * hx)}" y2="${n2(q[1] + HATCH.len * hy)}" style="stroke:var(--muted)" stroke-width="${SW.con}"/>`;
+  }
+  return s;
+}
+
+/* ---- layout: draw, measure labels, grow padding, redraw (max 3 passes) ---- */
+function mount(el, build) {
+  let pad = { l: PAD, r: PAD, t: PAD, b: PAD };
+  for (let pass = 0; pass < 3; pass++) {
+    const W = el.clientWidth, labels = [];
+    const k = { label: (text, at, anchor, color, cls = "") => labels.push({ text, at, anchor, color, cls }) };
+    const { svg, H } = build(W, pad, k);
+    el.style.height = H + "px";
+    el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${svg}</svg>`;
+    let grow = { l: 0, r: 0, t: 0, b: 0 };
+    for (const L of labels) {
+      const sp = document.createElement("span");
+      sp.className = "lbl " + L.cls; sp.innerHTML = tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color);
+      el.appendChild(sp);
+      const w = sp.offsetWidth, h = sp.offsetHeight, a = L.anchor, o = a === "c" ? 0 : a.length === 2 ? OFF * 0.7 : OFF;
+      const fx = a.includes("e") ? 0 : a.includes("w") ? -1 : -0.5, fy = a.includes("n") ? -1 : a.includes("s") ? 0 : -0.5;
+      const dx = a.includes("e") ? o : a.includes("w") ? -o : 0, dy = a.includes("n") ? -o : a.includes("s") ? o : 0;
+      const x = L.at[0] + dx + fx * w, y = L.at[1] + dy + fy * h;
+      sp.style.transform = `translate(${n2(x)}px, ${n2(y)}px)`;
+      grow.l = Math.max(grow.l, 4 - x); grow.r = Math.max(grow.r, x + w - W + 4);
+      grow.t = Math.max(grow.t, 4 - y); grow.b = Math.max(grow.b, y + h - H + 4);
+    }
+    if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
+    for (const s in pad) pad[s] += Math.max(0, Math.ceil(grow[s]));
+  }
+}
+
+function scene(marks, opt = {}) {
+  return (W, pad, k) => {
+    const pts = marks.flatMap(m => S[m.mark].pts(m));
+    const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
+    const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+    const maxH = opt.maxH || Math.min(440, 0.9 * W);
+    const s = Math.min((W - pad.l - pad.r) / (x1 - x0 || 1), (maxH - pad.t - pad.b) / (y1 - y0 || 1));
+    const ox = pad.l + ((W - pad.l - pad.r) - (x1 - x0) * s) / 2;
+    const H = Math.round((y1 - y0) * s + pad.t + pad.b);
+    Object.assign(k, { s, marks, X: p => [ox + (p[0] - x0) * s, pad.t + (y1 - p[1]) * s] });
+    const svg = marks.map((m, i) => [LAYER[m.mark], i, m]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(([, , m]) => S[m.mark].draw(m, k)).join("");
+    return { svg, H };
+  };
+}
+
+function niceStep(span, px) {
+  const raw = span / Math.max(2, Math.floor(px / 56)), p = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map(f => f * p).find(v => v >= raw);
+}
+function ticks(min, max, step) { const out = []; for (let v = Math.ceil(min / step - 1e-9) * step; v <= max + 1e-9; v += step) out.push(+v.toFixed(10)); return out; }
+function fmt(v) { return v < 0 ? "−" + Math.abs(v) : String(v); }
+
+function cartesian(g) {
+  return (W, pad, k) => {
+    const H = g.H || Math.round(Math.max(240, Math.min(420, W * 0.72)));
+    const pl = pad.l + 14, pr = pad.r, pt = pad.t, pb = pad.b + 6;
+    const sx = (W - pl - pr) / (g.x.max - g.x.min), sy = (H - pt - pb) / (g.y.max - g.y.min);
+    const X = p => [pl + (p[0] - g.x.min) * sx, pt + (g.y.max - p[1]) * sy];
+    const xs = g.x.step || niceStep(g.x.max - g.x.min, W - pl - pr), ys = g.y.step || niceStep(g.y.max - g.y.min, H - pt - pb);
+    const ax = Math.min(Math.max(0, g.x.min), g.x.max), ay = Math.min(Math.max(0, g.y.min), g.y.max);
+    const id = "clip" + Math.random().toString(36).slice(2, 8);
+    let s = `<defs><clipPath id="${id}"><rect x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></clipPath></defs>`;
+    for (const v of ticks(g.x.min, g.x.max, xs)) { const [x] = X([v, 0]); s += line([[x, pt], [x, H - pb]], "var(--grid)", SW.grid); }
+    for (const v of ticks(g.y.min, g.y.max, ys)) { const [, y] = X([0, v]); s += line([[pl, y], [W - pr, y]], "var(--grid)", SW.grid); }
+    let body = "", top = "";
+    for (const m of g.marks) {
+      const c = col(m.color || "c1");
+      if (m.mark === "shade") {
+        const f = m.f, gg = m.g || (() => 0), n = 120, up = [], dn = [];
+        for (let i = 0; i <= n; i++) { const x = m.from + (m.to - m.from) * i / n; up.push(X([x, f(x)])); dn.unshift(X([x, gg(x)])); }
+        body += `<polygon points="${P(up.concat(dn))}" style="fill:${c}" fill-opacity="${FILL}"/>`;
+        if (m.label) { let cx = 0, cy = 0; up.concat(dn).forEach(p => { cx += p[0]; cy += p[1]; }); k.label(m.label, [cx / (2 * n + 2), cy / (2 * n + 2)], m.anchor || "c", m.color || "c1"); }
+      }
+      if (m.mark === "fn") {
+        const [a, b] = m.domain || [g.x.min, g.x.max], n = 240, pts = [];
+        for (let i = 0; i <= n; i++) { const x = a + (b - a) * i / n; pts.push(X([x, m.y(x)])); }
+        top += line(pts, c, SW.curve, m.dash ? DASH.asym : "");
+        if (m.label) { const x = m.labelAt ?? a + 0.85 * (b - a); k.label(m.label, X([x, m.y(x)]), m.anchor || "n", m.color || "c1"); }
+      }
+      if (m.mark === "vline" || m.mark === "hline") {
+        const e = m.mark === "vline" ? [X([m.x, g.y.min]), X([m.x, g.y.max])] : [X([g.x.min, m.y]), X([g.x.max, m.y])];
+        body += line(e, col(m.color || "muted"), SW.con, m.dash ? DASH.asym : "");
+        if (m.label) k.label(m.label, e[1], m.anchor || (m.mark === "vline" ? "e" : "n"), m.color);
+      }
+      if (m.mark === "point") { const [x, y] = X(m.at); top += pointSvg(x, y, { ...m, color: m.color || "ink" }); if (m.label) k.label(m.label, [x, y], m.anchor || "ne", m.color); }
+    }
+    const O = X([ax, ay]);
+    let axes = arrow([pl, O[1]], [W - pr, O[1]], SW.axis, col("muted")) + arrow([O[0], H - pb], [O[0], pt], SW.axis, col("muted"));
+    for (const v of ticks(g.x.min, g.x.max, xs)) { if (Math.abs(v - ax) < 1e-9 || X([v, 0])[0] > W - pr - 12) continue; const [x] = X([v, 0]); axes += line([[x, O[1] - 3], [x, O[1] + 3]], col("muted"), SW.axis); k.label(fmt(v), [x, O[1] + 3], "s", "", "tick"); }
+    for (const v of ticks(g.y.min, g.y.max, ys)) { if (Math.abs(v - ay) < 1e-9 || X([0, v])[1] < pt + 12) continue; const [, y] = X([0, v]); axes += line([[O[0] - 3, y], [O[0] + 3, y]], col("muted"), SW.axis); k.label(fmt(v), [O[0] - 3, y], "w", "", "tick"); }
+    if (g.x.label) k.label(g.x.label, [W - pr, O[1]], "e", "ink");
+    if (g.y.label) k.label(g.y.label, [O[0], pt], "n", "ink");
+    s += `<g clip-path="url(#${id})">${body}</g>` + axes + `<g clip-path="url(#${id})">${top}</g>`;
+    return { svg: s, H };
+  };
+}
+
+function bars(g) {
+  return (W, pad, k) => {
+    const H = 240, pl = pad.l + 18, pr = pad.r, pt = pad.t + 4, pb = pad.b + 48;
+    const n = g.groups.reduce((a, gr) => a + gr.bars.length, 0), gaps = g.groups.length - 1;
+    const bw = Math.max(20, Math.min(48, (W - pl - pr - gaps * 24 - n * 8) / n));
+    const inner = n * (bw + 8) + gaps * 24, x0 = pl + ((W - pl - pr) - inner) / 2 + 4;
+    const sy = (H - pt - pb) / (g.max - g.min), Y = v => pt + (g.max - v) * sy, step = niceStep(g.max - g.min, H - pt - pb);
+    let s = "", x = x0;
+    for (const v of ticks(g.min, g.max, step)) { s += line([[pl, Y(v)], [W - pr, Y(v)]], "var(--grid)", SW.grid); k.label(fmt(v), [pl - 4, Y(v)], "w", "", "tick"); }
+    if (g.unit) k.label(g.unit, [pl - 4, pt - 2], "nw", "", "tick");
+    g.groups.forEach((gr, gi) => {
+      const start = x;
+      gr.bars.forEach((b, i) => {
+        const c = col(b.color || ["c1", "c2", "c3", "ink"][i % 4]), y = Math.min(Y(b.value), Y(0)), h = Math.abs(Y(b.value) - Y(0));
+        s += h < 2 ? `<rect x="${n2(x)}" y="${n2(Y(0) - 1)}" width="${n2(bw)}" height="2" style="fill:${c}"/>`
+                   : `<rect x="${n2(x)}" y="${n2(y)}" width="${n2(bw)}" height="${n2(h)}" rx="2" style="fill:${c}"/>`;
+        k.label(b.label, [x + bw / 2, H - pb + 4], "s", b.color || ["c1", "c2", "c3", "ink"][i % 4]);
+        x += bw + 8;
+      });
+      k.label(gr.label, [(start + x - 8) / 2, H - pb + 30], "s", "", "tick");
+      if (gi < gaps) { s += line([[x + 8, pt], [x + 8, H - pb + 44]], "var(--grid)", SW.grid); x += 24; }
+    });
+    s += line([[pl, Y(0)], [W - pr, Y(0)]], col("ink"), SW.axis);
+    return { svg: s, H };
+  };
+}
+
+/* ===== Figures: same keys as problem JSON (expressions as JS functions here) ===== */
+const box = (at, ang, extra = {}) => ({ mark: "body", shape: "box", at, w: 0.8, h: 0.6, angle: ang, ...extra });
+const F = {
+  a9r: cartesian({ x: { min: -0.5, max: 4.5, label: "$x$" }, y: { min: -1, max: 5, label: "$y$" }, marks: [
+    { mark: "shade", f: x => 4 * x - x * x, g: x => x, from: 0, to: 3, color: "c1", label: "$R$" },
+    { mark: "fn", y: x => 4 * x - x * x, color: "c1", label: "$y=4x-x^2$", labelAt: 1.2, anchor: "nw" },
+    { mark: "fn", y: x => x, color: "c2", label: "$y=x$", labelAt: 4.2, anchor: "se" },
+    { mark: "point", at: [3, 3], open: false, color: "ink" }] }),
+  f3n: scene([
+    { mark: "incline", at: [0, 0], base: 4, angle: 30, label: "$30^\\circ$" },
+    box([1.755, 1.36], 30),
+    { mark: "force", at: [1.755, 1.36], angle: 270, len: 1.2, label: "$m\\vec g$" },
+    { mark: "force", at: [1.755, 1.36], frame: 30, angle: 90, len: 1.04, label: "$\\vec N$" },
+    { mark: "force", at: [1.755, 1.36], frame: 30, angle: 0, len: 0.35, label: "$\\vec f_k$" }]),
+  s2k: scene([
+    { mark: "incline", at: [0, 0], base: 5, angle: 25, label: "$25^\\circ$" },
+    { mark: "surface", from: [4.531, 2.113], to: [4.277, 2.657], side: "right" },
+    { mark: "spring", from: [2.592, 1.54], to: [4.405, 2.385], coils: 9, width: 0.22, label: "$k$", anchor: "nw" },
+    box([2.23, 1.371], 25),
+    { mark: "force", at: [2.23, 1.371], angle: 270, len: 1.2, label: "$m\\vec g$" },
+    { mark: "force", at: [2.23, 1.371], frame: 25, angle: 90, len: 1.09, label: "$\\vec N$" },
+    { mark: "force", at: [2.23, 1.371], frame: 25, angle: 0, len: 0.9, label: "$\\vec F_s$", anchor: "se" }]),
+  pend: scene([
+    { mark: "surface", from: [-1.2, 0.18], to: [1.4, 0.18], side: "left" },
+    { mark: "pivot", at: [0, 0] },
+    { mark: "seg", from: [0, 0], to: [0, -2.1], dash: true },
+    { mark: "path", x: t => 2 * Math.sin(t), y: t => -2 * Math.cos(t), t: [-40 * deg, 40 * deg] },
+    { mark: "arc", at: [0, 0], r: 0.7, from: 270, to: 300, label: "$\\theta$", anchor: "s" },
+    { mark: "rope", pts: [[0, 0], [1, -1.732]] },
+    { mark: "body", shape: "dot", at: [1, -1.732], r: 0.09 },
+    { mark: "force", at: [1, -1.732], angle: 120, len: 0.95, label: "$\\vec T$", anchor: "w" },
+    { mark: "force", at: [1, -1.732], angle: 270, len: 0.85, label: "$m\\vec g$" },
+    { mark: "force", at: [1, -1.732], angle: 210, len: 0.6, color: "c2", label: "$\\vec v$", anchor: "sw" }]),
+  atwood: scene([
+    { mark: "surface", from: [-1.1, 2.4], to: [1.1, 2.4], side: "left" },
+    { mark: "pulley", at: [0, 1.8], r: 0.35, mount: [0, 2.4] },
+    { mark: "rope", pts: [[-0.35, 1.8], [-0.35, 0.35]] },
+    { mark: "rope", pts: [[0.35, 1.8], [0.35, -0.25]] },
+    { mark: "body", shape: "box", at: [-0.35, 0.1], w: 0.45, h: 0.5, label: "$m_1$" },
+    { mark: "body", shape: "box", at: [0.35, -0.55], w: 0.5, h: 0.6, label: "$m_2$" },
+    { mark: "force", at: [-0.85, -0.1], angle: 90, len: 0.5, color: "c3", label: "$\\vec a$" },
+    { mark: "force", at: [0.95, -0.35], angle: 270, len: 0.5, color: "c3", label: "$\\vec a$" }]),
+  circ: scene([
+    { mark: "path", x: t => 1.2 * Math.cos(t), y: t => 1.2 * Math.sin(t), t: [0, 2 * Math.PI] },
+    { mark: "point", at: [0, 0], color: "muted" },
+    { mark: "seg", from: [0, 0], to: [0.919, 0.771], dash: true, label: "$r$", anchor: "nw" },
+    { mark: "body", shape: "dot", at: [0.919, 0.771], r: 0.08 },
+    { mark: "force", at: [0.919, 0.771], angle: 130, len: 0.85, color: "c2", label: "$\\vec v$" },
+    { mark: "force", at: [0.919, 0.771], angle: 220, len: 0.55, color: "c3", label: "$\\vec a_c$", anchor: "s" }], { maxH: 360 }),
+  proj: scene([
+    { mark: "surface", from: [-0.4, 0], to: [11, 0], side: "right" },
+    { mark: "path", x: t => 7.66 * t, y: t => 6.428 * t - 4.9 * t * t, t: [0, 1.312] },
+    { mark: "arc", at: [0, 0], r: 1.1, from: 0, to: 40, label: "$40^\\circ$" },
+    { mark: "force", at: [0, 0], angle: 40, len: 1.8, color: "c2", label: "$\\vec v_0$", anchor: "nw" },
+    { mark: "force", at: [5.025, 2.108], angle: 0, len: 1.38, color: "c2", label: "$\\vec v$" },
+    { mark: "force", at: [5.025, 2.108], angle: 270, len: 0.9, color: "c3", label: "$\\vec g$", anchor: "w" },
+    { mark: "force", at: [10.05, 0], angle: -40, len: 1.8, color: "c2", label: "$\\vec v$", anchor: "e" }], { maxH: 300 }),
+  xt: cartesian({ H: 260, x: { min: 0, max: 6.4, label: "$t$ (s)" }, y: { min: 0, max: 8, label: "$x$ (m)" }, marks: [
+    { mark: "vline", x: 3, dash: true },
+    { mark: "fn", y: t => 2 + 3 * t - 0.5 * t * t, domain: [0, 6], color: "c1", label: "$x(t)$", labelAt: 1.2, anchor: "nw" },
+    { mark: "point", at: [3, 6.5] }] }),
+  vt: cartesian({ H: 260, x: { min: 0, max: 6.4, label: "$t$ (s)" }, y: { min: -4, max: 4, label: "$v$ (m/s)" }, marks: [
+    { mark: "vline", x: 3, dash: true },
+    { mark: "fn", y: t => 3 - t, domain: [0, 6], color: "c2", label: "$v(t)$", labelAt: 1, anchor: "ne" },
+    { mark: "point", at: [3, 0] }] }),
+  bars: bars({ unit: "J", min: 0, max: 8, groups: [
+    { label: "initial", bars: [{ label: "$K$", value: 0, color: "c1" }, { label: "$U_g$", value: 0, color: "c2" }, { label: "$U_s$", value: 7, color: "c3" }, { label: "$E_{th}$", value: 0, color: "ink" }] },
+    { label: "final", bars: [{ label: "$K$", value: 2, color: "c1" }, { label: "$U_g$", value: 4, color: "c2" }, { label: "$U_s$", value: 0, color: "c3" }, { label: "$E_{th}$", value: 1, color: "ink" }] }] }),
+  /* primitive tiles */
+  t_force: scene([box([0, 0], 0), { mark: "force", at: [0, 0], angle: 90, len: 0.9, label: "$\\vec F$" }, { mark: "force", at: [0, 0], angle: 0, len: 0.9, dash: true, label: "$F_x$" }], { maxH: 150 }),
+  t_vel: scene([{ mark: "body", shape: "dot", at: [0, 0] }, { mark: "force", at: [0, 0], angle: 30, len: 1.3, color: "c2", label: "$\\vec v$" }], { maxH: 150 }),
+  t_acc: scene([{ mark: "body", shape: "dot", at: [0, 0] }, { mark: "force", at: [0, 0], angle: 30, len: 1.3, color: "c3", label: "$\\vec a$" }], { maxH: 150 }),
+  t_dash: scene([{ mark: "seg", from: [0, 1.5], to: [2, 1.5], sty: "asym" }, { mark: "seg", from: [0, 1], to: [2, 1], sty: "guide" },
+    { mark: "force", at: [0, 0.5], angle: 0, len: 2, dash: true }, { mark: "seg", from: [0, 0], to: [2, 0], sty: "traj" }], { maxH: 150 }),
+  t_surf: scene([{ mark: "surface", from: [0, 0], to: [2, 0], side: "right" }, { mark: "pivot", at: [1, 0.3] }, { mark: "body", shape: "rod", at: [1.5, 0.3], w: 1, h: 0.05 }], { maxH: 150 }),
+  t_spring: scene([{ mark: "surface", from: [0, -0.4], to: [0, 0.4], side: "right" }, { mark: "spring", from: [0, 0], to: [1.6, 0], coils: 8, width: 0.25 }, box([1.95, 0], 0, { w: 0.7, h: 0.6 })], { maxH: 150 }),
+  t_pulley: scene([{ mark: "surface", from: [-0.7, 1], to: [0.7, 1], side: "left" }, { mark: "pulley", at: [0, 0.35], r: 0.3, mount: [0, 1] },
+    { mark: "rope", pts: [[-0.3, 0.35], [-0.3, -0.4]] }, { mark: "rope", pts: [[0.3, 0.35], [0.3, -0.4]] }], { maxH: 150 }),
+  t_bodies: scene([box([0, 0], 0, { w: 0.6, h: 0.6 }), { mark: "body", shape: "disk", at: [0.95, 0], r: 0.3 }, { mark: "body", shape: "ring", at: [1.85, 0], r: 0.3 },
+    { mark: "body", shape: "rod", at: [0.6, -0.65], w: 1.8, h: 0.08 }, { mark: "body", shape: "dot", at: [2.3, -0.65] }], { maxH: 150 }),
+  t_axes: scene([{ mark: "axes", at: [0, 0], angle: 30, len: 1, x: "$x$", y: "$y$" }], { maxH: 150 })
+};
+
+function renderAll() {
+  document.querySelectorAll(".fig").forEach(el => {
+    if (el.dataset.body) el.style.cssText += el.dataset.body === "b" ? ";--body:var(--sheet);--ramp:var(--sheet)" : ";--body:#313c4c;--ramp:#273242";
+    mount(el, F[el.dataset.fig]);
+  });
+}
+document.querySelectorAll(".p > p, .note").forEach(p => { if (p.textContent.includes("$")) p.innerHTML = tex(p.textContent); });
+document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+  document.documentElement.dataset.body = b.dataset.v;
+  document.querySelectorAll(".seg button").forEach(o => o.setAttribute("aria-pressed", o === b));
+}));
+let lastW = 0;
+new ResizeObserver(() => { if (document.body.clientWidth !== lastW) { lastW = document.body.clientWidth; renderAll(); } }).observe(document.body);
+document.fonts.ready.then(renderAll);
+</script>
+</body>
+</html>
