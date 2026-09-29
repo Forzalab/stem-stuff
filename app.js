@@ -454,20 +454,18 @@ function feedback(r, typed) {
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
 function mountBox() {
-  if (mounted) { mounted.box.destroy(); mounted.corner.destroy(); mounted.nums.destroy(); }
+  if (mounted) { mounted.box.destroy(); mounted.corner.destroy(); }
   const field = $("#xbField"); field.querySelector("textarea")?.remove();
-  $("#xbGutter").textContent = "";
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  ta.id = "scratch";
+  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbLabel");
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0,
     cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
-  S.nums = ExplainBox.lineNumbers(ta, $("#xbGutter"));      // line numbers in a gutter over the left padding
-  mounted = { box: S.box, corner: S.corner, nums: S.nums };
+  mounted = { box: S.box, corner: S.corner };
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }

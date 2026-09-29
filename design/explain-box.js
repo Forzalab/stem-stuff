@@ -113,7 +113,7 @@
       const ms = mirror.style;
       for (const k of COPY) ms[k] = cs[k];
       Object.assign(ms, { position: "absolute", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid",
-        paddingBottom: opts.freePadding || "1.75rem", width: el.offsetWidth - sb + "px", height: "auto", overflow: "hidden" });
+        paddingBottom: opts.freePadding || "1.875rem", width: el.offsetWidth - sb + "px", height: "auto", overflow: "hidden" });
       const text = el.value || el.placeholder || "";
       mirror.textContent = text + "​";          // zero-width end marker: a trailing newline still makes a line
       const node = mirror.firstChild;
