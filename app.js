@@ -112,7 +112,27 @@ function normalize(raw) {
   const m = s.match(/^(CALC1|CSCI26|PHYS)[\s_-]*([A-Z0-9]{3,6})$/);
   return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
 }
-codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; });
+/* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
+const codeGo = $("#codeGo"), codePaste = $("#codePaste");
+function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
+codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); });
+function putCode(code) { codeIn.value = code; syncCode(); }
+syncCode();
+/* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
+document.addEventListener("paste", e => {
+  const t = e.target;
+  if (t === codeIn || !(t instanceof HTMLElement) || !t.matches("input:not([type=file]), textarea")) return;
+  const n = normalize((e.clipboardData && e.clipboardData.getData("text")) || "");
+  if (!n) return;
+  e.preventDefault();
+  putCode(n.code); $("#entryMsg").textContent = ""; codeIn.focus();
+});
+codePaste.addEventListener("click", async () => {
+  let n = null;
+  try { n = normalize(await navigator.clipboard.readText()); } catch { /* plain http or denied: paste by hand */ }
+  if (!n) { codeIn.focus(); return; }
+  putCode(n.code); $("#entryMsg").textContent = ""; codeGo.focus();
+});
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   const n = normalize(codeIn.value);
@@ -153,7 +173,6 @@ async function fetchProblem(code) {
 }
 async function load(code) {
   if (!CODE_RE.test(code)) return;
-  codeIn.value = code;
   let prob;
   try { prob = await fetchProblem(code); }
   catch (e) {
@@ -161,6 +180,7 @@ async function load(code) {
     return;
   }
   $("#entryMsg").textContent = "";
+  putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: MAX_TRIES, finished: false, selected: null, box: null };
