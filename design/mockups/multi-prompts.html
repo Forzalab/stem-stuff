@@ -55,17 +55,16 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   display: grid; grid-template-columns: 2rem minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
   column-gap: var(--s2); row-gap: var(--s2); align-items: start;
 }
-.mparts .part.nopr { grid-template-areas: "mk bx" "mk bx"; }
+.mparts .part.nopr { grid-template-areas: "mk bx"; }
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
-.mparts .ff { grid-area: bx; }
-.mgo { display: flex; justify-content: flex-end; }
+.mparts .ff { grid-area: bx; position: relative; padding-right: 48px; }   /* room for the arrow is always reserved */
+.mparts .ff .btn { position: absolute; right: 0; top: 0; }   /* per-part arrow, flush inside the box; shown only once the box has text */
 @media (min-width: 40rem) {
-  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 14rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
+  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 16rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
   .mparts .part.nopr { grid-template-areas: "mk . bx"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
-  .mgo { padding-left: 0; }
 }
 
 /* mockup page only: which card shows */
@@ -89,14 +88,13 @@ body:has(#three:target) #two { display: none; }
           <div class="part">
             <span class="mk" id="m2a" aria-hidden="true">a)</span>
             <div class="pr md" id="p2a"><p data-tex>How many are in $A \cup B$?</p></div>
-            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p2a" autocomplete="off"></div>
+            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p2a" autocomplete="off"><button type="button" class="btn btn-go" aria-label="Submit a)"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
           </div>
           <div class="part">
             <span class="mk" id="m2b" aria-hidden="true">b)</span>
             <div class="pr md" id="p2b"><p data-tex>How many are in exactly one set?</p></div>
-            <div class="ff focus"><input class="ans" type="text" value="11" aria-labelledby="p2b" autocomplete="off"></div>
+            <div class="ff focus"><input class="ans" type="text" value="11" aria-labelledby="p2b" autocomplete="off"><button type="button" class="btn btn-go" aria-label="Submit b)"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
           </div>
-          <div class="mgo"><button type="button" class="btn btn-go" aria-label="Submit answers"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
         </div>
       </div>
     </div>
@@ -114,19 +112,18 @@ body:has(#three:target) #two { display: none; }
           <div class="part">
             <span class="mk" aria-hidden="true">a)</span>
             <div class="pr md" id="p3a"><p data-tex>How many are in $A \cup B$?</p></div>
-            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p3a" autocomplete="off"></div>
+            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p3a" autocomplete="off"><button type="button" class="btn btn-go" aria-label="Submit a)"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
           </div>
           <div class="part">
             <span class="mk" aria-hidden="true">b)</span>
             <div class="pr md" id="p3b"><p data-tex>How many are in exactly one set?</p></div>
-            <div class="ff"><input class="ans" type="text" value="11" aria-labelledby="p3b" autocomplete="off"></div>
+            <div class="ff"><input class="ans" type="text" value="11" aria-labelledby="p3b" autocomplete="off"><button type="button" class="btn btn-go" aria-label="Submit b)"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
           </div>
           <div class="part">
             <span class="mk" aria-hidden="true">c)</span>
             <div class="pr md" id="p3c"><p data-tex>How many are in neither $A$ nor $B$?</p></div>
             <div class="ff focus"><input class="ans" type="text" value="" aria-labelledby="p3c" autocomplete="off"></div>
           </div>
-          <div class="mgo"><button type="button" class="btn btn-go" aria-label="Submit answers" disabled><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
         </div>
       </div>
     </div>
