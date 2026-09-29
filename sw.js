@@ -11,7 +11,8 @@ const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "
   "SansSerif-Regular", "Script-Regular", "Size1-Regular", "Size2-Regular", "Size3-Regular", "Size4-Regular", "Typewriter-Regular"];
 const BASE = ["./", "index.html", "app.js", "app.css", "nav.js", "nav.css", "offline.js", "graph.js", "copy/payload.mjs", "design/explain-box.css", "design/explain-box.js",
   "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
-  "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
+  "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2",
+  "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-mono-latin-700-normal.woff2", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.
 function route(url, method, scope) {
@@ -77,7 +78,8 @@ self.addEventListener("fetch", e => {
     e.respondWith((async () => {
       const c = await caches.open(PROBS);
       try {
-        const r = await fetch(req);
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);   // never hang (design/RELOAD.md)
+        const r = await fetch(req, { signal: ctl.signal }).finally(() => clearTimeout(t));
         if (r.ok) await c.put(key, r.clone());
         return r;
       } catch (err) {

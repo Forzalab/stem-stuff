@@ -5,7 +5,7 @@
   Edit or replace the file: the next request re-reads it (mtime check), no restart.
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
 - Math: sympy (pip install sympy), behind a token allowlist.
-- POST /check          -> grades {code, answer | choice | parts}; 2 attempts per problem per browser (cookie).
+- POST /check          -> grades {code, answer | choice | parts}; tries per problem per browser (cookie): 1 for a 2-choice mc, else 2.
 - The bank file itself, keys, logs and server files are never served.
 """
 import hashlib
@@ -33,7 +33,7 @@ except Exception:  # noqa: BLE001
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5567
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
-MAX_TRIES = 2
+MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "var", "body", "how")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 
@@ -78,6 +78,12 @@ def shown(p):
     keep = [c for c in ch if c["id"] == p["correct"] or c.get("lock")]
     keep += [c for c in ch if c not in keep][: max(0, 5 - len(keep))]
     return [c for c in ch if c in keep]
+
+
+def max_tries(p):
+    """Tries by choice count (Tony, locked): a 2-choice mc gets ONE try; 3+ choices, and every typed type, get TWO.
+    app.js maxTries() is the same rule; tests/test_serve.py and tests/tries.test.mjs pin both to one table."""
+    return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
 def shuffled(choices, seed):
@@ -238,7 +244,7 @@ def grade(p, sid, body):
         st = _tries.setdefault((sid, p["code"]), {"wrong": [], "done": False})
 
         def left():
-            return MAX_TRIES - len(st["wrong"])
+            return max_tries(p) - len(st["wrong"])
 
         if st["done"] or left() <= 0:
             return {"verdict": "locked", "triesLeft": 0}

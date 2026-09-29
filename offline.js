@@ -29,8 +29,41 @@
     ingest: list => ingest(list),
     fileName: code => names.get(code) || null,
     loadProblem,
-    validate
+    validate,
+    restore: () => restore(),
+    ready: null
   };
+  const TIMEOUT = 8000;
+  const timed = (input, init) => {                       // every fetch from here: aborted after 8 s (design/RELOAD.md)
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT);
+    return nativeFetch(input, { ...(init || {}), signal: ctl.signal }).finally(() => clearTimeout(t));
+  };
+
+  /* ---------- the uploaded bank survives reloads: IndexedDB stem-stuff / bank / "files" = [{ name, text }] ---------- */
+  function idb(mode, fn) {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error("no idb"));
+      const o = indexedDB.open("stem-stuff", 1);
+      o.onupgradeneeded = () => o.result.createObjectStore("bank");
+      o.onerror = () => reject(o.error);
+      o.onsuccess = () => {
+        const db = o.result, tx = db.transaction("bank", mode), r = fn(tx.objectStore("bank"));
+        tx.oncomplete = () => { db.close(); resolve(r && r.result); };
+        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    });
+  }
+  const saveBank = files => idb("readwrite", s => s.put(files, "files")).catch(() => {});
+  async function restore() {
+    if (local.size) return false;
+    let files;
+    try { files = await idb("readonly", s => s.get("files")); } catch (e) { return false; }
+    if (!Array.isArray(files) || !files.length) return false;
+    const { got } = await ingest(files.map(f => ({ name: f.name, size: f.text.length, text: async () => f.text })), false);
+    return got.length > 0;
+  }
+  api.ready = restore().catch(() => false);
+  addEventListener("pageshow", e => { if (e.persisted && !local.size) api.ready = restore().catch(() => false); });
 
   if (CAN_SW) navigator.serviceWorker.register("sw.js").catch(() => { api.mode = "online"; });
 
@@ -55,7 +88,7 @@
     if (local.has(code)) return local.get(code);
     if (!FILE) {
       let r;
-      try { r = await nativeFetch("p/" + encodeURIComponent(code) + ".json"); } catch (e) { r = null; }
+      try { r = await timed("p/" + encodeURIComponent(code) + ".json"); } catch (e) { r = null; }
       if (r && r.ok) return r.json();
       if (r && r.status < 500) { const e = new Error("not found"); e.status = r.status; throw e; }
     }
@@ -75,7 +108,7 @@
     if (FILE) return pick(code).then(answer);
     return nativeFetch(input, init).then(
       r => r.status >= 500 ? pick(code).then(answer) : r,
-      () => pick(code).then(answer));
+      e => e && e.name === "AbortError" ? Promise.reject(e) : pick(code).then(answer));   // a timeout is not "offline"
   };
 
   /* ---------- picker UI ---------- */
@@ -179,18 +212,20 @@
 
   // Parse picked problems.json file(s) into the in-memory store. Shared by the dialog and by pickFile().
   const names = new Map();      // code -> file name it came from
-  async function ingest(list) {
+  async function ingest(list, save = true) {
     const files = [...(list || [])].filter(f => /\.json$/i.test(f.name));
-    const got = [], bad = [];
+    const got = [], bad = [], keep = [];
     for (const f of files) {
       try {
         if (f.size > MAX) throw 0;
-        const bank = JSON.parse(await f.text());
+        const text = await f.text(), bank = JSON.parse(text);
         const ps = bank && Array.isArray(bank.problems) ? bank.problems.filter(p => !validate(p)) : [];
         if (!ps.length) throw 0;
         for (const p of ps) { local.set(p.code, p); names.set(p.code, f.name); got.push(p); }
+        keep.push({ name: f.name, text });
       } catch (e) { bad.push(f.name); }
     }
+    if (save && keep.length) await saveBank(keep);
     return { files, got, bad };
   }
 

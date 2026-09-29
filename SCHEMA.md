@@ -48,7 +48,7 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 | `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
-| `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order. | yes |
+| `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
 | `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. | label + type only |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
@@ -64,14 +64,16 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 - **One number** → `num`. **A formula** → `expr`.
 - **A fixed set of options** → `mc` with exactly those options, no filler:
   - TRUE / FALSE → **2 choices**. T / F / MAYBE → **3 choices**. MODUS PONENS / MODUS TOLLENS / NEITHER → 3. Four named options → 4. Five or more → 5–8.
+  - Only 2 choices means only ONE try (see Grading), so keep a third choice only if it names a real error.
   - Every non-correct choice still needs its `wrong` entry (error + hint).
+- **A typed answer that can be made binary** (like the gate-chain XOR question: "which if statement...", "greater than .5?") **becomes a 2-choice `mc`**, not a `num`/`text`. Word the question so the two choices are the two live answers, and give the wrong one an error type + hint.
 - **A free word, phrase, symbol or code line** (□¬P, `if (!a || b)`) → `text`, with `how` saying exactly what to type and in what form (symbols: say how to type them on a keyboard, e.g. "Type `[]` for □, `<>` for ◇, `~` for ¬", and list those spellings in `accept`).
 - **Several answers to one question** ("write both, in that order") → one `multi` problem, one part per blank, in the worksheet's order. Never split it into separate problems. Each part picks its own type.
 - A worksheet's strict **form** rule (".2", not "0.2") → a `text` part, with the form in `how`. `num` accepts every equal value.
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
-- 2 attempts per problem. A repeat of the same wrong answer, or text that can't be read, does not count.
+- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text`/`multi` get TWO. There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
 - `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` (`expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: the submit arrow stays off until every box is filled. The attempt is correct only if every part is right; one attempt = the whole set. Nothing says which part was wrong, except the hint of the first wrong part that matched a `wrong` entry.

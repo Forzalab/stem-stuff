@@ -1,5 +1,6 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers, code (columns line up) */
   --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
@@ -43,7 +44,7 @@ button:disabled { cursor: default; }
 .code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: var(--mono); font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
@@ -163,6 +164,18 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .opt.pend { border-color: var(--c1); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: -24px; }
 
+/* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
+   The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
+   Pills size to their text and share the spare width. Wrong keeps the strike + dashed red; right keeps the green border and
+   shows its check where the arrow was. */
+.choices.inline { display: flex; gap: var(--s2); }
+.choices.inline .ch { flex: 1 1 auto; min-width: 3rem; }
+.choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
+.choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
+.choices.inline .opt .badge { display: none; }
+.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: 56px; }
+.choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
+
 .ff {
   display: flex; align-items: center; height: 52px; padding-left: var(--s3);
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px;
@@ -172,7 +185,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: 3rem; margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: inherit; font-size: 1.125rem; font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--mono); font-size: 1.125rem; font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
@@ -201,6 +214,8 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .verdict.bad { color: var(--bad); }
 .verdict.wait, .verdict.lock { color: var(--muted); font-weight: 400; }
 .verdict .ico { width: 1.25rem; height: 1.25rem; }
+.verdict .btn { margin-left: auto; flex: none; }
+.verdict .btn .ico { width: 24px; height: 24px; }
 .cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 8px; padding: var(--s3) var(--s4); }
 .cluck > .ico { color: var(--mark); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .cluck .md p { margin: 0; }
@@ -216,8 +231,17 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
    stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
-.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1.125rem; }
-.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
+.xb-field { --gw: 2.25rem; position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1.125rem; }
+/* line numbers (ExplainBox.lineNumbers): hint colour, small, tabular, right-aligned in a gutter over the textarea's left padding.
+   Each number sits on the first row of its logical line; the numbers scroll with the text. Decorative: aria-hidden, no pointer events. */
+.xb-gutter {
+  position: absolute; z-index: 1; left: 2px; top: 2px; bottom: 2px; width: var(--gw); overflow: hidden; pointer-events: none;
+  border-radius: 4px 0 0 4px; color: var(--hint); font: 400 0.8125rem/1.6 var(--mono);
+  font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none;
+}
+.xb-nums { will-change: transform; }
+.xb-nums > div { box-sizing: border-box; padding: 0 0.5rem 0 0; text-align: right; line-height: 1.8rem; overflow: hidden; }   /* 1.8rem = the textarea's 1.6 x 18px line */
+.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); padding-left: calc(var(--gw) + 0.5rem); transition: none; }
 /* free padding 28px: last line (28.8px) + 28px >= button (48) + inset (6), so only the LAST line can reach the button */
 .xb-field textarea.xb-free { padding-bottom: 1.75rem; }
 .xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
@@ -229,4 +253,79 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   main { padding-top: var(--s4); }
   .p { padding: var(--s3) var(--s4); }
 }
+/* ---------- top bar steps away while the scratchpad has focus (design/SWAP.md) ----------
+   Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
+   its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
+   Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .2s ease, opacity .2s ease, visibility 0s; }
+html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
+  transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: transform .2s ease, opacity .2s ease, visibility 0s .2s;
+}
+
+/* ---------- Swap: keyboard up = one pane above the keyboard (design/SWAP.md) ----------
+   JS (layoutDock/layoutSwap in app.js) adds html.swap while the phone keyboard is up and a field in <main> has focus, then
+   html.swap-problem or html.swap-scratch. <main> becomes a fixed stage exactly as tall as the visible viewport (--vv-h), at its top
+   (--kb-top): iOS keeps fixed elements on the layout viewport, so both come from visualViewport. */
+.stage { display: contents; }
+.btn-tgl { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
+.btn-tgl::before {                       /* the active side's pill */
+  content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised);
+  transition: transform .22s ease;
+}
+.btn-tgl:hover { background: var(--sheet); }
+.btn-tgl .ico { position: relative; color: var(--muted); transition: color .22s ease, transform .22s ease; }
+.btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--c1); }
+.btn-tgl[data-pane="scratch"]::before { transform: translateX(72px); }
+.btn-tgl[data-pane="scratch"] .t-swap { transform: rotate(180deg); }
+
+html.swap { overflow: hidden; overscroll-behavior: none; }
+html.swap body { min-height: var(--swap-doc-h, 100dvh); }            /* keeps the page's scroll position while <main> leaves the flow */
+html.swap body::before { content: ""; position: fixed; z-index: 14; left: 0; right: 0; top: var(--kb-top, 0px); height: var(--vv-h, 100dvh); background: var(--paper); }
+html.swap main {
+  position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
+  height: var(--vv-h, 100dvh); display: flex; flex-direction: column; gap: var(--s2);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--gut) var(--s2);
+}
+html.swap #sentinel { display: none; }
+html.swap #swap { flex: none; align-self: flex-start; }
+/* both panes share one grid cell; the one not shown stays laid out (and focusable) but see-through and untouchable, so focus can move into it before it appears */
+html.swap .stage { flex: 1 1 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); position: relative; overflow: clip; padding-bottom: 6px; }
+html.swap .stage > .freeze, html.swap .stage > .work { grid-area: 1 / 1; min-width: 0; min-height: 0; }
+html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) + .work */
+html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
+html.swap .more { display: none; }
+/* the card: problem + how line + answer, one surface */
+html.swap .freeze-in { background: var(--sheet); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
+html.swap .p, html.swap .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
+html.swap .q, html.swap .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
+html.swap .fb { margin: 0; padding: var(--s2) var(--s4) 0; }
+html.swap .fb:empty { display: none; }
+html.swap .xb { margin: 0; }
+html.swap .xb-field { max-width: none; }
+html.swap .xb textarea { min-height: calc(3 * 1.6em + 0.75rem + 1.75rem + 4px); }   /* 3 lines above the keyboard */
+html.swap #xb > .xb-label, html.swap.swap-scratch #q > :not(.how), html.swap.swap-scratch #fb {   /* visually hidden, still there for screen readers and focus */
+  position: absolute; width: 1px; height: 1px; min-height: 0; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+/* PROBLEM pane: the card fills the stage; the question scrolls inside it, from its start; the how line and the answer are pinned at its bottom */
+html.swap-problem .freeze { align-self: stretch; z-index: 2; }
+html.swap-problem .freeze-in { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+html.swap-problem #problem { flex: 1 1 auto; min-height: 3rem; overflow-y: auto; overscroll-behavior: contain; }
+html.swap-problem #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; }
+html.swap-problem #q { order: 3; flex: 0 0 auto; max-height: 80%; overflow-y: auto; overscroll-behavior: contain; }
+html.swap-problem .work { align-self: end; z-index: 1; opacity: 0; pointer-events: none; }
+html.swap-problem .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.swap-problem .freeze.clipped #problem { -webkit-mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); }
+/* SCRATCHPAD pane: a peek of the card at the top (its start, never scrolled to the end; the whole question when it fits, else clamped
+   with its own scroll and a fade), the scratchpad anchored to the bottom and growing upward */
+html.swap-scratch .freeze { align-self: start; z-index: 2; }
+html.swap-scratch .freeze.no-peek { display: none; }
+html.swap-scratch .freeze-in { max-height: var(--peek-max, 40%); overflow-y: auto; }
+html.swap-scratch .p { font-size: 1rem; line-height: 1.45; }
+html.swap-scratch .how { margin: 0; }
+html.swap-scratch .q { padding-top: 0; }
+html.swap-scratch .work { align-self: end; z-index: 1; }
+
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

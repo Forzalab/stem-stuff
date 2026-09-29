@@ -5,7 +5,7 @@ import { build, stringify } from "./copy/payload.mjs";
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
 const CODE_RE = /^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$/;
-const MAX_TRIES = 2;
+const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
@@ -42,18 +42,31 @@ function md(text, inline = false) {
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
    `answer` is { answer: "typed text" } or { choice: "b" }. */
+/* every request goes through net(): aborted after 8 s, so nothing can wait forever (design/RELOAD.md).
+   In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
+const TIMEOUT = 8000;
+const inflight = new Set();
+const timedOut = e => !!e && e.name === "AbortError";
+async function net(url, init = {}) {
+  const ctl = new AbortController(), req = { ctl, t0: Date.now() };
+  const t = setTimeout(() => ctl.abort(), TIMEOUT);
+  inflight.add(req);
+  try { return await fetch(url, { ...init, signal: ctl.signal }); }
+  finally { clearTimeout(t); inflight.delete(req); }
+}
 const localState = new Map();
 async function check(code, answer) {
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(off.get(code), answer);
   try {
-    const r = await fetch("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+    const r = await net("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
                                      body: JSON.stringify({ code, ...answer }) });
     if (r.ok) return await r.json();
-  } catch { /* offline */ }
+  } catch (e) { if (timedOut(e)) return { verdict: "timeout" }; /* else offline */ }
   return { verdict: "pending" };
 }
 /* mirror of serve.py grade(): keep the two in step */
+const maxTries = p => p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES;   // serve.py max_tries(): 2-choice mc = ONE try, else two
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -75,7 +88,7 @@ function unitHit(u, t, g) {                               // re entries first, t
 function gradeLocal(key, answer) {
   const st = localState.get(key.code) || { wrong: [], done: false };
   localState.set(key.code, st);
-  const left = () => MAX_TRIES - st.wrong.length;
+  const left = () => maxTries(key) - st.wrong.length;
   if (st.done || left() <= 0) return { verdict: "locked", triesLeft: 0 };
   let hit = null, correct, sig;
   if (key.type === "mc") {
@@ -104,7 +117,8 @@ function gradeLocal(key, answer) {
 }
 
 /* ================= entry box: code bar + upload ================= */
-const codeIn = $("#code"), dock = $("#dock");
+const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
+let swapOn = false, lostAt = 0;          // Swap state (see "Swap" below)
 /* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
@@ -163,10 +177,12 @@ function fileStatus(code) {
   layoutDock();
 }
 
+const retryLoad = $("#retryLoad");
 /* ================= problem state ================= */
+let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 async function fetchProblem(code) {
-  const r = await fetch(`p/${code}.json`);
+  const r = await net(`p/${code}.json`);
   if (r.ok) return r.json();
   r.text().catch(() => {});   // drain the 404 body so the request completes
   const e = new Error("not found"); e.status = r.status; throw e;
@@ -174,16 +190,18 @@ async function fetchProblem(code) {
 async function load(code) {
   if (!CODE_RE.test(code)) return;
   let prob;
+  retryLoad.hidden = true;
   try { prob = await fetchProblem(code); }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : "Couldn't load that. Check your connection.";
+    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "The server took too long." : "Couldn't load that. Check your connection.";
+    if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
   $("#entryMsg").textContent = "";
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
-  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: MAX_TRIES, finished: false, selected: null, box: null };
+  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   render();
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
 }
@@ -230,6 +248,7 @@ function renderQuestion() {
       </div>`).join("")}</div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
+    fitChoices();
   } else if (p.type === "multi") {
     /* one box per part, side by side; one arrow, off until every box is filled (SCHEMA.md "Grading") */
     q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
@@ -279,6 +298,28 @@ function shown(p) {
   keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, 5 - keep.length)));
   return ch.filter(c => keep.includes(c));
 }
+/* One row of pills for 2 choices, or 3 short ones. Decided by measuring, not by guessing lengths: lay the row out, then for each
+   pill in turn give it the selected look (its 56px arrow room) and check nothing wraps, clips or overflows the row.
+   Any pill failing means today's stacked list. Re-run when the width changes and when fonts arrive (the answer depends on both). */
+function fitChoices() {
+  const g = document.querySelector("#q .choices");
+  if (!g || !S || S.prob.type !== "mc") return;
+  if (!g.offsetWidth || g.offsetWidth < 120) return;             // laid out at (near) zero width (Swap hides it): keep the last answer
+  const was = g.classList.contains("inline");
+  let fits = g.children.length >= 2 && g.children.length <= 3;
+  if (fits) {
+    g.classList.add("inline");
+    for (const c of g.children) {
+      c.classList.add("probe");
+      const o = c.querySelector(".opt"), t = o.querySelector(".txt");
+      if (g.scrollWidth > g.clientWidth + 0.5 || o.scrollWidth > o.clientWidth + 0.5 || t.scrollWidth > t.clientWidth + 0.5) fits = false;
+      c.classList.remove("probe");
+      if (!fits) break;
+    }
+  }
+  g.classList.toggle("inline", fits);
+  if (fits !== was) layoutFreeze();
+}
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
 function select(o) {
   S.selected = o ? o.dataset.id : null;
@@ -305,17 +346,21 @@ function wireMC(q) {
     else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
     else if (e.key === "Enter") { e.preventDefault(); if (o.getAttribute("aria-checked") === "true") submitMC(); else select(o); }
     else if (e.key === " ") { e.preventDefault(); select(o.getAttribute("aria-checked") === "true" ? null : o); }
-    else if (/^[a-e]$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const n = opts().find(x => x.dataset.l === e.key.toUpperCase());
+    else if (/^([a-e]|[1-5])$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {         // A-E or 1-5 jump to that choice
+      const n = opts().find(x => x.dataset.l === (/\d/.test(e.key) ? LETTERS[+e.key - 1] : e.key.toUpperCase()));
       if (n && !n.disabled) { e.preventDefault(); roving(n); n.focus(); select(n); }
     }
   });
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 async function submitMC() {
-  const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished) return;
-  const c = S.prob.choices.find(x => x.id === S.selected);
-  const r = await check(S.code, { choice: c.id });
+  const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
+  const c = S.prob.choices.find(x => x.id === S.selected), mine = S;
+  busy = true;
+  let r;
+  try { r = await check(S.code, { choice: c.id }); } finally { busy = false; }
+  if (S !== mine) return;                                   // another problem opened meanwhile
+  if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
   const send = o.parentElement.querySelector(".send");
   if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); finish(); }
@@ -350,14 +395,15 @@ function wireFF() {
   }
   go.addEventListener("click", submitFF);
 }
-let busy = false;
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
   if (vals.some(v => !v) || S.finished || busy) return;
   busy = true;
   const multi = S.prob.type === "multi", t = vals.join(" , ");
   try {
-    const r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    const mine = S, r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    if (S !== mine) return;
+    if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); ins.forEach(x => { x.readOnly = true; }); $("#ansGo").hidden = true; finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish(true);
@@ -386,27 +432,34 @@ function feedback(r, typed) {
   else if (r.verdict === "wrong") h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   fb.innerHTML = h;
+  const again = $("#retry");
+  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say(fb.textContent.replace(/\s+/g, " ").trim());
   layoutFreeze();
 }
 
 /* ---------- scratchpad + Copy ---------- */
+let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
 function mountBox() {
-  if (S.box) S.box.destroy();
-  if (S.corner) S.corner.destroy();
+  if (mounted) { mounted.box.destroy(); mounted.corner.destroy(); mounted.nums.destroy(); }
   const field = $("#xbField"); field.querySelector("textarea")?.remove();
+  $("#xbGutter").textContent = "";
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
   ta.id = "scratch";
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
-  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0 });
+  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0,
+    cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
+  S.nums = ExplainBox.lineNumbers(ta, $("#xbGutter"));      // line numbers in a gutter over the left padding
+  mounted = { box: S.box, corner: S.corner, nums: S.nums };
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
@@ -450,9 +503,16 @@ function layoutDock() {
   tallest = Math.max(tallest, innerHeight, h);
   root.classList.toggle("dock-bottom", bottom);
   const inDock = dock.contains(document.activeElement);
-  const kb = bottom && editing() && tallest && h < tallest * 0.8;
+  const shrunk = bottom && !!tallest && h < tallest * 0.8;
+  const kb = shrunk && editing();
+  /* Swap (design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
+     (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
+  const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
+  const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
+  const swapNext = !!S && !freeze.hidden && shrunk && ((inMain && (editing() || swapOn)) || (swapOn && grace));
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
-  root.classList.toggle("dock-away", !!kb && !inDock);
+  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext);
+  if (swapNext !== swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
@@ -464,6 +524,7 @@ new ResizeObserver(() => layoutDock()).observe(dock);
 function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
+  if (swapOn) { layoutSwap(); return; }                                         // one pane above the keyboard: none of the strip logic applies
   const dockH = root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0;
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
@@ -485,7 +546,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden) return;
+  if (!S || freeze.hidden || swapOn) return;
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
@@ -495,6 +556,7 @@ function stuck() {
 /* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
    the question is what you answer while writing; the problem start is one small scroll up. */
 function showQuestion() {
+  if (swapOn) return;
   const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
   const end = Math.max(bottom($("#q")), bottom($("#fb")));
   freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
@@ -505,8 +567,8 @@ if (vv) { vv.addEventListener("resize", onView); vv.addEventListener("scroll", o
 addEventListener("resize", onView);
 addEventListener("scroll", () => stuck(), { passive: true });
 document.addEventListener("focusin", onView);
-document.addEventListener("focusout", () => setTimeout(onView, 60));
-freezeIn.addEventListener("scroll", () => { const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
+document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
+freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
 more.addEventListener("click", () => {
   const open = !freeze.classList.contains("open");
   freeze.classList.toggle("open", open);
@@ -515,14 +577,143 @@ more.addEventListener("click", () => {
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 });
+/* ================= Swap (design/SWAP.md) =================
+   Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
+   scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
+   picks the pane too. layoutDock() decides when it is on; CSS (html.swap, .swap-problem, .swap-scratch) does the layout;
+   this code sets the pane, the sizes CSS cannot know (--vv-h, --peek-max, the scratchpad's cap) and moves focus. */
+const swapBtn = $("#swap"), stage = $("#stage"), problemEl = $("#problem"), work = $("#work");
+const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
+let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
+const GAP = 10;                                                                  // between the peek and the scratchpad: clears the box's 5px focus ring
+const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
+function setSwap(on) {
+  swapOn = on;
+  if (on) {
+    swapY = scrollY;
+    root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");              // the page keeps its height, so its scroll position survives
+    const p = paneOf(document.activeElement); if (p) pane = p;
+    root.classList.add("swap");
+    swapBtn.hidden = false;
+    applyPane();
+  } else {
+    root.classList.remove("swap", "swap-problem", "swap-scratch");
+    swapBtn.hidden = true; swapPadMax = null;
+    freeze.classList.remove("clipped", "no-peek");
+    if (scrollY !== swapY) scrollTo(0, swapY);
+    requestAnimationFrame(() => { if (S && S.box) S.box.limit(); });
+  }
+}
+/* the DOM change: classes, toggle, scroll positions, sizes */
+function applyPane() {
+  shownPane = pane;
+  root.classList.toggle("swap-problem", pane === "problem");
+  root.classList.toggle("swap-scratch", pane === "scratch");
+  swapBtn.dataset.pane = pane;
+  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show the scratchpad" : "Show the problem");
+  freezeIn.scrollTop = 0; problemEl.scrollTop = 0;                                 // the question always shows from its start
+  layoutSwap();
+}
+/* crossfade between panes (View Transitions where supported), instant with reduced motion or without support.
+   Focus has already moved (it must, in the tap, for the keyboard to stay), so the fields are focusable in both states. */
+function setPane(p) {
+  if (p === pane) return;
+  pane = p;
+  if (!swapOn) return;
+  if (document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyPane); else applyPane();
+}
+function layoutSwap() {
+  if (!swapOn || !S) return;
+  const h = vv ? vv.height : innerHeight;
+  root.style.setProperty("--vv-h", Math.round(h) + "px");
+  root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+  const cell = stage.clientHeight - 6;                                             // minus the stage's focus-ring room
+  const padMin = parseFloat(getComputedStyle(S.box.el).minHeight) || 130;         // 3 lines
+  const peekMax = Math.max(0, Math.min(Math.round(h * 0.6), cell - padMin - GAP));
+  root.style.setProperty("--peek-max", peekMax + "px");
+  const noPeek = peekMax < 40;
+  freeze.classList.toggle("no-peek", noPeek);
+  let peek = 0;
+  if (!noPeek) {
+    if (shownPane === "scratch") peek = freeze.offsetHeight;
+    else { const how = $("#how"); peek = Math.min(peekMax, problemEl.scrollHeight + (how ? how.offsetHeight + 16 : 0) + 8); }   // what the peek will be
+  }
+  swapPadMax = Math.max(padMin, cell - (peek ? peek + GAP : 0));
+  root.style.setProperty("--pad-max", swapPadMax + "px");
+  S.box.limit();
+  swapFade();
+}
+/* subtle bottom fade on whichever box is scrolling (the peek, or the question in the problem pane) while it has more below */
+function swapFade() {
+  if (!swapOn) return;
+  const sc = shownPane === "scratch" ? freezeIn : problemEl;
+  freeze.classList.toggle("clipped", sc.scrollHeight > sc.clientHeight + 2 && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2);
+}
+problemEl.addEventListener("scroll", swapFade, { passive: true });
+/* the main field of a pane: the scratchpad; or the first empty answer box, or the picked / current choice */
+function focusField(p) {
+  let el = null;
+  if (p === "scratch") el = S.box && S.box.el;
+  else {
+    const ins = [...document.querySelectorAll("#q .ans")];
+    el = ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
+      : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled);
+  }
+  if (!el) return false;
+  el.focus({ preventScroll: true });
+  return document.activeElement === el;
+}
+/* the toggle must not take focus from the field (that would drop the keyboard): pointerdown/mousedown are cancelled, and the click puts
+   focus straight into the other pane's field, in the same tap */
+for (const ev of ["pointerdown", "mousedown"]) swapBtn.addEventListener(ev, e => e.preventDefault());
+swapBtn.addEventListener("click", () => { const next = pane === "problem" ? "scratch" : "problem"; focusField(next); setPane(next); });
+/* focus picks the pane; focusing the scratchpad also sends the top bar away (nav row: slides up and fades, keeps its space) */
+document.addEventListener("focusin", e => {
+  root.classList.toggle("bar-off", e.target.id === "scratch");
+  const p = paneOf(e.target); if (p) setPane(p);
+});
+document.addEventListener("focusout", e => { if (e.target.id === "scratch" && (!e.relatedTarget || e.relatedTarget.id !== "scratch")) root.classList.remove("bar-off"); });
+
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
 new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));
+let qW = 0;
+new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
+
+/* ================= resume (design/RELOAD.md) =================
+   Back from bfcache (pageshow persisted) or a long-hidden tab: requests older than the timeout are aborted (background timers are
+   throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
+function resume(fromCache) {
+  const now = Date.now();
+  for (const r of [...inflight]) if (fromCache || now - r.t0 >= TIMEOUT) r.ctl.abort();
+  if (fromCache) busy = false;
+  if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
+  if (S && !S.finished) {
+    const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
+    if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
+    for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
+    if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
+  }
+  tallest = 0; lastW = 0; qW = 0;
+  layoutDock(); layoutFreeze(); fitChoices();
+}
+addEventListener("pageshow", e => {
+  if (!e.persisted) return;
+  resume(true);
+  const off = window.stemOffline;
+  if (off && off.ready && S && !off.has(S.code)) off.ready.then(() => { if (S && off.has(S.code)) fileStatus(S.code); });
+});
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
 /* ================= boot ================= */
 const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) load(n.code); };
 addEventListener("hashchange", fromHash);
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); layoutFreeze(); } });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
 layoutDock();
-fromHash();
+/* offline.js (it runs after this module) restores an uploaded bank from IndexedDB first, so #CODE of an uploaded problem opens */
+addEventListener("DOMContentLoaded", async () => {
+  const off = window.stemOffline;
+  if (off && off.ready) { try { await Promise.race([off.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* storage blocked */ } }
+  fromHash();
+});
 window.__drill = { check, get state() { return S; } };   // for tests/e2e

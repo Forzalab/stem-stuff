@@ -355,7 +355,6 @@
       "code": "CSCI26_TF3",
       "title": "Even or odd",
       "type": "mc",
-      "shuffle": false,
       "body": [
         {
           "type": "text",
@@ -448,6 +447,195 @@
         }
       ],
       "nudge": "QUACK. Draw the two circles. Fill the middle first."
+    },
+    {
+      "code": "CSCI26_TFM",
+      "title": "Modus ponens, backwards",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$p \\to q$ is true and $q$ is true. Then $p$ is true."
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "m",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Try $p$ false and $q$ true. Is $p \\to q$ still true?"
+        },
+        {
+          "choice": "f",
+          "error": "misread",
+          "hint": "QUACK. Can you find one case where $p$ is true and the statement holds?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_CE3",
+      "title": "Gate chain with XOR, NOR, NAND",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "Three inputs A, B, C feed a chain of gates. $G_1 = A \\oplus B$ (XOR). $G_2$ is NOR of $G_1$ and C. OUT is NAND of $G_2$ and A."
+        },
+        {
+          "type": "text",
+          "md": "Evaluate the chain in that order for each row: $(A, B, C) = (1, 0, 1)$, then $(0, 1, 0)$, then $(1, 1, 0)$. Work one gate at a time, and write down $G_1$ and $G_2$ for every row before you read OUT."
+        }
+      ],
+      "how": "Type 0 or 1 for OUT in each row, in the order given.",
+      "parts": [
+        {
+          "label": "1",
+          "type": "text",
+          "answer": "1",
+          "accept": [
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "0",
+              "error": "negation",
+              "hint": "QUACK. NAND is NOT of AND. What is $G_2$ here, and what does A add?"
+            }
+          ]
+        },
+        {
+          "label": "2",
+          "type": "text",
+          "answer": "1",
+          "accept": [
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "0",
+              "error": "negation",
+              "hint": "QUACK. NOR is true only when both inputs are 0. Recheck $G_2$."
+            }
+          ]
+        },
+        {
+          "label": "3",
+          "type": "text",
+          "answer": "0",
+          "accept": [
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "1",
+              "error": "negation",
+              "hint": "QUACK. XOR of equal inputs is 0. What does NOR do with 0 and 0?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. One gate at a time: $G_1$ first, then $G_2$, then OUT."
+    },
+    {
+      "code": "CSCI26_CE05",
+      "title": "Fuzzy AND, NOT, OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. $A = .7$, $B = .45$, $C = .2$. Is $(A \\wedge \\neg B) \\vee (\\neg A \\wedge C)$ greater than $.5$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "op-swap",
+          "hint": "QUACK. Which does OR keep, the smaller side or the larger? Check each side first."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_CE07",
+      "title": "Fuzzy NOT of an AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. $A = .4$, $B = .9$. Is $\\neg(A \\wedge B)$ greater than $.5$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "order-ops",
+          "hint": "QUACK. Do the AND inside the parentheses first, then flip that one result. What did you flip?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_CE25",
+      "title": "Same-value test",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "In C++, `^` means XOR. Which if statement is true exactly when $a$ and $b$ have the same value?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (a ^ b)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (!(a ^ b))`"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. Try $a = 1$, $b = 1$. What does `a ^ b` give?"
+        }
+      ]
     }
   ]
 }

@@ -6,12 +6,18 @@
    box.getHistory()  -> [{ t: 1790000000000, text: "..." }, ...]  t = epoch ms, oldest first (copy/COPY-PAYLOAD.md)
    box.onHistory(fn) adds a listener, returns an unsubscribe function  ("onchange-history" hook)
    box.snapshot()    force a snapshot now (e.g. right before building the copy payload)
-   box.limit()       re-cap the height at the bottom of the visible viewport (opts.bottomInset() = px to keep clear, e.g. a dock)
+   box.limit()       re-cap the height at the bottom of the visible viewport (opts.bottomInset() = px to keep clear, e.g. a dock).
+                     opts.cap() -> px | null overrides that cap (Swap: the room between the question peek and the keyboard)
    box.destroy()
 */
 (function (root) {
   "use strict";
   const HAS_FIELD_SIZING = typeof CSS !== "undefined" && CSS.supports && CSS.supports("field-sizing", "content");
+
+  /* computed styles a mirror div copies from a textarea, so it wraps text exactly like the textarea */
+  const COPY = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "letterSpacing", "wordSpacing", "lineHeight", "textTransform",
+    "textIndent", "tabSize", "paddingTop", "paddingLeft", "paddingRight", "borderTopWidth", "borderRightWidth", "borderBottomWidth",
+    "borderLeftWidth", "boxSizing", "whiteSpace", "overflowWrap", "wordBreak", "minHeight", "fontVariantLigatures", "fontKerning"];
 
   function mount(el, opts = {}) {
     const idleMs = opts.idleMs ?? 2000;
@@ -35,7 +41,8 @@
       const vv = window.visualViewport, inset = opts.bottomInset ? opts.bottomInset() : 0;
       const bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - inset;
       const min = parseFloat(getComputedStyle(el).minHeight) || 0;
-      const cap = Math.max(min, Math.floor(bottom - el.getBoundingClientRect().top)) + "px";
+      const over = opts.cap ? opts.cap() : null;
+      const cap = Math.max(min, Math.floor(over != null ? over : bottom - el.getBoundingClientRect().top)) + "px";
       if (cap === el.style.maxHeight) return;
       el.style.maxHeight = cap;
       fit();
@@ -95,9 +102,6 @@
     const gap = opts.gap ?? 4, hys = opts.hysteresis ?? 8;
     const mirror = document.createElement("div");
     mirror.setAttribute("aria-hidden", "true");
-    const COPY = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "letterSpacing", "wordSpacing", "lineHeight", "textTransform",
-      "textIndent", "tabSize", "paddingTop", "paddingLeft", "paddingRight", "borderTopWidth", "borderRightWidth", "borderBottomWidth",
-      "borderLeftWidth", "boxSizing", "whiteSpace", "overflowWrap", "wordBreak", "minHeight", "fontVariantLigatures", "fontKerning"];
     let free = false, raf = 0;
 
     function update() {
@@ -140,7 +144,60 @@
     return { update, destroy() { cancelAnimationFrame(raf); el.removeEventListener("input", update); el.removeEventListener("xb-cap", update); if (ro) ro.disconnect(); mirror.remove(); }, get free() { return free; } };
   }
 
-  const api = { mount, reserveCorner, HAS_FIELD_SIZING };
+  /* lineNumbers(textarea, gutterEl)
+     A gutter of logical-line numbers (newline-separated lines) beside the text. A wrapped line still gets ONE number, on its
+     first visual row. The rows' heights come from a hidden mirror div (same font, width, padding, wrapping as the textarea) that
+     holds each logical line in its own block; the gutter has one block of that height per line, so the number sits on the
+     line's first row. The gutter scrolls with the textarea (its scroll event moves the numbers). `gutterEl` is absolutely
+     positioned over the textarea's left padding by CSS (.xb-gutter); it is aria-hidden and takes no pointer events.
+     Re-measured on input, on a cap change, on width changes and when fonts load; a classic scrollbar that appears after
+     an edit narrows the text, so a second pass runs on the next frame. Returns { update(), destroy(), heights }. */
+  function lineNumbers(el, gutter) {
+    const nums = document.createElement("div");
+    nums.className = "xb-nums";
+    gutter.setAttribute("aria-hidden", "true");
+    gutter.append(nums);
+    const mirror = document.createElement("div");
+    mirror.setAttribute("aria-hidden", "true");
+    let key = "", heights = [], raf = 0;
+
+    function update() {
+      if (!el.isConnected || !el.offsetWidth) return;
+      const cs = getComputedStyle(el);
+      const sb = Math.max(0, el.offsetWidth - el.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));
+      if (!mirror.isConnected) document.body.appendChild(mirror);
+      const ms = mirror.style;
+      for (const k of COPY) ms[k] = cs[k];
+      Object.assign(ms, { position: "absolute", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid", borderTopWidth: "0", borderBottomWidth: "0",
+        paddingTop: "0", paddingBottom: "0", minHeight: "0", width: el.offsetWidth - sb + "px", height: "auto", overflow: "hidden" });
+      mirror.textContent = "";
+      const lines = el.value.split("\n");
+      for (const t of lines) { const d = document.createElement("div"); d.textContent = t || "\u200b"; mirror.append(d); }   // an empty line still has a row
+      heights = [...mirror.children].map(d => Math.round(d.getBoundingClientRect().height * 100) / 100);
+      const k = heights.join();
+      if (k !== key) {
+        key = k;
+        nums.textContent = "";
+        heights.forEach((h, i) => { const n = document.createElement("div"); n.style.height = h + "px"; n.textContent = i + 1; nums.append(n); });
+      }
+      nums.style.paddingTop = cs.paddingTop;
+      sync();
+    }
+    const sync = () => { nums.style.transform = `translateY(${-el.scrollTop}px)`; };
+    const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); };
+    const onInput = () => { update(); schedule(); };
+    el.addEventListener("input", onInput);
+    el.addEventListener("xb-cap", schedule);
+    el.addEventListener("scroll", sync, { passive: true });
+    let ro = null, w = 0;
+    if (typeof ResizeObserver !== "undefined") { ro = new ResizeObserver(() => { if (el.offsetWidth !== w) { w = el.offsetWidth; schedule(); } }); ro.observe(el); }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+    update();
+    return { update, get heights() { return heights.slice(); },
+      destroy() { cancelAnimationFrame(raf); el.removeEventListener("input", onInput); el.removeEventListener("xb-cap", schedule); el.removeEventListener("scroll", sync); if (ro) ro.disconnect(); mirror.remove(); nums.remove(); } };
+  }
+
+  const api = { mount, reserveCorner, lineNumbers, HAS_FIELD_SIZING };
   root.ExplainBox = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -27,6 +27,9 @@ async function run(browserType, label, opts = {}) {
   catch (e) { console.log(`skip ${label}: ${e.message.split("\n")[0]}`); return; }
   for (const [vname, viewport] of Object.entries(VIEWS)) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: vname !== "desktop", isMobile: vname === "phone" && label === "chromium" });
+    /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
+       tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
+    await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
@@ -69,7 +72,7 @@ async function run(browserType, label, opts = {}) {
       const tab = async (code, closedOnly) => {
         await open(code);
         if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
-        if (code === "CSCI26_M5V") await page.locator("#q .ans").nth(0).fill("14");
+        if (code === "CSCI26_M5V") { await page.locator("#q .ans").nth(0).fill("14"); if (vname !== "desktop") await page.evaluate(() => document.activeElement.blur()); }   // phone / touch: a focused field + a short viewport = keyboard up = Swap, which has no #more (design/SWAP.md), so blur first
         // closed: shrink the viewport until the strip is clipped and the tab shows
         let shown = false;
         for (const h of vname === "phone" ? [600, 500, 400, 320] : [500, 400, 320, 260]) {
@@ -181,7 +184,7 @@ async function run(browserType, label, opts = {}) {
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
       assert.equal(text, "", `empty state shows text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
-      const kids = await page.evaluate(() => [...document.querySelector("#entry").children].map(e => e.id || e.className));
+      const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
       const d = await page.evaluate(() => { const r = document.querySelector("#entry").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, pos: getComputedStyle(document.querySelector("#dock")).position }; });
       if (vname === "phone") {
@@ -390,7 +393,7 @@ async function run(browserType, label, opts = {}) {
       // last line runs into the corner -> reserved
       const reserved = await page.evaluate(async () => {
         const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
-        for (let n = 1; n < 400; n++) { t.value = base.repeat(3) + "x".repeat(n); t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
+        for (let n = 1; n < 400; n++) { t.value = base + "x".repeat(n); /* one line of prose: stays under the height cap (a capped box always keeps the band) */ t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
         return false;
       });
       assert.ok(reserved, "never reserved the band for a long last line");
@@ -424,9 +427,9 @@ async function run(browserType, label, opts = {}) {
       await page.click("#ansGo");
       await page.locator("#fb .verdict.ok").waitFor();
 
-      await open("CSCI26_TF3");                                              // 2 choices, authored order (shuffle: false)
+      await open("CSCI26_TF3");                                              // 2 choices, shuffled by default (order varies, the set does not)
       assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);
-      assert.deepEqual(await page.locator("#q .opt .txt").allTextContents(), ["TRUE", "FALSE"]);
+      assert.deepEqual((await page.locator("#q .opt .txt").allTextContents()).sort(), ["FALSE", "TRUE"]);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/tf-${vname}.png` });
     });
 
