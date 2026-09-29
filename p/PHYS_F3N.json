@@ -1,0 +1,20 @@
+{
+  "$schema": "../schema/problem.schema.json",
+  "code": "PHYS_F3N",
+  "type": "num",
+  "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))",
+  "tol": 0.01,
+  "body": [
+    { "type": "text", "md": "A $4.0\\ \\text{kg}$ block slides down a $30^\\circ$ ramp with $\\mu_k = 0.20$. Use $g = 9.8\\ \\text{m/s}^2$." },
+    { "type": "graph", "kind": "scene",
+      "alt": "Box on a ramp rising to the right at 30 degrees. Weight points straight down, the normal force points out of the ramp, kinetic friction points up the ramp.",
+      "marks": [
+        { "mark": "incline", "at": [0, 0], "base": 4, "angle": 30, "label": "$30^\\circ$" },
+        { "mark": "body", "shape": "box", "at": [1.755, 1.36], "w": 0.8, "h": 0.6, "angle": 30 },
+        { "mark": "force", "at": [1.755, 1.36], "angle": 270, "len": 1.2, "color": "c1", "label": "$m\\vec g$" },
+        { "mark": "force", "at": [1.755, 1.36], "frame": 30, "angle": 90, "len": 1.04, "color": "c2", "label": "$\\vec N$" },
+        { "mark": "force", "at": [1.755, 1.36], "frame": 30, "angle": 0, "len": 0.35, "color": "c3", "label": "$\\vec f_k$" }
+      ] },
+    { "type": "text", "md": "Find the magnitude of the block's acceleration, in $\\text{m/s}^2$." }
+  ]
+}

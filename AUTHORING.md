@@ -7,17 +7,23 @@ The schema lives in `schema/problem.schema.json`. Validate against it before eve
 cd tests && npm install && npm test
 ```
 
+## Content rule (Tony, standing)
+- MINIMAL. Textbook language. State the givens and the ask, nothing else.
+- No table unless the data is a table (e.g. a limit table of x vs f(x)). Givens go in the sentence.
+- No bold/emphasis, no chatty lead-ins, no restating what the figure shows.
+- Units in the ask: "Find the stretch of the spring, in $\\text{m}$."
+
 ## Codes
-- Format is `PREFIX-SUFFIX`. Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math).
+- Format is `PREFIX_SUFFIX` (underscore: it joins words, so one double-tap on a phone selects the whole code; the page still accepts `-`, a space or no separator and normalizes to `_`). Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math).
 - The suffix is 3 characters, A–Z and 0–9. Don't use O/0 or I/1.
 - **A suffix must be unique across all subjects** (the tests enforce this).
-- The filename must equal the code: `p/PHYS-F3N.json`.
+- The filename must equal the code: `p/PHYS_F3N.json`.
 - The first key is `"$schema": "../schema/problem.schema.json"`.
 
 ## Top level
 | key | required | meaning |
 |---|---|---|
-| `code` | yes | `CALC1-K4M` |
+| `code` | yes | `CALC1_K4M` |
 | `type` | yes | `num`: the answer is one value. `expr`: the answer is a function of `var`. |
 | `answer` | yes | math.js string, or exactly `"dne"` |
 | `points` | `expr` only | at least 3 sample values of `var`. Keep them inside the domain. |
@@ -133,7 +139,7 @@ Author in this order:
 3. The answer is nowhere in the body or `alt`.
 
 ## Examples
-- `p/CALC1-T6B.json`: markdown table + limit
-- `p/CALC1-A9R.json`: text + cartesian shaded region + text
-- `p/PHYS-F3N.json`: text + incline FBD scene + text
-- `p/PHYS-S2K.json`: text + incline and spring scene + table
+- `p/CALC1_T6B.json`: markdown table + limit
+- `p/CALC1_A9R.json`: text + cartesian shaded region + text
+- `p/PHYS_F3N.json`: text + incline FBD scene + text
+- `p/PHYS_S2K.json`: text + incline and spring scene + table

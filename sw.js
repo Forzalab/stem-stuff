@@ -2,15 +2,16 @@
  * shell (index.html, its css/js, KaTeX): cache-first, updated in the background.
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
-const VERSION = "stem-v1";
+const VERSION = "stem-v2";
 const SHELL = VERSION + "-shell";
 const PROBS = VERSION + "-p";
-const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/KaTeX/", "https://fonts.googleapis.com/", "https://fonts.gstatic.com/"];
+const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/KaTeX/"];
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular", "Main-Bold",
   "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic", "SansSerif-Bold", "SansSerif-Italic",
   "SansSerif-Regular", "Script-Regular", "Size1-Regular", "Size2-Regular", "Size3-Regular", "Size4-Regular", "Typewriter-Regular"];
 const BASE = ["./", "index.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs", "design/explain-box.css", "design/explain-box.js",
-  "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
+  "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
+  "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.
 function route(url, method, scope) {
@@ -21,7 +22,7 @@ function route(url, method, scope) {
     const rel = u.pathname.startsWith(s.pathname) ? u.pathname.slice(s.pathname.length) : null;
     if (rel === null) return "pass";
     if (/(^|\/)(k|log)\//.test(rel) || /(^|\/)check(\/|$)/.test(rel) || /^\.|\/\./.test(rel)) return "pass";
-    if (/^p\/[A-Za-z0-9-]+\.json$/.test(rel)) return "problem";
+    if (/^p\/[A-Za-z0-9_-]+\.json$/.test(rel)) return "problem";
     if (rel === "" || rel === "index.html" || rel === "stem-stuff.html") return "shell";
     if (/^(tests|tools|schema)\//.test(rel) || rel === "sw.js") return "pass";
     if (/^[\w./-]+\.(js|mjs|css|woff2|svg|png|ico)$/.test(rel) && !rel.includes("..")) return "shell";

@@ -16,7 +16,7 @@
     },
     "code": {
       "type": "string",
-      "pattern": "^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$"
+      "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$"
     },
     "type": {
       "enum": [

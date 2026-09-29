@@ -73,7 +73,7 @@ for (const f of files) {
 test("code suffixes unique across subjects", () => {
   const seen = new Map();
   for (const f of files) {
-    const s = f.replace(/^[A-Z0-9]+-|\.json$/g, "");
+    const s = f.replace(/^[A-Z0-9]+_|\.json$/g, "");
     assert.ok(!seen.has(s), `${f} clashes with ${seen.get(s)}`);
     seen.set(s, f);
   }

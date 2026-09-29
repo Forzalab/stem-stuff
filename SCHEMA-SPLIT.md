@@ -8,8 +8,8 @@ Status: **proposal**. Nothing here is applied yet; `schema/problem.schema.json` 
 ## Layout
 
 ```
-p/CALC1-T6B.json   public: code, type, var, body, choices   (served)
-k/CALC1-T6B.json   server: answer, tol, points, correct, hints, traps   (never served)
+p/CALC1_T6B.json   public: code, type, var, body, choices   (served)
+k/CALC1_T6B.json   server: answer, tol, points, correct, hints, traps   (never served)
 ```
 
 Same filename in both. The code suffix stays the one lookup key.
@@ -23,12 +23,12 @@ Same filename in both. The code suffix stays the one lookup key.
 
 ## Key file (`schema/key.schema.json`, drafted and tested now)
 
-Worked examples (validated by `tests/key.test.mjs`): `schema/examples/CALC1-X2P.key.json` (MC, with its draft public file `CALC1-X2P.public.json`) and `schema/examples/CALC1-T6B.key.json` (freeform, pairs with `p/CALC1-T6B.json`).
+Worked examples (validated by `tests/key.test.mjs`): `schema/examples/CALC1_X2P.key.json` (MC, with its draft public file `CALC1_X2P.public.json`) and `schema/examples/CALC1_T6B.key.json` (freeform, pairs with `p/CALC1_T6B.json`).
 
 ```json
 {
   "$schema": "../schema/key.schema.json",
-  "code": "CALC1-T6B",
+  "code": "CALC1_T6B",
   "answer": "12",
   "wrong": [
     { "match": "4", "error": "algebra", "hint": "QUACK. Multiply your factors back out. Do you get $x^3-8$?" },
@@ -58,7 +58,7 @@ To add when applied:
 - Every `p/X.json` has a `k/X.json` and vice versa; codes match.
 - Point `tests/key.test.mjs` at `k/` instead of `schema/examples/`; move the "answer evaluates" test there.
 - **Leak test:** no public file contains the key's `answer` string, any `traps[].a`, or any hint `md` (catches copy-paste leaks into `body`/`alt`).
-- `serve.py` smoke test: `GET /k/CALC1-T6B.json` → 404.
+- `serve.py` smoke test: `GET /k/CALC1_T6B.json` → 404.
 
 ## Migration
 1. Script moves `answer/points/tol` from each `p/*.json` into a new `k/*.json`.

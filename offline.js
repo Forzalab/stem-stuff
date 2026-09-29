@@ -2,14 +2,14 @@
  * - registers sw.js where allowed (https or localhost), else runs without it
  * - wraps fetch for p/<CODE>.json: if the server can't be reached (or file://),
  *   asks the student for the JSON file(s) on disk and answers the fetch with it
- * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, downloadButton, has, codes } */
+ * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, codes } */
 (() => {
   if (window.stemOffline) return;
   const FILE = location.protocol === "file:";
   const CAN_SW = !FILE && "serviceWorker" in navigator && window.isSecureContext;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-  const CODE = /^[A-Z][A-Z0-9]*-[A-Z0-9]{2,}$/;
-  const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*-[A-Z0-9]{2,})\.json$/;
+  const CODE = /^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$/;
+  const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$/;
   const MAX = 2 * 1024 * 1024;
 
   const local = new Map();      // code -> problem picked from disk
@@ -23,8 +23,10 @@
     codes: () => [...local.keys()],
     onProblemLoaded(cb) { if (typeof cb === "function") listeners.push(cb); },
     openPicker: code => pick(code || null),
+    pickFile: () => pickFile(),
+    ingest: list => ingest(list),
+    fileName: code => names.get(code) || null,
     loadProblem,
-    downloadButton,
     validate
   };
 
@@ -81,7 +83,8 @@
     x: '<path d="M6 6l12 12M18 6L6 18"/>',
     down: '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/>'
   };
-  const svg = n => '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + "</svg>";
+  /* buttons use the page's one button system (.btn / .btn-go in app.css): 48px, 8px radius, 24px icon, 2px stroke */
+  const svg = n => '<svg class="ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + "</svg>";
 
   const CSS = `
 .so{--so-ink:var(--ink,#e7edf6);--so-muted:var(--muted,#a2b3cb);--so-sheet:var(--sheet,#1d2839);--so-edge:var(--edge,#6b7f9e);--so-focus:var(--focus,#8fb0ff);--so-bad:var(--bad,#ff7a7a);--so-ok:var(--ok,#5fd394);
@@ -90,25 +93,15 @@
 .so[hidden]{display:none}
 .so-card{position:relative;box-sizing:border-box;width:100%;max-width:26rem;padding:1.5rem 1.25rem 1.25rem;background:var(--so-sheet);border:1px solid #34445d;border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.45)}
 .so-card.drag{border-color:var(--so-focus);outline:2px dashed var(--so-focus);outline-offset:-8px}
-.so h2{margin:0 2.5rem .35rem 0;font-size:1.25rem;line-height:1.3;font-weight:700}
+.so h2{margin:0 3.75rem .35rem 0;font-size:1.25rem;line-height:1.3;font-weight:700}
 .so p{margin:0 0 1.1rem;color:var(--so-muted)}
 .so code{font:600 .95em ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--so-ink);overflow-wrap:anywhere}
-.so-row{display:flex;gap:.75rem;flex-wrap:wrap}
-.so-btn{position:relative;flex:1 1 9rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:48px;padding:.6rem 1rem;box-sizing:border-box;border-radius:8px;cursor:pointer;font-weight:700;color:var(--so-ink);background:#273242;border:2px solid var(--so-edge);-webkit-tap-highlight-color:transparent}
-.so-btn:hover{border-color:var(--so-muted)}
-.so-btn.main{background:#3a67d8;border-color:#3a67d8;color:#fff}
-.so-btn.main:hover{background:#4574e6;border-color:#4574e6}
-.so-btn:focus-within{outline:3px solid var(--so-focus);outline-offset:2px}
-.so-btn input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%)}
-.so-x{position:absolute;top:.5rem;right:.5rem;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:8px;background:none;color:var(--so-muted);cursor:pointer}
-.so-x:hover{color:var(--so-ink);background:#273242}
-.so-x:focus-visible{outline:3px solid var(--so-focus);outline-offset:0}
+.so-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.so-btn input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%)}
+.so-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.so-x{position:absolute;top:.75rem;right:.75rem}
 .so-msg{min-height:1.5em;margin:.9rem 0 0;font-size:.95rem;color:var(--so-muted)}
 .so-msg.bad{color:var(--so-bad)}.so-msg.ok{color:var(--so-ok)}
-.so-dl{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:8px;color:var(--muted,#a2b3cb);text-decoration:none}
-.so-dl:hover{color:var(--ink,#e7edf6);background:#273242}
-.so-dl:focus-visible{outline:3px solid var(--focus,#8fb0ff);outline-offset:2px}
-.so-dl[hidden]{display:none}
 @media (max-width:480px){.so{align-items:flex-end;padding:0}.so-card{max-width:none;border-radius:14px 14px 0 0;padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))}}
 @media (prefers-reduced-motion:no-preference){.so-card{animation:so-in .16s ease-out}@keyframes so-in{from{transform:translateY(8px);opacity:0}}}`;
 
@@ -128,11 +121,11 @@
     const dir = !IOS && "webkitdirectory" in document.createElement("input");
     el.innerHTML =
       '<div class="so-card">' +
-      '<button type="button" class="so-x" aria-label="Close">' + svg("x") + "</button>" +
+      '<button type="button" class="btn so-x" aria-label="Close" title="Close">' + svg("x") + "</button>" +
       '<h2 id="so-t"></h2><p id="so-d"></p>' +
       '<div class="so-row">' +
-      '<label class="so-btn main">' + svg("file") + '<span>Open file</span><input type="file" accept=".json,application/json" multiple></label>' +
-      (dir ? '<label class="so-btn">' + svg("folder") + '<span>Open folder</span><input type="file" webkitdirectory multiple></label>' : "") +
+      '<label class="btn btn-go so-btn main" title="Open file">' + svg("file") + '<span class="so-sr">Open file</span><input type="file" accept=".json,application/json" multiple></label>' +
+      (dir ? '<label class="btn so-btn" title="Open folder">' + svg("folder") + '<span class="so-sr">Open folder</span><input type="file" webkitdirectory multiple></label>' : "") +
       "</div>" +
       '<p class="so-msg" role="status" aria-live="polite"></p></div>';
     document.body.appendChild(el);
@@ -182,9 +175,10 @@
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
 
-  async function read(list) {
+  // Parse picked files into the in-memory store. Shared by the dialog and by pickFile().
+  const names = new Map();      // code -> file name it came from
+  async function ingest(list) {
     const files = [...(list || [])].filter(f => /\.json$/i.test(f.name) && !/(^|\/)k\//.test(f.webkitRelativePath || ""));
-    if (!files.length) { say("No .json files there.", "bad"); return; }
     const got = [], bad = [];
     for (const f of files) {
       try {
@@ -192,9 +186,16 @@
         const p = JSON.parse(await f.text());
         if (validate(p)) throw 0;
         local.set(p.code, p);
+        names.set(p.code, f.name);
         got.push(p);
       } catch (e) { bad.push(f.name); }
     }
+    return { files, got, bad };
+  }
+
+  async function read(list) {
+    const { files, got, bad } = await ingest(list);
+    if (!files.length) { say("No .json files there.", "bad"); return; }
     if (!got.length) { say((bad.length === 1 ? bad[0] + " is" : "Those files are") + " not a problem file.", "bad"); return; }
     if (waiting) {
       const hit = local.get(waiting.code);
@@ -206,31 +207,26 @@
     emit(got[0]);
   }
 
-  /* ---------- download ---------- */
-  function downloadButton() {
-    const a = document.createElement("a");
-    a.className = "so-dl";
-    a.href = "stem-stuff.html";
-    a.setAttribute("download", "stem-stuff.html");
-    a.setAttribute("aria-label", "Download for offline use");
-    a.title = "Download for offline use";
-    a.innerHTML = svg("down");
-    a.hidden = true;
-    if (!ui) build().hidden = true;
-    if (!FILE) {
-      nativeFetch("stem-stuff.html", { method: "HEAD", cache: "no-store" })
-        .then(r => r.ok, () => window.caches ? caches.match("stem-stuff.html").then(Boolean) : false)
-        .then(ok => { a.hidden = !ok; }, () => {});
+  // Direct upload (the page's upload button): the OS file dialog, no modal. Resolves
+  // { problem, name } for the first valid file (and emits it), { error } otherwise, null if cancelled.
+  let upInput = null;
+  function pickFile() {
+    if (!upInput) {
+      upInput = document.createElement("input");
+      upInput.type = "file"; upInput.accept = ".json,application/json"; upInput.hidden = true;
+      document.body.appendChild(upInput);
     }
-    return a;
+    return new Promise(resolve => {
+      upInput.onchange = async () => {
+        const { files, got, bad } = await ingest(upInput.files);
+        upInput.value = "";
+        if (!files.length) return resolve({ error: "No .json file there." });
+        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problem file." });
+        emit(got[0]);
+        resolve({ problem: got[0], name: names.get(got[0].code) });
+      };
+      upInput.click();
+    });
   }
 
-  // Mounts into [data-offline-download] if the page has one, else at the end of the top bar.
-  const mount = () => {
-    if (FILE || document.querySelector(".so-dl")) return;
-    const slots = document.querySelectorAll("[data-offline-download]");
-    if (slots.length) for (const slot of slots) slot.appendChild(downloadButton());
-    else { const bar = document.querySelector("header .bar"); if (bar) bar.appendChild(downloadButton()); }
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
 })();

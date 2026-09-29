@@ -13,7 +13,7 @@ The Copy button puts one JSON object on the clipboard. It replaces v1's plain "c
 
 ```json
 {
-  "v": 1, "code": "CALC1-T6B", "subject": "CALC1",
+  "v": 1, "code": "CALC1_T6B", "subject": "CALC1",
   "start": "2026-09-29T20:00:00.000Z", "copied": "2026-09-29T20:06:40.000Z",
   "final": {"a":"12","v":"correct"},
   "tries": [
@@ -43,7 +43,7 @@ Read it as: opened at 20:00, started writing at 0:20, typed 4 at 1:35 (wrong, Cl
 | `start` | when the problem was opened (ISO UTC). **Every `t` is seconds after `start`**, 0.1 s precision. Short numbers, easy to read. |
 | `copied` | when Copy was pressed |
 | `final` | the last try `{a, l?, v}`, or `null` |
-| `tries[]` | every `/check`, in order: `a` typed text (MC: choice text), `c` MC choice id, `l` letter shown, `v` verdict `correct / wrong / invalid / locked / egg` |
+| `tries[]` | every `/check`, in order: `a` typed text (MC: choice text), `c` MC choice id, `l` letter shown, `v` verdict `correct / wrong / invalid / locked / egg / pending`. `pending` (Tony approved): the try was recorded before server grading exists (no `POST /check` yet), so it has no verdict. |
 | `hints[]` | `{t, n, kind}`: `n` = which attempt produced the hint, `kind` = diagnosed error type (`MC.md` §6), or `nudge` if unmatched. Not the hint text. |
 | `explain` | explanation box text at copy time, full, never cut |
 | `hist` | explanation edit history as diffs (below) |

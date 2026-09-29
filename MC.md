@@ -17,7 +17,7 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
 ## 2. Problem shape (public file)
 
 ```json
-{ "code": "CALC1-M3Q", "type": "mc",
+{ "code": "CALC1_M3Q", "type": "mc",
   "body": [ ...blocks... ],
   "choices": [
     { "id": "a", "md": "$12$" },
@@ -44,7 +44,7 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
 - Five full-width rows, `A`–`E` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`E` keys jump).
 - One **Check** button. Nothing is graded on click of a row. There is **no Hint button**: hints come only from wrong attempts.
 - A wrong pick is struck through and disabled, and Cluck's hint for that pick appears under the problem (duck badge, labeled with the error type, e.g. `sign`).
-- Correct: existing v1 celebration. Out of attempts: card says "out of tries: ask Tony, code CALC1-M3Q". The answer is **not** revealed (Tony explains it).
+- Correct: existing v1 celebration. Out of attempts: card says "out of tries: ask Tony, code CALC1_M3Q". The answer is **not** revealed (Tony explains it).
 
 ## 5. Attempt rules (Tony: "2 times only" = 2 attempts)
 

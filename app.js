@@ -4,16 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
-const SUBJECTS = [
-  { id: "math", name: "Math", icon: "s-math", items: [
-    { id: "CALC1", name: "Calculus 1" },
-    { id: "CSCI26", name: "Discrete math" } ] },
-  { id: "sci", name: "Science", icon: "s-sci", items: [
-    { id: "PHYS", name: "Physics" } ] }
-];
-const PREFIXES = SUBJECTS.flatMap(g => g.items.map(i => i.id));
-const nameOf = id => SUBJECTS.flatMap(g => g.items).find(i => i.id === id)?.name || id;
-const CODE_RE = /^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$/;
+const CODE_RE = /^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
@@ -57,7 +48,7 @@ function md(text, inline = false) {
    `answer` is { answer: "typed text" } or { choice: "b" }. */
 const devKeys = new Map(), devState = new Map();
 async function devKey(code) {
-  if (!devKeys.has(code)) devKeys.set(code, fetch(`schema/examples/${code}.key.json`).then(r => r.ok ? r.json() : null).catch(() => null));
+  if (!devKeys.has(code)) devKeys.set(code, fetch(`schema/examples/${code}.key.json`).then(r => r.ok ? r.json() : r.text().then(() => null)).catch(() => null));
   return devKeys.get(code);
 }
 async function check(code, answer) {
@@ -96,69 +87,48 @@ async function check(code, answer) {
   return out;
 }
 
-/* ================= subject menu + cookie ================= */
-function getCookie(k) { const m = document.cookie.match(new RegExp("(?:^|; )" + k + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : null; }
-function setCookie(k, v) { document.cookie = `${k}=${encodeURIComponent(v)}; Max-Age=31536000; Path=/; SameSite=Lax`; }
-let subject = PREFIXES.includes(getCookie("subj")) ? getCookie("subj") : "CALC1";
-
-const subjBtn = $("#subjBtn"), menu = $("#subjMenu"), codeIn = $("#code");
-function buildMenu() {
-  menu.innerHTML = `<ul>${SUBJECTS.map(g => `<li class="grp"><div class="grp-head">${icon(g.icon)}<span>${esc(g.name)}</span></div>
-    <ul>${g.items.map(i => `<li><button type="button" class="item" data-subj="${i.id}" aria-current="${i.id === subject}" aria-label="${esc(i.name)}" title="${esc(i.name)}">${icon("s-" + i.id)}<span>${i.id}</span></button></li>`).join("")}</ul></li>`).join("")}</ul>`;
-}
-function setSubject(id, save = true) {
-  subject = id;
-  if (save) setCookie("subj", id);
-  subjBtn.querySelector("use").setAttribute("href", "#s-" + id);
-  subjBtn.setAttribute("aria-label", "Subject: " + nameOf(id));
-  subjBtn.title = nameOf(id);
-  $("#pre").textContent = id + "-";
-  menu.querySelectorAll(".item").forEach(b => b.setAttribute("aria-current", b.dataset.subj === id));
-}
-function openMenu(open) {
-  menu.hidden = !open; subjBtn.setAttribute("aria-expanded", open);
-  if (open) (menu.querySelector('[aria-current="true"]') || menu.querySelector(".item")).focus();
-}
-subjBtn.addEventListener("click", () => openMenu(menu.hidden));
-menu.addEventListener("click", e => { const b = e.target.closest(".item"); if (!b) return; setSubject(b.dataset.subj); openMenu(false); codeIn.focus(); });
-menu.addEventListener("keydown", e => {
-  const items = [...menu.querySelectorAll(".item")], i = items.indexOf(document.activeElement);
-  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); }
-  else if (e.key === "Home") { e.preventDefault(); items[0].focus(); }
-  else if (e.key === "End") { e.preventDefault(); items.at(-1).focus(); }
-  else if (e.key === "Escape") { e.preventDefault(); openMenu(false); subjBtn.focus(); }
-});
-subjBtn.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); openMenu(true); } });
-document.addEventListener("pointerdown", e => { if (!menu.hidden && !e.target.closest(".subj")) openMenu(false); });
-menu.addEventListener("focusout", e => { if (!menu.contains(e.relatedTarget) && e.relatedTarget !== subjBtn) openMenu(false); });
-
-/* ================= code entry ================= */
+/* ================= entry box: code bar + upload ================= */
+const codeIn = $("#code"), dock = $("#dock");
+/* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
+   Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
-  const s = raw.toUpperCase().replace(/\s+/g, "").replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS)-?([A-Z0-9]{3,6})$/);
-  if (m) return { prefix: m[1], code: `${m[1]}-${m[2]}` };
-  if (/^[A-Z0-9]{3,6}$/.test(s)) return { prefix: subject, code: `${subject}-${s}` };
-  return null;
+  const s = raw.toUpperCase().trim().replace(/^#/, "");
+  const m = s.match(/^(CALC1|CSCI26|PHYS)[\s_-]*([A-Z0-9]{3,6})$/);
+  return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
 }
-codeIn.addEventListener("input", () => {
-  /* typing or pasting a full code switches the subject and keeps only the suffix in the box */
-  const s = codeIn.value.toUpperCase().replace(/\s+/g, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS)-(.*)$/);
-  if (m) { setSubject(m[1]); codeIn.value = m[2]; }
-  $("#entryMsg").textContent = "";
-});
+codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; });
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   const n = normalize(codeIn.value);
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1-T6B."; codeIn.focus(); return; }
+  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
+  codeIn.blur();
   load(n.code);
 });
+/* upload = offline.js's file reading (stemOffline.pickFile); the store it fills also answers fetch("p/<CODE>.json") */
+$("#upload").addEventListener("click", async () => {
+  const off = window.stemOffline;
+  if (!off || !off.pickFile) { $("#entryMsg").textContent = "Can't open files here."; return; }
+  const r = await off.pickFile();
+  if (r && r.error) $("#entryMsg").textContent = r.error;
+});
+addEventListener("DOMContentLoaded", () => {
+  /* offline.js loads after this module; take over its "problem loaded from disk" event */
+  if (window.stemOffline) window.stemOffline.onProblemLoaded(p => load(p.code));
+});
+function fileStatus(code) {
+  const off = window.stemOffline, name = off && off.has && off.has(code) ? off.fileName(code) : null;
+  const el = $("#fileStatus");
+  el.hidden = !name;
+  el.textContent = name ? `File ${name} in use.` : "";
+  layoutDock();
+}
 
 /* ================= problem state ================= */
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 async function fetchProblem(code) {
   const r = await fetch(`p/${code}.json`);
   if (r.ok) return r.json();
+  r.text().catch(() => {});   // drain the 404 body so the request completes
   /* DEV-ONLY: draft MC problems live in schema/examples until the k/ split lands (SCHEMA-SPLIT.md). */
   const d = await fetch(`schema/examples/${code}.public.json`).catch(() => null);
   if (d && d.ok) return d.json();
@@ -166,9 +136,7 @@ async function fetchProblem(code) {
 }
 async function load(code) {
   if (!CODE_RE.test(code)) return;
-  const prefix = code.split("-")[0];
-  setSubject(prefix);
-  codeIn.value = code.slice(prefix.length + 1);
+  codeIn.value = code;
   let prob;
   try { prob = await fetchProblem(code); }
   catch (e) {
@@ -176,6 +144,7 @@ async function load(code) {
     return;
   }
   $("#entryMsg").textContent = "";
+  fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: MAX_TRIES, finished: false, selected: null, box: null };
   render();
@@ -184,7 +153,7 @@ async function load(code) {
 function render() {
   const { prob, code } = S;
   document.title = code;
-  $("#empty").hidden = true; $("#freeze").hidden = false; $("#work").hidden = false;
+  $("#freeze").hidden = false; $("#work").hidden = false;
   $("#freeze").classList.remove("open");
   $("#pcode").textContent = code;
   const blocks = $("#blocks"); blocks.innerHTML = "";
@@ -218,7 +187,7 @@ function renderQuestion() {
         <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}">
           <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md, true)}</span>
         </button>
-        <button type="button" class="send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>
       </div>`).join("")}</div>`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -228,7 +197,7 @@ function renderQuestion() {
     q.innerHTML = `<div class="ff" id="ff">${lead}
         <input id="ans" type="text" inputmode="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" placeholder="${p.type === "expr" ? "in terms of " + v : "e.g. 9/2, sqrt(3), dne"}">
-        <button type="button" class="send" id="ansGo" aria-label="Submit answer" hidden>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
@@ -287,7 +256,7 @@ async function submitMC() {
 function wireFF() {
   const inp = $("#ans"), go = $("#ansGo"), pv = $("#preview");
   inp.addEventListener("input", () => {
-    go.hidden = !inp.value.trim();
+    go.disabled = !inp.value.trim();
     pv.innerHTML = "";
     const t = inp.value.trim(); if (!t || typeof math === "undefined") return;
     try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
@@ -301,7 +270,7 @@ async function submitFF() {
   busy = true;
   try {
     const r = await check(S.code, { answer: t });
-    if (r.verdict !== "invalid") record({ a: t }, r);
+    if (r.verdict !== "invalid") { record({ a: t }, r); $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); inp.readOnly = true; $("#ansGo").hidden = true; finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish(true);
     feedback(r, t);
@@ -331,7 +300,7 @@ function feedback(r, typed) {
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
-  if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div>${r.error ? `<span class="tag">${esc(r.error)}</span>` : ""}</div></div>`;
+  if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   fb.innerHTML = h;
   say(fb.textContent.replace(/\s+/g, " ").trim());
   layoutFreeze();
@@ -340,12 +309,15 @@ function feedback(r, typed) {
 /* ---------- scratchpad + Copy ---------- */
 function mountBox() {
   if (S.box) S.box.destroy();
-  const label = $("#xb"); label.querySelector("textarea")?.remove();
+  if (S.corner) S.corner.destroy();
+  const field = $("#xbField"); field.querySelector("textarea")?.remove();
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  label.append(ta);
+  ta.id = "scratch";
+  field.prepend(ta);
   S.box = ExplainBox.mount(ta);
+  S.corner = ExplainBox.reserveCorner(ta, $("#copy"));
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
@@ -377,16 +349,36 @@ const freeze = $("#freeze"), freezeIn = $("#freezeIn"), more = $("#more"), senti
 let tallest = 0, lastW = 0;
 const vv = window.visualViewport;
 function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
-function layoutFreeze() {
-  if (!S || freeze.hidden) return;
-  const h = vv ? vv.height : innerHeight;
+/* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
+const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
+function layoutDock() {
+  const bottom = dockMQ.matches, h = vv ? vv.height : innerHeight;
   if (innerWidth !== lastW) { lastW = innerWidth; tallest = 0; }        // orientation / window change
   tallest = Math.max(tallest, innerHeight, h);
-  const kb = editing() && h < tallest * 0.8;                            // software keyboard is up
+  root.classList.toggle("dock-bottom", bottom);
+  const inDock = dock.contains(document.activeElement);
+  const kb = bottom && editing() && tallest && h < tallest * 0.8;
+  /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
+  root.classList.toggle("dock-away", !!kb && !inDock);
+  /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
+  const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
+  root.style.setProperty("--kb-bottom", lift + "px");
+  root.style.setProperty("--dock-h", bottom ? dock.offsetHeight + "px" : "0px");
+}
+if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
+new ResizeObserver(() => layoutDock()).observe(dock);
+
+function layoutFreeze() {
+  layoutDock();
+  if (!S || freeze.hidden) return;
+  const dockH = root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0;
+  const h = (vv ? vv.height : innerHeight) - dockH;
+  const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
   const inFreeze = freeze.contains(document.activeElement);
+  const kbWas = root.classList.contains("kb");
   root.classList.toggle("kb", kb);
   root.style.setProperty("--kb-top", kb && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
-  const frac = kb && !inFreeze ? 0.34 : h < 720 ? 0.5 : 0.6;
+  const frac = kb && !inFreeze ? 0.34 : h < 720 ? 0.5 : h < 960 ? 0.6 : 0.7;
   root.style.setProperty("--freeze-max", Math.round(Math.max(kb ? 96 : 180, h * frac)) + "px");
   requestAnimationFrame(() => {
     const clipped = !freeze.classList.contains("open") && freezeIn.scrollHeight > freezeIn.clientHeight + 2;
@@ -395,12 +387,23 @@ function layoutFreeze() {
     more.hidden = !clipped && !freeze.classList.contains("open");
     root.style.setProperty("--freeze-h", freeze.classList.contains("open") ? "0px" : freeze.offsetHeight + "px");
     stuck();
+    if (kb && !kbWas && !inFreeze) showQuestion();
   });
 }
 function stuck() {
   if (!S || freeze.hidden) return;
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
-  freeze.classList.toggle("stuck", !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5);
+  const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
+  const was = freeze.classList.contains("stuck");
+  freeze.classList.toggle("stuck", now);
+  if (now && !was) showQuestion();
+}
+/* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
+   the question is what you answer while writing; the problem start is one small scroll up. */
+function showQuestion() {
+  const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
+  const end = Math.max(bottom($("#q")), bottom($("#fb")));
+  freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
 }
 let raf = 0;
 const onView = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(layoutFreeze); };
@@ -423,10 +426,9 @@ let figW = 0;
 new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !== figW) { figW = w; drawFigures(); layoutFreeze(); } }).observe($("#blocks"));
 
 /* ================= boot ================= */
-buildMenu();
-setSubject(subject, false);
 const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) load(n.code); };
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); layoutFreeze(); } });
+layoutDock();
 fromHash();
 window.__drill = { check, get state() { return S; } };   // for tests/e2e

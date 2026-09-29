@@ -42,7 +42,7 @@ Any **one** of these trips for that problem+user:
 On trip, the server replies once:
 
 ```json
-{ "verdict": "egg", "msg": "bruh :)))) good riddance. optional: ping Tony if u see this msg with the prblem code", "code": "CALC1-T6B" }
+{ "verdict": "egg", "msg": "bruh :)))) good riddance. optional: ping Tony if u see this msg with the prblem code", "code": "CALC1_T6B" }
 ```
 
 The UI shows the message as-is (no celebration, no sock), with the code.
@@ -53,7 +53,7 @@ After that, **no security for that problem+user**: unlimited checks, no rate lim
 File: `log/incidents.jsonl`, one JSON object per line, one line per problem+user. Tony edits it by hand.
 
 ```json
-{"code":"CALC1-T6B","who":"c:3f9a1c0e|ip:73.12.4.9|fp:a1b2c3d4e5f60718","status":"tripped","check":"rate","at":"2026-09-29T21:04:11Z","tries":["11.9","12.1","12.01","12.001","11.99"],"note":""}
+{"code":"CALC1_T6B","who":"c:3f9a1c0e|ip:73.12.4.9|fp:a1b2c3d4e5f60718","status":"tripped","check":"rate","at":"2026-09-29T21:04:11Z","tries":["11.9","12.1","12.01","12.001","11.99"],"note":""}
 ```
 
 - `status`: `locked` (hit the limit) or `tripped` (egg shown, security off).

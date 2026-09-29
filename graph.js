@@ -84,8 +84,12 @@
     return ["e", "ne", "n", "nw", "w", "sw", "s", "se"][Math.floor(a / 45)];
   }
   const labelColor = c => ["c1", "c2", "c3", "ok", "bad", "mark"].includes(c) ? col(c) : col("ink");
+  /* Locked rule: every force arrow is c1. Only velocity (c2) and acceleration (c3) keep their own colour;
+     a "force" mark is treated as one of those only when its label is \vec v... or \vec a... */
+  const KIN = /^\$?\\vec\s*\{?\s*[va](?![a-zA-Z])/;
   function vecStyle(m) {
-    const c = m.color || "c1";
+    const kin = typeof m.label === "string" && KIN.test(m.label.trim());
+    const c = kin ? (m.color || "c1") : "c1";
     if (c === "c2") return { c, w: SW.vec, head: "open" };
     if (c === "c3") return { c, w: SW.vec, head: "double" };
     return { c, w: m.dash ? SW.out : SW.force, head: "fill" };
@@ -173,7 +177,7 @@
       draw(m, k) {
         const v = vecStyle(m), a = k.X(m.at), b = k.X(forceTip(m));
         if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), v.c);
-        return arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "");
+        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}">${arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "")}</g>`;
       }
     },
     arrow: {
@@ -324,8 +328,9 @@
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
       const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
-      const maxH = Math.min(440, 0.9 * W);
-      const s = Math.min((W - pad.l - pad.r) / (x1 - x0 || 1), (maxH - pad.t - pad.b) / (y1 - y0 || 1));
+      /* scenes are capped (320px tall, 560px wide) and centred, so a diagram never outweighs the text on desktop */
+      const maxH = Math.min(320, 0.9 * W), maxW = Math.min(W, 560);
+      const s = Math.min((maxW - pad.l - pad.r) / (x1 - x0 || 1), (maxH - pad.t - pad.b) / (y1 - y0 || 1));
       const ox = pad.l + ((W - pad.l - pad.r) - (x1 - x0) * s) / 2;
       const H = Math.round((y1 - y0) * s + pad.t + pad.b);
       Object.assign(k, { s, marks, X: p => [ox + (p[0] - x0) * s, pad.t + (y1 - p[1]) * s] });

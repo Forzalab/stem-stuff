@@ -28,7 +28,7 @@ let pw = null;
 try { pw = (await import("playwright-core")).chromium; } catch { /* not installed */ }
 const skip = !exe || !pw ? "no chromium / playwright-core" : false;
 
-const CODE = "CALC1-T6B";
+const CODE = "CALC1_T6B";
 let site, browser;
 
 const freePort = () => new Promise(res => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); });
@@ -81,7 +81,7 @@ test("localhost: service worker caches shell + opened problem, works with server
     assert.ok(await page.evaluate(() => !!navigator.serviceWorker.controller));
     assert.equal(await getProblem(page, CODE), CODE);          // opened once online
     await rendersMath(page, CODE);
-    await page.evaluate(() => fetch("k/" + "CALC1-T6B.json").catch(() => 0));
+    await page.evaluate(() => fetch("k/" + "CALC1_T6B.json").catch(() => 0));
     await page.evaluate(() => fetch("check", { method: "POST", body: "{}" }).catch(() => 0));
     await page.evaluate(() => fetch("check?x=1").catch(() => 0));
     await stop(s);                                             // server offline
@@ -98,10 +98,10 @@ test("localhost: service worker caches shell + opened problem, works with server
     assert.ok(keys.some(u => u.endsWith("/p/" + CODE + ".json")), "problem cached");
     assert.ok(!keys.some(u => /\/k\/|\/check|\/log\//.test(u)), "no k/ or /check in cache: " + keys);
     // Not opened before -> picker, then a file from disk answers the fetch.
-    const pending = getProblem(page, "PHYS-S2K");
+    const pending = getProblem(page, "PHYS_S2K");
     await page.locator(".so:not([hidden])").waitFor();
-    await page.locator(".so input[type=file]").first().setInputFiles(join(repo, "p", "PHYS-S2K.json"));
-    assert.equal(await pending, "PHYS-S2K");
+    await page.locator(".so input[type=file]").first().setInputFiles(join(repo, "p", "PHYS_S2K.json"));
+    assert.equal(await pending, "PHYS_S2K");
   } finally { await ctx.close(); if (s.proc.exitCode === null && !s.proc.signalCode) await stop(s); }
 });
 
@@ -117,28 +117,24 @@ test("plain http (no SW): server down -> file picker loads p/*.json, rejects jun
     const input = page.locator(".so input[type=file]").first();
     await input.setInputFiles({ name: "junk.json", mimeType: "application/json", buffer: Buffer.from('{"a":1}') });
     await page.locator(".so-msg.bad").waitFor();
-    await input.setInputFiles([join(repo, "p", "PHYS-F3N.json"), join(repo, "p", CODE + ".json")]);
+    await input.setInputFiles([join(repo, "p", "PHYS_F3N.json"), join(repo, "p", CODE + ".json")]);
     assert.equal(await pending, CODE);
-    assert.equal(await getProblem(page, "PHYS-F3N"), "PHYS-F3N", "second picked file kept in memory");
+    assert.equal(await getProblem(page, "PHYS_F3N"), "PHYS_F3N", "second picked file kept in memory");
     // Cancel -> fetch rejects (app shows its own error).
-    const cancelled = page.evaluate(() => fetch("p/CALC1-A9R.json").then(() => "ok", () => "rejected"));
+    const cancelled = page.evaluate(() => fetch("p/CALC1_A9R.json").then(() => "ok", () => "rejected"));
     await page.locator(".so:not([hidden])").waitFor();
     await page.keyboard.press("Escape");
     assert.equal(await cancelled, "rejected");
   } finally { await ctx.close(); if (s.proc.exitCode === null && !s.proc.signalCode) await stop(s); }
 });
 
-test("download: served bundle opens from file:// and loads a problem via picker", { skip, timeout: 30000 }, async () => {
+test("bundle: served stem-stuff.html opens from file:// and loads a problem via picker", { skip, timeout: 30000 }, async () => {
   const s = await serve();
   const ctx = await browser.newContext({ acceptDownloads: true });
   const page = await ctx.newPage();
   try {
     await page.goto(s.url);
-    const btn = page.locator(".so-dl");
-    if (await btn.count()) {                              // page mounted the download icon
-      await btn.first().waitFor({ state: "visible" });
-      assert.equal(await btn.first().textContent(), "", "icon only");
-    }
+    assert.equal(await page.locator(".so-dl, [data-offline-download]").count(), 0, "no download button (removed)");
     const out = join(site, "dl.html");
     execFileSync("curl", ["-sf", "-o", out, s.url + "stem-stuff.html"]);
     const page2 = await ctx.newPage();

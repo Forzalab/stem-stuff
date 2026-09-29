@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "properties": {
     "$schema": { "type": "string" },
-    "code": { "type": "string", "pattern": "^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$" },
+    "code": { "type": "string", "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$" },
     "answer": { "type": "string", "minLength": 1, "description": "num/expr: math.js or \"dne\"" },
     "points": { "type": "array", "minItems": 3, "items": { "type": "number" } },
     "tol": { "type": "number", "exclusiveMinimum": 0, "maximum": 0.05 },
