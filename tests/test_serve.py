@@ -155,6 +155,15 @@ class Grade(unittest.TestCase):
             pub = serve.public(p)
             self.assertFalse({"answer", "accept", "points", "tol", "correct", "wrong", "nudge"} & set(pub), p["code"])
             self.assertNotIn("answer", json.dumps(pub.get("parts", [])))
+
+    def test_part_prompt_is_public(self):
+        multi = [p for p in BANK.values() if p["type"] == "multi" and any("prompt" in u for u in p["parts"])]
+        self.assertTrue(multi, "no multi problem carries a part prompt")
+        for p in multi:
+            pub = serve.public(p)
+            self.assertEqual([u.get("prompt") for u in pub["parts"]], [u.get("prompt") for u in p["parts"]])
+            for u in pub["parts"]:
+                self.assertFalse({"answer", "accept", "points", "tol", "wrong"} & set(u), p["code"])
             self.assertEqual(pub["body"], p["body"])
 
 

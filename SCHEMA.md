@@ -49,7 +49,8 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
-| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. | label + type only |
+| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). | label + prompt + type only |
+| `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it). Put the shared givens in `body` and each question in its part's `prompt`. With no `prompt` anywhere, the boxes sit side by side under `body`, badge only (A, B). Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
@@ -58,7 +59,7 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
 
-**Never put the answer in `body`, a graph's `alt`, `title`, `how`, a choice's text beyond the choice itself, or a hint.**
+**Never put the answer in `body`, a graph's `alt`, `title`, `how`, a part's `prompt`, a choice's text beyond the choice itself, or a hint.**
 
 ## Converting a worksheet (rules)
 - **One number** → `num`. **A formula** → `expr`.
@@ -68,7 +69,7 @@ Keep problems in any order. Codes must be unique (tests enforce it).
   - Every non-correct choice still needs its `wrong` entry (error + hint).
 - **A typed answer that can be made binary** (like the gate-chain XOR question: "which if statement...", "greater than .5?") **becomes a 2-choice `mc`**, not a `num`/`text`. Word the question so the two choices are the two live answers, and give the wrong one an error type + hint.
 - **A free word, phrase, symbol or code line** (□¬P, `if (!a || b)`) → `text`, with `how` saying exactly what to type and in what form (symbols: say how to type them on a keyboard, e.g. "Type `[]` for □, `<>` for ◇, `~` for ¬", and list those spellings in `accept`).
-- **Several answers to one question** ("write both, in that order") → one `multi` problem, one part per blank, in the worksheet's order. Never split it into separate problems. Each part picks its own type.
+- **Several answers to one question** ("write both, in that order") → one `multi` problem, one part per blank, in the worksheet's order. Never split it into separate problems. Put the shared givens in `body` and each blank's question in that part's `prompt` (a, b, c...); `how` stays for typing instructions. Each part picks its own type.
 - A worksheet's strict **form** rule (".2", not "0.2") → a `text` part, with the form in `how`. `num` accepts every equal value.
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
@@ -511,6 +512,10 @@ Values can be negative.
           "minLength": 1,
           "maxLength": 12,
           "description": "Shown in the box; default A, B, C, D"
+        },
+        "prompt": {
+          "$ref": "#/$defs/md",
+          "description": "The sub-question for this box, shown next to it as \"a)\", \"b)\"... Markdown + $..$ KaTeX, same as a text block. Not for typing instructions: those go in the problem's how."
         },
         "type": {
           "enum": [

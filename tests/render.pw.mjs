@@ -418,6 +418,18 @@ async function run(browserType, label, opts = {}) {
       await open("CSCI26_M5V");                                              // multi: arrow off until every box is filled
       const boxes = page.locator("#q .ans");
       assert.equal(await boxes.count(), 2);
+      const marks = await page.locator("#q .mparts .mk").allTextContents();           // sub-questions: "a)" "b)" each with its own text and box
+      assert.deepEqual(marks, ["a)", "b)"]);
+      assert.match(await page.locator("#q .part").nth(0).locator(".pr").textContent(), /How many are in/);
+      assert.equal(await page.locator("#q .part .pr .katex").count(), 1, "prompt TeX renders");
+      assert.match(await page.locator("#q .part").nth(1).locator(".pr").textContent(), /exactly one set/);
+      const rows = await page.evaluate(() => [...document.querySelectorAll("#q .part")].map(r => { const b = r.getBoundingClientRect(), t = r.querySelector(".pr").getBoundingClientRect(), x = r.querySelector(".ff").getBoundingClientRect(); return { top: b.top, pr: t.top, ptxt: t.bottom, box: x.top, boxL: x.left, prL: t.left, prR: t.right, w: x.width }; }));
+      assert.ok(rows[1].top > rows[0].top, "rows stack");
+      if (vname === "phone") assert.ok(rows[0].box >= rows[0].ptxt - 1, "phone: box under its prompt");
+      else assert.ok(rows[0].boxL >= rows[0].prR - 1 && Math.abs(rows[0].box - rows[0].pr) < 20, "wide: box beside its prompt");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll");
+      assert.match(await boxes.nth(0).evaluate(e => getComputedStyle(e).fontFamily), /Atkinson Hyperlegible Mono/);
+      assert.match(await boxes.nth(1).getAttribute("aria-labelledby"), /mk1 pr1/);
       await boxes.nth(0).fill("14");
       assert.ok(await page.locator("#ansGo").isDisabled(), "arrow must wait for box B");
       await boxes.nth(0).press("Enter");                                   // Enter jumps to the empty box

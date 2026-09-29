@@ -251,13 +251,26 @@ function renderQuestion() {
     wireMC(q);
     fitChoices();
   } else if (p.type === "multi") {
-    /* one box per part, side by side; one arrow, off until every box is filled (SCHEMA.md "Grading") */
-    q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
+    /* one arrow, off until every box is filled (SCHEMA.md "Grading"). Two layouts:
+       no part has a prompt: the boxes side by side in one field (badge A, B);
+       any part has a prompt: one row per part, "a)" + its sub-question + its own box, the arrow after the last row */
+    const asked = p.parts.some(u => u.prompt);
+    if (asked) {
+      q.innerHTML = `${howLine(p)}<div class="mparts" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>${p.parts.map((u, i) => {
+        const l = esc(u.label || LETTERS[i].toLowerCase());
+        return `<div class="part${u.prompt ? "" : " nopr"}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
+          <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}></div></div>`;
+      }).join("")}
+        <div class="mgo"><button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answers" disabled>${icon("i-go")}</button></div>
+      </div>`;
+    } else {
+      q.innerHTML = `${howLine(p)}<div class="ff multi" id="ff" role="group" aria-label="Answers"${p.how ? ' aria-describedby="how"' : ""}>
         <div class="parts">${p.parts.map((u, i) => { const l = esc(u.label || LETTERS[i]); return `
           <label class="part"><span class="badge" aria-hidden="true">${l}</span>
             <input class="ans" type="text" aria-label="Answer ${l}" ${INPUT_ATTRS}></label>`; }).join("")}</div>
         <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answers" disabled>${icon("i-go")}</button>
       </div>`;
+    }
     wireFF();
   } else {
     const v = p.var || "x";
@@ -411,7 +424,7 @@ async function submitFF() {
     if (S !== mine) return;
     if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
-    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
+    if (r.verdict === "correct") { [$("#ff"), ...document.querySelectorAll("#ff .ff")].forEach(e => e.classList.add("ok", "done")); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     feedback(r, t);
   } finally { busy = false; }

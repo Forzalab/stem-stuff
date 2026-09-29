@@ -418,12 +418,13 @@
       "body": [
         {
           "type": "text",
-          "md": "$|A| = 10$, $|B| = 7$, $|A \\cap B| = 3$. How many elements are in $A \\cup B$? How many are in exactly one of the sets?"
+          "md": "$|A| = 10$, $|B| = 7$, $|A \\cap B| = 3$."
         }
       ],
       "how": "Two whole numbers, in the order asked.",
       "parts": [
         {
+          "prompt": "How many are in $A \\cup B$?",
           "type": "num",
           "answer": "14",
           "wrong": [
@@ -435,6 +436,7 @@
           ]
         },
         {
+          "prompt": "How many are in exactly one set?",
           "type": "num",
           "answer": "11",
           "wrong": [

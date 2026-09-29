@@ -106,7 +106,7 @@ def public(p, sid=""):
             ch = shuffled(ch, sid + ":" + p["code"])
         out["choices"] = [{k: c[k] for k in ("id", "md", "lock") if k in c} for c in ch]
     if p.get("type") == "multi":
-        out["parts"] = [{k: q[k] for k in ("label", "type", "var") if k in q} for q in p["parts"]]
+        out["parts"] = [{k: q[k] for k in ("label", "prompt", "type", "var") if k in q} for q in p["parts"]]
     return out
 
 

@@ -208,8 +208,27 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* divider between parts: 1px, inset 10px from the field border, centred in the column gap. At the start of a wrapped row it lies
    outside .parts (overflow hidden), so no dangling line. */
 .ff.multi .part + .part::before { content: ""; position: absolute; left: calc(var(--s3) / -2 - 0.5px); top: 10px; bottom: 10px; width: 1px; background: var(--line); }
-.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s3); }
-.boxed .q { margin-top: 0; padding: 0 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
+/* multi with prompts (design/mockups/multi-prompts.html): one row per part. Phone: "a)" and its sub-question, its own box under the text
+   (aligned to the text), one arrow after the last row. From 40rem: marker, text and box on one line, box at a fixed 14rem. */
+.mparts { display: grid; gap: var(--s4); }
+.mparts .part {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  column-gap: var(--s2); row-gap: var(--s2); align-items: start;
+}
+.mparts .part.nopr { grid-template-areas: "mk bx"; }
+.mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
+.mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
+.mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
+.mparts .ff { grid-area: bx; }
+.mgo { display: flex; justify-content: flex-end; }
+.q.closed .mgo { display: none; }
+@media (min-width: 40rem) {
+  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 14rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
+  .mparts .part.nopr { grid-template-areas: "mk . bx"; }
+  .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
+}
+.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: 1rem; }
 
 /* feedback */
