@@ -4,7 +4,7 @@ Tony: "when copying the explanation, ALSO copy tried answer AND git history of t
 
 The Copy button puts one JSON object on the clipboard. It replaces v1's plain "code / answer / explanation" text.
 
-- Schema: `schema/copy-payload.schema.json` (`"v": 1`)
+- Schema: `SCHEMA.md`, section "JSON Schema: Copy button payload" (`"v": 1`)
 - Reference code: `copy/payload.mjs` (`build`, `replay`, `stringify`, `diff`), no dependencies
 - Example: `copy/example.json` (regenerate: `node copy/gen-example.mjs > copy/example.json`)
 - Tests: `tests/copy.test.mjs`

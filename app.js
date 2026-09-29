@@ -1,4 +1,4 @@
-/* app.js: the drill page. Code entry -> p/<CODE>.json -> blocks -> answer -> scratchpad -> Copy.
+/* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 
@@ -37,47 +37,55 @@ function md(text, inline = false) {
 }
 
 /* ================= grading: THE one place =================
-   TODO(server): replace the body of check() with
-     const r = await fetch("/check", { method: "POST", headers: { "content-type": "application/json" },
-                                      body: JSON.stringify({ code, ...answer }) });
-     return await r.json();
-   Reply shape (MC.md section 7): { verdict: "correct"|"wrong"|"invalid"|"locked"|"egg", triesLeft, error?, hint? }.
-   Until then: DEV-ONLY stub. It grades only codes that have a sample key in schema/examples/<CODE>.key.json
-   (these are public demo keys, not secrets). Everything else answers { verdict: "pending" }.
-   It never reads `answer` from the public p/ file: grading must not depend on answers shipped to the browser.
+   Server problems: POST /check grades (answers never reach the browser). Reply shape (SCHEMA.md "Grading"):
+     { verdict: "correct"|"wrong"|"invalid"|"locked", triesLeft, error?, hint?, repeat? }
+   Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
+   No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
    `answer` is { answer: "typed text" } or { choice: "b" }. */
-const devKeys = new Map(), devState = new Map();
-async function devKey(code) {
-  if (!devKeys.has(code)) devKeys.set(code, fetch(`schema/examples/${code}.key.json`).then(r => r.ok ? r.json() : r.text().then(() => null)).catch(() => null));
-  return devKeys.get(code);
-}
+const localState = new Map();
 async function check(code, answer) {
-  const key = await devKey(code);
-  if (!key) return { verdict: "pending" };
-  const st = devState.get(code) || { wrong: [], done: false };
-  devState.set(code, st);
+  const off = window.stemOffline;
+  if (off && off.has(code)) return gradeLocal(off.get(code), answer);
+  try {
+    const r = await fetch("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+                                     body: JSON.stringify({ code, ...answer }) });
+    if (r.ok) return await r.json();
+  } catch { /* offline */ }
+  return { verdict: "pending" };
+}
+/* mirror of serve.py grade(): keep the two in step */
+function gradeLocal(key, answer) {
+  const st = localState.get(key.code) || { wrong: [], done: false };
+  localState.set(key.code, st);
   const left = () => MAX_TRIES - st.wrong.length;
   if (st.done || left() <= 0) return { verdict: "locked", triesLeft: 0 };
   let hit = null, correct = false, repeat = false;
   if ("choice" in answer) {
+    if (!key.choices.some(c => c.id === answer.choice)) return { verdict: "invalid", triesLeft: left() };
     correct = answer.choice === key.correct;
-    hit = key.wrong.find(w => w.choice === answer.choice);
+    hit = (key.wrong || []).find(w => w.choice === answer.choice);
     repeat = st.wrong.includes(answer.choice);
     if (!correct && !repeat) st.wrong.push(answer.choice);
   } else {
-    const typed = String(answer.answer).trim(), tol = key.tol ?? 1e-6;
+    const typed = String(answer.answer).trim(), tol = key.tol ?? 1e-6, v = key.var || "x";
     const isDne = t => /^\s*(dne|does not exist)\s*$/i.test(t);
-    let val = null;
-    if (!isDne(typed)) { try { val = math.evaluate(typed); if (typeof val !== "number") val = math.number(val); } catch { return { verdict: "invalid", triesLeft: left() }; } }
-    if (val !== null && !Number.isFinite(val)) return { verdict: "invalid", triesLeft: left() };
-    const same = (a, b) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
-    correct = key.answer === "dne" ? isDne(typed) : val !== null && same(val, math.evaluate(key.answer));
+    const sig = t => {
+      if (isDne(t)) return "dne";
+      const c = math.compile(t.replace(/ln\s*\(/gi, "log(").replace(/π/g, "pi").replace(/∞/g, "Infinity"));
+      const at = x => { let r = c.evaluate({ [v]: x }); if (typeof r !== "number") r = math.number(r); if (Number.isNaN(r)) throw 0; return r; };
+      return key.type === "expr" ? key.points.map(at) : at(undefined);
+    };
+    const same = (a, b) => Array.isArray(a) ? a.length === b.length && a.every((x, i) => same(x, b[i]))
+      : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
+      : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
+    let val;
+    try { val = sig(typed); } catch { return { verdict: "invalid", triesLeft: left() }; }
+    correct = same(val, key.answer === "dne" ? "dne" : sig(key.answer));
     if (!correct) {
-      hit = key.wrong.find(w => w.re && new RegExp(w.re, "i").test(typed))
-         || key.wrong.find(w => w.match != null && val !== null && same(val, math.evaluate(w.match)));
-      const sig = val === null ? "dne" : val;
-      repeat = st.wrong.some(w => (typeof w === "number" && typeof sig === "number") ? same(sig, w) : w === sig);
-      if (!repeat) st.wrong.push(sig);
+      hit = (key.wrong || []).find(w => w.re && new RegExp(w.re, "i").test(typed))
+         || (key.wrong || []).find(w => { try { return w.match != null && same(val, sig(w.match)); } catch { return false; } });
+      repeat = st.wrong.some(w => same(val, w));
+      if (!repeat) st.wrong.push(val);
     }
   }
   if (correct) { st.done = true; return { verdict: "correct", triesLeft: left() }; }
@@ -104,7 +112,8 @@ $("#entry").addEventListener("submit", e => {
   codeIn.blur();
   load(n.code);
 });
-/* upload = offline.js's file reading (stemOffline.pickFile); the store it fills also answers fetch("p/<CODE>.json") */
+/* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
+   After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
 $("#upload").addEventListener("click", async () => {
   const off = window.stemOffline;
   if (!off || !off.pickFile) { $("#entryMsg").textContent = "Can't open files here."; return; }
@@ -112,8 +121,11 @@ $("#upload").addEventListener("click", async () => {
   if (r && r.error) $("#entryMsg").textContent = r.error;
 });
 addEventListener("DOMContentLoaded", () => {
-  /* offline.js loads after this module; take over its "problem loaded from disk" event */
-  if (window.stemOffline) window.stemOffline.onProblemLoaded(p => load(p.code));
+  /* offline.js loads after this module; take over its "file loaded" event */
+  if (window.stemOffline) window.stemOffline.onProblemLoaded(p => {
+    const typed = normalize(codeIn.value), off = window.stemOffline;
+    load(typed && off.has(typed.code) ? typed.code : p.code);
+  });
 });
 function fileStatus(code) {
   const off = window.stemOffline, name = off && off.has && off.has(code) ? off.fileName(code) : null;
@@ -129,9 +141,6 @@ async function fetchProblem(code) {
   const r = await fetch(`p/${code}.json`);
   if (r.ok) return r.json();
   r.text().catch(() => {});   // drain the 404 body so the request completes
-  /* DEV-ONLY: draft MC problems live in schema/examples until the k/ split lands (SCHEMA-SPLIT.md). */
-  const d = await fetch(`schema/examples/${code}.public.json`).catch(() => null);
-  if (d && d.ok) return d.json();
   const e = new Error("not found"); e.status = r.status; throw e;
 }
 async function load(code) {
@@ -181,8 +190,7 @@ const LETTERS = "ABCDE";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
   if (p.type === "mc") {
-    /* TODO(server): order comes from the server's per-user seeded shuffle (MC.md section 3); authored order until then */
-    q.innerHTML = `<div class="choices" role="radiogroup" aria-label="Choices">${p.choices.slice(0, 5).map((c, i) => `
+    q.innerHTML = `<div class="choices" role="radiogroup" aria-label="Choices">${shown(p).map((c, i) => `
       <div class="ch" data-id="${esc(c.id)}">
         <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}">
           <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md, true)}</span>
@@ -201,6 +209,15 @@ function renderQuestion() {
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
+}
+/* 5 choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
+   same rule here: the right one, locked ones, then the rest, in authored order */
+function shown(p) {
+  const ch = p.choices;
+  if (ch.length <= 5) return ch;
+  const keep = ch.filter(c => c.id === p.correct || c.lock);
+  keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, 5 - keep.length)));
+  return ch.filter(c => keep.includes(c));
 }
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
 function select(o) {

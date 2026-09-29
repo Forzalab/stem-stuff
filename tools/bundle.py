@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build stem-stuff.html: index.html with its local css/js and KaTeX (fonts as data URIs)
 inlined, so it opens from disk (file://). Problems are NOT included (the page asks for
-p/<CODE>.json files via the file picker). See OFFLINE.md.
+problems.json via the file picker). See OFFLINE.md.
 
 usage: python3 tools/bundle.py [out]      (default: <repo>/stem-stuff.html)
 KaTeX: vendor/katex/ as index.html links it (a CDN KaTeX URL also works: local copy if versions match, else downloaded)."""

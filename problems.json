@@ -1,0 +1,350 @@
+{
+  "v": 1,
+  "problems": [
+    {
+      "code": "CALC1_T6B",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "Let $f(x)=\\dfrac{x^3-8}{x-2}$. A calculator gives:",
+            "",
+            "| $x$ | $f(x)$ |",
+            "|:---:|------:|",
+            "| 1.9 | 11.41 |",
+            "| 1.99 | 11.9401 |",
+            "| 2.01 | 12.0601 |",
+            "| 2.1 | 12.61 |",
+            "",
+            "Confirm the pattern algebraically and find",
+            "",
+            "$$\\lim_{x\\to 2} f(x)$$"
+          ]
+        }
+      ],
+      "answer": "12",
+      "wrong": [
+        {
+          "match": "4",
+          "error": "algebra",
+          "hint": "QUACK. Multiply your factors back out. Do you get $x^3-8$?"
+        },
+        {
+          "match": "8",
+          "error": "algebra",
+          "hint": "QUACK. After canceling $x-2$, which terms of $x^2+2x+4$ did you drop?"
+        },
+        {
+          "re": "^\\s*(dne|undefined|0/0)\\s*$",
+          "error": "limit-plug",
+          "hint": "QUACK. $0/0$ says 'simplify first', not 'no limit'. What factor do top and bottom share?"
+        }
+      ],
+      "nudge": "QUACK. Does your number agree with the calculator table?"
+    },
+    {
+      "code": "CALC1_A9R",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "The region $R$ is bounded by $y = 4x - x^2$ and $y = x$."
+        },
+        {
+          "type": "graph",
+          "kind": "cartesian",
+          "alt": "Downward parabola y = 4x - x^2 and the line y = x; the region R between them is shaded.",
+          "x": {
+            "min": -0.5,
+            "max": 4.5,
+            "label": "$x$"
+          },
+          "y": {
+            "min": -1,
+            "max": 5,
+            "label": "$y$"
+          },
+          "marks": [
+            {
+              "mark": "shade",
+              "f": "4x - x^2",
+              "g": "x",
+              "from": 0,
+              "to": 3,
+              "color": "c1",
+              "label": "$R$"
+            },
+            {
+              "mark": "fn",
+              "y": "4x - x^2",
+              "color": "c1",
+              "label": "$y=4x-x^2$",
+              "labelAt": 1.2,
+              "anchor": "nw"
+            },
+            {
+              "mark": "fn",
+              "y": "x",
+              "color": "c2",
+              "label": "$y=x$",
+              "labelAt": 4.2,
+              "anchor": "se"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Find the area of $R$."
+        }
+      ],
+      "answer": "9/2",
+      "wrong": []
+    },
+    {
+      "code": "CALC1_X2P",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Solve for $x$: $$x+2=11$$"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "$13$"
+        },
+        {
+          "id": "b",
+          "md": "$9$"
+        },
+        {
+          "id": "c",
+          "md": "$\\dfrac{11}{2}$"
+        },
+        {
+          "id": "d",
+          "md": "$-9$"
+        },
+        {
+          "id": "e",
+          "md": "$22$"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "sign",
+          "hint": "QUACK. You *added* 2 to both sides. What undoes $+2$?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. Dividing by 2 undoes $\\times 2$. Is there a $\\times$ anywhere in $x+2$?"
+        },
+        {
+          "choice": "d",
+          "error": "sign",
+          "hint": "QUACK. Plug your answer into $x+2$. Do you land on $11$ or on $-7$?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. You multiplied by 2. Where in $x+2=11$ is anything being divided?"
+        }
+      ]
+    },
+    {
+      "code": "PHYS_F3N",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A $4.0\\ \\text{kg}$ block slides down a $30^\\circ$ ramp with $\\mu_k = 0.20$. Use $g = 9.8\\ \\text{m/s}^2$."
+        },
+        {
+          "type": "graph",
+          "kind": "scene",
+          "alt": "Box on a ramp rising to the right at 30 degrees. Weight points straight down, the normal force points out of the ramp, kinetic friction points up the ramp.",
+          "marks": [
+            {
+              "mark": "incline",
+              "at": [
+                0,
+                0
+              ],
+              "base": 4,
+              "angle": 30,
+              "label": "$30^\\circ$"
+            },
+            {
+              "mark": "body",
+              "shape": "box",
+              "at": [
+                1.755,
+                1.36
+              ],
+              "w": 0.8,
+              "h": 0.6,
+              "angle": 30
+            },
+            {
+              "mark": "force",
+              "at": [
+                1.755,
+                1.36
+              ],
+              "angle": 270,
+              "len": 1.2,
+              "color": "c1",
+              "label": "$m\\vec g$"
+            },
+            {
+              "mark": "force",
+              "at": [
+                1.755,
+                1.36
+              ],
+              "frame": 30,
+              "angle": 90,
+              "len": 1.04,
+              "color": "c2",
+              "label": "$\\vec N$"
+            },
+            {
+              "mark": "force",
+              "at": [
+                1.755,
+                1.36
+              ],
+              "frame": 30,
+              "angle": 0,
+              "len": 0.35,
+              "color": "c3",
+              "label": "$\\vec f_k$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Find the magnitude of the block's acceleration, in $\\text{m/s}^2$."
+        }
+      ],
+      "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))",
+      "tol": 0.01,
+      "wrong": []
+    },
+    {
+      "code": "PHYS_S2K",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "A $2.0\\ \\text{kg}$ block rests on a frictionless $25^\\circ$ incline, held by a spring ($k = 150\\ \\text{N/m}$) parallel to the incline."
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "scene",
+          "alt": "Block on a 25 degree incline rising to the right, tied by a spring along the slope to a post near the top. Weight points down, normal force out of the incline, spring force up the slope.",
+          "marks": [
+            {
+              "mark": "incline",
+              "at": [
+                0,
+                0
+              ],
+              "base": 5,
+              "angle": 25,
+              "label": "$25^\\circ$"
+            },
+            {
+              "mark": "surface",
+              "from": [
+                4.531,
+                2.113
+              ],
+              "to": [
+                4.277,
+                2.657
+              ],
+              "side": "right"
+            },
+            {
+              "mark": "spring",
+              "from": [
+                2.592,
+                1.54
+              ],
+              "to": [
+                4.405,
+                2.385
+              ],
+              "coils": 9,
+              "width": 0.22,
+              "label": "$k$",
+              "anchor": "nw"
+            },
+            {
+              "mark": "body",
+              "shape": "box",
+              "at": [
+                2.23,
+                1.371
+              ],
+              "w": 0.8,
+              "h": 0.6,
+              "angle": 25
+            },
+            {
+              "mark": "force",
+              "at": [
+                2.23,
+                1.371
+              ],
+              "angle": 270,
+              "len": 1.2,
+              "color": "c1",
+              "label": "$m\\vec g$"
+            },
+            {
+              "mark": "force",
+              "at": [
+                2.23,
+                1.371
+              ],
+              "frame": 25,
+              "angle": 90,
+              "len": 1.09,
+              "color": "c1",
+              "label": "$\\vec N$"
+            },
+            {
+              "mark": "force",
+              "at": [
+                2.315,
+                1.19
+              ],
+              "frame": 25,
+              "angle": 0,
+              "len": 0.8,
+              "color": "c1",
+              "label": "$\\vec F_s$",
+              "anchor": "se"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Find the stretch of the spring, in $\\text{m}$."
+        }
+      ],
+      "answer": "2.0*9.8*sin(25 deg)/150",
+      "tol": 0.01,
+      "wrong": []
+    }
+  ]
+}

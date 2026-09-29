@@ -1,12 +1,14 @@
 # Security: grading, anti-brute-force, incidents
 
+Status: **live** in `serve.py`: server grading, answers never sent, 2 attempts per problem per browser (`sid` cookie, kept in memory, so a restart resets tries). **Not built yet:** IP + fingerprint matching, the trip checks and easter egg (section 4), the incident log (section 5).
+
 Goal: McKay can't get answers by guessing, scripting, or reading files. This is a deterrent for one student on a self-hosted Python server, not a bank. Section 7 lists what it can't stop.
 
 ## 1. What moves server-side
 
-- `p/<CODE>.json` stays public (fetched when the code is typed) but **has no answer** (see `SCHEMA-SPLIT.md`).
-- `k/<CODE>.json` holds answer, tol, points, MC correct id, hints, misconception feedback. Never served.
-- `serve.py` serves an **allowlist** (`index.html`, `p/*.json`, static assets), not a blocklist like v1. Everything else is 404, including `k/`, `log/`, `serve.py`.
+- One file, `problems.json`, holds everything (`SCHEMA.md`). It is never served.
+- `GET /p/<CODE>.json` returns only the public part of one problem (no answer, tol, points, MC correct id, hints).
+- `serve.py` 404s `problems.json`, `serve.py`, `deploy.sh`, `tests/`, `tools/`, `log/`, `.git`. (Plan: an allowlist instead.)
 - Endpoints: `POST /check` (JSON in/out; hints come back with wrong verdicts, no `/hint`, shapes in `MC.md` §7). Responses never include the answer, and take the same time whether right or wrong.
 
 ## 2. Who is this? (cookie, then IP, then fingerprint)

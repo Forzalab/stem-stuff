@@ -1,12 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import Ajv2020 from "ajv/dist/2020.js";
+import { validator } from "./schemas.mjs";
 import { build, replay, stringify, diff, MAX_EDITS, MAX_CHARS } from "../copy/payload.mjs";
 
 const root = new URL("../", import.meta.url);
-const schema = JSON.parse(readFileSync(new URL("schema/copy-payload.schema.json", root)));
-const validate = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, strictTypes: false }).compile(schema);
+const validate = validator("copy");
 const ok = p => assert.ok(validate(p), JSON.stringify(validate.errors, null, 1));
 const example = JSON.parse(readFileSync(new URL("copy/example.json", root)));
 

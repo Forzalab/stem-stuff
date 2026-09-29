@@ -1,15 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
-import Ajv2020 from "ajv/dist/2020.js";
 import katex from "katex";
-import { compile } from "mathjs";
+import { compile, evaluate } from "mathjs";
+import { validator, bank } from "./schemas.mjs";
 
-const root = new URL("../", import.meta.url);
-const schema = JSON.parse(readFileSync(new URL("schema/problem.schema.json", root)));
-const validate = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, strictTypes: false }).compile(schema);
-const files = readdirSync(new URL("p/", root)).filter(f => f.endsWith(".json"));
-const load = f => JSON.parse(readFileSync(new URL("p/" + f, root)));
+// problems.json: the whole bank in one file (SCHEMA.md)
+const validate = validator("problems");
+const B = bank();
+const problems = B.problems ?? [];
+const num = s => Number(evaluate(s.replace(/ln\s*\(/g, "log(")));
 
 // Walk every value; yields [key, value, parent].
 function* walk(v, k = "", parent = null) {
@@ -21,15 +20,14 @@ const MATH = /\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;
 const EXPR = new Set(["y", "f", "g", "of", "x", "fn"]);
 const norm = s => s.replace(/ln\s*\(/g, "log(");
 
-test("problem files exist", () => assert.ok(files.length > 0));
+test("problems.json: schema", () => assert.ok(validate(B), JSON.stringify(validate.errors, null, 1)));
+test("problems.json: has problems", () => assert.ok(problems.length > 0));
 
-for (const f of files) {
-  const p = load(f);
-  test(`${f}: schema`, () => assert.ok(validate(p), JSON.stringify(validate.errors, null, 1)));
-  test(`${f}: filename matches code`, () => assert.equal(f, p.code + ".json"));
+for (const p of problems) {
+  const f = p.code;
 
   test(`${f}: answer evaluates`, () => {
-    if (p.answer === "dne") return;
+    if (p.type === "mc" || p.answer === "dne") return;
     const c = compile(norm(p.answer));
     const scope = p.type === "expr" ? { [p.var ?? "x"]: p.points[0] } : {};
     assert.ok(Number.isFinite(Number(c.evaluate(scope))), p.answer);
@@ -58,6 +56,34 @@ for (const f of files) {
     }
   });
 
+  if (p.type === "mc") {
+    test(`${f}: every distractor has exactly one error+hint`, () => {
+      const ids = p.choices.map(c => c.id);
+      assert.equal(new Set(ids).size, ids.length, "duplicate choice ids");
+      assert.ok(ids.includes(p.correct), "correct id not in choices");
+      const got = p.wrong.map(w => w.choice);
+      assert.ok(got.every(Boolean), "mc wrong entries use choice, not match/re");
+      assert.deepEqual([...got].sort(), ids.filter(i => i !== p.correct).sort());
+    });
+  } else {
+    test(`${f}: known wrong answers evaluate and are actually wrong`, () => {
+      const tol = p.tol ?? 1e-6, ans = p.answer === "dne" ? NaN : num(p.answer);
+      for (const w of p.wrong ?? []) {
+        assert.ok(!w.choice, "freeform wrong entries use match/re");
+        if (w.re) { new RegExp(w.re, "i"); continue; }
+        const v = num(w.match);
+        assert.ok(Number.isFinite(v), w.match);
+        assert.ok(!(Math.abs(v - ans) <= tol * Math.max(1, Math.abs(ans))), `${w.match} equals the answer`);
+      }
+    });
+  }
+
+  test(`${f}: hints never state the answer`, () => {
+    const answer = p.type === "mc" ? p.choices.find(c => c.id === p.correct).md.replace(/\$/g, "") : p.answer;
+    const re = new RegExp(`(^|[^0-9.])${answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9.]|$)`);
+    for (const h of [...(p.wrong ?? []).map(w => w.hint), p.nudge ?? ""]) assert.ok(!re.test(h.replace(/\$/g, "")), h);
+  });
+
   test(`${f}: graph math compiles, <= 6 labels`, () => {
     for (const b of p.body.filter(b => b.type === "graph")) {
       let labels = 0;
@@ -70,11 +96,11 @@ for (const f of files) {
   });
 }
 
-test("code suffixes unique across subjects", () => {
+test("codes unique, suffixes unique across subjects", () => {
   const seen = new Map();
-  for (const f of files) {
-    const s = f.replace(/^[A-Z0-9]+_|\.json$/g, "");
-    assert.ok(!seen.has(s), `${f} clashes with ${seen.get(s)}`);
-    seen.set(s, f);
+  for (const { code } of problems) {
+    const s = code.replace(/^[A-Z0-9]+_/, "");
+    assert.ok(!seen.has(s), `${code} clashes with ${seen.get(s)}`);
+    seen.set(s, code);
   }
 });
