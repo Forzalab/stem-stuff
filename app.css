@@ -295,7 +295,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
    stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
-.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
+.xb-field { position: relative; font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
 .xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
 /* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
 /* focus: the 2px --focus border is the one ring (Tony: two glows, "ew") */

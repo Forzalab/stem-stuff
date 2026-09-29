@@ -173,9 +173,10 @@ async function run(browserType, label, opts = {}) {
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/app-freeze-${viewport.width}.png` });
     });
 
-    await step(`${label} ${vname} line length: scratchpad <= ~70ch`, async () => {
-      const w = await page.evaluate(() => { const t = document.querySelector("#scratch"); const cs = getComputedStyle(t); const c = document.createElement("span"); c.style.font = cs.font; c.textContent = "0".repeat(70); document.body.append(c); const r = c.offsetWidth; c.remove(); return { box: t.clientWidth, ch70: r }; });
-      assert.ok(w.box <= w.ch70 + 40, `textarea ${w.box}px vs 70ch ${w.ch70}px`);
+    await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
+      // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
+      const w = await page.evaluate(() => ({ box: document.querySelector("#xbField").getBoundingClientRect().right, card: document.querySelector("#problem").getBoundingClientRect().right }));
+      assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
     await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
