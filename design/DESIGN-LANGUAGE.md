@@ -8,7 +8,7 @@ Reference build: `design/specimen.html`. Every number in its script's top block 
 |---|---|---|---|
 | ink | #e7edf6 | 12.61 | outlines, surfaces, springs, ropes, default labels |
 | muted | #a2b3cb | 6.96 | axes, hatch, angle arcs, guides, trajectories, ticks |
-| c1 | #7ab8ff | 7.16 | **every force** (one blue), first series |
+| c1 | #7ab8ff | 7.16 | **every force** (one blue, locked), first series |
 | c2 | #ffb86b | 8.71 | velocity, second series |
 | c3 | #ff8fc8 | 7.08 | acceleration, third series (was #d59cff: it merged with c1 under red-green color blindness) |
 | grid | = line #34445d | 1.51 | grid lines only (decorative) |
@@ -18,7 +18,7 @@ Reference build: `design/specimen.html`. Every number in its script's top block 
 | hint | #7d8ea8 | 5.33 on field | placeholder text |
 
 Rules:
-- **Forces are all c1.** The color says "force"; the label says which one. The site `--blue` #3a67d8 (2.91) fails 3:1 and stays a button fill. `--focus` #8fb0ff (6.94) was the other candidate; c1 wins because it is already the graph token and has more distance from pink.
+- **Forces are all c1.** The color says "force"; the label says which one. The site `--blue` #3a67d8 (2.91) fails 3:1 and stays a button fill. Force blue is locked at c1 #7ab8ff.
 - Kind is carried by color and head together, so it survives grayscale: force c1 + filled head, velocity c2 + open head, acceleration c3 + double head.
 - Never c2 and mark in the same figure as two series.
 
