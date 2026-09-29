@@ -638,6 +638,776 @@
           "hint": "QUACK. Try $a = 1$, $b = 1$. What does `a ^ b` give?"
         }
       ]
+    },
+    {
+      "code": "CSCI26_Z6N",
+      "title": "Fuzzy rule with a NOT",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. Rule: IF hot AND NOT humid THEN fan high. hot $= .6$, humid $= .75$. How strongly does the rule fire?"
+        }
+      ],
+      "how": "A decimal, like .5",
+      "answer": "0.25",
+      "wrong": [
+        {
+          "match": "0.6",
+          "error": "negation",
+          "hint": "QUACK. The rule says NOT humid. Did humid get flipped before the AND?"
+        },
+        {
+          "match": "0.75",
+          "error": "negation",
+          "hint": "QUACK. That's humid itself. The rule wants NOT humid. Flip it, then AND."
+        }
+      ],
+      "nudge": "QUACK. NOT first. Then AND. One number each, on paper."
+    },
+    {
+      "code": "CSCI26_R4T",
+      "title": "Name the form: NAND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If a gate is a NAND gate, it is universal. Gate G is not universal. Therefore G is not a NAND gate. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. Ponens affirms the IF part. Which part did the second line talk about?"
+        },
+        {
+          "choice": "n",
+          "error": "fallacy",
+          "hint": "QUACK. The second line denies the THEN part. Which rule does that?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_R6E",
+      "title": "Name the form: even squares",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If $x$ is even, then $x^2$ is even. $x^2$ is even. Therefore $x$ is even. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. The conclusion is true in real math. Is the form valid? Which part did line two affirm?"
+        },
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Tollens needs a NOT. Where is one?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_R8N",
+      "title": "Name the form: two nots",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If it is not raining, the game is on. The game is not on. Therefore it is raining. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. Line two talks about the game. Is that the IF part or the THEN part?"
+        },
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Write $p$ = not raining. Now what does line two do to $q$, and what is not $p$?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_P3L",
+      "title": "Plate codes",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A code is 3 uppercase letters with no letter repeated, then 3 decimal digits. The last digit is odd. How many codes are possible?"
+        }
+      ],
+      "how": "The full number, no commas.",
+      "answer": "7800000",
+      "wrong": [
+        {
+          "match": "8788000",
+          "error": "counting",
+          "hint": "QUACK. No letter repeated. How many letters are left for slot two?"
+        },
+        {
+          "match": "15600000",
+          "error": "misread",
+          "hint": "QUACK. Reread the digits. Is every digit free?"
+        },
+        {
+          "match": "17576000",
+          "error": "counting",
+          "hint": "QUACK. Two rules on this code. Write one number under each slot first."
+        }
+      ],
+      "nudge": "QUACK. Six slots. Write how many choices each slot has, then multiply."
+    },
+    {
+      "code": "CSCI26_Q4V",
+      "title": "Quantifier order",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\exists y \\in \\mathbb{Z}\\ \\forall x \\in \\mathbb{Z}:\\ x + y = 0$"
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "TRUE"
+        },
+        {
+          "id": "f",
+          "md": "FALSE"
+        }
+      ],
+      "correct": "f",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "quantifier",
+          "hint": "QUACK. $y$ is picked first and stays fixed. Does one $y$ work for $x=1$ and $x=2$?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_V7C",
+      "title": "Empty set claim",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Every element of $\\{x \\in \\mathbb{Z} : x^2 < 0\\}$ is equal to 7."
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "TRUE"
+        },
+        {
+          "id": "f",
+          "md": "FALSE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "f",
+          "error": "quantifier",
+          "hint": "QUACK. To call it FALSE you need one element that isn't 7. Find one."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_D4B",
+      "title": "Box and diamond",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\Box$ means true in every world. $\\Diamond$ means true in at least one world. There are three worlds. $P$ is true in $W_1$ and $W_2$, false in $W_3$. Which is right?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "$\\Box P$ TRUE, $\\Diamond\\neg P$ TRUE"
+        },
+        {
+          "id": "b",
+          "md": "$\\Box P$ FALSE, $\\Diamond\\neg P$ TRUE"
+        },
+        {
+          "id": "c",
+          "md": "$\\Box P$ TRUE, $\\Diamond\\neg P$ FALSE"
+        },
+        {
+          "id": "d",
+          "md": "$\\Box P$ FALSE, $\\Diamond\\neg P$ FALSE"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "quantifier",
+          "hint": "QUACK. $\\Box$ is every world. Check $W_3$."
+        },
+        {
+          "choice": "c",
+          "error": "quantifier",
+          "hint": "QUACK. $\\Box$ is every world, not most. And is there a world where $P$ fails?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. $\\Diamond\\neg P$ asks for one world where $P$ is false. Look again."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_D7N",
+      "title": "Negate a box",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\Box$ means true in every world. $\\Diamond$ means true in at least one world. Which statement is the same as $\\neg\\Box P$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "b",
+          "md": "$\\Diamond\\neg P$"
+        },
+        {
+          "id": "a",
+          "md": "$\\Box\\neg P$"
+        },
+        {
+          "id": "c",
+          "md": "$\\neg\\Diamond P$"
+        },
+        {
+          "id": "d",
+          "md": "$\\Diamond P$"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "negation",
+          "hint": "QUACK. Not true in every world. Does that force false in every world?"
+        },
+        {
+          "choice": "c",
+          "error": "negation",
+          "hint": "QUACK. That says $P$ holds nowhere. Is that what not-every-world means?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. Where did the NOT go? Something has to be false somewhere."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S3A",
+      "title": "Syllogism: some through B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some B are C.",
+            "$\\therefore$ Some A are C."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "m",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Draw it. Can the B's that are C sit outside A?"
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. F means it can never happen. Can you draw one picture where it does?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S5B",
+      "title": "Syllogism: no and all",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "No A are B.",
+            "All C are A.",
+            "$\\therefore$ No C are B."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. Every C sits inside A. Where can B be? Try to draw a C that is B."
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. Draw A and B apart. Put C inside A. Now look."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S6C",
+      "title": "Syllogism: some not",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some C are not B.",
+            "$\\therefore$ Some C are not A."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. Take the C outside B. Can it be inside A? A sits inside B."
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. Draw A inside B. Put a C outside B. Where is that C?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S8F",
+      "title": "Syllogism: no B are C",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some A are C.",
+            "$\\therefore$ No B are C."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "f",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Take one A that is C. Is it also a B?"
+        },
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. The premises hand you one thing. It is A, it is C. What else is it, always?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S9D",
+      "title": "Syllogism: some means some not?",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "Some A are B.",
+            "$\\therefore$ Some A are not B."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "m",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "misread",
+          "hint": "QUACK. In logic, some means at least one. Can all A be B?"
+        },
+        {
+          "choice": "f",
+          "error": "misread",
+          "hint": "QUACK. Can you draw one A outside B without breaking line one?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F4R",
+      "title": "Cold tea ramp",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "In fuzzy logic, tea is 1 cold at $40^\\circ\\text{F}$ and 0 cold at $70^\\circ\\text{F}$, and it gets less cold evenly in between."
+        }
+      ],
+      "how": "Decimals, like .5",
+      "parts": [
+        {
+          "prompt": "How cold is $61^\\circ\\text{F}$ tea?",
+          "type": "num",
+          "answer": "0.3",
+          "wrong": [
+            {
+              "match": "0.7",
+              "error": "sign",
+              "hint": "QUACK. Hotter tea is less cold. Which end of the ramp is 1?"
+            }
+          ]
+        },
+        {
+          "prompt": "How cold is $85^\\circ\\text{F}$ tea?",
+          "type": "num",
+          "answer": "0",
+          "wrong": [
+            {
+              "match": "-0.5",
+              "error": "domain",
+              "hint": "QUACK. Membership lives in [0, 1]. Can tea be less than not cold?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Mark 40 and 70 on a line. Where does your temperature sit?"
+    },
+    {
+      "code": "CSCI26_W2T",
+      "title": "Exactly two of three",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "$|A \\cap B| = 7$, $|A \\cap C| = 6$, $|B \\cap C| = 5$, $|A \\cap B \\cap C| = 2$. How many elements are in exactly two of the sets?"
+        }
+      ],
+      "answer": "12",
+      "wrong": [
+        {
+          "match": "14",
+          "error": "misread",
+          "hint": "QUACK. That counts the middle once. Is the middle in exactly two sets?"
+        },
+        {
+          "match": "18",
+          "error": "counting",
+          "hint": "QUACK. Each pair count holds the middle too. How many pairs hold it?"
+        },
+        {
+          "match": "16",
+          "error": "counting",
+          "hint": "QUACK. The middle sits in all three pairs. How many times did you take it out?"
+        }
+      ],
+      "nudge": "QUACK. Draw three circles. Fill the middle first, then each pair-only region."
+    },
+    {
+      "code": "CSCI26_B5M",
+      "title": "Three share a month",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "What is the fewest people you need to be sure that at least 3 of them share a birth month?"
+        }
+      ],
+      "answer": "25",
+      "wrong": [
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. Fill every month to the brim without making three. Now add who?"
+        },
+        {
+          "match": "13",
+          "error": "misread",
+          "hint": "QUACK. That guarantees 2. The ask is 3."
+        },
+        {
+          "match": "36",
+          "error": "off-by-factor",
+          "hint": "QUACK. How many can a month hold before it has 3?"
+        }
+      ],
+      "nudge": "QUACK. Worst case first. How many people fit with no month at 3?"
+    },
+    {
+      "code": "CSCI26_H9S",
+      "title": "Keys per slot",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "100 keys are hashed into a table with 12 slots, with chaining. At least one slot must hold at least how many keys?"
+        }
+      ],
+      "answer": "9",
+      "wrong": [
+        {
+          "match": "8",
+          "error": "off-by-one",
+          "hint": "QUACK. Put 8 in every slot. How many keys is that? Where do the rest go?"
+        },
+        {
+          "match": "8.33",
+          "error": "format",
+          "hint": "QUACK. A slot holds whole keys. Round which way?"
+        }
+      ],
+      "nudge": "QUACK. Spread the keys as evenly as you can. Count the fullest slot."
+    },
+    {
+      "code": "CSCI26_M6V",
+      "title": "Inverse with a sign",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "$7^{-1} \\equiv 15 \\pmod{26}$. Find $(-7)^{-1} \\bmod 26$, as a number from 0 to 25."
+        }
+      ],
+      "answer": "11",
+      "wrong": [
+        {
+          "match": "15",
+          "error": "sign",
+          "hint": "QUACK. Multiply your answer by $-7$. Do you get 1 mod 26?"
+        },
+        {
+          "match": "-15",
+          "error": "format",
+          "hint": "QUACK. Right idea. Now the range: 0 to 25. One more step."
+        }
+      ],
+      "nudge": "QUACK. Check it: your number times $-7$, then mod 26. Is it 1?"
+    },
+    {
+      "code": "CSCI26_G5E",
+      "title": "Rows with an unwired input",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A circuit has inputs A, B, C, D, E. OUT = NOR(A, B) OR (C AND D). Input E is not wired to anything. In the full truth table, how many rows have OUT = 1?"
+        }
+      ],
+      "answer": "14",
+      "wrong": [
+        {
+          "match": "7",
+          "error": "counting",
+          "hint": "QUACK. How many rows does the full table have with five inputs?"
+        },
+        {
+          "match": "8",
+          "error": "counting",
+          "hint": "QUACK. Two cases can both be 1 in one row. Count that row once. And the table size?"
+        },
+        {
+          "match": "16",
+          "error": "counting",
+          "hint": "QUACK. Did a row where both sides are 1 get counted twice?"
+        }
+      ],
+      "nudge": "QUACK. Count the A, B, C, D rows first. Then ask what E does to that count."
+    },
+    {
+      "code": "CSCI26_K4P",
+      "title": "Read one K-map cell",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Karnaugh map for $f = a \\wedge \\neg c$. The top labels are $ab$, the side labels are $cd$, both $00, 01, 11, 10$. Is the cell in row $10$, column $01$ a 1?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Row is $cd$. Column is $ab$. Write $a, b, c, d$ before you look at $f$."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_K7R",
+      "title": "Count ones in a K-map row",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Karnaugh map for $f = (a \\oplus b) \\vee (c \\wedge \\neg d)$. The top labels are $ab$, the side labels are $cd$, both $00, 01, 11, 10$. How many 1s are in row $11$?"
+        }
+      ],
+      "answer": "2",
+      "wrong": [
+        {
+          "match": "1",
+          "error": "misread",
+          "hint": "QUACK. A row has a fixed $cd$. Which letters are 1 in row 11?"
+        },
+        {
+          "match": "3",
+          "error": "op-swap",
+          "hint": "QUACK. $\\oplus$ is XOR. What is $1 \\oplus 1$?"
+        },
+        {
+          "match": "4",
+          "error": "negation",
+          "hint": "QUACK. With $d = 1$, what is $c \\wedge \\neg d$?"
+        }
+      ],
+      "nudge": "QUACK. Fix $c$ and $d$ for the row. Then walk the four columns."
     }
   ]
 }
