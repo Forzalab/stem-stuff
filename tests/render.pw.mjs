@@ -69,7 +69,7 @@ async function run(browserType, label, opts = {}) {
       const tab = async (code, closedOnly) => {
         await open(code);
         if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
-        if (code === "CSCI26_M5V") await page.locator("#q .ans").nth(0).fill("14");
+        if (code === "CSCI26_M5V") { await page.locator("#q .ans").nth(0).fill("14"); if (vname !== "desktop") await page.evaluate(() => document.activeElement.blur()); }   // phone / touch: a focused field + a short viewport = keyboard up = Swap, which has no #more (design/SWAP.md), so blur first
         // closed: shrink the viewport until the strip is clipped and the tab shows
         let shown = false;
         for (const h of vname === "phone" ? [600, 500, 400, 320] : [500, 400, 320, 260]) {
