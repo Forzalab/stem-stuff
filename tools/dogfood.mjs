@@ -10,9 +10,9 @@ const [BASE = "http://localhost:8812", OUT = "design/shots"] = process.argv.slic
 
 // a problem file on "disk" for the upload flow (a real problem under a code the server doesn't have)
 const dir = mkdtempSync(join(tmpdir(), "dog-"));
-const prob = JSON.parse(readFileSync(new URL("../p/PHYS-F3N.json", import.meta.url)));
-prob.code = "PHYS-Q7W";
-const file = join(dir, "PHYS-Q7W.json");
+const prob = JSON.parse(readFileSync(new URL("../p/PHYS_F3N.json", import.meta.url)));
+prob.code = "PHYS_Q7W";
+const file = join(dir, "PHYS_Q7W.json");
 writeFileSync(file, JSON.stringify(prob));
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -32,13 +32,13 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
   await page.goto(`${BASE}/`, { waitUntil: "load" }); await shot("empty", false);
   await page.fill("#code", "nope"); await page.press("#code", "Enter"); await shot("bad-code", false);
 
-  await open("CALC1-X2P"); await shot("mc-loaded");
+  await open("CALC1_X2P"); await shot("mc-loaded");
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForSelector(".cluck"); await shot("mc-wrong");
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
   await page.waitForSelector(".opt.right"); await shot("mc-right");
 
-  await open("CALC1-T6B");
+  await open("CALC1_T6B");
   await page.fill("#ans", "4"); await page.press("#ans", "Enter"); await page.waitForSelector(".cluck");
   await page.fill("#ans", "12"); await page.press("#ans", "Enter"); await page.waitForSelector(".verdict.ok");
   await page.click("#scratch");
@@ -48,17 +48,17 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
   const clip = await page.evaluate(() => navigator.clipboard.readText().catch(() => ""));
   console.log(w, "copy payload tries:", JSON.parse(clip).tries.map(t => t.a + ":" + t.v).join(" "));
 
-  await open("PHYS-S2K"); await shot("scene-loaded");
+  await open("PHYS_S2K"); await shot("scene-loaded");
   await page.evaluate(() => scrollTo(0, 1e5)); await shot("scene-scrolled", false);
 
   await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await chooser.setFiles(file);
-  await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS-Q7W");
+  await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_Q7W");
   await shot("file-loaded");
 
   if (w < 700) {   // keyboard-ish: layout viewport shrinks while typing in the scratchpad (Chromium resizes-content)
-    await open("PHYS-S2K");
+    await open("PHYS_S2K");
     await page.click("#scratch"); await page.keyboard.type("resolve mg along the slope");
     await page.setViewportSize({ width: w, height: 470 }); await page.waitForTimeout(300);
     await shot("keyboard-scratch", false);

@@ -1,6 +1,6 @@
 {
   "$schema": "../schema/problem.schema.json",
-  "code": "PHYS-S2K",
+  "code": "PHYS_S2K",
   "type": "num",
   "answer": "2.0*9.8*sin(25 deg)/150",
   "tol": 0.01,

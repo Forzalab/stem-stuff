@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "properties": {
     "v": { "const": 1, "description": "payload schema version" },
-    "code": { "type": "string", "pattern": "^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$" },
+    "code": { "type": "string", "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$" },
     "subject": { "enum": ["CALC1", "CSCI26", "PHYS"] },
     "start": { "$ref": "#/$defs/iso", "description": "when the problem was opened; every t is seconds after this" },
     "copied": { "$ref": "#/$defs/iso" },

@@ -10,7 +10,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const BASE = process.argv[2] || "http://localhost:8812";
 const SHOTS = process.argv[3] || "";
-const CODES = ["CALC1-T6B", "CALC1-A9R", "PHYS-F3N", "PHYS-S2K", "CALC1-X2P"];   // X2P = the MC example (schema/examples)
+const CODES = ["CALC1_T6B", "CALC1_A9R", "PHYS_F3N", "PHYS_S2K", "CALC1_X2P"];   // X2P = the MC example (schema/examples)
 const RAW = [/\\vec\b/, /\^\\circ/, /\\frac/, /\\text\b/, /\\dfrac/, /\$/, /\\lim/, /\\mu/];
 const VIEWS = { phone: { width: 390, height: 844 }, ipad: { width: 1024, height: 1366 }, desktop: { width: 1920, height: 1080 } };
 
@@ -29,9 +29,9 @@ async function run(browserType, label, opts = {}) {
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
-    // expected 404s: schema/examples/<CODE>.key.json (dev grading stub probes for a key) and p/CALC1-X2P.json
+    // expected 404s: schema/examples/<CODE>.key.json (dev grading stub probes for a key) and p/CALC1_X2P.json
     // (the MC example lives only in schema/examples until the k/ split)
-    page.on("response", r => { if (r.status() >= 400 && !/schema\/examples\/|p\/CALC1-X2P\.json|offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
+    page.on("response", r => { if (r.status() >= 400 && !/schema\/examples\/|p\/CALC1_X2P\.json|offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     const open = async code => {
@@ -67,7 +67,7 @@ async function run(browserType, label, opts = {}) {
     }
 
     await step(`${label} ${vname} MC: select shows arrow, reselect hides it, wrong strikes`, async () => {
-      await open(`CALC1-X2P`);
+      await open(`CALC1_X2P`);
       await page.waitForSelector(".opt");
       const a = page.locator('.opt[data-id="a"]'), sendA = page.locator('.ch[data-id="a"] .send');
       assert.equal(await page.locator(".ch .send:visible").count(), 0);
@@ -93,7 +93,7 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} freeform: arrow inside input, wrong then right`, async () => {
-      await open(`CALC1-T6B`);
+      await open(`CALC1_T6B`);
       const inp = page.locator("#ans"), go = page.locator("#ansGo");
       assert.ok(await go.isVisible(), "arrow must always show inside the field");
       assert.ok(await go.isDisabled(), "arrow should be dimmed/disabled while empty");
@@ -108,7 +108,7 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
-      await open(`PHYS-S2K`);
+      await open(`PHYS_S2K`);
       await page.waitForSelector(".fig svg");
       const ta = page.locator("#scratch");
       await ta.click();
@@ -146,7 +146,7 @@ async function run(browserType, label, opts = {}) {
         assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
       } else if (vname === "desktop") assert.ok(d.top < 60, `box not at the top: ${d.top}`);
       // box never covers the scratchpad or Copy once scrolled to the end
-      await open("CALC1-T6B");
+      await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
       const o = await page.evaluate(() => {
         const a = document.querySelector("#dock").getBoundingClientRect(), hit = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.bottom > a.top && r.top < a.bottom && getComputedStyle(document.querySelector("#dock")).position === "fixed"; };
@@ -155,19 +155,31 @@ async function run(browserType, label, opts = {}) {
       assert.ok(!o.copy && !o.scratch, `box covers ${JSON.stringify(o)}`);
     });
 
+    await step(`${label} ${vname} code separator: "_" canonical, old "-" links and loose typing still work`, async () => {
+      await page.goto("about:blank"); await page.goto(`${BASE}/#CALC1-T6B`, { waitUntil: "load" });   // back-compat: old link
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_T6B");
+      assert.ok((await page.evaluate(() => location.hash)) === "#CALC1_T6B");
+      for (const typed of ["calc1 a9r", "CALC1-A9R", "calc1a9r"]) {                                      // back-compat: typing
+        await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
+        await page.fill("#code", typed); await page.press("#code", "Enter");
+        await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_A9R");
+        assert.equal(await page.inputValue("#code"), "CALC1_A9R");
+      }
+    });
+
     await step(`${label} ${vname} upload a problem file: status line + render`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       assert.ok(await page.locator("#fileStatus").isHidden());
-      const p = JSON.parse(await (await fetch(`${BASE}/p/PHYS-F3N.json`)).text()); p.code = "PHYS-Q7W";
+      const p = JSON.parse(await (await fetch(`${BASE}/p/PHYS_F3N.json`)).text()); p.code = "PHYS_Q7W";
       const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problem.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(p)) });
-      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS-Q7W");
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_Q7W");
       assert.equal(await page.locator("#fileStatus").textContent(), "File my-problem.json in use.");
       assert.ok(await page.locator("#freeze .fig svg").count() > 0 && await page.locator("#freeze .katex").count() > 0);
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
-      await open("CALC1-T6B");
+      await open("CALC1_T6B");
       const ta = page.locator("#scratch");
       // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
       const clear = () => page.evaluate(() => {
@@ -219,13 +231,13 @@ async function run(browserType, label, opts = {}) {
     if (label === "chromium" && vname === "desktop") {
       await step(`${label} copy payload`, async () => {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
-        await open(`CALC1-A9R`);
+        await open(`CALC1_A9R`);
         await page.locator("#ans").fill("9/2"); await page.locator("#ans").press("Enter");
         await page.locator("#scratch").fill("area between: integrate (4x-x^2) - x from 0 to 3");
         await page.locator("#copy").click();
         const txt = await page.evaluate(() => navigator.clipboard.readText());
         const p = JSON.parse(txt);
-        assert.equal(p.v, 1); assert.equal(p.code, "CALC1-A9R"); assert.equal(p.tries.length, 1);
+        assert.equal(p.v, 1); assert.equal(p.code, "CALC1_A9R"); assert.equal(p.tries.length, 1);
         assert.equal(p.tries[0].v, "pending"); assert.ok(p.explain.startsWith("area between"));
       });
     }

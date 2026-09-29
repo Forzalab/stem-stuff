@@ -2,7 +2,7 @@
 
 Tony: "make the explanation box fixed but then extend in height. make it PLEASANT to type in, just a plain textbox, no bold italic formatting no such thing."
 
-Files: `explain-box.css` (style), `explain-box.js` (growth fallback + history), `explain-box.html` (demo). Also wired into `specimen.html` under PHYS-F3N.
+Files: `explain-box.css` (style), `explain-box.js` (growth fallback + history), `explain-box.html` (demo). Also wired into `specimen.html` under PHYS_F3N.
 
 ## What the research says
 

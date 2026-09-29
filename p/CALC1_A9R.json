@@ -1,6 +1,6 @@
 {
   "$schema": "../schema/problem.schema.json",
-  "code": "CALC1-A9R",
+  "code": "CALC1_A9R",
   "type": "num",
   "answer": "9/2",
   "body": [

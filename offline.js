@@ -8,8 +8,8 @@
   const FILE = location.protocol === "file:";
   const CAN_SW = !FILE && "serviceWorker" in navigator && window.isSecureContext;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-  const CODE = /^[A-Z][A-Z0-9]*-[A-Z0-9]{2,}$/;
-  const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*-[A-Z0-9]{2,})\.json$/;
+  const CODE = /^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$/;
+  const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$/;
   const MAX = 2 * 1024 * 1024;
 
   const local = new Map();      // code -> problem picked from disk

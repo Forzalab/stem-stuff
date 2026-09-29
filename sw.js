@@ -22,7 +22,7 @@ function route(url, method, scope) {
     const rel = u.pathname.startsWith(s.pathname) ? u.pathname.slice(s.pathname.length) : null;
     if (rel === null) return "pass";
     if (/(^|\/)(k|log)\//.test(rel) || /(^|\/)check(\/|$)/.test(rel) || /^\.|\/\./.test(rel)) return "pass";
-    if (/^p\/[A-Za-z0-9-]+\.json$/.test(rel)) return "problem";
+    if (/^p\/[A-Za-z0-9_-]+\.json$/.test(rel)) return "problem";
     if (rel === "" || rel === "index.html" || rel === "stem-stuff.html") return "shell";
     if (/^(tests|tools|schema)\//.test(rel) || rel === "sw.js") return "pass";
     if (/^[\w./-]+\.(js|mjs|css|woff2|svg|png|ico)$/.test(rel) && !rel.includes("..")) return "shell";

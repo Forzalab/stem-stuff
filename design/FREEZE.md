@@ -48,7 +48,7 @@ Files: `index.html` (`#freeze`, `#freezeIn`, `#more`), `app.css` (section "freez
 ## Tested
 
 - Chromium (Playwright) at 390x844, 1024x1366 and 1920x1080: after 60 lines in the scratchpad and scrolling to the bottom, the layer's top is at 0, it is marked stuck, and it covers less than 75% of the viewport. Screenshots: `shots/app-freeze-390.png`, `shots/app-freeze-1024.png`, `shots/app-freeze-1920.png`.
-- **Not tested:** WebKit and Firefox are not installed in this container (`/opt/pw-browsers` has Chromium only), and a headless browser has no software keyboard. The iOS keyboard path (`--kb-top`, the 34% cap) is reasoned from the sources above, not observed. Check on a real iPhone and iPad: open PHYS-S2K, scroll down, tap the scratchpad, type, and scroll.
+- **Not tested:** WebKit and Firefox are not installed in this container (`/opt/pw-browsers` has Chromium only), and a headless browser has no software keyboard. The iOS keyboard path (`--kb-top`, the 34% cap) is reasoned from the sources above, not observed. Check on a real iPhone and iPad: open PHYS_S2K, scroll down, tap the scratchpad, type, and scroll.
 
 ## Entry box on phones (bottom dock)
 

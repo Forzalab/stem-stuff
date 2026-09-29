@@ -4,7 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
-const CODE_RE = /^(CALC1|CSCI26|PHYS)-[A-Z0-9]{3,6}$/;
+const CODE_RE = /^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
@@ -89,17 +89,18 @@ async function check(code, answer) {
 
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock");
-/* the code carries its subject prefix; accept lower case, spaces, a missing dash */
+/* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
+   Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
-  const s = raw.toUpperCase().replace(/\s+/g, "").replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS)-?([A-Z0-9]{3,6})$/);
-  return m ? { prefix: m[1], code: `${m[1]}-${m[2]}` } : null;
+  const s = raw.toUpperCase().trim().replace(/^#/, "");
+  const m = s.match(/^(CALC1|CSCI26|PHYS)[\s_-]*([A-Z0-9]{3,6})$/);
+  return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
 }
 codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; });
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   const n = normalize(codeIn.value);
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1-T6B."; codeIn.focus(); return; }
+  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
   load(n.code);
 });

@@ -35,7 +35,7 @@ export function build(s, now = Date.now()) {
     out = {
       v: V,
       code: s.code,
-      subject: s.code.split("-")[0],
+      subject: s.code.split("_")[0],
       start: new Date(t0).toISOString(),
       copied: new Date(now).toISOString(),
       final: last ? { a: last.a, ...(last.l ? { l: last.l } : {}), v: last.v } : null,

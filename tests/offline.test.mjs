@@ -12,20 +12,20 @@ const scope = "https://csci4x.com/";
 const r = (path, method = "GET") => route(new URL(path, scope).href, method, scope);
 
 test("never cached: k/, log/, /check, dotfiles, non-GET", () => {
-  for (const p of ["k/CALC1-T6B.json", "k/", "log/incidents.jsonl", "check", "check?x=1", "check/", ".git/config", "p/../k/X.json"])
+  for (const p of ["k/CALC1_T6B.json", "k/", "log/incidents.jsonl", "check", "check?x=1", "check/", ".git/config", "p/../k/X.json"])
     assert.equal(r(p), "pass", p);
-  for (const m of ["POST", "HEAD", "PUT"]) assert.equal(r("p/CALC1-T6B.json", m), "pass", m);
+  for (const m of ["POST", "HEAD", "PUT"]) assert.equal(r("p/CALC1_T6B.json", m), "pass", m);
   assert.equal(route("https://evil.example/app.js", "GET", scope), "pass");
 });
 test("problems: network-first", () => {
-  assert.equal(r("p/CALC1-T6B.json"), "problem");
-  assert.equal(r("p/CALC1-T6B.json?v=2"), "problem");
+  assert.equal(r("p/CALC1_T6B.json"), "problem");
+  assert.equal(r("p/CALC1_T6B.json?v=2"), "problem");
 });
 test("shell: cache-first", () => {
   for (const p of ["", "index.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs",
     "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css"])
     assert.equal(r(p), "shell", p);
-  for (const p of ["sw.js", "tests/x.js", "tools/bundle.py", "schema/examples/CALC1-X2P.key.json", "serve.py"]) assert.equal(r(p), "pass", p);
+  for (const p of ["sw.js", "tests/x.js", "tools/bundle.py", "schema/examples/CALC1_X2P.key.json", "serve.py"]) assert.equal(r(p), "pass", p);
 });
 test("offline.js never stores or reads k/", () => {
   const off = readFileSync(new URL("../offline.js", import.meta.url), "utf8");

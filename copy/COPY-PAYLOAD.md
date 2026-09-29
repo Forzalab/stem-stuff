@@ -13,7 +13,7 @@ The Copy button puts one JSON object on the clipboard. It replaces v1's plain "c
 
 ```json
 {
-  "v": 1, "code": "CALC1-T6B", "subject": "CALC1",
+  "v": 1, "code": "CALC1_T6B", "subject": "CALC1",
   "start": "2026-09-29T20:00:00.000Z", "copied": "2026-09-29T20:06:40.000Z",
   "final": {"a":"12","v":"correct"},
   "tries": [

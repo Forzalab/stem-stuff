@@ -17,7 +17,7 @@ test("copy example: history replays to final explanation", () =>
 test("copy: diff/replay round-trips", () => {
   const texts = ["", "abc", "abXc", "Xc", "Xc ok", "totally new", "totally new"];
   const hist = texts.map((text, k) => ({ t: 1000 * k, text }));
-  const p = build({ code: "PHYS-F3N", start: 0, explain: "totally new", history: hist }, 9000);
+  const p = build({ code: "PHYS_F3N", start: 0, explain: "totally new", history: hist }, 9000);
   ok(p);
   assert.deepEqual(replay(p).map(s => s.text), ["", "abc", "abXc", "Xc", "Xc ok", "totally new"]);
   assert.deepEqual(diff("abc", "abXc"), { at: 2, del: 0, ins: "X" });
@@ -26,7 +26,7 @@ test("copy: diff/replay round-trips", () => {
 test("copy: long history is thinned and capped, last snapshot kept", () => {
   let s = "", hist = [];
   for (let k = 0; k < 2000; k++) { s += `word${k} `; hist.push({ t: k * 500, text: s }); }
-  const p = build({ code: "CALC1-A9R", start: 0, explain: s,
+  const p = build({ code: "CALC1_A9R", start: 0, explain: s,
     tries: [{ t: 1000, a: "C text", c: "b", l: "C", v: "wrong" }], hints: [], history: hist }, 2e6);
   ok(p);
   assert.ok(p.hist.edits.length <= MAX_EDITS);
@@ -37,7 +37,7 @@ test("copy: long history is thinned and capped, last snapshot kept", () => {
 });
 
 test("copy: 'pending' verdict (tries made before server grading exists) is valid", () => {
-  const p = build({ code: "PHYS-F3N", start: 0, explain: "", history: [],
+  const p = build({ code: "PHYS_F3N", start: 0, explain: "", history: [],
     tries: [{ t: 4000, a: "3.2", v: "pending" }] }, 9000);
   ok(p);
   assert.deepEqual(p.final, { a: "3.2", v: "pending" });

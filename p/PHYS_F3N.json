@@ -1,6 +1,6 @@
 {
   "$schema": "../schema/problem.schema.json",
-  "code": "PHYS-F3N",
+  "code": "PHYS_F3N",
   "type": "num",
   "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))",
   "tol": 0.01,
