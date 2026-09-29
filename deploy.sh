@@ -13,7 +13,12 @@ REPO="${STEM_REPO:-git@github.com:Forzalab/stem-stuff.git}"
 PROBLEMS="${STEM_PROBLEMS:-}"
 
 die() { echo "error: $*" >&2; exit 1; }
-ask() { local a; read -r -p "$1" a </dev/tty 2>/dev/null || a=""; echo "$a"; }
+# prompt on the terminal itself (stdout is captured by $(...); read -p writes to stderr): no tty -> default answer
+ask() {
+  local a=""
+  if { : >/dev/tty; } 2>/dev/null; then printf '%s' "$1" >/dev/tty; read -r a </dev/tty || a=""; fi
+  echo "$a"
+}
 
 for c in git python3; do command -v "$c" >/dev/null || die "$c not installed"; done
 # the server grades with sympy
