@@ -207,8 +207,9 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
 /* free padding 28px: last line (28.8px) + 28px >= button (48) + inset (6), so only the LAST line can reach the button */
 .xb-field textarea.xb-free { padding-bottom: 1.75rem; }
-.xb-copy { position: absolute; right: 6px; bottom: 6px; }
-#copy.done { color: var(--ok); border-color: var(--ok); }
+.xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
+.xb-cut { right: calc(6px + 48px + 6px + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
+#copy.done, #cut.done { color: var(--ok); border-color: var(--ok); }
 
 @media (max-width: 34rem) {
   :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }

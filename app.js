@@ -333,8 +333,9 @@ function mountBox() {
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
   ta.id = "scratch";
   field.prepend(ta);
-  S.box = ExplainBox.mount(ta);
-  S.corner = ExplainBox.reserveCorner(ta, $("#copy"));
+  /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
+  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0 });
+  S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
@@ -346,17 +347,21 @@ async function copyText(text) {
   t.remove();
   return ok;
 }
-$("#copy").addEventListener("click", async () => {
+/* Copy, and Cut all (= Copy, then empty the box; only if the copy worked). Cut keeps the edit history and records the clear. */
+async function copyPad(b, icon, clear) {
   if (!S) return;
-  S.box.snapshot();
-  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: S.box.el.value, history: S.box.getHistory() }));
+  const box = S.box, text = box.el.value;
+  box.snapshot();
+  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: text, history: box.getHistory() }));
   const ok = await copyText(payload);
-  const b = $("#copy");
+  if (ok && clear && box.el.value === text) { box.el.value = ""; box.el.dispatchEvent(new Event("input")); box.snapshot(); }
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Copy failed.");
-  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
-});
+  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Copy failed.");
+  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", icon); }, 1600);
+}
+$("#copy").addEventListener("click", () => copyPad($("#copy"), "#i-copy", false));
+$("#cut").addEventListener("click", () => copyPad($("#cut"), "#i-cut", true));
 
 /* ================= freeze layer (design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
@@ -404,6 +409,7 @@ function layoutFreeze() {
     more.hidden = !clipped && !freeze.classList.contains("open");
     root.style.setProperty("--freeze-h", freeze.classList.contains("open") ? "0px" : freeze.offsetHeight + "px");
     stuck();
+    if (S.box) S.box.limit();                                                     // scratchpad cap follows the visible viewport and dock
     if (kb && !kbWas && !inFreeze) showQuestion();
   });
 }
