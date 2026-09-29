@@ -55,7 +55,14 @@ export function titleOf(p) {
     if (!line.trim()) { if (para.length) break; continue; }
     para.push(line.trim());
   }
-  return clip(plain(para.join(" ")));
+  return sentences(plain(para.join(" ")));
+}
+/* too long: end at the last full sentence that fits, else cut at a word */
+function sentences(s, n = MAX) {
+  if (s.length <= n) return s;
+  let end = -1;
+  for (const m of s.matchAll(/[.?!](?=\s)/g)) { if (m.index >= n) break; end = m.index; }
+  return end >= n / 3 ? s.slice(0, end + 1) : clip(s, n);
 }
 
 /* ---------- the nav ---------- */
@@ -125,8 +132,8 @@ function init() {
     if (e.key === "Escape") { e.preventDefault(); close(true); }
     else if (to !== undefined && r.length) { e.preventDefault(); r[Math.max(0, Math.min(r.length - 1, to))].focus(); }
   });
-  nav.addEventListener("focusout", e => { if (e.relatedTarget && !nav.contains(e.relatedTarget)) close(false); });
-  document.addEventListener("pointerdown", e => { if (!panel.hidden && !nav.contains(e.target)) close(false); });
+  /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
+     pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
   /* [ and ]: previous / next. Not while typing, not over the file picker dialog, not with Ctrl/Cmd (AltGr layouts still work) */
   document.addEventListener("keydown", e => {
     if ((e.key !== "[" && e.key !== "]") || nav.hidden || e.defaultPrevented) return;

@@ -2,7 +2,7 @@
 
 Tony: "prev next question, with NO TEXT question number table and brief text title of that question. [[icon] "Questions list"] for the button to it. be at top bar."
 
-Files: `nav.js` (all behaviour), `nav.css` (all styles), `index.html` (3 icons, the `<nav>` markup, 2 tags), `app.js` (one line: an event after a problem loads). Test: `tests/render.pw.mjs` (step "nav"), `tests/nav.test.mjs` (titles).
+Files: `nav.js` (all behaviour), `nav.css` (all styles), `index.html` (3 icons, the `<nav>` + list markup, 2 tags), `app.js` (one line: an event after a problem loads). Test: `tests/render.pw.mjs` (step "nav"), `tests/nav.test.mjs` (titles).
 
 ## What it is
 
@@ -15,6 +15,8 @@ Three buttons in the top bar, all from the one `.btn` system (48px, 2px border, 
 | Next | chevron right, no text | the question after this one |
 
 The list: one row per question, in file order. A row is a bare number (`1`, `2`, ...; no "Question" word) and a short title. The current question's row is marked. Clicking a row opens that question and closes the list.
+
+The list opens **in the flow**, under the top bar: it pushes the problem down and covers nothing. A first build dropped it over the page (absolute, z-index 30, shadow). Impeccable's live scan flagged every line of problem text under it (`text-occlusion`), and its inline ignore would have switched that rule off for the whole page, figures included. In the flow is also simpler: no stacking against the freeze layer or the dock, and no height math against the dock.
 
 Nothing else: no counter ("3 / 12"), no heading on the list, no close button. Refactoring UI, "Labels are a last resort" (p. 41) and "Don't design too much" (p. 13).
 
@@ -35,7 +37,9 @@ When the bank is loaded but the current problem is not in it (a server code type
 ## Titles
 
 1. `title` on the problem (optional, plain text, 60 characters or fewer, never the answer; SCHEMA.md).
-2. Fallback: the first text block's first paragraph, with TeX turned into plain text (`\text{kg}` to `kg`, `30^\circ` to `30°`, `\mu` to `μ`, `\dfrac{a}{b}` to `a/b`) and markdown marks removed. It stops at a table. Cut at a word boundary to 60 characters, with "…".
+2. Fallback: the first text block's first paragraph, with TeX turned into plain text (`\text{kg}` to `kg`, `30^\circ` to `30°`, `\mu` to `μ`, `\dfrac{a}{b}` to `a/b`, `x^2` to `x²`) and markdown marks removed. It stops at a table or a display-math line. Over 60 characters: end at the last full sentence that fits, else cut at a word with "…".
+
+   From today's bank: "Let f(x)=(x³-8)/(x-2). A calculator gives:", "Solve for x: x+2=11", "A 4.0 kg block slides down a 30° ramp with μk = 0.20.", "A 2.0 kg block rests on a frictionless 25° incline, held…".
 
 Body text never holds the answer (SCHEMA.md rule), so the fallback can't leak it.
 
@@ -52,7 +56,7 @@ File my-problems.json in use.
 
 The entry box and the nav share the row inside the 52rem column: the code box shrinks, and the nav keeps its natural width at the right. The file status line stays above, the entry message below. Implementation: while the nav is shown (`html.qnav-on`) and the dock is not at the bottom, `.top` is a 2-column grid and `.dock` is `display: contents`, so the status, the entry form and the message are grid items. Without a bank, nothing changes.
 
-The list opens under the button row, right-aligned with the column, 26rem wide.
+The list opens as a full-width row under the entry row (the grid's 4th row), a `--sheet` card like the problem's.
 
 ### 390x844 and touch (dock at the bottom): the top bar
 
@@ -62,11 +66,11 @@ The list opens under the button row, right-aligned with the column, 26rem wide.
 [⇧][ CALC1_QB6                 → ]                   <- entry dock, fixed at the bottom
 ```
 
-The nav takes the empty top bar. It doesn't join the bottom dock: at 390px, three more buttons would leave the code box too narrow for a code, and Tony asked for the top bar. The list opens as a full-width panel under the bar. Its height is capped so it ends above the bottom dock (`--dock-h`, already set by app.js).
+The nav takes the empty top bar. It doesn't join the bottom dock: at 390px, three more buttons would leave the code box too narrow for a code, and Tony asked for the top bar. The list opens as a full-width card under the bar. A long list scrolls inside the card (max `min(32rem, 60svh)`), so the page never becomes one long list.
 
 ### The freeze layer
 
-The top bar is in normal flow, above `#sentinel`. It scrolls away, and then the problem layer sticks at the top, as before. Nothing about the freeze changes: `--freeze-max` is computed from the viewport, not from what is above the layer. Loading a question already scrolls to the top (`render()`), so after Next the bar is on screen again. The list panel is `position: absolute` in the header (z-index 30, above the freeze's 10 and the dock's 20), so it scrolls with the page rather than floating over the problem.
+The top bar and the list are in normal flow, above `#sentinel`. They scroll away, and then the problem layer sticks at the top, as before. Nothing about the freeze changes: `--freeze-max` is computed from the viewport, not from what is above the layer, and the sentinel moves down with the header. Loading a question already scrolls to the top (`render()`), so after Next the bar is on screen again.
 
 ## States
 
@@ -96,15 +100,15 @@ Solved marks in the list: not built (out of scope). Grading state is private to 
 | ArrowUp / ArrowDown, Home / End | in the list | move between rows |
 | Enter | on a row | open that question |
 | Escape | in the list | close it, focus back on the list button |
-| Tab out of the list | | closes it |
 
 Not Alt+Left/Right: that is the browser's Back/Forward on Windows and Linux. `[` and `]` are free on the page (MC keys are A–E and arrows), need no modifier, and AltGr layouts still produce `[` / `]`. Ctrl/Cmd combos are ignored. The buttons carry `aria-keyshortcuts`, and their tooltips say the key.
 
 ## Accessibility
 
-- `<nav aria-label="Questions">`. The list is a disclosure (APG "disclosure navigation"), not a modal dialog: the button has `aria-expanded` and `aria-controls`, and the panel is an `<ol>` of links. No focus trap, and the rest of the page stays usable. A modal would make the list button inert, so the list would need a close button, which is more UI.
+- `<nav aria-label="Questions">` holds the three buttons. The list is a disclosure (APG "disclosure navigation"), not a modal dialog: the button has `aria-expanded` and `aria-controls`, and the panel (right after the `<nav>`, so the desktop grid can give it a full row) is an `<ol>` of links. No focus trap, and the rest of the page stays usable. A modal would make the list button inert, so the list would need a close button, which is more UI.
+- It does **not** close on an outside click or on focus leaving it. The list is in the flow, so closing on pointerdown would move the page under the pointer, and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev or Next.
 - Rows are links (`<a href="#CODE">`): they navigate. Their accessible name is "3. Block on a ramp with friction". Prev/Next set `location.hash` the same way, so the browser's Back and Forward walk through the questions the student visited.
-- Opening the list moves focus to the current row (or the first), scrolled into view. Closing with Escape returns focus to the button. Clicking or tapping outside closes it.
+- Opening the list moves focus to the current row (or the first), scrolled into view inside the card. Closing with Escape returns focus to the button.
 - After Prev / Next, the live region (`#sr`) says "3 of 12. Block on a ramp with friction."
 - Icon-only buttons have `aria-label` and `title`. Targets are 48px. Rows are at least 48px tall.
 
@@ -113,5 +117,13 @@ Not Alt+Left/Right: that is the browser's Back/Forward on Windows and Linux. `[`
 - `app.js`, `load()`: one line after `render()`:
   `dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));`
   nav.js listens and re-reads `stemOffline.codes()` each time (an upload always ends in a `load()`), so no other hook is needed. Navigation goes through `location.hash`, which app.js already follows (`hashchange` → `load`).
-- `index.html`: three `<symbol>`s (`i-list`, `i-prev`, `i-next`), the `<nav id="qnav" hidden>` block after `#dock` in `header.top`, `<link rel="stylesheet" href="nav.css">` after app.css, and `<script type="module" src="nav.js">` after app.js.
+- `index.html`: three `<symbol>`s (`i-list`, `i-prev`, `i-next`), the `<nav id="qnav" hidden>` block and `<div id="qlist" hidden>` after `#dock` in `header.top`, `<link rel="stylesheet" href="nav.css">` after app.css, and `<script type="module" src="nav.js">` after app.js.
 - `sw.js`: nav.js and nav.css in the shell list.
+
+## Tested
+
+- `tests/render.pw.mjs`, step "nav", Chromium at 390x844, 1024x1366 (touch) and 1920x1080: hidden for a server problem; upload a bank; placement (beside the entry box on desktop, top bar on touch); 48px buttons, no text on the arrows; list rows are 1..n with titles (one authored), current marked and focused; the list covers nothing; click row 3; Escape returns focus; Next, Prev; `]` and `[`; `[` typed in the scratchpad stays text; the last question disables Next; ArrowDown, Home, Enter from the list button; a server code after the upload leaves no row marked and both arrows off.
+- `tests/nav.test.mjs`: titles for every problem in `problems.json` are plain and 60 characters or fewer; authored titles win; TeX to text.
+- Impeccable, 0 findings: static (`index.html app.css nav.css`), and live at 1920x1080 and 390x844 for a server problem, and for an uploaded bank with the list closed and open.
+- Screenshots: `shots/nav-closed-390.png`, `shots/nav-open-390.png`, `shots/nav-next-390.png`, and the same at 1920.
+- **Not tested:** WebKit and Firefox (not installed here). Nothing here is browser-specific beyond `display: contents` on the desktop dock, which both support.

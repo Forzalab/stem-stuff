@@ -5,7 +5,7 @@
   width: auto; padding: 0 var(--s4) 0 var(--s3); display: inline-flex; align-items: center; gap: var(--s2);
   font-size: 1rem; font-weight: 700; line-height: 1; white-space: nowrap;
 }
-.qnav { position: relative; display: flex; gap: var(--s2); }
+.qnav { display: flex; gap: var(--s2); }
 .qnav .btn:disabled { opacity: 0.45; cursor: default; }
 .qnav .btn:disabled:hover { background: var(--sheet); border-color: var(--edge); }
 .qnav .btn:disabled:active { transform: none; }
@@ -14,8 +14,10 @@
 /* phones and touch (entry dock at the bottom): the nav is the top bar. List left, arrows right. */
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .dock-bottom #qprev { margin-left: auto; }
+.dock-bottom .qlist { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; }
 
-/* desktop: entry box and nav share one row. .dock's children become grid items (status / entry + nav / message). */
+/* desktop: entry box and nav share one row; the list is a full-width row under them.
+   .dock's children become grid items (status / entry + nav / message / list). */
 .qnav-on:not(.dock-bottom) .top {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2);
   max-width: 52rem; margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
@@ -23,17 +25,15 @@
 .qnav-on:not(.dock-bottom) .dock { display: contents; }
 .qnav-on:not(.dock-bottom) .file-status { grid-row: 1; grid-column: 1 / -1; }
 .qnav-on:not(.dock-bottom) .entry { grid-row: 2; grid-column: 1; }
-.qnav-on:not(.dock-bottom) .entry-msg { grid-row: 3; grid-column: 1 / -1; }
 .qnav-on:not(.dock-bottom) .qnav { grid-row: 2; grid-column: 2; }
+.qnav-on:not(.dock-bottom) .entry-msg { grid-row: 3; grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom) .qlist { grid-row: 4; grid-column: 1 / -1; margin-top: var(--s3); }
 
-/* the list: drops from the button row, scrolls with the page, ends above the bottom dock */
+/* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
 .qlist {
-  position: absolute; z-index: 30; top: calc(100% + var(--s2)); right: 0; width: 26rem;
-  max-height: min(32rem, calc(100svh - 6rem - var(--dock-h, 0px)));
-  overflow-y: auto; overscroll-behavior: contain;
-  padding: var(--s2); background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-4);
+  position: relative; max-height: min(32rem, 60svh); overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s2); background: var(--sheet); border-radius: 10px;
 }
-.dock-bottom .qlist { left: var(--gut); right: var(--gut); width: auto; }
 .qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .qlist a {
   display: flex; align-items: baseline; gap: var(--s3); min-height: 48px; padding: var(--s3);

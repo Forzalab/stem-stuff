@@ -60,7 +60,8 @@
     </form>
     <p class="entry-msg" id="entryMsg" role="status" aria-live="polite"></p>
   </div>
-  <!-- question nav (design/NAV.md): only for an uploaded problems.json. Top bar on phones, beside the entry box on desktop. -->
+  <!-- question nav (design/NAV.md): only for an uploaded problems.json. Top bar on phones, beside the entry box on desktop.
+       The list opens in the flow under it (it pushes the problem down; nothing is covered). -->
   <nav class="qnav" id="qnav" aria-label="Questions" hidden>
     <button type="button" class="btn btn-label" id="qlistBtn" aria-expanded="false" aria-controls="qlist">
       <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span>Questions list</span>
@@ -71,8 +72,8 @@
     <button type="button" class="btn" id="qnext" aria-label="Next question" title="Next question (])" aria-keyshortcuts="]">
       <svg class="ico" aria-hidden="true"><use href="#i-next"/></svg>
     </button>
-    <div class="qlist" id="qlist" hidden><ol></ol></div>
   </nav>
+  <div class="qlist" id="qlist" hidden><ol></ol></div>
 </header>
 
 <main id="main">

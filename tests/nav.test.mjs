@@ -17,7 +17,7 @@ test("fallback reads like the problem", () => {
   const by = c => titleOf({ ...bank.problems.find(p => p.code === c), title: undefined });
   assert.equal(by("CALC1_T6B"), "Let f(x)=(x³-8)/(x-2). A calculator gives:");
   assert.equal(by("CALC1_X2P"), "Solve for x: x+2=11");
-  assert.match(by("PHYS_F3N"), /^A 4\.0 kg block slides down a 30° ramp with μk = 0\.20\./);
+  assert.equal(by("PHYS_F3N"), "A 4.0 kg block slides down a 30° ramp with μk = 0.20.");   // ends at a full sentence
 });
 test("authored title wins, trimmed and clipped", () => {
   assert.equal(titleOf({ title: "  Spring on an incline ", body: [{ type: "text", md: "x" }] }), "Spring on an incline");
