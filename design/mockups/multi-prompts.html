@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multi-part prompts mockup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<style>
+/* tokens and base copied from app.css */
+:root {
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
+  --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
+  --focus: #8fb0ff; --ok: #5fd394; --bad: #ff7a7a;
+  --c1: #7ab8ff; --c1-hi: #a3cdff;
+  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
+  --gut: 1.25rem;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font: 400 1.125rem/1.55 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif; }
+.ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
+main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); }
+.btn {
+  flex: none; position: relative; width: 48px; height: 48px; margin: 0; padding: 0; display: inline-grid; place-items: center;
+  background: var(--sheet); color: var(--ink); border: 2px solid var(--edge); border-radius: 8px; font: inherit;
+}
+.btn-go { background: var(--c1); border-color: var(--c1); color: var(--field); }
+.btn-go:disabled { opacity: 0.45; }
+.p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
+.pcode { margin: 0 0 var(--s2); font-size: 0.95rem; line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.md p { margin: 0 0 var(--s3); max-width: 65ch; }
+.md > :last-child { margin-bottom: 0; }
+.md .katex { font-size: 1.08em; }
+.q { margin-top: var(--s3); }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
+.ff { display: flex; align-items: center; height: 52px; padding-left: var(--s3); background: var(--field); border: 2px solid var(--edge); border-radius: 8px; }
+.ff:focus-within, .ff.focus { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+.ff input { flex: 1 1 auto; min-width: 0; height: 3rem; margin: 0; padding: 0 var(--s2) 0 0; font-family: var(--mono); font-size: 1.125rem; line-height: 1; color: var(--ink); background: transparent; border: 0; }
+.ff input:focus { outline: none; }
+.boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
+@media (max-width: 34rem) {
+  :root { --gut: 1rem; }
+  main { padding-top: var(--s4); }
+  .p { padding: var(--s3) var(--s4); }
+}
+
+/* NEW: multi with prompts. One row per part: marker, its own text, its own box. One arrow at the end. */
+.mparts { display: grid; gap: var(--s4); }
+.mparts .part {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); grid-template-areas: "mk pr" ". bx";
+  column-gap: var(--s2); row-gap: var(--s2); align-items: start;
+}
+.mparts .part.nopr { grid-template-areas: "mk bx" "mk bx"; }
+.mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
+.mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
+.mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
+.mparts .ff { grid-area: bx; }
+.mgo { display: flex; justify-content: flex-end; }
+@media (min-width: 40rem) {
+  .mparts .part { grid-template-columns: 2rem minmax(0, 1fr) 14rem; grid-template-areas: "mk pr bx"; column-gap: var(--s3); }
+  .mparts .part.nopr { grid-template-areas: "mk . bx"; }
+  .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
+  .mgo { padding-left: 0; }
+}
+
+/* mockup page only: which card shows */
+#three { display: none; }
+body:has(#three:target) #two { display: none; }
+#three:target { display: block; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol></svg>
+<main>
+  <section id="two" aria-label="Two-part example">
+    <div class="boxed">
+      <div class="p">
+        <p class="pcode">CSCI26_M5V</p>
+        <div class="md"><p data-tex>$|A| = 10$, $|B| = 7$, $|A \cap B| = 3$.</p></div>
+      </div>
+      <div class="q">
+        <p class="how" id="how2">Two whole numbers, in the order asked.</p>
+        <div class="mparts" role="group" aria-label="Answers" aria-describedby="how2">
+          <div class="part">
+            <span class="mk" id="m2a" aria-hidden="true">a)</span>
+            <div class="pr md" id="p2a"><p data-tex>How many are in $A \cup B$?</p></div>
+            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p2a" autocomplete="off"></div>
+          </div>
+          <div class="part">
+            <span class="mk" id="m2b" aria-hidden="true">b)</span>
+            <div class="pr md" id="p2b"><p data-tex>How many are in exactly one set?</p></div>
+            <div class="ff focus"><input class="ans" type="text" value="11" aria-labelledby="p2b" autocomplete="off"></div>
+          </div>
+          <div class="mgo"><button type="button" class="btn btn-go" aria-label="Submit answers"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="three" aria-label="Three-part example">
+    <div class="boxed">
+      <div class="p">
+        <p class="pcode">CSCI26_M5V</p>
+        <div class="md"><p data-tex>$|A| = 10$, $|B| = 7$, $|A \cap B| = 3$, and the universe has $20$ elements.</p></div>
+      </div>
+      <div class="q">
+        <p class="how" id="how3">Three whole numbers, in the order asked.</p>
+        <div class="mparts" role="group" aria-label="Answers" aria-describedby="how3">
+          <div class="part">
+            <span class="mk" aria-hidden="true">a)</span>
+            <div class="pr md" id="p3a"><p data-tex>How many are in $A \cup B$?</p></div>
+            <div class="ff"><input class="ans" type="text" value="14" aria-labelledby="p3a" autocomplete="off"></div>
+          </div>
+          <div class="part">
+            <span class="mk" aria-hidden="true">b)</span>
+            <div class="pr md" id="p3b"><p data-tex>How many are in exactly one set?</p></div>
+            <div class="ff"><input class="ans" type="text" value="11" aria-labelledby="p3b" autocomplete="off"></div>
+          </div>
+          <div class="part">
+            <span class="mk" aria-hidden="true">c)</span>
+            <div class="pr md" id="p3c"><p data-tex>How many are in neither $A$ nor $B$?</p></div>
+            <div class="ff focus"><input class="ans" type="text" value="" aria-labelledby="p3c" autocomplete="off"></div>
+          </div>
+          <div class="mgo"><button type="button" class="btn btn-go" aria-label="Submit answers" disabled><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+document.querySelectorAll("[data-tex]").forEach(el => {
+  el.innerHTML = el.textContent.replace(/\$([^$]+)\$/g, (_, t) => katex.renderToString(t, { throwOnError: false, output: "htmlAndMathml" }));
+});
+</script>
+</body>
+</html>
