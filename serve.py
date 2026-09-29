@@ -5,7 +5,7 @@
   Edit or replace the file: the next request re-reads it (mtime check), no restart.
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
 - Math: sympy (pip install sympy), behind a token allowlist.
-- POST /check          -> grades {code, answer | choice | parts}; tries per problem per browser (cookie): 1 for a 2-choice mc, else 2.
+- POST /check          -> grades {code, answer | choice | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
 - The bank file itself, keys, logs and server files are never served.
 """
 import hashlib
@@ -233,21 +233,28 @@ def unit_hit(u, text, sig):
     return hit
 
 
-_tries = {}  # (sid, code) -> {"wrong": [signatures], "done": bool}. In memory: a restart resets tries.
+_tries = {}  # (sid, code) -> {"wrong": [signatures], "done": bool}; a multi keeps one per part: (sid, code, i). In memory: a restart resets tries.
 _tries_lock = threading.Lock()
 
 
 def grade(p, sid, body):
-    """body: {choice} (mc) | {answer} (num/expr/text) | {parts: [...]} (multi).
-    Reply {verdict, triesLeft, error?, hint?, repeat?}. The answer is never in the reply."""
+    """body: {choice} (mc) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
+    Reply {verdict, triesLeft, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply."""
+    multi = p["type"] == "multi"
+    idx = body.get("part")
+    if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
+        return {"verdict": "invalid", "triesLeft": max_tries(p)}    # the old whole-set body {parts: [...]} lands here too
     with _tries_lock:
-        st = _tries.setdefault((sid, p["code"]), {"wrong": [], "done": False})
+        st = _tries.setdefault((sid, p["code"], idx) if multi else (sid, p["code"]), {"wrong": [], "done": False})
 
         def left():
             return max_tries(p) - len(st["wrong"])
 
+        def reply(o):
+            return {**o, "part": idx} if multi else o
+
         if st["done"] or left() <= 0:
-            return {"verdict": "locked", "triesLeft": 0}
+            return reply({"verdict": "locked", "triesLeft": 0})
         hit = None
         if p["type"] == "mc":
             sig = body.get("choice")
@@ -257,24 +264,20 @@ def grade(p, sid, body):
             if not correct:
                 hit = next((w for w in p.get("wrong", []) if w.get("choice") == sig), None)
         else:
-            units = p["parts"] if p["type"] == "multi" else [p]
-            texts = body.get("parts") if p["type"] == "multi" else [body.get("answer", "")]
-            if not isinstance(texts, list) or len(texts) != len(units):
-                return {"verdict": "invalid", "triesLeft": left()}
-            texts = [str(t)[:200] for t in texts]
+            u = p["parts"][idx] if multi else p
+            text = str(body.get("answer", ""))[:200]
             try:
-                sigs = [signature(u, t) for u, t in zip(units, texts)]
-                oks = [unit_correct(u, g) for u, g in zip(units, sigs)]
+                sig = signature(u, text)
+                correct = unit_correct(u, sig)
             except UNREADABLE:
-                return {"verdict": "invalid", "triesLeft": left()}
-            correct = all(oks)
+                return reply({"verdict": "invalid", "triesLeft": left()})
             if not correct:
-                hit = next((h for u, t, g, ok in zip(units, texts, sigs, oks) if not ok for h in [unit_hit(u, t, g)] if h), None)
-            sig = tuple(sigs)
+                hit = unit_hit(u, text, sig)
         if correct:
             st["done"] = True
-            return {"verdict": "correct", "triesLeft": left()}
-        repeat = any(same(sig, x, max(u.get("tol", 1e-6) for u in p.get("parts", [p]))) for x in st["wrong"])
+            return reply({"verdict": "correct", "triesLeft": left()})
+        tol = (p["parts"][idx] if multi else p).get("tol", 1e-6)
+        repeat = any(same(sig, x, tol) for x in st["wrong"])
         if not repeat:
             st["wrong"].append(sig)
         out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
@@ -282,7 +285,7 @@ def grade(p, sid, body):
             out["error"] = hit["error"]
         if repeat:
             out["repeat"] = True
-        return out
+        return reply(out)
 
 
 # ---------------- HTTP ----------------
