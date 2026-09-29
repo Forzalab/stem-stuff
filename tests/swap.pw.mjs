@@ -170,7 +170,7 @@ for (const [W, H] of SIZES) {
   });
 
   /* ================= Swap: scratchpad grows upward, then scrolls ================= */
-  await step(`${T} swap: scratchpad is anchored above the keyboard, grows upward to the peek, then scrolls with the caret visible`, async () => {
+  await step(`${T} swap: scratchpad is anchored above the keyboard, fills up to a small gap under the peek (Tony, polish d), then scrolls with the caret visible`, async () => {
     await open("CSCI26_Q8C");                                          // a short question: the peek is small, so there is room to grow
     await page.locator("#scratch").focus(); await kbUp();
     const geo = () => page.evaluate(() => {
@@ -182,18 +182,17 @@ for (const [W, H] of SIZES) {
     assert.ok(Math.abs(g0.vvb - g0.bottom) <= 16, `not anchored to the bottom: bottom ${g0.bottom} vs visible bottom ${g0.vvb}`);
     assert.ok(g0.h >= 3 * g0.lh + 24, `under 3 lines: ${g0.h}`);
     const ta = page.locator("#scratch"); await ta.focus();
-    const tops = [g0.top]; let capped = -1, last = g0;
+    const tops = [g0.top]; let last = g0;
     for (let i = 1; i <= 24; i++) {
       await page.keyboard.type(i === 1 ? `line ${i}` : `\nline ${i}`);
       const g = await geo();
       assert.ok(Math.abs(g.bottom - g0.bottom) <= 1, `bottom moved at line ${i}: ${g.bottom} vs ${g0.bottom}`);
       assert.ok(g.top >= g.peekBottom, `pad overlaps the peek at line ${i}: pad top ${g.top}, peek bottom ${g.peekBottom}`);
       assert.ok(g.top <= tops.at(-1) + 1, `pad moved DOWN at line ${i}`);
-      if (capped < 0 && Math.abs(g.top - tops.at(-1)) < 0.5 && i > 4 && g.sh > g.ch) capped = i;
       tops.push(g.top); last = g;
     }
-    assert.ok(tops[6] < tops[0] - 20, `did not grow upward: ${tops[0]} -> ${tops[6]}`);
-    assert.ok(capped > 0, "never stopped growing");
+    assert.ok(g0.top - g0.peekBottom < 14, `empty box stops ${g0.top - g0.peekBottom}px short of the peek`);
+    assert.ok(tops.every(t => Math.abs(t - g0.top) < 1), "box moved while typing");
     assert.ok(last.sh > last.ch, "not scrollable after 24 lines");
     assert.ok(last.top - last.peekBottom < 14, `stopped ${last.top - last.peekBottom}px short of the peek`);
     // caret: typing at the end keeps the last line in view
@@ -415,6 +414,7 @@ for (const [W, H] of SIZES) {
     await open("CALC1_T6B");
     const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
     for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
+    if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_N6B", null, { timeout: 8000 });

@@ -129,7 +129,7 @@ function normalize(raw) {
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
 codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); });
-function putCode(code) { codeIn.value = code; syncCode(); }
+function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); }   // a code landing in the box: the bar shows
 syncCode();
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
@@ -200,6 +200,7 @@ async function load(code) {
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
+  if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   const rec = doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
@@ -631,14 +632,50 @@ function mountBox() {
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
-  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbLabel");
+  ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbName");
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
-  S.box = ExplainBox.mount(ta, { bottomInset: () => root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0,
+  S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
     cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
   mounted = { box: S.box, corner: S.corner };
+  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Cut / Copy
+     and of where the revealed code bar lies */
+  ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
+  autosave(ta);
 }
+/* ---------- scratchpad autosave (design/shots/autosave-*.png): draft per bank + code in localStorage.
+   3 s after the last edit: "saving" (a light band sweeps through it), then "saved", gone after 2 s. Reduced motion: no sweep. */
+const SAVE_IDLE = 3000, SAVE_SHOW = 700, SAVED_SHOW = 2000;
+const padKey = code => "stem-pad:" + ((window.stemOffline && window.stemOffline.fileName && window.stemOffline.fileName(code)) || "server") + ":" + code;
+function padGet(code) { try { return localStorage.getItem(padKey(code)) || ""; } catch { return ""; } }
+function padPut(code, v) { try { if (v) localStorage.setItem(padKey(code), v); else localStorage.removeItem(padKey(code)); return true; } catch { return false; } }
+let saveTimers = [], savePending = null;
+function autosave(ta) {
+  const st = $("#xbSave"), code = S.code;
+  for (const t of saveTimers) clearTimeout(t);
+  saveTimers = []; st.className = "xb-save"; st.textContent = "";
+  const draft = padGet(code);
+  if (draft) { ta.value = draft; ta.dispatchEvent(new Event("xb-refit")); ta.dispatchEvent(new Event("xb-cap")); }
+  const flush = () => { if (savePending) { padPut(savePending.code, savePending.ta.value); savePending = null; } };
+  flush();
+  ta.addEventListener("input", () => {
+    for (const t of saveTimers) clearTimeout(t);
+    st.className = "xb-save"; st.textContent = "";
+    savePending = { code, ta };
+    saveTimers = [setTimeout(() => {
+      flush();
+      st.className = "xb-save saving"; st.textContent = "saving";
+      saveTimers = [setTimeout(() => {
+        st.className = "xb-save"; st.textContent = "saved";
+        saveTimers = [setTimeout(() => { st.textContent = ""; }, SAVED_SHOW)];
+      }, SAVE_SHOW)];
+    }, SAVE_IDLE)];
+  });
+  autosave.flush = flush;
+}
+addEventListener("pagehide", () => autosave.flush && autosave.flush());
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && autosave.flush) autosave.flush(); });
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
   /* plain-http LAN (serve.py): no async clipboard, use a hidden textarea */
@@ -675,6 +712,33 @@ const vv = window.visualViewport;
 function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
 /* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
 const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
+/* the room the bottom bar takes from the page: its full height, or the strip's while it rests as a strip (revealed, it lies over the page) */
+const barTab = $("#barTab");
+function dockRoom(evenAway) {
+  if (!root.classList.contains("dock-bottom") || (!evenAway && root.classList.contains("dock-away"))) return 0;
+  if (!root.classList.contains("bar-mini")) return dock.offsetHeight;
+  if (!root.classList.contains("bar-open")) stripRoom = dock.offsetHeight || stripRoom;    // measured as a strip (incl. the safe-area inset); kept while revealed
+  return stripRoom;
+}
+let stripRoom = 24;
+function barOpen(open) {
+  root.classList.toggle("bar-open", open);
+  if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
+  barTab.setAttribute("aria-expanded", open);
+  barTab.setAttribute("aria-label", open ? "Hide the code bar" : "Show the code bar");
+}
+/* tap toggles; a swipe (20px+) up opens, down closes. The tab never takes focus: the scratchpad keeps its caret and keyboard */
+function swipeTab(el, act) {
+  let y0 = null, used = false;
+  el.addEventListener("pointerdown", e => { e.preventDefault(); y0 = e.clientY; used = false; try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ } });
+  el.addEventListener("pointermove", e => { if (y0 === null || used) return; const dy = e.clientY - y0; if (Math.abs(dy) > 20) { used = true; act(dy < 0 ? "up" : "down"); } });
+  el.addEventListener("pointerup", () => { y0 = null; });
+  el.addEventListener("pointercancel", () => { y0 = null; });
+  el.addEventListener("click", () => { if (!used) act("tap"); used = false; });
+}
+new MutationObserver(() => { if ($("#entryMsg").textContent || !retryLoad.hidden) barOpen(true); }).observe(dock, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });   // a message or Retry: shown
+dock.addEventListener("focusin", e => { if (e.target !== barTab) barOpen(true); });   // keyboard / Tab into the code box: shown
+swipeTab(barTab, d => barOpen(d === "tap" ? !root.classList.contains("bar-open") : d === "up"));
 function layoutDock() {
   const bottom = dockMQ.matches, h = vv ? vv.height : innerHeight;
   if (innerWidth !== lastW) { lastW = innerWidth; tallest = 0; }        // orientation / window change
@@ -690,11 +754,13 @@ function layoutDock() {
   const swapNext = !!S && !freeze.hidden && shrunk && ((inMain && (editing() || swapOn)) || (swapOn && grace));
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
   root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext);
+  root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
   if (swapNext !== swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
-  root.style.setProperty("--dock-h", bottom ? dock.offsetHeight + "px" : "0px");
+  root.classList.toggle("bar-mini", bottom && !!S && !freeze.hidden);
+  root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
 if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
 new ResizeObserver(() => layoutDock()).observe(dock);
@@ -703,7 +769,7 @@ function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
   if (swapOn) { layoutSwap(); return; }                                         // one pane above the keyboard: none of the strip logic applies
-  const dockH = root.classList.contains("dock-bottom") && !root.classList.contains("dock-away") ? dock.offsetHeight : 0;
+  const dockH = dockRoom();
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
   const inFreeze = freeze.contains(document.activeElement);
@@ -747,14 +813,15 @@ addEventListener("scroll", () => stuck(), { passive: true });
 document.addEventListener("focusin", onView);
 document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
 freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
-more.addEventListener("click", () => {
+swipeTab(more, d => { const open = freeze.classList.contains("open"); if (d === "tap" || (d === "down") !== open) toggleMore(); });
+function toggleMore() {
   const open = !freeze.classList.contains("open");
   freeze.classList.toggle("open", open);
   more.setAttribute("aria-expanded", open);
   more.setAttribute("aria-label", open ? "Freeze the problem again" : "Show the whole problem");
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
-});
+}
 /* ================= Swap (design/SWAP.md) =================
    Keyboard up = ONE pane fills the visible area above the keyboard: the problem (card, answer pinned at its bottom) or the
    scratchpad (question peek on top, the box anchored to the bottom and growing upward). One icon toggle switches; focusing a field
@@ -763,7 +830,7 @@ more.addEventListener("click", () => {
 const swapBtn = $("#swap"), stage = $("#stage"), problemEl = $("#problem"), work = $("#work");
 const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
 let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
-const GAP = 10;                                                                  // between the peek and the scratchpad: clears the box's 5px focus ring
+const GAP = 8;                                                                   // between the peek and the scratchpad: small, the box has no outside ring
 const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
 function setSwap(on) {
   swapOn = on;
@@ -806,7 +873,7 @@ function layoutSwap() {
   root.style.setProperty("--vv-h", Math.round(h) + "px");
   root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
   const cell = stage.clientHeight - 6;                                             // minus the stage's focus-ring room
-  const padMin = parseFloat(getComputedStyle(S.box.el).minHeight) || 130;         // 3 lines
+  const cs = getComputedStyle(S.box.el), padMin = 3 * parseFloat(cs.lineHeight) + parseFloat(cs.paddingTop) + 28 + 4 || 130;   // 3 lines (not min-height: Swap sets it to the cap)
   const peekMax = Math.max(0, Math.min(Math.round(h * 0.6), cell - padMin - GAP));
   root.style.setProperty("--peek-max", peekMax + "px");
   const noPeek = peekMax < 40;
@@ -850,7 +917,7 @@ document.addEventListener("focusin", e => {
   root.classList.toggle("bar-off", e.target.id === "scratch");
   const p = paneOf(e.target); if (p) setPane(p);
 });
-document.addEventListener("focusout", e => { if (e.target.id === "scratch" && (!e.relatedTarget || e.relatedTarget.id !== "scratch")) root.classList.remove("bar-off"); });
+document.addEventListener("focusout", () => setTimeout(() => root.classList.toggle("bar-off", document.activeElement && document.activeElement.id === "scratch"), 0));
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;

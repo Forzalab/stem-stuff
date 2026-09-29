@@ -6,6 +6,9 @@
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
   --body: var(--sheet); --ramp: var(--sheet); --knock: rgb(29 40 57 / 0.85);
+  /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
+     --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
+  --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
   /* spacing scale (px): 4 8 12 16 24 32 48 */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
@@ -20,7 +23,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-to
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
   background: var(--paper); color: var(--ink);
-  font: 400 1.125rem/1.55 "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  font: 400 var(--t-md)/var(--lh) "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 /* No overflow on any ancestor of .freeze: it would become the sticky scroller (Safari and everyone else). */
@@ -35,7 +38,7 @@ button:disabled { cursor: default; }
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 .dock { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { display: flex; gap: var(--s2); }
-.file-status { margin: 0 0 var(--s2); font-size: 1rem; color: var(--muted); overflow-wrap: anywhere; }
+.file-status { margin: 0 0 var(--s2); font-size: var(--t-sm); color: var(--muted); overflow-wrap: anywhere; }
 .code-box {
   flex: 1 1 auto; min-width: 0; height: 52px; display: flex; align-items: center;
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
@@ -44,12 +47,12 @@ button:disabled { cursor: default; }
 .code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
+  font-family: inherit; font-size: var(--t-md); font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
 .code-box input::placeholder { color: var(--hint); opacity: 1; }   /* the open problem's code */
-.entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: 1rem; }
+.entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
 
 /* phones and touch: the box is a thumb bar fixed at the bottom centre; it rides on the iOS keyboard while the
@@ -62,6 +65,22 @@ button:disabled { cursor: default; }
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
 .dock-bottom.dock-away .dock { display: none; }
 .dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
+/* bar strip (phones, a problem open): 44px (the tap target) with an up-chevron. Revealed, the full bar lies OVER the page (--dock-h stays the strip's),
+   so nothing under it moves or shrinks; its top edge holds the same tab, chevron down, to put it away. No problem open: the full bar. */
+.bar-tab { display: none; }
+html.bar-mini .bar-tab {
+  display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
+  background: none; border: 0; color: var(--muted); touch-action: none;
+}
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .2s ease; }
+html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
+html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
+html.bar-mini.bar-open .dock { padding-top: 0; }
+html.bar-mini.bar-open .bar-tab { margin-bottom: var(--s1); }
+html.bar-mini.bar-open .bar-tab .ico { transform: none; }
+/* the text keeps clear of where the revealed bar lies (--bar-over: its height above the strip, measured on reveal), so revealing it
+   never hides the caret: the box's bottom band (already there for Cut / Copy) is at least that tall */
+html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { padding-bottom: max(56px, calc(var(--bar-over, 76px) + 4px)); }
 
 /* ---------- one button system ----------
    Every button on the page (upload, submit arrows, copy, expand, file picker) is .btn:
@@ -110,12 +129,17 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .freeze.open { position: relative; top: 0; }
 .freeze.open .freeze-in { max-height: none; overflow: visible; }
 /* expand chevron: a centred pull-tab hanging fully BELOW the layer, so it never covers the answer controls (submit arrows are on the right edge) */
-.more { position: absolute; left: 50%; top: calc(100% + var(--s1)); transform: translateX(-50%); z-index: 1; box-shadow: var(--shadow-1); }
-.more:active { transform: translate(-50%, 1px); }
-.freeze.open .more .ico { transform: rotate(180deg); }
+/* grab handle (Tony: variant A): a 36x4 pill 8px under the strip's bottom edge; the touch area (88x44) hangs below the edge, invisible,
+   so it never covers an answer control; below it is only the Scratchpad title (not a control) */
+.more {
+  position: absolute; left: 50%; top: 100%; width: 88px; height: 44px; margin-left: -44px; z-index: 3;
+  display: grid; place-items: start center; padding: var(--s2) 0 0; background: none; border: 0; border-radius: 8px; touch-action: none;
+}
+.more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .12s ease-out; }
+.more:hover::before { background: var(--muted); }
 
 .p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
-.pcode { margin: 0 0 var(--s2); font-size: 0.95rem; line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
@@ -132,7 +156,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-.fig-off { color: var(--muted); font-size: 1rem; height: auto !important; }
+.fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: 16px; line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
 .lbl .katex { font-size: 1.1em; }
 .lbl.tick { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -150,7 +174,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .opt:hover:not(:disabled) { border-color: var(--edge); }
 .opt .badge {
   flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%;
-  border: 2px solid var(--edge); color: var(--muted); font-weight: 700; font-size: 1rem;
+  border: 2px solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-sm);
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
@@ -185,7 +209,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: 3rem; margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: var(--mono); font-size: 1.125rem; font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: var(--mono); font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
@@ -198,7 +222,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .q.closed .ff.ok { border-color: var(--ok); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
-.how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
 .how code { color: var(--ink); }
 /* multi: one row per part (design/mockups/multi-prompts.html). Phone: "a)" and its sub-question, its own box under the text (aligned to
    the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (hidden while the box is empty, like the code box's) and
@@ -234,7 +258,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
 .boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
-.preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: 1rem; }
+.preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }
 
 /* feedback */
 .fb:empty { display: none; }
@@ -254,16 +278,28 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
-.freeze:has(.more:not([hidden])) + .work { margin-top: calc(48px + var(--s1) + var(--s2)); }
-.xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); }
+.freeze:has(.more:not([hidden])) + .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
+.xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
+/* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
+.xb-save { margin-left: var(--s1); font-size: var(--t-xs); font-weight: 400; color: var(--hint); }
+.xb-save.saving {
+  color: var(--ink);
+  -webkit-mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
+  animation: xb-sweep 1.4s linear infinite;
+}
+@keyframes xb-sweep { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .xb-save.saving { animation: none; -webkit-mask: none; mask: none; color: var(--hint); } }
 /* Tony: limit line length and wrap. ch is measured in the textarea's own font. */
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
    stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
-.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: 1rem; }   /* 16px: smaller, still no iOS focus zoom */
+.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
 .xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
 /* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
+/* focus: the 2px --focus border is the one ring (Tony: two glows, "ew") */
+.xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: none; }
 .xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
 .xb-cut { right: calc(6px + 48px + 6px + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
@@ -341,10 +377,10 @@ html.swap-problem .freeze.clipped #problem { -webkit-mask-image: linear-gradient
 html.swap-scratch .freeze { align-self: start; z-index: 2; }
 html.swap-scratch .freeze.no-peek { display: none; }
 html.swap-scratch .freeze-in { max-height: var(--peek-max, 40%); overflow-y: auto; }
-html.swap-scratch .p { font-size: 1rem; line-height: 1.45; }
 html.swap-scratch .how { margin: 0; }
 html.swap-scratch .q { padding-top: 0; }
 html.swap-scratch .work { align-self: end; z-index: 1; }
+html.swap-scratch #scratch { min-height: var(--pad-max, auto); }   /* the box fills the room under the peek (layoutSwap): writing space right up to the question */
 
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }

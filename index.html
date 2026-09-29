@@ -108,6 +108,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
 <header class="top">
   <!-- the entry box: top of the column on desktop, fixed bottom-centre on phones (one thumb) -->
   <div class="dock" id="dock">
+    <!-- phones, problem open: the bar rests as a short strip (up-chevron); tap or swipe up shows it over the page, tap or swipe down puts it away -->
+    <button type="button" class="bar-tab" id="barTab" aria-expanded="false" aria-controls="entry" aria-label="Show the code bar"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg></button>
     <p class="file-status" id="fileStatus" role="status" hidden></p>
     <form class="entry" id="entry" autocomplete="off" novalidate>
       <button type="button" class="btn" id="upload" aria-label="Open a problem file" title="Open a problem file">
@@ -157,14 +159,13 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
       <div class="q" id="q"></div>
       <div class="fb" id="fb" aria-live="polite"></div>
     </div>
-    <button type="button" class="btn more" id="more" aria-expanded="false" aria-controls="freezeIn" aria-label="Show the whole problem" hidden>
-      <svg class="ico" aria-hidden="true"><use href="#i-down"/></svg>
-    </button>
+    <!-- grab handle on the strip's bottom edge (Tony: variant A): tap or drag down opens the whole problem, tap or drag up folds it -->
+    <button type="button" class="more" id="more" aria-expanded="false" aria-controls="freezeIn" aria-label="Show the whole problem" hidden></button>
   </section>
 
   <section class="work" id="work" hidden>
     <div class="xb" id="xb">
-      <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg>Scratchpad</div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
+      <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Scratchpad</span><span class="xb-save" id="xbSave" role="status"></span></div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
       <div class="xb-field" id="xbField">
