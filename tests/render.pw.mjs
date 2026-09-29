@@ -390,7 +390,7 @@ async function run(browserType, label, opts = {}) {
       // last line runs into the corner -> reserved
       const reserved = await page.evaluate(async () => {
         const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
-        for (let n = 1; n < 400; n++) { t.value = base.repeat(3) + "x".repeat(n); t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
+        for (let n = 1; n < 400; n++) { t.value = base + "x".repeat(n); /* one line of prose: stays under the height cap (a capped box always keeps the band) */ t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
         return false;
       });
       assert.ok(reserved, "never reserved the band for a long last line");
