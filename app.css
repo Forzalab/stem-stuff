@@ -191,6 +191,12 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .ff input::placeholder { color: var(--hint); opacity: 1; }
 .ff.ok { border-color: var(--ok); }
 .ff.done input { color: var(--ok); }
+/* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
+.q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
+.q.closed .opt:not(.right), .q.closed .ff:not(.ok) { opacity: 0.5; }
+.q.closed .ff:hover { border-color: var(--edge); }
+.q.closed .ff.ok { border-color: var(--ok); }
+.q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: 1rem; line-height: 1.4; }
 .how code { color: var(--ink); }
