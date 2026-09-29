@@ -46,3 +46,13 @@
 .qlist .qt { min-width: 0; overflow-wrap: anywhere; }
 .qlist a[aria-current] { background: var(--raised); }
 .qlist a[aria-current] .qn { color: var(--c1); }
+
+/* done marks (design/DONE.md, variant A): icons at the row's right edge; crossed + greyed = can't be answered any more */
+.qlist .mk { flex: none; display: inline-flex; gap: 2px; align-self: center; margin-left: auto; padding-left: var(--s2); }
+.qlist .mk .ico { width: 20px; height: 20px; }
+.qlist .mk-x { color: var(--bad); }
+.qlist .mk-ok { color: var(--ok); }
+.qlist a.gone .qt { color: var(--hint); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--hint); }
+.qlist a.gone .qn { color: var(--hint); }
+.qlist a.gone .mk { opacity: 0.8; }
+.qlist a.gone[aria-current] .qn { color: var(--c1); }

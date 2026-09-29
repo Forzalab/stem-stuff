@@ -201,7 +201,11 @@ async function load(code) {
   fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
+  const rec = doneStore() ? doneStore().doneGet(code) : null;
+  if (rec && off()) seedLocal(code, rec, prob);
   render();
+  if (rec) paint(rec);
+  if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
 }
 
@@ -490,6 +494,108 @@ function record(a, r) {
   const mine = x => x.part === a.part;        // a multi counts wrong tries per part; the others have part undefined
   if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
+  if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
+  else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
+}
+
+/* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
+   Record: { v: 2, units: [{ x, done, hint, gen, sigs? }], x, done, tries, hints }. One unit per problem, one per part for a multi.
+   x = wrong tries, done = "open" | "correct" | "out". Top level (for the list): x = all wrong tries, done = "correct" when every
+   unit is right, "out" when every unit is closed and one isn't, else "open".
+   Never the answer or the right choice: a reopened question shows only what the student did. */
+const doneStore = () => window.stemOffline && window.stemOffline.doneGet ? window.stemOffline : null;
+const unitCount = p => p.type === "multi" ? p.parts.length : 1;
+const freshUnit = () => ({ x: 0, done: "open", hint: null, gen: 0 });
+function units(rec, p) {
+  const n = unitCount(p), u = rec && Array.isArray(rec.units) ? rec.units : [];
+  return Array.from({ length: n }, (_, i) => ({ ...freshUnit(), ...(u[i] || {}) }));
+}
+function wrapRec(us, tries, hints) {
+  const x = us.reduce((a, u) => a + u.x, 0);
+  const done = us.every(u => u.done === "correct") ? "correct" : us.every(u => u.done !== "open") ? "out" : "open";
+  return { v: 2, units: us, x, done, tries, hints };
+}
+function saveDone(r) {
+  const st = doneStore(); if (!st) return;
+  const p = S.prob, max = maxTries(p), i = p.type === "multi" ? r.part ?? 0 : 0, us = units(st.doneGet(S.code), p);
+  const x = Math.max(0, max - (typeof r.triesLeft === "number" ? r.triesLeft : max)), u = us[i];
+  Object.assign(u, { x, done: r.verdict === "correct" ? "correct" : x >= max ? "out" : "open" });
+  if (r.verdict === "wrong") u.hint = r.hint || null;                  // the hint for the student's own wrong answer
+  if (typeof r.gen === "number") u.gen = r.gen;
+  if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
+  st.donePut(S.code, wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice()));
+}
+/* upload mode: gradeLocal picks up where it was */
+function seedLocal(code, rec, p) {
+  units(rec, p).forEach((u, i) => { if (u.sigs || u.done !== "open") localState.set(p.type === "multi" ? `${code}#${i}` : code, { wrong: (u.sigs || []).slice(), done: u.done === "correct" }); });
+}
+/* show a record on the freshly rendered question: struck wrong choices, the student's right one, their last typed answer;
+   closed = read-only. The right choice is never marked unless the student picked it. */
+function paint(rec) {
+  const p = S.prob, max = maxTries(p), us = units(rec, p);
+  S.tries = (rec.tries || []).slice(); S.hints = (rec.hints || []).slice();
+  if (p.type === "multi") {
+    us.forEach((u, i) => {
+      const last = S.tries.filter(t => t.part === i).pop(), { inp, go } = partEls(i);
+      if (last && typeof last.a === "string") { inp.value = last.a; go.hidden = u.done !== "open"; }
+      if (u.done !== "open") shutPart(i, u.done === "correct");
+      if (u.done === "correct") partFeedback(i, { verdict: "correct" });
+      else if (u.x > 0) partFeedback(i, { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined });
+    });
+    if (S.parts.every(x => x.shut)) settle();
+    return;
+  }
+  const u = us[0];
+  S.triesLeft = Math.max(0, max - u.x);
+  if (p.type === "mc") {
+    for (const t of S.tries) {
+      const o = opts().find(x => x.dataset.id === t.c); if (!o) continue;
+      if (t.v === "wrong") { o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); }
+      else if (t.v === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+    }
+    const live = opts().find(x => !x.disabled); if (live) roving(live);
+  } else {
+    const last = S.tries[S.tries.length - 1], inp = $("#ans");
+    if (last && typeof last.a === "string" && inp) { inp.value = last.a; const go = $("#ansGo"); if (go) go.disabled = !inp.value.trim(); }
+    if (u.done === "correct") $("#ff").classList.add("ok", "done");
+  }
+  if (u.done !== "open") finish();
+  if (u.done === "correct") feedback({ verdict: "correct" });
+  else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
+}
+function repaint(rec) {
+  Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
+  renderQuestion(); $("#fb").innerHTML = "";
+  if (rec) paint(rec);
+  layoutFreeze();
+}
+/* server mode: the server is the source of truth for tries, the record is a display cache. Per unit:
+   server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
+async function syncServer(mine) {
+  const st = doneStore(); if (!st || !mine || off()) return;
+  let s;
+  try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) { r.text().catch(() => {}); return; } s = await r.json(); }   // drain a 404 so the request completes
+  catch { return; }                                            // unreachable or slow: the cache stands
+  if (S !== mine || busy) return;
+  const p = mine.prob, max = maxTries(p), c = st.doneGet(mine.code), us = units(c, p), ss = s.parts || [s];
+  if (ss.length !== us.length || ss.some(x => typeof x.wrong !== "number")) return;
+  let tries = c ? (c.tries || []).slice() : [], hints = c ? (c.hints || []).slice() : [], shown = false, quiet = false;
+  ss.forEach((su, i) => {
+    const u = us[i], sd = su.done ? "correct" : su.wrong >= max ? "out" : "open";
+    const mineOf = t => p.type === "multi" ? t.part === i : true;
+    if (su.wrong > u.x || (sd !== "open" && u.done === "open") || (sd === "correct" && u.done !== "correct")) {
+      Object.assign(u, { x: su.wrong, done: sd, gen: su.gen }); shown = true;
+    } else if (u.x > su.wrong || (u.done !== "open" && sd === "open")) {
+      if (su.gen > (u.gen || 0)) {                             // Tony reset it by hand
+        us[i] = { ...freshUnit(), gen: su.gen }; shown = true;
+        tries = tries.filter(t => !mineOf(t)); hints = hints.filter(t => !mineOf(t));
+      }
+    } else if (u.gen !== su.gen) { u.gen = su.gen; quiet = true; }
+  });
+  if (!shown && !quiet) return;
+  const rec = wrapRec(us, tries, hints);
+  if (!rec.x && rec.done === "open" && !tries.length) st.doneDrop(mine.code); else st.donePut(mine.code, rec);
+  if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */

@@ -93,10 +93,20 @@ function init() {
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
     list.innerHTML = codes.map((c, k) => {
-      const t = titleOf(o.get(c)) || c;
-      return `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}"${c === cur ? ' aria-current="true"' : ""}>` +
-        `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(t)}</span></a></li>`;
+      const t = titleOf(o.get(c)) || c, m = marks(o.doneGet ? o.doneGet(c) : null);
+      return `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
+        `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(t)}</span>${m.html}</a></li>`;
     }).join("");
+  }
+
+  /* done marks (design/DONE.md, variant A): one X per wrong try, a tick for correct, at the row's right edge.
+     Crossed out + greyed only when it can't be answered any more (correct, or out of tries); still a link. */
+  const ico = (id, cls) => `<svg class="ico ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
+  function marks(rec) {
+    if (!rec || (!rec.x && rec.done === "open")) return { html: "", gone: false, say: "" };
+    const html = `<span class="mk" aria-hidden="true">${ico("i-x", "mk-x").repeat(rec.x || 0)}${rec.done === "correct" ? ico("i-ok", "mk-ok") : ""}</span>`;
+    const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " Out of tries." : " One wrong try, one left.";
+    return { html, gone: rec.done !== "open", say };
   }
 
   const rows = () => [...list.querySelectorAll("a")];
@@ -148,6 +158,7 @@ function init() {
     go(e.key === "]" ? 1 : -1);
   });
   addEventListener("drill:problem", e => update(e.detail && e.detail.code));
+  addEventListener("drill:state", () => { if (!nav.hidden) update(cur); });     // a graded try (offline.js donePut)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) update(s.code);
 }

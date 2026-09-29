@@ -6,6 +6,10 @@
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
 - Math: sympy (pip install sympy), behind a token allowlist.
 - POST /check          -> grades {code, answer | choice | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
+- GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
+  multi (design/DONE.md). No answer, no hints.
+- Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
+  deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
 import hashlib
@@ -39,10 +43,12 @@ DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/")
-BLOCK = {"/serve.py", "/deploy.sh", "/host.log", "/.host.pid", "/problems.json", "/" + os.path.basename(BANK)}
+TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
+BLOCK = {"/serve.py", "/deploy.sh", "/host.log", "/.host.pid", "/problems.json", "/tries.json", "/" + os.path.basename(BANK)}
 BUNDLE = os.path.join(ROOT, "stem-stuff.html")
 BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
+STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
 _bundle_lock = threading.Lock()
 
 
@@ -233,59 +239,131 @@ def unit_hit(u, text, sig):
     return hit
 
 
-_tries = {}  # (sid, code) -> {"wrong": [signatures], "done": bool}; a multi keeps one per part: (sid, code, i). In memory: a restart resets tries.
+# (sid, code) -> {"wrong": [signatures], "done": bool, "gen": int}; a multi keeps one per part: (sid, code, i).
+# Saved to TRIES on every graded try, so a restart keeps them (design/DONE.md). File keys: "sid CODE" / "sid CODE i".
+# gen: a counter; every new entry takes the next one. The page caches it; a /state gen above the cached one means
+# "this entry was deleted by hand (Tony reset it)", so the page drops its cached state instead of staying locked.
+_tries = {}
+_gen = {"n": 0, "loaded": None}
 _tries_lock = threading.Lock()
+
+
+def _tup(x):
+    return tuple(_tup(y) for y in x) if isinstance(x, list) else x
+
+
+def _load_tries():
+    """Read TRIES once per path (tests point TRIES elsewhere). A missing or broken file = no tries yet."""
+    if _gen["loaded"] == TRIES:
+        return
+    _tries.clear()
+    _gen["n"], _gen["loaded"] = 0, TRIES
+    try:
+        with open(TRIES, encoding="utf-8") as f:
+            data = json.load(f)
+        _gen["n"] = int(data.get("gen", 0))
+        for k, v in data.get("tries", {}).items():
+            bits = k.split(" ")
+            key = (bits[0], bits[1], int(bits[2])) if len(bits) == 3 else (bits[0], bits[1])
+            _tries[key] = {"wrong": [_tup(w) for w in v.get("wrong", [])], "done": bool(v.get("done")), "gen": int(v.get("gen", 0))}
+    except (OSError, ValueError, AttributeError, TypeError, IndexError):
+        pass
+
+
+def _save_tries():
+    data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}}
+    tmp = TRIES + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=1)
+        os.replace(tmp, TRIES)
+    except OSError as e:
+        print("tries.json not saved:", e, file=sys.stderr)
+
+
+def _entry(key):
+    st = _tries.get(key)
+    if st is None:
+        _gen["n"] += 1
+        st = _tries[key] = {"wrong": [], "done": False, "gen": _gen["n"]}
+    return st
+
+
+def state(p, sid):
+    """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
+    one it would get."""
+    with _tries_lock:
+        _load_tries()
+
+        def one(key):
+            st = _tries.get(key)
+            if st is None:
+                return {"wrong": 0, "done": False, "gen": _gen["n"] + 1}
+            return {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
+        if p["type"] == "multi":
+            return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
+        return one((sid, p["code"]))
 
 
 def grade(p, sid, body):
     """body: {choice} (mc) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
-    Reply {verdict, triesLeft, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply."""
+    Reply {verdict, triesLeft, gen, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply."""
     multi = p["type"] == "multi"
     idx = body.get("part")
     if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}    # the old whole-set body {parts: [...]} lands here too
     with _tries_lock:
-        st = _tries.setdefault((sid, p["code"], idx) if multi else (sid, p["code"]), {"wrong": [], "done": False})
+        _load_tries()
+        key = (sid, p["code"], idx) if multi else (sid, p["code"])
+        out = _grade(p, _entry(key), body, multi, idx)
+        out["gen"] = _tries[key]["gen"]
+        if out["verdict"] in ("correct", "wrong"):
+            _save_tries()
+        return out
 
-        def left():
-            return max_tries(p) - len(st["wrong"])
 
-        def reply(o):
-            return {**o, "part": idx} if multi else o
+def _grade(p, st, body, multi, idx):
+    """One try on entry st (the caller holds _tries_lock)."""
 
-        if st["done"] or left() <= 0:
-            return reply({"verdict": "locked", "triesLeft": 0})
-        hit = None
-        if p["type"] == "mc":
-            sig = body.get("choice")
-            if sig not in {c["id"] for c in shown(p)}:
-                return {"verdict": "invalid", "triesLeft": left()}
-            correct = sig == p["correct"]
-            if not correct:
-                hit = next((w for w in p.get("wrong", []) if w.get("choice") == sig), None)
-        else:
-            u = p["parts"][idx] if multi else p
-            text = str(body.get("answer", ""))[:200]
-            try:
-                sig = signature(u, text)
-                correct = unit_correct(u, sig)
-            except UNREADABLE:
-                return reply({"verdict": "invalid", "triesLeft": left()})
-            if not correct:
-                hit = unit_hit(u, text, sig)
-        if correct:
-            st["done"] = True
-            return reply({"verdict": "correct", "triesLeft": left()})
-        tol = (p["parts"][idx] if multi else p).get("tol", 1e-6)
-        repeat = any(same(sig, x, tol) for x in st["wrong"])
-        if not repeat:
-            st["wrong"].append(sig)
-        out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
-        if hit:
-            out["error"] = hit["error"]
-        if repeat:
-            out["repeat"] = True
-        return reply(out)
+    def left():
+        return max_tries(p) - len(st["wrong"])
+
+    def reply(o):
+        return {**o, "part": idx} if multi else o
+
+    if st["done"] or left() <= 0:
+        return reply({"verdict": "locked", "triesLeft": 0})
+    hit = None
+    if p["type"] == "mc":
+        sig = body.get("choice")
+        if sig not in {c["id"] for c in shown(p)}:
+            return {"verdict": "invalid", "triesLeft": left()}
+        correct = sig == p["correct"]
+        if not correct:
+            hit = next((w for w in p.get("wrong", []) if w.get("choice") == sig), None)
+    else:
+        u = p["parts"][idx] if multi else p
+        text = str(body.get("answer", ""))[:200]
+        try:
+            sig = signature(u, text)
+            correct = unit_correct(u, sig)
+        except UNREADABLE:
+            return reply({"verdict": "invalid", "triesLeft": left()})
+        if not correct:
+            hit = unit_hit(u, text, sig)
+    if correct:
+        st["done"] = True
+        return reply({"verdict": "correct", "triesLeft": left()})
+    tol = (p["parts"][idx] if multi else p).get("tol", 1e-6)
+    repeat = any(same(sig, x, tol) for x in st["wrong"])
+    if not repeat:
+        st["wrong"].append(sig)
+    out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
+    if hit:
+        out["error"] = hit["error"]
+    if repeat:
+        out["repeat"] = True
+    return reply(out)
 
 
 # ---------------- HTTP ----------------
@@ -327,6 +405,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path in BLOCK or path.startswith(BLOCK_PREFIX):
             self.send_error(404)
+            return
+        m = STATE_PATH.match(path)
+        if m:
+            p = problems().get(m.group(1))
+            if p is None:
+                self.send_error(404)
+            else:
+                self.send_json(200, state(p, self.sid()), head)
             return
         m = CODE_PATH.match(path)
         if m:

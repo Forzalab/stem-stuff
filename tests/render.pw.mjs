@@ -37,7 +37,8 @@ async function run(browserType, label, opts = {}) {
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     const open = async code => {
-      await page.goto("about:blank");
+      await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
+    await page.goto("about:blank");
       await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
     };

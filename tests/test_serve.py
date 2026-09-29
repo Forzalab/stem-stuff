@@ -13,6 +13,9 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
+import tempfile  # noqa: E402
+TMP = tempfile.mkdtemp(prefix="stem-tries-")
+os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json (the Http server inherits it)
 import serve  # noqa: E402
 
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
@@ -241,6 +244,78 @@ class Http(unittest.TestCase):
         r2 = urllib.request.urlopen(req(cookie))
         self.assertIsNone(r2.headers["Set-Cookie"])
         self.assertEqual(json.load(r2)["triesLeft"], 1)   # same wrong value again: a repeat
+
+    def get(self, path, cookie):
+        return json.load(urllib.request.urlopen(urllib.request.Request(self.base + path, headers={"Cookie": cookie})))
+
+    def test_state_endpoint(self):
+        cookie = "sid=" + "ab" * 16
+        s0 = self.get("state/CALC1_T6B", cookie)
+        self.assertEqual((s0["wrong"], s0["done"]), (0, False))
+        r = urllib.request.urlopen(urllib.request.Request(
+            self.base + "check", data=json.dumps({"code": "CALC1_T6B", "answer": "5"}).encode(), method="POST",
+            headers={"Content-Type": "application/json", "Cookie": cookie}))
+        g = json.load(r)["gen"]
+        s1 = self.get("state/CALC1_T6B", cookie)
+        self.assertEqual((s1["wrong"], s1["done"], s1["gen"]), (1, False, g))
+        self.assertEqual(set(s1), {"wrong", "done", "gen"})
+        self.assertEqual(self.status("state/NOPE_ZZZ"), 404)
+        self.assertEqual(self.status("tries.json"), 404)
+
+
+class Persist(unittest.TestCase):
+    """tries.json: a restart keeps tries; deleting an entry by hand resets it with a newer gen (design/DONE.md)."""
+    def setUp(self):
+        self.old = serve.TRIES
+        serve.TRIES = os.path.join(tempfile.mkdtemp(prefix="stem-p-"), "tries.json")
+
+    def tearDown(self):
+        serve.TRIES = self.old
+
+    def restart(self):
+        serve._gen["loaded"] = None     # what a new process does: read the file again
+
+    def test_restart_keeps_tries(self):
+        p = BANK["CALC1_T6B"]
+        self.assertEqual(serve.grade(p, "r1", {"answer": "5"})["verdict"], "wrong")
+        self.restart()
+        self.assertEqual(serve.state(p, "r1")["wrong"], 1)
+        self.assertEqual(serve.grade(p, "r1", {"answer": "5"}).get("repeat"), True)   # the old signature survived
+        self.assertEqual(serve.grade(p, "r1", {"answer": "6"})["verdict"], "wrong")
+        self.restart()
+        self.assertEqual(serve.grade(p, "r1", {"answer": "9"})["verdict"], "locked")
+
+    def test_multi_part_round_trip(self):
+        p = next(q for q in BANK.values() if q["type"] == "multi")        # per-part entries: "sid CODE i"
+        body = {"part": 1, "answer": "12345"}
+        self.assertEqual(serve.grade(p, "r2", body)["verdict"], "wrong")
+        self.restart()
+        self.assertTrue(serve.grade(p, "r2", body).get("repeat"))
+        st = serve.state(p, "r2")["parts"]
+        self.assertEqual([x["wrong"] for x in st], [0, 1] + [0] * (len(p["parts"]) - 2))
+
+    def test_hand_delete_resets_with_newer_gen(self):
+        p = BANK["CALC1_T6B"]
+        g = serve.grade(p, "r3", {"answer": "5"})["gen"]
+        serve.grade(p, "r3", {"answer": "6"})
+        with open(serve.TRIES) as f:
+            data = json.load(f)
+        del data["tries"]["r3 CALC1_T6B"]
+        with open(serve.TRIES, "w") as f:
+            json.dump(data, f)
+        self.restart()
+        s = serve.state(p, "r3")
+        self.assertEqual(s["wrong"], 0)
+        self.assertGreater(s["gen"], g)
+
+    def test_lost_file_gen_is_low(self):
+        p = BANK["CALC1_T6B"]
+        for i in range(3):
+            serve.grade(p, f"o{i}", {"answer": "5"})
+        g = serve.grade(p, "r4", {"answer": "5"})["gen"]
+        os.remove(serve.TRIES)
+        self.restart()
+        self.assertLessEqual(serve.state(p, "r4")["gen"], g)     # page keeps its lock: not a reset
 
 
 if __name__ == "__main__":

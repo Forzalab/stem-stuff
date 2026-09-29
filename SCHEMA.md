@@ -79,7 +79,8 @@ Keep problems in any order. Codes must be unique (tests enforce it).
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: **each part is graded alone.** `POST /check` takes `{ code, part: i, answer }` (`i` = 0 for a, 1 for b...) and the reply carries `part: i`. Each part has its own tries (the `num`/`expr`/`text` rule: TWO), its own repeat check and its own lockout, keyed by (browser, code, part): a part locks by itself when its tries run out and never locks the others. The old whole-set body `{ parts: [...] }` is not accepted (`invalid`). Every box has its own inline submit arrow, off while that box is empty; Enter in a box submits that box. A right part turns green and read-only; a wrong part shows the hint of the first of *its own* `wrong` entries it matched, else the problem `nudge`, else the default nudge. The problem is finished when every part is right or locked, and counts as correct only if every part is right.
 - A wrong answer gets the hint of the first `wrong` entry it matches (`re` entries first, then `match`), else `nudge`, else a default nudge.
-- Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
+- Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "gen": 7, "error"?: "sign", "hint"?: "QUACK. ..." }`. The answer is never sent.
+- `GET /state/<CODE>` (same cookie): `{ "wrong": 1, "done": false, "gen": 7 }`. Tries live in `tries.json` and survive a restart; `gen` lets the page tell a hand reset from a lost file (design/DONE.md).
 - Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
 
 ## Wrong answers and hints

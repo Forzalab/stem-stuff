@@ -4,3 +4,5 @@ host.log
 stem-stuff.html
 stem-stuff.html.tmp
 __pycache__/
+tries.json
+tries.json.tmp
