@@ -106,6 +106,11 @@ class Grade(unittest.TestCase):
             self.assertEqual(serve.max_tries(p), n, (p["type"], len(p.get("choices", []))))
         # the table also lives in tests/tries.test.mjs against app.js maxTries(): keep them equal
 
+    def test_new_ce_choices_binary(self):
+        for code in ("CSCI26_CE05", "CSCI26_CE07", "CSCI26_CE25"):
+            self.assertEqual(len(BANK[code]["choices"]), 2, code)
+            self.assertEqual(self.g(code, "ce", choice=BANK[code]["wrong"][0]["choice"])["triesLeft"], 0, code)
+
     def test_shuffle(self):
         p = BANK["CALC1_X2P"]
         order = lambda sid: [c["id"] for c in serve.public(p, sid)["choices"]]  # noqa: E731
@@ -117,7 +122,7 @@ class Grade(unittest.TestCase):
 
     def test_shuffle_is_the_default(self):
         self.assertEqual([c for c, p in BANK.items() if p.get("shuffle") is False], [])   # no bank problem opts out
-        for code in ("CSCI26_TF3", "CSCI26_TFM"):
+        for code in ("CSCI26_TF3", "CSCI26_TFM", "CSCI26_CE05"):
             p = BANK[code]
             order = lambda sid: tuple(c["id"] for c in serve.public(p, sid)["choices"])  # noqa: E731
             self.assertEqual(order("q1"), order("q1"))                                      # deterministic per seed

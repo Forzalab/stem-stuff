@@ -549,6 +549,93 @@
         }
       ],
       "nudge": "QUACK. One gate at a time: $G_1$ first, then $G_2$, then OUT."
+    },
+    {
+      "code": "CSCI26_CE05",
+      "title": "Fuzzy AND, NOT, OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. $A = .7$, $B = .45$, $C = .2$. Is $(A \\wedge \\neg B) \\vee (\\neg A \\wedge C)$ greater than $.5$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "op-swap",
+          "hint": "QUACK. Which does OR keep, the smaller side or the larger? Check each side first."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_CE07",
+      "title": "Fuzzy NOT of an AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. $A = .4$, $B = .9$. Is $\\neg(A \\wedge B)$ greater than $.5$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "order-ops",
+          "hint": "QUACK. Do the AND inside the parentheses first, then flip that one result. What did you flip?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_CE25",
+      "title": "Same-value test",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "In C++, `^` means XOR. Which if statement is true exactly when $a$ and $b$ have the same value?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (a ^ b)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (!(a ^ b))`"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. Try $a = 1$, $b = 1$. What does `a ^ b` give?"
+        }
+      ]
     }
   ]
 }
