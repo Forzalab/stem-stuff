@@ -7,7 +7,7 @@ set -euo pipefail
 DIR="${1:-$HOME/stem-stuff-site}"
 PORT="${2:-5567}"
 BRANCH="${3:-main}"
-REPO="${STEM_REPO:-https://github.com/Forzalab/stem-stuff.git}"
+REPO="${STEM_REPO:-git@github.com:Forzalab/stem-stuff.git}"
 
 die() { echo "error: $*" >&2; exit 1; }
 ask() { local a; read -r -p "$1" a </dev/tty 2>/dev/null || a=""; echo "$a"; }
