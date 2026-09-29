@@ -1,6 +1,6 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
-  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers, code (columns line up) */
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers (columns line up); not the code box */
   --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
@@ -44,7 +44,7 @@ button:disabled { cursor: default; }
 .code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: var(--mono); font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
+  font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
