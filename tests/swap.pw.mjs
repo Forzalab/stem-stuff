@@ -394,7 +394,9 @@ for (const [W, H] of SIZES) {
       await clean(`${code} idle`);
     });
   }
-  await step(`${T} mc row: TRUE/FALSE selected, wrong (struck), right (check where the arrow was); keys A-E and 1-5; roving focus`, async () => {
+  await step(`${T} mc row: 2 choices = one try (wrong locks, struck); 3 choices: keys A-E and 1-5, roving focus, wrong then right`, async () => {
+    const ids = () => page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.dataset.id));   // choices are shuffled: read the order
+    const foc = () => page.evaluate(() => document.activeElement.dataset.id);
     await open("CSCI26_TF3");
     await page.locator('.opt[data-id="f"]').click(); await page.waitForTimeout(250);
     await shot("mc-row-tf-selected");
@@ -403,25 +405,30 @@ for (const [W, H] of SIZES) {
     await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
     const w = await page.evaluate(() => { const o = document.querySelector(".opt.wrong"), c = getComputedStyle(o), t = getComputedStyle(o.querySelector(".txt")); return { dis: o.disabled, bs: c.borderStyle, td: t.textDecorationLine, col: c.borderColor, aria: o.getAttribute("aria-disabled") }; });
     assert.ok(w.dis && w.bs === "dashed" && /line-through/.test(w.td) && w.col === "rgb(255, 122, 122)", JSON.stringify(w));
-    assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "t", "focus did not move to the next live choice");
+    assert.equal(await page.locator(".opt:not([disabled])").count(), 0, "2-choice mc: one wrong answer must lock every choice");
     await shot("mc-row-tf-wrong");
-    await page.keyboard.press("a"); assert.equal(await page.locator('.opt[data-id="t"]').getAttribute("aria-checked"), "true");
-    await page.locator('.opt[data-id="t"]').click(); await page.keyboard.press("1");            // 1 = first choice = TRUE; toggling via key selects it
-    assert.equal(await page.locator('.opt[data-id="t"]').getAttribute("aria-checked"), "true");
+    await open("CSCI26_TFM");                                            // keys + arrows + roving (order is shuffled: follow the DOM)
+    const o = await ids();
+    assert.deepEqual([...o].sort(), ["f", "m", "t"]);
+    await page.locator(`.opt[data-id="${o[0]}"]`).focus();
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[1]);
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[2]);
+    await page.keyboard.press("ArrowRight"); assert.equal(await foc(), o[0]);
+    await page.keyboard.press("3"); assert.equal(await page.locator(`.opt[data-id="${o[2]}"]`).getAttribute("aria-checked"), "true");
+    await page.keyboard.press("b"); assert.equal(await page.locator(`.opt[data-id="${o[1]}"]`).getAttribute("aria-checked"), "true");
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.tabIndex)), [-1, 0, -1]);
+    await shot("mc-row-tfm-selected");
+    const pick = async id => { const l = page.locator(`.opt[data-id="${id}"]`); await l.click(); if (await l.getAttribute("aria-checked") !== "true") await l.click(); };   // a tap on the selected one deselects
+    await pick("t");                                                     // 3 choices: a wrong answer leaves a second try
     await page.locator('.ch[data-id="t"] .send').click();
+    await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
+    assert.notEqual(await foc(), "t", "focus did not move to a live choice");
+    await pick("m");
+    await page.locator('.ch[data-id="m"] .send').click();
     await page.waitForSelector(".opt.right"); await page.waitForTimeout(250);
     const r = await page.evaluate(() => { const o = document.querySelector(".opt.right"), b = o.querySelector(".badge").getBoundingClientRect(), r = o.getBoundingClientRect(), t = o.querySelector(".txt").getBoundingClientRect(); return { br: b.right, or: r.right, bl: b.left, tr: t.right, col: getComputedStyle(o).borderColor, bd: getComputedStyle(o.querySelector(".badge")).display }; });
     assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(95, 211, 148)", JSON.stringify(r));
     await shot("mc-row-tf-right");
-    await open("CSCI26_TFM");                                            // keys + arrows + roving
-    await page.locator('.opt[data-id="t"]').focus();
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "f");
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "m");
-    await page.keyboard.press("ArrowRight"); assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "t");
-    await page.keyboard.press("3"); assert.equal(await page.locator('.opt[data-id="m"]').getAttribute("aria-checked"), "true");
-    await page.keyboard.press("b"); assert.equal(await page.locator('.opt[data-id="f"]').getAttribute("aria-checked"), "true");
-    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".opt")].map(o => o.tabIndex)), [-1, 0, -1]);
-    await shot("mc-row-tfm-selected");
   });
   await step(`${T} mc row: falls back when the width shrinks, returns when it grows (measured, not guessed)`, async () => {
     await open("CSCI26_TFM");

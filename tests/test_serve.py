@@ -83,10 +83,33 @@ class Grade(unittest.TestCase):
         self.assertTrue(self.g("CSCI26_M5V", "m1", parts=["17", "11.0"])["repeat"])
         self.assertEqual(self.g("CSCI26_M5V", "m1", parts=["14", "11"])["verdict"], "correct")
 
-    def test_two_choices(self):
+    def test_two_choices_one_try(self):
         r = self.g("CSCI26_TF3", "c1", choice="f")
+        self.assertEqual((r["verdict"], r["triesLeft"]), ("wrong", 0))          # 2-choice mc: one wrong locks it
+        self.assertEqual(self.g("CSCI26_TF3", "c1", choice="t")["verdict"], "locked")
+        self.assertEqual(self.g("CSCI26_TF3", "c2", choice="t")["verdict"], "correct")
+
+    def test_three_choices_two_tries(self):
+        r = self.g("CSCI26_TFM", "c3", choice="t")
         self.assertEqual((r["verdict"], r["triesLeft"]), ("wrong", 1))
-        self.assertEqual(self.g("CSCI26_TF3", "c1", choice="t")["verdict"], "correct")
+        r = self.g("CSCI26_TFM", "c3", choice="f")
+        self.assertEqual((r["verdict"], r["triesLeft"]), ("wrong", 0))          # 3 choices: locks after 2 wrong
+        self.assertEqual(self.g("CSCI26_TFM", "c3", choice="m")["verdict"], "locked")
+        self.assertEqual(self.g("CSCI26_TFM", "c4", choice="t")["triesLeft"], 1)
+        self.assertEqual(self.g("CSCI26_TFM", "c4", choice="m")["verdict"], "correct")
+
+    def test_max_tries_table(self):
+        mk = lambda t, n: {"type": t, "correct": "0", "choices": [{"id": str(i), "md": "x"} for i in range(n)]}  # noqa: E731
+        table = [(mk("mc", 2), 1), (mk("mc", 3), 2), (mk("mc", 5), 2), (mk("mc", 8), 2), ({"type": "num"}, 2),
+                 ({"type": "text"}, 2), ({"type": "expr"}, 2), ({"type": "multi"}, 2)]
+        for p, n in table:
+            self.assertEqual(serve.max_tries(p), n, (p["type"], len(p.get("choices", []))))
+        # the table also lives in tests/tries.test.mjs against app.js maxTries(): keep them equal
+
+    def test_new_ce_choices_binary(self):
+        for code in ("CSCI26_CE05", "CSCI26_CE07", "CSCI26_CE25"):
+            self.assertEqual(len(BANK[code]["choices"]), 2, code)
+            self.assertEqual(self.g(code, "ce", choice=BANK[code]["wrong"][0]["choice"])["triesLeft"], 0, code)
 
     def test_shuffle(self):
         p = BANK["CALC1_X2P"]
@@ -96,7 +119,29 @@ class Grade(unittest.TestCase):
         self.assertEqual(sorted(order("s1")), sorted(c["id"] for c in p["choices"]))
         locked = dict(p, choices=[*p["choices"][:4], dict(p["choices"][4], lock=True)])
         self.assertTrue(all(serve.public(locked, f"s{i}")["choices"][4]["id"] == p["choices"][4]["id"] for i in range(20)))
-        self.assertEqual([c["id"] for c in serve.public(BANK["CSCI26_TF3"], "s9")["choices"]], ["t", "f"])  # shuffle: false
+
+    def test_shuffle_is_the_default(self):
+        self.assertEqual([c for c, p in BANK.items() if p.get("shuffle") is False], [])   # no bank problem opts out
+        for code in ("CSCI26_TF3", "CSCI26_TFM", "CSCI26_CE05"):
+            p = BANK[code]
+            order = lambda sid: tuple(c["id"] for c in serve.public(p, sid)["choices"])  # noqa: E731
+            self.assertEqual(order("q1"), order("q1"))                                      # deterministic per seed
+            self.assertGreater(len({order(f"q{i}") for i in range(30)}), 1, code)          # and it does shuffle
+        no_flag = {k: v for k, v in BANK["CALC1_X2P"].items() if k != "shuffle"}
+        self.assertGreater(len({tuple(c["id"] for c in serve.public(no_flag, f"z{i}")["choices"]) for i in range(20)}), 3)
+        opt_out = dict(BANK["CALC1_X2P"], shuffle=False)                                   # explicit false still keeps authored order
+        self.assertEqual([c["id"] for c in serve.public(opt_out, "z1")["choices"]], list("abcde"))
+
+    def test_grading_follows_the_id_after_shuffle(self):
+        for code, p in BANK.items():
+            if p["type"] != "mc":
+                continue
+            for i in range(8):
+                sid = f"gs{i}"
+                order = [c["id"] for c in serve.public(p, sid)["choices"]]
+                for pos, cid in enumerate(order):        # whatever slot it lands in, the id decides
+                    r = serve.grade(p, f"{sid}-{pos}", {"choice": cid})
+                    self.assertEqual(r["verdict"], "correct" if cid == p["correct"] else "wrong", (code, sid, pos))
 
     def test_reply_never_has_the_answer(self):
         for code, p in BANK.items():
