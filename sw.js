@@ -78,7 +78,8 @@ self.addEventListener("fetch", e => {
     e.respondWith((async () => {
       const c = await caches.open(PROBS);
       try {
-        const r = await fetch(req);
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);   // never hang (design/RELOAD.md)
+        const r = await fetch(req, { signal: ctl.signal }).finally(() => clearTimeout(t));
         if (r.ok) await c.put(key, r.clone());
         return r;
       } catch (err) {

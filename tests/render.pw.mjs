@@ -27,6 +27,9 @@ async function run(browserType, label, opts = {}) {
   catch (e) { console.log(`skip ${label}: ${e.message.split("\n")[0]}`); return; }
   for (const [vname, viewport] of Object.entries(VIEWS)) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: vname !== "desktop", isMobile: vname === "phone" && label === "chromium" });
+    /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
+       tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
+    await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
@@ -181,7 +184,7 @@ async function run(browserType, label, opts = {}) {
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
       assert.equal(text, "", `empty state shows text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
-      const kids = await page.evaluate(() => [...document.querySelector("#entry").children].map(e => e.id || e.className));
+      const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
       const d = await page.evaluate(() => { const r = document.querySelector("#entry").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, pos: getComputedStyle(document.querySelector("#dock")).position }; });
       if (vname === "phone") {

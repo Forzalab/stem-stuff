@@ -42,15 +42,27 @@ function md(text, inline = false) {
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
    `answer` is { answer: "typed text" } or { choice: "b" }. */
+/* every request goes through net(): aborted after 8 s, so nothing can wait forever (design/RELOAD.md).
+   In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
+const TIMEOUT = 8000;
+const inflight = new Set();
+const timedOut = e => !!e && e.name === "AbortError";
+async function net(url, init = {}) {
+  const ctl = new AbortController(), req = { ctl, t0: Date.now() };
+  const t = setTimeout(() => ctl.abort(), TIMEOUT);
+  inflight.add(req);
+  try { return await fetch(url, { ...init, signal: ctl.signal }); }
+  finally { clearTimeout(t); inflight.delete(req); }
+}
 const localState = new Map();
 async function check(code, answer) {
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(off.get(code), answer);
   try {
-    const r = await fetch("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+    const r = await net("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
                                      body: JSON.stringify({ code, ...answer }) });
     if (r.ok) return await r.json();
-  } catch { /* offline */ }
+  } catch (e) { if (timedOut(e)) return { verdict: "timeout" }; /* else offline */ }
   return { verdict: "pending" };
 }
 /* mirror of serve.py grade(): keep the two in step */
@@ -165,10 +177,12 @@ function fileStatus(code) {
   layoutDock();
 }
 
+const retryLoad = $("#retryLoad");
 /* ================= problem state ================= */
+let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
 async function fetchProblem(code) {
-  const r = await fetch(`p/${code}.json`);
+  const r = await net(`p/${code}.json`);
   if (r.ok) return r.json();
   r.text().catch(() => {});   // drain the 404 body so the request completes
   const e = new Error("not found"); e.status = r.status; throw e;
@@ -176,9 +190,11 @@ async function fetchProblem(code) {
 async function load(code) {
   if (!CODE_RE.test(code)) return;
   let prob;
+  retryLoad.hidden = true;
   try { prob = await fetchProblem(code); }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : "Couldn't load that. Check your connection.";
+    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "The server took too long." : "Couldn't load that. Check your connection.";
+    if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
   $("#entryMsg").textContent = "";
@@ -338,9 +354,13 @@ function wireMC(q) {
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 async function submitMC() {
-  const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished) return;
-  const c = S.prob.choices.find(x => x.id === S.selected);
-  const r = await check(S.code, { choice: c.id });
+  const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
+  const c = S.prob.choices.find(x => x.id === S.selected), mine = S;
+  busy = true;
+  let r;
+  try { r = await check(S.code, { choice: c.id }); } finally { busy = false; }
+  if (S !== mine) return;                                   // another problem opened meanwhile
+  if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
   const send = o.parentElement.querySelector(".send");
   if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); finish(); }
@@ -375,14 +395,15 @@ function wireFF() {
   }
   go.addEventListener("click", submitFF);
 }
-let busy = false;
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
   if (vals.some(v => !v) || S.finished || busy) return;
   busy = true;
   const multi = S.prob.type === "multi", t = vals.join(" , ");
   try {
-    const r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    const mine = S, r = await check(S.code, multi ? { parts: vals } : { answer: vals[0] });
+    if (S !== mine) return;
+    if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); ins.forEach(x => { x.readOnly = true; }); $("#ansGo").hidden = true; finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish(true);
@@ -411,10 +432,13 @@ function feedback(r, typed) {
   else if (r.verdict === "wrong") h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   fb.innerHTML = h;
+  const again = $("#retry");
+  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say(fb.textContent.replace(/\s+/g, " ").trim());
   layoutFreeze();
 }
@@ -656,10 +680,40 @@ new ResizeObserver(() => { const w = $("#blocks").clientWidth; if (S && w && w !
 let qW = 0;
 new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w !== qW) { qW = w; fitChoices(); } }).observe($("#q"));   // the one-row / stacked choice depends on the width
 
+/* ================= resume (design/RELOAD.md) =================
+   Back from bfcache (pageshow persisted) or a long-hidden tab: requests older than the timeout are aborted (background timers are
+   throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
+function resume(fromCache) {
+  const now = Date.now();
+  for (const r of [...inflight]) if (fromCache || now - r.t0 >= TIMEOUT) r.ctl.abort();
+  if (fromCache) busy = false;
+  if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
+  if (S && !S.finished) {
+    const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
+    if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
+    for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
+    if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
+  }
+  tallest = 0; lastW = 0; qW = 0;
+  layoutDock(); layoutFreeze(); fitChoices();
+}
+addEventListener("pageshow", e => {
+  if (!e.persisted) return;
+  resume(true);
+  const off = window.stemOffline;
+  if (off && off.ready && S && !off.has(S.code)) off.ready.then(() => { if (S && off.has(S.code)) fileStatus(S.code); });
+});
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
+
 /* ================= boot ================= */
 const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) load(n.code); };
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
 layoutDock();
-fromHash();
+/* offline.js (it runs after this module) restores an uploaded bank from IndexedDB first, so #CODE of an uploaded problem opens */
+addEventListener("DOMContentLoaded", async () => {
+  const off = window.stemOffline;
+  if (off && off.ready) { try { await Promise.race([off.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* storage blocked */ } }
+  fromHash();
+});
 window.__drill = { check, get state() { return S; } };   // for tests/e2e
