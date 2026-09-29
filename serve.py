@@ -4,15 +4,17 @@
 - Reads the whole problem bank from ONE file (default: problems.json next to this script; SCHEMA.md).
   Edit or replace the file: the next request re-reads it (mtime check), no restart.
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
-- POST /check          -> grades {code, answer | choice}; 2 attempts per problem per browser (cookie).
+- POST /check          -> grades {code, answer | choice | parts}; 2 attempts per problem per browser (cookie).
 - The bank file itself, keys, logs and server files are never served.
 """
 import ast
+import hashlib
 import http.cookies
 import http.server
 import json
 import math
 import os
+import random
 import re
 import secrets
 import socketserver
@@ -29,7 +31,7 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5567
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 MAX_TRIES = 2
-PUBLIC = ("code", "type", "var", "body")
+PUBLIC = ("code", "title", "type", "var", "body", "how")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 
 # Server-only or private paths: never served.
@@ -65,16 +67,37 @@ def problems():
         return _bank["by_code"]
 
 
-def public(p):
-    """What the browser may see: no answer, points, tol, correct, wrong, nudge."""
+def shown(p):
+    """mc: the choices on screen (up to 5): the right one, locked ones, then the rest, in authored order."""
+    ch = p["choices"]
+    if len(ch) <= 5:
+        return list(ch)
+    keep = [c for c in ch if c["id"] == p["correct"] or c.get("lock")]
+    keep += [c for c in ch if c not in keep][: max(0, 5 - len(keep))]
+    return [c for c in ch if c in keep]
+
+
+def shuffled(choices, seed):
+    """Seeded shuffle: same seed, same order. Locked choices keep their slot; the others trade places."""
+    free = [i for i, c in enumerate(choices) if not c.get("lock")]
+    moved = [choices[i] for i in free]
+    random.Random(hashlib.sha256(seed.encode()).hexdigest()).shuffle(moved)
+    out = list(choices)
+    for i, c in zip(free, moved):
+        out[i] = c
+    return out
+
+
+def public(p, sid=""):
+    """What the browser may see: no answer, accept, points, tol, correct, wrong, nudge. sid seeds the mc shuffle."""
     out = {k: p[k] for k in PUBLIC if k in p}
     if p.get("type") == "mc":
-        ch = p["choices"]
-        if len(ch) > 5:  # show 5: the right one, locked ones, then the rest in authored order
-            keep = [c for c in ch if c["id"] == p["correct"] or c.get("lock")]
-            keep += [c for c in ch if c not in keep][: max(0, 5 - len(keep))]
-            ch = [c for c in ch if c in keep]
+        ch = shown(p)
+        if p.get("shuffle", True):
+            ch = shuffled(ch, sid + ":" + p["code"])
         out["choices"] = [{k: c[k] for k in ("id", "md", "lock") if k in c} for c in ch]
+    if p.get("type") == "multi":
+        out["parts"] = [{k: q[k] for k in ("label", "type", "var") if k in q} for q in p["parts"]]
     return out
 
 
@@ -161,13 +184,22 @@ DNE = re.compile(r"^\s*(dne|does not exist)\s*$", re.I)
 UNREADABLE = (ValueError, ArithmeticError, SyntaxError, TypeError, RecursionError, MemoryError)
 
 
-def signature(p, text):
-    """Comparable value of typed text: 'dne', a float, or a tuple of floats (expr at points). ValueError if unreadable."""
+def squash(text):
+    return re.sub(r"\s+", "", str(text)).lower()
+
+
+def signature(u, text):
+    """Comparable value of typed text for one answer unit (a problem, or one part of a multi):
+    text type: squashed text; else 'dne', a float, or a tuple of floats (expr at points). ValueError if unreadable."""
+    if u["type"] == "text":
+        if not squash(text):
+            raise ValueError("empty")
+        return squash(text)
     if DNE.match(text):
         return "dne"
-    var = p.get("var", "x")
-    if p["type"] == "expr":
-        return tuple(evaluate(text, var, x) for x in p["points"])
+    var = u.get("var", "x")
+    if u["type"] == "expr":
+        return tuple(evaluate(text, var, x) for x in u["points"])
     v = evaluate(text, var)
     if math.isnan(v):
         raise ValueError("nan")
@@ -184,12 +216,33 @@ def same(a, b, tol):
     return abs(a - b) <= tol * max(1.0, abs(b))
 
 
+def unit_correct(u, sig):
+    tol = u.get("tol", 1e-6)
+    if u["type"] == "text":
+        return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
+    return same(sig, "dne" if u["answer"] == "dne" else signature(u, u["answer"]), tol)
+
+
+def unit_hit(u, text, sig):
+    """The first `wrong` entry this answer matches: re entries first, then match."""
+    wrong = u.get("wrong", [])
+    hit = next((w for w in wrong if w.get("re") and re.search(w["re"], text, re.I)), None)
+    for w in wrong if hit is None else []:
+        try:
+            if w.get("match") is not None and same(sig, signature(u, w["match"]), u.get("tol", 1e-6)):
+                return w
+        except UNREADABLE:
+            pass
+    return hit
+
+
 _tries = {}  # (sid, code) -> {"wrong": [signatures], "done": bool}. In memory: a restart resets tries.
 _tries_lock = threading.Lock()
 
 
 def grade(p, sid, body):
-    """Reply {verdict, triesLeft, error?, hint?, repeat?}. The answer is never in the reply."""
+    """body: {choice} (mc) | {answer} (num/expr/text) | {parts: [...]} (multi).
+    Reply {verdict, triesLeft, error?, hint?, repeat?}. The answer is never in the reply."""
     with _tries_lock:
         st = _tries.setdefault((sid, p["code"]), {"wrong": [], "done": False})
 
@@ -198,41 +251,35 @@ def grade(p, sid, body):
 
         if st["done"] or left() <= 0:
             return {"verdict": "locked", "triesLeft": 0}
-        hit, repeat = None, False
+        hit = None
         if p["type"] == "mc":
-            choice = body.get("choice")
-            if choice not in {c["id"] for c in public(p)["choices"]}:
+            sig = body.get("choice")
+            if sig not in {c["id"] for c in shown(p)}:
                 return {"verdict": "invalid", "triesLeft": left()}
-            correct = choice == p["correct"]
+            correct = sig == p["correct"]
             if not correct:
-                hit = next((w for w in p.get("wrong", []) if w.get("choice") == choice), None)
-                repeat = choice in st["wrong"]
-                if not repeat:
-                    st["wrong"].append(choice)
+                hit = next((w for w in p.get("wrong", []) if w.get("choice") == sig), None)
         else:
-            text = str(body.get("answer", ""))[:200]
-            tol = p.get("tol", 1e-6)
+            units = p["parts"] if p["type"] == "multi" else [p]
+            texts = body.get("parts") if p["type"] == "multi" else [body.get("answer", "")]
+            if not isinstance(texts, list) or len(texts) != len(units):
+                return {"verdict": "invalid", "triesLeft": left()}
+            texts = [str(t)[:200] for t in texts]
             try:
-                sig = signature(p, text)
-                key = "dne" if p["answer"] == "dne" else signature(p, p["answer"])
+                sigs = [signature(u, t) for u, t in zip(units, texts)]
+                oks = [unit_correct(u, g) for u, g in zip(units, sigs)]
             except UNREADABLE:
                 return {"verdict": "invalid", "triesLeft": left()}
-            correct = same(sig, key, tol)
+            correct = all(oks)
             if not correct:
-                hit = next((w for w in p.get("wrong", []) if w.get("re") and re.search(w["re"], text, re.I)), None)
-                for w in p.get("wrong", []) if hit is None else []:
-                    try:
-                        if w.get("match") is not None and same(sig, signature(p, w["match"]), tol):
-                            hit = w
-                            break
-                    except UNREADABLE:
-                        pass
-                repeat = any(same(sig, x, tol) for x in st["wrong"])
-                if not repeat:
-                    st["wrong"].append(sig)
+                hit = next((h for u, t, g, ok in zip(units, texts, sigs, oks) if not ok for h in [unit_hit(u, t, g)] if h), None)
+            sig = tuple(sigs)
         if correct:
             st["done"] = True
             return {"verdict": "correct", "triesLeft": left()}
+        repeat = any(same(sig, x, max(u.get("tol", 1e-6) for u in p.get("parts", [p]))) for x in st["wrong"])
+        if not repeat:
+            st["wrong"].append(sig)
         out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
         if hit:
             out["error"] = hit["error"]
@@ -287,7 +334,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if p is None:
                 self.send_error(404)
             else:
-                self.send_json(200, public(p), head)
+                self.send_json(200, public(p, self.sid()), head)
             return
         if path == "/stem-stuff.html":
             ensure_bundle()
@@ -315,16 +362,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if p is None:
             self.send_json(404, {"verdict": "invalid"})
             return
+        self.send_json(200, grade(p, self.sid(), body))
+
+    def sid(self):
+        """This browser's id (cookie). A new one is set on the response if missing or malformed."""
         jar = http.cookies.SimpleCookie()
         try:
             jar.load(self.headers.get("Cookie", ""))
         except http.cookies.CookieError:
             pass
-        sid = jar["sid"].value if "sid" in jar and re.fullmatch(r"[0-9a-f]{32}", jar["sid"].value) else None
-        if sid is None:
-            sid = secrets.token_hex(16)
-            self._cookie = f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
-        self.send_json(200, grade(p, sid, body))
+        if "sid" in jar and re.fullmatch(r"[0-9a-f]{32}", jar["sid"].value):
+            return jar["sid"].value
+        sid = secrets.token_hex(16)
+        self._cookie = f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
+        return sid
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
