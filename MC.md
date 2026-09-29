@@ -41,7 +41,8 @@ Takeaways we adopt: Moodle's "hints are tied to tries" model and Canvas/PrairieL
 
 ## 4. UI
 
-- Five full-width rows, `A`–`E` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`E` keys jump).
+- Five full-width rows, `A`–`E` badge + rendered markdown/TeX, radio semantics (`role="radiogroup"`, arrow keys move, Space selects, `A`–`E` and `1`–`5` keys jump).
+- **One row** when it fits: 2 choices, or 3 short ones, are pills in one row with no badges. The page decides by measuring (each pill with its arrow room must not wrap or overflow); otherwise it is the stacked list above. See `design/SWAP.md`.
 - One **Check** button. Nothing is graded on click of a row. There is **no Hint button**: hints come only from wrong attempts.
 - A wrong pick is struck through and disabled, and Cluck's hint for that pick appears under the problem (duck badge, labeled with the error type, e.g. `sign`).
 - Correct: existing v1 celebration. Out of attempts: card says "out of tries: ask Tony, code CALC1_M3Q". The answer is **not** revealed (Tony explains it).

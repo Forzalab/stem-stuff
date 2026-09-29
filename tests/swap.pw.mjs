@@ -42,6 +42,7 @@ for (const [W, H] of SIZES) {
   const T = `${W}x${H}`;
   const shot = async (name) => { if (SHOTS) { await page.waitForTimeout(120); await page.screenshot({ path: `${SHOTS}/${name}-${W}.png` }); } };
   const open = async code => {
+    await page.setViewportSize({ width: W, height: H });
     await page.goto("about:blank");
     await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
@@ -75,6 +76,8 @@ for (const [W, H] of SIZES) {
       out.push({ el, name: el.id || el.className || el.tagName, w: r.width, h: r.height, b, full: r });
     }
     const allowed = (a, c) => {
+      // #more: the freeze chevron overlaps the faded edge of the strip on purpose (FREEZE.md; PR #7 reworks it). Not in Swap, where it is gone.
+      if (a.el.id === "more" || c.el.id === "more") return true;
       const pair = (x, y) => (x.el.classList.contains("send") && y.el.classList.contains("opt") && x.el.parentElement === y.el.parentElement)
         || (y.el.classList.contains("xb-cut") || y.el.classList.contains("xb-copy")) && x.el.id === "scratch";
       return pair(a, c) || pair(c, a);
@@ -167,7 +170,7 @@ for (const [W, H] of SIZES) {
 
   /* ================= Swap: scratchpad grows upward, then scrolls ================= */
   await step(`${T} swap: scratchpad is anchored above the keyboard, grows upward to the peek, then scrolls with the caret visible`, async () => {
-    await open("CALC1_T6B");
+    await open("CSCI26_Q8C");                                          // a short question: the peek is small, so there is room to grow
     await page.locator("#scratch").focus(); await kbUp();
     const geo = () => page.evaluate(() => {
       const t = document.querySelector("#scratch"), r = t.getBoundingClientRect(), f = document.querySelector("#freezeIn").getBoundingClientRect();
@@ -213,7 +216,7 @@ for (const [W, H] of SIZES) {
     const r = await page.evaluate(() => {
       const t = document.querySelector("#scratch"), cs = getComputedStyle(t), nums = [...document.querySelectorAll("#xbGutter .xb-nums > div")];
       const lh = parseFloat(cs.lineHeight), pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom), tr = t.getBoundingClientRect();
-      return { texts: nums.map(n => n.textContent), heights: nums.map(n => n.getBoundingClientRect().height), tops: nums.map(n => n.getBoundingClientRect().top - tr.top), lh, pt, pb, sh: t.scrollHeight, hidden: document.querySelector("#xbGutter").getAttribute("aria-hidden"), ptr: getComputedStyle(document.querySelector("#xbGutter")).pointerEvents,
+      return { texts: nums.map(n => n.textContent), heights: nums.map(n => n.getBoundingClientRect().height), tops: nums.map(n => n.getBoundingClientRect().top - tr.top + t.scrollTop), lh, pt, pb, sh: t.scrollHeight, hidden: document.querySelector("#xbGutter").getAttribute("aria-hidden"), ptr: getComputedStyle(document.querySelector("#xbGutter")).pointerEvents,
         fs: getComputedStyle(document.querySelector("#xbGutter")).fontSize, tab: getComputedStyle(document.querySelector("#xbGutter")).fontVariantNumeric, ta: getComputedStyle(nums[0]).textAlign };
     });
     assert.deepEqual(r.texts, ["1", "2", "3", "4", "5"]);
@@ -383,7 +386,7 @@ for (const [W, H] of SIZES) {
           assert.ok(g.oR <= g.rowR + 0.5 && g.oL >= g.rowL - 0.5, "pill left the row");
         }
         assert.equal((await rowInfo()).inline, true);
-        await page.locator(".opt").nth(0).click();                       // tap the selected one again: deselect
+        await page.locator(".opt").nth(n - 1).click();                   // tap the selected one again: deselect
         await page.waitForTimeout(220);
         assert.equal(await page.locator(".ch .send:visible").count(), 0, "second tap did not deselect");
       }
@@ -397,7 +400,7 @@ for (const [W, H] of SIZES) {
     await shot("mc-row-tf-selected");
     await clean("TF selected");
     await page.locator('.ch[data-id="f"] .send').click();
-    await page.waitForSelector(".opt.wrong");
+    await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
     const w = await page.evaluate(() => { const o = document.querySelector(".opt.wrong"), c = getComputedStyle(o), t = getComputedStyle(o.querySelector(".txt")); return { dis: o.disabled, bs: c.borderStyle, td: t.textDecorationLine, col: c.borderColor, aria: o.getAttribute("aria-disabled") }; });
     assert.ok(w.dis && w.bs === "dashed" && /line-through/.test(w.td) && w.col === "rgb(255, 122, 122)", JSON.stringify(w));
     assert.equal(await page.evaluate(() => document.activeElement.dataset.id), "t", "focus did not move to the next live choice");
@@ -406,7 +409,7 @@ for (const [W, H] of SIZES) {
     await page.locator('.opt[data-id="t"]').click(); await page.keyboard.press("1");            // 1 = first choice = TRUE; toggling via key selects it
     assert.equal(await page.locator('.opt[data-id="t"]').getAttribute("aria-checked"), "true");
     await page.locator('.ch[data-id="t"] .send').click();
-    await page.waitForSelector(".opt.right");
+    await page.waitForSelector(".opt.right"); await page.waitForTimeout(250);
     const r = await page.evaluate(() => { const o = document.querySelector(".opt.right"), b = o.querySelector(".badge").getBoundingClientRect(), r = o.getBoundingClientRect(), t = o.querySelector(".txt").getBoundingClientRect(); return { br: b.right, or: r.right, bl: b.left, tr: t.right, col: getComputedStyle(o).borderColor, bd: getComputedStyle(o.querySelector(".badge")).display }; });
     assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(95, 211, 148)", JSON.stringify(r));
     await shot("mc-row-tf-right");
@@ -441,6 +444,8 @@ for (const [W, H] of SIZES) {
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_N6B", null, { timeout: 8000 });
     assert.ok(await page.locator("#qnav").isVisible(), "nav not shown");
+    assert.equal(await page.locator("#xbGutter .xb-nums").count(), 1, "a second problem load left a second gutter");
+    assert.equal(await page.locator("#xbGutter .xb-nums > div").count(), 1);
     const st = () => page.evaluate(() => { const n = document.querySelector("#qnav"), c = getComputedStyle(n), ta = document.querySelector("#scratch").getBoundingClientRect(), fz = document.querySelector("#freeze").getBoundingClientRect(); return { op: +c.opacity, vis: c.visibility, ty: c.transform, taTop: ta.top, fzTop: fz.top, y: scrollY, off: document.documentElement.classList.contains("bar-off"), qr: n.getBoundingClientRect().bottom }; });
     await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(100);
     const a = await st();
@@ -466,7 +471,7 @@ for (const [W, H] of SIZES) {
     const after = await audit(); assert.deepEqual(after.overlaps, []);
     // first line of the question visible with the bar hidden
     await page.evaluate(() => document.querySelector("#scratch").focus({ preventScroll: true })); await settle();
-    const fl = await page.evaluate(() => { const fi = document.querySelector("#freezeIn").getBoundingClientRect(), f = document.querySelector("#blocks > *").getBoundingClientRect(); return f.top >= fi.top - 0.5 && f.bottom <= fi.bottom + 0.5 && document.querySelector("#freezeIn").scrollTop === 0; });
+    const fl = await page.evaluate(() => { const fi = document.querySelector("#freezeIn").getBoundingClientRect(), f = document.querySelector("#blocks > *").getBoundingClientRect(); return f.top >= fi.top - 0.5 && f.top + 24 <= fi.bottom && document.querySelector("#freezeIn").scrollTop === 0; });
     assert.ok(fl, "first line of the question not visible with the bar hidden");
     await shot("swap-bar-hidden-keyboard-up");
     await kbDown();

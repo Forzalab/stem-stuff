@@ -419,11 +419,11 @@ function feedback(r, typed) {
 }
 
 /* ---------- scratchpad + Copy ---------- */
+let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
 function mountBox() {
-  if (S.box) S.box.destroy();
-  if (S.corner) S.corner.destroy();
-  if (S.nums) S.nums.destroy();
+  if (mounted) { mounted.box.destroy(); mounted.corner.destroy(); mounted.nums.destroy(); }
   const field = $("#xbField"); field.querySelector("textarea")?.remove();
+  $("#xbGutter").textContent = "";
   const ta = document.createElement("textarea");
   Object.assign(ta, { rows: 4, spellcheck: true, placeholder: "Paste GPT answer here, but me be sad..." });
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
@@ -434,6 +434,7 @@ function mountBox() {
     cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
   S.nums = ExplainBox.lineNumbers(ta, $("#xbGutter"));      // line numbers in a gutter over the left padding
+  mounted = { box: S.box, corner: S.corner, nums: S.nums };
 }
 async function copyText(text) {
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; } } catch { /* fall through */ }
