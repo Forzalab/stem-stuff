@@ -288,7 +288,7 @@ html.swap #swap { flex: none; align-self: flex-start; }
 /* both panes share one grid cell; the one not shown stays laid out (and focusable) but see-through and untouchable, so focus can move into it before it appears */
 html.swap .stage { flex: 1 1 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); position: relative; overflow: clip; padding-bottom: 6px; }
 html.swap .stage > .freeze, html.swap .stage > .work { grid-area: 1 / 1; min-width: 0; min-height: 0; }
-html.swap .stage > .work { margin: 0; }
+html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) + .work */
 html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
