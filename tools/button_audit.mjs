@@ -40,7 +40,7 @@ async function grab(shot, items) {
 
 await open("CALC1-X2P");
 await page.click('.opt[data-id="b"]'); await page.mouse.move(0, 1399); await page.waitForTimeout(200);
-await grab("main", [["upload", "#upload"], ["code go", "#codeGo"], ["download", ".so-dl"], ["MC arrow", '.ch[data-id="b"] .send'], ["copy", "#copy"]]);
+await grab("main", [["upload", "#upload"], ["code go", "#codeGo"], ["MC arrow", '.ch[data-id="b"] .send'], ["copy", "#copy"]]);
 
 
 await open("CALC1-T6B");

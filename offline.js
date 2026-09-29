@@ -2,7 +2,7 @@
  * - registers sw.js where allowed (https or localhost), else runs without it
  * - wraps fetch for p/<CODE>.json: if the server can't be reached (or file://),
  *   asks the student for the JSON file(s) on disk and answers the fetch with it
- * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, downloadButton, has, codes } */
+ * - window.stemOffline: { mode, loadProblem, onProblemLoaded, openPicker, pickFile, has, codes } */
 (() => {
   if (window.stemOffline) return;
   const FILE = location.protocol === "file:";
@@ -27,7 +27,6 @@
     ingest: list => ingest(list),
     fileName: code => names.get(code) || null,
     loadProblem,
-    downloadButton,
     validate
   };
 
@@ -103,7 +102,6 @@
 .so-x{position:absolute;top:.75rem;right:.75rem}
 .so-msg{min-height:1.5em;margin:.9rem 0 0;font-size:.95rem;color:var(--so-muted)}
 .so-msg.bad{color:var(--so-bad)}.so-msg.ok{color:var(--so-ok)}
-.so-dl[hidden]{display:none}
 @media (max-width:480px){.so{align-items:flex-end;padding:0}.so-card{max-width:none;border-radius:14px 14px 0 0;padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))}}
 @media (prefers-reduced-motion:no-preference){.so-card{animation:so-in .16s ease-out}@keyframes so-in{from{transform:translateY(8px);opacity:0}}}`;
 
@@ -231,31 +229,4 @@
     });
   }
 
-  /* ---------- download ---------- */
-  function downloadButton() {
-    const a = document.createElement("a");
-    a.className = "btn so-dl";
-    a.href = "stem-stuff.html";
-    a.setAttribute("download", "stem-stuff.html");
-    a.setAttribute("aria-label", "Download for offline use");
-    a.title = "Download for offline use";
-    a.innerHTML = svg("down");
-    a.hidden = true;
-    if (!ui) build().hidden = true;
-    if (!FILE) {
-      nativeFetch("stem-stuff.html", { method: "HEAD", cache: "no-store" })
-        .then(r => r.ok, () => window.caches ? caches.match("stem-stuff.html").then(Boolean) : false)
-        .then(ok => { a.hidden = !ok; }, () => {});
-    }
-    return a;
-  }
-
-  // Mounts into [data-offline-download] if the page has one, else at the end of the top bar.
-  const mount = () => {
-    if (FILE || document.querySelector(".so-dl")) return;
-    const slots = document.querySelectorAll("[data-offline-download]");
-    if (slots.length) for (const slot of slots) slot.appendChild(downloadButton());
-    else { const bar = document.querySelector("header .bar"); if (bar) bar.appendChild(downloadButton()); }
-  };
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
 })();

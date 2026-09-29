@@ -32,9 +32,6 @@ button:disabled { cursor: default; }
 
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
-/* download: page end, right edge of the column (Tony may drop it) */
-.dl-slot { display: flex; justify-content: flex-end; margin-top: var(--s6); }
-.dl-slot:empty, #work[hidden] ~ .dl-slot { display: none; }
 .dock { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { display: flex; gap: var(--s2); }
 .file-status { margin: 0 0 var(--s2); font-size: 1rem; color: var(--muted); overflow-wrap: anywhere; }
@@ -65,7 +62,7 @@ button:disabled { cursor: default; }
 .dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
 
 /* ---------- one button system ----------
-   Every button on the page (upload, submit arrows, copy, expand, download, file picker) is .btn:
+   Every button on the page (upload, submit arrows, copy, expand, file picker) is .btn:
    48x48, 8px radius, 2px border, 24px icon drawn at 2px stroke, same hover / focus / active.
    .btn-go is the one filled variant: the submit arrow. Fields that hold an arrow are 52px tall with a 2px border,
    so the 48px arrow sits flush inside them. */

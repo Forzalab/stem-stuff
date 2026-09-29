@@ -9,7 +9,7 @@ Tony: "read Refactoring UI to see what's wrong with the site too, but aim for ex
 | Labels are a last resort; don't design too much (p. 13) | The empty page had an illustration and "Enter a problem code." | Removed both. The empty page is just the entry box. |
 | Limit your choices (p. 24) | The subject dropdown duplicated the code prefix. It added a menu, icons, a cookie and a second way to get the code wrong. | Removed it. The code is typed in full. |
 | Use fewer borders (p. 206) | The problem card had a 2px border on top of its sheet background, and the top bar had a bottom rule. | Removed both. The background change is enough. |
-| Emphasize by de-emphasizing (p. 39) | The download button sat in the top bar next to the primary action, and showed on the empty page. | Moved to the end of the page, right edge of the column, and shown only once a problem is open. |
+| Emphasize by de-emphasizing (p. 39) | The download button sat in the top bar next to the primary action, and showed on the empty page. | Removed (Tony: plain http, the bundle carries no problems, YAGNI). `tools/bundle.py` and `/stem-stuff.html` stay for after HTTPS. |
 | Hierarchy is everything (p. 29): one primary action | Fine as is. The submit arrow is the only filled control; everything else is an outline `.btn`. | Kept. |
 | Don't design too much | After a correct answer, the math preview under the field repeated the answer. | The preview clears once an answer is submitted. |
 | Establish a spacing system (p. 60) | The gap from the question to the scratchpad was 32px plus the freeze padding. It read as a hole under short problems. | 16px (`--s4`). Rhythm: 12px inside the frozen layer, 16px between layers. |

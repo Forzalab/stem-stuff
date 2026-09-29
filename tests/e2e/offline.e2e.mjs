@@ -128,17 +128,13 @@ test("plain http (no SW): server down -> file picker loads p/*.json, rejects jun
   } finally { await ctx.close(); if (s.proc.exitCode === null && !s.proc.signalCode) await stop(s); }
 });
 
-test("download: served bundle opens from file:// and loads a problem via picker", { skip, timeout: 30000 }, async () => {
+test("bundle: served stem-stuff.html opens from file:// and loads a problem via picker", { skip, timeout: 30000 }, async () => {
   const s = await serve();
   const ctx = await browser.newContext({ acceptDownloads: true });
   const page = await ctx.newPage();
   try {
     await page.goto(s.url);
-    const btn = page.locator(".so-dl");
-    if (await btn.count()) {                              // page mounted the download icon
-      await btn.first().waitFor({ state: "attached" });   // the drill page hides it until a problem is open (blank empty state)
-      assert.equal(await btn.first().textContent(), "", "icon only");
-    }
+    assert.equal(await page.locator(".so-dl, [data-offline-download]").count(), 0, "no download button (removed)");
     const out = join(site, "dl.html");
     execFileSync("curl", ["-sf", "-o", out, s.url + "stem-stuff.html"]);
     const page2 = await ctx.newPage();
