@@ -8,14 +8,14 @@ const [BASE = "http://localhost:8812", OUT = "design/shots/buttons"] = process.a
 mkdirSync(OUT, { recursive: true });
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const page = await browser.newPage({ viewport: { width: 1024, height: 900 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: 1024, height: 1400 }, deviceScaleFactor: 1 });
 const rows = [];
 async function open(code) {
   await page.goto("about:blank");
   await page.goto(`${BASE}/#${code}`, { waitUntil: "load" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code);
   await page.evaluate(() => document.fonts.ready);
-  await page.mouse.move(0, 899);   // no hover
+  await page.mouse.move(0, 1399);   // no hover
   await page.waitForTimeout(300);
 }
 async function grab(shot, items) {
@@ -39,14 +39,12 @@ async function grab(shot, items) {
 }
 
 await open("CALC1-X2P");
-await page.click('.opt[data-id="b"]'); await page.mouse.move(0, 899); await page.waitForTimeout(200);
-await grab("main", [["subject", "#subjBtn"], ["code go", "#codeGo"], ["download", ".so-dl"], ["MC arrow", '.ch[data-id="b"] .send'], ["copy", "#copy"]]);
-await page.click("#subjBtn"); await page.mouse.move(0, 899); await page.waitForTimeout(200);
-await grab("menu", [["menu CALC1", '.item[data-subj="CALC1"]'], ["menu CSCI26", '.item[data-subj="CSCI26"]'], ["menu PHYS", '.item[data-subj="PHYS"]']]);
-await page.keyboard.press("Escape");
+await page.click('.opt[data-id="b"]'); await page.mouse.move(0, 1399); await page.waitForTimeout(200);
+await grab("main", [["upload", "#upload"], ["code go", "#codeGo"], ["download", ".so-dl"], ["MC arrow", '.ch[data-id="b"] .send'], ["copy", "#copy"]]);
+
 
 await open("CALC1-T6B");
-await page.fill("#ans", "12"); await page.mouse.move(0, 899); await page.waitForTimeout(150);
+await page.fill("#ans", "12"); await page.mouse.move(0, 1399); await page.waitForTimeout(150);
 await page.evaluate(() => document.activeElement.blur());
 await grab("freeform", [["freeform arrow", "#ansGo"]]);
 

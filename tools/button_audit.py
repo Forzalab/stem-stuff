@@ -28,7 +28,9 @@ hexc = lambda c: "#%02x%02x%02x" % c[:3]
 def measure(img, r):
     px = img.load()
     W, H = img.size
-    x0, y0, w, h = round(r["x"]), round(r["y"]), round(r["w"]), round(r["h"])
+    # fractional layout (e.g. y = 676.5): outer box = floor of the start, ceil of the end
+    x0, y0 = math.floor(r["x"]), math.floor(r["y"])
+    w, h = math.ceil(r["x"] + r["w"]) - x0, math.ceil(r["y"] + r["h"]) - y0
     # page colour right outside the top-left corner (a field or the sheet)
     mid_y, mid_x = y0 + h // 2, x0 + w // 2
 

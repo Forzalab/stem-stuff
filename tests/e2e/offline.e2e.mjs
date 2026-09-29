@@ -136,7 +136,7 @@ test("download: served bundle opens from file:// and loads a problem via picker"
     await page.goto(s.url);
     const btn = page.locator(".so-dl");
     if (await btn.count()) {                              // page mounted the download icon
-      await btn.first().waitFor({ state: "visible" });
+      await btn.first().waitFor({ state: "attached" });   // the drill page hides it until a problem is open (blank empty state)
       assert.equal(await btn.first().textContent(), "", "icon only");
     }
     const out = join(site, "dl.html");

@@ -49,3 +49,11 @@ Files: `index.html` (`#freeze`, `#freezeIn`, `#more`), `app.css` (section "freez
 
 - Chromium (Playwright) at 390x844, 1024x1366 and 1920x1080: after 60 lines in the scratchpad and scrolling to the bottom, the layer's top is at 0, it is marked stuck, and it covers less than 75% of the viewport. Screenshots: `shots/app-freeze-390.png`, `shots/app-freeze-1024.png`, `shots/app-freeze-1920.png`.
 - **Not tested:** WebKit and Firefox are not installed in this container (`/opt/pw-browsers` has Chromium only), and a headless browser has no software keyboard. The iOS keyboard path (`--kb-top`, the 34% cap) is reasoned from the sources above, not observed. Check on a real iPhone and iPad: open PHYS-S2K, scroll down, tap the scratchpad, type, and scroll.
+
+## Entry box on phones (bottom dock)
+
+- Under 700px wide, or with a coarse pointer (touch), the entry box (upload + code bar, plus the "File … in use." line) is `position: fixed` at the bottom centre, for one thumb. Its bottom padding is `max(12px, env(safe-area-inset-bottom))`. `main` gets extra bottom padding equal to the box height (`--dock-h`), so scrolling to the end always clears the scratchpad and Copy.
+- **Keyboard while typing the code:** `--kb-bottom = innerHeight − (visualViewport.offsetTop + visualViewport.height)` lifts the box onto the iOS keyboard. iOS keeps fixed elements on the layout viewport, the same issue as the sticky top.
+- **Keyboard while typing anywhere else** (scratchpad, answer): the box is hidden (`.dock-away`) so it can't cover the caret. The frozen strip's height is computed from the viewport minus the box, so the strip, the writing area and the box always add up to the screen.
+- On desktop the box sits at the top of the content column, at the column's width.
+- Tested in Chromium at 390: the box is fixed, at the bottom and centred, and doesn't overlap the scratchpad or Copy at the end of the page. `tools/dogfood.mjs` screenshots a shrunken viewport as the "keyboard" (`shots/dog-keyboard-scratch-390.png`, `shots/dog-keyboard-code-390.png`). iOS itself is still untested.

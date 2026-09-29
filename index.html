@@ -25,6 +25,7 @@
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -33,53 +34,35 @@
     <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-    <!-- subjects: drawn, no letters -->
-    <symbol id="s-math" viewBox="0 0 24 24"><path d="M15.5 3.5c-2.2-.6-3.5.6-3.5 3v11c0 2.4-1.3 3.6-3.5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="s-sci" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="9.5" ry="3.8" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(60 12 12)" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(-60 12 12)" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.9" fill="currentColor"/></symbol>
-    <symbol id="s-CALC1" viewBox="0 0 24 24"><path d="M4 20V14C8 14 10 6 20 5V20z" fill="currentColor" opacity=".35"/><path d="M3 20h18M4 14C8 14 10 6 20 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="s-CSCI26" viewBox="0 0 24 24"><path d="M6 6l12 1.5M6 6l2.5 12M18 7.5L8.5 18M18 7.5l1 10" fill="none" stroke="currentColor" stroke-width="2" opacity=".6"/><circle cx="6" cy="6" r="2.6" fill="currentColor"/><circle cx="18" cy="7.5" r="2.6" fill="currentColor"/><circle cx="8.5" cy="18" r="2.6" fill="currentColor"/><circle cx="19" cy="17.5" r="2.6" fill="currentColor"/></symbol>
-    <symbol id="s-PHYS" viewBox="0 0 24 24"><path d="M2.5 20.5h19v-11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="10" width="6" height="4.5" rx=".8" transform="rotate(-27.5 12 12.2)" fill="currentColor"/><path d="M12 4.5v-3" stroke="currentColor" stroke-width="2"/></symbol>
     <!-- Cluck the duck -->
     <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
   </defs>
 </svg>
 
 <header class="top">
-  <div class="bar">
+  <!-- the entry box: top of the column on desktop, fixed bottom-centre on phones (one thumb) -->
+  <div class="dock" id="dock">
+    <p class="file-status" id="fileStatus" role="status" hidden></p>
     <form class="entry" id="entry" autocomplete="off" novalidate>
-      <div class="subj">
-        <button type="button" id="subjBtn" class="btn subj-btn" aria-haspopup="true" aria-expanded="false" aria-controls="subjMenu" aria-label="Subject">
-          <svg class="ico" aria-hidden="true"><use href="#s-CALC1"/></svg>
-        </button>
-        <div class="menu" id="subjMenu" hidden></div>
-      </div>
+      <button type="button" class="btn" id="upload" aria-label="Open a problem file" title="Open a problem file">
+        <svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>
+      </button>
       <div class="code-box">
-        <span class="pre" id="pre" aria-hidden="true">CALC1-</span>
         <input id="code" name="code" type="text" aria-label="Problem code" aria-describedby="entryMsg"
           maxlength="16" spellcheck="false" autocapitalize="characters" autocorrect="off" enterkeyhint="go">
         <button type="submit" class="btn btn-go" id="codeGo" aria-label="Open problem"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button>
       </div>
     </form>
+    <p class="entry-msg" id="entryMsg" role="status" aria-live="polite"></p>
   </div>
-  <p class="entry-msg" id="entryMsg" role="status" aria-live="polite"></p>
 </header>
 
 <main id="main">
-  <section class="empty" id="empty">
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden="true" focusable="false">
-      <rect x="6" y="8" width="108" height="64" rx="10" fill="none" stroke="var(--line)" stroke-width="2"/>
-      <path d="M20 58C44 58 52 22 100 20" fill="none" stroke="var(--edge)" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M60 40l20-12" stroke="var(--c1)" stroke-width="3" stroke-linecap="round"/><path d="M85 25l-9.4.6 4 6.6z" fill="var(--c1)"/>
-      <circle cx="60" cy="40" r="4" fill="var(--ink)"/>
-    </svg>
-    <p>Enter a problem code.</p>
-  </section>
-
   <div id="sentinel" aria-hidden="true"></div>
   <section class="freeze" id="freeze" aria-labelledby="pcode" hidden>
     <div class="freeze-in" id="freezeIn">
       <article class="p" id="problem">
-        <h1 class="pcode" id="pcode"></h1>
+        <h1 class="pcode sr-only" id="pcode"></h1>
         <div class="blocks" id="blocks"></div>
       </article>
       <div class="q" id="q"></div>
@@ -102,6 +85,8 @@
       </div>
     </div>
   </section>
+  <!-- download (offline.js mounts it here): end of the page, right edge of the column, out of the way -->
+  <footer class="dl-slot" data-offline-download></footer>
 </main>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 </body>

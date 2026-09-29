@@ -23,6 +23,9 @@
     codes: () => [...local.keys()],
     onProblemLoaded(cb) { if (typeof cb === "function") listeners.push(cb); },
     openPicker: code => pick(code || null),
+    pickFile: () => pickFile(),
+    ingest: list => ingest(list),
+    fileName: code => names.get(code) || null,
     loadProblem,
     downloadButton,
     validate
@@ -174,9 +177,10 @@
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
 
-  async function read(list) {
+  // Parse picked files into the in-memory store. Shared by the dialog and by pickFile().
+  const names = new Map();      // code -> file name it came from
+  async function ingest(list) {
     const files = [...(list || [])].filter(f => /\.json$/i.test(f.name) && !/(^|\/)k\//.test(f.webkitRelativePath || ""));
-    if (!files.length) { say("No .json files there.", "bad"); return; }
     const got = [], bad = [];
     for (const f of files) {
       try {
@@ -184,9 +188,16 @@
         const p = JSON.parse(await f.text());
         if (validate(p)) throw 0;
         local.set(p.code, p);
+        names.set(p.code, f.name);
         got.push(p);
       } catch (e) { bad.push(f.name); }
     }
+    return { files, got, bad };
+  }
+
+  async function read(list) {
+    const { files, got, bad } = await ingest(list);
+    if (!files.length) { say("No .json files there.", "bad"); return; }
     if (!got.length) { say((bad.length === 1 ? bad[0] + " is" : "Those files are") + " not a problem file.", "bad"); return; }
     if (waiting) {
       const hit = local.get(waiting.code);
@@ -196,6 +207,28 @@
     }
     close(false);
     emit(got[0]);
+  }
+
+  // Direct upload (the page's upload button): the OS file dialog, no modal. Resolves
+  // { problem, name } for the first valid file (and emits it), { error } otherwise, null if cancelled.
+  let upInput = null;
+  function pickFile() {
+    if (!upInput) {
+      upInput = document.createElement("input");
+      upInput.type = "file"; upInput.accept = ".json,application/json"; upInput.hidden = true;
+      document.body.appendChild(upInput);
+    }
+    return new Promise(resolve => {
+      upInput.onchange = async () => {
+        const { files, got, bad } = await ingest(upInput.files);
+        upInput.value = "";
+        if (!files.length) return resolve({ error: "No .json file there." });
+        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problem file." });
+        emit(got[0]);
+        resolve({ problem: got[0], name: names.get(got[0].code) });
+      };
+      upInput.click();
+    });
   }
 
   /* ---------- download ---------- */

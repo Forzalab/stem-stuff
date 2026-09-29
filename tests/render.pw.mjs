@@ -130,11 +130,39 @@ async function run(browserType, label, opts = {}) {
       assert.ok(w.box <= w.ch70 + 40, `textarea ${w.box}px vs 70ch ${w.ch70}px`);
     });
 
-    await step(`${label} ${vname} top bar: subject, code box, download only (no logo)`, async () => {
+    await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
+      await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
+      assert.equal(await page.locator("#subjBtn, #subjMenu, .logo, .empty").count(), 0, "dropdown/logo/empty-state still present");
+      const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
+        .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
+      assert.equal(text, "", `empty state shows text: ${text}`);
+      assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
+      const kids = await page.evaluate(() => [...document.querySelector("#entry").children].map(e => e.id || e.className));
+      assert.deepEqual(kids, ["upload", "code-box"]);
+      const d = await page.evaluate(() => { const r = document.querySelector("#entry").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, pos: getComputedStyle(document.querySelector("#dock")).position }; });
+      if (vname === "phone") {
+        assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
+        assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
+      } else if (vname === "desktop") assert.ok(d.top < 60, `box not at the top: ${d.top}`);
+      // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1-T6B");
-      assert.equal(await page.locator("header .logo").count(), 0);
-      const kids = await page.evaluate(() => [...document.querySelector("header .bar").children].map(e => e.id || e.className));
-      assert.deepEqual(kids.slice(0, 1), ["entry"], kids.join(","));
+      await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
+      const o = await page.evaluate(() => {
+        const a = document.querySelector("#dock").getBoundingClientRect(), hit = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.bottom > a.top && r.top < a.bottom && getComputedStyle(document.querySelector("#dock")).position === "fixed"; };
+        return { copy: hit("#copy"), scratch: hit("#scratch") };
+      });
+      assert.ok(!o.copy && !o.scratch, `box covers ${JSON.stringify(o)}`);
+    });
+
+    await step(`${label} ${vname} upload a problem file: status line + render`, async () => {
+      await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
+      assert.ok(await page.locator("#fileStatus").isHidden());
+      const p = JSON.parse(await (await fetch(`${BASE}/p/PHYS-F3N.json`)).text()); p.code = "PHYS-Q7W";
+      const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+      await ch.setFiles({ name: "my-problem.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(p)) });
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS-Q7W");
+      assert.equal(await page.locator("#fileStatus").textContent(), "File my-problem.json in use.");
+      assert.ok(await page.locator("#freeze .fig svg").count() > 0 && await page.locator("#freeze .katex").count() > 0);
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {

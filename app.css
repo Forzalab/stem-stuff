@@ -30,42 +30,42 @@ button:disabled { cursor: default; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
 
-/* ---------- top bar ---------- */
-.top { border-bottom: 2px solid var(--line); padding-top: env(safe-area-inset-top); }
-.bar { max-width: 52rem; margin: 0 auto; padding: var(--s3) var(--gut); display: flex; align-items: center; gap: var(--s2); }
-.entry { flex: 1 1 auto; display: flex; gap: var(--s2); min-width: 0; max-width: 26rem; margin-left: auto; }
-.subj { position: relative; flex: none; }
-.menu {
-  position: absolute; z-index: 30; top: calc(100% + var(--s2)); left: 0;
-  display: grid; gap: var(--s2); padding: var(--s2);
-  background: var(--raised); border: 1px solid var(--edge); border-radius: 10px; box-shadow: var(--shadow-4);
-}
-.menu .grp { display: flex; align-items: center; gap: var(--s2); }
-.menu .grp + .grp { padding-top: var(--s2); border-top: 1px solid var(--line); }
-/* group mark: small and muted so the choices (c1) carry the weight (Refactoring UI: balance weight and contrast) */
-.menu .grp-head { width: 2rem; display: grid; place-items: center; color: var(--muted); }
-.menu .grp-head .ico { width: 1.25rem; height: 1.25rem; }
-.menu .item[aria-current="true"] { border-color: var(--c1); }
-
+/* ---------- entry box (dock) ---------- */
+.top { position: relative; padding-top: env(safe-area-inset-top); }
+/* download: page end, right edge of the column (Tony may drop it) */
+.dl-slot { display: flex; justify-content: flex-end; margin-top: var(--s6); }
+.dl-slot:empty, #work[hidden] ~ .dl-slot { display: none; }
+.dock { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.entry { display: flex; gap: var(--s2); }
+.file-status { margin: 0 0 var(--s2); font-size: 1rem; color: var(--muted); overflow-wrap: anywhere; }
 .code-box {
   flex: 1 1 auto; min-width: 0; height: 52px; display: flex; align-items: center;
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
 }
 .code-box:hover { border-color: var(--muted); }
 .code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
-.code-box .pre { color: var(--muted); font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
   font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
-.entry-msg { max-width: 52rem; margin: 0 auto; padding: 0 var(--gut); color: var(--bad); font-size: 1rem; }
+.entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: 1rem; }
 .entry-msg:empty { display: none; }
-.entry-msg:not(:empty) { padding-bottom: var(--s3); }
+
+/* phones and touch: the box is a thumb bar fixed at the bottom centre; it rides on the iOS keyboard while the
+   code is typed (--kb-bottom from visualViewport) and steps aside while the keyboard serves another field */
+.dock-bottom .dock {
+  position: fixed; z-index: 20; left: 0; right: 0; bottom: var(--kb-bottom, 0px); max-width: none;
+  padding: var(--s3) var(--gut) max(var(--s3), env(safe-area-inset-bottom));
+  background: var(--paper); box-shadow: 0 -10px 24px -8px rgb(0 0 0 / 0.55);
+}
+.dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
+.dock-bottom.dock-away .dock { display: none; }
+.dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
 
 /* ---------- one button system ----------
-   Every button on the page (subject, menu items, submit arrows, copy, expand, download, file picker) is .btn:
+   Every button on the page (upload, submit arrows, copy, expand, download, file picker) is .btn:
    48x48, 8px radius, 2px border, 24px icon drawn at 2px stroke, same hover / focus / active.
    .btn-go is the one filled variant: the submit arrow. Fields that hold an arrow are 52px tall with a 2px border,
    so the 48px arrow sits flush inside them. */
@@ -86,9 +86,6 @@ button:disabled { cursor: default; }
 
 /* ---------- main column ---------- */
 main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); padding-bottom: max(var(--s7), env(safe-area-inset-bottom)); }
-.empty { text-align: center; color: var(--muted); padding: var(--s7) 0; }
-.empty svg { display: block; margin: 0 auto var(--s3); }
-.empty p { margin: 0; }
 
 /* ---------- freeze layer: problem + question stay on screen while you write (FREEZE.md) ---------- */
 #sentinel { height: 1px; margin-bottom: -1px; }
@@ -115,7 +112,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .more:active { transform: translateY(1px); }
 .freeze.open .more .ico { transform: rotate(180deg); }
 
-.p { background: var(--sheet); border: 2px solid var(--line); border-radius: 10px; padding: var(--s4) 1.25rem; }
+.p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: 0.95rem; line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
@@ -193,10 +190,9 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 8px; padding: var(--s3) var(--s4); }
 .cluck > .ico { color: var(--mark); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .cluck .md p { margin: 0; }
-.cluck .tag { display: inline-block; margin-top: var(--s1); font-size: 0.9rem; color: var(--muted); }
 
 /* ---------- scratchpad + copy ---------- */
-.work { margin-top: var(--s6); }
+.work { margin-top: var(--s4); }
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* Tony: limit line length and wrap. ch is measured in the textarea's own font. */
@@ -214,6 +210,5 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
   :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }
   main { padding-top: var(--s4); }
   .p { padding: var(--s3) var(--s4); }
-  .bar { gap: var(--s2); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
