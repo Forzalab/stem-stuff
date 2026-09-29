@@ -157,6 +157,7 @@ async function load(code) {
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: MAX_TRIES, finished: false, selected: null, box: null };
   render();
+  dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
 }
 
 function render() {
