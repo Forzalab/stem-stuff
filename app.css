@@ -181,8 +181,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
 .opt[aria-checked="true"] { border-color: var(--c1); background: var(--raised); }
 .opt[aria-checked="true"] .badge { background: var(--c1); border-color: var(--c1); color: var(--field); }
-/* lock-in (Tony, Sep 30: "who wants to be a millionaire"): a picked choice glows, the other choices fade, the rest of the page dims */
-.opt[aria-checked="true"] { box-shadow: 0 0 18px -2px var(--c1); }
+/* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */
 .choices:has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
 html:has(.opt[aria-checked="true"]) :is(.top, #problem, #work, #fb) { filter: brightness(.55); }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
