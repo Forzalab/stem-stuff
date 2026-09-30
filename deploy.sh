@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # One-shot install + deploy of stem-stuff.
 # usage: ./deploy.sh [dir] [port] [branch]
+# dir defaults to the folder deploy.sh itself lives in (it trusts the checkout it runs from); pass a dir to deploy elsewhere.
 #   or:  bash <(curl -fsSL <raw deploy.sh url>) [dir] [port] [branch]
 # Every run force-stops the old server (pid file, then anything still on the port) and starts a new one.
 # STEM_PROBLEMS=/path/problems.json uses a bank outside the checkout (default: problems.json in the checkout).
@@ -9,7 +10,10 @@
 {
 set -euo pipefail
 
-DIR="${1:-$HOME/stem-stuff-site}"
+# the folder this script lives in (empty when piped / run via <(curl ...): then there is no checkout to trust)
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd -P)" || SELF_DIR=""
+[ -f "$SELF_DIR/serve.py" ] || SELF_DIR=""
+DIR="${1:-${SELF_DIR:-$HOME/stem-stuff-site}}"
 PORT="${2:-5567}"
 BRANCH="${3:-main}"
 REPO="${STEM_REPO:-git@github.com:Forzalab/stem-stuff.git}"
@@ -38,6 +42,8 @@ python3 -c "import sympy" 2>/dev/null || {
 }
 
 DIR="$(realpath -m "$DIR")"
+# is DIR the checkout this script is running from? never re-clone or wipe it
+IS_SELF=""; [ -n "$SELF_DIR" ] && [ "$DIR" = "$SELF_DIR" ] && IS_SELF=1
 case "$DIR" in
   /|"$HOME"|/home|/root|/usr|/etc|/var|/opt|/tmp) die "refusing to use $DIR" ;;
 esac
@@ -71,7 +77,7 @@ stop_old() {
   die "port $PORT is still in use by something this script can't stop (try: sudo lsof -iTCP:$PORT)"
 }
 
-if [ -d "$DIR/.git" ] && git -C "$DIR" remote get-url origin 2>/dev/null | grep -q stem-stuff; then
+if [ -d "$DIR/.git" ] && { [ -n "$IS_SELF" ] || git -C "$DIR" remote get-url origin 2>/dev/null | grep -q stem-stuff; }; then
   echo "existing install at $DIR ($BRANCH)"
   git -C "$DIR" fetch -q origin "$BRANCH"
   if [ "$(git -C "$DIR" rev-parse HEAD)" = "$(git -C "$DIR" rev-parse "origin/$BRANCH")" ]; then
@@ -92,6 +98,9 @@ if [ -d "$DIR/.git" ] && git -C "$DIR" remote get-url origin 2>/dev/null | grep 
       fi
     fi
   fi
+elif [ -n "$IS_SELF" ]; then
+  # our own folder but not a git checkout (zip download, etc.): can't pull, never wipe; just (re)start it
+  echo "existing install at $DIR (not a git checkout: not updating)"
 elif [ -e "$DIR" ] && [ -n "$(ls -A "$DIR" 2>/dev/null)" ]; then
   echo "WARNING: $DIR is not empty:"
   ls -A "$DIR" | head -n 10

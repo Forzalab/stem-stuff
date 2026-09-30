@@ -8,7 +8,7 @@ A code-gated STEM drill site (CALC1 / PHYS / CSCI26). It's a static page plus a 
 - **Practice banks: `banks/BANK_XXX.json`** (same format). Type `BANK_XXX` in the code box: its questions become the list, and the server keeps each browser's progress and place (design/BANK.md). Ships empty.
 - **Open a certain bank (how-to):**
   1. Name the file `BANK_` + 3–6 capital letters or digits, e.g. `BANK_CE3.json`. Any other name is skipped (the server prints one line saying so). `ce3-traps.json` → rename to `BANK_CE3.json`.
-  2. Put it in `banks/` next to `serve.py` on the server (with deploy.sh: `~/stem-stuff-site/banks/`). No restart: it's live on the next request.
+  2. Put it in `banks/` next to `serve.py` on the server (with deploy.sh: `banks/` in the folder deploy.sh is in). No restart: it's live on the next request.
   3. A person opens it either way:
      - types `BANK_CE3` in the code box (`bank ce3` works too), or
      - opens the link `http://<host>:<port>/#BANK_CE3` (e.g. `http://csci4x.com:5567/#BANK_CE3`).
@@ -16,4 +16,4 @@ A code-gated STEM drill site (CALC1 / PHYS / CSCI26). It's a static page plus a 
   - Answers stay on the server: `/banks/` is never served. Uploading a file instead (⬆ button) switches that browser to the file until they open a bank again.
 - Server needs Python 3 + sympy (`deploy.sh` installs sympy if missing).
 - Tests: `cd tests && npm install && npm test`, and `python3 -m unittest discover -s tests -p 'test_*.py'`.
-- Deploy: `./deploy.sh [dir] [port] [branch]` (defaults `~/stem-stuff-site`, 5567, main). Fresh → clone + serve. Existing install → shows incoming commits, asks "update the live site now? [Y/n]". Every run force-stops the old server (pid file, then anything still on the port) and starts a new one. Non-empty other dir → Exit (default) / wipe + install (type folder name to confirm).
+- Deploy: `./deploy.sh [dir] [port] [branch]` (defaults: the folder deploy.sh is in, 5567, main; run via curl with no checkout → `~/stem-stuff-site`). Fresh → clone + serve. Existing install (including the folder deploy.sh is in, which is never wiped or re-cloned) → shows incoming commits, asks "update the live site now? [Y/n]". Every run force-stops the old server (pid file, then anything still on the port) and starts a new one. Non-empty other dir → Exit (default) / wipe + install (type folder name to confirm).
