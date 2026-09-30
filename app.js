@@ -170,13 +170,6 @@ addEventListener("DOMContentLoaded", () => {
     load(typed && off.has(typed.code) ? typed.code : p.code);
   });
 });
-function fileStatus(code) {
-  const off = window.stemOffline, name = off && off.has && off.has(code) ? off.fileName(code) : null;
-  const el = $("#fileStatus");
-  el.hidden = !name;
-  el.textContent = name ? `File ${name} in use.` : "";
-  layoutDock();
-}
 
 const retryLoad = $("#retryLoad");
 /* ================= practice banks (design/BANK.md) =================
@@ -237,7 +230,6 @@ async function load(code) {
   }
   $("#entryMsg").textContent = "";
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
-  fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
@@ -973,7 +965,6 @@ addEventListener("pageshow", e => {
   if (!e.persisted) return;
   resume(true);
   const off = window.stemOffline;
-  if (off && off.ready && S && !off.has(S.code)) off.ready.then(() => { if (S && off.has(S.code)) fileStatus(S.code); });
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 

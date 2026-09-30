@@ -40,7 +40,6 @@ button:disabled { cursor: default; }
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { display: flex; gap: var(--s2); }
-.file-status { margin: 0 0 var(--s2); font-size: var(--t-sm); color: var(--muted); overflow-wrap: anywhere; }
 .code-box {
   flex: 1 1 auto; min-width: 0; height: var(--fld); display: flex; align-items: center;
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);

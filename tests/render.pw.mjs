@@ -271,7 +271,6 @@ async function run(browserType, label, opts = {}) {
 
     await step(`${label} ${vname} upload one problems.json: every problem loads, graded from the file`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
-      assert.ok(await page.locator("#fileStatus").isHidden());
       // a bank with codes the server doesn't have: the upload is the only source
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_Q");   // insert, not swap: a swap made codes collide
@@ -280,7 +279,7 @@ async function run(browserType, label, opts = {}) {
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
-      assert.equal(await page.locator("#fileStatus").textContent(), "File my-problems.json in use.");
+      assert.equal((await page.textContent("#qlistName")).trim(), "my-problems.json", "list button names the file");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
       const f3n = "PHYS_QF3N";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
