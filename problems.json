@@ -3287,6 +3287,926 @@
           "hint": "QUACK. You rounded 36 up to 40. Three times over, is that still close?"
         }
       ]
+    },
+    {
+      "code": "CSCI26_N9H",
+      "title": "Two stadium screens",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Two stadium screens each have a million pixels. How many pixels are there in total?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2 million"
+        },
+        {
+          "id": "b",
+          "md": "a trillion"
+        },
+        {
+          "id": "c",
+          "md": "10 million"
+        },
+        {
+          "id": "d",
+          "md": "2 trillion"
+        },
+        {
+          "id": "e",
+          "md": "64 million"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. Two screens side by side. Do their pixels add, or multiply?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. Adding a second million: does that add a zero, or double the count?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. Where did six extra zeros come from? Two piles of a million just add."
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. Two times a million is not 2 to some power. What do two equal piles make?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U2J",
+      "title": "Wide, tall and many frames",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A screen is a thousand pixels wide and a thousand pixels tall. It shows a thousand frames. How many pixels are drawn in all?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "3 thousand"
+        },
+        {
+          "id": "b",
+          "md": "a million"
+        },
+        {
+          "id": "c",
+          "md": "a billion"
+        },
+        {
+          "id": "d",
+          "md": "3 billion"
+        },
+        {
+          "id": "e",
+          "md": "a billion billion billion"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Width times height gives one frame. Should the three thousands add or multiply?"
+        },
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. That's one frame. How many frames does the screen show?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-factor",
+          "hint": "QUACK. Where does the extra 3 come from? Multiply the three counts, nothing else."
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. Each thousand adds three zeros. Did you multiply the zero counts instead of adding them?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U3K",
+      "title": "Town plus a suburb",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A town has a million people. A new suburb adds a hundred thousand people. How many people live in the town now?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "a million"
+        },
+        {
+          "id": "b",
+          "md": "1.1 million"
+        },
+        {
+          "id": "c",
+          "md": "2 million"
+        },
+        {
+          "id": "d",
+          "md": "100 billion"
+        },
+        {
+          "id": "e",
+          "md": "200 billion"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. The suburb adds people. Did your total change at all?"
+        },
+        {
+          "choice": "c",
+          "error": "misread",
+          "hint": "QUACK. A hundred thousand is not a million. How many hundred-thousands make a million?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. New people add on, they don't multiply. Did you add the zero counts?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. Did you multiply the two groups? New people add on. Line up the digits and add."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U4L",
+      "title": "Switches or one dial",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Which has more settings: a row of four on/off switches, or one dial with sixteen symbols?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "the switches"
+        },
+        {
+          "id": "b",
+          "md": "the dial"
+        },
+        {
+          "id": "c",
+          "md": "they have the same number"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. Count on/off settings, not the orders you could flip them in. Each switch has 2 positions."
+        },
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. Four switches with 2 positions each: add, or multiply? Each switch doubles the count."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U5M",
+      "title": "A trillion boxes",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A crew checks a million boxes a day. How many days does it take them to check a trillion boxes?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2 days"
+        },
+        {
+          "id": "b",
+          "md": "a thousand days"
+        },
+        {
+          "id": "c",
+          "md": "a million days"
+        },
+        {
+          "id": "d",
+          "md": "a billion days"
+        },
+        {
+          "id": "e",
+          "md": "a trillion days"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "arithmetic",
+          "hint": "QUACK. You divided the zero counts. When you divide, do the zero counts divide, or subtract?"
+        },
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. A thousand millions is a billion. Is a trillion the same as a billion?"
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros: 12 in a trillion, 6 in a million. Dividing takes away how many?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. That's the number of boxes. The crew does a million each day. Did you divide?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_J2A",
+      "title": "Books for a hike",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have ten different books on your bookshelf and you are going to take three of them hiking. How many different ways could you take the three books?"
+        }
+      ],
+      "answer": "120",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Does it matter which book you packed first? Divide out the orders of the three books."
+        },
+        {
+          "match": "1000",
+          "error": "counting",
+          "hint": "QUACK. Can you take the same book twice? Each pick leaves one fewer book."
+        },
+        {
+          "match": "30",
+          "error": "op-swap",
+          "hint": "QUACK. Ten books, three picks. Do the choices add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Count the picks in order first, then divide by how many orders three books have."
+    },
+    {
+      "code": "CSCI26_J3B",
+      "title": "Arrange TRAIN",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'TRAIN'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "120",
+      "wrong": [
+        {
+          "match": "3125",
+          "error": "counting",
+          "hint": "QUACK. Once a letter is used, can it be used again? Each spot has fewer letters left."
+        },
+        {
+          "match": "25",
+          "error": "op-swap",
+          "hint": "QUACK. Five spots. Is it 5 × 5, or does each spot have one fewer choice?"
+        },
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. You counted four spots. How many letters are in the word?"
+        }
+      ],
+      "nudge": "QUACK. Write a blank for each letter. How many letters can go in the first blank, then the next?"
+    },
+    {
+      "code": "CSCI26_J4C",
+      "title": "Arrange NOODLE",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'NOODLE'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "360",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two O's gives the same word. Did you divide out that repeat?"
+        },
+        {
+          "match": "180",
+          "error": "counting",
+          "hint": "QUACK. Which letters repeat? Only the O. How many times did you divide by 2?"
+        },
+        {
+          "match": "120",
+          "error": "off-by-one",
+          "hint": "QUACK. Both O's are letters. Did you count six spots?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J5D",
+      "title": "Arrange LOBBY",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'LOBBY'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "60",
+      "wrong": [
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two B's gives the same word. Did you divide out that repeat?"
+        },
+        {
+          "match": "30",
+          "error": "counting",
+          "hint": "QUACK. Only one letter repeats. How many times did you divide by 2?"
+        },
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. LOBBY has five letters. Did you drop a B?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J6E",
+      "title": "Arrange COFFEE",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'COFFEE'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "180",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two F's, or the two E's, gives the same word. Did you divide those out?"
+        },
+        {
+          "match": "360",
+          "error": "counting",
+          "hint": "QUACK. Two letters repeat, F and E. Did you divide for both?"
+        },
+        {
+          "match": "90",
+          "error": "counting",
+          "hint": "QUACK. Two pairs repeat. How many times should you divide by 2?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J7F",
+      "title": "License plates",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A license plate is one digit, then 3 letters, then 3 digits. The first digit cannot be 0. Letters and digits may repeat. How many plates are possible?"
+        }
+      ],
+      "how": "The full number, no commas.",
+      "answer": "158184000",
+      "wrong": [
+        {
+          "match": "175760000",
+          "error": "misread",
+          "hint": "QUACK. The first digit can't be 0. How many choices does that slot really have?"
+        },
+        {
+          "match": "140400000",
+          "error": "counting",
+          "hint": "QUACK. Letters may repeat. Does each letter slot still have all 26?"
+        },
+        {
+          "match": "158184",
+          "error": "counting",
+          "hint": "QUACK. Count the slots again. There are seven, and every one multiplies."
+        }
+      ],
+      "nudge": "QUACK. Seven slots. Write how many choices each slot has, then multiply."
+    },
+    {
+      "code": "CSCI26_J8G",
+      "title": "Soup, sandwich, drink",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A diner has 4 soups, 6 sandwiches and 3 drinks. A meal is one soup, one sandwich and one drink. How many different meals are there?"
+        }
+      ],
+      "answer": "72",
+      "wrong": [
+        {
+          "match": "13",
+          "error": "op-swap",
+          "hint": "QUACK. Each soup goes with every sandwich. Do the choices add or multiply?"
+        },
+        {
+          "match": "24",
+          "error": "misread",
+          "hint": "QUACK. Did you forget the drinks? Every part of the meal multiplies."
+        },
+        {
+          "match": "18",
+          "error": "misread",
+          "hint": "QUACK. Did you forget the soups? Every part of the meal multiplies."
+        }
+      ],
+      "nudge": "QUACK. Three slots: soup, sandwich, drink. Multiply the choices."
+    },
+    {
+      "code": "CSCI26_J9H",
+      "title": "Two toppings",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A pizza place has 8 toppings. You pick 2 different toppings. How many different pizzas can you make?"
+        }
+      ],
+      "answer": "28",
+      "wrong": [
+        {
+          "match": "56",
+          "error": "counting",
+          "hint": "QUACK. Is a mushroom-onion pizza different from an onion-mushroom pizza?"
+        },
+        {
+          "match": "64",
+          "error": "counting",
+          "hint": "QUACK. Can you pick the same topping twice? And does order matter on a pizza?"
+        },
+        {
+          "match": "16",
+          "error": "op-swap",
+          "hint": "QUACK. 8 toppings, 2 picks. Is it 8 × 2? List the pairs for 3 toppings and check."
+        }
+      ],
+      "nudge": "QUACK. Count ordered picks first, then divide by how many orders two toppings have."
+    },
+    {
+      "code": "CSCI26_H2J",
+      "title": "Captains and water carriers",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A team has 12 players."
+        }
+      ],
+      "how": "A whole number in each box.",
+      "parts": [
+        {
+          "prompt": "How many ways can the coach pick a captain and a co-captain?",
+          "type": "num",
+          "answer": "132",
+          "wrong": [
+            {
+              "match": "66",
+              "error": "counting",
+              "hint": "QUACK. Ana as captain with Bo as co-captain differs from the reverse. Does order matter here?"
+            },
+            {
+              "match": "144",
+              "error": "counting",
+              "hint": "QUACK. Can one player be both captain and co-captain?"
+            }
+          ]
+        },
+        {
+          "prompt": "How many ways can the coach pick 2 players to carry the water?",
+          "type": "num",
+          "answer": "66",
+          "wrong": [
+            {
+              "match": "132",
+              "error": "counting",
+              "hint": "QUACK. Ana and Bo carrying water is the same as Bo and Ana. Did you count it twice?"
+            },
+            {
+              "match": "144",
+              "error": "counting",
+              "hint": "QUACK. Can one player be picked twice? And does order matter for carrying water?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Two picks from 12. Ask first: do the two jobs have different names?"
+    },
+    {
+      "code": "CSCI26_H3K",
+      "title": "Lock codes: repeats or not",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock code is 4 digits, each 0–9."
+        }
+      ],
+      "how": "A whole number in each box, no commas.",
+      "parts": [
+        {
+          "prompt": "How many codes are there if digits may repeat?",
+          "type": "num",
+          "answer": "10000",
+          "wrong": [
+            {
+              "match": "5040",
+              "error": "counting",
+              "hint": "QUACK. Repeats are allowed. Does each spot still have all ten digits?"
+            },
+            {
+              "match": "40",
+              "error": "op-swap",
+              "hint": "QUACK. Each spot multiplies the count. Add or multiply?"
+            }
+          ]
+        },
+        {
+          "prompt": "How many codes are there if no digit repeats?",
+          "type": "num",
+          "answer": "5040",
+          "wrong": [
+            {
+              "match": "10000",
+              "error": "counting",
+              "hint": "QUACK. No repeats. After the first digit, how many are left for the second spot?"
+            },
+            {
+              "match": "210",
+              "error": "counting",
+              "hint": "QUACK. Is 1234 a different code from 4321? Then order matters. Don't divide."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Four spots. Write how many digits each spot can take, then multiply."
+    },
+    {
+      "code": "CSCI26_H4L",
+      "title": "At least one zero",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock code is 4 digits, each 0–9. How many codes have at least one 0?"
+        }
+      ],
+      "answer": "3439",
+      "wrong": [
+        {
+          "match": "4000",
+          "error": "counting",
+          "hint": "QUACK. Codes with two zeros got counted more than once. Try counting the codes with no 0 instead."
+        },
+        {
+          "match": "6561",
+          "error": "counting",
+          "hint": "QUACK. That counts codes with no 0 at all. What do you do with it next?"
+        },
+        {
+          "match": "2916",
+          "error": "counting",
+          "hint": "QUACK. That is exactly one 0. At least one also allows two, three or four."
+        }
+      ],
+      "nudge": "QUACK. Count all codes, then the codes with no 0. What's the difference?"
+    },
+    {
+      "code": "CSCI26_H5M",
+      "title": "Six friends in a row",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Six friends sit in a row of six seats. How many different seatings are there?"
+        }
+      ],
+      "answer": "720",
+      "wrong": [
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Six seats, six friends. Is it 6 × 6, or does each seat have one fewer friend left?"
+        },
+        {
+          "match": "46656",
+          "error": "counting",
+          "hint": "QUACK. Can one friend sit in two seats? Each seat has one fewer friend left."
+        },
+        {
+          "match": "120",
+          "error": "off-by-one",
+          "hint": "QUACK. Count the friends again. How many seats are you filling?"
+        }
+      ],
+      "nudge": "QUACK. Fill the seats left to right. How many friends can take each seat?"
+    },
+    {
+      "code": "CSCI26_H6N",
+      "title": "Two friends side by side",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Five friends sit in a row of five seats. Ana and Bo must sit next to each other. How many seatings are there?"
+        }
+      ],
+      "answer": "48",
+      "wrong": [
+        {
+          "match": "24",
+          "error": "counting",
+          "hint": "QUACK. Glue Ana and Bo together. Inside the pair, how many ways can they sit?"
+        },
+        {
+          "match": "120",
+          "error": "misread",
+          "hint": "QUACK. Ana and Bo must be side by side. Did you use that rule?"
+        },
+        {
+          "match": "240",
+          "error": "counting",
+          "hint": "QUACK. Did you glue the pair and still seat five things? How many things are left to seat?"
+        }
+      ],
+      "nudge": "QUACK. Treat Ana and Bo as one block. How many things are you seating now?"
+    },
+    {
+      "code": "CSCI26_H7P",
+      "title": "Committee with Maria",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A committee of 4 is picked from 10 people. Maria must be on it. How many committees are possible?"
+        }
+      ],
+      "answer": "84",
+      "wrong": [
+        {
+          "match": "210",
+          "error": "misread",
+          "hint": "QUACK. Maria is already in. How many seats are left, and how many people can fill them?"
+        },
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Maria is already picked. Can she be picked again? Take her out of the pool."
+        },
+        {
+          "match": "504",
+          "error": "counting",
+          "hint": "QUACK. Does the order of the other members matter on a committee?"
+        }
+      ],
+      "nudge": "QUACK. Seat Maria first. Then count the ways to fill the rest."
+    },
+    {
+      "code": "CSCI26_H8Q",
+      "title": "Officers or a committee",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A club has 8 members."
+        }
+      ],
+      "how": "A whole number in each box.",
+      "parts": [
+        {
+          "prompt": "How many ways can the club pick a president, a treasurer and a secretary?",
+          "type": "num",
+          "answer": "336",
+          "wrong": [
+            {
+              "match": "56",
+              "error": "counting",
+              "hint": "QUACK. The three jobs have different names. Does swapping two officers make a new pick?"
+            },
+            {
+              "match": "512",
+              "error": "counting",
+              "hint": "QUACK. Can one member hold two jobs? Each job has one fewer member left."
+            }
+          ]
+        },
+        {
+          "prompt": "How many ways can the club pick a 3-person committee?",
+          "type": "num",
+          "answer": "56",
+          "wrong": [
+            {
+              "match": "336",
+              "error": "counting",
+              "hint": "QUACK. A committee has no jobs. Did you count the same three people in every order?"
+            },
+            {
+              "match": "24",
+              "error": "op-swap",
+              "hint": "QUACK. 8 members and 3 seats. Is it 8 × 3? Try listing a few committees."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Three picks from 8. Ask first: do the three seats have different names?"
+    },
+    {
+      "code": "CSCI26_P4R",
+      "title": "Any number of toppings",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A pizza place has 10 toppings. A pizza can have any number of them, even none. How many different pizzas can you make?"
+        }
+      ],
+      "answer": "1024",
+      "wrong": [
+        {
+          "match": "10",
+          "error": "counting",
+          "hint": "QUACK. Each topping is on or off. How many choices is that per topping, and how do they combine?"
+        },
+        {
+          "match": "1023",
+          "error": "off-by-one",
+          "hint": "QUACK. Did you leave out the plain pizza with no toppings?"
+        },
+        {
+          "match": "100",
+          "error": "counting",
+          "hint": "QUACK. 10 × 10 counts pairs. Each topping is its own yes-or-no. Multiply those."
+        }
+      ],
+      "nudge": "QUACK. Walk down the topping list. For each one, how many choices do you have?"
+    },
+    {
+      "code": "CSCI26_P5S",
+      "title": "Handshakes",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Ten people meet. Each person shakes hands once with each other person. How many handshakes are there?"
+        }
+      ],
+      "answer": "45",
+      "wrong": [
+        {
+          "match": "90",
+          "error": "counting",
+          "hint": "QUACK. Ana shaking Bo's hand is the same handshake as Bo shaking Ana's. Did you count it twice?"
+        },
+        {
+          "match": "100",
+          "error": "counting",
+          "hint": "QUACK. Does anyone shake their own hand? And is each handshake counted twice?"
+        },
+        {
+          "match": "10",
+          "error": "misread",
+          "hint": "QUACK. Each person shakes more than one hand. How many does each person shake?"
+        }
+      ],
+      "nudge": "QUACK. Each person shakes hands with how many others? Then fix the double count."
+    },
+    {
+      "code": "CSCI26_P6T",
+      "title": "Four-song playlist",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "You choose 4 of your 9 songs and play them in order. How many different playlists are there?"
+        }
+      ],
+      "answer": "3024",
+      "wrong": [
+        {
+          "match": "126",
+          "error": "counting",
+          "hint": "QUACK. The same 4 songs in a new order is a new playlist. Does order matter?"
+        },
+        {
+          "match": "6561",
+          "error": "counting",
+          "hint": "QUACK. Can one song play twice? Each slot has one fewer song left."
+        },
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Four slots, and each slot multiplies. Add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Fill the playlist slot by slot. How many songs are left for each slot?"
+    },
+    {
+      "code": "CSCI26_P7U",
+      "title": "Breakfast week",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A cafe has 5 breakfasts. You eat one each day, Monday to Friday, and you may repeat. How many different weeks of breakfast are there?"
+        }
+      ],
+      "answer": "3125",
+      "wrong": [
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Repeats are allowed. Does Tuesday still have all 5 to choose from?"
+        },
+        {
+          "match": "25",
+          "error": "op-swap",
+          "hint": "QUACK. Five days, five breakfasts. Is it 5 × 5, or a 5 for every day?"
+        },
+        {
+          "match": "10",
+          "error": "op-swap",
+          "hint": "QUACK. Each day multiplies the count. Add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Write a blank for each day. How many breakfasts can go in each blank?"
+    },
+    {
+      "code": "CSCI26_P8V",
+      "title": "True-false quiz",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A quiz has 6 true/false questions. How many different ways can you fill in the answers?"
+        }
+      ],
+      "answer": "64",
+      "wrong": [
+        {
+          "match": "12",
+          "error": "op-swap",
+          "hint": "QUACK. Two answers per question. Does each question add 2, or multiply by 2?"
+        },
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Is it 6 × 6? Each question has only 2 answers."
+        },
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. You arranged the questions. The order is fixed. How many answers does each question have?"
+        }
+      ],
+      "nudge": "QUACK. Each question is a slot. How many choices per slot? Multiply."
     }
   ]
 }
