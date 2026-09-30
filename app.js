@@ -1,6 +1,7 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
+import { shuffled, seed } from "./shuffle.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
@@ -122,7 +123,7 @@ let swapOn = false, lostAt = 0;          // Swap state (see "Swap" below)
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
   const s = raw.toUpperCase().trim().replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS)[\s_-]*([A-Z0-9]{3,6})$/);
+  const m = s.match(/^(CALC1|CSCI26|PHYS|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
   return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
 }
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
@@ -151,7 +152,7 @@ $("#entry").addEventListener("submit", e => {
   const n = normalize(codeIn.value);
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
-  load(n.code);
+  if (n.prefix === "BANK") openBank(n.code); else load(n.code);
 });
 /* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
@@ -165,18 +166,49 @@ addEventListener("DOMContentLoaded", () => {
   /* offline.js loads after this module; take over its "file loaded" event */
   if (window.stemOffline) window.stemOffline.onProblemLoaded(p => {
     const typed = normalize(codeIn.value), off = window.stemOffline;
+    leaveBank();                                                     // an upload is the live list now
     load(typed && off.has(typed.code) ? typed.code : p.code);
   });
 });
-function fileStatus(code) {
-  const off = window.stemOffline, name = off && off.has && off.has(code) ? off.fileName(code) : null;
-  const el = $("#fileStatus");
-  el.hidden = !name;
-  el.textContent = name ? `File ${name} in use.` : "";
-  layoutDock();
-}
 
 const retryLoad = $("#retryLoad");
+/* ================= practice banks (design/BANK.md) =================
+   BANK_XXX = a file on the server (banks/BANK_XXX.json). The server keeps the answers, this browser's progress (marks) and
+   where it was in each bank (at). localStorage "stem-src" = the live list: a bank code, or "file" for an uploaded file. */
+let bank = null;                         // { code, codes, get: Map code -> public problem, marks }
+const src = v => { try { if (v === undefined) return localStorage.getItem("stem-src"); localStorage.setItem("stem-src", v); } catch { /* blocked */ } return null; };
+window.stemBank = {
+  get code() { return bank && bank.code; },
+  codes: () => bank ? bank.codes.slice() : [],
+  get: c => bank && bank.get.get(c),
+  mark: c => (bank && bank.marks[c]) || null
+};
+const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
+function leaveBank() { src("file"); if (bank) { bank = null; bankChanged(); } }
+/* code: BANK_XXX, or "last" (the server's pointer for this browser). go: open a question (at, else the first).
+   quiet (boot): no message, no retry; a bank that is gone just leaves the page as it is. */
+async function openBank(code, { go = true, quiet = false } = {}) {
+  retryLoad.hidden = true;
+  let b = null;
+  try {
+    const r = await net(`b/${code}.json`);
+    if (r.ok) b = await r.json(); else r.text().catch(() => {});
+  } catch (e) {
+    if (!quiet) {
+      $("#entryMsg").textContent = timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
+      retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
+    }
+    return false;
+  }
+  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `No bank ${code}.`; return false; }
+  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
+  src(b.code);
+  bankChanged();
+  if (!go) return true;
+  const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
+  if (S && S.code === to) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
+  return true;
+}
 /* ================= problem state ================= */
 let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
@@ -198,7 +230,6 @@ async function load(code) {
   }
   $("#entryMsg").textContent = "";
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
-  fileStatus(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
@@ -282,20 +313,7 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 const howLine = p => p.how ? `<p class="how" id="how">${md(p.how, true)}</p>` : "";
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
-function localSeed() {
-  try { let s = localStorage.getItem("stem-seed"); if (!s) { s = Math.random().toString(36).slice(2); localStorage.setItem("stem-seed", s); } return s; }
-  catch { return "stem"; }
-}
-function shuffled(choices, seed) {
-  let h = 2166136261;
-  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
-  const free = choices.map((c, i) => c.lock ? -1 : i).filter(i => i >= 0), moved = free.map(i => choices[i]);
-  for (let i = moved.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [moved[i], moved[j]] = [moved[j], moved[i]]; }
-  const out = [...choices];
-  free.forEach((i, k) => { out[i] = moved[k]; });
-  return out;
-}
+const localSeed = () => seed("stem-seed", "stem");
 /* 5 choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
    same rule here: the right one, locked ones, then the rest, in authored order */
 function shown(p) {
@@ -947,12 +965,17 @@ addEventListener("pageshow", e => {
   if (!e.persisted) return;
   resume(true);
   const off = window.stemOffline;
-  if (off && off.ready && S && !off.has(S.code)) off.ready.then(() => { if (S && off.has(S.code)) fileStatus(S.code); });
 });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
 /* ================= boot ================= */
-const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) return load(n.code); };
+const hashCode = () => location.hash.length > 1 ? normalize(decodeURIComponent(location.hash.slice(1))) : null;
+const fromHash = () => {
+  const n = hashCode();
+  if (!n) return;
+  if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
+  else if (!S || S.code !== n.code) return load(n.code);
+};
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
 layoutDock();
@@ -962,7 +985,16 @@ let firstDone;
 window.stemFirst = new Promise(r => { firstDone = r; });
 addEventListener("DOMContentLoaded", async () => {
   const off = window.stemOffline;
-  if (off && off.ready) { try { await Promise.race([off.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* storage blocked */ } }
-  try { await fromHash(); } catch { /* load() reports its own errors */ } finally { firstDone(); }
+  let restored = false;
+  if (off && off.ready) { try { restored = await Promise.race([off.ready, new Promise(r => setTimeout(() => r(false), 1500))]); } catch { /* storage blocked */ } }
+  /* the live list (design/BANK.md): #BANK_XXX, else the last one used here, else the server's pointer (new browser,
+     or storage wiped). A problem in the hash still opens; the bank then only fills the list. */
+  try {
+    const n = hashCode(), last = src(), q = !!n && n.prefix !== "BANK";
+    if (n && n.prefix === "BANK") await openBank(n.code);
+    else if (last && last !== "file") await openBank(last, { go: !q, quiet: true });
+    else if (!last && !restored) await openBank("last", { go: !q, quiet: true });
+    await fromHash();
+  } catch { /* load() / openBank() report their own errors */ } finally { firstDone(); }
 });
 window.__drill = { check, get state() { return S; } };   // for tests/e2e

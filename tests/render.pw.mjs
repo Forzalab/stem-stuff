@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { shuffled } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -30,6 +31,7 @@ async function run(browserType, label, opts = {}) {
     /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
        tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
     await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
+    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-order", "pin"); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known list order; the shuffle button may change it later
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
@@ -173,9 +175,10 @@ async function run(browserType, label, opts = {}) {
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/app-freeze-${viewport.width}.png` });
     });
 
-    await step(`${label} ${vname} line length: scratchpad <= ~70ch`, async () => {
-      const w = await page.evaluate(() => { const t = document.querySelector("#scratch"); const cs = getComputedStyle(t); const c = document.createElement("span"); c.style.font = cs.font; c.textContent = "0".repeat(70); document.body.append(c); const r = c.offsetWidth; c.remove(); return { box: t.clientWidth, ch70: r }; });
-      assert.ok(w.box <= w.ch70 + 40, `textarea ${w.box}px vs 70ch ${w.ch70}px`);
+    await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
+      // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
+      const w = await page.evaluate(() => ({ box: document.querySelector("#xbField").getBoundingClientRect().right, card: document.querySelector("#problem").getBoundingClientRect().right }));
+      assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
     await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
@@ -191,7 +194,7 @@ async function run(browserType, label, opts = {}) {
       if (vname === "phone") {
         assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
         assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
-      } else if (vname === "desktop") assert.ok(d.top < 60, `box not at the top: ${d.top}`);
+      } else if (vname === "desktop") assert.ok(d.top < viewport.height * 0.2, `box not in the upper part (desktop offset scales with the window height, app.css): ${d.top}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
@@ -228,7 +231,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
-      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), [48, 48]);
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [56, 56] : [48, 48]);   // desktop 1920x1080: --btn 56px (app.css), the same for every .btn
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
       for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
@@ -268,18 +271,17 @@ async function run(browserType, label, opts = {}) {
 
     await step(`${label} ${vname} upload one problems.json: every problem loads, graded from the file`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
-      assert.ok(await page.locator("#fileStatus").isHidden());
       // a bank with codes the server doesn't have: the upload is the only source
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
-      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_Q");
+      for (const p of bank.problems) p.code = p.code.replace("_", "_Q");   // insert, not swap: a swap made codes collide
       if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-      const first = bank.problems[0].code;
+      const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
-      assert.equal(await page.locator("#fileStatus").textContent(), "File my-problems.json in use.");
+      assert.equal((await page.textContent("#qlistName")).trim(), "my-problems.json", "list button names the file");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
-      const f3n = bank.problems.find(p => p.code.startsWith("PHYS_Q3N") || p.code.endsWith("3N")).code;
+      const f3n = "PHYS_QF3N";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", f3n); await page.press("#code", "Enter");
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, f3n);
@@ -291,9 +293,10 @@ async function run(browserType, label, opts = {}) {
       await open("CALC1_T6B");
       assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
-      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
-      bank.problems[1].title = "Area between a parabola and a line";
-      const codes = bank.problems.map(p => p.code), n = codes.length;
+      for (const p of bank.problems) p.code = p.code.replace("_", "_N");
+      const file = bank.problems.map(p => p.code), codes = shuffled(file, "pin"), n = codes.length;   // the page's order (seed pinned above)
+      assert.notDeepEqual(codes, file, "shuffle kept file order");
+      bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
@@ -302,12 +305,16 @@ async function run(browserType, label, opts = {}) {
       const nav = page.locator("#qnav"), btn = page.locator("#qlistBtn"), prev = page.locator("#qprev"), next = page.locator("#qnext");
       assert.ok(await nav.isVisible(), "nav hidden after upload");
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
-      for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
-      assert.equal((await btn.textContent()).trim(), "Questions list");
+      const shuf = page.locator("#qshuf");
+      assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
+      for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
+      assert.equal((await btn.innerText()).trim(), vname === "desktop" ? "bank.json" : "bank", "list button label");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
-      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main") }; });
-      if (vname === "desktop") assert.ok(Math.abs(g.nav.top - g.entry.top) < 1 && g.nav.left > g.entry.right, "nav not beside the entry box");
+      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
+      // desktop: list + shuffle, then the entry box, then Prev/Next at the right (Tony, Sep 30)
+      if (vname === "desktop") assert.ok(Math.abs(g.list.top - g.entry.top) < 1 && g.list.right < g.shuf.left && g.shuf.right < g.entry.left && g.prev.left > g.entry.right, "desktop bar order: list, shuffle, entry, arrows");
       else assert.ok(g.nav.bottom <= g.main.top + 1 && g.nav.top < 80, `nav not the top bar: ${g.nav.top}`);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-closed-${viewport.width}.png` });
       // list: bare numbers + titles, current marked, focus on the current row
@@ -351,11 +358,24 @@ async function run(browserType, label, opts = {}) {
       await btn.focus(); await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Home"); await page.keyboard.press("Enter");
       await at(codes[0]);
+      // shuffle button: a new order (list, numbers, Prev/Next follow it); the open problem stays open; the order survives a reload
+      const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
+      await shuf.click();
+      const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
+      const codes2 = shuffled(file, seed2);
+      assert.notEqual(seed2, "pin", "shuffle kept the seed");
+      assert.equal(await page.locator("#pcode").textContent(), codes[0], "shuffle moved off the open problem");
+      assert.deepEqual(await hrefs(), codes2, "list not in the new order");
+      const k = codes2.indexOf(codes[0]);
+      if (k < n - 1) { await next.click(); await at(codes2[k + 1]); await prev.click(); await at(codes[0]); }
       // a server problem after the upload: list stays, nothing marked, arrows off
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
       assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
       assert.equal(await page.locator("#qlist [aria-current]").count(), 0);
+      // reload: this harness deletes the bank on every load, so check the seed itself (reload.pw.mjs reloads a kept bank)
+      await page.reload();
+      assert.equal(await page.evaluate(() => localStorage.getItem("stem-order")), seed2, "order seed lost on reload");
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {

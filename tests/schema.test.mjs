@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import katex from "katex";
 import { compile, evaluate } from "mathjs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { validator, bank } from "./schemas.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
@@ -31,6 +32,68 @@ test("part.prompt: string or lines validate; other types and unknown keys do not
   assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
 });
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
+// practice banks (design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
+{
+  const dir = new URL("../banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
+  for (const f of existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")) : []) {
+    test(`banks/${f}: name, schema, no clashing codes`, () => {
+      assert.match(f, /^BANK_[A-Z0-9]{3,6}\.json$/);
+      const b = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
+      assert.ok(validate(b), JSON.stringify(validate.errors, null, 1));
+      for (const p of b.problems) {
+        const j = JSON.stringify(p);
+        assert.ok(!seen.has(p.code) || seen.get(p.code) === j, `${p.code}: in two files with different content`);
+        seen.set(p.code, j);
+      }
+    });
+  }
+}
+
+// kind: circuit wiring (SCHEMA.md): what the schema can't say. Returns a list of problems, [] if sound.
+function circuitFaults(b) {
+  const out = [], names = [...b.inputs.map(i => typeof i === "string" ? i : i.name), ...b.gates.map(g => g.id)];
+  const seen = new Set();
+  for (const n of names) { if (seen.has(n)) out.push(`repeated name ${n}`); seen.add(n); }
+  const gate = new Map(b.gates.map(g => [g.id, g]));
+  for (const r of [...b.gates.flatMap(g => g.in), ...b.outputs.map(o => o.from)]) if (!seen.has(r)) out.push(`unknown id ${r}`);
+  const state = new Map();   // DFS: 1 = on the stack, 2 = done
+  const visit = id => {
+    if (!gate.has(id) || state.get(id) === 2) return;
+    if (state.get(id) === 1) { out.push(`cycle through ${id}`); return; }
+    state.set(id, 1); gate.get(id).in.forEach(visit); state.set(id, 2);
+  };
+  b.gates.forEach(g => visit(g.id));
+  const live = new Set(), up = id => { if (live.has(id)) return; live.add(id); gate.get(id)?.in.forEach(up); };
+  b.outputs.forEach(o => up(o.from));
+  for (const g of b.gates) if (!live.has(g.id)) out.push(`gate ${g.id} reaches no output`);
+  return out;
+}
+const circuitOf = code => problems.find(p => p.code === code).body.find(b => b.kind === "circuit");
+test("circuit: bad wiring is caught, bad shapes fail the schema", () => {
+  const base = circuitOf("CSCI26_L3G");
+  const withBlock = b => ({ ...B, problems: [{ ...problems.find(p => p.code === "CSCI26_L3G"), body: [b] }] });
+  const edit = f => { const b = structuredClone(base); f(b); return b; };
+  assert.ok(validate(withBlock(base)), JSON.stringify(validate.errors));
+  assert.deepEqual(circuitFaults(base), []);
+  // wiring: schema-valid, but unsound
+  const unknown = edit(b => { b.gates[2].in[0] = "g9"; });
+  const cycle = edit(b => { b.gates[0].in[1] = "g3"; });
+  for (const [name, b, re] of [["unknown id", unknown, /unknown id g9/], ["cycle", cycle, /cycle/]]) {
+    assert.ok(validate(withBlock(b)), `${name}: ${JSON.stringify(validate.errors)}`);
+    assert.match(circuitFaults(b).join("; "), re, name);
+  }
+  // shapes: the schema says no
+  for (const [name, f] of [
+    ["not with 2 inputs", b => { b.gates[1].in = ["c", "a"]; }],
+    ["and with 1 input", b => { b.gates[0].in = ["a"]; }],
+    ["bad op", b => { b.gates[0].op = "andd"; }],
+    ["output with value", b => { b.outputs[0].value = 1; }],
+    ["input value 2", b => { b.inputs[2] = { name: "c", value: 2 }; }],
+    ["bad name", b => { b.inputs[0] = "1a"; }]
+  ]) assert.ok(!validate(withBlock(edit(f))), name);
+  // an input with a value is fine
+  assert.ok(validate(withBlock(edit(b => { b.inputs[2] = { name: "c", value: 1 }; }))), JSON.stringify(validate.errors));
+});
 
 for (const p of problems) {
   const f = p.code;
@@ -109,6 +172,11 @@ for (const p of problems) {
       const re = new RegExp(`(^|[^0-9.a-z])${ans.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^0-9.a-z]|$)`);
       for (const h of hints) assert.ok(!re.test(squash(h.replace(/\$/g, ""))), h);
     }
+  });
+
+  const circuits = p.body.filter(b => b.type === "graph" && b.kind === "circuit");
+  if (circuits.length) test(`${f}: circuit wiring is sound`, () => {
+    for (const b of circuits) assert.deepEqual(circuitFaults(b), []);
   });
 
   test(`${f}: graph math compiles, <= 6 labels`, () => {

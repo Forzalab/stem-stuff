@@ -284,7 +284,14 @@
       return;
     }
     close(false);
-    emit(got[0]);
+    emit(first(got));
+  }
+
+  // the problem to open after an upload: the first of these in the shuffled list order (nav.js window.stemOrder)
+  function first(got) {
+    if (!window.stemOrder) return got[0];
+    const code = window.stemOrder([...local.keys()]).find(c => got.some(p => p.code === c));
+    return got.find(p => p.code === code) || got[0];
   }
 
   // Direct upload (the page's upload button): the OS file dialog, no modal. Loads every problem in the file.
@@ -302,8 +309,9 @@
         upInput.value = "";
         if (!files.length) return resolve({ error: "No .json file there." });
         if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problems.json." });
-        emit(got[0]);
-        resolve({ problem: got[0], name: names.get(got[0].code), count: got.length });
+        const p = first(got);
+        emit(p);
+        resolve({ problem: p, name: names.get(p.code), count: got.length });
       };
       upInput.click();
     });

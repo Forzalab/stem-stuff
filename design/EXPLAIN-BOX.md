@@ -18,7 +18,7 @@ Files: `explain-box.css` (style), `explain-box.js` (growth fallback + history), 
 | setting | value | why |
 |---|---|---|
 | element | `<textarea rows="4">` in a `<label>`; visible label **Scratchpad** (pencil icon + word) | plain text only, labelled for screen readers |
-| width | 100% of the column, capped at `calc(68ch + 1.8rem + 4px)` (68 characters per line in the box's own font) | Tony: limit the line length and wrap. Fixed width, grows only in height |
+| width | 100% of the column, same right edge as the problem card and the answer box (the 68ch cap was dropped Tue 9/29: Tony, "unbalanced UI") | Wraps; fixed width, grows only in height |
 | growth | `field-sizing: content`; JS fallback in `explain-box.js` | no scrollbar, no jumps |
 | min height | 4 lines + padding | room to start without looking like a one-line answer box |
 | max height | none | the page scrolls, not the box |

@@ -175,9 +175,10 @@ class Grade(unittest.TestCase):
     def test_reply_never_has_the_answer(self):
         for code, p in BANK.items():
             for body in ({"answer": "0"}, {"choice": "a"}, {"answer": "1"}, {"choice": "c"}, {"parts": ["1", "2"]}):
-                r = json.dumps(serve.grade(p, "leak-" + code, body))
+                r = serve.grade(p, "leak-" + code, body)       # keys, not text: the verdict value "correct" is fine
                 for k in ("answer", "correct", "points"):
-                    self.assertNotIn(f'"{k}"', r)
+                    self.assertNotIn(k, r)
+                self.assertNotIn(json.dumps(p.get("answer", "\u0000")), json.dumps(r))
 
     def test_public_strips_keys(self):
         for p in BANK.values():
@@ -224,7 +225,8 @@ class Http(unittest.TestCase):
             return e.code
 
     def test_blocked(self):
-        for path in ["problems.json", "serve.py", "deploy.sh", "tests/test_serve.py", "tools/bundle.py", ".git/HEAD", "p/NOPE_ZZZ.json"]:
+        for path in ["problems.json", "serve.py", "deploy.sh", "tests/test_serve.py", "tools/bundle.py", ".git/HEAD", "p/NOPE_ZZZ.json",
+                     "banks/.gitkeep", "b/BANK_NOPE.json"]:
             for m in ("GET", "HEAD"):
                 self.assertEqual(self.status(path, m), 404, f"{m} {path}")
 
@@ -247,6 +249,9 @@ class Http(unittest.TestCase):
 
     def get(self, path, cookie):
         return json.load(urllib.request.urlopen(urllib.request.Request(self.base + path, headers={"Cookie": cookie})))
+
+    def test_no_last_bank_is_null(self):
+        self.assertIsNone(self.get("b/last.json", "sid=" + "cd" * 16))
 
     def test_state_endpoint(self):
         cookie = "sid=" + "ab" * 16
@@ -320,3 +325,77 @@ class Persist(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Banks(unittest.TestCase):
+    """Practice banks (design/BANK.md): banks/BANK_XXX.json, payload, marks, the last-bank pointer, blocked from serving."""
+    def setUp(self):
+        self.old = serve.BANKS, serve.TRIES
+        serve.BANKS = tempfile.mkdtemp(prefix="stem-b-")
+        serve.TRIES = os.path.join(tempfile.mkdtemp(prefix="stem-bt-"), "tries.json")
+        codes = ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P"]
+        self.write("BANK_AB12", {"v": 1, "problems": [BANK[c] for c in codes] + [
+            {"code": "CALC1_ZB1", "type": "num", "answer": "2", "body": [{"type": "text", "md": "1 + 1"}]}]})
+        with open(os.path.join(serve.BANKS, "notabank.json"), "w") as f:
+            f.write("{")
+
+    def tearDown(self):
+        serve.BANKS, serve.TRIES = self.old
+
+    def write(self, name, data):
+        with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
+            json.dump(data, f)
+
+    def test_payload(self):
+        b = serve.bank_payload("BANK_AB12", "s1")
+        self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])
+        self.assertEqual((b["code"], b["marks"], b["at"]), ("BANK_AB12", {}, None))
+        for p in b["problems"]:
+            self.assertFalse({"answer", "accept", "correct", "wrong", "nudge"} & set(p), p["code"])
+        self.assertIsNone(serve.bank_payload("BANK_NOPE", "s1"))
+        self.assertNotIn("NOTABANK", serve.banks())
+
+    def test_bank_problem_grades(self):
+        self.assertEqual(serve.grade(serve.problems()["CALC1_ZB1"], "s2", {"answer": "2"})["verdict"], "correct")
+
+    def test_marks(self):
+        serve.grade(serve.problems()["CALC1_T6B"], "s3", {"answer": "4"})
+        serve.grade(serve.problems()["CALC1_ZB1"], "s3", {"answer": "2"})
+        m = serve.bank_payload("BANK_AB12", "s3")["marks"]
+        self.assertEqual(m, {"CALC1_T6B": {"x": 1, "done": "open"}, "CALC1_ZB1": {"x": 0, "done": "correct"}})
+
+    def test_last_and_at(self):
+        self.assertIsNone(serve.bank_payload("last", "s4"))
+        serve.bank_payload("BANK_AB12", "s4")
+        serve.seen("CALC1_X2P", "s4")
+        serve.seen("PHYS_F3N", "s4")                     # not in the bank: the place stays
+        serve._gen["loaded"] = None                      # a restart: read tries.json again
+        b = serve.bank_payload("last", "s4")
+        self.assertEqual((b["code"], b["at"]), ("BANK_AB12", "CALC1_X2P"))
+        self.assertIsNone(serve.bank_payload("last", "other"))
+
+    def test_bank_gone(self):
+        serve.bank_payload("BANK_AB12", "s5")
+        os.remove(os.path.join(serve.BANKS, "BANK_AB12.json"))
+        self.assertIsNone(serve.bank_payload("last", "s5"))
+        self.assertNotIn("CALC1_ZB1", serve.problems())
+
+    def test_broken_file_keeps_last_good(self):
+        self.assertIn("CALC1_ZB1", serve.problems())
+        path = os.path.join(serve.BANKS, "BANK_AB12.json")
+        with open(path, "w") as f:
+            f.write("{ broken")
+        os.utime(path, (1, 1))
+        self.assertIn("CALC1_ZB1", serve.problems())
+        self.assertEqual(len(serve.banks()["BANK_AB12"]), 4)
+
+    def test_duplicate_code_first_wins(self):
+        other = dict(BANK["CALC1_T6B"], answer="999")
+        self.write("BANK_CD34", {"v": 1, "problems": [other]})
+        self.assertEqual(serve.problems()["CALC1_T6B"]["answer"], BANK["CALC1_T6B"]["answer"])   # problems.json first
+        self.assertEqual(serve.banks()["BANK_CD34"], ["CALC1_T6B"])
+
+    def test_banks_dir_blocked(self):
+        self.assertIn("/banks/", serve.BLOCK_PREFIX)
+        self.assertIsNone(serve.BANK_PATH.match("/b/../banks/BANK_AB12.json"))
+        self.assertIsNone(serve.BANK_PATH.match("/b/bank_ab12.json"))
