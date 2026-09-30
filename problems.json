@@ -1408,6 +1408,1885 @@
         }
       ],
       "nudge": "QUACK. Fix $c$ and $d$ for the row. Then walk the four columns."
+    },
+    {
+      "code": "CSCI26_C2A",
+      "title": "Circuit to C++: NOT and OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs feed a circuit with one NOT gate and one OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "g1",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!A || B)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (A || B)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!A && B)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A -> B)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!A ^ B)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the wire from A. Did you skip the NOT bubble on the way in?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. Check the last gate's shape. Is it the AND shape or the OR shape?"
+        },
+        {
+          "choice": "d",
+          "error": "format",
+          "hint": "QUACK. Same logic, but is `->` an operator C++ has? The question asks for C++."
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The last gate has no extra curved line at its back. Is it XOR or plain OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C3B",
+      "title": "Circuit to C++: B and not B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs feed a circuit with an AND gate, a NOT gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (A && B || !B)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (A && B || B)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (A ^ B || !B)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A && B || !A)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (B -> A)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Follow the lower wire into the OR. Does it pass through a NOT bubble first?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a flat back. Is that XOR, or AND?"
+        },
+        {
+          "choice": "d",
+          "error": "misread",
+          "hint": "QUACK. Trace the wire into the NOT gate back to its input. Is it A or B?"
+        },
+        {
+          "choice": "e",
+          "error": "format",
+          "hint": "QUACK. That may mean the same thing, but does C++ have a `->` operator for bools?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C4D",
+      "title": "Circuit to C++: XOR into AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an XOR gate and an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if ((A ^ B) && C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A && B) && C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if ((A ^ B) || C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (!(A ^ B) && C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if ((A ^ B) && A)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has an extra curved line at its back. Which gate has that?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. Check the last gate's shape. Flat back or curved back?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. Where do you see a NOT bubble in this drawing? Don't add one that isn't there."
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. Trace the second wire into the last gate. Which input does it come from?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C5E",
+      "title": "Circuit to C++: NAND into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NAND gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!(A && B) || C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A && B) || C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!A && B || C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A && B -> C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!(A || B) || C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the tip of the first gate. What does that small circle do?"
+        },
+        {
+          "choice": "c",
+          "error": "order-ops",
+          "hint": "QUACK. The bubble sits after the gate. Does it flip only A, or the whole AND?"
+        },
+        {
+          "choice": "d",
+          "error": "format",
+          "hint": "QUACK. Same logic maybe, but `->` does not work on bools in C++. Which operators does it have?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a flat back. Is it NOT-of-AND or NOT-of-OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C6F",
+      "title": "Circuit to C++: one input, two wires",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOT gate, two AND gates and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "A",
+                "C"
+              ]
+            },
+            {
+              "id": "g4",
+              "op": "or",
+              "in": [
+                "g2",
+                "g3"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g4",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!A && B || A && C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (!A && B || B && C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (A && B || A && C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if ((!A || B) && (A || C))`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!A ^ B || A && C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. A splits into two wires. Trace the lower AND's inputs back. Which inputs are they?"
+        },
+        {
+          "choice": "c",
+          "error": "negation",
+          "hint": "QUACK. One of A's two wires goes through a NOT bubble. Which one?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. Check each gate's shape again. Which two gates are AND, and which one is OR?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The upper gate after the NOT has a flat back. Is that XOR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C7H",
+      "title": "Circuit to C++: NOR into XOR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOR gate and an XOR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "xor",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!(A || B) ^ C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A || B) ^ C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!(A && B) ^ C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (!(A || B) && C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!(A || C) ^ C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the tip of the first gate. What does its small circle do?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a curved back. Is it NOT-of-OR or NOT-of-AND?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. The last gate has an extra curved line at its back. Is that AND?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. Trace the first gate's second input back. Is it B or C?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_T2C",
+      "title": "Truth table: AND, NOT, OR",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an AND gate, a NOT gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "C"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = T, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "misread",
+              "hint": "QUACK. The NOT side is off here. What does the AND gate send to the OR?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. The AND needs both inputs on. And what is NOT of an on $C$?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = F",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. Did you skip the NOT bubble? $C$ is off going in."
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. Is $A$ on? The AND needs both. Then check the NOT side."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Work one gate at a time: AND, then NOT, then OR."
+    },
+    {
+      "code": "CSCI26_T3D",
+      "title": "Truth table: XOR into AND",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an XOR gate and an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = T, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. XOR is on only when its inputs differ. Do $A$ and $B$ differ here?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "op-swap",
+              "hint": "QUACK. $A$ and $B$ differ. What does XOR send on, and what is $C$?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = F",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. The last gate is AND. Look at $C$."
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "op-swap",
+              "hint": "QUACK. XOR of an off and an on input first. Then AND that with $C$."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. XOR first, write it down, then the AND."
+    },
+    {
+      "code": "CSCI26_T4E",
+      "title": "Truth table: NOR into NAND",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOR gate and a NAND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "nand",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "negation",
+              "hint": "QUACK. NOR of two off inputs is on. Then NAND of two on inputs gives what?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. NOR is on only when both inputs are off. Is $A$ off here?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = F",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. NAND is off only when both its inputs are on. Is $C$ on?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. NOR first, write it down, then the NAND. Each bubble flips."
+    },
+    {
+      "code": "CSCI26_Y2A",
+      "title": "Simplify: three terms with x",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (x && w || x && y || x && !y)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (x)",
+      "accept": [
+        "x"
+      ],
+      "wrong": [
+        {
+          "match": "if (x && w)",
+          "error": "algebra",
+          "hint": "QUACK. You dropped two terms. Factor out $x$: what is `y || !y` on its own?"
+        },
+        {
+          "match": "if (true)",
+          "error": "algebra",
+          "hint": "QUACK. `y || !y` is always on, but every term still has $x$. Can it fire with $x$ off?"
+        },
+        {
+          "match": "if (x && y)",
+          "error": "algebra",
+          "hint": "QUACK. `x && !y` covers the rows `x && y` misses. What do the two cover together?"
+        }
+      ],
+      "nudge": "QUACK. Pull $x$ out of every term. Then simplify what is left inside the parentheses."
+    },
+    {
+      "code": "CSCI26_Y3B",
+      "title": "Simplify: p or p and q",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (p || p && q)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (p)",
+      "accept": [
+        "p"
+      ],
+      "wrong": [
+        {
+          "match": "if (p && q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ on, $q$ off. Does the original fire? Does yours?"
+        },
+        {
+          "match": "if (p || q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ off, $q$ on. Does `p && q` fire then?"
+        },
+        {
+          "match": "if (q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ on, $q$ off. The first term fires by itself. Does yours?"
+        }
+      ],
+      "nudge": "QUACK. When does `p && q` fire while $p$ alone does not?"
+    },
+    {
+      "code": "CSCI26_Y4C",
+      "title": "Simplify: k with m and not m",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (m && k || !m && k)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (k)",
+      "accept": [
+        "k"
+      ],
+      "wrong": [
+        {
+          "match": "if (m)",
+          "error": "algebra",
+          "hint": "QUACK. Try $m$ on, $k$ off. Does the original fire? Which letter is in both terms?"
+        },
+        {
+          "match": "if (true)",
+          "error": "algebra",
+          "hint": "QUACK. `m || !m` is always on, but it is ANDed with $k$. What if $k$ is off?"
+        },
+        {
+          "match": "if (m && k)",
+          "error": "algebra",
+          "hint": "QUACK. Try $m$ off, $k$ on. The second term fires. Does yours?"
+        }
+      ],
+      "nudge": "QUACK. Pull $k$ out of both terms. What is left in the parentheses?"
+    },
+    {
+      "code": "CSCI26_F5A",
+      "title": "Flip B: OR then AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs with the values shown feed a circuit with an OR gate and an AND gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 1
+            },
+            {
+              "name": "B",
+              "value": 0
+            },
+            {
+              "name": "C",
+              "value": 1
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "or",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Find $Q$ before and after the flip. With $A$ = 1, what does the OR gate send either way?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F6B",
+      "title": "Flip B: a blocked gate and a second wire",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs with the values shown feed a circuit with an AND gate and an XOR gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 0
+            },
+            {
+              "name": "B",
+              "value": 0
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "xor",
+              "in": [
+                "g1",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "misread",
+          "hint": "QUACK. The AND is blocked, but $B$ has two wires. Where does the other one go?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F7C",
+      "title": "Flip B: B or not B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs with the values shown feed a circuit with a NOT gate, an OR gate and an AND gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 1
+            },
+            {
+              "name": "B",
+              "value": 0
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "B",
+                "g1"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "A",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Work out the OR gate for $B$ = 0 and for $B$ = 1. Does its output ever change?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E2Q",
+      "title": "Same output? NAND vs NOTs into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one NAND gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs each pass a NOT gate, then feed an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Test all four input rows on both circuits. Find a row where they differ, if you can."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E3R",
+      "title": "Same output? NOR vs NOTs into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one NOR gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs each pass a NOT gate, then feed an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "negation",
+          "hint": "QUACK. Try $A$ = 1, $B$ = 0 on both. When a NOT moves inside, does OR stay OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E4S",
+      "title": "Same output? XOR vs OR and NAND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one XOR gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs feed an OR gate and a NAND gate, whose outputs feed an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "or",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Check the row $A$ = 1, $B$ = 1 on both circuits first. Then the other three rows."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N2A",
+      "title": "Bigger lock, smaller dials",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 4 dials, each A–Z. A machine tries every setting in 1 hour. A new lock has 8 dials, but each dial has only 13 letters. At the same speed, how long does the machine need?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "1 hour"
+        },
+        {
+          "id": "b",
+          "md": "$13^4$ hours"
+        },
+        {
+          "id": "c",
+          "md": "$\\dfrac{13^4}{16}$ hours"
+        },
+        {
+          "id": "d",
+          "md": "$26^4$ hours"
+        },
+        {
+          "id": "e",
+          "md": "$\\dfrac{1}{16}$ hour"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. Twice the dials, half the letters. Do settings add or multiply? Write both counts as products."
+        },
+        {
+          "choice": "b",
+          "error": "off-by-factor",
+          "hint": "QUACK. Each old dial has 26 = 2 × 13 letters. Where did those four 2s go?"
+        },
+        {
+          "choice": "d",
+          "error": "misread",
+          "hint": "QUACK. The new dials have 13 letters, not 26. Did you count them as full A–Z dials?"
+        },
+        {
+          "choice": "e",
+          "error": "counting",
+          "hint": "QUACK. Halving each dial is half the story. What do the 4 extra dials do to the count?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N3B",
+      "title": "Sixth dial, faster machine",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 5 dials, each A–Z. A thief's machine tries every setting in roughly 1 day. The owner adds a 6th dial with only the digits 0–9. The thief gets a machine that is 26 times faster. Roughly how long does the thief need now?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 1 hour"
+        },
+        {
+          "id": "b",
+          "md": "roughly 9 hours"
+        },
+        {
+          "id": "c",
+          "md": "roughly 1 day"
+        },
+        {
+          "id": "d",
+          "md": "roughly 10 days"
+        },
+        {
+          "id": "e",
+          "md": "roughly 30 days"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. You used the faster machine. What does a new dial with 10 digits do to the settings?"
+        },
+        {
+          "choice": "c",
+          "error": "counting",
+          "hint": "QUACK. The new dial and the new machine don't cancel. What does each one multiply or divide by?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-factor",
+          "hint": "QUACK. The new dial multiplies the settings. What does a machine 26 times faster do to the time?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. The 6th dial holds only 0–9, and faster means less time. Recheck both changes."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N4C",
+      "title": "Two more dials or bigger dials",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 3 dials, each 0–9. Plan A adds 2 more dials, each 0–9. Plan B keeps 3 dials but gives each dial 30 symbols. Which plan gives more settings, and roughly how many times more?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "Plan A, roughly 4 times more"
+        },
+        {
+          "id": "b",
+          "md": "Plan B, roughly 3 times more"
+        },
+        {
+          "id": "c",
+          "md": "the same"
+        },
+        {
+          "id": "d",
+          "md": "Plan A, roughly 40 times more"
+        },
+        {
+          "id": "e",
+          "md": "Plan B, roughly 9 times more"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "counting",
+          "hint": "QUACK. Bigger dials feel bigger. Count both plans as products of dial sizes before you compare."
+        },
+        {
+          "choice": "c",
+          "error": "counting",
+          "hint": "QUACK. 2 extra dials and 20 extra symbols don't balance. Multiply out each plan's settings."
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros in Plan B's total again. How many settings is 30 × 30 × 30?"
+        },
+        {
+          "choice": "e",
+          "error": "counting",
+          "hint": "QUACK. Plan B has three 30-symbol dials, not two. And which plan's total is bigger?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N5D",
+      "title": "Hotel door codes",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A hotel has 500 rooms. Each room gets 2 door codes, and all 1000 codes must be different. Every code has the same length and uses only the keys 1 to 9. What is the shortest length that works?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2"
+        },
+        {
+          "id": "b",
+          "md": "3"
+        },
+        {
+          "id": "c",
+          "md": "4"
+        },
+        {
+          "id": "d",
+          "md": "5"
+        },
+        {
+          "id": "e",
+          "md": "1000"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. 2 is codes per room, not keys per code. How many codes does a 2-key code give?"
+        },
+        {
+          "choice": "b",
+          "error": "counting",
+          "hint": "QUACK. The keypad has only 9 keys, not 10. How many 3-key codes does it make?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-one",
+          "hint": "QUACK. Is there a shorter length that already gives enough codes? Try each length in turn."
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. That's how many codes you need, not how long each is. Each extra key multiplies the count by 9."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N6E",
+      "title": "Four-dial lock, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Roughly how many settings does a lock with 4 dials, each A–Z, have?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 50 thousand"
+        },
+        {
+          "id": "b",
+          "md": "roughly 200 thousand"
+        },
+        {
+          "id": "c",
+          "md": "roughly 500 thousand"
+        },
+        {
+          "id": "d",
+          "md": "roughly 800 thousand"
+        },
+        {
+          "id": "e",
+          "md": "roughly 10 million"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros again. Is 26 × 26 closer to 70 or 700?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 down to 20. Four times over, how big does that slip grow?"
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 up to 30. Four times over, is that still close?"
+        },
+        {
+          "choice": "e",
+          "error": "off-by-one",
+          "hint": "QUACK. Count the dials again. How many 26s did you multiply?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N7F",
+      "title": "Two-dial lock, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 2 dials, each A–Z. Roughly how many settings does it have?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 50"
+        },
+        {
+          "id": "b",
+          "md": "roughly 200"
+        },
+        {
+          "id": "c",
+          "md": "roughly 400"
+        },
+        {
+          "id": "d",
+          "md": "roughly 700"
+        },
+        {
+          "id": "e",
+          "md": "roughly 900"
+        }
+      ],
+      "correct": "d",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Each dial multiplies the count. Did you add the two dials instead?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. You kept the 2 and a hundred but lost the squaring. What is 26 times 26, roughly?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 down to 20. Is 20 × 20 a fair stand-in?"
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 up to 30. Is 30 × 30 a fair stand-in, or too high?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N8G",
+      "title": "Letters or digits, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A code has 3 characters. Each character is a letter A–Z or a digit 0–9. Roughly how many codes are there?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 100"
+        },
+        {
+          "id": "b",
+          "md": "roughly 5 thousand"
+        },
+        {
+          "id": "c",
+          "md": "roughly 30 thousand"
+        },
+        {
+          "id": "d",
+          "md": "roughly 50 thousand"
+        },
+        {
+          "id": "e",
+          "md": "roughly 60 thousand"
+        }
+      ],
+      "correct": "d",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Three spots, each with 36 options. Multiply 36 by 3, or 36 by itself?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros again. 36 × 36 is over a thousand. Times 36 more?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 36 down to 30. Three times over, how much does that cost?"
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 36 up to 40. Three times over, is that still close?"
+        }
+      ]
     }
   ]
 }
