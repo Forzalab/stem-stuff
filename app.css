@@ -12,6 +12,8 @@
   /* spacing scale (px): 4 8 12 16 24 32 48 */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
+  /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
+  --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
   /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
   --shadow-3: 0 10px 24px -6px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.35);
@@ -36,11 +38,11 @@ button:disabled { cursor: default; }
 
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
-.dock { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { display: flex; gap: var(--s2); }
 .file-status { margin: 0 0 var(--s2); font-size: var(--t-sm); color: var(--muted); overflow-wrap: anywhere; }
 .code-box {
-  flex: 1 1 auto; min-width: 0; height: 52px; display: flex; align-items: center;
+  flex: 1 1 auto; min-width: 0; height: var(--fld); display: flex; align-items: center;
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
 }
 .code-box:hover { border-color: var(--muted); }
@@ -88,13 +90,13 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
    .btn-go is the one filled variant: the submit arrow. Fields that hold an arrow are 52px tall with a 2px border,
    so the 48px arrow sits flush inside them. */
 .btn {
-  flex: none; position: relative; box-sizing: border-box; width: 48px; height: 48px; margin: 0; padding: 0;
+  flex: none; position: relative; box-sizing: border-box; width: var(--btn); height: var(--btn); margin: 0; padding: 0;
   display: inline-grid; place-items: center;
   background: var(--sheet); color: var(--ink); border: 2px solid var(--edge); border-radius: 8px;
   cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
   transition: background-color .12s ease-out, border-color .12s ease-out;
 }
-.btn .ico, .btn > svg { width: 24px; height: 24px; }
+.btn .ico, .btn > svg { width: var(--ico); height: var(--ico); }
 .btn:hover { background: var(--raised); border-color: var(--muted); }
 .btn:focus-visible, label.btn:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
 .btn:active { transform: translateY(1px); }
@@ -106,7 +108,7 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 .btn[hidden] { display: none; }
 
 /* ---------- main column ---------- */
-main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); padding-bottom: max(var(--s7), env(safe-area-inset-bottom)); }
+main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); padding-bottom: max(var(--s7), env(safe-area-inset-bottom)); }
 
 /* ---------- freeze layer: problem + question stay on screen while you write (FREEZE.md) ---------- */
 #sentinel { height: 1px; margin-bottom: -1px; }
@@ -166,8 +168,8 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .choices { display: grid; gap: var(--s2); }
 .ch { position: relative; }
 .opt {
-  width: 100%; min-height: 52px; display: flex; align-items: center; gap: var(--s3);
-  padding: var(--s2) 56px var(--s2) var(--s3); text-align: left; line-height: 1.4;
+  width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
   background: var(--sheet); border: 2px solid var(--line); border-radius: 8px; color: var(--ink);
   transition: border-color .12s ease-out, background-color .12s ease-out;
 }
@@ -186,7 +188,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .opt.right { border-color: var(--ok); background: var(--raised); }
 .opt.right .badge { background: var(--ok); border-color: var(--ok); color: var(--field); }
 .opt.pend { border-color: var(--c1); border-style: dashed; }
-.ch .send { position: absolute; right: 2px; top: 50%; margin-top: -24px; }
+.ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
    The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
@@ -197,18 +199,18 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
 .choices.inline .opt .badge { display: none; }
-.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: 56px; }
+.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) + 8px); }
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
-  display: flex; align-items: center; height: 52px; padding-left: var(--s3);
+  display: flex; align-items: center; height: var(--fld); padding-left: var(--s3);
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
 .ff:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
-  flex: 1 1 auto; min-width: 0; height: 3rem; margin: 0; padding: 0 var(--s2) 0 0;
+  flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
   font-family: var(--mono); font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
@@ -238,7 +240,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
-.mparts .ff { grid-area: bx; position: relative; padding-right: 48px; }   /* the arrow's room is always reserved: nothing jumps when it appears */
+.mparts .ff { grid-area: bx; position: relative; padding-right: var(--btn); }   /* the arrow's room is always reserved: nothing jumps when it appears */
 .mparts .ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders) */
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
@@ -269,7 +271,7 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 .verdict.wait, .verdict.lock { color: var(--muted); font-weight: 400; }
 .verdict .ico { width: 1.25rem; height: 1.25rem; }
 .verdict .btn { margin-left: auto; flex: none; }
-.verdict .btn .ico { width: 24px; height: 24px; }
+.verdict .btn .ico { width: var(--ico); height: var(--ico); }
 .cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 8px; padding: var(--s3) var(--s4); }
 .cluck > .ico { color: var(--mark); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .cluck .md p { margin: 0; }
@@ -295,14 +297,14 @@ main { max-width: 52rem; margin: 0 auto; padding: var(--s5) var(--gut) var(--s7)
 /* Copy lives inside the box, bottom-right. Without JS the bottom band is always reserved (padding-bottom = button
    + inset + gap) so text can never run under it; ExplainBox.reserveCorner adds .xb-free when the text's lines
    stay clear of the button, giving back the normal padding. No transition: the switch must not animate. */
-.xb-field { position: relative; max-width: calc(68ch + 1.8rem + 4px); font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
-.xb-field textarea { max-width: none; padding-bottom: calc(48px + 6px + 4px - 2px); transition: none; }
+.xb-field { position: relative; font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
+.xb-field textarea { max-width: none; padding-bottom: calc(var(--btn) + 8px); transition: none; }
 /* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
 /* focus: the 2px --focus border is the one ring (Tony: two glows, "ew") */
 .xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: none; }
 .xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
-.xb-cut { right: calc(6px + 48px + 6px + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
+.xb-cut { right: calc(12px + var(--btn) + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
 #copy.done, #cut.done { color: var(--ok); border-color: var(--ok); }
 
 @media (max-width: 34rem) {
@@ -387,6 +389,28 @@ html.swap-scratch .stage, html.swap-scratch .xb-field { position: static; }
 html.swap-scratch .xb-copy, html.swap-scratch .xb-cut { top: max(var(--s2), env(safe-area-inset-top)); bottom: auto; right: var(--gut); }
 html.swap-scratch .xb-cut { right: calc(var(--gut) + 48px + 6px); }
 html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-free { padding-bottom: 0.75rem; }
+
+/* ---------- desktop: wide window + fine pointer (the complement of app.js dockMQ: the top entry bar, not the phone dock) ----------
+   Bigger: the column, the type scale and the one button size grow together (tokens only, so every rule above follows).
+   The type steps up with the window height too: the frozen layer (problem + answer) may take 60% of a 720-960px window (app.js
+   layoutFreeze), so a 768px-tall window gets a small step and the answer box stays uncut.
+   Centred: a top offset that grows with the window height. True centring would move the page every time the scratchpad
+   gains a line; a fixed offset keeps the problem still while you write, and the frozen layer keeps sticking at top: 0. */
+@media (min-width: 700.02px) and (pointer: fine) {
+  :root {
+    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem;
+    --btn: 50px; --ico: 25px;
+    --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);     /* 1024: 56rem, 1366: 60.5rem, 1920: 68rem (gutters included) */
+  }
+  body { padding-top: clamp(0px, calc((100vh - 52rem) * 0.36), 12rem); }
+  .xb-field textarea { font-size: var(--t-sm); }       /* explain-box.css sets it in rem, not inherited */
+}
+@media (min-width: 700.02px) and (min-height: 56rem) and (pointer: fine) {
+  :root { --t-md: 1.25rem; --t-sm: 1.125rem; --btn: 52px; --ico: 26px; }
+}
+@media (min-width: 100rem) and (min-height: 56rem) and (pointer: fine) {
+  :root { --t-md: 1.375rem; --t-sm: 1.25rem; --t-xs: 1.0625rem; --btn: 56px; --ico: 28px; }
+}
 
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }

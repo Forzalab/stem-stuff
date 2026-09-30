@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import katex from "katex";
 import { compile, evaluate } from "mathjs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { validator, bank } from "./schemas.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
@@ -31,6 +32,22 @@ test("part.prompt: string or lines validate; other types and unknown keys do not
   assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
 });
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
+// practice banks (design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
+{
+  const dir = new URL("../banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
+  for (const f of existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")) : []) {
+    test(`banks/${f}: name, schema, no clashing codes`, () => {
+      assert.match(f, /^BANK_[A-Z0-9]{3,6}\.json$/);
+      const b = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
+      assert.ok(validate(b), JSON.stringify(validate.errors, null, 1));
+      for (const p of b.problems) {
+        const j = JSON.stringify(p);
+        assert.ok(!seen.has(p.code) || seen.get(p.code) === j, `${p.code}: in two files with different content`);
+        seen.set(p.code, j);
+      }
+    });
+  }
+}
 
 // kind: circuit wiring (SCHEMA.md): what the schema can't say. Returns a list of problems, [] if sound.
 function circuitFaults(b) {

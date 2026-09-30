@@ -1,7 +1,8 @@
 /* nav.js: Prev / Next and the questions list (design/NAV.md).
-   Only for an uploaded problems.json: the list is window.stemOffline.codes(), shuffled by a seed kept in this browser
-   (stable across reloads; the shuffle button draws a new one), so a topic can't be guessed from its position. With problems from the
-   server there is no list (codes are the gate), so the nav stays hidden.
+   The list: the open practice bank (window.stemBank, design/BANK.md), else an uploaded problems.json
+   (window.stemOffline.codes()), shuffled by a seed kept in this browser (stable across reloads; the shuffle button draws a
+   new one), so a topic can't be guessed from its position. Neither: no list (codes are the gate), so the nav stays hidden.
+   The list button's text is the bank code; for an upload, the file name (".json" dimmed, hidden on phones).
    Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
 import { shuffled, seed, newSeed } from "./shuffle.mjs";
 const MAX = 60;
@@ -77,15 +78,24 @@ if (typeof document !== "undefined" && document.getElementById("qnav")) init();
 function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
-  const nav = $("#qnav"), btn = $("#qlistBtn"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
-  const off = () => window.stemOffline;
+  const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
+  const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
+  const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
   let codes = [], cur = null;
+  function mark(c) {                                                 // this browser's record first, else the bank's server mark
+    const s = window.stemOffline, rec = s && s.doneGet ? s.doneGet(c) : null, b = bank();
+    return rec || (b ? b.mark(c) : null);
+  }
 
   function update(code) {
     cur = code;
     const o = off();
     codes = o && o.codes ? order(o.codes()) : [];
     const on = codes.length > 0;
+    const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
+    const label = bank() ? bank().code : file.replace(/\.json$/i, "");
+    name.innerHTML = esc(label) + (file.length > label.length ? `<span class="ext">${esc(file.slice(label.length))}</span>` : "");
+    btn.setAttribute("aria-label", label ? `${label} questions list` : "Questions list");
     nav.hidden = !on;
     root.classList.toggle("qnav-on", on);
     if (!on) { close(false); return; }
@@ -96,7 +106,7 @@ function init() {
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
     list.innerHTML = codes.map((c, k) => {
-      const t = titleOf(o.get(c)) || c, m = marks(o.doneGet ? o.doneGet(c) : null);
+      const t = titleOf(o.get(c)) || c, m = marks(mark(c));
       return `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
         `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(t)}</span>${m.html}</a></li>`;
     }).join("");
@@ -173,6 +183,7 @@ function init() {
   });
   addEventListener("drill:problem", e => update(e.detail && e.detail.code));
   addEventListener("drill:state", () => { if (!nav.hidden) update(cur); });     // a graded try (offline.js donePut)
+  addEventListener("drill:bank", () => update(cur));                             // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) update(s.code);
 }

@@ -99,7 +99,7 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9.5 6H20M9.5 12H20M9.5 18H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4.75" cy="6" r="1.25" fill="currentColor"/><circle cx="4.75" cy="12" r="1.25" fill="currentColor"/><circle cx="4.75" cy="18" r="1.25" fill="currentColor"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M3.3 5.1l1.4 1.4 3-3M3.8 17.9l2.9 2.9M6.7 17.9l-2.9 2.9M11 5h10M11 12h10M11 19.3h10M3.9 10.7a1.5 1.5 0 1 1 2.1 1.35c-.4.2-.6.5-.6.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5.4" cy="15.1" r=".95" fill="currentColor"/></symbol>
     <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3.5 7h3.2c2 0 3.2 1 4.3 2.7l2 3.1c1.1 1.7 2.3 2.7 4.3 2.7h3.2M3.5 17h3.2c1.4 0 2.4-.5 3.2-1.4M13.8 8.4c.8-.9 1.8-1.4 3.2-1.4h3.5M17.5 4l3 3-3 3M17.5 14l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -128,11 +128,11 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     </form>
     <p class="entry-msg" id="entryMsg" role="status" aria-live="polite"></p>
   </div>
-  <!-- question nav (design/NAV.md): only for an uploaded problems.json. Top bar on phones, beside the entry box on desktop.
+  <!-- question nav (design/NAV.md): only with a list (a practice bank, design/BANK.md, or an uploaded problems.json). Top bar on phones, beside the entry box on desktop.
        The list opens in the flow under it (it pushes the problem down; nothing is covered). -->
   <nav class="qnav" id="qnav" aria-label="Questions" hidden>
     <button type="button" class="btn btn-label" id="qlistBtn" aria-expanded="false" aria-controls="qlist">
-      <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span>Questions list</span>
+      <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span id="qlistName"></span>
     </button>
     <button type="button" class="btn" id="qshuf" aria-label="Shuffle questions" title="Shuffle questions">
       <svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg>

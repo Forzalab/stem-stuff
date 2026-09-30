@@ -6,6 +6,8 @@
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
 - Math: sympy (pip install sympy), behind a token allowlist.
 - POST /check          -> grades {code, answer | choice | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
+- GET /b/<BANK>.json   -> a practice bank (banks/BANK_XXX.json): public problems + this browser's marks + where it was;
+  /b/last.json = this browser's last bank, or null (design/BANK.md). Bank problems are graded like any other (/check).
 - GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
   multi (design/DONE.md). No answer, no hints.
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
@@ -37,43 +39,98 @@ except Exception:  # noqa: BLE001
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5567
 ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
+BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "var", "body", "how")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 
 # Server-only or private paths: never served.
-BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/")
+BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
 TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
 BLOCK = {"/serve.py", "/deploy.sh", "/host.log", "/.host.pid", "/problems.json", "/tries.json", "/" + os.path.basename(BANK)}
 BUNDLE = os.path.join(ROOT, "stem-stuff.html")
 BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
+BANK_CODE = re.compile(r"^BANK_[A-Z0-9]{3,6}$")
+BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
-# ---------------- the bank: one file, re-read when it changes ----------------
-_bank = {"mtime": None, "by_code": {}}
+# ---------------- the bank: problems.json + banks/BANK_XXX.json, each re-read when it changes ----------------
+# design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
+# index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
+_files = {}                  # path -> (mtime, [problems]): the last good copy of each file
+_bank = {"sig": None, "by_code": {}, "banks": {}, "skipped": set()}
 _bank_lock = threading.Lock()
 
 
-def problems():
-    """code -> full problem (with answers). Re-reads the file when its mtime changes; keeps the last good copy on errors."""
+def _read(path):
+    """[problems] of one file; re-read when its mtime changes; the last good copy on errors ([] if it never parsed)."""
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        _files.pop(path, None)
+        return []
+    old = _files.get(path)
+    if old and old[0] == mtime:
+        return old[1]
+    try:
+        with open(path, encoding="utf-8") as f:
+            ps = [p for p in json.load(f)["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
+        print(f"loaded {len(ps)} problems from {path}", file=sys.stderr)
+    except Exception as e:  # noqa: BLE001
+        print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
+        ps = old[1] if old else []
+    _files[path] = (mtime, ps)
+    return ps
+
+
+def _bank_files():
+    """bank code -> path, for banks/BANK_XXX.json. Other names are skipped (one stderr line each)."""
+    try:
+        names = sorted(os.listdir(BANKS))
+    except OSError:
+        return {}
+    out = {}
+    for n in names:
+        if not n.endswith(".json"):
+            continue
+        if BANK_CODE.match(n[:-5]):
+            out[n[:-5]] = os.path.join(BANKS, n)
+        elif n not in _bank["skipped"]:
+            _bank["skipped"].add(n)
+            print(f"banks/{n}: not a bank name (BANK_ + 3-6 of A-Z0-9), skipped", file=sys.stderr)
+    return out
+
+
+def _index():
+    """Rebuild the code index when any file changed."""
     with _bank_lock:
-        try:
-            mtime = os.path.getmtime(BANK)
-        except OSError:
-            return _bank["by_code"]
-        if mtime != _bank["mtime"]:
-            try:
-                with open(BANK, encoding="utf-8") as f:
-                    data = json.load(f)
-                _bank["by_code"] = {p["code"]: p for p in data["problems"]}
-                print(f"loaded {len(_bank['by_code'])} problems from {BANK}", file=sys.stderr)
-            except Exception as e:  # noqa: BLE001
-                print(f"problems file unreadable, keeping the last good copy: {e}", file=sys.stderr)
-            _bank["mtime"] = mtime
-        return _bank["by_code"]
+        bf = _bank_files()
+        lists = [_read(BANK)] + [_read(p) for p in bf.values()]
+        sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]))
+        if sig != _bank["sig"]:
+            by_code = {}
+            for ps in lists:
+                for p in ps:
+                    if p["code"] not in by_code:
+                        by_code[p["code"]] = p
+                    elif by_code[p["code"]] != p:
+                        print(f"{p['code']} is in two files with different content: the first one wins", file=sys.stderr)
+            _bank.update(sig=sig, by_code=by_code, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
+        return _bank
+
+
+
+def problems():
+    """code -> full problem (with answers), from problems.json and every bank."""
+    return _index()["by_code"]
+
+
+def banks():
+    """bank code -> [problem codes], in file order (duplicates inside one file dropped). A bank that never parsed is absent."""
+    return {c: list(dict.fromkeys(codes)) for c, codes in _index()["banks"].items()}
 
 
 def shown(p):
@@ -244,6 +301,7 @@ def unit_hit(u, text, sig):
 # gen: a counter; every new entry takes the next one. The page caches it; a /state gen above the cached one means
 # "this entry was deleted by hand (Tony reset it)", so the page drops its cached state instead of staying locked.
 _tries = {}
+_last = {}                  # sid -> {"bank": BANK_XXX, "at": {BANK_XXX: CODE}}: this browser's last bank and place in each
 _gen = {"n": 0, "loaded": None}
 _tries_lock = threading.Lock()
 
@@ -257,6 +315,7 @@ def _load_tries():
     if _gen["loaded"] == TRIES:
         return
     _tries.clear()
+    _last.clear()
     _gen["n"], _gen["loaded"] = 0, TRIES
     try:
         with open(TRIES, encoding="utf-8") as f:
@@ -266,12 +325,13 @@ def _load_tries():
             bits = k.split(" ")
             key = (bits[0], bits[1], int(bits[2])) if len(bits) == 3 else (bits[0], bits[1])
             _tries[key] = {"wrong": [_tup(w) for w in v.get("wrong", [])], "done": bool(v.get("done")), "gen": int(v.get("gen", 0))}
+        _last.update({k: v for k, v in data.get("last", {}).items() if isinstance(v, dict) and isinstance(v.get("at"), dict)})
     except (OSError, ValueError, AttributeError, TypeError, IndexError):
         pass
 
 
 def _save_tries():
-    data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}}
+    data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}, "last": _last}
     tmp = TRIES + ".tmp"
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -303,6 +363,53 @@ def state(p, sid):
         if p["type"] == "multi":
             return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
         return one((sid, p["code"]))
+
+
+def mark(p, sid):
+    """The list mark for one problem, as app.js wrapRec() builds it: {x: wrong tries, done: open|correct|out}; None if untried."""
+    st = state(p, sid)
+    us = st["parts"] if "parts" in st else [st]
+    ds = ["correct" if u["done"] else "out" if u["wrong"] >= max_tries(p) else "open" for u in us]
+    x = sum(u["wrong"] for u in us)
+    done = "correct" if all(d == "correct" for d in ds) else "out" if all(d != "open" for d in ds) else "open"
+    return {"x": x, "done": done} if x or done != "open" else None
+
+
+def bank_payload(code, sid):
+    """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
+    Opening a bank makes it this browser's last one (design/BANK.md)."""
+    all_banks = banks()
+    if code == "last":
+        with _tries_lock:
+            _load_tries()
+            code = _last.get(sid, {}).get("bank")
+    if code not in all_banks:
+        return None
+    by_code = problems()
+    ps = [by_code[c] for c in all_banks[code] if c in by_code]
+    marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
+    with _tries_lock:
+        _load_tries()
+        me = _last.setdefault(sid, {"bank": None, "at": {}})
+        at = me["at"].get(code)
+        if me["bank"] != code:
+            me["bank"] = code
+            _save_tries()
+    return {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in all_banks[code] else None}
+
+
+def seen(code, sid):
+    """GET /p/<code>.json: when code is in this browser's last bank, remember it as the place to reopen that bank."""
+    with _tries_lock:
+        _load_tries()
+        me = _last.get(sid)
+        if not me or not me.get("bank") or me["at"].get(me["bank"]) == code:
+            return
+        bank_ = me["bank"]
+    if code in banks().get(bank_, []):
+        with _tries_lock:
+            me["at"][bank_] = code
+            _save_tries()
 
 
 def grade(p, sid, body):
@@ -420,7 +527,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if p is None:
                 self.send_error(404)
             else:
-                self.send_json(200, public(p, self.sid()), head)
+                sid = self.sid()
+                self.send_json(200, public(p, sid), head)
+                seen(p["code"], sid)
+            return
+        m = BANK_PATH.match(path)
+        if m:
+            b = bank_payload(m.group(1), self.sid())
+            if b is None and m.group(1) == "last":
+                self.send_json(200, None, head)      # no last bank: a normal answer, not an error (no red console line)
+            elif b is None:
+                self.send_error(404)
+            else:
+                self.send_json(200, b, head)
             return
         if path == "/stem-stuff.html":
             ensure_bundle()

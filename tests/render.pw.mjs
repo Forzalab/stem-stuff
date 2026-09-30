@@ -175,9 +175,10 @@ async function run(browserType, label, opts = {}) {
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/app-freeze-${viewport.width}.png` });
     });
 
-    await step(`${label} ${vname} line length: scratchpad <= ~70ch`, async () => {
-      const w = await page.evaluate(() => { const t = document.querySelector("#scratch"); const cs = getComputedStyle(t); const c = document.createElement("span"); c.style.font = cs.font; c.textContent = "0".repeat(70); document.body.append(c); const r = c.offsetWidth; c.remove(); return { box: t.clientWidth, ch70: r }; });
-      assert.ok(w.box <= w.ch70 + 40, `textarea ${w.box}px vs 70ch ${w.ch70}px`);
+    await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
+      // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
+      const w = await page.evaluate(() => ({ box: document.querySelector("#xbField").getBoundingClientRect().right, card: document.querySelector("#problem").getBoundingClientRect().right }));
+      assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
     await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
@@ -193,7 +194,7 @@ async function run(browserType, label, opts = {}) {
       if (vname === "phone") {
         assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
         assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
-      } else if (vname === "desktop") assert.ok(d.top < 60, `box not at the top: ${d.top}`);
+      } else if (vname === "desktop") assert.ok(d.top < viewport.height * 0.2, `box not in the upper part (desktop offset scales with the window height, app.css): ${d.top}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
@@ -230,7 +231,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
-      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), [48, 48]);
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [56, 56] : [48, 48]);   // desktop 1920x1080: --btn 56px (app.css), the same for every .btn
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
       for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
@@ -308,7 +309,8 @@ async function run(browserType, label, opts = {}) {
       const shuf = page.locator("#qshuf");
       assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
       for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
-      assert.equal((await btn.textContent()).trim(), "Questions list");
+      // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
+      assert.equal((await btn.innerText()).trim(), vname === "desktop" ? "bank.json" : "bank", "list button label");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
       const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main") }; });

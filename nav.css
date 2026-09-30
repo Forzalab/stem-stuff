@@ -3,12 +3,16 @@
 /* .btn with a word: same 48px height, border, radius, hover and focus; width follows the label */
 .btn-label {
   width: auto; padding: 0 var(--s4) 0 var(--s3); display: inline-flex; align-items: center; gap: var(--s2);
-  font-size: 1rem; font-weight: 700; line-height: 1; white-space: nowrap;
+  font-size: var(--t-sm); font-weight: 700; line-height: 1; white-space: nowrap;
 }
 .qnav { display: flex; gap: var(--s2); }
 .qnav .btn:disabled { opacity: 0.45; cursor: default; }
 .qnav .btn:disabled:hover { background: var(--sheet); border-color: var(--edge); }
 .qnav .btn:disabled:active { transform: none; }
+/* list button label: bank code, or the upload's file name with ".json" dimmed; phones and touch drop ".json" (Tony, Sep 30) */
+#qlistName { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#qlistName .ext { color: var(--muted); }
+.dock-bottom #qlistName .ext { display: none; }
 #qlistBtn[aria-expanded="true"] { background: var(--raised); border-color: var(--muted); }
 
 /* phones and touch (entry dock at the bottom): the nav is the top bar. List left, arrows right. */
@@ -20,7 +24,7 @@
    .dock's children become grid items (status / entry + nav / message / list). */
 .qnav-on:not(.dock-bottom) .top {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2);
-  max-width: 52rem; margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
+  max-width: var(--col); margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
 }
 .qnav-on:not(.dock-bottom) .dock { display: contents; }
 .qnav-on:not(.dock-bottom) .file-status { grid-row: 1; grid-column: 1 / -1; }
@@ -36,7 +40,7 @@
 }
 .qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .qlist a {
-  display: flex; align-items: baseline; gap: var(--s3); min-height: 48px; padding: var(--s3);
+  display: flex; align-items: baseline; gap: var(--s3); min-height: var(--btn); padding: var(--s3);
   border-radius: 8px; color: var(--ink); text-decoration: none; line-height: 1.35;
   transition: background-color .12s ease-out;
 }
