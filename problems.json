@@ -640,6 +640,3575 @@
       ]
     },
     {
+      "code": "CSCI26_Z6N",
+      "title": "Fuzzy rule with a NOT",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. Rule: IF hot AND NOT humid THEN fan high. hot $= .6$, humid $= .75$. How strongly does the rule fire?"
+        }
+      ],
+      "how": "A decimal, like .5",
+      "answer": "0.25",
+      "wrong": [
+        {
+          "match": "0.6",
+          "error": "negation",
+          "hint": "QUACK. The rule says NOT humid. Did humid get flipped before the AND?"
+        },
+        {
+          "match": "0.75",
+          "error": "negation",
+          "hint": "QUACK. That's humid itself. The rule wants NOT humid. Flip it, then AND."
+        }
+      ],
+      "nudge": "QUACK. NOT first. Then AND. One number each, on paper."
+    },
+    {
+      "code": "CSCI26_R4T",
+      "title": "Name the form: NAND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If a gate is a NAND gate, it is universal. Gate G is not universal. Therefore G is not a NAND gate. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. Ponens affirms the IF part. Which part did the second line talk about?"
+        },
+        {
+          "choice": "n",
+          "error": "fallacy",
+          "hint": "QUACK. The second line denies the THEN part. Which rule does that?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_R6E",
+      "title": "Name the form: even squares",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If $x$ is even, then $x^2$ is even. $x^2$ is even. Therefore $x$ is even. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. The conclusion is true in real math. Is the form valid? Which part did line two affirm?"
+        },
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Tollens needs a NOT. Where is one?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_R8N",
+      "title": "Name the form: two nots",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "If it is not raining, the game is on. The game is not on. Therefore it is raining. Name the form."
+        }
+      ],
+      "choices": [
+        {
+          "id": "p",
+          "md": "MODUS PONENS"
+        },
+        {
+          "id": "t",
+          "md": "MODUS TOLLENS"
+        },
+        {
+          "id": "n",
+          "md": "NEITHER"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "p",
+          "error": "fallacy",
+          "hint": "QUACK. Line two talks about the game. Is that the IF part or the THEN part?"
+        },
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Write $p$ = not raining. Now what does line two do to $q$, and what is not $p$?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_P3L",
+      "title": "Plate codes",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A code is 3 uppercase letters with no letter repeated, then 3 decimal digits. The last digit is odd. How many codes are possible?"
+        }
+      ],
+      "how": "The full number, no commas.",
+      "answer": "7800000",
+      "wrong": [
+        {
+          "match": "8788000",
+          "error": "counting",
+          "hint": "QUACK. No letter repeated. How many letters are left for slot two?"
+        },
+        {
+          "match": "15600000",
+          "error": "misread",
+          "hint": "QUACK. Reread the digits. Is every digit free?"
+        },
+        {
+          "match": "17576000",
+          "error": "counting",
+          "hint": "QUACK. Two rules on this code. Write one number under each slot first."
+        }
+      ],
+      "nudge": "QUACK. Six slots. Write how many choices each slot has, then multiply."
+    },
+    {
+      "code": "CSCI26_Q4V",
+      "title": "Quantifier order",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\exists y \\in \\mathbb{Z}\\ \\forall x \\in \\mathbb{Z}:\\ x + y = 0$"
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "TRUE"
+        },
+        {
+          "id": "f",
+          "md": "FALSE"
+        }
+      ],
+      "correct": "f",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "quantifier",
+          "hint": "QUACK. $y$ is picked first and stays fixed. Does one $y$ work for $x=1$ and $x=2$?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_V7C",
+      "title": "Empty set claim",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Every element of $\\{x \\in \\mathbb{Z} : x^2 < 0\\}$ is equal to 7."
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "TRUE"
+        },
+        {
+          "id": "f",
+          "md": "FALSE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "f",
+          "error": "quantifier",
+          "hint": "QUACK. To call it FALSE you need one element that isn't 7. Find one."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_D4B",
+      "title": "Box and diamond",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\Box$ means true in every world. $\\Diamond$ means true in at least one world. There are three worlds. $P$ is true in $W_1$ and $W_2$, false in $W_3$. Which is right?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "$\\Box P$ TRUE, $\\Diamond\\neg P$ TRUE"
+        },
+        {
+          "id": "b",
+          "md": "$\\Box P$ FALSE, $\\Diamond\\neg P$ TRUE"
+        },
+        {
+          "id": "c",
+          "md": "$\\Box P$ TRUE, $\\Diamond\\neg P$ FALSE"
+        },
+        {
+          "id": "d",
+          "md": "$\\Box P$ FALSE, $\\Diamond\\neg P$ FALSE"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "quantifier",
+          "hint": "QUACK. $\\Box$ is every world. Check $W_3$."
+        },
+        {
+          "choice": "c",
+          "error": "quantifier",
+          "hint": "QUACK. $\\Box$ is every world, not most. And is there a world where $P$ fails?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. $\\Diamond\\neg P$ asks for one world where $P$ is false. Look again."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_D7N",
+      "title": "Negate a box",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "$\\Box$ means true in every world. $\\Diamond$ means true in at least one world. Which statement is the same as $\\neg\\Box P$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "b",
+          "md": "$\\Diamond\\neg P$"
+        },
+        {
+          "id": "a",
+          "md": "$\\Box\\neg P$"
+        },
+        {
+          "id": "c",
+          "md": "$\\neg\\Diamond P$"
+        },
+        {
+          "id": "d",
+          "md": "$\\Diamond P$"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "negation",
+          "hint": "QUACK. Not true in every world. Does that force false in every world?"
+        },
+        {
+          "choice": "c",
+          "error": "negation",
+          "hint": "QUACK. That says $P$ holds nowhere. Is that what not-every-world means?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. Where did the NOT go? Something has to be false somewhere."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S3A",
+      "title": "Syllogism: some through B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some B are C.",
+            "$\\therefore$ Some A are C."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "m",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Draw it. Can the B's that are C sit outside A?"
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. F means it can never happen. Can you draw one picture where it does?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S5B",
+      "title": "Syllogism: no and all",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "No A are B.",
+            "All C are A.",
+            "$\\therefore$ No C are B."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. Every C sits inside A. Where can B be? Try to draw a C that is B."
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. Draw A and B apart. Put C inside A. Now look."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S6C",
+      "title": "Syllogism: some not",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some C are not B.",
+            "$\\therefore$ Some C are not A."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "t",
+      "wrong": [
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. Take the C outside B. Can it be inside A? A sits inside B."
+        },
+        {
+          "choice": "f",
+          "error": "fallacy",
+          "hint": "QUACK. Draw A inside B. Put a C outside B. Where is that C?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S8F",
+      "title": "Syllogism: no B are C",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "All A are B.",
+            "Some A are C.",
+            "$\\therefore$ No B are C."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "f",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "fallacy",
+          "hint": "QUACK. Take one A that is C. Is it also a B?"
+        },
+        {
+          "choice": "m",
+          "error": "fallacy",
+          "hint": "QUACK. The premises hand you one thing. It is A, it is C. What else is it, always?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_S9D",
+      "title": "Syllogism: some means some not?",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": [
+            "Some A are B.",
+            "$\\therefore$ Some A are not B."
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "t",
+          "md": "T"
+        },
+        {
+          "id": "f",
+          "md": "F"
+        },
+        {
+          "id": "m",
+          "md": "MAYBE"
+        }
+      ],
+      "correct": "m",
+      "wrong": [
+        {
+          "choice": "t",
+          "error": "misread",
+          "hint": "QUACK. In logic, some means at least one. Can all A be B?"
+        },
+        {
+          "choice": "f",
+          "error": "misread",
+          "hint": "QUACK. Can you draw one A outside B without breaking line one?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F4R",
+      "title": "Cold tea ramp",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "In fuzzy logic, tea is 1 cold at $40^\\circ\\text{F}$ and 0 cold at $70^\\circ\\text{F}$, and it gets less cold evenly in between."
+        }
+      ],
+      "how": "Decimals, like .5",
+      "parts": [
+        {
+          "prompt": "How cold is $61^\\circ\\text{F}$ tea?",
+          "type": "num",
+          "answer": "0.3",
+          "wrong": [
+            {
+              "match": "0.7",
+              "error": "sign",
+              "hint": "QUACK. Hotter tea is less cold. Which end of the ramp is 1?"
+            }
+          ]
+        },
+        {
+          "prompt": "How cold is $85^\\circ\\text{F}$ tea?",
+          "type": "num",
+          "answer": "0",
+          "wrong": [
+            {
+              "match": "-0.5",
+              "error": "domain",
+              "hint": "QUACK. Membership lives in [0, 1]. Can tea be less than not cold?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Mark 40 and 70 on a line. Where does your temperature sit?"
+    },
+    {
+      "code": "CSCI26_W2T",
+      "title": "Exactly two of three",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "$|A \\cap B| = 7$, $|A \\cap C| = 6$, $|B \\cap C| = 5$, $|A \\cap B \\cap C| = 2$. How many elements are in exactly two of the sets?"
+        }
+      ],
+      "answer": "12",
+      "wrong": [
+        {
+          "match": "14",
+          "error": "misread",
+          "hint": "QUACK. That counts the middle once. Is the middle in exactly two sets?"
+        },
+        {
+          "match": "18",
+          "error": "counting",
+          "hint": "QUACK. Each pair count holds the middle too. How many pairs hold it?"
+        },
+        {
+          "match": "16",
+          "error": "counting",
+          "hint": "QUACK. The middle sits in all three pairs. How many times did you take it out?"
+        }
+      ],
+      "nudge": "QUACK. Draw three circles. Fill the middle first, then each pair-only region."
+    },
+    {
+      "code": "CSCI26_B5M",
+      "title": "Three share a month",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "What is the fewest people you need to be sure that at least 3 of them share a birth month?"
+        }
+      ],
+      "answer": "25",
+      "wrong": [
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. Fill every month to the brim without making three. Now add who?"
+        },
+        {
+          "match": "13",
+          "error": "misread",
+          "hint": "QUACK. That guarantees 2. The ask is 3."
+        },
+        {
+          "match": "36",
+          "error": "off-by-factor",
+          "hint": "QUACK. How many can a month hold before it has 3?"
+        }
+      ],
+      "nudge": "QUACK. Worst case first. How many people fit with no month at 3?"
+    },
+    {
+      "code": "CSCI26_H9S",
+      "title": "Keys per slot",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "100 keys are hashed into a table with 12 slots, with chaining. At least one slot must hold at least how many keys?"
+        }
+      ],
+      "answer": "9",
+      "wrong": [
+        {
+          "match": "8",
+          "error": "off-by-one",
+          "hint": "QUACK. Put 8 in every slot. How many keys is that? Where do the rest go?"
+        },
+        {
+          "match": "8.33",
+          "error": "format",
+          "hint": "QUACK. A slot holds whole keys. Round which way?"
+        }
+      ],
+      "nudge": "QUACK. Spread the keys as evenly as you can. Count the fullest slot."
+    },
+    {
+      "code": "CSCI26_M6V",
+      "title": "Inverse with a sign",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "$7^{-1} \\equiv 15 \\pmod{26}$. Find $(-7)^{-1} \\bmod 26$, as a number from 0 to 25."
+        }
+      ],
+      "answer": "11",
+      "wrong": [
+        {
+          "match": "15",
+          "error": "sign",
+          "hint": "QUACK. Multiply your answer by $-7$. Do you get 1 mod 26?"
+        },
+        {
+          "match": "-15",
+          "error": "format",
+          "hint": "QUACK. Right idea. Now the range: 0 to 25. One more step."
+        }
+      ],
+      "nudge": "QUACK. Check it: your number times $-7$, then mod 26. Is it 1?"
+    },
+    {
+      "code": "CSCI26_G5E",
+      "title": "Rows with an unwired input",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A circuit has inputs A, B, C, D, E. OUT = NOR(A, B) OR (C AND D). Input E is not wired to anything. In the full truth table, how many rows have OUT = 1?"
+        }
+      ],
+      "answer": "14",
+      "wrong": [
+        {
+          "match": "7",
+          "error": "counting",
+          "hint": "QUACK. How many rows does the full table have with five inputs?"
+        },
+        {
+          "match": "8",
+          "error": "counting",
+          "hint": "QUACK. Two cases can both be 1 in one row. Count that row once. And the table size?"
+        },
+        {
+          "match": "16",
+          "error": "counting",
+          "hint": "QUACK. Did a row where both sides are 1 get counted twice?"
+        }
+      ],
+      "nudge": "QUACK. Count the A, B, C, D rows first. Then ask what E does to that count."
+    },
+    {
+      "code": "CSCI26_K4P",
+      "title": "Read one K-map cell",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Karnaugh map for $f = a \\wedge \\neg c$. The top labels are $ab$, the side labels are $cd$, both $00, 01, 11, 10$. Is the cell in row $10$, column $01$ a 1?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Row is $cd$. Column is $ab$. Write $a, b, c, d$ before you look at $f$."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_K7R",
+      "title": "Count ones in a K-map row",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Karnaugh map for $f = (a \\oplus b) \\vee (c \\wedge \\neg d)$. The top labels are $ab$, the side labels are $cd$, both $00, 01, 11, 10$. How many 1s are in row $11$?"
+        }
+      ],
+      "answer": "2",
+      "wrong": [
+        {
+          "match": "1",
+          "error": "misread",
+          "hint": "QUACK. A row has a fixed $cd$. Which letters are 1 in row 11?"
+        },
+        {
+          "match": "3",
+          "error": "op-swap",
+          "hint": "QUACK. $\\oplus$ is XOR. What is $1 \\oplus 1$?"
+        },
+        {
+          "match": "4",
+          "error": "negation",
+          "hint": "QUACK. With $d = 1$, what is $c \\wedge \\neg d$?"
+        }
+      ],
+      "nudge": "QUACK. Fix $c$ and $d$ for the row. Then walk the four columns."
+    },
+    {
+      "code": "CSCI26_C2A",
+      "title": "Circuit to C++: NOT and OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs feed a circuit with one NOT gate and one OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "g1",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!A || B)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (A || B)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!A && B)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A -> B)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!A ^ B)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the wire from A. Did you skip the NOT bubble on the way in?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. Check the last gate's shape. Is it the AND shape or the OR shape?"
+        },
+        {
+          "choice": "d",
+          "error": "format",
+          "hint": "QUACK. Same logic, but is `->` an operator C++ has? The question asks for C++."
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The last gate has no extra curved line at its back. Is it XOR or plain OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C3B",
+      "title": "Circuit to C++: B and not B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs feed a circuit with an AND gate, a NOT gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (A && B || !B)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (A && B || B)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (A ^ B || !B)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A && B || !A)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (B -> A)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Follow the lower wire into the OR. Does it pass through a NOT bubble first?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a flat back. Is that XOR, or AND?"
+        },
+        {
+          "choice": "d",
+          "error": "misread",
+          "hint": "QUACK. Trace the wire into the NOT gate back to its input. Is it A or B?"
+        },
+        {
+          "choice": "e",
+          "error": "format",
+          "hint": "QUACK. That may mean the same thing, but does C++ have a `->` operator for bools?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C4D",
+      "title": "Circuit to C++: XOR into AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an XOR gate and an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if ((A ^ B) && C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A && B) && C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if ((A ^ B) || C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (!(A ^ B) && C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if ((A ^ B) && A)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has an extra curved line at its back. Which gate has that?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. Check the last gate's shape. Flat back or curved back?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. Where do you see a NOT bubble in this drawing? Don't add one that isn't there."
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. Trace the second wire into the last gate. Which input does it come from?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C5E",
+      "title": "Circuit to C++: NAND into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NAND gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!(A && B) || C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A && B) || C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!A && B || C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (A && B -> C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!(A || B) || C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the tip of the first gate. What does that small circle do?"
+        },
+        {
+          "choice": "c",
+          "error": "order-ops",
+          "hint": "QUACK. The bubble sits after the gate. Does it flip only A, or the whole AND?"
+        },
+        {
+          "choice": "d",
+          "error": "format",
+          "hint": "QUACK. Same logic maybe, but `->` does not work on bools in C++. Which operators does it have?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a flat back. Is it NOT-of-AND or NOT-of-OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C6F",
+      "title": "Circuit to C++: one input, two wires",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOT gate, two AND gates and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "A",
+                "C"
+              ]
+            },
+            {
+              "id": "g4",
+              "op": "or",
+              "in": [
+                "g2",
+                "g3"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g4",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!A && B || A && C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if (!A && B || B && C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (A && B || A && C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if ((!A || B) && (A || C))`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!A ^ B || A && C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. A splits into two wires. Trace the lower AND's inputs back. Which inputs are they?"
+        },
+        {
+          "choice": "c",
+          "error": "negation",
+          "hint": "QUACK. One of A's two wires goes through a NOT bubble. Which one?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. Check each gate's shape again. Which two gates are AND, and which one is OR?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. The upper gate after the NOT has a flat back. Is that XOR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_C7H",
+      "title": "Circuit to C++: NOR into XOR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOR gate and an XOR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "xor",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "What is this circuit's equivalent in C++?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if (!(A || B) ^ C)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((A || B) ^ C)`"
+        },
+        {
+          "id": "c",
+          "md": "`if (!(A && B) ^ C)`"
+        },
+        {
+          "id": "d",
+          "md": "`if (!(A || B) && C)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (!(A || C) ^ C)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "negation",
+          "hint": "QUACK. Look at the tip of the first gate. What does its small circle do?"
+        },
+        {
+          "choice": "c",
+          "error": "op-swap",
+          "hint": "QUACK. The first gate has a curved back. Is it NOT-of-OR or NOT-of-AND?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. The last gate has an extra curved line at its back. Is that AND?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. Trace the first gate's second input back. Is it B or C?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_T2C",
+      "title": "Truth table: AND, NOT, OR",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an AND gate, a NOT gate and an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "C"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = T, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "misread",
+              "hint": "QUACK. The NOT side is off here. What does the AND gate send to the OR?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. The AND needs both inputs on. And what is NOT of an on $C$?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = F",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. Did you skip the NOT bubble? $C$ is off going in."
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. Is $A$ on? The AND needs both. Then check the NOT side."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Work one gate at a time: AND, then NOT, then OR."
+    },
+    {
+      "code": "CSCI26_T3D",
+      "title": "Truth table: XOR into AND",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with an XOR gate and an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = T, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. XOR is on only when its inputs differ. Do $A$ and $B$ differ here?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "op-swap",
+              "hint": "QUACK. $A$ and $B$ differ. What does XOR send on, and what is $C$?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = F",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "op-swap",
+              "hint": "QUACK. The last gate is AND. Look at $C$."
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = T, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "op-swap",
+              "hint": "QUACK. XOR of an off and an on input first. Then AND that with $C$."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. XOR first, write it down, then the AND."
+    },
+    {
+      "code": "CSCI26_T4E",
+      "title": "Truth table: NOR into NAND",
+      "type": "multi",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs feed a circuit with a NOR gate and a NAND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B",
+            "C"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "nand",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Fill in $Q$ for each row."
+        }
+      ],
+      "how": "Type T or F in each box.",
+      "parts": [
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "F",
+          "accept": [
+            "false",
+            "0"
+          ],
+          "wrong": [
+            {
+              "match": "T",
+              "error": "negation",
+              "hint": "QUACK. NOR of two off inputs is on. Then NAND of two on inputs gives what?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = T, $B$ = F, $C$ = T",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. NOR is on only when both inputs are off. Is $A$ off here?"
+            }
+          ]
+        },
+        {
+          "prompt": "$A$ = F, $B$ = F, $C$ = F",
+          "type": "text",
+          "answer": "T",
+          "accept": [
+            "true",
+            "1"
+          ],
+          "wrong": [
+            {
+              "match": "F",
+              "error": "negation",
+              "hint": "QUACK. NAND is off only when both its inputs are on. Is $C$ on?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. NOR first, write it down, then the NAND. Each bubble flips."
+    },
+    {
+      "code": "CSCI26_Y2A",
+      "title": "Simplify: three terms with x",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (x && w || x && y || x && !y)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (x)",
+      "accept": [
+        "x"
+      ],
+      "wrong": [
+        {
+          "match": "if (x && w)",
+          "error": "algebra",
+          "hint": "QUACK. You dropped two terms. Factor out $x$: what is `y || !y` on its own?"
+        },
+        {
+          "match": "if (true)",
+          "error": "algebra",
+          "hint": "QUACK. `y || !y` is always on, but every term still has $x$. Can it fire with $x$ off?"
+        },
+        {
+          "match": "if (x && y)",
+          "error": "algebra",
+          "hint": "QUACK. `x && !y` covers the rows `x && y` misses. What do the two cover together?"
+        }
+      ],
+      "nudge": "QUACK. Pull $x$ out of every term. Then simplify what is left inside the parentheses."
+    },
+    {
+      "code": "CSCI26_Y3B",
+      "title": "Simplify: p or p and q",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (p || p && q)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (p)",
+      "accept": [
+        "p"
+      ],
+      "wrong": [
+        {
+          "match": "if (p && q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ on, $q$ off. Does the original fire? Does yours?"
+        },
+        {
+          "match": "if (p || q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ off, $q$ on. Does `p && q` fire then?"
+        },
+        {
+          "match": "if (q)",
+          "error": "algebra",
+          "hint": "QUACK. Try $p$ on, $q$ off. The first term fires by itself. Does yours?"
+        }
+      ],
+      "nudge": "QUACK. When does `p && q` fire while $p$ alone does not?"
+    },
+    {
+      "code": "CSCI26_Y4C",
+      "title": "Simplify: k with m and not m",
+      "type": "text",
+      "body": [
+        {
+          "type": "text",
+          "md": "Simplify `if (m && k || !m && k)` as far as you can."
+        }
+      ],
+      "how": "Type the shortest if statement, like `if (a && b)`.",
+      "answer": "if (k)",
+      "accept": [
+        "k"
+      ],
+      "wrong": [
+        {
+          "match": "if (m)",
+          "error": "algebra",
+          "hint": "QUACK. Try $m$ on, $k$ off. Does the original fire? Which letter is in both terms?"
+        },
+        {
+          "match": "if (true)",
+          "error": "algebra",
+          "hint": "QUACK. `m || !m` is always on, but it is ANDed with $k$. What if $k$ is off?"
+        },
+        {
+          "match": "if (m && k)",
+          "error": "algebra",
+          "hint": "QUACK. Try $m$ off, $k$ on. The second term fires. Does yours?"
+        }
+      ],
+      "nudge": "QUACK. Pull $k$ out of both terms. What is left in the parentheses?"
+    },
+    {
+      "code": "CSCI26_F5A",
+      "title": "Flip B: OR then AND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Three inputs with the values shown feed a circuit with an OR gate and an AND gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 1
+            },
+            {
+              "name": "B",
+              "value": 0
+            },
+            {
+              "name": "C",
+              "value": 1
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "or",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "and",
+              "in": [
+                "g1",
+                "C"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Find $Q$ before and after the flip. With $A$ = 1, what does the OR gate send either way?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F6B",
+      "title": "Flip B: a blocked gate and a second wire",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs with the values shown feed a circuit with an AND gate and an XOR gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 0
+            },
+            {
+              "name": "B",
+              "value": 0
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "xor",
+              "in": [
+                "g1",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g2",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "misread",
+          "hint": "QUACK. The AND is blocked, but $B$ has two wires. Where does the other one go?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_F7C",
+      "title": "Flip B: B or not B",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Two inputs with the values shown feed a circuit with a NOT gate, an OR gate and an AND gate that ends at Q.",
+          "inputs": [
+            {
+              "name": "A",
+              "value": 1
+            },
+            {
+              "name": "B",
+              "value": 0
+            }
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "or",
+              "in": [
+                "B",
+                "g1"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "A",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "If $B$ flips from 0 to 1, does $Q$ change?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "misread",
+          "hint": "QUACK. Work out the OR gate for $B$ = 0 and for $B$ = 1. Does its output ever change?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E2Q",
+      "title": "Same output? NAND vs NOTs into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one NAND gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs each pass a NOT gate, then feed an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Test all four input rows on both circuits. Find a row where they differ, if you can."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E3R",
+      "title": "Same output? NOR vs NOTs into OR",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one NOR gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "nor",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs each pass a NOT gate, then feed an OR gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "not",
+              "in": [
+                "A"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "or",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "n",
+      "wrong": [
+        {
+          "choice": "y",
+          "error": "negation",
+          "hint": "QUACK. Try $A$ = 1, $B$ = 0 on both. When a NOT moves inside, does OR stay OR?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_E4S",
+      "title": "Same output? XOR vs OR and NAND",
+      "type": "mc",
+      "body": [
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit P: two inputs feed one XOR gate that ends at P.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "xor",
+              "in": [
+                "A",
+                "B"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g1",
+              "label": "$P$"
+            }
+          ]
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Circuit Q: two inputs feed an OR gate and a NAND gate, whose outputs feed an AND gate that ends at Q.",
+          "inputs": [
+            "A",
+            "B"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "or",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "nand",
+              "in": [
+                "A",
+                "B"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "and",
+              "in": [
+                "g1",
+                "g2"
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "Do these two circuits give the same output for every input?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "y",
+          "md": "YES"
+        },
+        {
+          "id": "n",
+          "md": "NO"
+        }
+      ],
+      "correct": "y",
+      "wrong": [
+        {
+          "choice": "n",
+          "error": "negation",
+          "hint": "QUACK. Check the row $A$ = 1, $B$ = 1 on both circuits first. Then the other three rows."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N2A",
+      "title": "Bigger lock, smaller dials",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 4 dials, each A–Z. A machine tries every setting in 1 hour. A new lock has 8 dials, but each dial has only 13 letters. At the same speed, how long does the machine need?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "1 hour"
+        },
+        {
+          "id": "b",
+          "md": "$13^4$ hours"
+        },
+        {
+          "id": "c",
+          "md": "$\\dfrac{13^4}{16}$ hours"
+        },
+        {
+          "id": "d",
+          "md": "$26^4$ hours"
+        },
+        {
+          "id": "e",
+          "md": "$\\dfrac{1}{16}$ hour"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. Twice the dials, half the letters. Do settings add or multiply? Write both counts as products."
+        },
+        {
+          "choice": "b",
+          "error": "off-by-factor",
+          "hint": "QUACK. Each old dial has 26 = 2 × 13 letters. Where did those four 2s go?"
+        },
+        {
+          "choice": "d",
+          "error": "misread",
+          "hint": "QUACK. The new dials have 13 letters, not 26. Did you count them as full A–Z dials?"
+        },
+        {
+          "choice": "e",
+          "error": "counting",
+          "hint": "QUACK. Halving each dial is half the story. What do the 4 extra dials do to the count?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N3B",
+      "title": "Sixth dial, faster machine",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 5 dials, each A–Z. A thief's machine tries every setting in roughly 1 day. The owner adds a 6th dial with only the digits 0–9. The thief gets a machine that is 26 times faster. Roughly how long does the thief need now?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 1 hour"
+        },
+        {
+          "id": "b",
+          "md": "roughly 9 hours"
+        },
+        {
+          "id": "c",
+          "md": "roughly 1 day"
+        },
+        {
+          "id": "d",
+          "md": "roughly 10 days"
+        },
+        {
+          "id": "e",
+          "md": "roughly 30 days"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. You used the faster machine. What does a new dial with 10 digits do to the settings?"
+        },
+        {
+          "choice": "c",
+          "error": "counting",
+          "hint": "QUACK. The new dial and the new machine don't cancel. What does each one multiply or divide by?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-factor",
+          "hint": "QUACK. The new dial multiplies the settings. What does a machine 26 times faster do to the time?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. The 6th dial holds only 0–9, and faster means less time. Recheck both changes."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N4C",
+      "title": "Two more dials or bigger dials",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 3 dials, each 0–9. Plan A adds 2 more dials, each 0–9. Plan B keeps 3 dials but gives each dial 30 symbols. Which plan gives more settings, and roughly how many times more?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "Plan A, roughly 4 times more"
+        },
+        {
+          "id": "b",
+          "md": "Plan B, roughly 3 times more"
+        },
+        {
+          "id": "c",
+          "md": "the same"
+        },
+        {
+          "id": "d",
+          "md": "Plan A, roughly 40 times more"
+        },
+        {
+          "id": "e",
+          "md": "Plan B, roughly 9 times more"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "counting",
+          "hint": "QUACK. Bigger dials feel bigger. Count both plans as products of dial sizes before you compare."
+        },
+        {
+          "choice": "c",
+          "error": "counting",
+          "hint": "QUACK. 2 extra dials and 20 extra symbols don't balance. Multiply out each plan's settings."
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros in Plan B's total again. How many settings is 30 × 30 × 30?"
+        },
+        {
+          "choice": "e",
+          "error": "counting",
+          "hint": "QUACK. Plan B has three 30-symbol dials, not two. And which plan's total is bigger?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N5D",
+      "title": "Hotel door codes",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A hotel has 500 rooms. Each room gets 2 door codes, and all 1000 codes must be different. Every code has the same length and uses only the keys 1 to 9. What is the shortest length that works?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2"
+        },
+        {
+          "id": "b",
+          "md": "3"
+        },
+        {
+          "id": "c",
+          "md": "4"
+        },
+        {
+          "id": "d",
+          "md": "5"
+        },
+        {
+          "id": "e",
+          "md": "1000"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. 2 is codes per room, not keys per code. How many codes does a 2-key code give?"
+        },
+        {
+          "choice": "b",
+          "error": "counting",
+          "hint": "QUACK. The keypad has only 9 keys, not 10. How many 3-key codes does it make?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-one",
+          "hint": "QUACK. Is there a shorter length that already gives enough codes? Try each length in turn."
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. That's how many codes you need, not how long each is. Each extra key multiplies the count by 9."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N6E",
+      "title": "Four-dial lock, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Roughly how many settings does a lock with 4 dials, each A–Z, have?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 50 thousand"
+        },
+        {
+          "id": "b",
+          "md": "roughly 200 thousand"
+        },
+        {
+          "id": "c",
+          "md": "roughly 500 thousand"
+        },
+        {
+          "id": "d",
+          "md": "roughly 800 thousand"
+        },
+        {
+          "id": "e",
+          "md": "roughly 10 million"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros again. Is 26 × 26 closer to 70 or 700?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 down to 20. Four times over, how big does that slip grow?"
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 up to 30. Four times over, is that still close?"
+        },
+        {
+          "choice": "e",
+          "error": "off-by-one",
+          "hint": "QUACK. Count the dials again. How many 26s did you multiply?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N7F",
+      "title": "Two-dial lock, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock has 2 dials, each A–Z. Roughly how many settings does it have?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 50"
+        },
+        {
+          "id": "b",
+          "md": "roughly 200"
+        },
+        {
+          "id": "c",
+          "md": "roughly 400"
+        },
+        {
+          "id": "d",
+          "md": "roughly 700"
+        },
+        {
+          "id": "e",
+          "md": "roughly 900"
+        }
+      ],
+      "correct": "d",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Each dial multiplies the count. Did you add the two dials instead?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. You kept the 2 and a hundred but lost the squaring. What is 26 times 26, roughly?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 down to 20. Is 20 × 20 a fair stand-in?"
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 26 up to 30. Is 30 × 30 a fair stand-in, or too high?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N8G",
+      "title": "Letters or digits, roughly",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A code has 3 characters. Each character is a letter A–Z or a digit 0–9. Roughly how many codes are there?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "roughly 100"
+        },
+        {
+          "id": "b",
+          "md": "roughly 5 thousand"
+        },
+        {
+          "id": "c",
+          "md": "roughly 30 thousand"
+        },
+        {
+          "id": "d",
+          "md": "roughly 50 thousand"
+        },
+        {
+          "id": "e",
+          "md": "roughly 60 thousand"
+        }
+      ],
+      "correct": "d",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Three spots, each with 36 options. Multiply 36 by 3, or 36 by itself?"
+        },
+        {
+          "choice": "b",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros again. 36 × 36 is over a thousand. Times 36 more?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 36 down to 30. Three times over, how much does that cost?"
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. You rounded 36 up to 40. Three times over, is that still close?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_N9H",
+      "title": "Two stadium screens",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Two stadium screens each have a million pixels. How many pixels are there in total?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2 million"
+        },
+        {
+          "id": "b",
+          "md": "a trillion"
+        },
+        {
+          "id": "c",
+          "md": "10 million"
+        },
+        {
+          "id": "d",
+          "md": "2 trillion"
+        },
+        {
+          "id": "e",
+          "md": "64 million"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. Two screens side by side. Do their pixels add, or multiply?"
+        },
+        {
+          "choice": "c",
+          "error": "arithmetic",
+          "hint": "QUACK. Adding a second million: does that add a zero, or double the count?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. Where did six extra zeros come from? Two piles of a million just add."
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. Two times a million is not 2 to some power. What do two equal piles make?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U2J",
+      "title": "Wide, tall and many frames",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A screen is a thousand pixels wide and a thousand pixels tall. It shows a thousand frames. How many pixels are drawn in all?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "3 thousand"
+        },
+        {
+          "id": "b",
+          "md": "a million"
+        },
+        {
+          "id": "c",
+          "md": "a billion"
+        },
+        {
+          "id": "d",
+          "md": "3 billion"
+        },
+        {
+          "id": "e",
+          "md": "a billion billion billion"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "op-swap",
+          "hint": "QUACK. Width times height gives one frame. Should the three thousands add or multiply?"
+        },
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. That's one frame. How many frames does the screen show?"
+        },
+        {
+          "choice": "d",
+          "error": "off-by-factor",
+          "hint": "QUACK. Where does the extra 3 come from? Multiply the three counts, nothing else."
+        },
+        {
+          "choice": "e",
+          "error": "arithmetic",
+          "hint": "QUACK. Each thousand adds three zeros. Did you multiply the zero counts instead of adding them?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U3K",
+      "title": "Town plus a suburb",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A town has a million people. A new suburb adds a hundred thousand people. How many people live in the town now?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "a million"
+        },
+        {
+          "id": "b",
+          "md": "1.1 million"
+        },
+        {
+          "id": "c",
+          "md": "2 million"
+        },
+        {
+          "id": "d",
+          "md": "100 billion"
+        },
+        {
+          "id": "e",
+          "md": "200 billion"
+        }
+      ],
+      "correct": "b",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "misread",
+          "hint": "QUACK. The suburb adds people. Did your total change at all?"
+        },
+        {
+          "choice": "c",
+          "error": "misread",
+          "hint": "QUACK. A hundred thousand is not a million. How many hundred-thousands make a million?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. New people add on, they don't multiply. Did you add the zero counts?"
+        },
+        {
+          "choice": "e",
+          "error": "op-swap",
+          "hint": "QUACK. Did you multiply the two groups? New people add on. Line up the digits and add."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U4L",
+      "title": "Switches or one dial",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "Which has more settings: a row of four on/off switches, or one dial with sixteen symbols?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "the switches"
+        },
+        {
+          "id": "b",
+          "md": "the dial"
+        },
+        {
+          "id": "c",
+          "md": "they have the same number"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "counting",
+          "hint": "QUACK. Count on/off settings, not the orders you could flip them in. Each switch has 2 positions."
+        },
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. Four switches with 2 positions each: add, or multiply? Each switch doubles the count."
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_U5M",
+      "title": "A trillion boxes",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "A crew checks a million boxes a day. How many days does it take them to check a trillion boxes?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "2 days"
+        },
+        {
+          "id": "b",
+          "md": "a thousand days"
+        },
+        {
+          "id": "c",
+          "md": "a million days"
+        },
+        {
+          "id": "d",
+          "md": "a billion days"
+        },
+        {
+          "id": "e",
+          "md": "a trillion days"
+        }
+      ],
+      "correct": "c",
+      "wrong": [
+        {
+          "choice": "a",
+          "error": "arithmetic",
+          "hint": "QUACK. You divided the zero counts. When you divide, do the zero counts divide, or subtract?"
+        },
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. A thousand millions is a billion. Is a trillion the same as a billion?"
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. Count the zeros: 12 in a trillion, 6 in a million. Dividing takes away how many?"
+        },
+        {
+          "choice": "e",
+          "error": "misread",
+          "hint": "QUACK. That's the number of boxes. The crew does a million each day. Did you divide?"
+        }
+      ]
+    },
+    {
+      "code": "CSCI26_J2A",
+      "title": "Books for a hike",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have ten different books on your bookshelf and you are going to take three of them hiking. How many different ways could you take the three books?"
+        }
+      ],
+      "answer": "120",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Does it matter which book you packed first? Divide out the orders of the three books."
+        },
+        {
+          "match": "1000",
+          "error": "counting",
+          "hint": "QUACK. Can you take the same book twice? Each pick leaves one fewer book."
+        },
+        {
+          "match": "30",
+          "error": "op-swap",
+          "hint": "QUACK. Ten books, three picks. Do the choices add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Count the picks in order first, then divide by how many orders three books have."
+    },
+    {
+      "code": "CSCI26_J3B",
+      "title": "Arrange TRAIN",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'TRAIN'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "120",
+      "wrong": [
+        {
+          "match": "3125",
+          "error": "counting",
+          "hint": "QUACK. Once a letter is used, can it be used again? Each spot has fewer letters left."
+        },
+        {
+          "match": "25",
+          "error": "op-swap",
+          "hint": "QUACK. Five spots. Is it 5 × 5, or does each spot have one fewer choice?"
+        },
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. You counted four spots. How many letters are in the word?"
+        }
+      ],
+      "nudge": "QUACK. Write a blank for each letter. How many letters can go in the first blank, then the next?"
+    },
+    {
+      "code": "CSCI26_J4C",
+      "title": "Arrange NOODLE",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'NOODLE'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "360",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two O's gives the same word. Did you divide out that repeat?"
+        },
+        {
+          "match": "180",
+          "error": "counting",
+          "hint": "QUACK. Which letters repeat? Only the O. How many times did you divide by 2?"
+        },
+        {
+          "match": "120",
+          "error": "off-by-one",
+          "hint": "QUACK. Both O's are letters. Did you count six spots?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J5D",
+      "title": "Arrange LOBBY",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'LOBBY'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "60",
+      "wrong": [
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two B's gives the same word. Did you divide out that repeat?"
+        },
+        {
+          "match": "30",
+          "error": "counting",
+          "hint": "QUACK. Only one letter repeats. How many times did you divide by 2?"
+        },
+        {
+          "match": "24",
+          "error": "off-by-one",
+          "hint": "QUACK. LOBBY has five letters. Did you drop a B?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J6E",
+      "title": "Arrange COFFEE",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Suppose you have the word 'COFFEE'. How many different ways can you arrange the letters?"
+        }
+      ],
+      "answer": "180",
+      "wrong": [
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. Swapping the two F's, or the two E's, gives the same word. Did you divide those out?"
+        },
+        {
+          "match": "360",
+          "error": "counting",
+          "hint": "QUACK. Two letters repeat, F and E. Did you divide for both?"
+        },
+        {
+          "match": "90",
+          "error": "counting",
+          "hint": "QUACK. Two pairs repeat. How many times should you divide by 2?"
+        }
+      ],
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+    },
+    {
+      "code": "CSCI26_J7F",
+      "title": "License plates",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A license plate is one digit, then 3 letters, then 3 digits. The first digit cannot be 0. Letters and digits may repeat. How many plates are possible?"
+        }
+      ],
+      "how": "The full number, no commas.",
+      "answer": "158184000",
+      "wrong": [
+        {
+          "match": "175760000",
+          "error": "misread",
+          "hint": "QUACK. The first digit can't be 0. How many choices does that slot really have?"
+        },
+        {
+          "match": "140400000",
+          "error": "counting",
+          "hint": "QUACK. Letters may repeat. Does each letter slot still have all 26?"
+        },
+        {
+          "match": "158184",
+          "error": "counting",
+          "hint": "QUACK. Count the slots again. There are seven, and every one multiplies."
+        }
+      ],
+      "nudge": "QUACK. Seven slots. Write how many choices each slot has, then multiply."
+    },
+    {
+      "code": "CSCI26_J8G",
+      "title": "Soup, sandwich, drink",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A diner has 4 soups, 6 sandwiches and 3 drinks. A meal is one soup, one sandwich and one drink. How many different meals are there?"
+        }
+      ],
+      "answer": "72",
+      "wrong": [
+        {
+          "match": "13",
+          "error": "op-swap",
+          "hint": "QUACK. Each soup goes with every sandwich. Do the choices add or multiply?"
+        },
+        {
+          "match": "24",
+          "error": "misread",
+          "hint": "QUACK. Did you forget the drinks? Every part of the meal multiplies."
+        },
+        {
+          "match": "18",
+          "error": "misread",
+          "hint": "QUACK. Did you forget the soups? Every part of the meal multiplies."
+        }
+      ],
+      "nudge": "QUACK. Three slots: soup, sandwich, drink. Multiply the choices."
+    },
+    {
+      "code": "CSCI26_J9H",
+      "title": "Two toppings",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A pizza place has 8 toppings. You pick 2 different toppings. How many different pizzas can you make?"
+        }
+      ],
+      "answer": "28",
+      "wrong": [
+        {
+          "match": "56",
+          "error": "counting",
+          "hint": "QUACK. Is a mushroom-onion pizza different from an onion-mushroom pizza?"
+        },
+        {
+          "match": "64",
+          "error": "counting",
+          "hint": "QUACK. Can you pick the same topping twice? And does order matter on a pizza?"
+        },
+        {
+          "match": "16",
+          "error": "op-swap",
+          "hint": "QUACK. 8 toppings, 2 picks. Is it 8 × 2? List the pairs for 3 toppings and check."
+        }
+      ],
+      "nudge": "QUACK. Count ordered picks first, then divide by how many orders two toppings have."
+    },
+    {
+      "code": "CSCI26_H2J",
+      "title": "Captains and water carriers",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A team has 12 players."
+        }
+      ],
+      "how": "A whole number in each box.",
+      "parts": [
+        {
+          "prompt": "How many ways can the coach pick a captain and a co-captain?",
+          "type": "num",
+          "answer": "132",
+          "wrong": [
+            {
+              "match": "66",
+              "error": "counting",
+              "hint": "QUACK. Ana as captain with Bo as co-captain differs from the reverse. Does order matter here?"
+            },
+            {
+              "match": "144",
+              "error": "counting",
+              "hint": "QUACK. Can one player be both captain and co-captain?"
+            }
+          ]
+        },
+        {
+          "prompt": "How many ways can the coach pick 2 players to carry the water?",
+          "type": "num",
+          "answer": "66",
+          "wrong": [
+            {
+              "match": "132",
+              "error": "counting",
+              "hint": "QUACK. Ana and Bo carrying water is the same as Bo and Ana. Did you count it twice?"
+            },
+            {
+              "match": "144",
+              "error": "counting",
+              "hint": "QUACK. Can one player be picked twice? And does order matter for carrying water?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Two picks from 12. Ask first: do the two jobs have different names?"
+    },
+    {
+      "code": "CSCI26_H3K",
+      "title": "Lock codes: repeats or not",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock code is 4 digits, each 0–9."
+        }
+      ],
+      "how": "A whole number in each box, no commas.",
+      "parts": [
+        {
+          "prompt": "How many codes are there if digits may repeat?",
+          "type": "num",
+          "answer": "10000",
+          "wrong": [
+            {
+              "match": "5040",
+              "error": "counting",
+              "hint": "QUACK. Repeats are allowed. Does each spot still have all ten digits?"
+            },
+            {
+              "match": "40",
+              "error": "op-swap",
+              "hint": "QUACK. Each spot multiplies the count. Add or multiply?"
+            }
+          ]
+        },
+        {
+          "prompt": "How many codes are there if no digit repeats?",
+          "type": "num",
+          "answer": "5040",
+          "wrong": [
+            {
+              "match": "10000",
+              "error": "counting",
+              "hint": "QUACK. No repeats. After the first digit, how many are left for the second spot?"
+            },
+            {
+              "match": "210",
+              "error": "counting",
+              "hint": "QUACK. Is 1234 a different code from 4321? Then order matters. Don't divide."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Four spots. Write how many digits each spot can take, then multiply."
+    },
+    {
+      "code": "CSCI26_H4L",
+      "title": "At least one zero",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A lock code is 4 digits, each 0–9. How many codes have at least one 0?"
+        }
+      ],
+      "answer": "3439",
+      "wrong": [
+        {
+          "match": "4000",
+          "error": "counting",
+          "hint": "QUACK. Codes with two zeros got counted more than once. Try counting the codes with no 0 instead."
+        },
+        {
+          "match": "6561",
+          "error": "counting",
+          "hint": "QUACK. That counts codes with no 0 at all. What do you do with it next?"
+        },
+        {
+          "match": "2916",
+          "error": "counting",
+          "hint": "QUACK. That is exactly one 0. At least one also allows two, three or four."
+        }
+      ],
+      "nudge": "QUACK. Count all codes, then the codes with no 0. What's the difference?"
+    },
+    {
+      "code": "CSCI26_H5M",
+      "title": "Six friends in a row",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Six friends sit in a row of six seats. How many different seatings are there?"
+        }
+      ],
+      "answer": "720",
+      "wrong": [
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Six seats, six friends. Is it 6 × 6, or does each seat have one fewer friend left?"
+        },
+        {
+          "match": "46656",
+          "error": "counting",
+          "hint": "QUACK. Can one friend sit in two seats? Each seat has one fewer friend left."
+        },
+        {
+          "match": "120",
+          "error": "off-by-one",
+          "hint": "QUACK. Count the friends again. How many seats are you filling?"
+        }
+      ],
+      "nudge": "QUACK. Fill the seats left to right. How many friends can take each seat?"
+    },
+    {
+      "code": "CSCI26_H6N",
+      "title": "Two friends side by side",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Five friends sit in a row of five seats. Ana and Bo must sit next to each other. How many seatings are there?"
+        }
+      ],
+      "answer": "48",
+      "wrong": [
+        {
+          "match": "24",
+          "error": "counting",
+          "hint": "QUACK. Glue Ana and Bo together. Inside the pair, how many ways can they sit?"
+        },
+        {
+          "match": "120",
+          "error": "misread",
+          "hint": "QUACK. Ana and Bo must be side by side. Did you use that rule?"
+        },
+        {
+          "match": "240",
+          "error": "counting",
+          "hint": "QUACK. Did you glue the pair and still seat five things? How many things are left to seat?"
+        }
+      ],
+      "nudge": "QUACK. Treat Ana and Bo as one block. How many things are you seating now?"
+    },
+    {
+      "code": "CSCI26_H7P",
+      "title": "Committee with Maria",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A committee of 4 is picked from 10 people. Maria must be on it. How many committees are possible?"
+        }
+      ],
+      "answer": "84",
+      "wrong": [
+        {
+          "match": "210",
+          "error": "misread",
+          "hint": "QUACK. Maria is already in. How many seats are left, and how many people can fill them?"
+        },
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Maria is already picked. Can she be picked again? Take her out of the pool."
+        },
+        {
+          "match": "504",
+          "error": "counting",
+          "hint": "QUACK. Does the order of the other members matter on a committee?"
+        }
+      ],
+      "nudge": "QUACK. Seat Maria first. Then count the ways to fill the rest."
+    },
+    {
+      "code": "CSCI26_H8Q",
+      "title": "Officers or a committee",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A club has 8 members."
+        }
+      ],
+      "how": "A whole number in each box.",
+      "parts": [
+        {
+          "prompt": "How many ways can the club pick a president, a treasurer and a secretary?",
+          "type": "num",
+          "answer": "336",
+          "wrong": [
+            {
+              "match": "56",
+              "error": "counting",
+              "hint": "QUACK. The three jobs have different names. Does swapping two officers make a new pick?"
+            },
+            {
+              "match": "512",
+              "error": "counting",
+              "hint": "QUACK. Can one member hold two jobs? Each job has one fewer member left."
+            }
+          ]
+        },
+        {
+          "prompt": "How many ways can the club pick a 3-person committee?",
+          "type": "num",
+          "answer": "56",
+          "wrong": [
+            {
+              "match": "336",
+              "error": "counting",
+              "hint": "QUACK. A committee has no jobs. Did you count the same three people in every order?"
+            },
+            {
+              "match": "24",
+              "error": "op-swap",
+              "hint": "QUACK. 8 members and 3 seats. Is it 8 × 3? Try listing a few committees."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Three picks from 8. Ask first: do the three seats have different names?"
+    },
+    {
+      "code": "CSCI26_P4R",
+      "title": "Any number of toppings",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A pizza place has 10 toppings. A pizza can have any number of them, even none. How many different pizzas can you make?"
+        }
+      ],
+      "answer": "1024",
+      "wrong": [
+        {
+          "match": "10",
+          "error": "counting",
+          "hint": "QUACK. Each topping is on or off. How many choices is that per topping, and how do they combine?"
+        },
+        {
+          "match": "1023",
+          "error": "off-by-one",
+          "hint": "QUACK. Did you leave out the plain pizza with no toppings?"
+        },
+        {
+          "match": "100",
+          "error": "counting",
+          "hint": "QUACK. 10 × 10 counts pairs. Each topping is its own yes-or-no. Multiply those."
+        }
+      ],
+      "nudge": "QUACK. Walk down the topping list. For each one, how many choices do you have?"
+    },
+    {
+      "code": "CSCI26_P5S",
+      "title": "Handshakes",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "Ten people meet. Each person shakes hands once with each other person. How many handshakes are there?"
+        }
+      ],
+      "answer": "45",
+      "wrong": [
+        {
+          "match": "90",
+          "error": "counting",
+          "hint": "QUACK. Ana shaking Bo's hand is the same handshake as Bo shaking Ana's. Did you count it twice?"
+        },
+        {
+          "match": "100",
+          "error": "counting",
+          "hint": "QUACK. Does anyone shake their own hand? And is each handshake counted twice?"
+        },
+        {
+          "match": "10",
+          "error": "misread",
+          "hint": "QUACK. Each person shakes more than one hand. How many does each person shake?"
+        }
+      ],
+      "nudge": "QUACK. Each person shakes hands with how many others? Then fix the double count."
+    },
+    {
+      "code": "CSCI26_P6T",
+      "title": "Four-song playlist",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "You choose 4 of your 9 songs and play them in order. How many different playlists are there?"
+        }
+      ],
+      "answer": "3024",
+      "wrong": [
+        {
+          "match": "126",
+          "error": "counting",
+          "hint": "QUACK. The same 4 songs in a new order is a new playlist. Does order matter?"
+        },
+        {
+          "match": "6561",
+          "error": "counting",
+          "hint": "QUACK. Can one song play twice? Each slot has one fewer song left."
+        },
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Four slots, and each slot multiplies. Add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Fill the playlist slot by slot. How many songs are left for each slot?"
+    },
+    {
+      "code": "CSCI26_P7U",
+      "title": "Breakfast week",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A cafe has 5 breakfasts. You eat one each day, Monday to Friday, and you may repeat. How many different weeks of breakfast are there?"
+        }
+      ],
+      "answer": "3125",
+      "wrong": [
+        {
+          "match": "120",
+          "error": "counting",
+          "hint": "QUACK. Repeats are allowed. Does Tuesday still have all 5 to choose from?"
+        },
+        {
+          "match": "25",
+          "error": "op-swap",
+          "hint": "QUACK. Five days, five breakfasts. Is it 5 × 5, or a 5 for every day?"
+        },
+        {
+          "match": "10",
+          "error": "op-swap",
+          "hint": "QUACK. Each day multiplies the count. Add or multiply?"
+        }
+      ],
+      "nudge": "QUACK. Write a blank for each day. How many breakfasts can go in each blank?"
+    },
+    {
+      "code": "CSCI26_P8V",
+      "title": "True-false quiz",
+      "type": "num",
+      "body": [
+        {
+          "type": "text",
+          "md": "A quiz has 6 true/false questions. How many different ways can you fill in the answers?"
+        }
+      ],
+      "answer": "64",
+      "wrong": [
+        {
+          "match": "12",
+          "error": "op-swap",
+          "hint": "QUACK. Two answers per question. Does each question add 2, or multiply by 2?"
+        },
+        {
+          "match": "36",
+          "error": "op-swap",
+          "hint": "QUACK. Is it 6 × 6? Each question has only 2 answers."
+        },
+        {
+          "match": "720",
+          "error": "counting",
+          "hint": "QUACK. You arranged the questions. The order is fixed. How many answers does each question have?"
+        }
+      ],
+      "nudge": "QUACK. Each question is a slot. How many choices per slot? Multiply."
+    },
+    {
       "code": "CSCI26_L3G",
       "title": "Circuit to C++ if",
       "type": "mc",
