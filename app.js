@@ -212,7 +212,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   src(b.code);
   bankChanged();
   if (!go) return true;
-  const to = bank.codes.includes(b.at) ? b.at : bank.codes[0];
+  const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
   if (S && S.code === to) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
   return true;
 }

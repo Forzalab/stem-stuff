@@ -23,6 +23,11 @@ const FILE = { v: 1, problems: [num("CALC1_U01", "1", "Upload one"), num("CALC1_
 (await import("node:fs")).mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_AB12.json"), JSON.stringify(BANK));
 
+/* the list is shuffled per browser (design/NAV.md): pin a seed that keeps file order for both tiny banks, re-set on every load
+   (one step wipes storage) */
+const { shuffled } = await import("../shuffle.mjs");
+const same = (a, s) => shuffled(a, s).every((c, i) => c === a[i]);
+const SEED = Array.from({ length: 500 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -37,13 +42,14 @@ async function typeCode(page, code) {
   if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
-const label = page => page.textContent("#qlistName").then(t => t.trim());
+const label = page => page.innerText("#qlistName").then(t => t.trim());   // what shows: ".json" is hidden on phones
 const rowTexts = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); return page.$$eval("#qlist a", as => as.map(a => a.textContent.trim())); };
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   for (const [vname, viewport] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1920, height: 1080 }]]) {
     const ctx = await browser.newContext({ viewport, serviceWorkers: "block", hasTouch: vname === "phone", isMobile: vname === "phone" });
+    await ctx.addInitScript(s => { try { if (localStorage.getItem("stem-order") !== s) localStorage.setItem("stem-order", s); } catch { /* blocked */ } }, SEED);
     const page = await ctx.newPage();
 
     await step(`${vname}: new browser = blank page, no list`, async () => {
@@ -100,11 +106,11 @@ try {
       const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
       await opened(page, "CALC1_U01");
-      assert.equal(await label(page), "mine");
+      assert.equal(await label(page), vname === "phone" ? "mine" : "mine.json");
       await page.goto("about:blank"); await page.goto(BASE + "/"); await page.waitForTimeout(1200);
       assert.ok(!/^CALC1_B/.test(await page.textContent("#pcode")), "the bank took over after an upload");
       await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_U02"); await opened(page, "CALC1_U02");
-      assert.equal(await label(page), "mine");
+      assert.equal(await label(page), vname === "phone" ? "mine" : "mine.json");
     });
 
     await step(`${vname}: #BANK_AB12 link opens the bank again`, async () => {

@@ -175,9 +175,10 @@ class Grade(unittest.TestCase):
     def test_reply_never_has_the_answer(self):
         for code, p in BANK.items():
             for body in ({"answer": "0"}, {"choice": "a"}, {"answer": "1"}, {"choice": "c"}, {"parts": ["1", "2"]}):
-                r = json.dumps(serve.grade(p, "leak-" + code, body))
+                r = serve.grade(p, "leak-" + code, body)       # keys, not text: the verdict value "correct" is fine
                 for k in ("answer", "correct", "points"):
-                    self.assertNotIn(f'"{k}"', r)
+                    self.assertNotIn(k, r)
+                self.assertNotIn(json.dumps(p.get("answer", "\u0000")), json.dumps(r))
 
     def test_public_strips_keys(self):
         for p in BANK.values():
