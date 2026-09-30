@@ -15,20 +15,28 @@
 .dock-bottom #qlistName .ext { display: none; }
 #qlistBtn[aria-expanded="true"] { background: var(--raised); border-color: var(--muted); }
 
-/* phones and touch (entry dock at the bottom): the nav is the top bar. List left, arrows right. */
+/* two groups, both layouts: the bank side (list, shuffle) left, Prev/Next pushed to the right edge */
+.qnav #qprev { margin-left: auto; }
+
+/* phones and touch (entry dock at the bottom): the nav is the top bar. */
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
-.dock-bottom #qprev { margin-left: auto; }
 .dock-bottom .qlist { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; }
 
-/* desktop: entry box and nav share one row; the list is a full-width row under them.
+/* desktop: one row. Bank side first (list, shuffle), then the entry box, only as wide as a code needs; Prev/Next at the
+   right edge (Tony, Sep 30 sketches). The nav and .dock unwrap (display: contents) so their buttons are grid items.
+   The list is a full-width row under them.
    .dock's children become grid items (entry + nav / message / list). */
 .qnav-on:not(.dock-bottom) .top {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s2);
+  display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; column-gap: var(--s2);
   max-width: var(--col); margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
 }
 .qnav-on:not(.dock-bottom) .dock { display: contents; }
-.qnav-on:not(.dock-bottom) .entry { grid-row: 1; grid-column: 1; }
-.qnav-on:not(.dock-bottom) .qnav { grid-row: 1; grid-column: 2; }
+.qnav-on:not(.dock-bottom) .qnav { display: contents; }
+.qnav-on:not(.dock-bottom) #qlistBtn { grid-row: 1; grid-column: 1; }
+.qnav-on:not(.dock-bottom) #qshuf { grid-row: 1; grid-column: 2; }
+.qnav-on:not(.dock-bottom) .entry { grid-row: 1; grid-column: 3; width: 21rem; }
+.qnav-on:not(.dock-bottom) #qprev { grid-row: 1; grid-column: 5; }
+.qnav-on:not(.dock-bottom) #qnext { grid-row: 1; grid-column: 6; }
 .qnav-on:not(.dock-bottom) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
 .qnav-on:not(.dock-bottom) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); }
 

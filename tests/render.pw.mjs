@@ -312,8 +312,9 @@ async function run(browserType, label, opts = {}) {
       assert.equal((await btn.innerText()).trim(), vname === "desktop" ? "bank.json" : "bank", "list button label");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
-      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main") }; });
-      if (vname === "desktop") assert.ok(Math.abs(g.nav.top - g.entry.top) < 1 && g.nav.left > g.entry.right, "nav not beside the entry box");
+      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
+      // desktop: list + shuffle, then the entry box, then Prev/Next at the right (Tony, Sep 30)
+      if (vname === "desktop") assert.ok(Math.abs(g.list.top - g.entry.top) < 1 && g.list.right < g.shuf.left && g.shuf.right < g.entry.left && g.prev.left > g.entry.right, "desktop bar order: list, shuffle, entry, arrows");
       else assert.ok(g.nav.bottom <= g.main.top + 1 && g.nav.top < 80, `nav not the top bar: ${g.nav.top}`);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-closed-${viewport.width}.png` });
       // list: bare numbers + titles, current marked, focus on the current row
