@@ -293,7 +293,7 @@
     const pad = { l: PAD, r: PAD, t: PAD, b: PAD };
     for (let pass = 0; pass < 3; pass++) {
       const W = el.clientWidth, labels = [];
-      const k = { label: (text, at, anchor, color, cls = "") => labels.push({ text, at, anchor, color, cls }) };
+      const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html }) };
       const { svg, H } = build(W, pad, k);
       el.style.height = H + "px";
       el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false">${svg}</svg>`;
@@ -302,7 +302,7 @@
         if (!L.at || !fin(L.at)) continue;
         const sp = document.createElement("span");
         sp.className = "lbl " + L.cls; sp.setAttribute("aria-hidden", "true");
-        sp.innerHTML = tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color);
+        sp.innerHTML = L.html ? L.text : tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color);
         el.appendChild(sp);
         const w = sp.offsetWidth, h = sp.offsetHeight, a = L.anchor || "c", o = a === "c" ? 0 : a.length === 2 ? OFF * 0.7 : OFF;
         const fx = a.includes("e") ? 0 : a.includes("w") ? -1 : -0.5, fy = a.includes("n") ? -1 : a.includes("s") ? 0 : -0.5;
@@ -444,7 +444,201 @@
     };
   }
 
+  /* ---- kind: circuit (logic gates, SCHEMA.md). Layered layout: Kahn topo sort -> columns, dummy nodes for long edges,
+     rows by barycenter (left->right), one right->left reorder, then left->right again; wires are orthogonal, one vertical
+     track per net in the gap before its target column. Throws on a bad circuit (the caller then shows alt). ---- */
+  const OPS = { and: { b: "and" }, nand: { b: "and", inv: 1 }, or: { b: "or" }, nor: { b: "or", inv: 1 },
+    xor: { b: "xor" }, xnor: { b: "xor", inv: 1 }, not: { b: "not", inv: 1, one: 1 }, buf: { b: "not", one: 1 } };
+  const SYM = /^[A-Za-z][A-Za-z0-9_]*$/;
+  const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+  const stableSort = (a, key) => a.map((n, i) => [key(n), i, n]).sort((p, q) => p[0] - q[0] || p[1] - q[1]).map(p => p[2]);
+
+  function circuitLayout(g) {
+    const fail = m => { throw new Error("circuit: " + m); };
+    const ins = (g.inputs || []).map(i => typeof i === "string" ? { name: i } : i), gates = g.gates || [], outs = g.outputs || [];
+    if (!ins.length || !gates.length || !outs.length) fail("needs inputs, gates and outputs");
+    const N = new Map();
+    ins.forEach((i, r) => {
+      if (!SYM.test(i.name) || N.has(i.name)) fail(`bad or repeated name ${i.name}`);
+      N.set(i.name, { id: i.name, kind: "in", col: 0, row: r, src: [], value: i.value });
+    });
+    for (const q of gates) {
+      const op = OPS[q.op], n = (q.in || []).length;
+      if (!op) fail(`unknown op ${q.op}`);
+      if (!SYM.test(q.id) || N.has(q.id)) fail(`bad or repeated name ${q.id}`);
+      if (op.one ? n !== 1 : n < 2 || n > 4) fail(`${q.op} ${q.id} has ${n} inputs`);
+      N.set(q.id, { id: q.id, kind: "gate", src: q.in.slice(), q, op });
+    }
+    for (const s of gates.flatMap(q => q.in).concat(outs.map(o => o.from))) if (!N.has(s)) fail(`unknown id ${s}`);
+    /* Kahn: a gate is ready once every gate feeding it is placed */
+    const deg = new Map(), users = new Map();
+    for (const q of gates) {
+      deg.set(q.id, 0);
+      for (const s of q.in) if (N.get(s).kind === "gate") { deg.set(q.id, deg.get(q.id) + 1); users.set(s, (users.get(s) || []).concat(q.id)); }
+    }
+    const queue = gates.filter(q => !deg.get(q.id)).map(q => q.id), order = [];
+    while (queue.length) {
+      const id = queue.shift(); order.push(id);
+      for (const v of users.get(id) || []) { deg.set(v, deg.get(v) - 1); if (!deg.get(v)) queue.push(v); }
+    }
+    if (order.length < gates.length) fail("cycle");
+    let maxCol = 1;
+    for (const id of order) {
+      const n = N.get(id);
+      n.col = Math.max(Number.isInteger(n.q.col) ? n.q.col : 0, 1 + Math.max(...n.src.map(s => N.get(s).col)));
+      maxCol = Math.max(maxCol, n.col);
+    }
+    outs.forEach((o, i) => N.set("\u0000out" + i, { id: "\u0000out" + i, kind: "out", col: maxCol + 1, src: [o.from], o }));
+    /* dummies: an edge spanning >1 column passes through one shared dummy per (source, column) */
+    for (const n of [...N.values()]) n.src = n.src.map(s => {
+      let prev = s;
+      for (let c = N.get(s).col + 1; c < n.col; c++) {
+        const id = `${s}\u0000${c}`;
+        if (!N.has(id)) N.set(id, { id, kind: "dummy", col: c, src: [prev] });
+        prev = id;
+      }
+      return prev;
+    });
+    const layers = Array.from({ length: maxCol + 2 }, () => []);
+    for (const n of N.values()) layers[n.col].push(n);
+    for (const n of N.values()) n.succ = [];
+    for (const n of N.values()) for (const s of n.src) N.get(s).succ.push(n);
+    const gap = (a, b) => [1, 0.6, 0.4][(a.kind === "dummy") + (b.kind === "dummy")];
+    /* least-squares rows in a fixed order with minimum gaps (pool adjacent violators) */
+    const place = (list, want, w) => {
+      const off = [0];
+      for (let i = 1; i < list.length; i++) off[i] = off[i - 1] + gap(list[i - 1], list[i]);
+      const bl = [];
+      list.forEach((n, i) => {
+        bl.push({ w: w[i], s: w[i] * (want[i] - off[i]), n: 1 });
+        while (bl.length > 1 && bl[bl.length - 2].s / bl[bl.length - 2].w > bl[bl.length - 1].s / bl[bl.length - 1].w) {
+          const b = bl.pop(), a = bl.pop(); bl.push({ w: a.w + b.w, s: a.s + b.s, n: a.n + b.n });
+        }
+      });
+      let i = 0;
+      for (const b of bl) for (let j = 0; j < b.n; j++, i++) list[i].row = b.s / b.w + off[i];
+    };
+    const pinned = n => n.kind === "gate" && typeof n.q.row === "number";
+    const wantL = n => pinned(n) ? n.q.row : mean(n.src.map(s => N.get(s).row));
+    const weights = list => list.map(n => pinned(n) ? 1e3 : 1);
+    for (let c = 1; c <= maxCol + 1; c++) {
+      layers[c] = stableSort(layers[c], wantL);
+      place(layers[c], layers[c].map(wantL), weights(layers[c]));
+    }
+    for (let c = maxCol; c >= 1; c--) {
+      const key = n => pinned(n) ? n.q.row : n.succ.length ? mean(n.succ.map(s => s.row)) : n.row;
+      layers[c] = stableSort(layers[c], key);
+      place(layers[c], layers[c].map(key), weights(layers[c]));
+    }
+    for (let c = 1; c <= maxCol + 1; c++) {
+      if (c === maxCol + 1) layers[c] = stableSort(layers[c], wantL);
+      place(layers[c], layers[c].map(wantL), weights(layers[c]));
+    }
+    const lo = Math.min(...[...N.values()].map(n => n.row));
+    for (const n of N.values()) n.row -= lo;
+    return { N, layers, maxCol, maxRow: Math.max(...[...N.values()].map(n => n.row)) };
+  }
+
+  /* gate bodies in a unit box (x right, y down), scaled to u px */
+  function gateBody(b, x, y, u) {
+    const p = (a, c) => n2(x + a * u) + "," + n2(y + c * u);
+    if (b === "and") return `M${p(0, 0)} H${n2(x + 0.5 * u)} A${n2(u / 2)},${n2(u / 2)} 0 0 1 ${p(0.5, 1)} H${n2(x)} Z`;
+    if (b === "not") return `M${p(0, 0.15)} L${p(0.75, 0.5)} L${p(0, 0.85)} Z`;
+    const or = `M${p(0, 0)} Q${p(0.6, 0)} ${p(1, 0.5)} Q${p(0.6, 1)} ${p(0, 1)} Q${p(0.25, 0.5)} ${p(0, 0)} Z`;
+    return b === "xor" ? or + ` M${p(-0.15, 0)} Q${p(0.1, 0.5)} ${p(-0.15, 1)}` : or;
+  }
+  /* where an input wire stops, as a fraction of u from the body's left edge (OR family: on the back curve) */
+  const pinStop = (b, t) => b === "or" ? 0.5 * t * (1 - t) : b === "xor" ? -0.15 + 0.5 * t * (1 - t) : 0;
+  const texName = s => /^[A-Za-z]$/.test(s) ? `$${s}$` : /^[A-Za-z]_?\d+$/.test(s) ? `$${s[0]}_{${s.replace(/^[A-Za-z]_?/, "")}}$` : s;
+
+  function circuit(g) {
+    const L = circuitLayout(g), { N, layers, maxCol } = L;
+    return (W, pad, k) => {
+      const span = 4 + 2.6 * (maxCol - 1), avail = W - pad.l - pad.r;
+      const u = Math.min(40, avail / span), RP = 1.4 * u, br = Math.max(0.09 * u, 3);
+      const x0 = pad.l + Math.max(0, (avail - span * u) / 2);
+      const colL = c => c === 0 ? x0 : x0 + 1.6 * u + (Math.min(c, maxCol) - 1) * 2.6 * u + (c > maxCol ? 2.1 * u : 0);
+      const Y = r => pad.t + u / 2 + r * RP;
+      const H = Math.round(Y(L.maxRow) + u / 2 + pad.b);
+      const ink = col("ink");
+      /* geometry: every node gets an out point; gates and dummies get in pins */
+      const out = new Map(), pins = new Map();
+      for (const n of N.values()) {
+        const x = colL(n.col), y = Y(n.row);
+        if (n.kind === "in") out.set(n.id, [x, y]);
+        else if (n.kind === "dummy") { pins.set(n.id, [[x, y, n.src[0]]]); out.set(n.id, [x + 1.2 * u, y]); }
+        else if (n.kind === "out") pins.set(n.id, [[x, y, n.src[0]]]);
+        else {
+          const srcs = n.op.one ? n.src : stableSort(n.src, s => N.get(s).row), m = srcs.length;   // multi-input ops commute: sort pins by source height
+          pins.set(n.id, srcs.map((s, i) => { const t = (i + 1) / (m + 1); return [x + pinStop(n.op.b, t) * u, y - u / 2 + t * u, s]; }));
+          out.set(n.id, [x + ((n.op.b === "not" ? 0.75 : 1) * u) + (n.op.inv ? 2 * br : 0), y]);
+        }
+      }
+      let wires = "", dots = "";
+      for (let c = 1; c <= maxCol + 1; c++) {
+        const nets = new Map();   // source id -> target pins in column c
+        for (const n of layers[c]) for (const [px, py, s] of pins.get(n.id)) nets.set(s, (nets.get(s) || []).concat([[px, py]]));
+        const gl = colL(c - 1) + (c === 1 ? 0 : 1.2 * u) + 4, gr = colL(c) - (c > maxCol ? 0 : 0.15 * u) - 4;
+        const straight = [], routed = [];
+        for (const [s, ts] of nets) {
+          const [sx, sy] = out.get(s);
+          if (ts.length === 1 && Math.abs(ts[0][1] - sy) < 0.5) straight.push([sx, sy, ts[0][0]]);
+          else routed.push({ sx, sy, ts, lo: Math.min(sy, ...ts.map(t => t[1])), hi: Math.max(sy, ...ts.map(t => t[1])) });
+        }
+        for (const [sx, sy, tx] of straight) wires += `M${n2(sx)} ${n2(sy)}H${n2(tx)}`;
+        /* one vertical track per routed net, ~6px apart; try orders of the tracks, keep the one with the fewest crossings */
+        const m = routed.length, step = m > 1 ? Math.min(6, (gr - gl) / (m - 1)) : 0, mid = (gl + gr) / 2;
+        const xs = i => mid + (i - (m - 1) / 2) * step;
+        const cross = ord => {
+          let n = 0;
+          ord.forEach((a, i) => ord.forEach((b, j) => {
+            if (i === j) return;
+            const xa = xs(i), xb = xs(j), hs = [[b.sx, xb, b.sy], ...b.ts.map(t => [xb, t[0], t[1]])];
+            for (const [h0, h1, hy] of hs) if (xa > Math.min(h0, h1) + 0.1 && xa < Math.max(h0, h1) - 0.1 && hy > a.lo + 0.1 && hy < a.hi - 0.1) n++;
+          }));
+          return n;
+        };
+        const perms = a => a.length <= 1 ? [a] : a.flatMap((x, i) => perms(a.slice(0, i).concat(a.slice(i + 1))).map(p => [x, ...p]));
+        const asc = stableSort(routed, r => r.sy);
+        let best = asc, bestN = cross(asc);
+        if (m <= 6) for (const p of perms(asc)) { const n = cross(p); if (n < bestN) { best = p; bestN = n; } }
+        best.forEach((r, i) => {
+          const x = xs(i);
+          wires += `M${n2(r.sx)} ${n2(r.sy)}H${n2(x)}M${n2(x)} ${n2(r.lo)}V${n2(r.hi)}`;
+          for (const [tx, ty] of r.ts) wires += `M${n2(x)} ${n2(ty)}H${n2(tx)}`;
+          /* junction dot wherever 3+ segments meet on the trunk */
+          for (const y of new Set([r.sy, ...r.ts.map(t => t[1])])) {
+            const segs = (Math.abs(y - r.sy) < 0.5 ? 1 : 0) + r.ts.filter(t => Math.abs(t[1] - y) < 0.5).length + (y > r.lo + 0.5 ? 1 : 0) + (y < r.hi - 0.5 ? 1 : 0);
+            if (segs >= 3) dots += `<circle cx="${n2(x)}" cy="${n2(y)}" r="3" style="fill:${ink}"/>`;
+          }
+        });
+      }
+      let bodies = "";
+      for (const n of N.values()) {
+        const x = colL(n.col), y = Y(n.row);
+        if (n.kind === "dummy") wires += `M${n2(x)} ${n2(y)}H${n2(x + 1.2 * u)}`;
+        else if (n.kind === "out") {
+          const e = x + 0.3 * u; wires += `M${n2(x)} ${n2(y)}H${n2(e)}`;
+          const src = N.get(n.o.from);
+          k.label(n.o.label || (src.kind === "gate" && src.q.label) || texName(n.o.from), [e, y], "e", "c1");
+        } else if (n.kind === "in") {
+          const v = n.value === 0 || n.value === 1 ? `<span style="color:var(--c2);font-size:0.8em;margin-left:0.3em">= ${n.value}</span>` : "";
+          k.label(tex(texName(n.id)) + v, [x, y], "w", "ink", "", true);
+        } else {
+          const top = y - u / 2, bx = x + (n.op.b === "not" ? 0.75 : 1) * u;
+          let s = `<path d="${gateBody(n.op.b, x, top, u)}" style="fill:var(--bg, var(--sheet));stroke:${ink}" stroke-width="${SW.out}"/>`;
+          if (n.op.inv) s += `<circle cx="${n2(bx + br)}" cy="${n2(y)}" r="${n2(br)}" style="fill:var(--bg, var(--sheet));stroke:${ink}" stroke-width="${SW.out}"/>`;
+          bodies += `<g data-gate="${esc(n.id)}" data-op="${esc(n.q.op)}">${s}</g>`;
+          if (n.q.label) k.label(n.q.label, [x + 0.5 * u, top], "n", "", "tick");
+        }
+      }
+      const svg = `<path d="${wires}" fill="none" style="stroke:${ink}" stroke-width="${SW.con}"/>` + bodies + dots;
+      return { svg, H };
+    };
+  }
+
   function prep(block) {
+    if (block.kind === "circuit") return structuredClone(block);   // names like "a" are not math.js numbers
     const g = {};
     for (const k in block) g[k] = k === "marks" ? block.marks.map(m => prepMark(m, block.kind)) : numify(block[k], k);
     return g;
@@ -454,7 +648,7 @@
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
     const g = el._g;
-    mount(el, g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : cartesian(g));
+    mount(el, g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : cartesian(g));
   }
 
   root.Graph = { render, tex };

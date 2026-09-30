@@ -638,6 +638,104 @@
           "hint": "QUACK. Try $a = 1$, $b = 1$. What does `a ^ b` give?"
         }
       ]
+    },
+    {
+      "code": "CSCI26_L3G",
+      "title": "Circuit to C++ if",
+      "type": "mc",
+      "body": [
+        {
+          "type": "text",
+          "md": "In C++, `^` means XOR. Which if statement matches this circuit?"
+        },
+        {
+          "type": "graph",
+          "kind": "circuit",
+          "alt": "Logic circuit with inputs a, b, c. a and b feed an AND gate; c feeds a NOT gate; both results feed an XOR gate labeled G3, whose output is Q.",
+          "inputs": [
+            "a",
+            "b",
+            "c"
+          ],
+          "gates": [
+            {
+              "id": "g1",
+              "op": "and",
+              "in": [
+                "a",
+                "b"
+              ]
+            },
+            {
+              "id": "g2",
+              "op": "not",
+              "in": [
+                "c"
+              ]
+            },
+            {
+              "id": "g3",
+              "op": "xor",
+              "in": [
+                "g1",
+                "g2"
+              ],
+              "label": "G3"
+            }
+          ],
+          "outputs": [
+            {
+              "from": "g3",
+              "label": "$Q$"
+            }
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "`if ((a && b) ^ !c)`"
+        },
+        {
+          "id": "b",
+          "md": "`if ((a || b) ^ !c)`"
+        },
+        {
+          "id": "c",
+          "md": "`if ((a && b) ^ c)`"
+        },
+        {
+          "id": "d",
+          "md": "`if ((a && b) || !c)`"
+        },
+        {
+          "id": "e",
+          "md": "`if (a && b ^ !c)`"
+        }
+      ],
+      "correct": "a",
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "op-swap",
+          "hint": "QUACK. Look at the gate a and b feed: flat back or curved back? Which operator is that?"
+        },
+        {
+          "choice": "c",
+          "error": "negation",
+          "hint": "QUACK. What does the triangle with a bubble do to c before it reaches G3?"
+        },
+        {
+          "choice": "d",
+          "error": "op-swap",
+          "hint": "QUACK. G3 has a second curve behind its back. Is that plain OR?"
+        },
+        {
+          "choice": "e",
+          "error": "order-ops",
+          "hint": "QUACK. In C++, `^` binds tighter than `&&`. Which gate would this compute first?"
+        }
+      ]
     }
   ]
 }
