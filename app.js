@@ -940,14 +940,17 @@ addEventListener("pageshow", e => {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
 /* ================= boot ================= */
-const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) load(n.code); };
+const fromHash = () => { const n = normalize(decodeURIComponent(location.hash.slice(1))); if (n && location.hash.length > 1 && (!S || S.code !== n.code)) return load(n.code); };
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
 layoutDock();
 /* offline.js (it runs after this module) restores an uploaded bank from IndexedDB first, so #CODE of an uploaded problem opens */
+/* the splash (index.html) waits for this: the #CODE problem opened (or failed), so the page never flashes the empty entry state first */
+let firstDone;
+window.stemFirst = new Promise(r => { firstDone = r; });
 addEventListener("DOMContentLoaded", async () => {
   const off = window.stemOffline;
   if (off && off.ready) { try { await Promise.race([off.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* storage blocked */ } }
-  fromHash();
+  try { await fromHash(); } catch { /* load() reports its own errors */ } finally { firstDone(); }
 });
 window.__drill = { check, get state() { return S; } };   // for tests/e2e
