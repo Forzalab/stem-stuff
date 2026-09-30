@@ -1,8 +1,11 @@
 /* nav.js: Prev / Next and the questions list (design/NAV.md).
-   Only for an uploaded problems.json: the list is window.stemOffline.codes(), in file order. With problems from the
+   Only for an uploaded problems.json: the list is window.stemOffline.codes(), shuffled by a seed kept in this browser
+   (stable across reloads; the shuffle button draws a new one), so a topic can't be guessed from its position. With problems from the
    server there is no list (codes are the gate), so the nav stays hidden.
    Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
+import { shuffled, seed, newSeed } from "./shuffle.mjs";
 const MAX = 60;
+const ORDER = "stem-order";
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
 /* ---------- titles: problem.title, else the first paragraph of the first text block as plain text ---------- */
@@ -74,14 +77,14 @@ if (typeof document !== "undefined" && document.getElementById("qnav")) init();
 function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
-  const nav = $("#qnav"), btn = $("#qlistBtn"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
+  const nav = $("#qnav"), btn = $("#qlistBtn"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
   const off = () => window.stemOffline;
   let codes = [], cur = null;
 
   function update(code) {
     cur = code;
     const o = off();
-    codes = o && o.codes ? o.codes() : [];
+    codes = o && o.codes ? order(o.codes()) : [];
     const on = codes.length > 0;
     nav.hidden = !on;
     root.classList.toggle("qnav-on", on);
@@ -108,6 +111,17 @@ function init() {
     const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " Out of tries." : " One wrong try, one left.";
     return { html, gone: rec.done !== "open", say };
   }
+
+  /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js) */
+  const order = all => shuffled(all, seed(ORDER, ""));
+  window.stemOrder = all => order(all);
+  shuf.addEventListener("click", () => {
+    newSeed(ORDER);
+    update(cur);
+    panel.scrollTop = 0;
+    const i = codes.indexOf(cur);
+    say(`Shuffled. This is ${i + 1} of ${codes.length}.`);
+  });
 
   const rows = () => [...list.querySelectorAll("a")];
   function open() {

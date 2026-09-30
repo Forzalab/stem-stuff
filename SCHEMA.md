@@ -25,7 +25,7 @@ cd tests && npm install && npm test
 }
 ```
 
-Keep problems in any order. Codes must be unique (tests enforce it).
+Keep problems in any order: the page shuffles the list per browser (design/NAV.md), so file order is never shown. Codes must be unique (tests enforce it).
 
 ## Content rule (Tony, standing)
 - MINIMAL. Textbook language. State the givens and the ask, nothing else.

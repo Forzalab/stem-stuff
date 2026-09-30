@@ -1,6 +1,7 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
+import { shuffled, seed } from "./shuffle.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
@@ -282,20 +283,7 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 const howLine = p => p.how ? `<p class="how" id="how">${md(p.how, true)}</p>` : "";
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
-function localSeed() {
-  try { let s = localStorage.getItem("stem-seed"); if (!s) { s = Math.random().toString(36).slice(2); localStorage.setItem("stem-seed", s); } return s; }
-  catch { return "stem"; }
-}
-function shuffled(choices, seed) {
-  let h = 2166136261;
-  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  const rnd = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
-  const free = choices.map((c, i) => c.lock ? -1 : i).filter(i => i >= 0), moved = free.map(i => choices[i]);
-  for (let i = moved.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [moved[i], moved[j]] = [moved[j], moved[i]]; }
-  const out = [...choices];
-  free.forEach((i, k) => { out[i] = moved[k]; });
-  return out;
-}
+const localSeed = () => seed("stem-seed", "stem");
 /* 5 choices shown. The server already cut them (serve.py public()); an uploaded file may have up to 8:
    same rule here: the right one, locked ones, then the rest, in authored order */
 function shown(p) {

@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { shuffled } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -16,6 +17,10 @@ const SHOTS = process.argv[3] || "";
 const BANK = { v: 1, problems: [
   { code: "CALC1_ZZ9", type: "num", answer: "2", body: [{ type: "text", md: "What is $1 + 1$?" }] },
   { code: "CALC1_ZZ8", type: "num", answer: "3", body: [{ type: "text", md: "What is $1 + 2$?" }] }] };
+
+/* the list is shuffled per browser (design/NAV.md): pin a seed that keeps ZZ9 first, so "next" from ZZ9 is ZZ8 */
+const CODES = BANK.problems.map(p => p.code);
+const SEED = Array.from({ length: 50 }, (_, i) => "s" + i).find(s => shuffled(CODES, s)[0] === CODES[0]);
 
 let failures = 0;
 async function step(name, fn) {
@@ -31,6 +36,8 @@ async function run(type, label, launchOpts) {
   const launch = () => type.launchPersistentContext(dir, { ...launchOpts, viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   let ctx;
   try { ctx = await launch(); } catch (e) { console.log(`skip ${label}: ${e.message.split("\n")[0]}`); return; }
+  const pin = c => c.addInitScript(s => { try { localStorage.setItem("stem-order", s); } catch { /* blocked */ } }, SEED);
+  await pin(ctx);
   let page = ctx.pages()[0] || await ctx.newPage();
 
   await step(`${label} (a) bank survives closing and reopening the browser`, async () => {
@@ -40,7 +47,7 @@ async function run(type, label, launchOpts) {
     await opened(page, "CALC1_ZZ9");
     await page.waitForTimeout(300);                              // the IndexedDB write
     await ctx.close();
-    ctx = await launch(); page = ctx.pages()[0] || await ctx.newPage();
+    ctx = await launch(); await pin(ctx); page = ctx.pages()[0] || await ctx.newPage();
     await page.goto(BASE + "/#CALC1_ZZ9");
     await opened(page, "CALC1_ZZ9");
     assert.equal(await page.textContent("#fileStatus"), "File mine.json in use.");

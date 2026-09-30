@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { shuffled } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -30,6 +31,7 @@ async function run(browserType, label, opts = {}) {
     /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
        tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
     await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
+    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-order", "pin"); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known list order; the shuffle button may change it later
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
@@ -271,15 +273,15 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await page.locator("#fileStatus").isHidden());
       // a bank with codes the server doesn't have: the upload is the only source
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
-      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_Q");
+      for (const p of bank.problems) p.code = p.code.replace("_", "_Q");   // insert, not swap: a swap made codes collide
       if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-      const first = bank.problems[0].code;
+      const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
       assert.equal(await page.locator("#fileStatus").textContent(), "File my-problems.json in use.");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
-      const f3n = bank.problems.find(p => p.code.startsWith("PHYS_Q3N") || p.code.endsWith("3N")).code;
+      const f3n = "PHYS_QF3N";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", f3n); await page.press("#code", "Enter");
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, f3n);
@@ -291,9 +293,10 @@ async function run(browserType, label, opts = {}) {
       await open("CALC1_T6B");
       assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
-      for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
-      bank.problems[1].title = "Area between a parabola and a line";
-      const codes = bank.problems.map(p => p.code), n = codes.length;
+      for (const p of bank.problems) p.code = p.code.replace("_", "_N");
+      const file = bank.problems.map(p => p.code), codes = shuffled(file, "pin"), n = codes.length;   // the page's order (seed pinned above)
+      assert.notDeepEqual(codes, file, "shuffle kept file order");
+      bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
@@ -302,7 +305,9 @@ async function run(browserType, label, opts = {}) {
       const nav = page.locator("#qnav"), btn = page.locator("#qlistBtn"), prev = page.locator("#qprev"), next = page.locator("#qnext");
       assert.ok(await nav.isVisible(), "nav hidden after upload");
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
-      for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      const shuf = page.locator("#qshuf");
+      assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
+      for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
       assert.equal((await btn.textContent()).trim(), "Questions list");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
@@ -351,11 +356,24 @@ async function run(browserType, label, opts = {}) {
       await btn.focus(); await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Home"); await page.keyboard.press("Enter");
       await at(codes[0]);
+      // shuffle button: a new order (list, numbers, Prev/Next follow it); the open problem stays open; the order survives a reload
+      const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
+      await shuf.click();
+      const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
+      const codes2 = shuffled(file, seed2);
+      assert.notEqual(seed2, "pin", "shuffle kept the seed");
+      assert.equal(await page.locator("#pcode").textContent(), codes[0], "shuffle moved off the open problem");
+      assert.deepEqual(await hrefs(), codes2, "list not in the new order");
+      const k = codes2.indexOf(codes[0]);
+      if (k < n - 1) { await next.click(); await at(codes2[k + 1]); await prev.click(); await at(codes[0]); }
       // a server problem after the upload: list stays, nothing marked, arrows off
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
       await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
       assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
       assert.equal(await page.locator("#qlist [aria-current]").count(), 0);
+      // reload: this harness deletes the bank on every load, so check the seed itself (reload.pw.mjs reloads a kept bank)
+      await page.reload();
+      assert.equal(await page.evaluate(() => localStorage.getItem("stem-order")), seed2, "order seed lost on reload");
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {

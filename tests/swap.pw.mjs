@@ -413,11 +413,12 @@ for (const [W, H] of SIZES) {
   await step(`${T} top bar: hides on scratchpad focus (keyboard down and up), keeps its space, comes back on blur; swap toggle stays`, async () => {
     await open("CALC1_T6B");
     const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
-    for (const p of bank.problems) p.code = p.code.replace(/_(\w)/, "_N");
+    for (const p of bank.problems) p.code = p.code.replace("_", "_N");   // insert, not swap: a swap made codes collide
     if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_N6B", null, { timeout: 8000 });
+    // the list is shuffled per browser (design/NAV.md): whichever uploaded problem opens first
+    await page.waitForFunction(() => { const c = document.querySelector("#pcode")?.textContent; return !!c && window.stemOffline.has(c); }, null, { timeout: 8000 });
     assert.ok(await page.locator("#qnav").isVisible(), "nav not shown");
     assert.equal(await page.locator("#scratch").count(), 1, "a second problem load left a second scratchpad");
     const st = () => page.evaluate(() => { const n = document.querySelector("#qnav"), c = getComputedStyle(n), ta = document.querySelector("#scratch").getBoundingClientRect(), fz = document.querySelector("#freeze").getBoundingClientRect(); return { op: +c.opacity, vis: c.visibility, ty: c.transform, taTop: ta.top, fzTop: fz.top, y: scrollY, off: document.documentElement.classList.contains("bar-off"), qr: n.getBoundingClientRect().bottom }; });
