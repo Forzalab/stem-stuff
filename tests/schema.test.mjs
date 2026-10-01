@@ -95,6 +95,59 @@ test("circuit: bad wiring is caught, bad shapes fail the schema", () => {
   assert.ok(validate(withBlock(edit(b => { b.inputs[2] = { name: "c", value: 1 }; }))), JSON.stringify(validate.errors));
 });
 
+// kind: network (SCHEMA.md): what the schema can't say. Returns a list of problems, [] if sound.
+function networkFaults(b) {
+  const out = [], ids = b.nodes.map(n => typeof n === "string" ? n : n.id), seen = new Set();
+  for (const n of ids) { if (seen.has(n)) out.push(`repeated id ${n}`); seen.add(n); }
+  for (const e of b.edges) for (const s of [e.from, e.to]) if (!seen.has(s)) out.push(`unknown id ${s}`);
+  if (b.layout === "free" && b.nodes.some(n => typeof n === "string" || !n.at)) out.push("free layout: a node has no at");
+  if (b.layout === "tree") {
+    if (!seen.has(b.root)) out.push(`root ${b.root} is not a node`);
+    if (b.edges.length !== ids.length - 1 || b.edges.some(e => e.from === e.to)) out.push("tree: needs n-1 edges and no loop");
+    const reach = new Set([b.root]), q = [b.root];
+    while (q.length) { const u = q.pop(); for (const e of b.edges) for (const [x, y] of [[e.from, e.to], [e.to, e.from]]) if (x === u && !reach.has(y)) { reach.add(y); q.push(y); } }
+    if (reach.size < ids.length) out.push("tree: not every node hangs off the root");
+  }
+  return out;
+}
+const networkOf = code => problems.find(p => p.code === code).body.find(b => b.kind === "network");
+test("network: bad graphs are caught, bad shapes fail the schema", () => {
+  const withBlock = (code, b) => ({ ...B, problems: [{ ...problems.find(p => p.code === code), body: [b] }] });
+  const edit = (base, f) => { const b = structuredClone(base); f(b); return b; };
+  for (const code of ["CSCI26_G3H", "CSCI26_G2T"]) {
+    const b = networkOf(code);
+    assert.ok(validate(withBlock(code, b)), JSON.stringify(validate.errors));
+    assert.deepEqual(networkFaults(b), []);
+  }
+  const multi = networkOf("CSCI26_G3H"), tree = networkOf("CSCI26_G2T");
+  // schema-valid, but unsound
+  for (const [name, code, b, re] of [
+    ["unknown id", "CSCI26_G3H", edit(multi, b => { b.edges[0].to = "z"; }), /unknown id z/],
+    ["repeated id", "CSCI26_G3H", edit(multi, b => { b.nodes.push("a"); }), /repeated id a/],
+    ["free without at", "CSCI26_G3H", edit(multi, b => { b.layout = "free"; }), /no at/],
+    ["tree with a cycle", "CSCI26_G2T", edit(tree, b => { b.edges[5] = { from: "f", to: "r" }; b.edges.push({ from: "c", to: "d" }); }), /n-1|hangs/],
+    ["tree, cut off", "CSCI26_G2T", edit(tree, b => { b.edges[4] = { from: "d", to: "c" }; }), /hangs/]
+  ]) {
+    assert.ok(validate(withBlock(code, b)), `${name}: ${JSON.stringify(validate.errors)}`);
+    assert.match(networkFaults(b).join("; "), re, name);
+  }
+  // shapes: the schema says no
+  for (const [name, b] of [
+    ["tree without root", edit(tree, b => { delete b.root; })],
+    ["bad layout", edit(multi, b => { b.layout = "spring"; })],
+    ["string weight", edit(multi, b => { b.edges[0].w = "3"; })],
+    ["unknown edge key", edit(multi, b => { b.edges[0].weight = 3; })],
+    ["bad id", edit(multi, b => { b.nodes[0] = "1a"; })],
+    ["13 nodes", edit(multi, b => { b.nodes = Array.from({ length: 13 }, (_, i) => "v" + i); })]
+  ]) assert.ok(!validate(withBlock("CSCI26_G3H", b)), name);
+  // the rest of the variants validate
+  assert.ok(validate(withBlock("CSCI26_G3H", edit(multi, b => {
+    b.directed = true; b.layout = "free";
+    b.nodes = b.nodes.map((id, i) => ({ id, at: [i, "pi/2"], ...(i ? {} : { color: "c2", label: "$s$" }) }));
+    b.edges[0] = { ...b.edges[0], w: 2.5, color: "c1", dash: true };
+  }))), JSON.stringify(validate.errors));
+});
+
 for (const p of problems) {
   const f = p.code;
 
@@ -177,6 +230,11 @@ for (const p of problems) {
   const circuits = p.body.filter(b => b.type === "graph" && b.kind === "circuit");
   if (circuits.length) test(`${f}: circuit wiring is sound`, () => {
     for (const b of circuits) assert.deepEqual(circuitFaults(b), []);
+  });
+
+  const networks = p.body.filter(b => b.type === "graph" && b.kind === "network");
+  if (networks.length) test(`${f}: network is sound`, () => {
+    for (const b of networks) assert.deepEqual(networkFaults(b), []);
   });
 
   test(`${f}: graph math compiles, <= 6 labels`, () => {

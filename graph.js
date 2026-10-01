@@ -637,7 +637,122 @@
     };
   }
 
+  /* ---- kind: network (graph theory: vertices + edges, SCHEMA.md). World positions from the layout (circle, tree, free),
+     fit 1:1 like a scene. Parallel edges bow apart, loops hang off the node away from the centre.
+     Throws on a bad network (the caller then shows alt). ---- */
+  function networkLayout(g) {
+    const fail = m => { throw new Error("network: " + m); };
+    const nodes = (g.nodes || []).map(n => typeof n === "string" ? { id: n } : n), edges = g.edges || [];
+    if (!nodes.length) fail("needs nodes");
+    const ids = new Map(nodes.map((n, i) => [n.id, i]));
+    if (ids.size < nodes.length) fail("repeated node id");
+    for (const e of edges) for (const s of [e.from, e.to]) if (!ids.has(s)) fail("unknown node " + s);
+    const layout = g.layout || "circle", n = nodes.length;
+    let at;
+    if (layout === "free") {
+      if (nodes.some(v => !v.at)) fail("free layout: every node needs at");
+      at = nodes.map(v => v.at);
+    } else if (layout === "tree") {
+      if (!ids.has(g.root)) fail("tree layout: root is not a node");
+      const kids = new Map(nodes.map(v => [v.id, []])), depth = new Map([[g.root, 0]]), q = [g.root];
+      while (q.length) {
+        const u = q.shift();
+        for (const e of edges) {
+          const v = e.from === u ? e.to : e.to === u ? e.from : null;
+          if (v != null && !depth.has(v)) { depth.set(v, depth.get(u) + 1); kids.get(u).push(v); q.push(v); }
+        }
+      }
+      if (depth.size < n) fail("tree layout: not every node hangs off the root");
+      const x = new Map();
+      let leaf = 0;
+      const place = u => { const c = kids.get(u); c.forEach(place); x.set(u, c.length ? mean(c.map(v => x.get(v))) : leaf++); };
+      place(g.root);
+      at = nodes.map(v => [x.get(v.id), -depth.get(v.id)]);
+    } else {
+      const a0 = n === 2 ? 180 : 90;   // K2 lies flat; otherwise start at the top, clockwise
+      at = n === 1 ? [[0, 0]] : nodes.map((_, i) => [Math.cos((a0 - 360 * i / n) * deg), Math.sin((a0 - 360 * i / n) * deg)]);
+    }
+    return { nodes, edges, at, ids };
+  }
+
+  function network(g) {
+    const L = networkLayout(g), { nodes, edges, ids } = L, dir = !!g.directed;
+    const hasLoop = edges.some(e => e.from === e.to);
+    return (W, pad, k) => {
+      const R = 14, AH = 9, E = R + (hasLoop ? 2 * R : 0) + 2;   // node radius, arrowhead length, room for loops
+      const xs = L.at.map(p => p[0]), ys = L.at.map(p => p[1]);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const maxH = Math.min(320, 0.9 * W), maxW = Math.min(W, 560);
+      const pl = pad.l + E, pr = pad.r + E, pt = pad.t + E, pb = pad.b + E;
+      const s = Math.min((maxW - pl - pr) / (x1 - x0 || 1), (maxH - pt - pb) / (y1 - y0 || 1));
+      const ox = pl + ((W - pl - pr) - (x1 - x0) * s) / 2;
+      const H = Math.round((y1 - y0) * s + pt + pb);
+      const X = L.at.map(p => [ox + (p[0] - x0) * s, pt + (y1 - p[1]) * s]);
+      const cen = [mean(X.map(p => p[0])), mean(X.map(p => p[1]))];
+      const pos = id => X[ids.get(id)];
+      const head = (tip, from, st) => {
+        const [ux, uy] = norm(tip[0] - from[0], tip[1] - from[1]), b = [tip[0] - AH * ux, tip[1] - AH * uy], w = 0.38 * AH;
+        return `<polygon points="${P([tip, [b[0] - w * uy, b[1] + w * ux], [b[0] + w * uy, b[1] - w * ux]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`;
+      };
+      const tag = e => e.label ?? (typeof e.w === "number" ? String(e.w) : null);
+      /* group edges by unordered pair: m edges between the same two nodes bow out symmetrically */
+      const groups = new Map(), loops = new Map();
+      for (const e of edges) {
+        if (e.from === e.to) { loops.set(e.from, (loops.get(e.from) || []).concat([e])); continue; }
+        const key = ids.get(e.from) < ids.get(e.to) ? e.from + "\u0000" + e.to : e.to + "\u0000" + e.from;
+        groups.set(key, (groups.get(key) || []).concat([e]));
+      }
+      let svg = "";
+      for (const [key, es] of groups) {
+        const [lo, hi] = key.split("\u0000").map(pos), [ux, uy] = norm(hi[0] - lo[0], hi[1] - lo[1]);
+        let nx = -uy, ny = ux;   // one normal per pair (lo -> hi), so the bows of a group never cross
+        const mid = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2];
+        es.forEach((e, i) => {
+          const bend = (i - (es.length - 1) / 2) * 1.6 * R, a = pos(e.from), b = pos(e.to), st = col(e.color);
+          const c = [mid[0] + 2 * bend * nx, mid[1] + 2 * bend * ny];   // quadratic control: the curve peaks at bend
+          const [sx, sy] = norm(c[0] - a[0], c[1] - a[1]), [tx, ty] = norm(b[0] - c[0], b[1] - c[1]);
+          const p0 = [a[0] + R * sx, a[1] + R * sy], tip = [b[0] - R * tx, b[1] - R * ty];
+          const p1 = dir ? [tip[0] - 0.6 * AH * tx, tip[1] - 0.6 * AH * ty] : tip;
+          svg += `<g data-edge="${esc(e.from)}-${esc(e.to)}"><path d="M${n2(p0[0])} ${n2(p0[1])}Q${n2(c[0])} ${n2(c[1])} ${n2(p1[0])} ${n2(p1[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, c, st) : ""}</g>`;
+          const t = tag(e);
+          if (t != null) {
+            const peak = [mid[0] + bend * nx, mid[1] + bend * ny];
+            let [lx, ly] = bend ? norm(bend * nx, bend * ny) : [nx, ny];
+            if (!bend && (peak[0] - cen[0]) * lx + (peak[1] - cen[1]) * ly < 0) { lx = -lx; ly = -ly; }   // straight edge: tag on the outer side
+            k.label(t, peak, dirAnchor(lx, ly), e.color);
+          }
+        });
+      }
+      for (const [id, es] of loops) {
+        const c = pos(id), [dx, dy] = Math.hypot(c[0] - cen[0], c[1] - cen[1]) < 1 ? [0, -1] : norm(c[0] - cen[0], c[1] - cen[1]);
+        const th = Math.atan2(dy, dx), u = a => [Math.cos(th + a), Math.sin(th + a)];
+        es.forEach((e, j) => {
+          /* a circle through two points on the node rim, centre pushed outward; nested loops grow */
+          const rl = 0.75 * R * (1 + 0.5 * j), st = col(e.color), at = (r, a) => [c[0] + r * u(a)[0], c[1] + r * u(a)[1]];
+          const p0 = at(R, -0.5), tip = at(R, 0.5), Q = at(R * Math.cos(0.5) + Math.sqrt(rl * rl - (R * Math.sin(0.5)) ** 2), 0);
+          let [tx, ty] = [-(tip[1] - Q[1]), tip[0] - Q[0]];
+          if (tx * (c[0] - tip[0]) + ty * (c[1] - tip[1]) < 0) { tx = -tx; ty = -ty; }   // tangent at the tip, heading into the node
+          svg += `<g data-edge="${esc(id)}-${esc(id)}"><path d="M${n2(p0[0])} ${n2(p0[1])}A${n2(rl)} ${n2(rl)} 0 1 1 ${n2(tip[0])} ${n2(tip[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, [tip[0] - tx, tip[1] - ty], st) : ""}</g>`;
+          const t = tag(e);
+          if (t != null) k.label(t, [Q[0] + rl * dx, Q[1] + rl * dy], dirAnchor(dx, dy), e.color);
+        });
+      }
+      nodes.forEach((v, i) => {
+        const [x, y] = X[i], st = col(v.color);
+        svg += `<g data-node="${esc(v.id)}"><circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>` +
+          (v.color ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:${st}" fill-opacity="${FILL}"/>` : "") + "</g>";
+        k.label(v.label || texName(v.id), [x, y], "c", v.color);
+      });
+      return { svg, H };
+    };
+  }
+
   function prep(block) {
+    if (block.kind === "network") {
+      const g = structuredClone(block);
+      g.nodes = g.nodes.map(v => typeof v === "object" && v.at ? { ...v, at: numify(v.at, "at") } : v);
+      return g;
+    }
     if (block.kind === "circuit") return structuredClone(block);   // names like "a" are not math.js numbers
     const g = {};
     for (const k in block) g[k] = k === "marks" ? block.marks.map(m => prepMark(m, block.kind)) : numify(block[k], k);
@@ -648,7 +763,7 @@
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
     const g = el._g;
-    mount(el, g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : cartesian(g));
+    mount(el, g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g));
   }
 
   root.Graph = { render, tex };

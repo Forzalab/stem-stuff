@@ -12,7 +12,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const BASE = process.argv[2] || "http://localhost:8812";
 const SHOTS = process.argv[3] || "";
-const CODES = ["CALC1_T6B", "CALC1_A9R", "PHYS_F3N", "PHYS_S2K", "CALC1_X2P"];   // X2P = the MC example
+const CODES = ["CALC1_T6B", "CALC1_A9R", "PHYS_F3N", "PHYS_S2K", "CALC1_X2P", "CSCI26_G3H", "CSCI26_G2T"];   // X2P = the MC example; G3H, G2T = network
 const RAW = [/\\vec\b/, /\^\\circ/, /\\frac/, /\\text\b/, /\\dfrac/, /\$/, /\\lim/, /\\mu/];
 const VIEWS = { phone: { width: 390, height: 844 }, ipad: { width: 1024, height: 1366 }, desktop: { width: 1920, height: 1080 } };
 

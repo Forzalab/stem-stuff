@@ -4305,6 +4305,173 @@
           "hint": "QUACK. In C++, `^` binds tighter than `&&`. Which gate would this compute first?"
         }
       ]
+    },
+    {
+      "code": "CSCI26_G3H",
+      "title": "Degrees in a pseudograph",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "An undirected graph $G$."
+        },
+        {
+          "type": "graph",
+          "kind": "network",
+          "alt": "Undirected graph on a, b, c, d: two edges between a and b, edges b-c, c-d, d-a, and a loop at c.",
+          "nodes": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "edges": [
+            {
+              "from": "a",
+              "to": "b"
+            },
+            {
+              "from": "a",
+              "to": "b"
+            },
+            {
+              "from": "b",
+              "to": "c"
+            },
+            {
+              "from": "c",
+              "to": "c"
+            },
+            {
+              "from": "c",
+              "to": "d"
+            },
+            {
+              "from": "d",
+              "to": "a"
+            }
+          ]
+        }
+      ],
+      "how": "Two whole numbers, in the order asked.",
+      "parts": [
+        {
+          "prompt": "What is $\\deg(c)$?",
+          "type": "num",
+          "answer": "4",
+          "wrong": [
+            {
+              "match": "3",
+              "error": "counting",
+              "hint": "QUACK. Walk once around the loop. How many times do you leave $c$ and come back?"
+            }
+          ]
+        },
+        {
+          "prompt": "What is the sum of the degrees of all four vertices?",
+          "type": "num",
+          "answer": "12",
+          "wrong": [
+            {
+              "match": "6",
+              "error": "counting",
+              "hint": "QUACK. That counts edges. Each edge has two ends. Whose degree does each end add to?"
+            },
+            {
+              "match": "11",
+              "error": "counting",
+              "hint": "QUACK. Recheck the loop at $c$."
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Count edge ends at each vertex. A loop has two ends."
+    },
+    {
+      "code": "CSCI26_G2T",
+      "title": "Rooted tree: leaves and height",
+      "type": "multi",
+      "body": [
+        {
+          "type": "text",
+          "md": "A rooted tree with root $r$."
+        },
+        {
+          "type": "graph",
+          "kind": "network",
+          "alt": "Rooted tree: r has children a and b; a has children c and d; b has child e; e has child f.",
+          "layout": "tree",
+          "root": "r",
+          "nodes": [
+            "r",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f"
+          ],
+          "edges": [
+            {
+              "from": "r",
+              "to": "a"
+            },
+            {
+              "from": "r",
+              "to": "b"
+            },
+            {
+              "from": "a",
+              "to": "c"
+            },
+            {
+              "from": "a",
+              "to": "d"
+            },
+            {
+              "from": "b",
+              "to": "e"
+            },
+            {
+              "from": "e",
+              "to": "f"
+            }
+          ]
+        }
+      ],
+      "how": "Two whole numbers, in the order asked.",
+      "parts": [
+        {
+          "prompt": "How many leaves does the tree have?",
+          "type": "num",
+          "answer": "3",
+          "wrong": [
+            {
+              "match": "4",
+              "error": "misread",
+              "hint": "QUACK. A leaf has no children. Does $b$ have any?"
+            }
+          ]
+        },
+        {
+          "prompt": "What is the height of the tree?",
+          "type": "num",
+          "answer": "3",
+          "wrong": [
+            {
+              "match": "4",
+              "error": "counting",
+              "hint": "QUACK. Height counts edges on the longest root-to-leaf path, not vertices."
+            },
+            {
+              "match": "2",
+              "error": "misread",
+              "hint": "QUACK. Follow every branch to its end. Which one goes deepest?"
+            }
+          ]
+        }
+      ],
+      "nudge": "QUACK. Leaves: no children. Height: edges, root to the deepest leaf."
     }
   ]
 }
