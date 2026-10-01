@@ -48,7 +48,7 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 | `--ok` | right | check icon, right choice border and badge, right answer text, Copy done | decoration, "success" toasts for routine saves |
 | `--bad` | wrong | X icon, dashed border on a wrong answer, strike on a wrong choice, list X marks, the entry error line | hover, delete buttons, emphasis |
 | `--mark` | careful / look here | warning: one try left (toast ring, the drawn devil); Cluck's duck; figure highlight | a second series next to `--c2`; a full-surface fill |
-| `--muted` | locked / waiting | lock icon, "Out of tries.", checking | (see table above) |
+| `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
 There is no separate warning token: `--mark` is the warning color. Do not add yellow, amber or orange variants.
 
@@ -220,7 +220,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 
 ## 5. Copy voice
 
-- Plain, short, active, sentence case. One job per string. A verdict word ends with a period: "Correct." "Not quite. One more try." "Out of tries."
+- Plain, short, active, sentence case. One job per string. Verdicts are icons in the answer box, not words (AUDIT.md); the screen-reader text ends with a period: "Correct." "Not quite. One more try." "Out of tries."
 - Name things as the student sees them: "Scratchpad", "Copy", "Questions". Not system words.
 - A button's label states its action ("Open a problem file", "Show the scratchpad"). The same action keeps the same word everywhere.
 - Errors say what happened and what to do. No apology, no blame.
@@ -300,6 +300,6 @@ Line numbers are from the working tree on 2026-10-01 (other agents are editing `
 | 15 | `nav.css:22`, `nav.css:23`, `app.css:353` | Column width written as `52rem` instead of `var(--col)`. | `var(--col)`. |
 | 16 | `nav.css:66-67` | "Gone" rows use `--hint`: 4.46:1 on `--sheet` and 3.92:1 on `--raised` (current row). Below 4.5:1. | Raise `--hint` to `#899ab3` (4.56 on raised, 5.19 on sheet), or use `--muted` for the struck title. |
 | 17 | `app.js:22` | The toast uses a color emoji (😈). | Draw `i-imp` in the sprite; render it in `--mark` after the text (Iconography). |
-| 18 | `app.js:33-34` + `app.js:423, 463, 514` | A wrong answer says "Not quite. One more try." in the verdict **and** "One more try, so choose wisely." in the toast: the same fact twice. | Keep the verdict icon in the arrow slot and the toast; drop the verdict words, or drop the toast. Ask Tony (AUDIT.md lists the words as candidates for icon-only). |
+| 18 | `app.js:33-34` + `app.js:423, 463, 514` | A wrong answer says "Not quite. One more try." in the verdict **and** "One more try, so choose wisely." in the toast: the same fact twice. | Done (Oct 1): the verdict words are gone; the icon in the arrow slot and the toast stay (AUDIT.md "Kept on purpose"). |
 | 19 | `design/DESIGN-LANGUAGE.md:90`, `design/specimen.html:22-23, 58` | Refer to a site `--blue` #3a67d8 and `#fff` on it. The app has no `--blue`; the primary fill is `--c1` with `--field` ink. | Remove `--blue` from both; specimen buttons use `.btn` / `--c1`. |
 | 20 | `index.html:123` | Paste is a filled `.btn-go` in the code box. It alternates with the Go arrow, so only one is visible: allowed. | No change; keep them mutually exclusive (rule: one filled control per field). |

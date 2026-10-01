@@ -33,6 +33,8 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   await page.goto(BASE + "/");
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(BANK)) });
+  await page.waitForFunction(() => /^CALC1_ZZ/.test(document.querySelector("#pcode")?.textContent || "") && !document.querySelector("#freeze").hidden);   // the first in the shuffled list
+  await page.evaluate(() => { location.hash = "CALC1_ZZ9"; });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_ZZ9" && !document.querySelector("#freeze").hidden);
   await page.waitForTimeout(300);
 

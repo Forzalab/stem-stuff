@@ -26,7 +26,7 @@ async function open(page, code, verdicts) {
 }
 const WRONG2 = [{ verdict: "wrong", triesLeft: 1 }, { verdict: "wrong", triesLeft: 0 }];
 const RIGHT = [{ verdict: "correct", triesLeft: 2 }];
-const waitFb = page => page.waitForSelector("#fb .verdict", { timeout: 4000 });
+const waitFb = page => page.waitForSelector("#q .vk, #q .opt.right, #fb .verdict", { timeout: 4000 });   // graded: the box / badge icon, or a line in #fb
 
 /* every answer control: aria-disabled, not-allowed cursor, no change on hover, clicks do nothing */
 async function assertDead(page, keep) {

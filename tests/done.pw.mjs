@@ -49,14 +49,18 @@ async function step(name, fn) {
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout: 8000 });
 const go = async (page, code) => { await page.goto("about:blank"); await page.goto(`${BASE}/#${code}`); await opened(page, code); };
-const fb = page => page.waitForSelector("#fb .verdict", { timeout: 4000 }).then(() => page.textContent("#fb"));
-async function typed(page, v) { await page.fill("#ans", v); await page.click("#ansGo"); await fb(page); await page.waitForTimeout(150); }
+/* graded: one more try recorded (the verdict is an icon in the box / badge, no words in #fb) */
+const tries = page => page.evaluate(() => window.__drill.state.tries.length);
+const graded = (page, n) => page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 4000 });
+async function typed(page, v) { const n = await tries(page); await page.fill("#ans", v); await page.click("#ansGo"); await graded(page, n); await page.waitForTimeout(150); }
 async function pick(page, id) {
+  const n = await tries(page);
   await page.click(`.opt[data-id="${id}"]`);
   await page.click(`.ch[data-id="${id}"] .send`);
-  await fb(page); await page.waitForTimeout(150);
+  await graded(page, n); await page.waitForTimeout(150);
 }
-const rows = page => page.$$eval("#qlist a", as => as.map(a => ({
+/* the rows in code order (CALC1_D01 = r[0] ...): the list itself is in mastery order (design/NAV.md), which these tests change */
+const rows = page => page.$$eval("#qlist a", as => as.sort((a, b) => a.getAttribute("href") < b.getAttribute("href") ? -1 : 1).map(a => ({
   x: a.querySelectorAll(".mk-x").length, ok: a.querySelectorAll(".mk-ok").length, gone: a.classList.contains("gone"),
   label: a.getAttribute("aria-label"), line: getComputedStyle(a.querySelector(".qt")).textDecorationLine,
   disabled: a.getAttribute("aria-disabled"), text: a.textContent.trim() })));
@@ -67,13 +71,14 @@ const qstate = page => page.evaluate(() => ({
   wrong: [...document.querySelectorAll("#q .opt.wrong")].map(o => o.dataset.id),
   live: [...document.querySelectorAll("#q .opt:not(:disabled), #q .ans:not(:disabled)")].length,
   ans: document.querySelector("#ans")?.value ?? null, fb: document.querySelector("#fb").textContent,
+  mark: document.querySelector("#ff .vk")?.dataset.v ?? null,
   sendShown: [...document.querySelectorAll("#q .send")].some(b => !b.hidden && b.offsetParent) }));
 
 async function upload(page) {
   await page.goto(BASE + "/");
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "done.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(BANK)) });
-  await opened(page, "CALC1_D01");
+  await page.waitForFunction(() => /^CALC1_D0\d$/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });   // the first in the shuffled list
 }
 
 await start();
@@ -149,13 +154,13 @@ try {
     const s = await qstate(page);
     assert.ok(s.finished && s.closed, "read-only"); assert.equal(s.live, 0); assert.equal(s.sendShown, false);
     assert.equal(s.ans, "5", "the student's last answer, not the right one");
-    assert.match(s.fb, /Out of tries/); assert.doesNotMatch(s.fb, /Correct/);
+    assert.equal(s.mark, "i-lock"); assert.match(s.fb, /Ask Tony/);
   });
 
   await step("upload: reopened correct MC shows the student's pick, read-only", async () => {
     await go(page, "CALC1_D04");
     const s = await qstate(page);
-    assert.deepEqual(s.right, ["a"]); assert.ok(s.finished); assert.equal(s.live, 0); assert.match(s.fb, /Correct/);
+    assert.deepEqual(s.right, ["a"]); assert.ok(s.finished); assert.equal(s.live, 0); assert.equal(s.fb.trim(), "", "no verdict words");
     if (SHOTS) { await page.screenshot({ path: `${SHOTS}/done-open-correct-390.png` }); }
   });
 
@@ -163,7 +168,7 @@ try {
     await go(page, "CALC1_D07");
     const s = await qstate(page);
     assert.deepEqual(s.right, [], "no right choice revealed"); assert.deepEqual(s.wrong.sort(), ["a", "c"]);
-    assert.ok(s.finished); assert.equal(s.live, 0); assert.match(s.fb, /Out of tries/);
+    assert.ok(s.finished); assert.equal(s.live, 0); assert.match(s.fb, /Ask Tony/);
     const html = await page.innerHTML("#q");
     assert.doesNotMatch(html, /\bright\b/, "no .right anywhere");
     if (SHOTS) {
@@ -185,10 +190,10 @@ try {
     await go(page, "CALC1_D02");
     const s = await qstate(page);
     assert.equal(s.finished, false); assert.ok(s.live > 0, "can still answer");
-    assert.match(s.fb, /One more try/); assert.match(s.fb, /HINT-D02/);
+    assert.equal(s.mark, "i-x"); assert.doesNotMatch(s.fb, /Ask Tony/); assert.match(s.fb, /HINT-D02/);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/done-open-tryleft-390.png` });
     await typed(page, "9");
-    assert.match(await page.textContent("#fb"), /Out of tries/, "the try before the reload counted");
+    assert.equal((await qstate(page)).mark, "i-lock", "the try before the reload counted");
     await openList(page);
     const r = await rows(page);
     assert.equal(r[1].x, 2); assert.equal(r[1].gone, true);
@@ -214,7 +219,7 @@ try {
     await go(sp, "CALC1_X2P"); await pick(sp, "a");
     await sp.reload(); await opened(sp, "CALC1_X2P");
     const s = await qstate(sp);
-    assert.deepEqual(s.wrong, ["a"]); assert.equal(s.finished, false); assert.match(s.fb, /One more try/);
+    assert.deepEqual(s.wrong, ["a"]); assert.equal(s.finished, false); assert.doesNotMatch(s.fb, /Ask Tony/);
   });
 
   await step("server: out of tries, then a server restart: still locked (tries.json)", async () => {
@@ -225,7 +230,7 @@ try {
     assert.equal(st.wrong, 2);
     await sp.reload(); await opened(sp, "CALC1_X2P");
     const s = await qstate(sp);
-    assert.ok(s.finished); assert.deepEqual(s.right, []); assert.match(s.fb, /Out of tries/);
+    assert.ok(s.finished); assert.deepEqual(s.right, []); assert.match(s.fb, /Ask Tony/);
     await sp.waitForTimeout(500);
     assert.ok((await qstate(sp)).finished, "still locked after /state");
   });
@@ -247,7 +252,7 @@ try {
     await go(sp, "CALC1_T6B"); await typed(sp, "12");
     await sp.reload(); await opened(sp, "CALC1_T6B");
     const s = await qstate(sp);
-    assert.ok(s.finished); assert.equal(s.ans, "12"); assert.match(s.fb, /Correct/);
+    assert.ok(s.finished); assert.equal(s.ans, "12"); assert.equal(s.mark, "i-ok");
   });
 
   await step("server further than the cache (same cookie, empty cache): server wins", async () => {
@@ -257,7 +262,7 @@ try {
     await go(op, "CALC1_X2P");
     await op.waitForFunction(() => window.__drill.state.finished, null, { timeout: 9000 });
     const s = await qstate(op);
-    assert.match(s.fb, /Out of tries/); assert.deepEqual(s.right, []);
+    assert.match(s.fb, /Ask Tony/); assert.deepEqual(s.right, []);
     await other.close();
   });
 
@@ -280,14 +285,14 @@ try {
     await go(sp, "CALC1_A9R");
     await sp.waitForTimeout(800);
     const s = await qstate(sp);
-    assert.ok(s.finished, "stays read-only"); assert.match(s.fb, /Out of tries/);
+    assert.ok(s.finished, "stays read-only"); assert.equal(s.mark, "i-lock");
   });
 
   await step("server: unreachable -> cache still shows the done state", async () => {
     await sp.route("**/state/**", r => r.abort());
     await go(sp, "CALC1_T6B");
     const s = await qstate(sp);
-    assert.ok(s.finished); assert.match(s.fb, /Correct/);
+    assert.ok(s.finished); assert.equal(s.mark, "i-ok");
     await sp.unrouteAll({ behavior: "ignoreErrors" });
   });
   await sctx.close();

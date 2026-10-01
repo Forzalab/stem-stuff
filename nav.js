@@ -4,7 +4,7 @@
    new one), so a topic can't be guessed from its position. Neither: no list (codes are the gate), so the nav stays hidden.
    The list button's text is the bank code; for an upload, the file name (".json" dimmed, hidden on phones).
    Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
-import { shuffled, seed, newSeed } from "./shuffle.mjs";
+import { shuffled, seed, newSeed, mastery } from "./shuffle.mjs";
 const MAX = 60;
 const ORDER = "stem-order";
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -81,16 +81,19 @@ function init() {
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
-  let codes = [], cur = null;
+  let codes = [], cur = null, setKey = "";
   function mark(c) {                                                 // this browser's record first, else the bank's server mark
     const s = window.stemOffline, rec = s && s.doneGet ? s.doneGet(c) : null, b = bank();
     return rec || (b ? b.mark(c) : null);
   }
 
-  function update(code) {
+  /* resort: compute the order again (a graded try, a bank, a shuffle). Opening a problem keeps the order as it is, so Prev / Next walk
+     a list that holds still (re-sorting on every open would bounce Next between two open questions) */
+  function update(code, resort = true) {
     cur = code;
-    const o = off();
-    codes = o && o.codes ? order(o.codes()) : [];
+    const o = off(), all = o && o.codes ? o.codes() : [], key = [...all].sort().join(" ");
+    if (resort || key !== setKey) codes = all.length ? order(all) : [];
+    setKey = key;
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
     const label = bank() ? bank().code : file.replace(/\.json$/i, "");
@@ -122,8 +125,10 @@ function init() {
     return { html, gone: rec.done !== "open", say };
   }
 
-  /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js) */
-  const order = all => shuffled(all, seed(ORDER, ""));
+  /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js).
+     Seeded shuffle, then mastery (design/NAV.md "Mastery order"): answered first, the open one, then the families with the most
+     wrong tries. Silent: it re-sorts on a graded try (drill:state), a bank change and the shuffle button; opening a problem keeps the order. */
+  const order = all => mastery(shuffled(all, seed(ORDER, "")), mark, cur);
   window.stemOrder = all => order(all);
   shuf.addEventListener("click", () => {
     newSeed(ORDER);
@@ -181,7 +186,7 @@ function init() {
     e.preventDefault();
     go(e.key === "]" ? 1 : -1);
   });
-  addEventListener("drill:problem", e => update(e.detail && e.detail.code));
+  addEventListener("drill:problem", e => update(e.detail && e.detail.code, false));
   addEventListener("drill:state", () => { if (!nav.hidden) update(cur); });     // a graded try (offline.js donePut)
   addEventListener("drill:bank", () => update(cur));                             // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
