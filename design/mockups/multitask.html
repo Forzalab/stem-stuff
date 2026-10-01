@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multitask mockup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<style>
+/* Multitask mockup (design/MULTITASK.md). Only app.css tokens: colors, --t-*, --s*, --btn, --shadow-*, radii 8/10, borders 1/2px.
+   Mock chrome (the top strip, the fake keyboard, the side notes) is dashed so it never reads as product UI. */
+body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; gap: var(--s6); }
+.phone { position: relative; flex: none; width: min(100vw, 390px); height: min(100dvh, 844px); overflow: hidden; background: var(--paper); --kbh: 34px; }
+.phone[data-kb="1"] { --kbh: 300px; }
+@media (min-width: 760px) { body { padding: var(--s5) !important; } .phone { border: 2px solid var(--line); border-radius: 10px; } }
+
+/* ---------- mock chrome ---------- */
+.mbar { position: absolute; z-index: 30; top: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; gap: var(--s1); padding: 0 var(--s2);
+  background: var(--field); border-bottom: 1px dashed var(--line); font-size: var(--t-xs); line-height: 1.2; color: var(--muted); }
+.mbar .mlbl { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mbar .mlbl b { color: var(--ink); }
+.mbar .mlbl span { display: block; color: var(--hint); }
+.mchip { flex: none; width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 8px; background: none; color: var(--muted); font-size: var(--t-xs); }
+.mchip[aria-pressed="true"] { border-style: solid; border-color: var(--c1); color: var(--c1); }
+.mchip .ico { width: 1.25rem; height: 1.25rem; }
+.screen { position: absolute; top: 44px; left: 0; right: 0; bottom: var(--kbh); overflow: hidden; }
+.kb { position: absolute; z-index: 25; left: 0; right: 0; bottom: 0; height: 300px; padding: var(--s2) var(--s1) var(--s6); display: none; flex-direction: column; gap: var(--s2);
+  background: var(--raised); border-top: 1px dashed var(--line); }
+.phone[data-kb="1"] .kb { display: flex; }
+.kb .row { flex: 1 1 0; display: flex; gap: 5px; justify-content: center; }
+.kb button { flex: 1 1 0; max-width: 36px; padding: 0; border: 0; border-radius: 8px; background: var(--line); color: var(--ink); font-size: var(--t-sm); }
+.kb button.w { max-width: none; flex: 2 1 0; color: var(--muted); font-size: var(--t-xs); }
+.kb button.sp { flex: 5 1 0; max-width: none; }
+.kb button .ico { margin: auto; width: 20px; height: 20px; }
+.homebar { position: absolute; left: 50%; bottom: 10px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: var(--edge); }
+.phone[data-kb="1"] .homebar { display: none; }
+.notes { display: none; }
+@media (min-width: 760px) {
+  .notes { display: block; width: 22rem; font-size: var(--t-sm); color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: var(--s4); }
+  .notes h1 { margin: 0 0 var(--s3); font-size: var(--t-md); color: var(--ink); }
+  .notes ol { margin: 0 0 var(--s4); padding-left: var(--s5); }
+  .notes li { margin-bottom: var(--s2); }
+  .notes li b { color: var(--ink); }
+  .notes button { font-size: var(--t-xs); background: none; border: 1px dashed var(--line); border-radius: 8px; color: var(--c1); padding: var(--s1) var(--s2); margin: 2px 2px 0 0; }
+  .notes .mem { font-family: var(--mono); font-size: var(--t-xs); color: var(--hint); white-space: pre-wrap; margin: 0; }
+}
+
+/* ---------- shared parts (app.css look) ---------- */
+.card { background: var(--sheet); border-radius: 10px; }
+.prob { padding: var(--s3) var(--s4); }
+.code { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.ptxt { margin: 0 0 var(--s2); max-width: 65ch; }
+.fig { display: block; width: 100%; max-width: 15rem; height: auto; margin: var(--s2) 0 0; }
+.fig * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.gv { font-weight: inherit; }
+.qa { padding: 0 var(--s4) var(--s4); }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
+.fld { display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); background: var(--field); border: 2px solid var(--edge); border-radius: 8px; }
+.fld:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+.fld .lead { color: var(--muted); margin-right: var(--s2); font-family: var(--mono); }
+.fld input { flex: 1 1 auto; min-width: 0; height: 100%; margin: 0; padding: 0 var(--s2) 0 0; border: 0; background: transparent; color: var(--ink);
+  font: 400 var(--t-md)/1 var(--mono); caret-color: var(--focus); }
+.fld input:focus { outline: none; }
+.fld input::placeholder { color: var(--hint); opacity: 1; }
+.scr { display: block; width: 100%; margin: 0; resize: none; padding: var(--s3) var(--s3); background: var(--field); color: var(--ink); border: 2px solid var(--edge); border-radius: 8px;
+  font: 400 var(--t-sm)/1.6 var(--mono); caret-color: var(--focus); overflow-y: auto; overscroll-behavior: contain; white-space: pre-wrap; overflow-wrap: anywhere; }
+.scr:focus { outline: none; border-color: var(--focus); }
+.scr::placeholder { color: var(--hint); opacity: 1; }
+.xl { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
+.xl .ico { width: 1.25rem; height: 1.25rem; }
+/* the mode switch: Swap's document | pencil pill (app.css .btn-tgl), here "problem showing" | "pad only" */
+.seg { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
+.seg::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised); transition: transform 200ms ease-out; }
+.seg:hover { background: var(--sheet); }
+.seg .ico { position: relative; color: var(--muted); transition: color 200ms ease-out; }
+.seg[data-on="peek"] .t-doc, .seg[data-on="full"] .t-pen { color: var(--c1); }
+.seg[data-on="full"]::before { transform: translateX(36px); }
+/* the pad's header: mode switch left, the grab handle in the middle, collapse ALWAYS in the right corner */
+.phead { flex: none; position: relative; height: calc(var(--btn) + var(--s3)); display: flex; align-items: center; justify-content: space-between; }
+.grip { position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; padding: 0; display: grid; place-items: center; background: none; border: 0; border-radius: 8px; touch-action: none; cursor: grab; }
+.grip::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); }
+.grip:hover::before { background: var(--muted); }
+.pad { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pad .scr { flex: 1 1 auto; min-height: 0; }
+.chipln { display: flex; align-items: center; gap: var(--s2); min-width: 0; height: 100%; padding: 0 var(--s3); color: var(--ink); font-size: var(--t-sm); }
+.chipln .ico { color: var(--muted); width: 20px; height: 20px; }
+.chipln .c { font-weight: 700; color: var(--muted); letter-spacing: 0.04em; flex: none; }
+.chipln .t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tapx { cursor: pointer; }
+/* a scrolling peek fades at its bottom edge, as the freeze strip does (FREEZE.md) */
+.peek { -webkit-mask-image: linear-gradient(#000 calc(100% - 1.5rem), transparent); mask-image: linear-gradient(#000 calc(100% - 1.5rem), transparent); }
+.snapline { position: absolute; z-index: 9; left: var(--s2); right: var(--s2); height: 0; border-top: 2px dashed var(--edge); opacity: 0; pointer-events: none; transition: opacity 120ms ease-out; }
+.dragging .snapline { opacity: 1; }
+.dragging, .dragging * { transition: none !important; }
+.phone.instant * { transition: none !important; }
+
+/* ---------- home: the page as it is (tap into the pad, or the expand icon, to open) ---------- */
+.home { position: absolute; inset: 0; overflow-y: auto; padding: var(--s4) var(--s4) var(--s6); }
+.home .xrow { display: flex; align-items: center; justify-content: space-between; margin: var(--s4) 0 var(--s2); }
+.home .scr { min-height: calc(5 * 1.6em + 1.5rem + 4px); }
+
+/* ---------- 1. Pop-up: the pad is a floating window over the page; full = maximized, the problem minimizes to a bubble ---------- */
+.v1 .bg { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--s4) calc(58% + var(--s4)); }
+.v1 .win { position: absolute; z-index: 3; left: var(--s2); right: var(--s2); top: calc(42% - var(--s2)); height: 58%; display: flex; flex-direction: column;
+  padding: 0 var(--s2) var(--s2); background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3); }
+.v1 .win .phead { touch-action: none; }
+.v1[data-mode="full"] .win { top: var(--s2); height: calc(100% - var(--s4)); }
+.v1 .bubble { position: absolute; z-index: 4; box-shadow: var(--shadow-3); touch-action: none; opacity: 0; pointer-events: none; transition: opacity 200ms ease-out; }
+.v1[data-mode="full"] .bubble { opacity: 1; transform: none; pointer-events: auto; }
+
+/* ---------- 2. Split: problem pane / divider (the pad's header) / pad; snaps chip, 1/3, 1/2 ---------- */
+.v2 { position: absolute; inset: 0; display: grid; grid-template-rows: calc(var(--r) * 100%) minmax(0, 1fr); padding: var(--s2) var(--s2) var(--s2); }
+.v2[data-mode="full"] { grid-template-rows: 52px minmax(0, 1fr); }
+.v2 .top { position: relative; min-height: 0; overflow: hidden; }
+.v2 .top .peek { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.v2 .top .chipln { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.v2[data-mode="full"] .top .peek { opacity: 0; pointer-events: none; }
+.v2[data-mode="full"] .top .chipln { opacity: 1; pointer-events: auto; }
+.v2 .phead { touch-action: none; cursor: grab; }
+
+/* ---------- 3. Tiles: problem / answer / pad tiles, 8px gaps, the focused tile outlined (Pop Shell); full = one tile + tabs (i3 tabbed) ---------- */
+.v3 { position: absolute; inset: 0; padding: var(--s2); display: grid; gap: var(--s2); grid-template-rows: minmax(0, 34%) auto minmax(0, 1fr); grid-template-areas: "p" "a" "w"; }
+.v3[data-mode="full"] { grid-template-rows: 52px minmax(0, 1fr); grid-template-areas: "t" "w"; }
+.v3 .tile { min-height: 0; border-radius: 10px; background: var(--sheet); }
+.v3 .t-p { grid-area: p; overflow-y: auto; overscroll-behavior: contain; }
+.v3 .t-a { grid-area: a; padding: var(--s3); }
+.v3 .t-a .how { margin: 0 0 var(--s2); }
+.v3 .t-w { grid-area: w; padding: 0 var(--s2) var(--s2); }
+.v3 .tabs { grid-area: t; display: none; gap: var(--s2); }
+.v3[data-mode="full"] .tabs { display: flex; }
+.v3[data-mode="full"] .t-p, .v3[data-mode="full"] .t-a { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }   /* still focusable, so the keyboard stays */
+.v3 .tab { flex: 1 1 0; min-width: 0; height: 100%; border: 2px solid var(--edge); border-radius: 8px; background: var(--sheet); padding: 0; }
+.v3 .tab:hover { background: var(--raised); border-color: var(--muted); }
+.v3 .tab.ans .chipln .t { color: var(--muted); }
+
+/* ---------- 4. Hold to peek: pad fills; the problem is a chip; hold it to see the card, pull down to pin it ---------- */
+.v4 { position: absolute; inset: 0; padding: var(--s2); display: grid; gap: var(--s2); grid-template-rows: 52px minmax(0, 1fr); }
+.v4[data-mode="peek"] { grid-template-rows: minmax(0, 40%) minmax(0, 1fr); }
+.v4 .top { position: relative; min-height: 0; overflow: hidden; }
+.v4 .top .chipln { position: absolute; inset: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.v4 .top .hint { margin-left: auto; flex: none; color: var(--muted); font-size: var(--t-sm); }
+.v4 .top .peek { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; opacity: 0; pointer-events: none; }
+.v4[data-mode="peek"] .top .peek { opacity: 1; pointer-events: auto; }
+.v4[data-mode="peek"] .top .chipln { opacity: 0; pointer-events: none; }
+.v4 .pop { position: absolute; z-index: 5; left: var(--s2); right: var(--s2); top: calc(52px + var(--s3)); max-height: calc(100% - 52px - var(--s5)); overflow: hidden;
+  box-shadow: var(--shadow-3); opacity: 0; transform: translateY(-12px); pointer-events: none; transition: opacity 200ms ease-out, transform 200ms ease-out; }
+.v4.holding .pop { opacity: 1; transform: none; }
+.v4 .pop .pull { display: flex; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s2); color: var(--muted); font-size: var(--t-sm); border-top: 1px solid var(--line); }
+.v4 .pop .pull .ico { width: 1.25rem; height: 1.25rem; }
+
+/* ---------- 5. Picture in picture: pad fills; the problem is a thumbnail in a corner; drop it on the top edge to dock it (peek) ---------- */
+.v5 { position: absolute; inset: 0; }
+.v5 .pad { position: absolute; left: var(--s2); right: var(--s2); bottom: var(--s2); top: 0; }
+.v5[data-mode="peek"] .pad { top: calc(40% + var(--s2)); }
+.v5 .pip { position: absolute; z-index: 4; overflow: hidden; box-shadow: var(--shadow-3); touch-action: none; cursor: grab; }
+.v5[data-mode="full"] .pip { width: 152px; height: 116px; }
+.v5[data-mode="full"][data-corner$="l"] .pip { left: var(--s2); }
+.v5[data-mode="full"][data-corner$="r"] .pip { left: calc(100% - 152px - var(--s2)); }
+.v5[data-mode="full"][data-corner^="t"] .pip { top: calc(var(--btn) + var(--s4)); }
+.v5[data-mode="full"][data-corner^="b"] .pip { top: calc(100% - 116px - var(--s3)); }
+.v5[data-mode="peek"] .pip { left: var(--s2); top: var(--s2); width: calc(100% - var(--s4)); height: 40%; box-shadow: none; cursor: default; touch-action: auto; }
+.v5 .pip .mini { position: absolute; inset: 0; pointer-events: none; }
+.v5 .pip .mini { display: flex; flex-direction: column; padding: var(--s2) var(--s3); }
+.v5 .pip .mini .fig { width: 100%; max-width: none; flex: 1 1 auto; min-height: 0; margin: 0; }
+.v5 .pip .mini .code { margin: var(--s1) 0 0; }
+.v5 .pip .peek { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; opacity: 0; pointer-events: none; }
+.v5[data-mode="peek"] .pip .mini { opacity: 0; }
+.v5[data-mode="peek"] .pip .peek { opacity: 1; pointer-events: auto; }
+.v5[data-mode="full"][data-corner^="b"] .scr { padding-bottom: 124px; scroll-padding-bottom: 124px; }
+.v5 .ghost { position: absolute; z-index: 3; border: 2px dashed var(--edge); border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity 120ms ease-out; }
+.v5.dragging .ghost { opacity: .7; }
+
+/* ---------- 6. Givens ribbon: pad fills; the problem shrinks to its givens; pull the ribbon down for the whole question ---------- */
+.v6 { position: absolute; inset: 0; padding: var(--s2); display: grid; gap: var(--s5); grid-template-rows: 56px minmax(0, 1fr); }
+.v6[data-mode="peek"] { grid-template-rows: minmax(0, 40%) minmax(0, 1fr); }
+.v6 .rib { position: relative; min-height: 0; }
+.v6 .rib .gvs { position: absolute; inset: 0; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); overflow-x: auto; }
+.v6 .g { flex: none; display: inline-flex; align-items: baseline; gap: var(--s1); height: 36px; padding: 0 var(--s3); align-items: center; border-radius: 8px; background: var(--raised); font-family: var(--mono); font-size: var(--t-sm); white-space: nowrap; }
+.v6 .g i { font-style: normal; color: var(--muted); }
+.v6 .g.find { background: none; color: var(--muted); }
+.v6 .g.find b { color: var(--ink); font-weight: 400; }
+.v6 .rib .peek { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; opacity: 0; pointer-events: none; }
+.v6[data-mode="peek"] .rib .gvs { opacity: 0; pointer-events: none; }
+.v6[data-mode="peek"] .rib .peek { opacity: 1; pointer-events: auto; }
+.v6[data-mode="peek"] .gv { color: var(--ink); background: var(--raised); border-radius: 4px; padding: 0 var(--s1); }
+.v6 .pull { position: absolute; z-index: 3; left: 50%; top: 100%; width: 88px; height: 44px; margin-left: -44px; padding: var(--s2) 0 0; display: grid; place-items: start center; background: none; border: 0; touch-action: none; cursor: grab; }
+.v6 .pull::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); }
+
+/* ---------- tablet landscape + desktop mocks (?v=tab, ?v=desk&opt=N): no phone frame ---------- */
+body.wide { display: block; padding: 0 !important; }
+.wide .phone, .wide .notes { display: none; }
+.big { display: none; }
+.wide .big { display: flex; flex-direction: column; height: 100dvh; padding: 0 var(--s5) var(--s5); }
+.big .tbar { flex: none; display: flex; align-items: center; gap: var(--s2); padding: var(--s4) 0; max-width: 84rem; width: 100%; margin: 0 auto; }
+.big .tbar .fld { flex: 1 1 auto; max-width: 30rem; }
+.big .tbar .fld input { font-family: inherit; font-weight: 700; letter-spacing: .06em; }
+.big .tbar .sp { flex: 1 1 auto; }
+.big .split { flex: 1 1 auto; min-height: 0; position: relative; max-width: 84rem; width: 100%; margin: 0 auto; display: grid; grid-template-columns: calc(var(--r) * 100%) 24px minmax(0, 1fr); }
+.big .split.stack { grid-template-columns: minmax(0, 1fr); max-width: var(--col); width: 100%; margin: 0 auto; overflow-y: auto; }
+.big .left { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--s4); }
+.big .left .card { flex: none; }
+.big .right { min-height: 0; }
+.big .split.stack .right { min-height: 24rem; margin-top: var(--s4); }
+.big .split.stack .sash { display: none; }
+.big .sash { position: relative; display: grid; place-items: center; cursor: col-resize; touch-action: none; border-radius: 8px; }
+.big .sash::before { content: ""; width: 4px; height: 36px; border-radius: 2px; background: var(--edge); }
+.big .sash:hover::before, .big .sash:focus-visible::before { background: var(--muted); }
+.big .sash .tick { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px dashed var(--edge); opacity: 0; pointer-events: none; }
+.big .split.dragging .sash .tick { opacity: .8; }
+.big .phead .xl { margin-right: auto; }
+.big .phead .btns { display: flex; gap: var(--s2); }
+
+.big .right .pad { height: 100%; }
+.flyout { position: absolute; z-index: 10; right: 0; top: calc(var(--btn) + var(--s3)); display: flex; gap: var(--s3); padding: var(--s3); background: var(--raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3); }
+.flyout[hidden] { display: none; }
+.lay { width: 96px; height: 64px; padding: 6px; display: grid; gap: 4px; background: var(--field); border: 2px solid var(--line); border-radius: 8px; }
+.lay i { display: block; border-radius: 4px; background: var(--line); }
+.lay[aria-pressed="true"] { border-color: var(--c1); }
+.lay:hover i { background: var(--edge); }
+.lay i.w { background: var(--edge); }
+.lay.stk { grid-template-rows: 2fr 3fr; }
+.lay.half { grid-template-columns: 1fr 1fr; }
+.lay.wide2 { grid-template-columns: 1fr 2fr; }
+.laylbl { margin-top: var(--s1); font-size: var(--t-sm); color: var(--muted); text-align: center; }
+.keys { flex: none; display: flex; flex-wrap: wrap; gap: var(--s5); justify-content: center; padding: var(--s3) 0 0; font-size: var(--t-sm); color: var(--muted); }
+.keys kbd { font: 700 var(--t-xs)/1 var(--mono); color: var(--ink); background: var(--sheet); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 3px 6px; }
+.mocktag { flex: none; font-size: var(--t-xs); color: var(--hint); border: 1px dashed var(--line); border-radius: 8px; padding: var(--s1) var(--s2); background: var(--paper); }
+
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; animation-timing-function: ease-out; }
+@media (prefers-reduced-motion: reduce) { .phone *, .big * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- new, same drawing rules (24 grid, 2px stroke, round caps): expand / collapse (arrows out / in), layout, keyboard, back -->
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M19 10h-5V5M5 14h5v5M14 10l6-6M10 14l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 4.5v15" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-kb" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M10 6l-6 6 6 6M4.5 12H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="phone" id="phone" data-kb="0">
+  <div class="mbar" id="mbar" aria-label="Mockup controls"></div>
+  <div class="screen" id="screen"></div>
+  <div class="kb" id="kb" aria-label="Simulated keyboard"></div>
+  <div class="homebar" aria-hidden="true"></div>
+</div>
+<aside class="notes" id="notes"></aside>
+<div class="big" id="big"></div>
+
+<script>
+"use strict";
+/* ---------- content ---------- */
+const FIG = `<svg class="fig" viewBox="0 0 220 124" aria-label="Block on a 30 degree ramp" role="img">
+  <path d="M8 110H212" stroke="var(--ink)" stroke-width="2" fill="none"/>
+  ${Array.from({length: 24}, (_, i) => `<path d="M${16 + i * 8} 114l-6 6" stroke="var(--muted)" stroke-width="1.5"/>`).join("")}
+  <path d="M20 110L190 110L190 12Z" fill="var(--sheet)" stroke="var(--ink)" stroke-width="2"/>
+  <path d="M52 110A32 32 0 0 0 47.7 94" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <text x="58" y="104" fill="var(--muted)" font-size="14" font-family="Atkinson Hyperlegible">30°</text>
+  <path d="M90.3 69.5L119.7 52.5L108.7 33.4L79.3 50.4Z" fill="var(--sheet)" stroke="var(--ink)" stroke-width="2"/>
+  <path d="M99.5 51.5V84" stroke="var(--c1)" stroke-width="3"/><path d="M93.5 82l6 12 6-12z" fill="var(--c1)"/>
+  <text x="108" y="90" fill="var(--c1)" font-size="16" font-style="italic" font-family="Atkinson Hyperlegible">mg</text>
+</svg>`;
+const CODE = "PHYS_F3N";
+const TEXT = `A <b class="gv">4.0 kg</b> block slides down a <b class="gv">30°</b> ramp. The coefficient of kinetic friction is <b class="gv">0.20</b>. Find the block’s acceleration down the ramp, in m/s².`;
+const PLAIN = "A 4.0 kg block slides down a 30° ramp. The coefficient of kinetic…";
+const PAD0 = "N = mg cos30 = 33.9\nf = 0.20 N = 6.79\nmg sin30 = 19.6\nF = 19.6 - 6.79\n  = 12.8\na = F / m";
+const prob = (fig = true) => `<div class="prob"><p class="code">${CODE}</p><p class="ptxt">${TEXT}</p>${fig ? FIG : ""}</div>`;
+const qa = () => `<div class="qa"><p class="how">One number, in m/s².</p><label class="fld"><input class="ans" inputmode="decimal" autocomplete="off" placeholder="e.g. 9/2, sqrt(3)" aria-label="Answer"><button type="button" class="btn btn-go" data-act="noop" aria-label="Check answer"><svg class="ico"><use href="#i-go"/></svg></button></label></div>`;
+const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+const seg = () => `<button type="button" class="btn seg" data-act="mode">${ico("i-doc").replace('class="ico"', 'class="ico t-doc"')}${ico("i-pen").replace('class="ico"', 'class="ico t-pen"')}</button>`;
+const collapse = () => `<button type="button" class="btn" data-act="collapse" aria-label="Collapse the scratchpad" title="Collapse">${ico("i-collapse")}</button>`;
+const phead = (grip = true) => `<div class="phead">${seg()}${grip ? `<button type="button" class="grip" data-act="grip" aria-label="Move"></button>` : ""}${collapse()}</div>`;
+const ta = () => `<textarea class="scr" spellcheck="false" autocapitalize="off" aria-label="Scratchpad" placeholder="Work it out here"></textarea>`;
+const chip = () => `<div class="chipln">${ico("i-doc")}<span class="c">${CODE}</span><span class="t">${PLAIN}</span></div>`;
+
+/* ---------- variants ---------- */
+const V = {
+  1: { name: "Pop-up", def: { mode: "peek", side: "r", slot: 1 },
+       html: () => `<div class="v1" id="vr"><div class="bg tapx" data-exit>${`<div class="card">${prob()}</div>`}</div>
+         <div class="win pad" id="win">${phead()}${ta()}</div>
+         <button type="button" class="btn bubble" id="bubble" aria-label="Problem: tap to go back to it">${ico("i-doc")}</button></div>` },
+  2: { name: "Split", def: { mode: "peek", r: .5 },
+       html: () => `<div class="v2" id="vr"><div class="top card tapx" data-exit><div class="peek">${prob()}</div>${chip()}</div>
+         <div class="pad">${phead()}${ta()}</div><div class="snapline" id="s1"></div><div class="snapline" id="s2"></div><div class="snapline" id="s3"></div></div>` },
+  3: { name: "Tiles", def: { mode: "peek" },
+       html: () => `<div class="v3" id="vr"><div class="tabs"><button type="button" class="tab" data-act="exit" aria-label="Problem: go back to it"><div class="chipln">${ico("i-doc")}<span class="t">Problem</span></div></button>
+         <button type="button" class="tab ans" data-act="anstab" aria-label="Answer">${`<div class="chipln">${ico("i-ok")}<span class="t">Answer</span></div>`}</button></div>
+         <div class="tile t-p tapx" data-exit>${prob()}</div>
+         <div class="tile t-a"><label class="fld"><span class="lead">a =</span><input class="ans" inputmode="decimal" autocomplete="off" placeholder="e.g. 9/2, sqrt(3)" aria-label="Answer, in m/s²"><button type="button" class="btn btn-go" data-act="noop" aria-label="Check answer">${ico("i-go")}</button></label></div>
+         <div class="tile t-w pad">${phead(false)}${ta()}</div></div>` },
+  4: { name: "Hold to peek", def: { mode: "full" },
+       html: () => `<div class="v4" id="vr"><div class="top card"><div class="peek tapx" data-exit>${prob()}</div>${chip().replace('class="chipln"', 'class="chipln tapx" id="hold"').replace("</div>", `<span class="hint">Hold</span></div>`)}</div>
+         <div class="pad">${phead(false)}${ta()}</div>
+         <div class="pop card" aria-hidden="true">${prob()}<div class="pull">${ico("i-down")}Pull down to pin</div></div></div>` },
+  5: { name: "Picture in picture", def: { mode: "full", corner: "br" },
+       html: () => `<div class="v5" id="vr"><div class="pad">${phead(false)}${ta()}</div><div class="ghost" id="ghost"></div>
+         <div class="pip card tapx" id="pip" role="button" aria-label="Problem: tap to go back to it"><div class="mini" aria-hidden="true">${FIG}<p class="code">${CODE}</p></div>
+         <div class="peek" data-exit>${prob()}</div></div></div>` },
+  6: { name: "Givens ribbon", def: { mode: "full" },
+       html: () => `<div class="v6" id="vr"><div class="rib card"><div class="gvs tapx" data-exit><span class="g"><i>m</i>4.0 kg</span><span class="g"><i>θ</i>30°</span><span class="g"><i>μk</i>0.20</span><span class="g find">find <b>a</b></span></div>
+         <div class="peek tapx" data-exit>${prob()}</div><button type="button" class="pull" id="pull" data-act="mode" aria-label="Show the whole question"></button></div>
+         <div class="pad">${phead(false)}${ta()}</div></div>` },
+};
+
+/* ---------- state + memory (per device: localStorage, wrapped in try/catch) ---------- */
+const P = new URLSearchParams(location.search);
+const KEY = "stem.multitask";
+let mem = {};
+try { mem = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { mem = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) {} };
+const S = { v: +(P.get("v")) || mem.v || 2, open: false, kb: 0, text: PAD0, ans: "", hold: false };
+if (!V[S.v]) S.v = 2;
+const shot = P.get("state");
+const cfg = (v = S.v) => (mem[v] = Object.assign({}, V[v].def, mem[v] || {}));
+if (shot) mem = {};   // screenshots: defaults, not this browser's memory
+
+const phone = document.getElementById("phone"), screen = document.getElementById("screen");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = screen) => r.querySelector(s);
+
+function instant() { phone.classList.add("instant"); requestAnimationFrame(() => requestAnimationFrame(() => phone.classList.remove("instant"))); }
+function setKb(on) { if (S.kb === on) return; S.kb = on; instant(); phone.dataset.kb = on; drawBar(); }
+
+/* ---------- open / close: Back closes it (pushState), so does tapping the problem, so does the collapse button ---------- */
+let after = null, quiet = false;
+function open() {
+  if (S.open) return;
+  S.open = true; mem.v = S.v; save();
+  try { if (!(history.state && history.state.mt)) history.pushState({ mt: 1 }, ""); } catch (e) {}
+  render(); if (S.kb || !shot) focusPad();
+}
+function close(target) {   // target: "pad" keeps writing inline, "ans" puts the caret in the answer
+  after = target || "pad";
+  if (history.state && history.state.mt) history.back(); else doClose();
+}
+function doClose() {
+  if (!S.open) return;
+  S.open = false; S.hold = false; render();
+  const t = after === "ans" ? $(".ans") : $(".scr"); after = null;
+  quiet = true;
+  if (t && (S.kb || t.classList.contains("ans"))) t.focus({ preventScroll: true });
+  if (t && t.classList.contains("ans")) t.scrollIntoView({ block: "center" });
+  quiet = false;
+}
+addEventListener("popstate", () => { if (S.open) doClose(); });
+function focusPad() { const t = $(".scr"); if (t) { t.focus({ preventScroll: true }); t.setSelectionRange(t.value.length, t.value.length); t.scrollTop = t.scrollHeight; } }
+
+function setMode(m) {
+  const c = cfg(); if (m === undefined) m = c.mode === "peek" ? "full" : "peek";
+  vt(() => { c.mode = m; save(); sync(); });
+}
+/* every snap and mode change is a 200ms crossfade (View Transition), never an animated layout; reduced motion: instant */
+function vt(fn) { if (!reduce && document.startViewTransition) document.startViewTransition(fn); else fn(); }
+
+/* ---------- render ---------- */
+function render() {
+  if (!S.open) {
+    screen.innerHTML = `<div class="home"><div class="card">${prob()}${qa()}</div>
+      <div class="xrow"><div class="xl">${ico("i-pen")}Scratchpad</div><button type="button" class="btn" data-act="expand" aria-label="Expand the scratchpad" title="Expand">${ico("i-expand")}</button></div>${ta()}</div>`;
+  } else screen.innerHTML = V[S.v].html();
+  screen.querySelectorAll(".scr").forEach(t => { t.value = S.text; t.addEventListener("input", () => S.text = t.value); });
+  screen.querySelectorAll(".ans").forEach(t => { t.value = S.ans; t.addEventListener("input", () => S.ans = t.value); });
+  if (!S.open) { const t = $(".scr"); t.addEventListener("focus", () => { if (!quiet) open(); }); t.addEventListener("click", () => { if (S.kb && !quiet) open(); }); }   // tapping into the pad opens it; our own refocus after a close does not
+  else wire[S.v] && wire[S.v]();
+  sync();
+}
+function sync() {
+  const c = cfg(), vr = $("#vr");
+  if (vr) {
+    vr.dataset.mode = c.mode;
+    vr.classList.toggle("holding", S.hold);
+    if (c.r) vr.style.setProperty("--r", c.r);
+    if (c.corner) vr.dataset.corner = c.corner;
+    const s = $(".seg"); if (s) { s.dataset.on = c.mode; s.setAttribute("aria-label", c.mode === "peek" ? "Hide the problem" : "Show the problem"); }
+    const pl = $("#pull"); if (pl) pl.setAttribute("aria-label", c.mode === "peek" ? "Shrink the question to its givens" : "Show the whole question");
+    if (S.v === 1) placeBubble();
+  }
+  drawBar(); drawNotes();
+}
+const memText = (v) => { const c = cfg(v); return c.mode + (c.r ? " " + (Math.abs(c.r - .5) < .01 ? "½" : "⅓") : "") + (c.corner ? " " + c.corner.toUpperCase() : "") ; };
+
+/* ---------- gestures: one helper; a move under 6px is a tap. Pointerdown is cancelled so the field keeps focus (the keyboard stays up). ---------- */
+function drag(el, h) {
+  el.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    const b = e.target.closest("[data-act]"); if (b && b !== el) return;
+    e.preventDefault();
+    const x0 = e.clientX, y0 = e.clientY, t0 = performance.now(); let moved = false, last = { x: x0, y: y0, t: t0 }, vel = { x: 0, y: 0 };
+    el.setPointerCapture(e.pointerId); h.down && h.down(e);
+    const mv = ev => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!moved && Math.hypot(dx, dy) > 6) { moved = true; h.start && h.start(); }
+      if (moved) { const now = performance.now(), dt = Math.max(1, now - last.t); vel = { x: (ev.clientX - last.x) / dt, y: (ev.clientY - last.y) / dt }; last = { x: ev.clientX, y: ev.clientY, t: now }; h.move && h.move(dx, dy, ev); }
+    };
+    const up = ev => {
+      el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up);
+      if (moved) h.end && h.end(ev.clientX - x0, ev.clientY - y0, vel, ev); else h.tap && h.tap(ev, performance.now() - t0);
+    };
+    el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
+  });
+}
+const H = () => screen.clientHeight;
+
+const wire = {
+  1() {   // window: drag its header up to maximize (full), down to restore (peek); the grab handle taps between them. The bubble snaps to an edge and one of 3 heights.
+    const win = $("#win"), vr = $("#vr"), head = $(".phead", win);
+    let top0;
+    const hd = { start() { top0 = win.offsetTop; vr.classList.add("dragging"); },
+      move(dx, dy) { win.style.top = Math.max(8, top0 + dy) + "px"; },
+      end(dx, dy, v) { vr.classList.remove("dragging"); const c = cfg(), m = dy < -40 || v.y < -.5 ? "full" : dy > 40 || v.y > .5 ? "peek" : c.mode; vt(() => { win.style.top = ""; c.mode = m; save(); sync(); }); },
+      tap() { setMode(); } };
+    drag(head, hd); drag($(".grip", win), hd);
+    const bub = $("#bubble"); let b0;
+    drag(bub, { start() { b0 = { x: bub.offsetLeft, y: bub.offsetTop }; vr.classList.add("dragging"); },
+      move(dx, dy) { bub.style.left = b0.x + dx + "px"; bub.style.top = b0.y + dy + "px"; },
+      end() { vr.classList.remove("dragging"); const c = cfg(), cx = bub.offsetLeft + 24, cy = (bub.offsetTop + 24) / H();
+        c.side = cx < screen.clientWidth / 2 ? "l" : "r"; c.slot = [.22, .5, .78].reduce((a, s, i) => Math.abs(s - cy) < Math.abs([.22, .5, .78][a] - cy) ? i : a, 0); vt(() => { save(); sync(); }); },
+      tap() { close("ans"); } });
+  },
+  2() {   // divider = the pad's header: drag, it snaps to chip / 1/3 / 1/2; the grab handle taps 1/2 -> 1/3 -> chip -> 1/2
+    const vr = $("#vr"), head = $(".phead", vr); let h0;
+    const snaps = () => { const h = H() - 16; return [52, h / 3, h / 2]; };
+    const showLines = () => snaps().forEach((y, i) => { const l = $("#s" + (i + 1)); l.style.top = (8 + y + 4) + "px"; });
+    const hd = {
+      start() { h0 = $(".top", vr).offsetHeight; showLines(); vr.classList.add("dragging"); },
+      move(dx, dy) { const h = Math.max(52, Math.min((H() - 16) * .62, h0 + dy)); vr.style.gridTemplateRows = `${h}px minmax(0,1fr)`; },
+      end(dx, dy, v) {
+        vr.classList.remove("dragging");
+        const s = snaps(), h = Math.max(52, h0 + dy) + v.y * 120; let i = s.reduce((a, y, j) => Math.abs(y - h) < Math.abs(s[a] - h) ? j : a, 0);
+        vt(() => { vr.style.gridTemplateRows = ""; apply(i); });
+      },
+      tap() { const c = cfg(); vt(() => apply(c.mode === "full" ? 2 : c.r > .4 ? 1 : 0)); } };
+    const apply = (i) => { const c = cfg(); if (i === 0) c.mode = "full"; else { c.mode = "peek"; c.r = i === 1 ? 1 / 3 : .5; } save(); sync(); };
+    drag(head, hd); drag($(".grip", vr), hd);
+  },
+  3() {   // swipe the pad tile's header sideways: tiled <-> one tile
+    drag($(".t-w .phead"), { end(dx) { if (Math.abs(dx) > 50) setMode(); } });
+    $("[data-act=anstab]").addEventListener("click", () => { setMode("peek"); requestAnimationFrame(() => $(".t-a .ans").focus()); });
+  },
+  4() {   // hold the chip: the card drops down while held; pull down while holding: pinned (peek); a quick tap: back to the problem
+    const el = $("#hold"); let timer;
+    drag(el, {
+      down() { timer = setTimeout(() => { S.hold = true; sync(); }, 220); },
+      start() {}, move(dx, dy) { if (!S.hold && Math.abs(dy) > 10) { clearTimeout(timer); S.hold = true; sync(); } if (S.hold && dy > 60) { clearTimeout(timer); S.hold = false; setMode("peek"); } },
+      end() { clearTimeout(timer); if (S.hold) { S.hold = false; sync(); } },
+      tap(e, dt) { clearTimeout(timer); if (S.hold) { S.hold = false; sync(); } else close("ans"); } });
+  },
+  5() {   // PiP: drag it; it snaps to the nearest corner, or docks at the top (peek) when dropped on the top edge; a tap goes back to the problem
+    const vr = $("#vr"), pip = $("#pip"), gh = $("#ghost"); let p0;
+    const target = (x, y) => { const W = screen.clientWidth; if (y < 70) return "dock"; return (y < H() / 2 ? "t" : "b") + (x < W / 2 ? "l" : "r"); };
+    const ghost = (t) => { const W = screen.clientWidth, g = gh.style;
+      if (t === "dock") Object.assign(g, { left: "8px", top: "8px", width: W - 16 + "px", height: H() * .4 + "px" });
+      else Object.assign(g, { left: (t[1] === "l" ? 8 : W - 160) + "px", top: (t[0] === "t" ? 64 : H() - 128) + "px", width: "152px", height: "116px" }); };
+    drag(pip, {
+      down(e) { if (cfg().mode === "peek") return; },
+      start() { if (cfg().mode === "peek") return; p0 = { x: pip.offsetLeft, y: pip.offsetTop }; vr.classList.add("dragging"); },
+      move(dx, dy) { if (!p0) return; pip.style.left = p0.x + dx + "px"; pip.style.top = p0.y + dy + "px"; ghost(target(p0.x + dx + 76, p0.y + dy)); },
+      end(dx, dy) { if (!p0) return; vr.classList.remove("dragging"); const t = target(p0.x + dx + 76, p0.y + dy); p0 = null;
+        const c = cfg(); vt(() => { pip.style.left = pip.style.top = ""; if (t === "dock") c.mode = "peek"; else { c.corner = t; c.mode = "full"; } save(); sync(); }); },
+      tap() { if (cfg().mode === "full") close("ans"); } });
+    pip.addEventListener("pointerdown", e => { if (cfg().mode === "peek") e.stopImmediatePropagation(); }, true);
+  },
+  6() {   // pull the ribbon's handle down: whole question (peek); push it up: givens only (full); tap the handle: toggle
+    const pl = $("#pull");
+    drag(pl, { end(dx, dy) { if (dy > 30) setMode("peek"); else if (dy < -30) setMode("full"); }, tap() { setMode(); } });
+  },
+};
+function placeBubble() {
+  const c = cfg(), b = $("#bubble"); if (!b) return;
+  b.style.left = c.side === "l" ? "8px" : `calc(100% - var(--btn) - 8px)`; b.style.top = `calc(${[22, 50, 78][c.slot]}% - var(--btn) / 2)`;
+}
+
+/* buttons never take focus from the field (that keeps the phone keyboard up), then act on click */
+screen.addEventListener("pointerdown", e => { if (e.target.closest("button[data-act], [data-exit]") && !e.target.closest(".peek")) e.preventDefault(); });
+screen.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]");
+  if (b) {
+    const a = b.dataset.act;
+    if (a === "mode") { if (b.id !== "pull") setMode(); }
+    else if (a === "collapse") close("pad");
+    else if (a === "expand") open();
+    else if (a === "exit") close("ans");
+    return;
+  }
+  if (e.target.closest("[data-exit]") && S.open) close("ans");
+});
+screen.addEventListener("focusin", e => { if (e.target.matches("textarea, input")) setKb(1); });
+
+/* ---------- mock chrome: variant chips, keyboard, Back ---------- */
+function drawBar() {
+  const bar = document.getElementById("mbar");
+  bar.innerHTML = `<div class="mlbl"><b>${S.v} · ${V[S.v].name}</b><span>saved: ${memText(S.v)}</span></div>`
+    + [1, 2, 3, 4, 5, 6].map(n => `<button type="button" class="mchip" data-v="${n}" aria-pressed="${n === S.v}" aria-label="Variant ${n}: ${V[n].name}">${n}</button>`).join("")
+    + `<button type="button" class="mchip" data-m="kb" aria-pressed="${!!S.kb}" aria-label="Keyboard">${ico("i-kb")}</button>`
+    + `<button type="button" class="mchip" data-m="back" aria-label="Phone Back gesture">${ico("i-back")}</button>`;
+}
+document.getElementById("mbar").addEventListener("pointerdown", e => { if (e.target.closest("button")) e.preventDefault(); });
+document.getElementById("mbar").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.v) { S.v = +b.dataset.v; mem.v = S.v; save(); S.hold = false; render(); if (S.open && S.kb) focusPad(); }
+  else if (b.dataset.m === "kb") { if (S.kb) { setKb(0); document.activeElement.blur(); } else { setKb(1); const t = $(".scr"); quiet = true; t && t.focus(); quiet = false; } }
+  else if (b.dataset.m === "back") history.back();
+});
+const KEYS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+document.getElementById("kb").innerHTML = KEYS.map(r => `<div class="row">${[...r].map(k => `<button type="button" data-k="${k}">${k}</button>`).join("")}</div>`).join("")
+  + `<div class="row"><button type="button" class="w" data-k="123">123</button><button type="button" class="sp" data-k=" " aria-label="space"></button><button type="button" class="w" data-k="\n">return</button><button type="button" class="w" data-k="hide" aria-label="Hide keyboard">${ico("i-down")}</button></div>`;
+document.getElementById("kb").addEventListener("pointerdown", e => e.preventDefault());
+document.getElementById("kb").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const k = b.dataset.k, f = document.activeElement;
+  if (k === "hide") { setKb(0); f && f.blur(); return; }   // keyboard down never closes the pad
+  if (k === "123" || !f || !f.matches("textarea, input")) return;
+  f.setRangeText(k, f.selectionStart, f.selectionEnd, "end"); f.dispatchEvent(new Event("input"));
+});
+function drawNotes() {
+  const n = document.getElementById("notes");
+  n.innerHTML = `<h1>Multitask variants</h1><ol>${[1, 2, 3, 4, 5, 6].map(i => `<li><b>${V[i].name}</b><br>${["peek kb-down", "full kb-down", "peek", "full"].map((s, j) => `<button type="button" data-go="${i}:${["a", "b", "peek", "full"][j]}">${s}</button>`).join("")}</li>`).join("")}</ol>
+    <p>Tap into the scratchpad to open. Exit: Back (◀ in the strip), tap the problem, or the collapse button (top right of the pad). Keyboard down never closes it.</p>
+    <p class="mem">remembered on this device:\n${[1, 2, 3, 4, 5, 6].map(i => i + " " + memText(i)).join("\n")}</p>
+    <p><button type="button" data-go="tab">tablet landscape</button><button type="button" data-go="desk:1">desktop 1</button><button type="button" data-go="desk:2">desktop 2</button><button type="button" data-go="desk:3">desktop 3</button></p>`;
+}
+document.getElementById("notes").addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"); if (!g) return;
+  const [v, s] = g.dataset.go.split(":");
+  location.search = v === "tab" ? "?v=tab" : v === "desk" ? `?v=desk&opt=${s}` : `?v=${v}&state=${s}`;
+});
+
+/* ---------- tablet landscape + desktop ---------- */
+function bigView(kind, opt) {
+  document.body.classList.add("wide");
+  const big = document.getElementById("big"), K = kind === "tab" ? KEY + ".tab" : KEY + ".desk";
+  let m = {}; try { m = JSON.parse(localStorage.getItem(K) || "{}") || {}; } catch (e) {}
+  if (P.get("state")) m = {};
+  const st = { r: m.r || .5, lay: m.lay || (opt === 2 ? "wide2" : "half") };
+  if (opt === 2 && !m.r) st.r = 1 / 3;
+  const put = () => { try { localStorage.setItem(K, JSON.stringify({ r: st.r, lay: st.lay })); } catch (e) {} };
+  const SN = [1 / 3, .5, 2 / 3];
+  const btns = kind === "tab" ? "" : opt === 1 ? `<button type="button" class="btn" data-a="stack" aria-label="Back to one column" title="One column">${ico("i-collapse")}</button>`
+    : opt === 2 ? `<button type="button" class="btn" data-a="lay" aria-label="Layouts" aria-expanded="true" title="Layouts">${ico("i-layout")}</button>`
+    : `<button type="button" class="btn" data-a="stack" aria-label="One column (Ctrl+\\)" title="One column (Ctrl+\\)">${ico("i-collapse")}</button>`;
+  const fly = opt === 2 ? `<div class="flyout" id="fly">${[["stk", "One column"], ["half", "Side by side"], ["wide2", "Pad wide"]].map(([k, l]) => `<div><button type="button" class="lay ${k}" data-l="${k}" aria-pressed="${st.lay === k}" aria-label="${l}">${k === "stk" ? "<i></i><i class=w></i>" : "<i></i><i class=w></i>"}</button><div class="laylbl">${l}</div></div>`).join("")}</div>` : "";
+  big.innerHTML = `<div class="tbar"><label class="fld"><input value="${CODE}" aria-label="Problem code"></label><span class="sp"></span><span class="mocktag">${kind === "tab" ? "Tablet landscape · 1180" : "Desktop option " + opt + " · " + ["", "Side pane on demand", "Snap layouts", "Keyboard tiling"][opt]}</span><span class="sp"></span>
+      <button type="button" class="btn" aria-label="Previous">${ico("i-prev")}</button><button type="button" class="btn" aria-label="Next">${ico("i-next")}</button></div>
+    <div class="split${opt === 3 ? " tiled" : ""}" id="split" style="--r:${st.r}">
+      <section class="left"><div class="card">${prob()}${qa()}</div></section>
+      <div class="sash" id="sash" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize: problem | scratchpad" aria-valuemin="33" aria-valuemax="67">${SN.map(() => `<span class="tick"></span>`).join("")}</div>
+      <section class="right"><div class="pad"><div class="phead"><div class="xl">${ico("i-pen")}Scratchpad</div><div class="btns">${btns}</div>${fly}</div>${ta()}</div></section>
+    </div>${kind === "desk" && opt === 3 ? `<div class="keys"><span><kbd>Ctrl</kbd> <kbd>\\</kbd> side by side / one column</span><span><kbd>Ctrl</kbd> <kbd>[</kbd> <kbd>]</kbd> resize ⅓ ½ ⅔</span><span><kbd>Alt</kbd> <kbd>1</kbd> <kbd>2</kbd> focus answer / pad</span><span><kbd>Esc</kbd> back to the pad</span></div>` : ""}
+`;
+  big.querySelector(".scr").value = PAD0;
+  const sp = document.getElementById("split"), sash = document.getElementById("sash");
+  const ticks = () => { const W = sp.clientWidth - 24; sash.querySelectorAll(".tick").forEach((t, i) => t.style.left = (SN[i] * W - st.r * W + 12) + "px"); };
+  const set = (r) => { st.r = r; sp.style.setProperty("--r", r); sash.setAttribute("aria-valuenow", Math.round(r * 100)); put(); };
+  set(st.r);
+  if (opt === 2 && st.lay === "stk") sp.classList.add("stack");
+  let r0;
+  drag(sash, { start() { r0 = st.r; ticks(); sp.classList.add("dragging"); },
+    move(dx) { sp.style.setProperty("--r", Math.min(.7, Math.max(.28, r0 + dx / (sp.clientWidth - 24)))); },
+    end(dx, dy, v) { sp.classList.remove("dragging"); const r = r0 + dx / (sp.clientWidth - 24) + v.x * .1; vt(() => set(SN.reduce((a, s) => Math.abs(s - r) < Math.abs(a - r) ? s : a))); } });
+  sash.addEventListener("dblclick", () => set(.5));
+  sash.addEventListener("keydown", e => { const i = SN.indexOf(SN.reduce((a, s) => Math.abs(s - st.r) < Math.abs(a - st.r) ? s : a));
+    if (e.key === "ArrowLeft" && i > 0) set(SN[i - 1]); if (e.key === "ArrowRight" && i < 2) set(SN[i + 1]); if (e.key === "Home") set(SN[0]); if (e.key === "End") set(SN[2]); });
+  big.addEventListener("click", e => {
+    const a = e.target.closest("[data-a]"), l = e.target.closest("[data-l]");
+    if (a && a.dataset.a === "stack") sp.classList.toggle("stack");
+    if (a && a.dataset.a === "lay") { const f = document.getElementById("fly"); f.hidden = !f.hidden; a.setAttribute("aria-expanded", !f.hidden); }
+    if (l) { st.lay = l.dataset.l; put(); big.querySelectorAll(".lay").forEach(x => x.setAttribute("aria-pressed", x === l)); sp.classList.toggle("stack", st.lay === "stk"); if (st.lay !== "stk") set(st.lay === "half" ? .5 : 1 / 3); }
+  });
+  if (kind === "desk" && opt === 3) addEventListener("keydown", e => {
+    if (e.altKey && e.key === "1") { big.querySelector(".ans").focus(); e.preventDefault(); }   // Ctrl+1/2 switch browser tabs: Alt instead
+    if (e.altKey && e.key === "2") { big.querySelector(".scr").focus(); e.preventDefault(); }
+    if (e.key === "Escape") big.querySelector(".scr").focus();
+    if (!e.ctrlKey) return;
+    const i = SN.indexOf(SN.reduce((a, s) => Math.abs(s - st.r) < Math.abs(a - st.r) ? s : a));
+    if (e.key === "\\") { sp.classList.toggle("stack"); e.preventDefault(); }
+    if (e.key === "[" && i > 0) { set(SN[i - 1]); e.preventDefault(); }
+    if (e.key === "]" && i < 2) { set(SN[i + 1]); e.preventDefault(); }
+  });
+  if (opt === 3) big.querySelector(".scr").focus({ preventScroll: true });
+}
+
+/* ---------- boot: ?v=N&state=home|a|b|peek|full|hold, ?v=tab, ?v=desk&opt=N ---------- */
+if (P.get("v") === "tab" || P.get("v") === "desk") bigView(P.get("v"), +(P.get("opt")) || 1);
+else {
+  instant();
+  const st = shot || "home", c = cfg();
+  if (["a", "peek"].includes(st)) c.mode = "peek";
+  if (["b", "full", "hold"].includes(st)) c.mode = "full";
+  if (["peek", "full", "hold"].includes(st)) { S.kb = 1; phone.dataset.kb = 1; }
+  if (st !== "home") { S.open = true; try { history.pushState({ mt: 1 }, ""); } catch (e) {} }
+  render();
+  if (S.open && S.kb) focusPad();
+  if (st === "hold" && S.v === 4) { S.hold = true; sync(); }
+}
+</script>
+</body>
+</html>
