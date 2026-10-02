@@ -108,6 +108,10 @@ Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-fa
 - Double every backslash: `"\\frac{1}{2}"`, `"\\vec F"`, `"30^\\circ"`.
 - A TeX line break `\\` becomes `"\\\\"`.
 - A literal dollar sign is `"\\$"`.
+  - **Money eats text.** Any two bare `$` in one string pair up as inline math, money included: `"Paid $1 liars ... $20 liars"` renders the words between them as math, and both `$` vanish.
+  - Fix: write every money `$` as `\\$` in the JSON: `"Paid \\$1 liars ... \\$20 liars"`.
+  - Check before committing: `grep -nE '[^\\]\$[0-9][0-9.,]* +[A-Za-z]' problems.json banks/*.json` (a `$`, a number, a space, a word). Every match is a bare money sign; math like `$13$` is skipped.
+  - Known, left as is: `banks/BANK_PSY6.json` (the Festinger & Carlsmith choices).
 - Derivatives use dot notation: `\\dot{y}` (project rule).
 
 ## math.js (answers and graph expressions)
