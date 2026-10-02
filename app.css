@@ -223,7 +223,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
-  display: flex; align-items: center; height: var(--fld); padding-left: var(--s3);
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: var(--btn);   /* the arrow's room is always reserved */
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
@@ -239,7 +239,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.done input { color: var(--ok); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
-.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.ok) { opacity: 0.5; }   /* solved MC: nothing dims */
+.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay */
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--ok); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
@@ -260,8 +260,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
-.mparts .ff { grid-area: bx; position: relative; padding-right: var(--btn); }   /* the arrow's room is always reserved: nothing jumps when it appears */
-.mparts .ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders) */
+.mparts .ff { grid-area: bx; }
+.ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders): nothing jumps when it appears */
+/* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
+.ff .vk { position: absolute; right: 0; top: 0; width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk .ico { width: var(--ico); height: var(--ico); }
+.ff .vk[data-v="i-ok"] { color: var(--ok); }
+.ff .vk[data-v="i-x"] { color: var(--bad); }
+.ff .vk[data-v="i-lock"] { color: var(--muted); }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
 @media (min-width: 40rem) {
@@ -274,7 +280,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.bad { border-color: var(--bad); border-style: dashed; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
-.ff.shut:not(.ok) { opacity: 0.5; }
+.ff.shut { opacity: 0.5; }   /* right ones too: closed = looks disabled */
 .ff.shut:hover { border-color: var(--edge); }
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
@@ -435,3 +441,13 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- toast (app.js toast()): plain default; the picked variant (design/TOAST.md) replaces this one block ---------- */
+#toast {
+  position: fixed; z-index: 50; top: calc(env(safe-area-inset-top, 0px) + var(--s3)); left: 50%; width: max-content; max-width: min(calc(100vw - 32px), 28rem);
+  padding: var(--s2) var(--s4); background: var(--sheet); color: var(--ink); border: 2px solid var(--mark); border-radius: 8px;
+  box-shadow: var(--shadow-3); font-size: var(--t-sm); line-height: 1.4; text-align: center; cursor: pointer;
+  opacity: 0; visibility: hidden; transform: translate(-50%, -8px); transition: opacity .2s ease-out, transform .2s ease-out, visibility 0s linear .2s;
+}
+#toast.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .2s ease-out, transform .2s ease-out; }
+@media (prefers-reduced-motion: reduce) { #toast, #toast.on { transform: translate(-50%, 0); } }
