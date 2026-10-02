@@ -157,7 +157,13 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await page.locator("#ff.bad").count() === 1 && await go.isHidden(), "bad box, the x holds the arrow's slot");
       const vk = await page.locator("#ff .vk").boundingBox();
       assert.ok(Math.abs(vk.x - g.x) < 1 && Math.abs(vk.y - g.y) < 1, "the x is where the arrow was");
-      assert.equal(await page.locator("#toast.on").textContent(), "One more try, so choose wisely. 😈");
+      assert.equal(await page.locator("#toast.on").textContent(), "One more try, so\u00A0choose\u00A0wisely.");
+      {   // take 5f: hangs under the wrong box, page paper + --line hairline, no yellow
+        const tb = await page.locator("#toast.on").boundingBox(), fb = await page.locator("#ff").boundingBox();
+        assert.ok(tb.y >= fb.y + fb.height && tb.y - (fb.y + fb.height) < 24, "toast under the wrong box");
+        const st = await page.$eval("#toast", e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.fontWeight].join("|"); });
+        assert.equal(st, "rgb(21, 29, 43)|rgb(52, 68, 93)|400");
+      }
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");
       assert.equal(await page.locator("#ff .vk").count(), 0, "typing clears the x");

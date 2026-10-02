@@ -442,12 +442,25 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-/* ---------- toast (app.js toast()): plain default; the picked variant (design/TOAST.md) replaces this one block ---------- */
+/* ---------- toast (app.js toast(); design/TOAST.md take 5f "page note", Tony Oct 2) ----------
+   The page's own paper, the part divider's 1px --line hairline, --shadow-3 to lift it; text in the part prompt's style (400, --t-md).
+   No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
+   exactly on the struck-out choice, no caret. 200ms ease-out, 8px; reduced motion = fade only (app.css turns transitions off, so
+   these are animations). */
 #toast {
-  position: fixed; z-index: 50; top: calc(env(safe-area-inset-top, 0px) + var(--s3)); left: 50%; width: max-content; max-width: min(calc(100vw - 32px), 28rem);
-  padding: var(--s2) var(--s4); background: var(--sheet); color: var(--ink); border: 2px solid var(--mark); border-radius: 8px;
-  box-shadow: var(--shadow-3); font-size: var(--t-sm); line-height: 1.4; text-align: center; cursor: pointer;
-  opacity: 0; visibility: hidden; transform: translate(-50%, -8px); transition: opacity .2s ease-out, transform .2s ease-out, visibility 0s linear .2s;
+  position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
+  display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
+  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3);
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
-#toast.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity .2s ease-out, transform .2s ease-out; }
-@media (prefers-reduced-motion: reduce) { #toast, #toast.on { transform: translate(-50%, 0); } }
+#toast.on { visibility: visible; animation: toast-in .2s ease-out both; }
+#toast::before {
+  content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
+}
+#toast.row { max-width: none; padding: var(--s1) var(--s3); text-align: center; }
+#toast.row::before { display: none; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear both; } }

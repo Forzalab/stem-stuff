@@ -10,16 +10,41 @@ const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
-/* a small calm note at the top centre: 2.5 s, or a tap. One block of CSS (app.css "toast"), so another look can replace it */
-let toastT = 0;
-function toast(text) {
-  const t = $("#toast"); if (!t) return;
-  clearTimeout(toastT);
-  t.textContent = text; t.classList.add("on");
-  toastT = setTimeout(() => t.classList.remove("on"), 2500);
+/* the "one more try" note (design/TOAST.md, take 5f): hangs under the wrong answer box with a caret at its verdict mark; on MC it
+   lies on the struck-out choice (a dead control, so no live choice is covered). Page type, no colour of its own. 2.5 s, paused while
+   the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
+let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
+function placeToast() {
+  const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
+  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt");
+  const m = (toastAt.querySelector(".vk, .badge") || toastAt).getBoundingClientRect(), mx = m.left + m.width / 2;
+  const gut = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gut")) || 20;
+  t.classList.toggle("row", row);
+  if (row) { t.style.width = b.width + "px"; t.style.minHeight = b.height + "px"; t.style.left = b.left + "px"; t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return; }
+  t.style.width = ""; t.style.minHeight = "";
+  const w = t.offsetWidth;
+  let x = mx > b.left + b.width / 2 ? b.right - w : b.left;
+  x = Math.min(Math.max(gut, x), innerWidth - gut - w);
+  t.style.left = x + "px"; t.style.top = (b.bottom + 12) + "px";
+  t.style.setProperty("--px", Math.max(18, Math.min(w - 18, mx - x)) + "px");
 }
-$("#toast")?.addEventListener("click", e => { clearTimeout(toastT); e.currentTarget.classList.remove("on"); });
-const AGAIN = "One more try, so choose wisely. 😈";
+function hideToast() { clearTimeout(toastT); toastLeft = 0; toastAt = null; $("#toast")?.classList.remove("on"); }
+function armToast(ms) { clearTimeout(toastT); toastLeft = ms; toastSince = Date.now(); toastT = setTimeout(hideToast, ms); }
+function holdToast() { if (toastLeft) { clearTimeout(toastT); toastLeft = Math.max(600, toastLeft - (Date.now() - toastSince)); } }
+function goToast() { if (toastLeft && toastAt) armToast(toastLeft); }
+function toast(text, at) {
+  const t = $("#toast"); if (!t || !at) return;
+  t.textContent = text; toastAt = at; t.classList.add("on");
+  placeToast(); armToast(2500);
+}
+$("#toast")?.addEventListener("click", hideToast);
+$("#toast")?.addEventListener("pointerenter", holdToast);
+$("#toast")?.addEventListener("pointerleave", goToast);
+document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
+addEventListener("keydown", e => { if (e.key === "Escape" && toastAt) hideToast(); });
+addEventListener("scroll", placeToast, { passive: true });
+addEventListener("resize", placeToast);
+const AGAIN = "One more try, so\u00A0choose\u00A0wisely.";   // no-break spaces keep "choose wisely." together
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -503,7 +528,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish(); else toast(AGAIN);
+    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o);
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -574,7 +599,7 @@ async function submitFF() {
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") toast(AGAIN);
+    else if (r.verdict === "wrong") toast(AGAIN, $("#ff"));
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -625,7 +650,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
-    else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN); }
+    else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN, partEls(i).box); }
     if (mine.parts.every(x => x.shut)) settle();
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
