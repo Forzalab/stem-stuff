@@ -2,6 +2,7 @@
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
+import { suggest, remember, isBank } from "./suggest.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
@@ -209,9 +210,57 @@ function normalize(raw) {
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
-codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); });
-function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); }   // a code landing in the box: the bar shows
+codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); sugShow(); });
+function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
+/* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
+   uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (design/NAV.md).
+   A combobox: ArrowDown / ArrowUp move, Enter opens the marked one (else the typed code), Escape closes, a tap opens. */
+const sugEl = $("#codeSug");
+let sugAt = -1, sugList = [];
+const recent = v => {
+  try { if (v === undefined) return JSON.parse(localStorage.getItem("stem-codes") || "[]"); localStorage.setItem("stem-codes", JSON.stringify(v)); } catch { /* blocked */ }
+  return [];
+};
+const remembered = code => recent(remember(recent(), code));
+function knownCodes() {
+  const off = window.stemOffline, live = bank ? [bank.code, ...bank.codes] : [];
+  return [...recent(), ...live, ...(off && off.codes ? off.codes() : [])];
+}
+function sugShow() {
+  sugList = suggest(codeIn.value, knownCodes());
+  sugAt = -1;
+  sugEl.innerHTML = sugList.map((c, i) => `<li role="option" id="sug${i}" aria-selected="false" data-code="${esc(c)}">${icon(isBank(c) ? "i-list" : "i-doc")}<span>${esc(c)}</span></li>`).join("");
+  sugEl.hidden = !sugList.length;
+  codeIn.setAttribute("aria-expanded", String(!!sugList.length));
+  codeIn.removeAttribute("aria-activedescendant");
+}
+function sugHide() {
+  sugList = []; sugAt = -1; sugEl.hidden = true; sugEl.innerHTML = "";
+  codeIn.setAttribute("aria-expanded", "false"); codeIn.removeAttribute("aria-activedescendant");
+}
+function sugMark(i) {
+  sugAt = i;
+  [...sugEl.children].forEach((li, k) => li.setAttribute("aria-selected", String(k === i)));
+  if (i < 0) { codeIn.removeAttribute("aria-activedescendant"); return; }
+  codeIn.setAttribute("aria-activedescendant", "sug" + i);
+  sugEl.children[i].scrollIntoView({ block: "nearest" });
+}
+function sugPick(code) { codeIn.value = code; syncCode(); sugHide(); $("#entry").requestSubmit(); }
+codeIn.addEventListener("keydown", e => {
+  if (e.isComposing) return;
+  if (e.key === "Escape" && !sugEl.hidden) { e.preventDefault(); sugHide(); return; }
+  if ((e.key === "ArrowDown" || e.key === "ArrowUp") && sugList.length) {
+    e.preventDefault();
+    const n = sugList.length, d = e.key === "ArrowDown" ? 1 : -1;
+    sugMark(sugAt < 0 ? (d > 0 ? 0 : n - 1) : sugAt + d >= n || sugAt + d < 0 ? -1 : sugAt + d);   // past either end: back to the typed text
+    return;
+  }
+  if (e.key === "Enter" && sugAt >= 0) { e.preventDefault(); sugPick(sugList[sugAt]); }
+});
+sugEl.addEventListener("pointerdown", e => e.preventDefault());   // keep the focus (and the phone keyboard) in the box
+sugEl.addEventListener("click", e => { const li = e.target.closest("li[data-code]"); if (li) sugPick(li.dataset.code); });
+codeIn.addEventListener("blur", () => sugHide());
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -229,6 +278,7 @@ codePaste.addEventListener("click", async () => {
 });
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
+  sugHide();
   const n = normalize(codeIn.value);
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
@@ -283,6 +333,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `No bank ${code}.`; return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
   src(b.code);
+  remembered(b.code);
   bankChanged();
   if (!go) return true;
   const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
@@ -310,6 +361,7 @@ async function load(code) {
   }
   $("#entryMsg").textContent = "";
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
+  remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
@@ -958,6 +1010,10 @@ function layoutDock() {
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
   root.classList.toggle("bar-mini", bottom && !!S && !freeze.hidden);
+  /* start page: no problem open. The entry stands alone, centred under its title (app.css html.start); on phones in the area
+     above the keyboard, so --kb-top follows the visual viewport here too (layoutFreeze owns it once a problem is open) */
+  root.classList.toggle("start", !S);
+  if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
   root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
 if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });

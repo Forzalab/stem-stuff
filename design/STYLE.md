@@ -64,6 +64,7 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 | `--t-md` | 18 | problem text, choices, typed answers, toast |
 | `--t-sm` | 16 | labels, how line, scratchpad, list button, error line |
 | `--t-xs` | 14 | status only (autosave) |
+| `--t-lg` | 28 (desktop 36) | the start page's title only |
 
   Figure labels are fixed at 16 / 14 px (DESIGN-LANGUAGE.md). Line height `--lh` 1.55 for prose, 1.4 for controls, 1 for single-line inputs.
 - Weights: 400 and 700 only. Bold means "a name or a state": verdict words, labels, list numbers, the code. Never bold a word inside a sentence for emphasis.
@@ -80,7 +81,7 @@ Scale: `--s1` 4, `--s2` 8, `--s3` 12, `--s4` 16, `--s5` 24, `--s6` 32, `--s7` 48
 
 ### 2.4 Sizes
 
-`--btn` 48px (every button; desktop 50 to 56), `--fld` = `--btn` + 4 (fields that hold a button flush), `--ico` 24px (icon in a button), `--col` 52rem (column). Tap targets are at least 44px, normally 48.
+`--btn` 48px (every button; desktop 50 to 56), `--fld` = `--btn` + 4 (answer fields that hold a button flush; the code box is `--btn` tall, like the bar buttons beside it), `--ico` 24px (icon in a button), `--col` 52rem (column). Tap targets are at least 44px, normally 48.
 
 ### 2.5 Radius
 
@@ -90,7 +91,8 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 |---|---|
 | 10px | surfaces that hold content: problem card, list card, Cluck, toast, swap card |
 | 8px | controls: `.btn`, fields (`.ff`, code box, scratchpad), choices, list rows |
-| 6px | something inside a control (the swap toggle's pill) |
+| 6px | something inside a control (the swap toggle's pill, Paste / Go inside the code box, a suggestion row) |
+| pill / 50% | the start page's field and the round buttons inside it (nested: outer radius minus the 4px gap) |
 | 4px / 3px | inline code / figure label knockout |
 | 50% | choice badges only |
 
@@ -110,6 +112,8 @@ A shadow means "this floats over content". Allowed only on:
 | freeze strip, while stuck | `--shadow-3` |
 | phone dock (fixed, bottom) | the upward version of `--shadow-3` |
 | toast | `--shadow-3` |
+| code suggestions (floats over the page) | `--shadow-3` |
+| start page field | `--shadow-1` at rest, `--shadow-3` on hover / focus (Tony: "popping, like Google"; the only thing on that page) |
 
 Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 
@@ -137,6 +141,18 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 - Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-icon switch.
 - Do: one `.btn-go` visible per field. Put the arrow flush inside its field.
 - Don't: text-only buttons, a "→" after a word, a second filled color, round or pill buttons.
+
+### Code box (`.code-box`) and suggestions
+
+- Anatomy: in the bar, the same height (`--btn`), surface (`--sheet`), 2px `--edge` border and 8px radius as the buttons beside it, so tops and bottoms line up. Text: the bar's label text (`--t-sm` bold, Atkinson Hyperlegible, uppercase because codes are). Paste (empty box) or the Go arrow (typed) sits flush inside the border: `--btn` minus 4px, 6px radius. Paste is an icon button (transparent, `--muted` icon, `--raised` + `--ink` on hover); Go is the one filled control.
+- Focus: one ring. The border turns `--focus` and a 1px inset makes it 3px. No outline around it.
+- Suggestions (`suggest.mjs`): while typing, the codes this browser knows (opened here before, newest first; the live bank and its list; an uploaded file) that contain the typed text. **Banks first, then questions**, order kept inside each group. A `--sheet` card, 10px, `--shadow-3`, floating under the bar (above it when the bar is the phone dock). Rows `--btn` tall: `i-list` for a bank, `i-doc` for a question, the code in `--t-sm` bold; hover / marked row `--raised`. Combobox keys: ArrowDown / ArrowUp, Enter, Escape. The browser's own form history is off (no `name`).
+
+### Start page (`html.start`: no problem open)
+
+- Like a search home page: one line of title, "Upload or type code to start." (`--t-lg` bold `--ink`, centred), over one wide field (up to 40rem), both centred on the page. On phones the area is the part above the keyboard (`--kb-top` / `--kb-bottom`), so the field never hides under it.
+- The field: a pill, `--sheet`, 2px `--edge`, `--shadow-1`; hover `--muted` border + `--shadow-3`; focus `--focus` border (3px, as the code box) + `--shadow-3`. Upload (left) and Paste / Go (right) are round 48px buttons inside it, transparent until hovered; Go stays the one filled control.
+- Once a problem opens, the bar goes back to its place. Nothing animates in on load; hover and focus transitions only, off with reduced motion.
 
 ### Answer box (`.ff`)
 
@@ -283,7 +299,7 @@ Line numbers are from the working tree on 2026-10-01 (other agents are editing `
 
 | # | where | what | fix |
 |---|---|---|---|
-| 1 | `app.css:48`, `app.css:213` | Code box and answer box show a `--focus` border **and** a 3px outline: two rings. The scratchpad (`app.css:313`) has one ring, by Tony's rule. | Fields: `--focus` border only, no outline. Buttons keep the outline. |
+| 1 | `app.css:48`, `app.css:213` | (Code box: fixed Oct 2, one ring.) Code box and answer box show a `--focus` border **and** a 3px outline: two rings. The scratchpad (`app.css:313`) has one ring, by Tony's rule. | Fields: `--focus` border only, no outline. Buttons keep the outline. |
 | 2 | `design/explain-box.css:30` | Scratchpad focus sets the outline that `app.css:313` then removes. | Drop the outline in explain-box.css. |
 | 3 | `app.css:172`, `app.css:175` | MC choice boundary is `--line` (1.51:1, fails 3:1); hover goes to `--edge`. Buttons and fields use `--edge` / `--muted`. | Choice idle `--edge`, hover `--muted`, like `.ff`. Keep `--line` only for dividers. |
 | 4 | `design/explain-box.css:22` | Scratchpad radius 6px; every other field is 8px. | 8px. |
@@ -302,4 +318,4 @@ Line numbers are from the working tree on 2026-10-01 (other agents are editing `
 | 17 | `app.js:22` | The toast uses a color emoji (😈). | Draw `i-imp` in the sprite; render it in `--mark` after the text (Iconography). |
 | 18 | `app.js:33-34` + `app.js:423, 463, 514` | A wrong answer says "Not quite. One more try." in the verdict **and** "One more try, so choose wisely." in the toast: the same fact twice. | Done (Oct 1): the verdict words are gone; the icon in the arrow slot and the toast stay (AUDIT.md "Kept on purpose"). |
 | 19 | `design/DESIGN-LANGUAGE.md:90`, `design/specimen.html:22-23, 58` | Refer to a site `--blue` #3a67d8 and `#fff` on it. The app has no `--blue`; the primary fill is `--c1` with `--field` ink. | Remove `--blue` from both; specimen buttons use `.btn` / `--c1`. |
-| 20 | `index.html:123` | Paste is a filled `.btn-go` in the code box. It alternates with the Go arrow, so only one is visible: allowed. | No change; keep them mutually exclusive (rule: one filled control per field). |
+| 20 | `index.html:123` | Paste was a filled `.btn-go` in the code box (Tony: a light-blue slab, unlike every other button). | Fixed Oct 2: Paste is an outlined-family icon button; only the Go arrow is filled, and the two stay mutually exclusive. |

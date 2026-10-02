@@ -9,6 +9,7 @@
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
      --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
   --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
+  --t-lg: 1.75rem;   /* one display size: the start page's title only (STYLE.md 2.2) */
   /* spacing scale (px): 4 8 12 16 24 32 48 */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
@@ -39,20 +40,86 @@ button:disabled { cursor: default; }
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
-.entry { display: flex; gap: var(--s2); }
+.entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
+/* code box (design/STYLE.md "Code box"): the bar's language. As tall as the buttons beside it (--btn, tops and bottoms line up),
+   the buttons' --sheet surface, 2px --edge, 8px; its text is the bar's label text (--t-sm bold, like the list button).
+   Paste / Go sit flush inside the border as icon buttons (--btn minus the border, 6px: "inside a control"). */
 .code-box {
-  flex: 1 1 auto; min-width: 0; height: var(--fld); display: flex; align-items: center;
-  background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  flex: 1 1 auto; min-width: 0; height: var(--btn); display: flex; align-items: center;
+  background: var(--sheet); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  transition: background-color .12s ease-out, border-color .12s ease-out, box-shadow .12s ease-out;
 }
 .code-box:hover { border-color: var(--muted); }
-.code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+/* focus: one ring (STYLE.md 2.6). The border turns --focus and a 1px inset thickens it to 3px, as strong as a button's outline */
+.code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: var(--t-md); font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
+  font-family: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
 .code-box input::placeholder { color: var(--hint); opacity: 1; }   /* the open problem's code */
+.code-box .btn { width: calc(var(--btn) - 4px); height: calc(var(--btn) - 4px); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.code-box .btn:hover { background: var(--raised); color: var(--ink); }
+.code-box .btn:focus-visible { outline-offset: -3px; }
+.code-box .btn-go { background: var(--c1); color: var(--field); }   /* the arrow: the one filled control, only once a code is typed */
+.code-box .btn-go:hover { background: var(--c1-hi); }
+/* suggestions (suggest.mjs): codes this browser knows that contain what is typed, banks first. Floats over the page
+   (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
+.code-sug {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;
+  max-height: min(22rem, 50vh); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
+}
+.dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
+.code-sug li {
+  display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 6px; cursor: pointer;
+  font-size: var(--t-sm); font-weight: 700; line-height: 1; color: var(--ink);
+}
+.code-sug li .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.code-sug li:hover, .code-sug li[aria-selected="true"] { background: var(--raised); }
+.code-sug li[aria-selected="true"] .ico { color: var(--c1); }
+/* start page (html.start: no problem open). Like a search home page: the entry alone, centred, under one line of title.
+   The upload and paste buttons sit inside one wide rounded field; it rests on --shadow-1 and lifts to --shadow-3 on hover / focus. */
+.start-title { display: none; }
+html.start body { padding-top: 0; }
+html.start main, html.start .qnav, html.start .qlist { display: none !important; }
+html.start .top {
+  display: grid; place-items: center; min-height: 100vh; min-height: 100dvh;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+html.start .dock { width: 100%; max-width: calc(40rem + 2 * var(--gut)); padding: 0 var(--gut) var(--s7); }
+html.start .start-title {
+  display: block; margin: 0 0 var(--s5); text-align: center; text-wrap: balance;
+  font-size: var(--t-lg); font-weight: 700; line-height: 1.25; color: var(--ink);
+}
+html.start .entry {
+  gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
+  background: var(--sheet); border: 2px solid var(--edge); border-radius: calc(var(--btn) / 2 + var(--s1) + 2px);
+  box-shadow: var(--shadow-1);
+  transition: border-color .12s ease-out, box-shadow .2s ease-out;
+}
+html.start .entry:hover { border-color: var(--muted); box-shadow: var(--shadow-3); }
+html.start .entry:focus-within { border-color: var(--focus); box-shadow: var(--shadow-3), inset 0 0 0 1px var(--focus); }
+html.start .code-box, html.start .code-box:hover, html.start .code-box:focus-within { height: 100%; padding-left: var(--s2); background: none; border: 0; box-shadow: none; }
+html.start .code-box input { font-size: var(--t-md); }
+html.start .code-box input::placeholder { text-transform: none; font-weight: 400; }
+html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+html.start .entry .btn:hover { background: var(--raised); color: var(--ink); }
+html.start .entry .btn:focus-visible { outline-offset: -3px; }
+html.start .code-box .btn-go { background: var(--c1); color: var(--field); }
+html.start .code-box .btn-go:hover { background: var(--c1-hi); }
+html.start .entry-msg { text-align: center; }
+/* phones: the bottom dock becomes the whole visible area, the field centred in it; with the keyboard up it is the area above
+   the keyboard (--kb-top / --kb-bottom from visualViewport, app.js layoutDock), so the field stays in view */
+html.start.dock-bottom .dock {
+  top: var(--kb-top, 0px); bottom: var(--kb-bottom, 0px); max-width: none;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: max(var(--s4), env(safe-area-inset-top)) var(--gut) max(var(--s4), env(safe-area-inset-bottom));
+  background: var(--paper); box-shadow: none;
+}
+html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
+html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh); }
 .entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
 
@@ -424,7 +491,7 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
    gains a line; a fixed offset keeps the problem still while you write, and the frozen layer keeps sticking at top: 0. */
 @media (min-width: 700.02px) and (pointer: fine) {
   :root {
-    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem;
+    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem; --t-lg: 2.25rem;
     --btn: 50px; --ico: 25px;
     --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);     /* 1024: 56rem, 1366: 60.5rem, 1920: 68rem (gutters included) */
   }

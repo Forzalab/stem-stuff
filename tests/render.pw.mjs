@@ -199,20 +199,26 @@ async function run(browserType, label, opts = {}) {
       assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
-    await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
+    await step(`${label} ${vname} entry box: upload + code bar only; start page = title + entry, centred; placement`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       assert.equal(await page.locator("#subjBtn, #subjMenu, .logo, .empty").count(), 0, "dropdown/logo/empty-state still present");
+      // start page (design/STYLE.md "Start page"): the one line of title is the only text
+      await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"));
       const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
-      assert.equal(text, "", `empty state shows text: ${text}`);
+      assert.equal(text, "Upload or type code to start.", `start page text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
       const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
-      const d = await page.evaluate(() => { const r = document.querySelector("#entry").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, pos: getComputedStyle(document.querySelector("#dock")).position }; });
-      if (vname === "phone") {
-        assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
-        assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
-      } else if (vname === "desktop") assert.ok(d.top < viewport.height * 0.2, `box not in the upper part (desktop offset scales with the window height, app.css): ${d.top}`);
+      const d = await page.evaluate(() => {
+        const r = document.querySelector("#entry").getBoundingClientRect(), t = document.querySelector("#startTitle").getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, titleBottom: t.bottom, titleCx: t.left + t.width / 2 };
+      });
+      assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, `entry not centred across: ${d.cx}`);
+      assert.ok(Math.abs(d.titleCx - viewport.width / 2) < 2, "title not centred across");
+      assert.ok(d.cy > viewport.height * 0.35 && d.cy < viewport.height * 0.65, `entry not centred down: ${d.cy}`);
+      assert.ok(d.titleBottom <= d.top, "title not above the entry");
+      assert.ok(d.w >= Math.min(viewport.width - 40, 600), `entry not wide: ${d.w}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
@@ -249,7 +255,9 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
-      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [56, 56] : [48, 48]);   // desktop 1920x1080: --btn 56px (app.css), the same for every .btn
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [52, 52] : [44, 44]);   // flush inside the code box: --btn (56 on a 1920x1080 desktop, else 48) minus its 2px borders
+      const hs = await page.evaluate(() => ["#upload", ".code-box"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }));
+      assert.deepEqual(hs[0], hs[1], "code box and upload button: same top and bottom");
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
       for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
