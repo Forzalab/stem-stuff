@@ -4472,6 +4472,127 @@
         }
       ],
       "nudge": "QUACK. Leaves: no children. Height: edges, root to the deepest leaf."
+    },
+    {
+      "code": "CSCI26_A7K",
+      "title": "De Morgan: choose all",
+      "type": "mc",
+      "pick": "all",
+      "body": [
+        {
+          "type": "text",
+          "md": "Which of these are always equal to $\\lnot(A \\land B)$?"
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "$\\lnot A \\lor \\lnot B$"
+        },
+        {
+          "id": "b",
+          "md": "$\\lnot A \\land \\lnot B$"
+        },
+        {
+          "id": "c",
+          "md": "$A$ NAND $B$"
+        },
+        {
+          "id": "d",
+          "md": "$\\lnot A \\lor B$"
+        },
+        {
+          "id": "e",
+          "md": "None of these",
+          "lock": true
+        }
+      ],
+      "correct": [
+        "a",
+        "c"
+      ],
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "misread",
+          "hint": "QUACK. De Morgan flips the operator too. Did your $\\land$ flip?"
+        },
+        {
+          "choice": "d",
+          "error": "negation",
+          "hint": "QUACK. The NOT goes to *both* inputs. Look at $B$."
+        },
+        {
+          "choice": "e",
+          "error": "other",
+          "hint": "QUACK. Test one row: $A=1, B=0$. Does any choice match?"
+        }
+      ],
+      "miss": "QUACK. Every tick you made is right. Is that all of them? Test each one left."
+    },
+    {
+      "code": "CSCI26_A8F",
+      "title": "Counting: fix the false ones",
+      "type": "mc",
+      "pick": "all",
+      "fix": {
+        "type": "num",
+        "how": "Type the correct count."
+      },
+      "body": [
+        {
+          "type": "text",
+          "md": "Tick every TRUE statement. For each FALSE one, type the correct number."
+        }
+      ],
+      "choices": [
+        {
+          "id": "a",
+          "md": "A 4-bit string has $16$ possible values."
+        },
+        {
+          "id": "b",
+          "md": "$\\binom{5}{2} = 20$"
+        },
+        {
+          "id": "c",
+          "md": "There are $6$ ways to order 3 different books."
+        },
+        {
+          "id": "d",
+          "md": "$2^{3} \\cdot 2 = 12$"
+        }
+      ],
+      "correct": [
+        "a",
+        "c"
+      ],
+      "wrong": [
+        {
+          "choice": "b",
+          "error": "counting",
+          "hint": "QUACK. Does order matter in a choose? Divide by what?",
+          "fix": {
+            "answer": "10",
+            "wrong": [
+              {
+                "match": "20",
+                "error": "counting",
+                "hint": "QUACK. You kept the order. Pairs {1,2} and {2,1}: same pair?"
+              }
+            ]
+          }
+        },
+        {
+          "choice": "d",
+          "error": "arithmetic",
+          "hint": "QUACK. Do the power first. What is $2^3$?",
+          "fix": {
+            "answer": "16"
+          }
+        }
+      ],
+      "miss": "QUACK. Every tick is right. Is that all the true ones? Check each one left."
     }
   ]
 }

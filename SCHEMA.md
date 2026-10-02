@@ -75,7 +75,7 @@ Keep problems in any order: the page shuffles the list per browser (design/NAV.m
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
 - **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**. There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
-- `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` (`expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
+- `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` **or to 4 significant figures** (Tony: $15.59$ counts for $9\sqrt3$; `expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: **each part is graded alone.** `POST /check` takes `{ code, part: i, answer }` (`i` = 0 for a, 1 for b...) and the reply carries `part: i`. Each part has its own tries (the `num`/`expr`/`text` rule: TWO), its own repeat check and its own lockout, keyed by (browser, code, part): a part locks by itself when its tries run out and never locks the others. The old whole-set body `{ parts: [...] }` is not accepted (`invalid`). Every box has its own inline submit arrow, off while that box is empty; Enter in a box submits that box. A right part turns green and read-only; a wrong part shows the hint of the first of *its own* `wrong` entries it matched, else the problem `nudge`, else the default nudge. The problem is finished when every part is right or locked, and counts as correct only if every part is right.
 - A wrong answer gets the hint of the first `wrong` entry it matches (`re` entries first, then `match`), else `nudge`, else a default nudge.
@@ -320,10 +320,11 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
     "s_arc": {"type": "object", "required": ["mark", "at", "r", "from", "to"], "additionalProperties": false, "properties": {"mark": {"const": "arc"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "r": {"type": "number", "exclusiveMinimum": 0}, "from": {"type": "number", "description": "Degrees, counterclockwise from +x"}, "to": {"type": "number", "description": "Degrees, counterclockwise from +x"}, "arrow": {"type": "boolean", "default": false, "description": "Arrowhead at the 'to' end (rotation sense)"}}},
     "s_poly": {"type": "object", "required": ["mark", "pts"], "additionalProperties": false, "properties": {"mark": {"const": "poly"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "pts": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/pt"}}, "fill": {"type": "boolean", "default": false}}},
     "s_text": {"type": "object", "required": ["mark", "at", "text"], "additionalProperties": false, "properties": {"mark": {"const": "text"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "text": {"$ref": "#/$defs/label"}}},
-    "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "other", "fallacy", "quantifier", "negation", "counting", "off-by-one", "format"]},
+    "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "incomplete", "other", "fallacy", "quantifier", "negation", "counting", "off-by-one", "format"]},
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
-    "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
+    "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
+    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
     "problem": {
       "type": "object",
       "required": [
@@ -421,10 +422,42 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
           "default": 1e-06,
           "description": "Relative tolerance. ~0.01 for physics."
         },
+        "pick": {
+          "enum": [
+            "one",
+            "all"
+          ],
+          "default": "one",
+          "description": "mc only. all = checkboxes, the ticked set is graded all or nothing (design/CHOOSE-ALL.md)"
+        },
         "correct": {
-          "type": "string",
-          "pattern": "^[a-z]$",
-          "description": "mc: id of the right choice"
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z]$"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]$"
+              }
+            }
+          ],
+          "description": "mc: id of the right choice (pick all: every right id)"
+        },
+        "fix": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {"type": {"enum": ["num", "expr", "text"]}, "how": {"type": "string", "minLength": 3, "maxLength": 120}, "var": {"type": "string", "pattern": "^[a-z]$"}},
+          "description": "mc pick all, prove mode (public): every X'd row needs a typed fix of this type; each false choice's wrong entry holds its fix answer"
+        },
+        "miss": {
+          "$ref": "#/$defs/cluck",
+          "description": "mc pick all: hint when every tick is right but a right choice is missing. Never names it."
         },
         "wrong": {
           "type": "array",
@@ -460,10 +493,22 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
               "var": false,
               "nudge": false,
               "parts": false,
-              "how": false,
               "accept": false
             }
           }
+        },
+        {
+          "if": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]},
+          "then": {"required": ["miss"], "properties": {"type": {"const": "mc"}, "correct": {"type": "array"}}},
+          "else": {"properties": {"miss": false, "fix": false, "correct": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
+          "then": {"properties": {"how": false}}
+        },
+        {
+          "if": {"not": {"properties": {"type": {"const": "mc"}}}},
+          "then": {"properties": {"pick": false}}
         },
         {
           "if": {

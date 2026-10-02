@@ -70,7 +70,7 @@ plus an `if pick=all then correct is array and miss is required` rule. The key f
 - Request: `POST /check { code, choices: ["a","c"] }`. Ids, not letters (MC.md §3). Empty array, unknown id, duplicate, or "none" + another → `invalid` (no try spent).
 - **Correct** = the set equals `correct` exactly.
 - **Wrong**: pick the hint in this order:
-  1. The first ticked distractor in **shown order** that has a `wrong` entry → that entry's `error` + `hint`. Its row gets struck through and disabled, like a wrong `mc` row. This reveals the same amount as today's mc: one known-wrong option.
+  1. The first ticked distractor in **authored order** (of the shown choices, not the per-browser shuffle, so the same set always gets the same hint) that has a `wrong` entry → that entry's `error` + `hint`. Its row gets struck through and disabled, like a wrong `mc` row. This reveals the same amount as today's mc: one known-wrong option.
   2. No distractor ticked (so the ticks are a strict subset of `correct`) → `miss`, with `error: "incomplete"` (a new error enum value).
 - Reply: same shape as `mc` (`MC.md` §7), plus `struck: "b"` when a row should strike. Never send which correct ids are missing.
 - **Tries**: same rule as `mc`, by shown count (`maxTries`). 4–5 shown → TWO. A **repeat of the same set** doesn't count (like freeform "distinct", SCHEMA.md tries rule). A struck row can't be re-ticked, so a repeat after a strike is impossible anyway.
@@ -94,6 +94,27 @@ plus an `if pick=all then correct is array and miss is required` rule. The key f
   - with a `miss` hint nothing is struck, and the ticks stay.
 - Correct: the existing celebration + explain box (`design/EXPLAIN-BOX.md`).
 - The copy payload (`copy/`) records the ticked ids + letters per try.
+
+## 4b. Prove mode: fix every false row (Tony, 10-02)
+
+Stops guessing. Turn it on with a public `fix` on the problem: `"fix": { "type": "num" | "expr" | "text", "how"?: "Type the correct count.", "var"?: "x" }`. It is only allowed with `pick: "all"`.
+- Every row is either **ticked** (true) or **X'd** (false). There is no blank. Each X'd row that isn't locked opens a box under it, where you type the corrected value.
+- Key: every false, unlocked choice's `wrong` entry carries `fix: { answer, accept?, tol?, points?, wrong? }`. It is graded like a `multi` part, with type and var taken from the problem's `fix`. Locked rows ("None of these") never take a fix.
+- One shared type for all rows keeps the public file from leaking which rows are false.
+- Request: `{ code, choices: [ticked], fixes: { id: text } }`, where `fixes` holds exactly the X'd unlocked ids. A missing, empty or extra fix → `invalid`.
+- Grading:
+  1. the set is graded first, as in §3 (wrong set → struck/miss, fixes not graded);
+  2. right set → every fix is graded. An unreadable fix → `invalid`. The first wrong fix in authored order → `wrong` + `fixWrong: id` + that fix's own `wrong` hint, else the fix nudge.
+  3. All right → correct. Same tries (TWO). The repeat check covers the set + the fixes.
+- Sample: `CSCI26_A8F`.
+
+## 4c. Four significant figures (Tony, 10-02, every typed number)
+
+A typed number counts when it is right to 4 significant figures: |typed − answer| ≤ half a unit in the answer's 4th figure. It is checked on top of `tol`, never instead of it.
+- Examples for $9\sqrt3 = 15.588…$: `15.59` ✓, `15.6` ✗.
+- It applies to `num`, to `expr` (per point value), to `multi` parts and to fixes.
+- It applies only to correctness, never to matching `wrong` entries or to repeat detection. An answer of 0 stays exact.
+- `serve.py sig4()`, mirrored in app.js.
 
 ## 5. Open (Tony decides)
 
