@@ -182,8 +182,10 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt[aria-checked="true"] { border-color: var(--c1); background: var(--raised); }
 .opt[aria-checked="true"] .badge { background: var(--c1); border-color: var(--c1); color: var(--field); }
 /* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */
-.choices:has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
-html:has(.opt[aria-checked="true"]) :is(.top, #problem, #work, #fb) { filter: brightness(.55); }
+/* only while open; never the question or the top bar. Picking also hides the code bar and the grab handle (Tony, Oct 2) */
+.q:not(.closed) .choices:has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
+html:has(.q:not(.closed) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
+html:has(.q:not(.closed) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
 .opt.wrong { border-style: dashed; border-color: var(--bad); color: var(--muted); }
 .opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2px; }
@@ -222,7 +224,7 @@ html:has(.opt[aria-checked="true"]) :is(.top, #problem, #work, #fb) { filter: br
 .ff.done input { color: var(--ok); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
-.q.closed .opt:not(.right), .q.closed .ff:not(.ok) { opacity: 0.5; }
+.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.ok) { opacity: 0.5; }   /* solved MC: nothing dims */
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--ok); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
