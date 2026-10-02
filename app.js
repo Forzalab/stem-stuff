@@ -10,6 +10,28 @@ const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
+/* a small calm note at the top centre: 2.5 s, or a tap. One block of CSS (app.css "toast"), so another look can replace it */
+let toastT = 0;
+function toast(text) {
+  const t = $("#toast"); if (!t) return;
+  clearTimeout(toastT);
+  t.textContent = text; t.classList.add("on");
+  toastT = setTimeout(() => t.classList.remove("on"), 2500);
+}
+$("#toast")?.addEventListener("click", e => { clearTimeout(toastT); e.currentTarget.classList.remove("on"); });
+const AGAIN = "One more try, so choose wisely. 😈";
+/* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
+   i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
+function vmark(box, id) {
+  if (!box) return;
+  let m = box.querySelector(".vk");
+  if (!id) { if (m) m.remove(); return; }
+  if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
+  m.dataset.v = id; m.innerHTML = icon(id);
+}
+/* the words the screen reader hears (the page shows only the icon) */
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries."
+  : r.verdict === "wrong" ? "Not quite. One more try." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
@@ -481,7 +503,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish();
+    if (r.triesLeft <= 0) finish(); else toast(AGAIN);
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -524,6 +546,7 @@ function wireFF() {
   for (const inp of ins) {
     inp.addEventListener("input", () => {
       go.disabled = ins.some(x => !x.value.trim());
+      const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
       if (!pv) return;
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
@@ -551,6 +574,7 @@ async function submitFF() {
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
+    else if (r.verdict === "wrong") toast(AGAIN);
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -561,7 +585,7 @@ function wireParts() {
   S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
-    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); });   // the arrow appears once there is text (like the code box)
+    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); vmark(box, null); });   // the arrow appears once there is text (like the code box)
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });
@@ -573,14 +597,12 @@ function shutPart(i, ok) {
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
   go.hidden = true;
+  vmark(box, ok ? "i-ok" : "i-lock");
 }
 function partFeedback(i, r, typed) {
-  const { hint, box } = partEls(i), row = hint.parentElement;
+  const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
-  if (r.verdict === "wrong") {
-    if (!S.parts[i].shut) box.classList.add("bad");
-    h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
-  } else if (r.verdict === "locked") h = `<p class="verdict lock">${icon("i-lock")}<span>Out of tries.</span></p>`;
+  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
@@ -589,7 +611,7 @@ function partFeedback(i, r, typed) {
   row.classList.toggle("hinted", !!h);
   const again = hint.querySelector(".retry");
   if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); layoutFreeze(); submitPart(i); });
-  say((partEls(i).row.querySelector(".mk").textContent + " " + (r.verdict === "correct" ? "Correct. " : "") + hint.textContent).replace(/\s+/g, " ").trim());
+  say((partEls(i).row.querySelector(".mk").textContent + " " + verdictWords(r) + " " + hint.textContent).replace(/\s+/g, " ").trim());
 }
 async function submitPart(i) {
   const { inp, hint } = partEls(i), v = inp.value.trim();
@@ -603,7 +625,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
-    else partFeedback(i, r, v);
+    else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN); }
     if (mine.parts.every(x => x.shut)) settle();
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
@@ -614,9 +636,9 @@ function settle() {
   const right = S.parts.filter(x => x.ok).length, n = S.parts.length;
   S.solved = right === n;
   finish();
-  $("#fb").innerHTML = S.solved ? `<p class="verdict ok">${icon("i-ok")}<span>Correct</span></p>`
+  $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
     : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
-  say($("#fb").textContent.replace(/\s+/g, " ").trim());
+  say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
 }
 
 /* ---------- attempts, feedback ---------- */
@@ -757,9 +779,12 @@ function finish() {
 function feedback(r, typed) {
   const fb = $("#fb");
   let h = "";
-  if (r.verdict === "correct") h = `<p class="verdict ok">${icon("i-ok")}<span>Correct</span></p>`;
-  else if (r.verdict === "wrong") h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
-  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
+  /* right / wrong / out: the answer box (or the MC badge) shows the icon; no words on the page */
+  const ff = S.prob.type === "mc" ? null : $("#ff");
+  if (ff && r.verdict === "correct") vmark(ff, "i-ok");
+  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
+  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
+  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>timeout</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
@@ -768,7 +793,7 @@ function feedback(r, typed) {
   fb.innerHTML = h;
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
-  say(fb.textContent.replace(/\s+/g, " ").trim());
+  say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
   layoutFreeze();
 }
 
@@ -1083,8 +1108,8 @@ function resume(fromCache) {
   if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
   if (S && !S.finished) {
     const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
-    if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
-    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim(); } });
+    if (go && ins.length) { go.hidden = !!$("#ff .vk"); go.disabled = ins.some(x => !x.value.trim()); }   // a wrong mark holds the slot until typing
+    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim() || !!e.box.querySelector(".vk"); } });
     for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
     if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
   }

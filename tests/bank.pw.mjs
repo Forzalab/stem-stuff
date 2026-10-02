@@ -84,11 +84,11 @@ try {
     await step(`${vname}: Next, a wrong try, reload -> same bank, same question, X in the list`, async () => {
       await page.click("#qnext"); await opened(page, "CALC1_B02");
       await page.fill("#ans", "9"); await page.click("#ansGo");
-      await page.waitForSelector("#fb .verdict", { timeout: 4000 });
+      await page.waitForSelector("#ff .vk[data-v=i-x]", { timeout: 4000 });   // the verdict is the icon in the box
       await page.goto(BASE + "/"); await opened(page, "CALC1_B02");
       assert.equal(await label(page), "BANK_AB12");
       await page.click("#qlistBtn");
-      assert.equal(await page.$$eval("#qlist a", as => as[1].querySelectorAll(".mk-x").length), 1);
+      assert.equal(await page.$eval('#qlist a[href="#CALC1_B02"]', a => a.querySelectorAll(".mk-x").length), 1);
       await page.click("#qlistBtn");
     });
 
@@ -97,7 +97,7 @@ try {
       await page.goto("about:blank"); await page.goto(BASE + "/"); await opened(page, "CALC1_B02");
       assert.equal(await label(page), "BANK_AB12");
       await page.click("#qlistBtn");
-      assert.equal(await page.$$eval("#qlist a", as => as[1].querySelectorAll(".mk-x").length), 1, "server mark missing");
+      assert.equal(await page.$eval('#qlist a[href="#CALC1_B02"]', a => a.querySelectorAll(".mk-x").length), 1, "server mark missing");
       await page.click("#qlistBtn");
     });
 

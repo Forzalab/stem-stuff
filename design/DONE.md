@@ -50,9 +50,9 @@ Storage: the IndexedDB database from RELOAD.md (`stem-stuff`), a second store `d
 | state | what renders |
 |---|---|
 | open, 0 wrong | as today |
-| open, 1 wrong (try left) | as today, the wrong MC choice struck (dashed, X badge), "Not quite. One more try." Hint not re-shown (the page doesn't keep hint text; keeping it is a small add if Tony wants it). |
-| correct | MC: the student's choice green with the tick; typed: their answer in the green read-only box. "Correct". No arrow. |
-| out | MC: their wrong choices struck, **no choice marked right**; the rest dimmed (muted text, `--line` border, `disabled`). Typed: their last answer read-only, no green. "Out of tries." + lock line "Ask Tony about CODE." No arrow. |
+| open, 1 wrong (try left) | as today, the wrong MC choice struck (dashed, X badge); typed: the X in the box's arrow slot, box dashed red (no verdict words, AUDIT.md). Hint not re-shown (the page doesn't keep hint text; keeping it is a small add if Tony wants it). |
+| correct | MC: the student's choice green with the tick; typed: their answer in the green read-only box with the check in the arrow slot. No words, no arrow. |
+| out | MC: their wrong choices struck, **no choice marked right**; the rest dimmed (muted text, `--line` border, `disabled`). Typed: their last answer read-only, no green, the lock in the arrow slot. Lock line "Ask Tony about CODE." No arrow. |
 
 Everything is `disabled` / `readOnly`, so no tap, key or Enter can submit. The scratchpad and Copy stay live (Tony wants the explanation text regardless).
 

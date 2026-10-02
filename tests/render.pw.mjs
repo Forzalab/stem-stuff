@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { shuffled } from "../shuffle.mjs";
+import { shuffled, mastery } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -151,8 +151,20 @@ async function run(browserType, label, opts = {}) {
       assert.ok(g.x + g.width <= f.x + f.width && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside the field");
       await go.click();
       await page.waitForSelector(".cluck");
-      await inp.fill("12"); await inp.press("Enter");
-      await page.waitForSelector(".verdict.ok");
+      // wrong with a try left: the x sits in the arrow's slot, the box is dashed red, no verdict words; typing clears it
+      assert.equal(await page.getAttribute("#ff .vk", "data-v"), "i-x");
+      assert.equal(await page.locator("#fb .verdict").count(), 0, "no verdict words");
+      assert.ok(await page.locator("#ff.bad").count() === 1 && await go.isHidden(), "bad box, the x holds the arrow's slot");
+      const vk = await page.locator("#ff .vk").boundingBox();
+      assert.ok(Math.abs(vk.x - g.x) < 1 && Math.abs(vk.y - g.y) < 1, "the x is where the arrow was");
+      assert.equal(await page.locator("#toast.on").textContent(), "One more try, so choose wisely. 😈");
+      const iw = (await inp.boundingBox()).width;
+      await inp.fill("12");
+      assert.equal(await page.locator("#ff .vk").count(), 0, "typing clears the x");
+      assert.ok(await go.isVisible() && Math.abs((await inp.boundingBox()).width - iw) < 0.5, "nothing moved");
+      await inp.press("Enter");
+      await page.waitForSelector('#ff .vk[data-v="i-ok"]');
+      assert.ok(await inp.isDisabled(), "a right answer closes the box");
     });
 
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
@@ -362,7 +374,7 @@ async function run(browserType, label, opts = {}) {
       const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
       await shuf.click();
       const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
-      const codes2 = shuffled(file, seed2);
+      const codes2 = mastery(shuffled(file, seed2), () => null, codes[0]);   // nothing answered: the open problem leads (design/NAV.md "Mastery order")
       assert.notEqual(seed2, "pin", "shuffle kept the seed");
       assert.equal(await page.locator("#pcode").textContent(), codes[0], "shuffle moved off the open problem");
       assert.deepEqual(await hrefs(), codes2, "list not in the new order");
@@ -440,7 +452,7 @@ async function run(browserType, label, opts = {}) {
       await page.fill("#ans", "q -> p"); await page.press("#ans", "Enter");
       await page.locator("#fb .cluck").waitFor();
       await page.fill("#ans", "~Q->~P"); await page.press("#ans", "Enter");
-      await page.locator("#fb .verdict.ok").waitFor();
+      await page.locator('#ff .vk[data-v="i-ok"]').waitFor();
 
       await open("CSCI26_M5V");                                              // multi: every part has its own arrow, verdict, tries and lockout
       const boxes = page.locator("#q .ans");
@@ -477,12 +489,14 @@ async function run(browserType, label, opts = {}) {
       await page.locator("#q .part").nth(1).locator(".phint .cluck").waitFor();
       assert.match(await page.locator("#ph1").textContent(), /Exactly one/);
       assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
+      assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-x", "b: the x in its arrow's slot");
+      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Not quite|One more try/, "no verdict words");
       assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
       assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
       await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='1'] .ff.shut"));
       assert.equal(await arrows(), 0, "a locked part shows no arrow");
-      assert.match(await page.locator("#ph1").textContent(), /Out of tries/);
+      assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-lock", "b: out of tries, the lock in its box");
       const dead = await page.evaluate(() => { const i = document.querySelectorAll("#q .ans")[1], b = document.querySelector("#go1"); return { d: i.disabled, a: i.getAttribute("aria-disabled"), cur: getComputedStyle(i).cursor, op: getComputedStyle(i.closest(".ff")).opacity, go: b.hidden }; });
       assert.deepEqual(dead, { d: true, a: "true", cur: "not-allowed", op: "0.5", go: true }, "b is locked with the disabled look");
       assert.equal(await boxes.nth(0).isEnabled(), true, "locking b does not lock a");
@@ -494,6 +508,8 @@ async function run(browserType, label, opts = {}) {
       await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
       assert.equal(await arrows(), 0, "a correct part shows no arrow");
+      assert.equal(await page.getAttribute("#q .part[data-i='0'] .vk", "data-v"), "i-ok", "a: the check in its box");
+      assert.deepEqual(await boxes.nth(0).evaluate(e => [e.disabled, e.getAttribute("aria-disabled")]), [true, "true"], "a correct part's box is disabled");
       assert.equal(await page.evaluate(() => window.__drill.state.finished), true, "finished when every part is right or locked");
       assert.equal(await page.evaluate(() => window.__drill.state.solved), false, "a locked part means not solved");
       assert.match(await page.locator("#fb").textContent(), /1 of 2 right/);
@@ -505,12 +521,14 @@ async function run(browserType, label, opts = {}) {
       await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
       assert.equal(await page.evaluate(() => window.__drill.state.finished), false);
+      assert.ok(await boxes.nth(0).isDisabled() && await boxes.nth(1).isEnabled(), "a right part closes its box only");
       assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#q .ans")[1]), true, "focus moves to the next open box");
       await boxes.nth(1).fill("11");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/multi-${vname}.png` });
       await page.click("#go1");
-      await page.locator("#fb .verdict.ok").waitFor();
+      await page.locator("#q .part[data-i='1'] .ff.ok").waitFor();
       assert.equal(await page.evaluate(() => window.__drill.state.solved), true);
+      assert.equal((await page.locator("#fb").textContent()).trim(), "", "solved: the checks say it, no words");
 
       await open("CSCI26_TF3");                                              // 2 choices, shuffled by default (order varies, the set does not)
       assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);
