@@ -5,7 +5,7 @@
   Edit or replace the file: the next request re-reads it (mtime check), no restart.
 - GET /p/<CODE>.json   -> the public part of one problem (no answers, no hints).
 - Math: sympy (pip install sympy), behind a token allowlist.
-- POST /check          -> grades {code, answer | choice | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
+- POST /check          -> grades {code, answer | choice | choices (mc pick all) | part+answer}; tries per problem (per part for a multi) per browser (cookie): 1 for a 2-choice mc, else 2.
 - GET /b/<BANK>.json   -> a practice bank (banks/BANK_XXX.json): public problems + this browser's marks + where it was;
   /b/last.json = this browser's last bank, or null (design/BANK.md). Bank problems are graded like any other (/check).
 - GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
@@ -41,8 +41,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "var", "body", "how")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
+FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -134,13 +135,20 @@ def banks():
 
 
 def shown(p):
-    """mc: the choices on screen (up to 5): the right one, locked ones, then the rest, in authored order."""
+    """mc: the choices on screen (up to 5): the right one(s), locked ones, then the rest, in authored order."""
     ch = p["choices"]
     if len(ch) <= 5:
         return list(ch)
-    keep = [c for c in ch if c["id"] == p["correct"] or c.get("lock")]
+    right = rights(p)
+    keep = [c for c in ch if c["id"] in right or c.get("lock")]
     keep += [c for c in ch if c not in keep][: max(0, 5 - len(keep))]
     return [c for c in ch if c in keep]
+
+
+def rights(p):
+    """mc: the correct ids as a set (pick all: a list in the key; pick one: a string)."""
+    c = p["correct"]
+    return set(c) if isinstance(c, list) else {c}
 
 
 def max_tries(p):
@@ -276,11 +284,21 @@ def same(a, b, tol):
     return abs(a - b) <= tol * max(1.0, abs(b))
 
 
+def sig4(a, b):
+    """Tony: typed numbers count when right to 4 significant figures (|a - b| <= half a unit in b's 4th figure)."""
+    if isinstance(a, tuple):
+        return isinstance(b, tuple) and len(a) == len(b) and all(sig4(x, y) for x, y in zip(a, b))
+    if isinstance(a, str) or isinstance(b, str) or not (math.isfinite(a) and math.isfinite(b)) or b == 0:
+        return False
+    return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 3) * (1 + 1e-9)
+
+
 def unit_correct(u, sig):
     tol = u.get("tol", 1e-6)
     if u["type"] == "text":
         return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
-    return same(sig, "dne" if u["answer"] == "dne" else signature(u, u["answer"]), tol)
+    ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
+    return same(sig, ans, tol) or sig4(sig, ans)
 
 
 def unit_hit(u, text, sig):
@@ -413,7 +431,7 @@ def seen(code, sid):
 
 
 def grade(p, sid, body):
-    """body: {choice} (mc) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
+    """body: {choice} (mc) | {choices: [ids]} (mc pick all) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
     Reply {verdict, triesLeft, gen, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply."""
     multi = p["type"] == "multi"
     idx = body.get("part")
@@ -441,7 +459,38 @@ def _grade(p, st, body, multi, idx):
     if st["done"] or left() <= 0:
         return reply({"verdict": "locked", "triesLeft": 0})
     hit = None
-    if p["type"] == "mc":
+    if p["type"] == "mc" and p.get("pick") == "all":         # design/CHOOSE-ALL.md §3: grade the ticked set, all or nothing
+        ids, sh = body.get("choices"), shown(p)
+        locked = {c["id"] for c in sh if c.get("lock")}
+        if (not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids) or len(set(ids)) != len(ids)
+                or not set(ids) <= {c["id"] for c in sh} or (set(ids) & locked and len(ids) > 1)):
+            return {"verdict": "invalid", "triesLeft": left()}
+        hint_of = {w.get("choice"): w for w in p.get("wrong", [])}
+        fixes, xs = body.get("fixes"), [c["id"] for c in sh if c["id"] not in ids and not c.get("lock")]
+        if "fix" in p:                                           # prove mode: every X'd row carries a typed fix
+            if (not isinstance(fixes, dict) or set(fixes) != set(xs)
+                    or not all(isinstance(t, str) and t.strip() for t in fixes.values())):
+                return {"verdict": "invalid", "triesLeft": left()}
+        sig, correct = ",".join(sorted(ids)), set(ids) == rights(p)
+        if not correct:                                          # first ticked distractor in authored order, else miss
+            hit = next((dict(hint_of[c["id"]], struck=c["id"]) for c in sh
+                        if c["id"] in ids and c["id"] not in rights(p) and c["id"] in hint_of), None)
+            hit = hit or {"error": "incomplete", "hint": p["miss"]}
+            if "fix" in p:
+                sig = (sig, *(squash(fixes[i])[:200] for i in xs))
+        elif "fix" in p:                                         # right set: now every fix must be right too
+            units = [(i, {**p["fix"], **hint_of[i]["fix"]}, str(fixes[i])[:200]) for i in xs]
+            try:
+                sigs = [signature(u, t) for _, u, t in units]
+            except UNREADABLE:
+                return {"verdict": "invalid", "triesLeft": left()}
+            sig = (sig, *sigs)
+            bad = next(((i, u, t, g) for (i, u, t), g in zip(units, sigs) if not unit_correct(u, g)), None)
+            if bad:
+                correct, (i, u, t, g) = False, bad
+                w = unit_hit(u, t, g)
+                hit = {"error": w["error"], "hint": w["hint"], "fixWrong": i} if w else {"hint": FIX_NUDGE, "fixWrong": i}
+    elif p["type"] == "mc":
         sig = body.get("choice")
         if sig not in {c["id"] for c in shown(p)}:
             return {"verdict": "invalid", "triesLeft": left()}
@@ -467,7 +516,7 @@ def _grade(p, st, body, multi, idx):
         st["wrong"].append(sig)
     out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
     if hit:
-        out["error"] = hit["error"]
+        out.update({k: hit[k] for k in ("error", "struck", "fixWrong") if k in hit})
     if repeat:
         out["repeat"] = True
     return reply(out)

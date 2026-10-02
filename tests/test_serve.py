@@ -71,6 +71,49 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="z")["verdict"], "invalid")
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="b")["verdict"], "correct")
 
+    def test_pick_all(self):                                                    # design/CHOOSE-ALL.md §3
+        for bad in ({"choices": []}, {"choices": "a"}, {"choices": ["a", "a"]}, {"choices": ["z"]}, {"choices": ["a", "e"]},
+                    {"choice": "a"}, {"choices": [1]}):
+            self.assertEqual(self.g("CSCI26_A7K", "k1", **bad)["verdict"], "invalid", bad)   # not a try
+        r = self.g("CSCI26_A7K", "k1", choices=["a"])                          # right but incomplete: miss, nothing struck
+        self.assertEqual((r["verdict"], r["triesLeft"], r["error"]), ("wrong", 1, "incomplete"))
+        self.assertNotIn("struck", r)
+        self.assertTrue(self.g("CSCI26_A7K", "k1", choices=["a"])["repeat"])   # same set again: no try spent
+        r = self.g("CSCI26_A7K", "k1", choices=["d", "a", "b"])                 # first ticked distractor in shown order
+        self.assertEqual((r["verdict"], r["triesLeft"], r["struck"], r["error"]), ("wrong", 0, "b", "misread"))
+        self.assertEqual(self.g("CSCI26_A7K", "k1", choices=["a", "c"])["verdict"], "locked")
+        self.assertEqual(self.g("CSCI26_A7K", "k2", choices=["c", "a"])["verdict"], "correct")   # order does not matter
+        self.assertEqual(self.g("CSCI26_A7K", "k3", choices=["e"])["struck"], "e")
+        pub = serve.public(BANK["CSCI26_A7K"], "k1")
+        self.assertEqual(pub["pick"], "all")
+        self.assertFalse({"correct", "wrong", "miss"} & set(pub))
+
+    def test_four_sig_figs(self):                                               # Tony: right to 4 significant figures counts
+        u = {"type": "num", "answer": "9*sqrt(3)"}
+        for text, ok in (("15.59", True), ("15.588", True), ("15.6", False), ("15.58", False), ("dne", False)):
+            self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
+        e = {"type": "expr", "answer": "x/3", "points": [1, 2, 3]}
+        self.assertTrue(serve.unit_correct(e, serve.signature(e, "0.33334x")))   # per point value, not per coefficient
+        self.assertFalse(serve.unit_correct(e, serve.signature(e, "0.333x")))
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "0"}, 0.0))       # zero: exact (tol) only
+
+    def test_pick_all_fix(self):                                                # prove mode: X'd rows carry a graded fix
+        for bad in ({"choices": ["a", "c"]}, {"choices": ["a", "c"], "fixes": {"b": "10"}},
+                    {"choices": ["a", "c"], "fixes": {"b": "10", "d": " "}}, {"choices": ["a", "c"], "fixes": {"b": "10", "d": "16", "a": "1"}},
+                    {"choices": ["a", "c"], "fixes": {"b": "10", "d": "2+"}}):
+            self.assertEqual(self.g("CSCI26_A8F", "f1", **bad)["verdict"], "invalid", bad)   # not a try
+        r = self.g("CSCI26_A8F", "f1", choices=["a", "c"], fixes={"b": "20", "d": "16"})     # right set, b's fix is a known wrong
+        self.assertEqual((r["verdict"], r["triesLeft"], r["fixWrong"], r["error"]), ("wrong", 1, "b", "counting"))
+        self.assertTrue(self.g("CSCI26_A8F", "f1", choices=["c", "a"], fixes={"b": "20.0", "d": "16"})["repeat"])
+        r = self.g("CSCI26_A8F", "f1", choices=["a", "c"], fixes={"b": "10", "d": "12"})     # d's fix: no known wrong, fix nudge
+        self.assertEqual((r["verdict"], r["triesLeft"], r["fixWrong"], r["hint"]), ("wrong", 0, "d", serve.FIX_NUDGE))
+        self.assertNotIn("error", r)
+        r = self.g("CSCI26_A8F", "f2", choices=["a"], fixes={"b": "10", "c": "5", "d": "16"})  # set wrong: set hint, fixes not graded
+        self.assertEqual((r["verdict"], r["error"]), ("wrong", "incomplete"))
+        self.assertNotIn("fixWrong", r)
+        self.assertEqual(self.g("CSCI26_A8F", "f2", choices=["a", "c"], fixes={"b": "10", "d": "2^4"})["verdict"], "correct")
+        self.assertEqual(serve.public(BANK["CSCI26_A8F"])["fix"], {"type": "num", "how": "Type the correct count."})
+
     def test_text(self):
         r = self.g("CSCI26_Q8C", "t1", answer="q -> p")
         self.assertEqual((r["verdict"], r["error"]), ("wrong", "fallacy"))
@@ -169,6 +212,11 @@ class Grade(unittest.TestCase):
                 sid = f"gs{i}"
                 order = [c["id"] for c in serve.public(p, sid)["choices"]]
                 for pos, cid in enumerate(order):        # whatever slot it lands in, the id decides
+                    if p.get("pick") == "all":            # pick all: the right set, sent in shuffled order
+                        fx = {w["choice"]: w["fix"]["answer"] for w in p["wrong"] if "fix" in w and w["choice"] in order}
+                        r = serve.grade(p, f"{sid}-{pos}", {"choices": [c for c in order if c in p["correct"]], **({"fixes": fx} if "fix" in p else {})})
+                        self.assertEqual(r["verdict"], "correct", (code, sid))
+                        break
                     r = serve.grade(p, f"{sid}-{pos}", {"choice": cid})
                     self.assertEqual(r["verdict"], "correct" if cid == p["correct"] else "wrong", (code, sid, pos))
 

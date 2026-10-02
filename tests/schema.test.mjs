@@ -191,10 +191,16 @@ for (const p of problems) {
     test(`${f}: every distractor has exactly one error+hint`, () => {
       const ids = p.choices.map(c => c.id);
       assert.equal(new Set(ids).size, ids.length, "duplicate choice ids");
-      assert.ok(ids.includes(p.correct), "correct id not in choices");
+      const right = [p.correct].flat();                                   // pick all: a list (design/CHOOSE-ALL.md)
+      assert.ok(right.every(r => ids.includes(r)), "correct id not in choices");
       const got = p.wrong.map(w => w.choice);
       assert.ok(got.every(Boolean), "mc wrong entries use choice, not match/re");
-      assert.deepEqual([...got].sort(), ids.filter(i => i !== p.correct).sort());
+      assert.deepEqual([...got].sort(), ids.filter(i => !right.includes(i)).sort());
+      if (p.pick === "all") assert.ok(right.length < Math.min(5, ids.length), "pick all: ticking everything must lose");
+      if (p.fix) for (const w of p.wrong) {                               // prove mode: every false, unlocked row has a fix
+        const locked = p.choices.find(c => c.id === w.choice).lock;
+        assert.ok(locked ? !w.fix : w.fix, `${w.choice}: ${locked ? "locked rows take no fix" : "missing fix"}`);
+      }
     });
   }
   test(`${f}: known wrong answers read and are actually wrong`, () => {
@@ -216,9 +222,10 @@ for (const p of problems) {
 
   // loose on purpose (SCHEMA.md "Hint check"): only answers of 2+ chars the body doesn't already show
   test(`${f}: hints never state the answer`, () => {
-    const answers = p.type === "mc" ? [p.choices.find(c => c.id === p.correct).md] : units.flatMap(u => [u.answer, ...(u.accept ?? [])]);
+    const fixes = (p.wrong ?? []).flatMap(w => w.fix ? [w.fix.answer, ...(w.fix.accept ?? [])] : []);
+    const answers = p.type === "mc" ? [...p.choices.filter(c => [p.correct].flat().includes(c.id)).map(c => c.md), ...fixes] : units.flatMap(u => [u.answer, ...(u.accept ?? [])]);
     const bodyText = squash(JSON.stringify(p.body).replace(/\$/g, ""));
-    const hints = [...(p.wrong ?? []), ...units.flatMap(u => u.wrong ?? [])].map(w => w.hint).concat(p.nudge ?? []);
+    const hints = [...(p.wrong ?? []), ...(p.wrong ?? []).flatMap(w => w.fix?.wrong ?? []), ...units.flatMap(u => u.wrong ?? [])].map(w => w.hint).concat(p.nudge ?? [], p.miss ?? []);
     for (const raw of answers) {
       const ans = squash(raw.replace(/\$/g, ""));
       if (ans.length < 2 || bodyText.includes(ans)) continue;

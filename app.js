@@ -42,7 +42,7 @@ function md(text, inline = false) {
      { verdict: "correct"|"wrong"|"invalid"|"locked", triesLeft, error?, hint?, repeat?, part? }
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
-   `answer` is { answer: "typed text" } or { choice: "b" }; a multi grades one part at a time: { part: i, answer: "typed text" }. */
+   `answer` is { answer: "typed text" } or { choice: "b" } or, pick all, { choices: ["a", "c"] } (wrong adds struck?); a multi grades one part at a time: { part: i, answer: "typed text" }. */
 /* every request goes through net(): aborted after 8 s, so nothing can wait forever (design/RELOAD.md).
    In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
 const TIMEOUT = 8000;
@@ -68,6 +68,8 @@ async function check(code, answer) {
 }
 /* mirror of serve.py grade(): keep the two in step */
 const maxTries = p => p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES;   // serve.py max_tries(): 2-choice mc = ONE try, else two
+const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
+const FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math.";   // serve.py FIX_NUDGE
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -79,8 +81,15 @@ function unitSig(u, t) {                                  // serve.py signature(
 const same = (a, b, tol) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
   : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
-const unitOk = (u, g) => u.type === "text" ? [u.answer, ...(u.accept || [])].map(squash).includes(g)
-  : same(g, u.answer === "dne" ? "dne" : unitSig(u, u.answer), u.tol ?? 1e-6);
+/* right to 4 significant figures (serve.py sig4): correctness only, never wrong-entry matching or repeats */
+const sig4 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => sig4(x, b[i]))
+  : typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
+    && Math.abs(a - b) <= 0.5 * 10 ** (Math.floor(Math.log10(Math.abs(b))) - 3) * (1 + 1e-9);
+function unitOk(u, g) {
+  if (u.type === "text") return [u.answer, ...(u.accept || [])].map(squash).includes(g);
+  const a = u.answer === "dne" ? "dne" : unitSig(u, u.answer);
+  return same(g, a, u.tol ?? 1e-6) || sig4(g, a);
+}
 function unitHit(u, t, g) {                               // re entries first, then match
   const w = u.wrong || [];
   return w.find(x => x.re && new RegExp(x.re, "i").test(t))
@@ -95,7 +104,29 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   const left = () => maxTries(key) - st.wrong.length;
   if (st.done || left() <= 0) return R({ verdict: "locked", triesLeft: 0 });
   let hit = null, correct, sig;
-  if (key.type === "mc") {
+  if (all(key)) {                                         // { choices: [ids] }; hint = first ticked distractor in shown (authored) order, else miss
+    /* prove mode (key.fix): + fixes { id: text } for exactly the un-ticked, unlocked rows; a right set then grades each fix like a part */
+    const ch = answer.choices, sh = shown(key), right = [].concat(key.correct), lk = sh.filter(c => c.lock).map(c => c.id), fx = answer.fixes;
+    const need = key.fix && Array.isArray(ch) ? sh.filter(c => !c.lock && !ch.includes(c.id)).map(c => c.id) : [];
+    if (!Array.isArray(ch) || !ch.length || ch.some(x => !sh.some(c => c.id === x)) || new Set(ch).size !== ch.length
+        || (ch.length > 1 && ch.some(x => lk.includes(x)))
+        || (key.fix && (!fx || typeof fx !== "object" || Array.isArray(fx) || Object.keys(fx).length !== need.length
+            || need.some(id => typeof fx[id] !== "string" || !fx[id].trim())))) return { verdict: "invalid", triesLeft: left() };
+    sig = [...ch].sort().join(",");
+    correct = ch.length === right.length && ch.every(x => right.includes(x));
+    const w = key.wrong || [];
+    if (!correct) {
+      const c = sh.find(c => ch.includes(c.id) && !right.includes(c.id) && w.some(x => x.choice === c.id));
+      hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: key.miss };
+      if (key.fix) sig = [sig, ...need.map(id => squash(fx[id]).slice(0, 200))];
+    } else if (key.fix) {                                 // unreadable fix = invalid; else the first wrong fix in authored order
+      const us = need.map(id => { const e = w.find(x => x.choice === id); return e && e.fix ? { id, u: { ...key.fix, ...e.fix }, t: fx[id].slice(0, 200) } : null; }).filter(Boolean);
+      try { for (const x of us) x.g = unitSig(x.u, x.t); } catch { return { verdict: "invalid", triesLeft: left() }; }
+      sig = [sig, ...us.map(x => x.g)];
+      const bad = us.find(x => { try { return !unitOk(x.u, x.g); } catch { return true; } });
+      if (bad) { correct = false; hit = { ...(unitHit(bad.u, bad.t, bad.g) || { hint: FIX_NUDGE }), fixWrong: bad.id }; }
+    }
+  } else if (key.type === "mc") {
     sig = answer.choice;
     if (!shown(key).some(c => c.id === sig)) return { verdict: "invalid", triesLeft: left() };
     correct = sig === key.correct;
@@ -110,8 +141,10 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
   if (!repeat) st.wrong.push(sig);
-  const out = { verdict: "wrong", triesLeft: left(), hint: hit ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
-  if (hit) out.error = hit.error;
+  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
+  if (hit && hit.error) out.error = hit.error;
+  if (hit && hit.struck) out.struck = hit.struck;
+  if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
   if (repeat) out.repeat = true;
   return R(out);
 }
@@ -275,13 +308,17 @@ function renderQuestion() {
   $("#freezeIn").classList.toggle("boxed", p.type === "multi");      // multi: question + boxes in one box (Tony's sketch)
   if (p.type === "mc") {
     const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
-    q.innerHTML = `${howLine(p)}<div class="choices" role="radiogroup" aria-label="Choices">${list.map((c, i) => `
+    const many = all(p);       // pick all: square check badge + the letter beside it, one Check button under the list (CHOOSE-ALL.md §4)
+    q.innerHTML = `${howLine(p)}<div class="choices${many ? " all" : ""}" ${many ? 'role="group" aria-labelledby="how"' : 'role="radiogroup" aria-label="Choices"'}>${list.map((c, i) => `
       <div class="ch" data-id="${esc(c.id)}">
-        <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}">
-          <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md, true)}</span>
+        <button type="button" class="opt" role="${many ? "checkbox" : "radio"}" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}"${c.lock ? " data-lock" : ""}>
+          ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
+            : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
         </button>
-        <button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>
-      </div>`).join("")}</div>`;
+        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
+        ${p.fix && many && !c.lock ? `<div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
+          placeholder="${esc(p.fix.how || "Type the correct value")}"></div>` : ""}
+      </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
     fitChoices();
@@ -310,7 +347,7 @@ function renderQuestion() {
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-const howLine = p => p.how ? `<p class="how" id="how">${md(p.how, true)}</p>` : "";
+const howLine = p => { const h = p.how || (all(p) ? "Choose all that apply." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -319,7 +356,7 @@ const localSeed = () => seed("stem-seed", "stem");
 function shown(p) {
   const ch = p.choices;
   if (ch.length <= 5) return ch;
-  const keep = ch.filter(c => c.id === p.correct || c.lock);
+  const keep = ch.filter(c => [].concat(p.correct).includes(c.id) || c.lock);   // pick all: correct is a list, keep every one
   keep.push(...ch.filter(c => !keep.includes(c)).slice(0, Math.max(0, 5 - keep.length)));
   return ch.filter(c => keep.includes(c));
 }
@@ -331,7 +368,7 @@ function fitChoices() {
   if (!g || !S || S.prob.type !== "mc") return;
   if (!g.offsetWidth || g.offsetWidth < 120) return;             // laid out at (near) zero width (Swap hides it): keep the last answer
   const was = g.classList.contains("inline");
-  let fits = g.children.length >= 2 && g.children.length <= 3;
+  let fits = !g.classList.contains("all") && g.children.length >= 2 && g.children.length <= 3;   // pick all: never one row
   if (fits) {
     g.classList.add("inline");
     for (const c of g.children) {
@@ -365,25 +402,71 @@ function wireMC(q) {
     const send = e.target.closest(".send");
     if (send) { submitMC(); return; }
     const o = e.target.closest(".opt"); if (!o || o.disabled) return;
-    select(o.getAttribute("aria-checked") === "true" ? null : o);   // tap the selected choice again: deselect
+    if (all(S.prob)) tick(o, S.prob.fix && !o.hasAttribute("data-lock") && markOf(o) ? "x" : "on");   // prove: blank -> tick -> X -> blank
+    else select(o.getAttribute("aria-checked") === "true" ? null : o);   // tap the selected choice again: deselect
     roving(o);
   });
+  /* pick all: arrows only move focus, Space / A-E / 1-5 toggle, Enter = Check; prove mode: X or Backspace = mark wrong.
+     A fix box: Enter goes to the next empty box, then Check. */
+  q.addEventListener("input", e => { if (e.target.closest(".fix")) { e.target.parentElement.classList.remove("bad"); syncTicks(); } });
   q.addEventListener("keydown", e => {
+    if (e.target.closest(".fix")) {
+      if (e.key !== "Enter" || !S || S.finished) return;
+      e.preventDefault();
+      const n = [...q.querySelectorAll(".fix:not([hidden]) input")].find(x => !x.value.trim());
+      if (n) n.focus(); else submitMC();
+      return;
+    }
     const o = e.target.closest(".opt"); if (!o || !S || S.finished) return;
-    const live = opts().filter(x => !x.disabled), i = live.indexOf(o);
-    const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); select(n); };
+    const many = all(S.prob), live = opts().filter(x => !x.disabled), i = live.indexOf(o);
+    const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); if (!many) select(n); };
     if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); move(1); }
     else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
-    else if (e.key === "Enter") { e.preventDefault(); if (o.getAttribute("aria-checked") === "true") submitMC(); else select(o); }
-    else if (e.key === " ") { e.preventDefault(); select(o.getAttribute("aria-checked") === "true" ? null : o); }
+    else if (e.key === "Enter") { e.preventDefault(); if (many || o.getAttribute("aria-checked") === "true") submitMC(); else select(o); }
+    else if (e.key === " ") { e.preventDefault(); if (many) tick(o); else select(o.getAttribute("aria-checked") === "true" ? null : o); }
+    else if (many && S.prob.fix && /^(x|Backspace)$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); tick(o, "x"); }
     else if (/^([a-e]|[1-5])$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {         // A-E or 1-5 jump to that choice
       const n = opts().find(x => x.dataset.l === (/\d/.test(e.key) ? LETTERS[+e.key - 1] : e.key.toUpperCase()));
-      if (n && !n.disabled) { e.preventDefault(); roving(n); n.focus(); select(n); }
+      if (n && !n.disabled) { e.preventDefault(); roving(n); n.focus(); if (many) tick(n); else select(n); }
     }
   });
 }
+/* pick all: a row is "on" (ticked), "x" (prove mode: marked wrong, its fix box shows) or "" (blank).
+   tick(o, m) sets m, or clears it when the row already has it. A locked choice ("None of these") is exclusive:
+   ticking it clears the other ticks, ticking another clears it. Locked rows are never X'd. */
+const ticked = () => opts().filter(x => x.getAttribute("aria-checked") === "true");
+const markOf = o => o.getAttribute("aria-checked") === "true" ? "on" : o.dataset.mark === "x" ? "x" : "";
+const fixOf = o => o.parentElement.querySelector(".fix");
+function mark(o, m) {
+  o.setAttribute("aria-checked", m === "on");
+  if (m === "x") o.dataset.mark = "x"; else delete o.dataset.mark;
+  if (!o.classList.contains("wrong")) o.querySelector(".badge").innerHTML = icon(m === "x" ? "i-x" : "i-ok");
+  const f = fixOf(o); if (f) f.hidden = m !== "x";
+  o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}${m === "x" ? ", marked wrong" : ""}`);
+}
+function tick(o, m = "on") {
+  const lock = o.hasAttribute("data-lock");
+  if (m === "x" && (lock || !fixOf(o))) return;
+  const next = markOf(o) === m ? "" : m;
+  for (const x of opts()) if (x !== o && next === "on" && (lock || x.hasAttribute("data-lock")) && markOf(x) === "on") mark(x, "");
+  mark(o, next);
+  syncTicks();
+}
+/* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
+function syncTicks() {
+  S.selected = ticked().map(x => x.dataset.id);
+  const proved = !S.prob.fix || opts().every(o => o.hasAttribute("data-lock") || markOf(o) === "on" || (markOf(o) === "x" && fixOf(o).querySelector("input").value.trim()));
+  const go = $("#mcGo"); if (go) go.disabled = !S.selected.length || !proved || S.finished;
+}
+function strike(o) {                                        // a wrong choice: unticked, struck through, disabled (prove mode: X'd, its box live)
+  if (!o) return;
+  o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true");
+  mark(o, fixOf(o) ? "x" : "");
+  o.querySelector(".badge").innerHTML = icon("i-x");
+}
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 async function submitMC() {
+  if (all(S.prob)) return submitAll();
   const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
   const c = S.prob.choices.find(x => x.id === S.selected), mine = S;
   busy = true;
@@ -402,6 +485,37 @@ async function submitMC() {
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
+}
+/* pick all: send the ticked ids (prove mode: + fixes { id: text } for every X'd row). Wrong: the ticks and texts stay (the student
+   edits the set); the struck row (if any) is unticked + disabled; a wrong fix turns its box red.
+   Copy payload: a = the ticked choices' text, c / l = their ids / letters; prove mode: a = { tick, fix: { letter: text } } */
+async function submitAll() {
+  const on = ticked(), go = $("#mcGo"); if (!on.length || !go || go.disabled || S.finished || busy) return;
+  const mine = S, c = on.map(o => o.dataset.id), xs = S.prob.fix ? opts().filter(o => markOf(o) === "x" && fixOf(o)) : [];
+  const f = Object.fromEntries(xs.map(o => [o.dataset.id, fixOf(o).querySelector("input").value.trim()]));
+  busy = true;
+  let r;
+  try { r = await check(S.code, { choices: c, ...(S.prob.fix ? { fixes: f } : {}) }); } finally { busy = false; }
+  if (S !== mine) return;
+  if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the ticks stay, retry resends them
+  const tick = c.map(id => S.prob.choices.find(x => x.id === id).md);
+  if (r.verdict !== "invalid") record({ a: S.prob.fix ? { tick, fix: Object.fromEntries(xs.map(o => [o.dataset.l, f[o.dataset.id]])) } : tick, c, l: on.map(o => o.dataset.l),
+    ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}) }, r);
+  if (r.verdict === "correct") {
+    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+    for (const o of xs) fixOf(o).classList.add("ok", "done");
+    finish();
+  } else if (r.verdict === "wrong") {
+    const o = r.struck && opts().find(x => x.dataset.id === r.struck), was = document.activeElement;
+    const bad = r.fixWrong && opts().find(x => x.dataset.id === r.fixWrong); if (bad && fixOf(bad)) fixOf(bad).classList.add("bad");
+    strike(o); syncTicks();
+    if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
+    else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
+    else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
+    if (r.triesLeft <= 0) finish();
+  } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
+  else if (r.verdict === "locked") finish();
+  feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
 }
 
 /* ---------- freeform: the same arrow, flush inside the input ---------- */
@@ -566,7 +680,23 @@ function paint(rec) {
   }
   const u = us[0];
   S.triesLeft = Math.max(0, max - u.x);
-  if (p.type === "mc") {
+  if (all(p)) {                                             // struck rows, then the last try's ticks and fixes (green if it was right)
+    const opt = id => opts().find(x => x.dataset.id === id), last = S.tries[S.tries.length - 1];
+    for (const t of S.tries) if (t.s) strike(opt(t.s));
+    if (last && Array.isArray(last.c)) for (const o of last.c.map(opt)) {
+      if (!o || o.disabled) continue;
+      mark(o, "on");
+      if (last.v === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+    }
+    if (last && last.f) for (const [id, v] of Object.entries(last.f)) {
+      const o = opt(id), f = o && fixOf(o); if (!f) continue;
+      if (!o.disabled) mark(o, "x");
+      f.querySelector("input").value = v;
+      f.classList.toggle("bad", last.w === id); if (last.v === "correct") f.classList.add("ok", "done");
+    }
+    const live = opts().find(x => !x.disabled); if (live) roving(live);
+    syncTicks();
+  } else if (p.type === "mc") {
     for (const t of S.tries) {
       const o = opts().find(x => x.dataset.id === t.c); if (!o) continue;
       if (t.v === "wrong") { o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); }

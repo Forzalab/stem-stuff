@@ -70,3 +70,62 @@ test("multi: the whole-set body, a missing or bad part, and unreadable text are 
   assert.equal(gradeLocal(p, { part: 0, answer: "x+" }).verdict, "invalid");
   assert.equal(gradeLocal(p, { part: 0, answer: "1" }).triesLeft, 1);
 });
+
+// mc pick all (design/CHOOSE-ALL.md §3): same cases as tests/test_serve.py pick-all tests
+const pickAll = (code, extra = {}) => ({ type: "mc", pick: "all", code, correct: ["a", "c"], miss: "QUACK. Missing one.",
+  choices: [{ id: "a", md: "A" }, { id: "b", md: "B" }, { id: "c", md: "C" }, { id: "d", md: "D" }, { id: "e", md: "None", lock: true }],
+  wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: `QUACK. ${c}` })), ...extra });
+test("pick all: the set must match; any order", () => {
+  assert.equal(maxTries(pickAll("T_a0")), 2);
+  assert.equal(gradeLocal(pickAll("T_a1"), { choices: ["c", "a"] }).verdict, "correct");
+});
+test("pick all: empty, unknown, duplicate, not an array, locked + another are invalid (no try spent)", () => {
+  const p = pickAll("T_a2");
+  for (const b of [{ choices: [] }, { choices: ["z"] }, { choices: ["a", "a"] }, { choices: "a" }, { choice: "a" }, { choices: ["e", "a"] }])
+    assert.deepEqual(gradeLocal(p, b), { verdict: "invalid", triesLeft: 2 }, JSON.stringify(b));
+  assert.equal(gradeLocal(p, { choices: ["e"] }).struck, "e");                 // "none" alone is a real (wrong) answer
+});
+test("pick all: the first ticked distractor in shown (authored) order strikes; none ticked = miss; a repeat is free", () => {
+  const p = pickAll("T_a3");
+  let r = gradeLocal(p, { choices: ["d", "a", "b"] });
+  assert.deepEqual([r.verdict, r.triesLeft, r.error, r.hint, r.struck], ["wrong", 1, "misread", "QUACK. b", "b"]);
+  r = gradeLocal(p, { choices: ["b", "d", "a"] });
+  assert.deepEqual([r.repeat, r.triesLeft], [true, 1]);
+  r = gradeLocal(p, { choices: ["a"] });
+  assert.deepEqual([r.verdict, r.triesLeft, r.error, r.hint, r.struck], ["wrong", 0, "incomplete", "QUACK. Missing one.", undefined]);
+  assert.equal(gradeLocal(p, { choices: ["a", "c"] }).verdict, "locked");
+});
+test("pick all: shown() keeps every correct id and the locked ones from a pool of 8", () => {
+  const p = pickAll("T_a4", { correct: ["g", "h"], choices: "abcdefgh".split("").map(id => ({ id, md: id, ...(id === "c" ? { lock: true } : {}) })) });
+  assert.deepEqual(shown(p).map(c => c.id), ["a", "b", "c", "g", "h"]);
+});
+
+// typed numbers right to 4 significant figures (serve.py sig4): correctness only
+test("num: 4 significant figures count as right", () => {
+  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "wrong"], ["15.58", "wrong"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_s4_${t}`, answer: "9*sqrt(3)" }, { answer: t }).verdict, v, t);
+});
+
+// pick all, prove mode (fix): every unlocked row not ticked carries a typed fix; a right set grades the fixes like parts
+const prove = code => pickAll(code, { fix: { type: "num" }, wrong: [
+  { choice: "b", error: "misread", hint: "QUACK. b", fix: { answer: "6", wrong: [{ match: "7", error: "arithmetic", hint: "QUACK. fix b" }] } },
+  { choice: "d", error: "misread", hint: "QUACK. d", fix: { answer: "9*sqrt(3)" } },
+  { choice: "e", error: "other", hint: "QUACK. e" }] });
+test("prove: fixes must cover exactly the un-ticked unlocked rows (else invalid, no try)", () => {
+  const p = prove("T_p1");
+  for (const f of [undefined, {}, { b: "6" }, { b: "6", d: "" }, { b: "6", d: "1", e: "1" }, { b: "6", d: 1 }, ["6", "1"]])
+    assert.deepEqual(gradeLocal(p, { choices: ["a", "c"], ...(f !== undefined ? { fixes: f } : {}) }), { verdict: "invalid", triesLeft: 2 }, JSON.stringify(f));
+  assert.equal(gradeLocal(p, { choices: ["a", "c"], fixes: { b: "2+", d: "1" } }).verdict, "invalid", "unreadable fix on a right set");
+});
+test("prove: wrong set strikes first; a wrong fix names its row; repeat is free; 4 sig figs count", () => {
+  const p = prove("T_p2");
+  let r = gradeLocal(p, { choices: ["a", "b", "c"], fixes: { d: "2+" } });     // set wrong: the fixes are not graded
+  assert.deepEqual([r.verdict, r.struck, r.triesLeft], ["wrong", "b", 1]);
+  r = gradeLocal(p, { choices: ["a", "c"], fixes: { b: "7", d: "15.59" } });
+  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint, r.triesLeft], ["wrong", "b", "arithmetic", "QUACK. fix b", 0]);
+  const q = prove("T_p3");
+  r = gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6", d: "15" } });
+  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "QUACK. Right call on which ones are false. One fix is off: redo that row's math."]);
+  assert.equal(gradeLocal(q, { choices: ["c", "a"], fixes: { d: "15.0", b: "6" } }).repeat, true);   // same values: a repeat
+  assert.equal(gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6.000", d: "15.588" } }).verdict, "correct");
+});
