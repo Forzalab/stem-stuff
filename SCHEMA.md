@@ -34,7 +34,7 @@ Keep problems in any order: the page shuffles the list per browser (design/NAV.m
 - Units in the ask: "Find the stretch of the spring, in $\\text{m}$."
 
 ## Codes
-- Format is `PREFIX_SUFFIX` (underscore: it joins words, so one double-tap on a phone selects the whole code; the page still accepts `-`, a space or no separator and normalizes to `_`). Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math), `PSY` (psychology).
+- Format is `PREFIX_SUFFIX` (underscore: it joins words, so one double-tap on a phone selects the whole code; the page still accepts `-`, a space or no separator and normalizes to `_`). Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math).
 - The suffix is 3 characters, A–Z and 0–9. Don't use O/0 or I/1.
 - **A suffix must be unique across all subjects** (the tests enforce this).
 
@@ -335,7 +335,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
       "properties": {
         "code": {
           "type": "string",
-          "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$"
+          "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$"
         },
         "title": {
           "type": "string",
@@ -677,7 +677,7 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
     },
     "code": {
       "type": "string",
-      "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$"
+      "pattern": "^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$"
     },
     "subject": {
       "enum": [
