@@ -5,7 +5,7 @@ import { shuffled, seed } from "./shuffle.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
-const CODE_RE = /^(CALC1|CSCI26|PHYS)_[A-Z0-9]{3,6}$/;
+const CODE_RE = /^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
@@ -123,7 +123,7 @@ let swapOn = false, lostAt = 0;          // Swap state (see "Swap" below)
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
   const s = raw.toUpperCase().trim().replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
+  const m = s.match(/^(CALC1|CSCI26|PHYS|PSY|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
   return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
 }
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
