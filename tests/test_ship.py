@@ -205,6 +205,26 @@ class PrintBanks(unittest.TestCase):
         self.assertIn("pull --ff-only", r.stderr)
         self.assertNotIn("deploying", r.stdout)
 
+    def test_main_checkout_pulls_itself_and_restarts(self):
+        origin = os.path.join(self.tmp, "origin.git")
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", origin], check=True)
+        git(self.root, "init", "-q", "-b", "main")
+        git(self.root, "add", "tools")
+        git(self.root, "commit", "-q", "-m", "tools")
+        git(self.root, "remote", "add", "origin", origin)
+        git(self.root, "push", "-q", "-u", "origin", "main")
+        other = os.path.join(self.tmp, "other")
+        subprocess.run(["git", "clone", "-q", origin, other], check=True)
+        with open(os.path.join(other, "tools", "ship.sh"), "a") as f:
+            f.write("# newer\n")
+        git(other, "commit", "-q", "-am", "newer ship.sh")
+        git(other, "push", "-q", "origin", "main")
+        r = self.ship()
+        self.assertIn("restarting with the new version", r.stdout)
+        with open(os.path.join(self.root, "tools", "ship.sh")) as f:
+            self.assertTrue(f.read().endswith("# newer\n"))
+        self.assertIn("BANK_ZZ1.json", self.chosen(r))
+
 
 if __name__ == "__main__":
     unittest.main()

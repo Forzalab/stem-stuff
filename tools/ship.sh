@@ -12,12 +12,26 @@
 # deploy: a partial bank set never ships. The token is never printed.
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
 #   (no worktree, no Vercel; demo|live optional).
-# A deploy stops if tools/ship.sh or brain_banks.py differs from origin/main's (pull first).
+# A checkout on main pulls itself first (fast-forward only; a new ship.sh restarts the run). A deploy still stops if
+# tools/ship.sh or brain_banks.py differs from origin/main's (local edits, another branch, offline).
 # A repo-root .env (gitignored; see .env.example) is loaded first. Vercel token: $VERCEL_TOKEN if set (cloud), else your
 # `vercel login`. Already-built demo → live without a rebuild: Vercel dashboard → Deployments → ⋯ → Promote.
 # design/DEPLOY.md has the why.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# --- self-update (like deploy.sh): a checkout on main fast-forwards to origin/main; a changed ship.sh finishes the run (once) ---
+if [ -z "${SHIP_REEXEC:-}" ] && [ "$(git -C "$ROOT" symbolic-ref -q --short HEAD 2>/dev/null || true)" = main ]; then
+  OLD_SELF="$(git -C "$ROOT" rev-parse HEAD:tools/ship.sh 2>/dev/null || true)"
+  if GIT_TERMINAL_PROMPT=0 git -C "$ROOT" fetch -q origin main </dev/null && git -C "$ROOT" merge -q --ff-only origin/main >/dev/null 2>&1; then
+    if [ "$OLD_SELF" != "$(git -C "$ROOT" rev-parse HEAD:tools/ship.sh)" ]; then
+      echo "ship.sh updated -> restarting with the new version"
+      exec env SHIP_REEXEC=1 bash "$ROOT/tools/ship.sh" "$@"
+    fi
+  else
+    echo "ship: could not fast-forward $ROOT to origin/main (local changes or offline)" >&2
+  fi
+fi
 XT=; case $- in *x*) XT=1 ;; esac
 xoff() { { set +x; } 2>/dev/null; }          # around anything that expands $BRAIN_TOKEN
 xon() { if [ -n "$XT" ]; then set -x; fi; }
