@@ -219,7 +219,7 @@ Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3
 ## Round 3b (Oct 2 ~22:05 PT, Tony's picks)
 
 - **Button: 2**, pen + "Scratchpad" (M3 extended FAB). Rounds 1/3/4/5 stay as history shots.
-- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), a touch bigger: 1.75rem.**
+- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), a touch bigger: 1.75rem, then 1.875rem (~23:59).**
 - Tony ~22:50: toast text layout was ugly (it wrapped mid-phrase at 16rem) → one line, centred, width up to the column; border 1px → 1.5px; the Scratchpad button's dot removed (it read as noise).
 - **Toast: hybrid** = the shipped take-5f look (page `--paper`, 1px `--line`, `--shadow-1`, `--t-md` 400) + its 14px caret, on every toast: under its anchor (caret up), above it (`.up`, caret down: the onboarding note over the button), and on the MC row (`.side`: lies on the struck choice's text, caret points left at the X badge, so no live choice is covered).
 - Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer here." · "Drag the button anywhere."

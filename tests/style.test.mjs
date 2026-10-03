@@ -80,8 +80,8 @@ test("§3 Toast: the caret on every toast, the MC row too", { todo: "STYLE.md §
 
 test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () => {
   // window: Escape closes the toast. codeIn: the combobox. q: MC choice keys. inp: Enter submits a box. sash: silent a11y.
-  // nav.js btn / panel: the list combobox. document in nav.js: [ and ] prev / next (existing; STYLE.md §5 keeps existing keys).
-  const ALLOW = { "app.js": ["window", "codeIn", "q", "inp", "sash"], "nav.js": ["btn", "panel", "document"] };
+  // nav.js btn / panel: the list combobox. ([ and ] prev / next were removed: Tony, Oct 2 ~23:59 PT.)
+  const ALLOW = { "app.js": ["window", "codeIn", "q", "inp", "sash"], "nav.js": ["btn", "panel"] };
   const bad = [];
   for (const f of JS) for (const m of read(f).matchAll(/(?:^|[^\w.])(?:(\w+)\.)?addEventListener\(\s*["']key(?:down|up|press)["']/gm)) {
     const who = m[1] || "window";

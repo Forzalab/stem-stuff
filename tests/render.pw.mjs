@@ -383,14 +383,10 @@ async function run(browserType, label, opts = {}) {
       await next.click(); await at(codes[3]);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-next-${viewport.width}.png` });
       await prev.click(); await at(codes[2]);
-      // keys: ] and [ outside fields; typed into the scratchpad they stay text
+      // no keyboard shortcuts (Tony, Oct 2 ~23:59 PT: "kill key shortcut"): [ and ] do nothing outside fields
       await page.locator("#problem").click();
-      await page.keyboard.press("]"); await at(codes[3]);
-      await page.keyboard.press("["); await at(codes[2]);
-      await page.locator("#scratch").click(); await page.keyboard.type("a[i]");
-      await page.waitForTimeout(150);
-      assert.equal(await page.locator("#pcode").textContent(), codes[2], "[ ] navigated while typing");
-      assert.equal(await page.inputValue("#scratch"), "a[i]");
+      await page.keyboard.press("]"); await page.waitForTimeout(150);
+      assert.equal(await page.locator("#pcode").textContent(), codes[2], "] still navigates");
       // last question: next off; the list works from the keyboard
       await page.evaluate(c => { location.hash = c; }, codes[n - 1]); await at(codes[n - 1]);
       assert.ok(await next.isDisabled() && await prev.isEnabled(), "last question: next off, prev on");

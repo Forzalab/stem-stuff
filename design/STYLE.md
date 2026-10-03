@@ -64,7 +64,7 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 
 ### 2.2 Type
 
-- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.75rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
+- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.875rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
 - Scale (phones; desktop raises all three):
 
 | token | px | for |
@@ -264,7 +264,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Keyboard
 
-- No keyboard shortcuts for new features. Existing keys stay (code box combobox, MC choice keys, Enter to submit, Esc to close). Why: Tony, "NO KEYBOARD SHORTCUT".
+- No keyboard shortcuts. Keys only do what a focused control already means: the code box and list comboboxes, MC choice keys inside the focused group, Enter to submit a box, Esc to close. Nothing global (`[` / `]` prev / next removed Oct 2 ~23:59 PT). Why: Tony, "NO KEYBOARD SHORTCUT", "kill key shortcut".
 - The sash takes arrows, Home and End only while focused, for assistive tech; it is never shown or documented.
 
 ---
