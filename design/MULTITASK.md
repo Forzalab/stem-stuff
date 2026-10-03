@@ -247,6 +247,21 @@ Length test (Oct 3 ~00:30; `?len=1..4`: one line · a line + an equation · thre
 
 Pick stays **4, else 1**, with the hug cap made screen-dependent: at most ⅓ of the screen under 700px tall, 45% above, so a long question never costs pad room vs today.
 
+## Round 3d (Oct 3 ~00:35 PT): no header row
+
+Tony: the collapse button belongs to the pad, so it goes inside the pad box; the q | a switch moves into the answer view, or the tile bleeds into the page; a thin drag bar; no dead space; one-hand reach; 5 variants. Mock `design/mockups/pad3d.html?v=1..5&tile=q|a&len=1..4` (tile hugs its content, at most ⅓ of a short screen, 45% of a tall one). Every variant: collapse inside the pad's bottom-left, Cut / Copy bottom-right, a 3×32px bar with a 44px touch area.
+
+| v | name | the switch | tile | pad px (q short / a / q long, 390×844) |
+|---|---|---|---|---|
+| 1 | corner kit | rides the tile's bottom-right corner | card | 620 / 478 / 506 |
+| 2 | bleed + thumb row | in the pad's bottom row, next to collapse | bleeds into the page, a hairline divides | 668 / 526 / 554 |
+| 3 | pad toolbar | left end of one tool row along the pad's bottom edge (collapse, Cut, Copy right) | card | 668 / 526 / 554 |
+| 4 | the handle is the switch | one pill on the divider: tap q or a, drag it to resize | bleeds | 628 / 486 / 514 |
+| 5 | swipe pages | none: swipe the tile sideways, or tap the q · a marks under it | bleeds | 628 / 486 / 514 |
+
+**Pick: 2.** Every control is in the bottom thumb band, the tile costs no frame, the most pad room. Runner-up: 4 (one control does both jobs; the switch sits right where the eye crosses from question to pad). Impeccable live at 390, all five: 0.
+Shots: `mt3d-{1..5}-{q2,a2,q4}-390.png`.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.
