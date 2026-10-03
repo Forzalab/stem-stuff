@@ -21,6 +21,9 @@ const CODES = ["CALC1_N01", "CALC1_N02", "CALC1_N03", "CALC1_N04"];
 const BANK = { v: 1, problems: CODES.map((c, i) => num(c, String(i + 2), `Stable ${i + 1}: 1 + ${i + 1}`)) };
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_NV12.json"), JSON.stringify(BANK));
+const MC = { code: "CALC1_M01", type: "mc", correct: "a", shuffle: false, body: [{ type: "text", md: "Pick A. " + "Long text. ".repeat(120) }],
+  choices: [{ id: "a", md: "right" }, { id: "b", md: "nope" }, { id: "c", md: "nah" }] };
+writeFileSync(join(BANKS, "BANK_NV34.json"), JSON.stringify({ v: 1, problems: [MC, num("CALC1_M02", "2", "1 + 1")] }));
 
 const { shuffled } = await import("../shuffle.mjs");
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => shuffled(CODES, s).every((c, i) => c === CODES[i]));
@@ -82,7 +85,7 @@ try {
 
   await step("Next does not wait on p/CODE.json (bank in memory), and still tells the server", async () => {
     let asked = 0;
-    await page.route("**/p/*.json", async r => { asked++; await new Promise(res => setTimeout(res, 2000)); await r.continue(); });
+    await page.route("**/p/*.json", async r => { asked++; await new Promise(res => setTimeout(res, 2000)); await r.continue().catch(() => {}); });
     const list = await order(page), to = list[list.indexOf(await page.textContent("#pcode")) + 1];
     const t0 = Date.now();
     await page.click("#qnext"); await opened(page, to, 1500);
@@ -91,6 +94,25 @@ try {
     await page.waitForTimeout(300);
     assert.equal(asked, 1, "the server was not told (seen pointer)");
     await page.unroute("**/p/*.json");
+  });
+
+  await step("all correct with the pad page open: the pad closes and the question row (Next) comes back", async () => {
+    const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
+    await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const pg = await c2.newPage();
+    await pg.goto(BASE + "/#BANK_NV34");
+    await pg.waitForFunction(() => /^CALC1_M0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    if ((await pg.textContent("#pcode")) !== MC.code) { await pg.goto(BASE + "/#" + MC.code); await opened(pg, MC.code); }
+    await pg.waitForTimeout(400);
+    await pg.click("#padFab");
+    await pg.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 3000 });
+    if (!(await pg.isVisible('.opt[data-id="a"]'))) await pg.click("#mtMode");                // the a tile
+    await pg.click('.opt[data-id="a"]'); await pg.click('.ch[data-id="a"] .send');
+    await pg.waitForFunction(() => !document.documentElement.classList.contains("mt"), null, { timeout: 3000 });
+    await pg.waitForTimeout(800);                                                   // the smooth scroll
+    const g = await pg.evaluate(() => ({ next: document.querySelector("#qnext").getBoundingClientRect().top, y: scrollY }));
+    assert.ok(g.next >= 0 && g.next < 100, `Next not in view: top ${g.next}, scrollY ${g.y}`);
+    await c2.close();
   });
 } finally {
   await browser.close();
