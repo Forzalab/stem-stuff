@@ -28,6 +28,9 @@ tests and root-causes red ones.
   asynchronously. A test that reopens a problem an earlier step locked can see the old state for a moment.
 
 ## Paths already walked (do not repeat)
+- **Dead gap at the bottom of a phone problem page** (Oct 3): three reservations stacked: `main` padding-bottom (dock 44 + 24), `html.fab-on main::after`
+  (88, room for the Scratchpad button) and `.freeze` padding (12) = 168 above the page end, i.e. 124px between the last control and the bar. Rule kept:
+  ONE reservation, `html.fab-on main { padding-bottom: dock-h + 56px + s4 }` (no `::after`), gap now 84px. `fab.pw` asserts gap <= 90 and no overlap.
 - **Bounce at the end of scroll** (Oct 3): researched and mocked (design/BOUNCE.md), Tony: "doesn't work, KISS" → bottom
   padding in the pad page's boxes instead.
 - **CI-only reds on the first GitHub run (Oct 3, PR #44 @67bbea8)**: `disabled.pw` "390 mc: correct" (`reading 'click'` of
