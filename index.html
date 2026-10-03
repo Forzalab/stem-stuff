@@ -166,6 +166,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <section class="freeze" id="freeze" aria-labelledby="pcode" hidden>
     <!-- desktop, pad wide: the problem stashed to a 52px strip with its code written down the side; tap = the problem back -->
     <button type="button" class="pstrip" id="pstrip" aria-label="Show the problem" hidden><span id="pstripCode"></span></button>
+    <!-- side by side: the question's label row, the twin of the pad's "Scratchpad" row, so both boxes start at the same height (Tony, Oct 3) -->
+    <div class="xb-label q-label" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span>Question</span></div>
     <div class="freeze-in" id="freezeIn">
       <article class="p" id="problem">
         <h1 class="pcode sr-only" id="pcode"></h1>

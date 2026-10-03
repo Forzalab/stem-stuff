@@ -593,6 +593,9 @@ html.side .sash::before { position: sticky; display: block; top: 40vh; left: aut
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
+.q-label { display: none; }
+html.side .freeze .q-label { display: flex; }                                       /* side by side only: the boxes start level */
+html.side.mt-r0 .freeze .q-label, html.mt .freeze .q-label { display: none; }   /* the pad page's .xb-label rule (display: contents) must not show it */
 html.side #scratch { min-height: var(--pad-max, 60vh); }
 html.side.mt-r0 .freeze-in { display: none; }
 html.side .pstrip {

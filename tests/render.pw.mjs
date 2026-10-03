@@ -173,10 +173,10 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
       // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
       const w = await page.evaluate(() => { scrollTo(0, 0); const b = document.querySelector("#xbField").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(), k = document.querySelector("#work").getBoundingClientRect();
-        return { box: b.right, card: c.right, left: b.left, cardTop: c.top, workTop: k.top }; });
+        return { box: b.right, card: c.right, left: b.left, cardTop: c.top, workTop: k.top, boxTop: b.top }; });
       if (viewport.width >= 720) {   // side by side (design/MULTITASK.md "Desktop, revised"): the pad is the right column, never under the problem
         assert.ok(w.left >= w.card && w.left - w.card <= 48, `pad not beside the problem: pad left ${w.left}, card right ${w.card}`);
-        assert.ok(Math.abs(w.workTop - w.cardTop) <= 2, `pad top ${w.workTop} vs problem top ${w.cardTop}`);
+        assert.ok(Math.abs(w.boxTop - w.cardTop) <= 2, `pad box top ${w.boxTop} vs question box top ${w.cardTop} (the Question row levels them)`);
       } else assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 

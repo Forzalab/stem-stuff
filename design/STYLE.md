@@ -222,6 +222,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 - The top area hugs what it shows: at most ⅓ of a screen under 700px tall, 45% above. Dragging the bar sets a size until the page closes.
 - The tile has a q | a switch: **q** shows the problem only (text and figure); **a** shows the answer control only, for every type. Opening goes to q with a big pad.
 - Desktop and landscape tablet (720px and up): side by side, problem and answer left, pad right. Never the pad under the problem. Why: Tony, "pad down = bad". No Scratchpad button there.
+- Side by side, both columns start with a label row (`i-doc` + "Question", `i-pen` + "Scratchpad"), so the question box and the pad box start level; the top bar spans the same width as the two columns (its ends sit on the content's edges). Why: Tony, Oct 3, "looks unbalanced".
 - One surface per pane. Panes are siblings on `--paper`: a `--s2` gap, `--s4` where a handle sits. Never a card inside a card.
 - The active side is shown by its switch (`.btn-tgl`: active letter in `--c1` on a `--raised` pill), not by a colored frame or a shadow.
 - A switch is a `--d-move` crossfade (View Transition); with reduced motion it is instant. Hidden panes stay laid out and focusable; switching never resets scroll or caret.

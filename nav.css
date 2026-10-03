@@ -30,6 +30,8 @@
   display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; column-gap: var(--s2);
   max-width: var(--col); margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
 }
+/* side by side: the bar spans the same width as the two columns under it, so its ends sit on the content's edges (Tony, Oct 3) */
+html.side.qnav-on:not(.dock-bottom):not(.start) .top, html.side.dock-bottom .qnav { max-width: min(100%, calc(var(--col) * 1.7)); }
 .qnav-on:not(.dock-bottom):not(.start) .dock { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) .qnav { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) #qlistBtn { grid-row: 1; grid-column: 1; }
