@@ -7,13 +7,13 @@
 }
 .qnav { display: flex; gap: var(--s2); }
 .qnav .btn:disabled { opacity: 0.45; cursor: default; }
-.qnav .btn:disabled:hover { background: var(--sheet); border-color: var(--edge); }
+.qnav .btn:disabled:hover { background: var(--sheet); }
 .qnav .btn:disabled:active { transform: none; }
 /* list button label: bank code, or the upload's file name with ".json" dimmed; phones and touch drop ".json" (Tony, Sep 30) */
 #qlistName { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #qlistName .ext { color: var(--muted); }
 .dock-bottom #qlistName .ext { display: none; }
-#qlistBtn[aria-expanded="true"] { background: var(--raised); border-color: var(--muted); }
+#qlistBtn[aria-expanded="true"] { background: var(--raised); }
 
 /* two groups, both layouts: the bank side (list, shuffle) left, Prev/Next pushed to the right edge */
 .qnav #qprev { margin-left: auto; }
