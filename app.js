@@ -1,12 +1,15 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
-import { inject } from "./vendor/vercel-analytics/index.mjs";
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank } from "./suggest.mjs";
 
-// Initialize Vercel Web Analytics
-inject();
+/* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
+   tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
+if (location.protocol === "https:" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  const va = document.createElement("script"); va.defer = true; va.src = "/_vercel/insights/script.js"; document.head.appendChild(va);
+}
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
