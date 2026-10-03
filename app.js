@@ -1440,17 +1440,18 @@ function fabSync() {
   if (fab.hidden === !show) return;
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
   if (!show) return;
-  fabPlace(); requestAnimationFrame(() => requestAnimationFrame(fabPlace));        // again once the bottom bar is back in place
+  fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
   if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap Scratchpad to open your pad.", fab), 700); }
   else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag the button anywhere.", fab), 700);
 }
 function fabBounds() {
   const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;
-  const vh = vv ? vv.height : innerHeight, dk = dock.getBoundingClientRect();
-  const floor = Math.min(vh - dockRoom(), dk.height && dk.top < vh ? dk.top : vh);   // the bar as it really sits, whatever state it is in
+  const floor = root.clientHeight - dockRoom();   // layout viewport and the bar's resting height: nothing that moves while scrolling or while the URL bar slides
   return { min: s + 8, max: Math.max(s + 8, floor - s - h), h };
 }
-function fabPlace() {
+/* avoid: step off answer controls under it. Only explicit placements ask for it (first show, drag end); a resize never does, or the
+   button hops by a control's height with the scroll offset it happens to be at. */
+function fabPlace({ avoid } = {}) {
   const m = mtMem.fab || {}, b = fabBounds();
   let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
   fab.classList.toggle("left", m.side === "l");
@@ -1458,7 +1459,7 @@ function fabPlace() {
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
   const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
-  for (let n = 0; n < 6; n++) {
+  for (let n = 0; avoid && n < 6; n++) {
     const hit = ctl.find(q => q.bottom > top && q.top < top + b.h); if (!hit) break;
     const upY = hit.top - b.h - 8, downY = hit.bottom + 8;
     top = upY >= b.min ? upY : downY <= b.max ? downY : top;
@@ -1487,15 +1488,15 @@ function fabEnd(e) {
   const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy));
   mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
   mtMem.fabMoved = 1; mtSave();
-  fabPlace();
+  fabPlace({ avoid: true });
 }
 fab.addEventListener("pointerup", fabEnd);
 fab.addEventListener("pointercancel", fabEnd);
 fab.addEventListener("click", () => { if (fabMoved) { fabMoved = false; return; } openMT(); });   // a drag is not a tap
 document.addEventListener("focusin", fabSync);
 document.addEventListener("focusout", () => setTimeout(fabSync, 0));
-addEventListener("resize", () => { if (!fab.hidden) fabPlace(); });
-new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);         // the bar grew (Retry, an error line): stay above it
+addEventListener("resize", () => { if (!fab.hidden) fabPlace(); });                // the same spot of the (new) range: no step-off
+new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);         // the bar changed height: stay above it
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
