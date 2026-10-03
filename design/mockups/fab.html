@@ -96,8 +96,8 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 
 /* ---------- onboarding toast (take 5f look: page paper, --line hairline) ---------- */
 /* round 3b hybrid: the app's #toast (paper, hairline, --shadow-1, --t-md 400) with its 14px caret; .up = the toast sits above its anchor, caret on the bottom edge */
-.tst { position: absolute; z-index: 35; width: max-content; max-width: 16rem; min-height: 52px; display: flex; align-items: center; padding: var(--s3) var(--s4);
-  border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-1);
+.tst { position: absolute; z-index: 35; width: max-content; max-width: calc(100% - 2 * var(--s4)); min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--s3) var(--s4);
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker" */
   font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; color: var(--ink); }
 .tst::before { content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
   background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0; }
@@ -111,7 +111,7 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .ch.wrong span:last-child { text-decoration: line-through; color: var(--muted); }
 /* q | a letter pill: one face per variant (all already shipped by the app) */
 .pill span.l { font-size: 1.5rem; line-height: 1; padding-bottom: 2px; }
-.ql1 span.l { font-family: KaTeX_Math; font-style: italic; }
+.ql1 span.l { font-family: KaTeX_Math; font-style: italic; font-size: 1.75rem; }   /* the pick, a touch bigger (Tony) */
 .ql2 span.l { font-family: KaTeX_Main; }
 .ql3 span.l { font-family: KaTeX_Main; font-style: italic; font-weight: 700; }
 .ql4 span.l { font-family: KaTeX_Fraktur; }
@@ -162,7 +162,7 @@ const PAIRS = { 1: "doc | pencil box", 2: "? bubble | check", 3: "lines | radios
 const choices = wrong => CHOICES.map(([l, t]) => `<div class="ch${l === wrong ? " wrong" : ""}"><span class="box">${l === wrong ? ico("i-x") : ""}</span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
 const dot = padOn ? `<span class="dot"></span>` : "";
 function fab() {
-  if (f === 2) return `<button class="fab f2" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span>Scratchpad</span>${dot}</button>`;
+  if (f === 2) return `<button class="fab f2" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span>Scratchpad</span></button>`;   // no dot (round 3b: it read as noise)
   if (f === 4) return `<button class="fab f4" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-chev")}${dot}</button>`;
   if (f === 5) return `<button class="fab f5" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span class="ln${padOn ? "" : " empty"}">${padOn ? LAST : "Scratchpad"}</span></button>`;
   return `<button class="fab f${f}${f === 3 && state === "closed" && P.get("idle") ? " idle" : ""}" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}${dot}</button>`;

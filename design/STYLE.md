@@ -64,7 +64,7 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 
 ### 2.2 Type
 
-- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters use one KaTeX face (a math face, not a UI family; pick in [MULTITASK.md](MULTITASK.md) Round 3b).
+- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.75rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
 - Scale (phones; desktop raises all three):
 
 | token | px | for |
@@ -109,7 +109,7 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 
 - Controls and fields: 2px `--edge`. Hover: `--muted`. Focus: `--focus`. Selected: `--c1`. Right: `--ok` solid. Wrong: `--bad` **dashed** (dash = not accepted, so it survives grayscale).
 - Surfaces have no border. A background change separates them.
-- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom).
+- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom). The toast's edge is the one 1.5px `--line` border.
 - No colored side stripes on anything.
 
 ### 2.7 Elevation
@@ -192,7 +192,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 ### Toast (`#toast`)
 
 - Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
-- Anatomy: page `--paper`, 1px `--line` hairline, `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
+- Anatomy: page `--paper`, 1.5px `--line` border (Tony: "slight thicker"), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
 - Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
 - Timing: in `--d-move`, stays 2.5 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
 - Don't: use it for "Saved", "Correct" or anything already shown on the control; stack two toasts (a wrong-answer note wins over onboarding); a tinted or yellow slab.
@@ -228,7 +228,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Scratchpad button (`#padFab`, phone only)
 
-- Anatomy: M3 extended FAB. `i-pen` + "Scratchpad", 56px tall, 16px radius, `--raised`, `--shadow-3`, `--ink`, `--t-sm` bold. A small `--c1` dot when the pad has text. `aria-expanded`.
+- Anatomy: M3 extended FAB. `i-pen` + "Scratchpad", 56px tall, 16px radius, `--raised`, `--shadow-3`, `--ink`, `--t-sm` bold. No badge or dot (Tony, round 3b: it read as noise). `aria-expanded`.
 - Behavior: tap opens the pad page. You can drag it; on release it snaps to the left or right edge, never under the dock or the home indicator, and never rests over an answer control. Hidden while an answer field has focus. Its place is remembered per device.
 - Why: one tap to the pad, and the pad never covers the problem.
 
