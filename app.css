@@ -518,7 +518,7 @@ html.mt main {
   position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
   height: var(--vv-h, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr);
   grid-template-rows: calc(var(--r, .5) * (100% - var(--s3))) var(--s3) minmax(0, 1fr);
-  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) var(--s2);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) max(var(--s2), env(safe-area-inset-bottom));   /* the tool row stays above the home indicator */
 }
 html.mt.mt-fit main { grid-template-rows: var(--tile-h, 33%) var(--s3) minmax(0, 1fr); }   /* the tile hugs its content (layoutMT) */
 html.mt.mt-r0 main { grid-template-rows: auto var(--s3) minmax(0, 1fr); }
