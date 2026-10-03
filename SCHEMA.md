@@ -70,6 +70,7 @@ Keep problems in any order: the page shuffles the list per browser (design/NAV.m
 - **A typed answer that can be made binary** (like the gate-chain XOR question: "which if statement...", "greater than .5?") **becomes a 2-choice `mc`**, not a `num`/`text`. Word the question so the two choices are the two live answers, and give the wrong one an error type + hint.
 - **A free word, phrase, symbol or code line** (□¬P, `if (!a || b)`) → `text`, with `how` saying exactly what to type and in what form (symbols: say how to type them on a keyboard, e.g. "Type `[]` for □, `<>` for ◇, `~` for ¬", and list those spellings in `accept`).
 - **Several answers to one question** ("write both, in that order") → one `multi` problem, one part per blank, in the worksheet's order. Never split it into separate problems. Put the shared givens in `body` and each blank's question in that part's `prompt` (a, b, c...); `how` stays for typing instructions. Each part picks its own type.
+- Prove mode `fix.how` is the fix box's **placeholder**: 20 characters at most, abbreviations fine ("4 sigfigs, no unit", "in x, * ^, no unit", "up / same / down"). It must fit the box on a 375px phone.
 - A worksheet's strict **form** rule (".2", not "0.2") → a `text` part, with the form in `how`. `num` accepts every equal value.
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
@@ -456,7 +457,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
           "type": "object",
           "required": ["type"],
           "additionalProperties": false,
-          "properties": {"type": {"enum": ["num", "expr", "text"]}, "how": {"type": "string", "minLength": 3, "maxLength": 120}, "var": {"type": "string", "pattern": "^[a-z]$"}},
+          "properties": {"type": {"enum": ["num", "expr", "text"]}, "how": {"type": "string", "minLength": 3, "maxLength": 20, "description": "the fix box placeholder: 20 characters at most so it fits a 375px phone"}, "var": {"type": "string", "pattern": "^[a-z]$"}},
           "description": "mc pick all, prove mode (public): every X'd row needs a typed fix of this type; each false choice's wrong entry holds its fix answer"
         },
         "miss": {

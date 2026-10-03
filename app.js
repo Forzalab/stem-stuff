@@ -419,8 +419,8 @@ function renderQuestion() {
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
         </button>
         ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
-        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Type the correct value")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
-          data-how="${esc(p.fix.how || "Type the correct value")}" placeholder="${esc(p.fix.how || "Type the correct value")}"></div>` : ""}
+        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "correct value")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
+          data-how="${esc(p.fix.how || "correct value")}" placeholder="${esc(p.fix.how || "correct value")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
