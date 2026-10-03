@@ -1,7 +1,7 @@
 // Code box suggestions (suggest.mjs): banks first, questions last, order kept inside each group.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { suggest, remember } from "../suggest.mjs";
+import { suggest, remember, normalize, entry } from "../suggest.mjs";
 
 test("typing P2X lists the bank before the questions", () => {
   const codes = ["PHYS_P2XA", "CALC1_P2X", "BANK_P2X", "PHYS_P2XB", "BANK_P2XQ", "CALC1_T6B"];
@@ -26,4 +26,10 @@ test("remember: newest first, no duplicates, capped", () => {
   assert.deepEqual(remember(["A", "B", "C"], "B"), ["B", "A", "C"]);
   assert.deepEqual(remember(null, "A"), ["A"]);
   assert.equal(remember(Array.from({ length: 50 }, (_, i) => "C" + i), "X", 40).length, 40);
+});
+test("entry: a bare suffix opens a bank; full codes as before; paste (normalize) stays strict", () => {
+  for (const s of ["p2x", "P2X", " #p2x ", "bank p2x", "BANK_P2X"]) assert.deepEqual(entry(s), { prefix: "BANK", code: "BANK_P2X" }, s);
+  assert.deepEqual(entry("calc1 t6b"), { prefix: "CALC1", code: "CALC1_T6B" });
+  for (const s of ["", "ab", "toolong7", "p2 x!", "p2-x"]) assert.equal(entry(s), null, s);
+  assert.equal(normalize("p2x"), null);
 });

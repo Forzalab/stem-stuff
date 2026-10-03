@@ -58,7 +58,7 @@ Boot order:
 
 ### Opening a bank
 
-Type `bank a7q` / `BANK_A7Q` / paste it anywhere (existing paste redirect) → arrow → bank loads → question opens →
+Type `bank a7q` / `BANK_A7Q` / just `a7q` (code box only, Oct 3) / paste it anywhere (existing paste redirect) → arrow → bank loads → question opens →
 list button reads `BANK_A7Q`. Bad code → "Codes look like CALC1_T6B." (existing). Unknown bank → "No bank BANK_A7Q.".
 Timeout / offline → existing message + retry button. No close/leave button: type another code to switch.
 

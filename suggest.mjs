@@ -6,6 +6,23 @@
 const key = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 export const isBank = c => /^BANK_/.test(c);
 
+/* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
+   Accept lower case, "-" (old links), a space, or no separator at all. */
+export function normalize(raw) {
+  const s = String(raw || "").toUpperCase().trim().replace(/^#/, "");
+  const m = s.match(/^(CALC1|CSCI26|PHYS|PSY|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
+  return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
+}
+
+/* the code box only (Tony, Oct 3: typing BANK_ is tiring): a bare 3-6 letter/digit suffix means a bank, "p2x" -> BANK_P2X.
+   Paste, the Paste button and #links stay strict (normalize), so a short word pasted elsewhere is never taken for a code. */
+export function entry(raw) {
+  const n = normalize(raw);
+  if (n) return n;
+  const s = String(raw || "").toUpperCase().trim().replace(/^#/, "");
+  return /^[A-Z0-9]{3,6}$/.test(s) ? { prefix: "BANK", code: `BANK_${s}` } : null;
+}
+
 /* codes that contain what was typed. Banks first, then questions; inside each group the order the codes came in (the caller
    passes recent first). Duplicates dropped; the exact code already typed is not suggested back. */
 export function suggest(typed, codes, limit = 8) {
