@@ -1,8 +1,12 @@
 /* app.js: the drill page. Code entry -> p/<CODE>.json (served from problems.json, or an uploaded problems.json) -> blocks -> answer -> scratchpad -> Copy.
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
+import { inject } from "./vendor/vercel-analytics/index.mjs";
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank } from "./suggest.mjs";
+
+// Initialize Vercel Web Analytics
+inject();
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
