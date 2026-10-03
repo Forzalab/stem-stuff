@@ -45,7 +45,8 @@ async function run(browserType, label, opts = {}) {
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
     };
     /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
-    const padPage = async () => { if (vname !== "phone") return; await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); };
+    const padPage = async () => { if (vname !== "phone") return; await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"));
+      await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== "running")); await page.waitForTimeout(50); };   // measure the settled pad page, not its crossfade (CI red once, design/TESTING.md)
 
     for (const code of CODES) {
       await step(`${label} ${vname} ${code}: renders TeX, no raw TeX visible`, async () => {
