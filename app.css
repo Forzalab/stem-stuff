@@ -231,7 +231,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 
 /* ---------- question ---------- */
 .q { margin-top: var(--s3); }
-.choices { display: grid; gap: var(--s2); }
+.choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }   /* minmax: a fix box (an input, ~20ch wide) never widens the column past the card */
 .ch { position: relative; }
 .opt {
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
@@ -506,7 +506,6 @@ html.kbup #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !i
 .xb-label .mt-exp .ico, .xb-label .mt-mode .ico { width: var(--ico); height: var(--ico); }
 .xb-label .mt-mode .ico { color: var(--muted); }
 .xb-label .mt-mode[data-pane="problem"] .t-doc, .xb-label .mt-mode[data-pane="scratch"] .t-pen { color: var(--c1); }
-.xb-label .mt-mode + .mt-exp { margin-left: var(--s2); }
 .sash { display: none; }
 .pstrip { display: none; }
 
@@ -526,7 +525,7 @@ html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; 
 html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--sheet); border-radius: 10px; }
 html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
 html.mt.mt-r0 #problem { display: none; }
-html.mt #problem { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
+html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
 html.mt #fb:empty { display: none; }
 html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }

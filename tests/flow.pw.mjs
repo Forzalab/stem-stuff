@@ -30,10 +30,16 @@ let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   const page = await ctx.newPage();
+  page.setDefaultTimeout(6000);
   const errors = [];
   page.on("pageerror", e => errors.push(String(e)));
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
   const T = `${W}x${H}`;
+  /* the expand icon sits on the pad's label row: bring that row into view under the frozen problem (as a thumb scroll would) */
+  const expand = async () => {
+    await page.evaluate(() => { const l = document.querySelector("#xbLabel"), f = document.querySelector("#freeze"); scrollBy(0, l.getBoundingClientRect().top - f.getBoundingClientRect().bottom - 8); });
+    await page.waitForTimeout(150); await page.locator("#mtExp").tap(); await page.waitForTimeout(400);
+  };
   const shot = async () => { if (SHOTS && W === 390) { n++; await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/flow-${n}-390.png` }); } };
   const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * KB) }); await page.waitForTimeout(450); };
   const kbDown = async () => { await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(500); };
@@ -128,7 +134,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   });
 
   await step(`${T} handle: tap = next anchor (1/2 -> 1/3 -> answer only -> 1/2); drag snaps; the answer is always there`, async () => {
-    await page.locator("#mtExp").tap(); await page.waitForTimeout(400);
+    await expand();
     assert.ok(await has("mt"));
     const ratio = () => page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"));
     const tapSash = async () => { await page.locator("#sash").tap(); await page.waitForTimeout(400); };
@@ -169,7 +175,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
 
   await step(`${T} memory: the anchor is kept per device (reload)`, async () => {
     await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(400);
-    await page.locator("#mtExp").tap(); await page.waitForTimeout(400);
+    await expand();
     assert.equal(+(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3), 0.333);
     await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
     assert.equal(await has("mt"), false, "collapse closes");

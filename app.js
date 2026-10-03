@@ -1229,7 +1229,7 @@ freeze.addEventListener("click", () => { if (swapOn && shownPane === "scratch" &
 function backInView() {
   const el = lastEdit;
   if (!el || !el.isConnected || !mainEl.contains(el)) return;
-  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: "nearest", inline: "nearest" }); }));
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
 }
 
 /* ================= Multitask (design/MULTITASK.md) =================
