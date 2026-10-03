@@ -510,14 +510,14 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* ---------- toast (app.js toast(); design/TOAST.md take 5f "page note", Tony Oct 2) ----------
-   The page's own paper, the part divider's 1px --line hairline, --shadow-3 to lift it; text in the part prompt's style (400, --t-md).
+   The page's own paper, the part divider's 1px --line hairline as its edge (--shadow-1 only: Impeccable flags hairline + wide shadow); text in the part prompt's style (400, --t-md).
    No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
    exactly on the struck-out choice, no caret. 200ms ease-out, 8px; reduced motion = fade only (app.css turns transitions off, so
    these are animations). */
 #toast {
   position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
   display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
-  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3);
+  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);
   font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; cursor: pointer;
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
