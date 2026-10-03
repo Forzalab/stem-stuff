@@ -30,8 +30,9 @@ let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
 function placeToast() {
   const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
   if (!toastAt.getClientRects().length) { hideToast(); return; }                // its anchor went away (the button while the pad is open)
-  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt");
-  const m = (toastAt.querySelector(".vk, .badge") || toastAt).getBoundingClientRect(), mx = m.left + m.width / 2;
+  const mk = toastAt.querySelector(".vk, .badge"), mr = mk && mk.getBoundingClientRect();
+  const m = mr && mr.width ? mr : toastAt.getBoundingClientRect(), mx = m.left + m.width / 2;   // a one-row pill has no badge: its centre
+  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt") && !!(mr && mr.width);   // on the struck text only beside a badge
   const gut = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gut")) || 20;
   t.classList.toggle("row", row);
   if (row) {                                                                     // on the struck text, after the badge

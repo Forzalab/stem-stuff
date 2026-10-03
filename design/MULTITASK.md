@@ -264,6 +264,16 @@ Tony: the collapse button belongs to the pad, so it goes inside the pad box; the
 alt's pick was 2. Every control is in the bottom thumb band, the tile costs no frame, the most pad room. Runner-up: 4 (one control does both jobs; the switch sits right where the eye crosses from question to pad). Impeccable live at 390, all five: 0.
 Shots: `mt3d-{1..5}-{q2,a2,q4}-390.png`.
 
+## Shipped (round 3, Oct 3)
+
+In the app: phones hide the pad; the Scratchpad button (extended FAB, drag + edge snap, kept per device, off answer controls, above the bar, hidden while typing an answer or while the code bar is revealed) opens the pad page: the question box (`--qbox`) hugging its content (⅓ cap under 700px tall, 45% above), a thin bar, the pad with its tool row (q | a; collapse, Cut, Copy; saving / saved). One pointy toast (`.up`, `.row`), onboarding once per new device, no keyboard shortcuts. Phones have no freeze strip (the pad is off the page).
+
+Bugs found while porting the tests: the button covered Retry (it re-places when the bar grows, hides while the bar is revealed); the save status had no place on the pad page (now in the tool row); an onboarding toast outlived its anchor and blocked the button (a toast closes when its anchor goes); tapping the problem on q left the caret nowhere (close, then focus); the tool row sat under the home indicator (bottom safe area).
+
+Tests, old → new: autosave: types after opening the pad page. bar: (e) strip handle → none on phones, the whole problem in the page; (grow) the plain-page pad → the pad page fills to the bottom and scrolls, the bar away. render: pull-tab → never on phones at any height (viewport always restored); freeze, balance, copy band, pad-stops-at-bottom → on the pad page (the band is always reserved there); paste into the pad → checked where the pad is on the page (phones: the answer box). polish: focus ring, top bar, type sizes, gap → on the pad page. flow: rewritten for round 3 (peek → pad page, tap question → back to the field, the button, tool row, hug, q | a, thin bar, button drag + memory, onboarding, MC caret); desktop: no q | a. swap: entered from an answer field; the scratch pane (now unreachable) checks dropped, covered by flow / polish / bar / render; the crossfade and reduced motion → the q | a switch; safe areas → also the pad page. New: `tests/style.test.mjs`.
+
+Open: the Swap scratch-pane code in app.js (`setPane("scratch")`, the question-peek tap) is unreachable on phones now; remove it in a follow-up.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.
