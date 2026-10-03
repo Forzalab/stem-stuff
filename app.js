@@ -1068,7 +1068,12 @@ function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
   if (swapOn) { layoutSwap(); return; }
-  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes                                         // one pane above the keyboard: none of the strip logic applies
+  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes
+  if (root.classList.contains("pad-off")) {                                      // phones, pad off: nothing below needs room, so no strip
+    freeze.classList.remove("clipped", "stuck", "open"); more.hidden = true;     // cap, no fade, no pull-tab (Tony: "big ass dark space")
+    root.style.setProperty("--freeze-h", "0px");
+    return;
+  }                                         // one pane above the keyboard: none of the strip logic applies
   const dockH = dockRoom();
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
@@ -1090,7 +1095,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches) { freeze.classList.remove("stuck"); return; }
+  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches || root.classList.contains("pad-off")) { freeze.classList.remove("stuck"); return; }
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
