@@ -20,3 +20,17 @@ export function newSeed(key) {
   try { localStorage.setItem(key, s); } catch { /* blocked: this page only */ }
   return s;
 }
+/* mastery order (design/NAV.md "Mastery order"): order = the seeded list, recOf(code) -> { x, done } | null, cur = the open code.
+   Answered (done correct | out) first, in seeded order; then cur if it is still open; then the rest, the families with the most
+   wrong tries first (family = prefix + first letter of the suffix: CSCI26_C2A -> CSCI26_C). Stable: seeded order breaks ties. */
+export const family = code => code.replace(/_(.).*/, "_$1");
+export function mastery(order, recOf, cur) {
+  const rec = c => recOf(c) || null, answered = c => { const r = rec(c); return !!r && (r.done === "correct" || r.done === "out"); };
+  const weight = new Map();
+  for (const c of order) { const r = rec(c), f = family(c); weight.set(f, (weight.get(f) || 0) + ((r && r.x) || 0)); }
+  const done = order.filter(answered), open = order.filter(c => !answered(c));
+  const head = open.includes(cur) ? [cur] : [];
+  const rest = open.filter(c => c !== cur).map((c, i) => ({ c, i, w: weight.get(family(c)) }))
+    .sort((a, b) => b.w - a.w || a.i - b.i).map(o => o.c);
+  return [...done, ...head, ...rest];
+}

@@ -26,10 +26,10 @@ async function open(page, code, verdicts) {
 }
 const WRONG2 = [{ verdict: "wrong", triesLeft: 1 }, { verdict: "wrong", triesLeft: 0 }];
 const RIGHT = [{ verdict: "correct", triesLeft: 2 }];
-const waitFb = page => page.waitForSelector("#fb .verdict", { timeout: 4000 });
+const waitFb = page => page.waitForSelector("#q .vk, #q .opt.right, #fb .verdict", { timeout: 4000 });   // graded: the box / badge icon, or a line in #fb
 
 /* every answer control: aria-disabled, not-allowed cursor, no change on hover, clicks do nothing */
-async function assertDead(page, keep) {
+async function assertDead(page, keep, op = "1") {
   const ctl = await page.$$("#q .opt, #q .ans, #q .send");
   assert.ok(ctl.length, "controls present");
   for (const el of ctl) {
@@ -50,9 +50,9 @@ async function assertDead(page, keep) {
   for (const el of await page.$$("#q .opt, #q .ans")) { await el.click({ force: true }); await page.keyboard.type("9"); await page.keyboard.press("Enter"); }
   await page.waitForTimeout(200);
   assert.equal(await snap(), s0, "clicks changed something");
-  if (keep) {   // the right answer keeps its ok look, not dimmed
+  if (keep) {   // the right answer keeps its --ok edge; a right MC choice stays bright, a right box dims like every closed box (Tony, Oct 2)
     const o = await page.$eval(keep, e => { const s = getComputedStyle(e); return { op: s.opacity, bc: s.borderColor }; });
-    assert.equal(o.op, "1", "correct one not dimmed");
+    assert.equal(o.op, op, "correct one's opacity");
     assert.equal(o.bc, "rgb(95, 211, 148)", "correct one keeps --ok border");
   }
 }
@@ -86,7 +86,7 @@ async function run(w, h) {
     await open(page, "CALC1_T6B", RIGHT);
     await page.fill("#ans", "3"); await page.click("#ansGo"); await waitFb(page);
     await shot("num-correct");
-    if (!ONLY_SHOTS) await assertDead(page, "#ff");
+    if (!ONLY_SHOTS) await assertDead(page, "#ff", "0.5");
   });
   await step(`${w} multi: locked`, async () => {
     await open(page, "CSCI26_M5V", [...WRONG2, ...WRONG2]);

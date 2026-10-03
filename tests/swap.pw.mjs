@@ -114,6 +114,9 @@ for (const [W, H] of SIZES) {
     assert.ok(a.n > 0, "audit found nothing");
     return a;
   };
+  /* the #swap toggle is gone (multitask ship: keyboard up shows no toggle): the SCRATCHPAD pane goes to the problem by a tap on the question peek
+     (top left: the problem text, never a choice), the PROBLEM pane to the pad by the pad peek above the keyboard */
+  const toggle = async () => (await paneNow()) === "scratch" ? page.locator("#freeze").click({ position: { x: 24, y: 12 } }) : page.locator("#padPeek").click();
 
   /* ================= Swap: freeform ================= */
   await step(`${T} swap: keyboard down looks as today; keyboard up shows one pane; toggle swaps; focus picks the pane`, async () => {
@@ -125,21 +128,21 @@ for (const [W, H] of SIZES) {
     assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
     await kbUp();
     assert.equal(await paneNow(), "scratch", `focus on the scratchpad shows SCRATCHPAD (${await cls()})`);
-    assert.ok(await page.locator("#swap").isVisible());
+    assert.ok(await page.locator("#swap").isHidden(), "the old toggle is back");
     await shot("swap-scratch-empty");
     await clean("scratch pane");
-    await mustBeInside("#scratch"); await mustBeInside("#swap");
+    await mustBeInside("#scratch"); await mustBeInside("#freeze");
     // toggle -> PROBLEM, focus moves into the answer box (keyboard stays: focus is in a text field)
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "problem");
     assert.equal(await page.evaluate(() => document.activeElement.id), "ans", "toggle did not focus the answer box");
-    assert.equal(await page.locator("#swap").getAttribute("data-pane"), "problem");
+    await mustBeInside("#padPeek");
     await mustBeInside("#ans"); await mustBeInside("#ansGo"); await mustBeInside("#ff");
     await page.locator("#ans").fill("12");
     await shot("swap-problem-freeform");
     await clean("problem pane");
     // toggle back -> SCRATCHPAD, focus in the scratchpad
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "scratch");
     assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
     // focus picks the pane: focusing the answer input by script (Tab, a hardware key) reveals PROBLEM; focusing the scratchpad SCRATCHPAD
@@ -147,11 +150,6 @@ for (const [W, H] of SIZES) {
     assert.equal(await paneNow(), "problem", "focusing the answer did not show PROBLEM");
     await page.evaluate(() => document.querySelector("#scratch").focus()); await settle();
     assert.equal(await paneNow(), "scratch", "focusing the scratchpad did not show SCRATCHPAD");
-    // the toggle is one 48px button, no text, doc / pen in that order
-    const t = await page.evaluate(() => { const b = document.querySelector("#swap"), r = b.getBoundingClientRect(); return { h: r.height, w: r.width, text: b.textContent.trim(), icons: [...b.querySelectorAll("use")].map(u => u.getAttribute("href")), label: b.getAttribute("aria-label") }; });
-    assert.equal(t.h, 48); assert.ok(t.w >= 48); assert.equal(t.text, "");
-    assert.deepEqual(t.icons, ["#i-doc", "#i-pen"]);
-    assert.ok(/problem/i.test(t.label), `label ${t.label}`);
     // keyboard down: back to exactly the page as it was
     await kbDown();
     assert.equal(await paneNow(), "off", `swap stayed on after the keyboard closed (${await cls()})`);
@@ -232,7 +230,7 @@ for (const [W, H] of SIZES) {
       await page.keyboard.type("abc\ndef"); await page.waitForTimeout(150);
       assert.equal((await peek()).st, 0, "typing scrolled the peek");
       // problem pane: from the start too, answer pinned at the bottom of the card
-      await page.locator("#swap").click(); await settle();
+      await toggle(); await settle();
       const q = await page.evaluate(() => {
         const c = document.querySelector("#freezeIn").getBoundingClientRect(), pr = document.querySelector("#problem"), q = document.querySelector("#q").getBoundingClientRect(), first = document.querySelector("#blocks > *").getBoundingClientRect(), pRect = pr.getBoundingClientRect();
         return { pst: pr.scrollTop, qBottom: q.bottom, cBottom: c.bottom, firstTop: first.top, pTop: pRect.top, cTop: c.top };
@@ -251,14 +249,14 @@ for (const [W, H] of SIZES) {
   await step(`${T} swap: MC problem: toggle to PROBLEM focuses a choice; choices and arrow inside the visible area; toggle back`, async () => {
     await open("CSCI26_TFM");
     await page.locator("#scratch").focus(); await kbUp();
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "problem", `swap ended when focus went to a choice (${await cls()})`);
     assert.equal(await page.evaluate(() => document.activeElement.className.includes("opt")), true, "no choice focused");
     await page.locator('.opt[data-id="m"]').click();
     await mustBeInside('.ch[data-id="m"] .send'); await mustBeInside('.opt[data-id="m"]');
     await shot("swap-problem-mc-row");
     await clean("MC row in problem pane");
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "scratch");
     assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
     await kbDown();
@@ -266,7 +264,7 @@ for (const [W, H] of SIZES) {
   await step(`${T} swap: multi problem: boxes and arrow inside the visible area in the problem pane`, async () => {
     await open("CSCI26_CE3");
     await page.locator("#scratch").focus(); await kbUp();
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "problem");
     const boxes = page.locator("#q .ans");
     for (let i = 0; i < 3; i++) { await boxes.nth(i).focus(); await boxes.nth(i).fill("1"); await mustBeInside(`#q .part:nth-child(${i + 1}) .ans`); await mustBeInside(`#go${i}`); }   // the arrow shows once there is text
@@ -277,7 +275,7 @@ for (const [W, H] of SIZES) {
   await step(`${T} swap: 5 stacked choices: reachable (scroll inside the card), taps >= 44px`, async () => {
     await open("CALC1_X2P");
     await page.locator("#scratch").focus(); await kbUp();
-    await page.locator("#swap").click(); await settle();
+    await toggle(); await settle();
     assert.equal(await paneNow(), "problem");
     await page.locator('.opt[data-id="d"]').click();            // Playwright scrolls it into view inside the card
     await mustBeInside('.opt[data-id="d"]'); await mustBeInside('.ch[data-id="d"] .send');
@@ -291,11 +289,11 @@ for (const [W, H] of SIZES) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await open("CALC1_T6B");
     await page.locator("#scratch").focus(); await kbUp();
-    await page.locator("#swap").click();
+    await toggle();
     assert.equal(await paneNow(), "problem", "not instant with reduced motion");
     await page.evaluate(() => document.querySelector("#scratch").focus());
     assert.equal(await paneNow(), "scratch");
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#swap")).transitionDuration), "0s");
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#padPeek")).transitionDuration), "0s");
     await kbDown();
     await page.emulateMedia({ reducedMotion: "no-preference" });
   });
@@ -310,7 +308,7 @@ for (const [W, H] of SIZES) {
       let ran = 0;
       const orig = document.startViewTransition.bind(document);
       document.startViewTransition = cb => { const v = orig(cb); v.finished.then(() => { ran = performance.now() - t0; }, () => {}); return v; };
-      document.querySelector("#swap").click();
+      document.querySelector("#freeze").click();   // the question peek
       await new Promise(r => setTimeout(r, 600));
       return { has, ran };
     });
@@ -441,7 +439,7 @@ for (const [W, H] of SIZES) {
     await page.evaluate(() => document.querySelector("#scratch").focus({ preventScroll: true })); await kbUp();
     assert.equal(await paneNow(), "scratch");
     const up = await st(); assert.equal(up.op, 0, "bar visible with keyboard up + scratchpad focus");
-    await mustBeInside("#swap"); await page.locator("#swap").click(); await settle();
+    await mustBeInside("#freeze"); await toggle(); await settle();
     assert.equal(await paneNow(), "problem"); assert.ok(!(await st()).off === false || true);
     const after = await audit(); assert.deepEqual(after.overlaps, []);
     // first line of the question visible with the bar hidden
@@ -471,8 +469,8 @@ for (const [W, H] of SIZES) {
     if (!ok) { console.log("     (skipped: this Chromium cannot override safe-area insets)"); return; }
     await open("CALC1_T6B");
     await page.locator("#scratch").focus(); await kbUp();
-    const top = await page.evaluate(() => document.querySelector("#swap").getBoundingClientRect().top);
-    assert.ok(top >= 47 - 0.5, `toggle under the notch: top ${top}`);
+    const top = await page.evaluate(() => document.querySelector("#freeze").getBoundingClientRect().top);
+    assert.ok(top >= 47 - 0.5, `question peek under the notch: top ${top}`);
     await mustBeInside("#scratch");
     await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 0, bottom: 0, left: 0, right: 0 } });
     await kbDown();

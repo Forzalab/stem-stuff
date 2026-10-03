@@ -4537,7 +4537,7 @@
       "pick": "all",
       "fix": {
         "type": "num",
-        "how": "Type the correct count."
+        "how": "whole number"
       },
       "body": [
         {

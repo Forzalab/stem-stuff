@@ -29,7 +29,8 @@ async function step(name, fn) {
 }
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
 const answer = async (page, v) => { await page.fill("#ans", v); await page.click("#ansGo"); };
-const verdict = page => page.waitForSelector("#fb .verdict", { timeout: 4000 }).then(() => page.textContent("#fb"));
+/* the verdict is the icon in the answer box (data-v: i-ok, i-x, i-lock); wait for a new graded try first */
+const verdict = async (page, n = 0) => { await page.waitForFunction(n => window.__drill.state.tries.length > n && document.querySelector("#ff .vk"), n, { timeout: 4000 }); return page.getAttribute("#ff .vk", "data-v"); };
 
 async function run(type, label, launchOpts) {
   const dir = mkdtempSync(join(tmpdir(), "reload-"));
@@ -53,7 +54,7 @@ async function run(type, label, launchOpts) {
     assert.equal((await page.innerText("#qlistName")).trim(), "mine", "list button names the file");
     assert.equal(await page.isHidden("#qnav"), false, "question nav back");
     await answer(page, "2");
-    assert.match(await verdict(page), /Correct/);
+    assert.equal(await verdict(page), "i-ok");
     await page.click("#qnext");
     await opened(page, "CALC1_ZZ8");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/reload-restored-${label}-390.png` });
@@ -67,7 +68,7 @@ async function run(type, label, launchOpts) {
     await page.waitForTimeout(300);
     await page.evaluate(() => dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })));
     await answer(page, "1");
-    await page.waitForFunction(() => /Not quite|Out of tries/.test(document.querySelector("#fb").textContent), null, { timeout: 4000 });
+    assert.match(await verdict(page), /^i-(x|lock)$/);
     assert.equal(n, 2);
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });
@@ -88,7 +89,7 @@ async function run(type, label, launchOpts) {
     if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.waitForTimeout(100); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }
     stall = false;
     await page.click("#retry");
-    assert.match(await verdict(page), /Not quite|Out of tries/);
+    assert.match(await verdict(page, before), /^i-(x|lock)$/);
     assert.equal(n, 2);
     await page.unrouteAll({ behavior: "ignoreErrors" });
   });

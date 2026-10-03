@@ -2,6 +2,7 @@
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
+import { suggest, remember, isBank } from "./suggest.mjs";
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
@@ -10,6 +11,53 @@ const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
+/* the "one more try" note (design/TOAST.md, take 5f): hangs under the wrong answer box with a caret at its verdict mark; on MC it
+   lies on the struck-out choice (a dead control, so no live choice is covered). Page type, no colour of its own. 2.5 s, paused while
+   the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
+let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
+function placeToast() {
+  const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
+  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt");
+  const m = (toastAt.querySelector(".vk, .badge") || toastAt).getBoundingClientRect(), mx = m.left + m.width / 2;
+  const gut = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gut")) || 20;
+  t.classList.toggle("row", row);
+  if (row) { t.style.width = b.width + "px"; t.style.minHeight = b.height + "px"; t.style.left = b.left + "px"; t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return; }
+  t.style.width = ""; t.style.minHeight = "";
+  const w = t.offsetWidth;
+  let x = mx > b.left + b.width / 2 ? b.right - w : b.left;
+  x = Math.min(Math.max(gut, x), innerWidth - gut - w);
+  t.style.left = x + "px"; t.style.top = (b.bottom + 12) + "px";
+  t.style.setProperty("--px", Math.max(18, Math.min(w - 18, mx - x)) + "px");
+}
+function hideToast() { clearTimeout(toastT); toastLeft = 0; toastAt = null; $("#toast")?.classList.remove("on"); }
+function armToast(ms) { clearTimeout(toastT); toastLeft = ms; toastSince = Date.now(); toastT = setTimeout(hideToast, ms); }
+function holdToast() { if (toastLeft) { clearTimeout(toastT); toastLeft = Math.max(600, toastLeft - (Date.now() - toastSince)); } }
+function goToast() { if (toastLeft && toastAt) armToast(toastLeft); }
+function toast(text, at) {
+  const t = $("#toast"); if (!t || !at) return;
+  t.textContent = text; toastAt = at; t.classList.add("on");
+  placeToast(); armToast(2500);
+}
+$("#toast")?.addEventListener("click", hideToast);
+$("#toast")?.addEventListener("pointerenter", holdToast);
+$("#toast")?.addEventListener("pointerleave", goToast);
+document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
+addEventListener("keydown", e => { if (e.key === "Escape" && toastAt) hideToast(); });
+addEventListener("scroll", placeToast, { passive: true });
+addEventListener("resize", placeToast);
+const AGAIN = "One more try, so\u00A0choose\u00A0wisely.";   // no-break spaces keep "choose wisely." together
+/* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
+   i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
+function vmark(box, id) {
+  if (!box) return;
+  let m = box.querySelector(".vk");
+  if (!id) { if (m) m.remove(); return; }
+  if (!m) { m = document.createElement("span"); m.className = "vk"; m.setAttribute("aria-hidden", "true"); box.append(m); }
+  m.dataset.v = id; m.innerHTML = icon(id);
+}
+/* the words the screen reader hears (the page shows only the icon) */
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries."
+  : r.verdict === "wrong" ? "Not quite. One more try." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
@@ -151,7 +199,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
-let swapOn = false, lostAt = 0;          // Swap state (see "Swap" below)
+let swapOn = false, lostAt = 0, mtOpen = false, lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
 /* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
@@ -162,9 +210,57 @@ function normalize(raw) {
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
-codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); });
-function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); }   // a code landing in the box: the bar shows
+codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); sugShow(); });
+function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
+/* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
+   uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (design/NAV.md).
+   A combobox: ArrowDown / ArrowUp move, Enter opens the marked one (else the typed code), Escape closes, a tap opens. */
+const sugEl = $("#codeSug");
+let sugAt = -1, sugList = [];
+const recent = v => {
+  try { if (v === undefined) return JSON.parse(localStorage.getItem("stem-codes") || "[]"); localStorage.setItem("stem-codes", JSON.stringify(v)); } catch { /* blocked */ }
+  return [];
+};
+const remembered = code => recent(remember(recent(), code));
+function knownCodes() {
+  const off = window.stemOffline, live = bank ? [bank.code, ...bank.codes] : [];
+  return [...recent(), ...live, ...(off && off.codes ? off.codes() : [])];
+}
+function sugShow() {
+  sugList = suggest(codeIn.value, knownCodes());
+  sugAt = -1;
+  sugEl.innerHTML = sugList.map((c, i) => `<li role="option" id="sug${i}" aria-selected="false" data-code="${esc(c)}">${icon(isBank(c) ? "i-list" : "i-doc")}<span>${esc(c)}</span></li>`).join("");
+  sugEl.hidden = !sugList.length;
+  codeIn.setAttribute("aria-expanded", String(!!sugList.length));
+  codeIn.removeAttribute("aria-activedescendant");
+}
+function sugHide() {
+  sugList = []; sugAt = -1; sugEl.hidden = true; sugEl.innerHTML = "";
+  codeIn.setAttribute("aria-expanded", "false"); codeIn.removeAttribute("aria-activedescendant");
+}
+function sugMark(i) {
+  sugAt = i;
+  [...sugEl.children].forEach((li, k) => li.setAttribute("aria-selected", String(k === i)));
+  if (i < 0) { codeIn.removeAttribute("aria-activedescendant"); return; }
+  codeIn.setAttribute("aria-activedescendant", "sug" + i);
+  sugEl.children[i].scrollIntoView({ block: "nearest" });
+}
+function sugPick(code) { codeIn.value = code; syncCode(); sugHide(); $("#entry").requestSubmit(); }
+codeIn.addEventListener("keydown", e => {
+  if (e.isComposing) return;
+  if (e.key === "Escape" && !sugEl.hidden) { e.preventDefault(); sugHide(); return; }
+  if ((e.key === "ArrowDown" || e.key === "ArrowUp") && sugList.length) {
+    e.preventDefault();
+    const n = sugList.length, d = e.key === "ArrowDown" ? 1 : -1;
+    sugMark(sugAt < 0 ? (d > 0 ? 0 : n - 1) : sugAt + d >= n || sugAt + d < 0 ? -1 : sugAt + d);   // past either end: back to the typed text
+    return;
+  }
+  if (e.key === "Enter" && sugAt >= 0) { e.preventDefault(); sugPick(sugList[sugAt]); }
+});
+sugEl.addEventListener("pointerdown", e => e.preventDefault());   // keep the focus (and the phone keyboard) in the box
+sugEl.addEventListener("click", e => { const li = e.target.closest("li[data-code]"); if (li) sugPick(li.dataset.code); });
+codeIn.addEventListener("blur", () => sugHide());
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -182,6 +278,7 @@ codePaste.addEventListener("click", async () => {
 });
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
+  sugHide();
   const n = normalize(codeIn.value);
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
@@ -236,6 +333,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `No bank ${code}.`; return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
   src(b.code);
+  remembered(b.code);
   bankChanged();
   if (!go) return true;
   const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
@@ -263,10 +361,12 @@ async function load(code) {
   }
   $("#entryMsg").textContent = "";
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
+  remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
-  const rec = doneStore() ? doneStore().doneGet(code) : null;
+  root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
+  const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
   if (rec) paint(rec);
@@ -294,6 +394,9 @@ function render() {
   mountBox();
   $("#freezeIn").scrollTop = 0;
   scrollTo({ top: 0 });
+  $("#pstripCode").textContent = code;
+  lastEdit = null; padPeekText();
+  applyMT();
   layoutFreeze();
 }
 function drawFigures() {
@@ -316,8 +419,8 @@ function renderQuestion() {
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
         </button>
         ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
-        ${p.fix && many && !c.lock ? `<div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
-          placeholder="${esc(p.fix.how || "Type the correct value")}"></div>` : ""}
+        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "correct value")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
+          data-how="${esc(p.fix.how || "correct value")}" placeholder="${esc(p.fix.how || "correct value")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -380,9 +483,27 @@ function fitChoices() {
     }
   }
   g.classList.toggle("inline", fits);
+  g.querySelectorAll(".fix").forEach(fitFix);
   if (fits !== was) layoutFreeze();
 }
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
+/* a fix box's placeholder is the problem's fix.how. When it is wider than the box (it clipped: "Type increases or decr…" at 390px),
+   the same words move to a wrapping line right above the box (linked by aria-describedby) and the placeholder goes empty */
+let fixCtx = null;
+function fitFix(f) {
+  const inp = f && f.querySelector("input"), cap = f && f.previousElementSibling;
+  if (!inp || f.hidden || !cap || !cap.classList.contains("fix-how")) return;
+  const how = inp.dataset.how || "", w = inp.clientWidth;
+  if (!w) return;
+  const cs = getComputedStyle(inp);
+  fixCtx = fixCtx || document.createElement("canvas").getContext("2d");
+  fixCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const ls = parseFloat(cs.letterSpacing) || 0;
+  const fits = fixCtx.measureText(how).width + ls * how.length <= w - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2;
+  inp.placeholder = fits ? how : "";
+  cap.hidden = fits;
+  if (fits) inp.removeAttribute("aria-describedby"); else inp.setAttribute("aria-describedby", cap.id);
+}
 function select(o) {
   S.selected = o ? o.dataset.id : null;
   for (const x of opts()) {
@@ -390,6 +511,7 @@ function select(o) {
     x.setAttribute("aria-checked", on);
     x.parentElement.querySelector(".send").hidden = !on;
   }
+  placeToast();   // a row of choices reflows when the arrow shows: the toast follows its struck choice, never lands on a live one
 }
 /* #q outlives every problem (only its innerHTML changes), so wire it ONCE: a listener per load stacked up and one tap
    ran select() twice (select, then "tap again = deselect"), leaving the choice with only its hover border. */
@@ -441,7 +563,7 @@ function mark(o, m) {
   o.setAttribute("aria-checked", m === "on");
   if (m === "x") o.dataset.mark = "x"; else delete o.dataset.mark;
   if (!o.classList.contains("wrong")) o.querySelector(".badge").innerHTML = icon(m === "x" ? "i-x" : "i-ok");
-  const f = fixOf(o); if (f) f.hidden = m !== "x";
+  const f = fixOf(o); if (f) { f.hidden = m !== "x"; const h = f.previousElementSibling; if (h && h.classList.contains("fix-how")) h.hidden = true; fitFix(f); }
   o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}${m === "x" ? ", marked wrong" : ""}`);
 }
 function tick(o, m = "on") {
@@ -481,7 +603,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish();
+    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o);
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -512,7 +634,7 @@ async function submitAll() {
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
-    if (r.triesLeft <= 0) finish();
+    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o || $("#q .choices"));   // take 5f, as on single MC: on the struck row
   } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
   else if (r.verdict === "locked") finish();
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
@@ -524,6 +646,7 @@ function wireFF() {
   for (const inp of ins) {
     inp.addEventListener("input", () => {
       go.disabled = ins.some(x => !x.value.trim());
+      const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
       if (!pv) return;
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
@@ -551,6 +674,7 @@ async function submitFF() {
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
+    else if (r.verdict === "wrong") toast(AGAIN, $("#ff"));
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -561,7 +685,7 @@ function wireParts() {
   S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
-    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); });   // the arrow appears once there is text (like the code box)
+    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); vmark(box, null); });   // the arrow appears once there is text (like the code box)
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });
@@ -573,14 +697,12 @@ function shutPart(i, ok) {
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
   go.hidden = true;
+  vmark(box, ok ? "i-ok" : "i-lock");
 }
 function partFeedback(i, r, typed) {
-  const { hint, box } = partEls(i), row = hint.parentElement;
+  const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
-  if (r.verdict === "wrong") {
-    if (!S.parts[i].shut) box.classList.add("bad");
-    h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
-  } else if (r.verdict === "locked") h = `<p class="verdict lock">${icon("i-lock")}<span>Out of tries.</span></p>`;
+  if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
@@ -589,7 +711,7 @@ function partFeedback(i, r, typed) {
   row.classList.toggle("hinted", !!h);
   const again = hint.querySelector(".retry");
   if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); layoutFreeze(); submitPart(i); });
-  say((partEls(i).row.querySelector(".mk").textContent + " " + (r.verdict === "correct" ? "Correct. " : "") + hint.textContent).replace(/\s+/g, " ").trim());
+  say((partEls(i).row.querySelector(".mk").textContent + " " + verdictWords(r) + " " + hint.textContent).replace(/\s+/g, " ").trim());
 }
 async function submitPart(i) {
   const { inp, hint } = partEls(i), v = inp.value.trim();
@@ -603,7 +725,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
-    else partFeedback(i, r, v);
+    else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN, partEls(i).box); }
     if (mine.parts.every(x => x.shut)) settle();
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
@@ -614,9 +736,9 @@ function settle() {
   const right = S.parts.filter(x => x.ok).length, n = S.parts.length;
   S.solved = right === n;
   finish();
-  $("#fb").innerHTML = S.solved ? `<p class="verdict ok">${icon("i-ok")}<span>Correct</span></p>`
+  $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
     : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
-  say($("#fb").textContent.replace(/\s+/g, " ").trim());
+  say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
 }
 
 /* ---------- attempts, feedback ---------- */
@@ -757,9 +879,12 @@ function finish() {
 function feedback(r, typed) {
   const fb = $("#fb");
   let h = "";
-  if (r.verdict === "correct") h = `<p class="verdict ok">${icon("i-ok")}<span>Correct</span></p>`;
-  else if (r.verdict === "wrong") h = `<p class="verdict bad">${icon("i-x")}<span>${r.triesLeft > 0 ? "Not quite. One more try." : "Out of tries."}</span></p>`;
-  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
+  /* right / wrong / out: the answer box (or the MC badge) shows the icon; no words on the page */
+  const ff = S.prob.type === "mc" ? null : $("#ff");
+  if (ff && r.verdict === "correct") vmark(ff, "i-ok");
+  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
+  else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
+  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>timeout</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
@@ -768,7 +893,7 @@ function feedback(r, typed) {
   fb.innerHTML = h;
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
-  say(fb.textContent.replace(/\s+/g, " ").trim());
+  say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
   layoutFreeze();
 }
 
@@ -784,7 +909,7 @@ function mountBox() {
   field.prepend(ta);
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
-    cap: () => swapOn ? swapPadMax : null });                                  // Swap: the room the peek leaves
+    cap: () => swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
   mounted = { box: S.box, corner: S.corner };
   /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Cut / Copy
@@ -860,6 +985,7 @@ const vv = window.visualViewport;
 function editing() { const a = document.activeElement; return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type === "text")); }
 /* entry box: fixed bottom-centre on phones / touch (one thumb), top of the column on desktop (FREEZE.md) */
 const dockMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
+const sideMQ = matchMedia("(min-width: 720px)");                       // multitask: problem | pad side by side from here up (design/MULTITASK.md)
 /* the room the bottom bar takes from the page: its full height, or the strip's while it rests as a strip (revealed, it lies over the page) */
 const barTab = $("#barTab");
 function dockRoom(evenAway) {
@@ -899,15 +1025,20 @@ function layoutDock() {
      (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
   const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
   const grace = (!a || a === document.body) && performance.now() - lostAt < 500;
-  const swapNext = !!S && !freeze.hidden && shrunk && ((inMain && (editing() || swapOn)) || (swapOn && grace));
+  const swapNext = !!S && !freeze.hidden && shrunk && !mtOpen && !sideMQ.matches && ((inMain && (editing() || swapOn)) || (swapOn && grace));
+  root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
-  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext);
+  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (mtOpen && !!S));
   root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
   if (swapNext !== swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
   root.classList.toggle("bar-mini", bottom && !!S && !freeze.hidden);
+  /* start page: no problem open. The entry stands alone, centred under its title (app.css html.start); on phones in the area
+     above the keyboard, so --kb-top follows the visual viewport here too (layoutFreeze owns it once a problem is open) */
+  root.classList.toggle("start", !S);
+  if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
   root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
 if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
@@ -916,7 +1047,8 @@ new ResizeObserver(() => layoutDock()).observe(dock);
 function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
-  if (swapOn) { layoutSwap(); return; }                                         // one pane above the keyboard: none of the strip logic applies
+  if (swapOn) { layoutSwap(); return; }
+  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes                                         // one pane above the keyboard: none of the strip logic applies
   const dockH = dockRoom();
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
@@ -938,7 +1070,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden || swapOn) return;
+  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches) { freeze.classList.remove("stuck"); return; }
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
@@ -948,7 +1080,7 @@ function stuck() {
 /* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
    the question is what you answer while writing; the problem start is one small scroll up. */
 function showQuestion() {
-  if (swapOn) return;
+  if (swapOn || mtOpen || sideMQ.matches) return;
   const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
   const end = Math.max(bottom($("#q")), bottom($("#fb")));
   freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
@@ -987,7 +1119,6 @@ function setSwap(on) {
     root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");              // the page keeps its height, so its scroll position survives
     const p = paneOf(document.activeElement); if (p) pane = p;
     root.classList.add("swap");
-    swapBtn.hidden = false;
     applyPane();
   } else {
     root.classList.remove("swap", "swap-problem", "swap-scratch");
@@ -995,6 +1126,7 @@ function setSwap(on) {
     freeze.classList.remove("clipped", "no-peek");
     if (scrollY !== swapY) scrollTo(0, swapY);
     requestAnimationFrame(() => { if (S && S.box) S.box.limit(); });
+    backInView();
   }
 }
 /* the DOM change: classes, toggle, scroll positions, sizes */
@@ -1004,8 +1136,8 @@ function applyPane() {
   root.classList.toggle("swap-scratch", pane === "scratch");
   swapBtn.dataset.pane = pane;
   swapBtn.setAttribute("aria-label", pane === "problem" ? "Show the scratchpad" : "Show the problem");
-  freezeIn.scrollTop = 0; problemEl.scrollTop = 0;                                 // the question always shows from its start
-  layoutSwap();
+  padPeekText();
+  layoutSwap();                                                                   // scroll positions are left alone (a reset lost the field you typed in)
 }
 /* crossfade between panes (View Transitions where supported), instant with reduced motion or without support.
    Focus has already moved (it must, in the tap, for the keyboard to stay), so the fields are focusable in both states. */
@@ -1048,9 +1180,10 @@ function focusField(p) {
   let el = null;
   if (p === "scratch") el = S.box && S.box.el;
   else {
-    const ins = [...document.querySelectorAll("#q .ans")];
-    el = ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
-      : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled);
+    const ins = [...document.querySelectorAll("#q .ans")].filter(x => x.getClientRects().length && !x.disabled);   // a hidden fix box can't take focus
+    const back = lastEdit && ins.includes(lastEdit) ? lastEdit : null;                                   // the field you were typing in
+    el = back || (ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
+      : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled));
   }
   if (!el) return false;
   el.focus({ preventScroll: true });
@@ -1066,6 +1199,180 @@ document.addEventListener("focusin", e => {
   const p = paneOf(e.target); if (p) setPane(p);
 });
 document.addEventListener("focusout", () => setTimeout(() => root.classList.toggle("bar-off", document.activeElement && document.activeElement.id === "scratch"), 0));
+
+/* keyboard up, PROBLEM pane: the pad peek (one line above the keyboard). Its text is the pad's last line; empty pad = "Scratchpad".
+   A tap goes to the pad in the same tap: pointerdown / mousedown are cancelled (focus stays in the field, the keyboard stays up), then the
+   click focuses the pad with the caret at the end, and focus picks the pane. The mirror of the question peek in the SCRATCHPAD pane. */
+const padPeek = $("#padPeek"), padPeekTx = $("#padPeekTx");
+function padPeekText() {
+  const t = S && S.box ? S.box.el.value : "";
+  const last = t.split("\n").map(x => x.trim()).filter(Boolean).pop();
+  padPeekTx.textContent = last || "Scratchpad";
+  padPeek.classList.toggle("empty", !last);
+}
+padPeek.hidden = false;                                                         // CSS shows it only in the PROBLEM pane
+for (const ev of ["pointerdown", "mousedown"]) padPeek.addEventListener(ev, e => e.preventDefault());
+padPeek.addEventListener("click", () => {
+  if (!S || !S.box) return;
+  const ta = S.box.el, n = ta.value.length;
+  ta.focus({ preventScroll: true }); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight;
+  setPane("scratch");
+});
+document.addEventListener("input", e => {
+  if (S && S.box && e.target === S.box.el) padPeekText();
+  if (e.target.matches && e.target.matches("#main input, #main textarea")) lastEdit = e.target;
+});
+/* SCRATCHPAD pane: a tap on the question peek goes back to the answer, in the same tap */
+for (const ev of ["pointerdown", "mousedown"]) freeze.addEventListener(ev, e => { if (swapOn && shownPane === "scratch") e.preventDefault(); });
+freeze.addEventListener("click", () => { if (swapOn && shownPane === "scratch" && focusField("problem")) setPane("problem"); });
+/* keyboard down (or Back with it up): the field last typed in comes back into view, without taking focus (it never gets scrollTop = 0) */
+function backInView() {
+  const el = lastEdit;
+  if (!el || !el.isConnected || !mainEl.contains(el)) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
+}
+
+/* ================= Multitask (design/MULTITASK.md) =================
+   Phone (< 720px): variant 9, Answer sliver. Tapping the pad (or its expand icon) opens the pad page: the problem tile on top (its bottom
+   edge is the answer, always there), one drag handle in the gap, the pad below. Anchors 1/2, 1/3 and the sliver (answer only); drag snaps,
+   tap = next. The pill: document = problem and pad, pencil = pad wide (sliver). Exits: Back (a pushed history entry), tapping the
+   problem (caret into the answer), the collapse icon in the pad's top-right. The keyboard going down never closes it.
+   Desktop (>= 720px): side by side, always: problem + answer left, pad right. Anchors strip (52px), 1/3, 1/2, 2/3.
+   Memory: per device (localStorage, every access in try/catch). */
+const sash = $("#sash"), mtMode = $("#mtMode"), mtExp = $("#mtExp"), pstrip = $("#pstrip");
+const ANCH = { phone: [0, 1 / 3, 1 / 2], desk: [0, 1 / 3, 1 / 2, 2 / 3] };
+const ANAME = r => r < 0.4 ? "one third" : r < 0.6 ? "half" : "two thirds";
+let mtMem = {};
+try { mtMem = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { mtMem = {}; }
+const mtKind = () => sideMQ.matches ? "desk" : "phone";
+const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a);
+function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : 1 / 2; }
+const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
+const anchorName = (k, r) => r === 0 ? (k === "desk" ? "problem strip" : "answer only") : "problem " + ANAME(r);
+let dragR = null;
+function applyMT() {
+  const side = sideMQ.matches && !!S, k = mtKind();
+  if (sideMQ.matches || !S) mtOpen = false;
+  const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
+  root.classList.toggle("side", side);
+  root.classList.toggle("mt", mtOpen);
+  root.classList.toggle("mt-r0", on && dragR == null && r === 0);
+  root.classList.toggle("mt-drag", dragR != null);
+  root.style.setProperty("--r", r);
+  sash.hidden = !on; mtMode.hidden = !on; pstrip.hidden = !(side && r === 0 && dragR == null);
+  mtMode.dataset.pane = r === 0 ? "scratch" : "problem";
+  mtMode.setAttribute("aria-label", r === 0 ? "Show the problem" : "Pad wide");
+  mtExp.hidden = side;
+  mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
+  mtExp.setAttribute("aria-label", mtOpen ? "Close the scratchpad page" : "Open the scratchpad");
+  mtExp.title = mtExp.getAttribute("aria-label");
+  /* a11y only (WAI-ARIA window splitter), never shown */
+  sash.setAttribute("aria-orientation", side ? "vertical" : "horizontal");
+  sash.setAttribute("aria-valuemin", "0"); sash.setAttribute("aria-valuemax", String(Math.round(Math.max(...ANCH[k]) * 100)));
+  sash.setAttribute("aria-valuenow", String(Math.round(r * 100)));
+  sash.setAttribute("aria-valuetext", anchorName(k, r));
+  sash.setAttribute("aria-label", `Problem size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
+  if (on) layoutMT(); else mtCap = null;
+}
+/* the sizes CSS cannot know: the visible height (phone), and the pad's height (it fills its tile / column) */
+let mtCap = null;
+function layoutMT() {
+  if (!S || !S.box) return;
+  const ta = S.box.el;
+  if (mtOpen) {
+    const h = vv ? vv.height : innerHeight;
+    root.style.setProperty("--vv-h", Math.round(h) + "px");
+    root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+  } else root.style.setProperty("--kb-top", "0px");
+  const fill = () => {
+    if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
+    if (mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
+    else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
+    root.style.setProperty("--pad-max", mtCap + "px");
+    S.box.limit();
+  };
+  fill(); requestAnimationFrame(fill);
+}
+function setRatio(r, animate = true) {
+  const k = mtKind();
+  mtMem[k] = r; if (r > 0) mtMem[k + "Last"] = r;
+  try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ }
+  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
+}
+const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : 1 / 2; };
+function openMT() {
+  if (mtOpen || !S || sideMQ.matches) return;
+  swapY = scrollY;
+  root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
+  if (swapOn) setSwap(false);
+  mtOpen = true;
+  try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
+  applyMT(); layoutDock();
+}
+let mtSkipPop = false;
+function shutMT() {
+  if (!mtOpen) return;
+  mtOpen = false;
+  applyMT(); layoutDock();
+  if (scrollY !== swapY) scrollTo(0, swapY);
+  requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); });
+}
+function closeMT(toAnswer) {
+  if (!mtOpen) return;
+  if (toAnswer) focusField("problem");                                            // in the tap: the keyboard can stay
+  shutMT();
+  if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
+}
+addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
+/* open: a tap into the pad (not a script's focus: Swap still serves those), or the expand icon */
+$("#xbField").addEventListener("pointerdown", e => { if (!mtOpen && !sideMQ.matches && S && S.box && e.target === S.box.el) openMT(); });
+for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
+mtExp.addEventListener("click", () => { if (mtOpen) closeMT(false); else openMT(); });
+mtMode.addEventListener("click", () => setRatio(mtRatio() === 0 ? lastPeek() : 0));
+pstrip.addEventListener("click", () => setRatio(lastPeek()));
+/* tap the problem (not the answer) = close, caret in the answer */
+for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (mtOpen) e.preventDefault(); });
+problemEl.addEventListener("click", () => { if (mtOpen) closeMT(true); });
+/* the handle: the pane follows the finger, release snaps to the nearest anchor; a tap (no move) goes to the next anchor */
+let mtDrag = null;
+sash.addEventListener("pointerdown", e => {
+  if (e.button > 0) return;
+  e.preventDefault();
+  const m = mainEl.getBoundingClientRect(), cs = getComputedStyle(mainEl), side = sideMQ.matches;
+  const a = side ? m.left + parseFloat(cs.paddingLeft) : m.top + parseFloat(cs.paddingTop);
+  const len = (side ? m.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) : m.height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) - 16;
+  mtDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, a, len, side, moved: false };
+  try { sash.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
+});
+sash.addEventListener("pointermove", e => {
+  const d = mtDrag; if (!d || e.pointerId !== d.id) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+  d.moved = true;
+  const pos = (d.side ? e.clientX : e.clientY) - d.a - 8;
+  dragR = Math.min(Math.max(...ANCH[mtKind()]), Math.max(0.06, pos / d.len));
+  applyMT();
+});
+function sashEnd(e) {
+  const d = mtDrag; if (!d || (e && e.pointerId !== d.id)) return;
+  mtDrag = null;
+  const k = mtKind();
+  if (!d.moved) { dragR = null; setRatio(nextDown(k, mtRatio(k))); return; }
+  let r = dragR; dragR = null;
+  r = r < (d.side ? 0.2 : 1 / 6) ? 0 : near(k, r);                              // past 20% to the left (desktop) / a sixth (phone): the strip / sliver
+  setRatio(r);
+}
+sash.addEventListener("pointerup", sashEnd);
+sash.addEventListener("pointercancel", sashEnd);
+sash.addEventListener("dblclick", () => { if (sideMQ.matches) setRatio(1 / 2); });
+/* assistive tech only (WAI-ARIA window splitter): arrows step one anchor, Home / End go to the ends. Never shown or documented. */
+sash.addEventListener("keydown", e => {
+  const k = mtKind(), a = ANCH[k], i = a.indexOf(mtRatio(k));
+  const to = { ArrowLeft: i - 1, ArrowUp: i - 1, ArrowRight: i + 1, ArrowDown: i + 1, Home: 0, End: a.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
+});
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); layoutFreeze(); });
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;
@@ -1083,8 +1390,8 @@ function resume(fromCache) {
   if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
   if (S && !S.finished) {
     const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
-    if (go && ins.length) { go.hidden = false; go.disabled = ins.some(x => !x.value.trim()); }
-    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim(); } });
+    if (go && ins.length) { go.hidden = !!$("#ff .vk"); go.disabled = ins.some(x => !x.value.trim()); }   // a wrong mark holds the slot until typing
+    (S.parts || []).forEach((st, i) => { if (!st.shut) { const e = partEls(i); e.go.hidden = !e.inp.value.trim() || !!e.box.querySelector(".vk"); } });
     for (const o of opts()) if (!o.classList.contains("wrong")) { o.disabled = false; o.removeAttribute("aria-disabled"); }
     if (S.selected) { const o = opts().find(x => x.dataset.id === S.selected); if (o) select(o); }
   }

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="color-scheme" content="dark"><title>One-try-left toast</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css">
+<style>
+/* ---------- mock-only bits ---------- */
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s4); }
+.pick span { color: var(--muted); font-size: var(--t-sm); margin-right: var(--s2); }
+.pick .btn { font-weight: 700; }
+.pick .btn.wide { width: auto; padding: 0 var(--s3); }
+.pick .btn[aria-pressed="true"] { border-color: var(--mark); color: var(--mark); }
+.card + .card { margin-top: var(--s7); }   /* the MC card stands for the next problem (the app shows one at a time) */
+.card .q { margin-top: var(--s4); }
+/* the verdict mark inside a wrong box, where the arrow sits when the box is live */
+.mparts .ff .xmark { position: absolute; right: 0; top: 0; width: var(--btn); height: var(--btn); display: grid; place-items: center; color: var(--bad); }
+.mparts .ff.ok .xmark { color: var(--ok); }
+.ff input[readonly] { cursor: default; }
+.work { margin-top: var(--s5); }
+.work .how { font-weight: 700; }
+.pad { min-height: 22rem; background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding: var(--s3); color: var(--hint); font-family: var(--mono); font-size: var(--t-sm); }
+
+/* ---------- the toast: shared ----------
+   position: fixed, so showing it moves nothing on the page. One message, one line where it fits, 18px+ bold.
+   In and out are CSS animations (app.css turns every transition off under reduced motion; the fade must survive). */
+.toast {
+  position: fixed; z-index: 30; left: 0; right: 0; margin-inline: auto; width: fit-content;
+  max-width: calc(100vw - 2 * var(--gut));
+  display: flex; align-items: center; gap: var(--s3);
+  min-height: 52px; padding: var(--s2) var(--s5);
+  font: 700 var(--t-md)/1.35 "Atkinson Hyperlegible", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif; color: var(--ink);
+  background: var(--raised); border-radius: 999px; box-shadow: var(--shadow-4);
+  cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  visibility: hidden;
+}
+.toast.on, .toast.off { visibility: visible; }
+.toast .msg { min-width: 0; text-wrap: balance; }
+.toast .ico { width: var(--ico); height: var(--ico); }
+.toast:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.t-top { top: calc(env(safe-area-inset-top) + var(--s4)); --from: -14px; }
+.t-bot { bottom: calc(var(--kb-bottom, 0px) + var(--dock-h, 0px) + env(safe-area-inset-bottom) + var(--s4)); --from: 14px; }
+.toast.on  { animation: t-in  .32s cubic-bezier(.2, .8, .2, 1) both; }
+.toast.off { animation: t-out .24s ease-in both; }
+.toast.still { animation: none; }
+@keyframes t-in  { from { opacity: 0; transform: translateY(var(--from, 0)); } to { opacity: 1; transform: none; } }
+@keyframes t-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(var(--from, 0)); } }
+@keyframes t-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes t-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .toast.on  { animation: t-fade-in .2s linear both; }
+  .toast.off { animation: t-fade-out .2s linear both; }
+  .toast.still { animation: none; }
+}
+
+/* 1 top pill, yellow border / 2 the same at the bottom */
+.v1, .v2 { border: 2px solid var(--mark); }
+/* 3 solid yellow, dark ink */
+.v3 { background: var(--mark); color: var(--field); box-shadow: var(--shadow-4); }
+/* 4 icon-led card */
+.v4 { border-radius: 12px; background: var(--sheet); padding: var(--s3) var(--s5) var(--s3) var(--s4); gap: var(--s4); max-width: min(30rem, calc(100vw - 2 * var(--gut))); }
+.v4 .ico { width: 2.25rem; height: 2.25rem; color: var(--mark); }
+/* 5 anchored under the wrong box (left/top set by JS from the box's rect), a caret points up at it */
+.v5 { right: auto; margin: 0; border-radius: 10px; border: 2px solid var(--mark); padding: var(--s2) var(--s4); }
+.v5::before {
+  content: ""; position: absolute; top: -8px; right: var(--caret, 24px); width: 12px; height: 12px;
+  background: var(--raised); border-left: 2px solid var(--mark); border-top: 2px solid var(--mark); transform: rotate(45deg);
+}
+/* 6 banner across the top, thin yellow accent on the left (Refactoring UI: accent border, not a big fill) */
+.v6 {
+  top: 0; width: min(100vw, var(--col)); max-width: none; border-radius: 0 0 10px 10px;
+  justify-content: flex-start; padding: calc(env(safe-area-inset-top) + var(--s3)) var(--gut) var(--s3);
+  background: var(--sheet); border-left: 5px solid var(--mark); box-shadow: var(--shadow-3); --from: -100%;
+}
+@media (max-width: 700px) { .v6 { border-radius: 0; } }
+/* 7 bottom chip with the tries meter: filled = the try you have left, ring = the one you used */
+.v7 { border: 2px solid var(--line); border-radius: 16px; padding-left: var(--s4); }   /* rounded rect, not a pill: it wraps to 2 lines on phones */
+.dots { display: flex; gap: 6px; flex: none; }
+.dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--mark); }
+.dots i.left { background: var(--mark); }
+
+/* ---------- round 2: five takes on 5 (anchored under the wrong box; MC: on the struck-out choice) ----------
+   Audited against design/STYLE.md: tokens only (--sheet --mark --ink --muted --paper, --t-md, --s1..--s5, --shadow-3), no derived colours,
+   10px radius (toast = content surface), whole sentence bold (no bold-for-emphasis inside it), the drawn i-imp (2px stroke, --mark,
+   20px) instead of the emoji, motion 200ms ease-out on opacity + transform only, max 8px travel; reduced motion = fade.
+   JS sets left/top (and width for the edge-matched ones) from the target; --px = the x of the target's verdict mark inside the toast. */
+.a5 {
+  right: auto; margin: 0; max-width: min(26rem, calc(100vw - 2 * var(--gut))); border-radius: 10px;
+  padding: var(--s3) var(--s4); gap: var(--s2); background: var(--sheet); box-shadow: var(--shadow-3);
+  font-size: var(--t-md); font-weight: 700; line-height: 1.4; color: var(--ink);
+}
+.a5 .msg { text-wrap: balance; }
+.a5 .ico { width: 1.25rem; height: 1.25rem; color: var(--mark); }
+.a5.on  { animation: a5-in  .2s ease-out both; }
+.a5.off { animation: a5-out .2s ease-out both; }
+.a5.still { animation: none; }
+@keyframes a5-in  { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes a5-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-8px); } }
+/* caret: a turned square in the toast's own fill and ring, under the verdict mark */
+.a5.caret::before {
+  content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
+}
+/* 5a tab: hangs from the box, inset 8px; ring on three sides, open at the top, so the box and the tab read as one piece */
+.v5a { border-radius: 0 0 10px 10px; padding: var(--s2) var(--s3); border: 2px solid var(--mark); border-top: 0; max-width: none; }
+/* 5b ring bubble: the STYLE.md anatomy as written (--sheet, 2px --mark ring, --shadow-3), caret at the x */
+.v5b { border: 2px solid var(--mark); }
+/* 5c rule strip: a column-wide --sheet strip, no ring; a 2px --mark rule only under the box (an underline, not a side stripe); text lines up with the box */
+.v5c { max-width: none; border-radius: 0 0 10px 10px; padding: var(--s3) var(--s4) var(--s3) var(--bx, 0px); }
+.v5c::before { content: ""; position: absolute; top: 0; left: var(--bx, 0px); width: var(--bw, 100%); height: 2px; border-radius: 1px; background: var(--mark); }
+.v5c.end { justify-content: flex-end; padding-left: var(--s4); padding-right: var(--br, 0px); }
+/* 5d quiet: no ring; two lines (ink, then muted), colour only in the imp; caret in --sheet */
+.a5 .msg .ico { display: inline-block; vertical-align: -0.2em; margin-left: var(--s2); }
+.v5d .msg { display: block; }
+.v5d .l2 { display: block; color: var(--muted); }
+/* 5e imp on the edge: the imp sits ON the ring, right under the x, in a --sheet disc; it is the pointer */
+.v5e { border: 2px solid var(--mark); padding: var(--s3) var(--s5); }
+.v5e .perch { position: absolute; top: -15px; left: calc(var(--px, 50%) - 14px); width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--sheet); border: 2px solid var(--mark); }
+/* MC: the toast lies ON the struck-out choice (a dead control), same box, so it covers no live choice; no caret */
+.a5.row { padding: var(--s1) var(--s3); justify-content: center; }
+.a5.row::before { display: none; }
+.a5.row .msg { text-align: center; }
+.v5a.row { border-top: 2px solid var(--mark); border-radius: 10px; }
+.v5c.row { padding: var(--s1) var(--s3); justify-content: center; }
+.v5c.row::before { left: 0; width: 100%; }
+.v5e.row .perch { display: none; }   /* on the row it has nothing to point at: the imp goes back after the text */
+@media (prefers-reduced-motion: reduce) {
+  .a5.on  { animation: t-fade-in .2s linear both; }
+  .a5.off { animation: t-fade-out .2s linear both; }
+  .a5.still { animation: none; }
+}
+/* ---------- round 3: no yellow, the page's own type (Tony, Oct 2: 5d "looks out of place and tacked on") ----------
+   Same anchoring as round 2. Text = the part prompt's style (400, --t-md, --ink, --lh), so it reads as page text, not a sticker.
+   The imp takes the text colour family (--muted / --bad), never --mark. */
+.r3 { font-weight: 400; line-height: var(--lh); gap: var(--s2); }
+.r3 .msg .ico { color: var(--muted); }
+/* 5f page note: the page's own paper, a 1px --line hairline (the divider between parts), caret in the same */
+.v5f { background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow-1); }   /* hairline = the edge; Impeccable flags hairline + wide shadow */
+/* 5g card: exactly a problem card (--sheet, 10px, no ring), soft shadow; reads as one more card */
+.v5g { background: var(--sheet); border: 0; }
+/* 5h box tab: hangs from the wrong box in the box's own dashed --bad edge, open at the top, --field fill: the box grew a line */
+.v5h { background: var(--field); border: 2px dashed var(--bad); border-top: 0; border-radius: 0 0 8px 8px; box-shadow: none; padding: var(--s2) var(--s3); max-width: none; }
+.v5h .msg .ico { color: var(--bad); }
+.v5h.row { border-top: 2px dashed var(--bad); border-radius: 8px; }
+.pick .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 var(--s1); }
+</style>
+</head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<!-- new: warning triangle, same 2px stroke and round joins as the sprite in index.html -->
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M10.3 4.3a2 2 0 0 1 3.4 0l7.6 13.2a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.15" fill="currentColor"/></symbol>
+<!-- i-imp (STYLE.md: the drawn 😈): horned face, 24 grid, 2px stroke, round caps, no fill, currentColor -->
+<symbol id="i-imp" viewBox="0 0 24 24"><circle cx="12" cy="14.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 9.9C5 9 3.6 6.6 3.9 3.4c1.3 2 3.3 3.4 5.8 4.1M16.5 9.9c2.5-.9 3.9-3.3 3.6-6.5-1.3 2-3.3 3.4-5.8 4.1M8.8 11.7l2.2 1.1M15.2 11.7l-2.2 1.1M9.4 16.9c1.5 1.3 3.7 1.3 5.2 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+
+<!-- phones: the code bar resting as its 44px strip, as in the app (bar-mini) -->
+<header class="top"><div class="dock" id="dock">
+  <button type="button" class="bar-tab" aria-label="Show the code bar"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg></button>
+  <form class="entry"></form>
+</div></header>
+
+<main>
+  <div class="pick" role="group" aria-label="Toast variant">
+    <span>Variant</span>
+    <button type="button" class="btn" data-v="1">1</button><button type="button" class="btn" data-v="2">2</button>
+    <button type="button" class="btn" data-v="3">3</button><button type="button" class="btn" data-v="4">4</button>
+    <button type="button" class="btn" data-v="5">5</button><button type="button" class="btn" data-v="6">6</button>
+    <button type="button" class="btn" data-v="7">7</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" class="btn" data-v="5a">5a</button><button type="button" class="btn" data-v="5b">5b</button>
+    <button type="button" class="btn" data-v="5c">5c</button><button type="button" class="btn" data-v="5d">5d</button>
+    <button type="button" class="btn" data-v="5e">5e</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" class="btn" data-v="5f">5f</button><button type="button" class="btn" data-v="5g">5g</button>
+    <button type="button" class="btn" data-v="5h">5h</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button type="button" class="btn wide" id="onTgl" aria-pressed="false">Anchor: box</button>
+  </div>
+
+  <section class="card">
+    <article class="p"><div class="blocks"><div class="md"><p>A ball is thrown straight up at 14 m/s. Take g = 9.8 m/s².</p></div></div></article>
+    <div class="q"><div class="mparts">
+      <div class="part"><span class="mk">a)</span><span class="pr">Time to reach the top, in s</span>
+        <div class="ff ok shut"><input value="1.43" readonly aria-label="Part a answer"><span class="xmark" aria-hidden="true"><svg class="ico"><use href="#i-ok"/></svg></span></div></div>
+      <div class="part hinted"><span class="mk">b)</span><span class="pr">Maximum height, in m</span>
+        <div class="ff bad" id="wrongBox"><input value="20" readonly aria-label="Part b answer, wrong"><span class="xmark" aria-hidden="true"><svg class="ico"><use href="#i-x"/></svg></span></div>
+        <div class="phint" id="hintB"><p class="verdict bad"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg><span>Not quite. One more try.</span></p><div class="cluck"><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg><div><div class="md"><p>QUACK. At the top, what is v? Which equation has v, u, g and height, and no t?</p></div></div></div></div></div>
+    </div></div>
+  </section>
+
+  <section class="card">
+    <article class="p"><div class="blocks"><div class="md"><p>A 2.0 kg cart speeds up at 3.0 m/s². What is the net force on it?</p></div></div></article>
+    <div class="q"><div class="choices" role="radiogroup" aria-label="Choices">
+      <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">A</span><span class="txt">1.5 N</span></button></div>
+      <div class="ch"><button type="button" class="opt wrong" id="wrongOpt" role="radio" aria-checked="false" disabled><span class="badge"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></span><span class="txt">5.0 N</span></button></div>
+      <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">C</span><span class="txt">6.0 N</span></button></div>
+      <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">D</span><span class="txt">0.67 N</span></button></div>
+    </div></div>
+  </section>
+
+  <section class="work"><p class="how">Scratchpad</p><div class="pad">v = u - g t ...</div></section>
+</main>
+
+<!-- the seven toasts. Each is its own live region, present (empty) from load so the message is announced when it fills in. -->
+<div class="toast t-top v1" id="t1" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast t-bot v2" id="t2" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast t-top v3" id="t3" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast t-top v4" id="t4" role="status" aria-live="polite" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><span class="msg"></span></div>
+<div class="toast v5" id="t5" role="status" aria-live="polite" tabindex="-1" style="--from:-8px"><span class="msg"></span></div>
+<div class="toast t-top v6" id="t6" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast t-bot v7" id="t7" role="status" aria-live="polite" tabindex="-1"><span class="dots" aria-hidden="true"><i class="left"></i><i></i></span><span class="msg"></span></div>
+
+<!-- round 2: 5a to 5e. Same live-region rules. The screen reader hears the sentence; the drawn devil is aria-hidden. -->
+<div class="toast a5 v5a" id="t5a" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 v5b caret" id="t5b" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 v5c" id="t5c" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 v5d caret" id="t5d" role="status" aria-live="polite" tabindex="-1" data-split><span class="msg"></span></div>
+<div class="toast a5 r3 v5f caret" id="t5f" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 r3 v5g caret" id="t5g" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 r3 v5h" id="t5h" role="status" aria-live="polite" tabindex="-1"><span class="msg"></span></div>
+<div class="toast a5 v5e" id="t5e" role="status" aria-live="polite" tabindex="-1"><span class="perch" aria-hidden="true"><svg class="ico"><use href="#i-imp"/></svg></span><span class="msg"></span></div>
+
+<script>
+(function () {
+  var TEXT = "One more try, so choose wisely.\u00A0\u{1F608}", SHOW_MS = 2500;
+  var root = document.documentElement, still = new URLSearchParams(location.search).get("v");
+  var timer = 0, cur = null;
+
+  // phones: the resting code-bar strip at the bottom, as in the app
+  var phone = matchMedia("(max-width: 700px), (pointer: coarse)");
+  function dock() {
+    root.classList.toggle("dock-bottom", phone.matches);
+    root.classList.toggle("bar-mini", phone.matches);
+    root.style.setProperty("--dock-h", phone.matches ? document.getElementById("dock").offsetHeight + "px" : "0px");
+  }
+  dock(); phone.addEventListener("change", dock);
+
+  // variant 5: under the wrong box, right edges aligned, kept inside the gutters
+  function anchor(t) {
+    var b = document.getElementById("wrongBox").getBoundingClientRect();
+    var gut = parseFloat(getComputedStyle(document.querySelector("main")).paddingLeft) || 20;
+    var w = t.offsetWidth, x = Math.min(Math.max(gut, b.right - w), innerWidth - gut - w);
+    t.style.left = x + "px"; t.style.top = (b.bottom + 12) + "px";
+    t.style.setProperty("--caret", Math.max(14, Math.min(w - 28, (x + w) - (b.right - 26) - 6)) + "px");   // caret under the box's x mark
+  }
+  // round 2: under the wrong box (or the struck-out choice). 5a/5c take the target's width (5a inset 8px); the bubbles size to their
+  // text and line up with the target's edge nearest its verdict mark. --px = the mark's x inside the toast (caret / horns).
+  var onMC = new URLSearchParams(location.search).get("on") === "mc";
+  function anchor5(t) {
+    var el = document.getElementById(onMC ? "wrongOpt" : "wrongBox"), b = el.getBoundingClientRect();
+    var m = el.querySelector(".xmark, .badge").getBoundingClientRect(), mx = m.left + m.width / 2;
+    var gut = parseFloat(getComputedStyle(document.querySelector("main")).paddingLeft) || 20, x, gap = 10;
+    t.classList.toggle("row", onMC); t.classList.remove("end");
+    if (onMC) {   // MC: exactly over the struck-out row
+      t.style.width = b.width + "px"; t.style.minHeight = b.height + "px"; t.style.left = b.left + "px";
+      t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; t.style.setProperty("--px", (mx - b.left) + "px");
+      return;
+    }
+    t.style.minHeight = "";
+    if (t.classList.contains("v5h")) { t.style.width = b.width + "px"; x = b.left; gap = -2; }   // exactly the box's width: its dashed sides run on
+    else if (t.classList.contains("v5a")) { t.style.width = (b.width - 16) + "px"; x = b.left + 8; gap = -2; }
+    else if (t.classList.contains("v5c")) {   // the strip spans the column; rule under the box; text from the box's left (phones) or ending at its right (desktop, box on the right)
+      var col = document.querySelector("main").getBoundingClientRect(); x = col.left + gut; t.style.width = (col.width - 2 * gut) + "px"; gap = 4;
+      t.style.setProperty("--bx", (b.left - x) + "px"); t.style.setProperty("--bw", b.width + "px"); t.style.setProperty("--br", (x + col.width - 2 * gut - b.right) + "px");
+      t.classList.toggle("end", b.left - x > (col.width - 2 * gut) / 2);
+    }
+    else {
+      t.style.width = ""; var w = t.offsetWidth;
+      x = mx > b.left + b.width / 2 ? b.right - w : b.left;
+      x = Math.min(Math.max(gut, x), innerWidth - gut - w);
+      gap = t.classList.contains("v5e") ? 18 : 12;
+    }
+    t.style.left = x + "px"; t.style.top = (b.bottom + gap) + "px";
+    t.style.setProperty("--px", Math.max(18, Math.min(t.offsetWidth - 18, mx - x)) + "px");
+  }
+  function place(t) { if (t.id === "t5") anchor(t); else if (t.classList.contains("a5")) anchor5(t); }
+  addEventListener("scroll", function () { if (cur) place(cur); }, { passive: true });
+  addEventListener("resize", function () { if (cur) place(cur); });
+
+  // never over a live answer control (a closed box or a struck-out choice does not count): a top/bottom toast that would land on one takes the other edge instead
+  function hits(t) {
+    var r = t.getBoundingClientRect(), pad = 8;
+    return [].some.call(document.querySelectorAll(".opt:not(:disabled), .ff:not(.shut), .send"), function (c) {
+      var q = c.getBoundingClientRect();
+      return q.bottom > r.top - pad && q.top < r.bottom + pad && q.right > r.left && q.left < r.right;
+    });
+  }
+  function avoid(t) {
+    if (!t.dataset.edge) t.dataset.edge = t.classList.contains("t-bot") ? "bot" : "top";
+    t.classList.toggle("t-top", t.dataset.edge === "top"); t.classList.toggle("t-bot", t.dataset.edge === "bot");
+    if (t.classList.contains("v6") || !hits(t)) return;
+    t.classList.toggle("t-top"); t.classList.toggle("t-bot");
+    if (hits(t)) { t.classList.toggle("t-top"); t.classList.toggle("t-bot"); }   // both edges busy: keep its own
+  }
+
+  function hide(t) {
+    if (!t || !t.classList.contains("on")) return;
+    clearTimeout(timer); left = 0;
+    t.classList.remove("on", "still"); t.classList.add("off");
+    var done = function () { t.classList.remove("off"); t.querySelector(".msg").textContent = ""; };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !t.getAnimations) setTimeout(done, 220);
+    else t.addEventListener("animationend", done, { once: true });
+    if (cur === t) cur = null;
+  }
+  // auto-hide that waits while a finger/pointer rests on it, it has focus, or the tab is hidden (Sonner does the same)
+  var left = 0, since = 0;
+  function arm(t, ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(function () { hide(t); }, ms); }
+  function hold() { if (cur && left) { clearTimeout(timer); left = Math.max(600, left - (Date.now() - since)); } }
+  function go() { if (cur && left && !cur.classList.contains("still")) arm(cur, left); }
+  document.addEventListener("visibilitychange", function () { document.hidden ? hold() : go(); });
+
+  function show(n, fixed) {
+    if (cur) { var old = cur; old.classList.remove("on", "off", "still"); old.querySelector(".msg").textContent = ""; }
+    var t = document.getElementById("t" + n); cur = t;
+    t.classList.remove("off");
+    t.classList.add("on"); if (fixed) t.classList.add("still");
+    var msg = t.querySelector(".msg");   // filled after it is visible, so the live region announces it
+    if (!t.classList.contains("a5")) msg.textContent = TEXT;
+    else if (t.hasAttribute("data-split")) msg.innerHTML = 'One more try, <span class="l2">so choose wisely.<svg class="ico" aria-hidden="true"><use href="#i-imp"/></svg></span>';
+    else if (t.classList.contains("v5e") && !onMC) msg.textContent = "One more try, so\u00A0choose\u00A0wisely.";   // its imp is the perch
+    else msg.innerHTML = 'One more try, so\u00A0choose\u00A0wisely.<svg class="ico" aria-hidden="true"><use href="#i-imp"/></svg>';   // the imp rides on the last word
+    if (n === 5 || t.classList.contains("a5")) place(t); else avoid(t);
+    document.querySelectorAll(".pick .btn[data-v]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.v === String(n))); });
+    clearTimeout(timer);
+    if (!fixed) arm(t, SHOW_MS);
+  }
+
+  document.querySelectorAll(".toast").forEach(function (t) {
+    t.addEventListener("click", function () { hide(t); });   // tap anywhere on it to dismiss (52px+ tall)
+    t.addEventListener("pointerenter", hold); t.addEventListener("pointerleave", go);
+  });
+  var tgl = document.getElementById("onTgl");
+  function tglText() { tgl.textContent = onMC ? "Anchor: choice" : "Anchor: box"; tgl.setAttribute("aria-pressed", String(onMC)); }
+  tglText();
+  tgl.addEventListener("click", function () { onMC = !onMC; tglText(); if (cur) place(cur); });
+  addEventListener("keydown", function (e) { if (e.key === "Escape") hide(cur); });
+  document.querySelectorAll(".pick .btn[data-v]").forEach(function (b) {
+    b.addEventListener("click", function () { show(/^\d$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v, false); });
+  });
+  var y = +new URLSearchParams(location.search).get("y") || 0;   // screenshots: the page as it sits while you write
+  if (still && /^([1-7]|5[a-h])$/.test(still)) document.fonts.ready.then(function () { if (y) scrollTo(0, y); show(/^\d$/.test(still) ? +still : still, true); });
+})();
+</script>
+</body></html>

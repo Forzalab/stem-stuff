@@ -25,20 +25,20 @@
 /* desktop: one row. Bank side first (list, shuffle), then the entry box, only as wide as a code needs; Prev/Next at the
    right edge (Tony, Sep 30 sketches). The nav and .dock unwrap (display: contents) so their buttons are grid items.
    The list is a full-width row under them.
-   .dock's children become grid items (entry + nav / message / list). */
-.qnav-on:not(.dock-bottom) .top {
+   .dock's children become grid items (entry + nav / message / list). Not on the start page (html.start, app.css): there the entry stands alone. */
+.qnav-on:not(.dock-bottom):not(.start) .top {
   display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto; column-gap: var(--s2);
   max-width: var(--col); margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
 }
-.qnav-on:not(.dock-bottom) .dock { display: contents; }
-.qnav-on:not(.dock-bottom) .qnav { display: contents; }
-.qnav-on:not(.dock-bottom) #qlistBtn { grid-row: 1; grid-column: 1; }
-.qnav-on:not(.dock-bottom) #qshuf { grid-row: 1; grid-column: 2; }
-.qnav-on:not(.dock-bottom) .entry { grid-row: 1; grid-column: 3; width: 21rem; }
-.qnav-on:not(.dock-bottom) #qprev { grid-row: 1; grid-column: 5; }
-.qnav-on:not(.dock-bottom) #qnext { grid-row: 1; grid-column: 6; }
-.qnav-on:not(.dock-bottom) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
-.qnav-on:not(.dock-bottom) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); }
+.qnav-on:not(.dock-bottom):not(.start) .dock { display: contents; }
+.qnav-on:not(.dock-bottom):not(.start) .qnav { display: contents; }
+.qnav-on:not(.dock-bottom):not(.start) #qlistBtn { grid-row: 1; grid-column: 1; }
+.qnav-on:not(.dock-bottom):not(.start) #qshuf { grid-row: 1; grid-column: 2; }
+.qnav-on:not(.dock-bottom):not(.start) .entry { grid-row: 1; grid-column: 3; width: 21rem; }
+.qnav-on:not(.dock-bottom):not(.start) #qprev { grid-row: 1; grid-column: 5; }
+.qnav-on:not(.dock-bottom):not(.start) #qnext { grid-row: 1; grid-column: 6; }
+.qnav-on:not(.dock-bottom):not(.start) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom):not(.start) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); }
 
 /* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
 .qlist {

@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { shuffled } from "../shuffle.mjs";
+import { shuffled, mastery } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -71,7 +71,8 @@ async function run(browserType, label, opts = {}) {
       });
     }
 
-    if (vname !== "ipad") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
+    // ipad + desktop are side by side (design/MULTITASK.md "Desktop, revised"): the problem column has no pull-tab
+    if (vname === "phone") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
       const tab = async (code, closedOnly) => {
         await open(code);
         if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
@@ -82,6 +83,14 @@ async function run(browserType, label, opts = {}) {
           await page.setViewportSize({ width: viewport.width, height: h });
           await page.waitForTimeout(150);
           if (await page.locator("#more").isVisible()) { shown = true; break; }
+        }
+        if (code === "CALC1_X2P" && !shown) {
+          /* MC lock-in (b86eac5, Tony Oct 2): while a choice is picked the grab handle is hidden, so it covers nothing;
+             unpick and check the handle against the plain choices */
+          assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#more")).visibility), "hidden", "handle shown while a choice is picked");
+          await page.locator('.opt[data-id="a"]').click();
+          await page.waitForTimeout(150);
+          shown = await page.locator("#more").isVisible();
         }
         assert.ok(shown, `${code}: #more never appeared`);
         const hit = () => page.evaluate(() => {
@@ -151,8 +160,26 @@ async function run(browserType, label, opts = {}) {
       assert.ok(g.x + g.width <= f.x + f.width && g.y >= f.y && g.y + g.height <= f.y + f.height + 0.5, "arrow not inside the field");
       await go.click();
       await page.waitForSelector(".cluck");
-      await inp.fill("12"); await inp.press("Enter");
-      await page.waitForSelector(".verdict.ok");
+      // wrong with a try left: the x sits in the arrow's slot, the box is dashed red, no verdict words; typing clears it
+      assert.equal(await page.getAttribute("#ff .vk", "data-v"), "i-x");
+      assert.equal(await page.locator("#fb .verdict").count(), 0, "no verdict words");
+      assert.ok(await page.locator("#ff.bad").count() === 1 && await go.isHidden(), "bad box, the x holds the arrow's slot");
+      const vk = await page.locator("#ff .vk").boundingBox();
+      assert.ok(Math.abs(vk.x - g.x) < 1 && Math.abs(vk.y - g.y) < 1, "the x is where the arrow was");
+      assert.equal(await page.locator("#toast.on").textContent(), "One more try, so\u00A0choose\u00A0wisely.");
+      {   // take 5f: hangs under the wrong box, page paper + --line hairline, no yellow
+        const tb = await page.locator("#toast.on").boundingBox(), fb = await page.locator("#ff").boundingBox();
+        assert.ok(tb.y >= fb.y + fb.height && tb.y - (fb.y + fb.height) < 24, "toast under the wrong box");
+        const st = await page.$eval("#toast", e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.fontWeight].join("|"); });
+        assert.equal(st, "rgb(21, 29, 43)|rgb(52, 68, 93)|400");
+      }
+      const iw = (await inp.boundingBox()).width;
+      await inp.fill("12");
+      assert.equal(await page.locator("#ff .vk").count(), 0, "typing clears the x");
+      assert.ok(await go.isVisible() && Math.abs((await inp.boundingBox()).width - iw) < 0.5, "nothing moved");
+      await inp.press("Enter");
+      await page.waitForSelector('#ff .vk[data-v="i-ok"]');
+      assert.ok(await inp.isDisabled(), "a right answer closes the box");
     });
 
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
@@ -177,24 +204,34 @@ async function run(browserType, label, opts = {}) {
 
     await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
       // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
-      const w = await page.evaluate(() => ({ box: document.querySelector("#xbField").getBoundingClientRect().right, card: document.querySelector("#problem").getBoundingClientRect().right }));
-      assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
+      const w = await page.evaluate(() => { scrollTo(0, 0); const b = document.querySelector("#xbField").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(), k = document.querySelector("#work").getBoundingClientRect();
+        return { box: b.right, card: c.right, left: b.left, cardTop: c.top, workTop: k.top }; });
+      if (viewport.width >= 720) {   // side by side (design/MULTITASK.md "Desktop, revised"): the pad is the right column, never under the problem
+        assert.ok(w.left >= w.card && w.left - w.card <= 48, `pad not beside the problem: pad left ${w.left}, card right ${w.card}`);
+        assert.ok(Math.abs(w.workTop - w.cardTop) <= 2, `pad top ${w.workTop} vs problem top ${w.cardTop}`);
+      } else assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
-    await step(`${label} ${vname} entry box: upload + code bar only; blank empty state; placement`, async () => {
+    await step(`${label} ${vname} entry box: upload + code bar only; start page = title + entry, centred; placement`, async () => {
       await page.goto("about:blank"); await page.goto(`${BASE}/`, { waitUntil: "load" });
       assert.equal(await page.locator("#subjBtn, #subjMenu, .logo, .empty").count(), 0, "dropdown/logo/empty-state still present");
+      // start page (design/STYLE.md "Start page"): the one line of title is the only text
+      await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"));
       const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
-      assert.equal(text, "", `empty state shows text: ${text}`);
+      assert.equal(text, "Upload or type code to start.", `start page text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
       const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
-      const d = await page.evaluate(() => { const r = document.querySelector("#entry").getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, pos: getComputedStyle(document.querySelector("#dock")).position }; });
-      if (vname === "phone") {
-        assert.equal(d.pos, "fixed"); assert.ok(d.bottom > viewport.height - 80, `box not at the bottom: ${d.bottom}`);
-        assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, "box not centred");
-      } else if (vname === "desktop") assert.ok(d.top < viewport.height * 0.2, `box not in the upper part (desktop offset scales with the window height, app.css): ${d.top}`);
+      const d = await page.evaluate(() => {
+        const r = document.querySelector("#entry").getBoundingClientRect(), t = document.querySelector("#startTitle").getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, cy: r.top + r.height / 2, w: r.width, titleBottom: t.bottom, titleCx: t.left + t.width / 2 };
+      });
+      assert.ok(Math.abs(d.cx - viewport.width / 2) < 2, `entry not centred across: ${d.cx}`);
+      assert.ok(Math.abs(d.titleCx - viewport.width / 2) < 2, "title not centred across");
+      assert.ok(d.cy > viewport.height * 0.35 && d.cy < viewport.height * 0.65, `entry not centred down: ${d.cy}`);
+      assert.ok(d.titleBottom <= d.top, "title not above the entry");
+      assert.ok(d.w >= Math.min(viewport.width - 40, 600), `entry not wide: ${d.w}`);
       // box never covers the scratchpad or Copy once scrolled to the end
       await open("CALC1_T6B");
       await page.evaluate(() => scrollTo(0, 1e5)); await page.waitForTimeout(150);
@@ -231,7 +268,9 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
-      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [56, 56] : [48, 48]);   // desktop 1920x1080: --btn 56px (app.css), the same for every .btn
+      assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [52, 52] : [44, 44]);   // flush inside the code box: --btn (56 on a 1920x1080 desktop, else 48) minus its 2px borders
+      const hs = await page.evaluate(() => ["#upload", ".code-box"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }));
+      assert.deepEqual(hs[0], hs[1], "code box and upload button: same top and bottom");
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
       for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
@@ -362,7 +401,7 @@ async function run(browserType, label, opts = {}) {
       const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
       await shuf.click();
       const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
-      const codes2 = shuffled(file, seed2);
+      const codes2 = mastery(shuffled(file, seed2), () => null, codes[0]);   // nothing answered: the open problem leads (design/NAV.md "Mastery order")
       assert.notEqual(seed2, "pin", "shuffle kept the seed");
       assert.equal(await page.locator("#pcode").textContent(), codes[0], "shuffle moved off the open problem");
       assert.deepEqual(await hrefs(), codes2, "list not in the new order");
@@ -406,7 +445,8 @@ async function run(browserType, label, opts = {}) {
       assert.ok(c.inside && c.apart, "Cut and Copy not both inside the textarea box, side by side");
       assert.equal(c.hits, 0, "placeholder under the button");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
-      await ta.click();
+      const side = viewport.width >= 720;   // side by side: the pad fills its column (design/MULTITASK.md), it does not grow with the text
+      await ta.focus();   // a tap on a phone opens the pad page (variant 9); the band is checked on the plain page, as before
       // legit toggles: at most on (last line reaches the corner) and off (it wraps) once per new line
       let toggles = 0, prev = (await clear()).free, lines = 0, h = await ta.evaluate(t => t.offsetHeight);
       for (let i = 0; i < 40; i++) {
@@ -418,16 +458,22 @@ async function run(browserType, label, opts = {}) {
       }
       assert.ok(toggles <= 2 * lines + 2, `padding flickered: ${toggles} toggles for ${lines} height changes`);
       // last line runs into the corner -> reserved
-      const reserved = await page.evaluate(async () => {
+      const reserved = await page.evaluate(async side => {
         const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
+        if (side && document.documentElement.classList.contains("bar-mini")) return true;   // touch: the bar's band (>= 56px) always sits under the text
+        if (side) {   // a column-tall box: walk one full line down to the bottom row; it must reserve before the box would scroll
+          for (let k = 0; k < 400; k++) { t.value = "\n".repeat(k) + base + "x".repeat(400); t.dispatchEvent(new Event("input"));
+            if (!t.classList.contains("xb-free")) return k > 0; if (t.scrollHeight > t.clientHeight + 1) return false; }   // the band's own padding may then scroll it a little
+          return false;
+        }
         for (let n = 1; n < 400; n++) { t.value = base + "x".repeat(n); /* one line of prose: stays under the height cap (a capped box always keeps the band) */ t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
         return false;
-      });
+      }, side);
       assert.ok(reserved, "never reserved the band for a long last line");
       assert.equal((await clear()).hits, 0);
       if (SHOTS && vname === "phone") await page.locator("#work").screenshot({ path: `${SHOTS}/app-copy-reserved-390.png` });
       // short last line -> normal padding
-      await page.evaluate(() => { const t = document.querySelector("#scratch"); t.value = t.value + "\nok"; t.dispatchEvent(new Event("input")); });
+      await page.evaluate(side => { const t = document.querySelector("#scratch"); t.value = side ? "ok" : t.value + "\nok"; t.dispatchEvent(new Event("input")); }, side);   // side: a short note in a tall pad
       c = await clear();
       assert.ok(c.free, "short last line still reserves the band");
       assert.equal(c.hits, 0);
@@ -440,7 +486,7 @@ async function run(browserType, label, opts = {}) {
       await page.fill("#ans", "q -> p"); await page.press("#ans", "Enter");
       await page.locator("#fb .cluck").waitFor();
       await page.fill("#ans", "~Q->~P"); await page.press("#ans", "Enter");
-      await page.locator("#fb .verdict.ok").waitFor();
+      await page.locator('#ff .vk[data-v="i-ok"]').waitFor();
 
       await open("CSCI26_M5V");                                              // multi: every part has its own arrow, verdict, tries and lockout
       const boxes = page.locator("#q .ans");
@@ -477,12 +523,14 @@ async function run(browserType, label, opts = {}) {
       await page.locator("#q .part").nth(1).locator(".phint .cluck").waitFor();
       assert.match(await page.locator("#ph1").textContent(), /Exactly one/);
       assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
+      assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-x", "b: the x in its arrow's slot");
+      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Not quite|One more try/, "no verdict words");
       assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
       assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
       await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='1'] .ff.shut"));
       assert.equal(await arrows(), 0, "a locked part shows no arrow");
-      assert.match(await page.locator("#ph1").textContent(), /Out of tries/);
+      assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-lock", "b: out of tries, the lock in its box");
       const dead = await page.evaluate(() => { const i = document.querySelectorAll("#q .ans")[1], b = document.querySelector("#go1"); return { d: i.disabled, a: i.getAttribute("aria-disabled"), cur: getComputedStyle(i).cursor, op: getComputedStyle(i.closest(".ff")).opacity, go: b.hidden }; });
       assert.deepEqual(dead, { d: true, a: "true", cur: "not-allowed", op: "0.5", go: true }, "b is locked with the disabled look");
       assert.equal(await boxes.nth(0).isEnabled(), true, "locking b does not lock a");
@@ -494,6 +542,8 @@ async function run(browserType, label, opts = {}) {
       await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
       assert.equal(await arrows(), 0, "a correct part shows no arrow");
+      assert.equal(await page.getAttribute("#q .part[data-i='0'] .vk", "data-v"), "i-ok", "a: the check in its box");
+      assert.deepEqual(await boxes.nth(0).evaluate(e => [e.disabled, e.getAttribute("aria-disabled")]), [true, "true"], "a correct part's box is disabled");
       assert.equal(await page.evaluate(() => window.__drill.state.finished), true, "finished when every part is right or locked");
       assert.equal(await page.evaluate(() => window.__drill.state.solved), false, "a locked part means not solved");
       assert.match(await page.locator("#fb").textContent(), /1 of 2 right/);
@@ -505,12 +555,14 @@ async function run(browserType, label, opts = {}) {
       await boxes.nth(0).fill("14"); await boxes.nth(0).press("Enter");
       await page.waitForFunction(() => document.querySelector("#q .part[data-i='0'] .ff.ok"));
       assert.equal(await page.evaluate(() => window.__drill.state.finished), false);
+      assert.ok(await boxes.nth(0).isDisabled() && await boxes.nth(1).isEnabled(), "a right part closes its box only");
       assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#q .ans")[1]), true, "focus moves to the next open box");
       await boxes.nth(1).fill("11");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/multi-${vname}.png` });
       await page.click("#go1");
-      await page.locator("#fb .verdict.ok").waitFor();
+      await page.locator("#q .part[data-i='1'] .ff.ok").waitFor();
       assert.equal(await page.evaluate(() => window.__drill.state.solved), true);
+      assert.equal((await page.locator("#fb").textContent()).trim(), "", "solved: the checks say it, no words");
 
       await open("CSCI26_TF3");                                              // 2 choices, shuffled by default (order varies, the set does not)
       assert.deepEqual(await page.locator("#q .opt .badge").allTextContents(), ["A", "B"]);

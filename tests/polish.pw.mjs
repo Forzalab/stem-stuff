@@ -33,6 +33,8 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   await page.goto(BASE + "/");
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(BANK)) });
+  await page.waitForFunction(() => /^CALC1_ZZ/.test(document.querySelector("#pcode")?.textContent || "") && !document.querySelector("#freeze").hidden);   // the first in the shuffled list
+  await page.evaluate(() => { location.hash = "CALC1_ZZ9"; });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_ZZ9" && !document.querySelector("#freeze").hidden);
   await page.waitForTimeout(300);
 
@@ -68,10 +70,11 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await shot("swap-scratch");
       const sw = { p: await fontOf(page, "#blocks .md p") };
       if (!ONLY_SHOTS) assert.equal(sw.p, normal.p, "question text");
-      await page.click("#swap"); await page.waitForTimeout(400);
+      await page.click("#freeze"); await page.waitForTimeout(400);   // the #swap toggle is gone (design/MULTITASK.md): the question peek goes to the problem
       await shot("swap-problem");
       if (!ONLY_SHOTS) { assert.equal(await fontOf(page, "#blocks .md p"), normal.p); assert.equal(await fontOf(page, "#q .opt .txt"), normal.opt); }
-      await page.click("#swap"); await page.waitForTimeout(400);
+      await page.click("#padPeek"); await page.waitForTimeout(400);   // and the pad peek goes back
+      if (!ONLY_SHOTS) assert.equal(await page.evaluate(() => document.activeElement.id), "scratch", "pad peek: the pad has focus");
     });
     await step(`${W} (d) Swap: scratchpad grows up to a small gap under the question`, async () => {
       const g = await page.evaluate(() => {

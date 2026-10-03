@@ -9,6 +9,7 @@
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
      --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
   --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
+  --t-lg: 1.75rem;   /* one display size: the start page's title only (STYLE.md 2.2) */
   /* spacing scale (px): 4 8 12 16 24 32 48 */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
@@ -39,20 +40,86 @@ button:disabled { cursor: default; }
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
-.entry { display: flex; gap: var(--s2); }
+.entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
+/* code box (design/STYLE.md "Code box"): the bar's language. As tall as the buttons beside it (--btn, tops and bottoms line up),
+   the buttons' --sheet surface, 2px --edge, 8px; its text is the bar's label text (--t-sm bold, like the list button).
+   Paste / Go sit flush inside the border as icon buttons (--btn minus the border, 6px: "inside a control"). */
 .code-box {
-  flex: 1 1 auto; min-width: 0; height: var(--fld); display: flex; align-items: center;
-  background: var(--field); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  flex: 1 1 auto; min-width: 0; height: var(--btn); display: flex; align-items: center;
+  background: var(--sheet); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  transition: background-color .12s ease-out, border-color .12s ease-out, box-shadow .12s ease-out;
 }
 .code-box:hover { border-color: var(--muted); }
-.code-box:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+/* focus: one ring (STYLE.md 2.6). The border turns --focus and a 1px inset thickens it to 3px, as strong as a button's outline */
+.code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: var(--t-md); font-weight: 700; line-height: 1; letter-spacing: 0.06em; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
+  font-family: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
 .code-box input::placeholder { color: var(--hint); opacity: 1; }   /* the open problem's code */
+.code-box .btn { width: calc(var(--btn) - 4px); height: calc(var(--btn) - 4px); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+.code-box .btn:hover { background: var(--raised); color: var(--ink); }
+.code-box .btn:focus-visible { outline-offset: -3px; }
+.code-box .btn-go { background: var(--c1); color: var(--field); }   /* the arrow: the one filled control, only once a code is typed */
+.code-box .btn-go:hover { background: var(--c1-hi); }
+/* suggestions (suggest.mjs): codes this browser knows that contain what is typed, banks first. Floats over the page
+   (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
+.code-sug {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;
+  max-height: min(22rem, 50vh); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
+}
+.dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
+.code-sug li {
+  display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 6px; cursor: pointer;
+  font-size: var(--t-sm); font-weight: 700; line-height: 1; color: var(--ink);
+}
+.code-sug li .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.code-sug li:hover, .code-sug li[aria-selected="true"] { background: var(--raised); }
+.code-sug li[aria-selected="true"] .ico { color: var(--c1); }
+/* start page (html.start: no problem open). Like a search home page: the entry alone, centred, under one line of title.
+   The upload and paste buttons sit inside one wide rounded field; it rests on --shadow-1 and lifts to --shadow-3 on hover / focus. */
+.start-title { display: none; }
+html.start body { padding-top: 0; }
+html.start main, html.start .qnav, html.start .qlist { display: none !important; }
+html.start .top {
+  display: grid; place-items: center; min-height: 100vh; min-height: 100dvh;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+html.start .dock { width: 100%; max-width: calc(40rem + 2 * var(--gut)); padding: 0 var(--gut) var(--s7); }
+html.start .start-title {
+  display: block; margin: 0 auto var(--s5); text-align: center;   /* auto: centred like the entry under it in the bottom dock */ text-wrap: balance;
+  font-size: var(--t-lg); font-weight: 700; line-height: 1.25; color: var(--ink);
+}
+html.start .entry {
+  gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
+  background: var(--sheet); border: 2px solid var(--edge); border-radius: calc(var(--btn) / 2 + var(--s1) + 2px);
+  box-shadow: var(--shadow-1);
+  transition: border-color .12s ease-out, box-shadow .2s ease-out;
+}
+html.start .entry:hover { border-color: var(--muted); box-shadow: var(--shadow-3); }
+html.start .entry:focus-within { border-color: var(--focus); box-shadow: var(--shadow-3), inset 0 0 0 1px var(--focus); }
+html.start .code-box, html.start .code-box:hover, html.start .code-box:focus-within { height: 100%; padding-left: var(--s2); background: none; border: 0; box-shadow: none; }
+html.start .code-box input { font-size: var(--t-md); }
+html.start .code-box input::placeholder { text-transform: none; font-weight: 400; }
+html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+html.start .entry .btn:hover { background: var(--raised); color: var(--ink); }
+html.start .entry .btn:focus-visible { outline-offset: -3px; }
+html.start .code-box .btn-go { background: var(--c1); color: var(--field); }
+html.start .code-box .btn-go:hover { background: var(--c1-hi); }
+html.start .entry-msg { text-align: center; }
+/* phones: the bottom dock becomes the whole visible area, the field centred in it; with the keyboard up it is the area above
+   the keyboard (--kb-top / --kb-bottom from visualViewport, app.js layoutDock), so the field stays in view */
+html.start.dock-bottom .dock {
+  top: var(--kb-top, 0px); bottom: var(--kb-bottom, 0px); max-width: none;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: max(var(--s4), env(safe-area-inset-top)) var(--gut) max(var(--s4), env(safe-area-inset-bottom));
+  background: var(--paper); box-shadow: none;
+}
+html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
+html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh); }
 .entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
 
@@ -164,7 +231,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 
 /* ---------- question ---------- */
 .q { margin-top: var(--s3); }
-.choices { display: grid; gap: var(--s2); }
+.choices { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }   /* minmax: a fix box (an input, ~20ch wide) never widens the column past the card */
 .ch { position: relative; }
 .opt {
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
@@ -223,7 +290,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
-  display: flex; align-items: center; height: var(--fld); padding-left: var(--s3);
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: var(--btn);   /* the arrow's room is always reserved */
   background: var(--field); border: 2px solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
@@ -239,7 +306,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.done input { color: var(--ok); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
-.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.ok) { opacity: 0.5; }   /* solved MC: nothing dims */
+.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay */
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--ok); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
@@ -260,8 +327,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
-.mparts .ff { grid-area: bx; position: relative; padding-right: var(--btn); }   /* the arrow's room is always reserved: nothing jumps when it appears */
-.mparts .ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders) */
+.mparts .ff { grid-area: bx; }
+.ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders): nothing jumps when it appears */
+/* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
+.ff .vk { position: absolute; right: 0; top: 0; width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk .ico { width: var(--ico); height: var(--ico); }
+.ff .vk[data-v="i-ok"] { color: var(--ok); }
+.ff .vk[data-v="i-x"] { color: var(--bad); }
+.ff .vk[data-v="i-lock"] { color: var(--muted); }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
 @media (min-width: 40rem) {
@@ -274,7 +347,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.bad { border-color: var(--bad); border-style: dashed; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
-.ff.shut:not(.ok) { opacity: 0.5; }
+.ff.shut { opacity: 0.5; }   /* right ones too: closed = looks disabled */
 .ff.shut:hover { border-color: var(--edge); }
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
@@ -300,7 +373,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
-.freeze:has(.more:not([hidden])) + .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
+.freeze:has(.more:not([hidden])) ~ .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
@@ -370,7 +443,7 @@ html.swap #swap { flex: none; align-self: flex-start; }
 /* both panes share one grid cell; the one not shown stays laid out (and focusable) but see-through and untouchable, so focus can move into it before it appears */
 html.swap .stage { flex: 1 1 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); position: relative; overflow: clip; padding-bottom: 6px; }
 html.swap .stage > .freeze, html.swap .stage > .work { grid-area: 1 / 1; min-width: 0; min-height: 0; }
-html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) + .work */
+html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) ~ .work */
 html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
@@ -410,6 +483,96 @@ html.swap-scratch .xb-copy, html.swap-scratch .xb-cut { top: max(var(--s2), env(
 html.swap-scratch .xb-cut { right: calc(var(--gut) + 48px + 6px); }
 html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-free { padding-bottom: 0.75rem; }
 
+/* ---------- keyboard up: the pad peek (PROBLEM pane), the fix word's caption ---------- */
+/* one line pinned just above the keyboard: the pencil and the pad's last line (mono, dimmed, ellipsis). A glimpse, not a button. */
+.pad-peek { display: none; }
+html.swap-problem .pad-peek {
+  display: flex; flex: none; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s1); margin-top: calc(-1 * var(--s1));
+  color: var(--hint); font: 400 var(--t-sm)/1.3 var(--mono); cursor: pointer; touch-action: manipulation;
+}
+html.swap-problem .pad-peek .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.pad-peek span { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pad-peek.empty span { font-family: inherit; font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
+html.swap-problem .stage { padding-bottom: 0; }
+/* keyboard up: no expand icon, no pill, no toggle; switching is closing the keyboard, tapping the question, or the pad peek */
+html.kbup #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }
+#swap { display: none !important; }
+.fix-how { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); color: var(--muted); font-size: var(--t-sm); line-height: 1.35; }
+
+/* ---------- multitask (design/MULTITASK.md) ---------- */
+/* the pad's header: label left; expand (phone page) or the pill (side by side) right */
+.xb-label { min-height: var(--btn); }
+.xb-label .mt-exp, .xb-label .mt-mode { margin-left: auto; color: var(--ink); }
+.xb-label .mt-exp .ico, .xb-label .mt-mode .ico { width: var(--ico); height: var(--ico); }
+.xb-label .mt-mode .ico { color: var(--muted); }
+.xb-label .mt-mode[data-pane="problem"] .t-doc, .xb-label .mt-mode[data-pane="scratch"] .t-pen { color: var(--c1); }
+.sash { display: none; }
+.pstrip { display: none; }
+
+/* phone: the pad page (variant 9). <main> is the stage over the visible area (as Swap's): problem tile, the handle in a 16px gap, the pad */
+html.mt { overflow: hidden; overscroll-behavior: none; }
+html.mt body { min-height: var(--swap-doc-h, 100dvh); }
+html.mt body::before { content: ""; position: fixed; z-index: 14; left: 0; right: 0; top: var(--kb-top, 0px); height: var(--vv-h, 100dvh); background: var(--paper); }
+html.mt main {
+  position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
+  height: var(--vv-h, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: calc(var(--r, .5) * (100% - var(--s4))) var(--s4) minmax(0, 1fr);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) var(--s2);
+}
+html.mt.mt-r0 main { grid-template-rows: auto var(--s4) minmax(0, 1fr); }
+html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
+html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
+html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--sheet); border-radius: 10px; }
+html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
+html.mt.mt-r0 #problem { display: none; }
+html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
+html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
+html.mt #fb:empty { display: none; }
+html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
+html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
+html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
+html.mt .xb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
+html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico, html.mt #xbSave { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html.mt .xb-label .mt-mode { margin-left: 0; }
+html.mt .xb-label .mt-exp { margin-left: auto; }
+html.mt .xb-field { flex: 1 1 auto; min-height: 0; max-width: none; }
+html.mt #scratch { min-height: var(--pad-max, 8rem); }
+
+/* the handle: a 36x4 --edge pill in the gap, touched big (88x44 phone, 48 wide desktop); --muted on hover and while dragging */
+html.mt .sash, html.side .sash { display: block; position: relative; touch-action: none; cursor: row-resize; outline: none; }
+.sash::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
+.sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
+.sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
+.sash:focus-visible::before { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+/* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
+html.side main {
+  max-width: min(100%, calc(var(--col) * 1.7)); display: grid; align-items: start;
+  grid-template-columns: calc(var(--r, .5) * (100% - var(--s4))) var(--s4) minmax(0, 1fr);
+}
+html.side.mt-r0 main { grid-template-columns: 52px var(--s4) minmax(0, 1fr); }
+html.side #sentinel { grid-column: 1 / -1; }
+html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
+html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
+html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
+html.side .more { display: none; }
+html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: 60vh; cursor: col-resize; }
+html.side .sash::before { position: sticky; display: block; top: 40vh; left: auto; width: 4px; height: 36px; margin: 0 auto; }
+html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
+html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
+html.side .xb-label { margin-bottom: var(--s2); }
+html.side #scratch { min-height: var(--pad-max, 60vh); }
+html.side.mt-r0 .freeze-in { display: none; }
+html.side .pstrip {
+  display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
+  background: var(--sheet); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
+}
+html.side .pstrip[hidden] { display: none; }
+html.side .pstrip:hover { background: var(--raised); color: var(--ink); }
+html.side .pstrip span { writing-mode: vertical-rl; }
+
 /* ---------- desktop: wide window + fine pointer (the complement of app.js dockMQ: the top entry bar, not the phone dock) ----------
    Bigger: the column, the type scale and the one button size grow together (tokens only, so every rule above follows).
    The type steps up with the window height too: the frozen layer (problem + answer) may take 60% of a 720-960px window (app.js
@@ -418,7 +581,7 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
    gains a line; a fixed offset keeps the problem still while you write, and the frozen layer keeps sticking at top: 0. */
 @media (min-width: 700.02px) and (pointer: fine) {
   :root {
-    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem;
+    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem; --t-lg: 2.25rem;
     --btn: 50px; --ico: 25px;
     --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);     /* 1024: 56rem, 1366: 60.5rem, 1920: 68rem (gutters included) */
   }
@@ -435,3 +598,26 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- toast (app.js toast(); design/TOAST.md take 5f "page note", Tony Oct 2) ----------
+   The page's own paper, the part divider's 1px --line hairline as its edge (--shadow-1 only: Impeccable flags hairline + wide shadow); text in the part prompt's style (400, --t-md).
+   No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
+   exactly on the struck-out choice, no caret. 200ms ease-out, 8px; reduced motion = fade only (app.css turns transitions off, so
+   these are animations). */
+#toast {
+  position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
+  display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
+  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; cursor: pointer;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
+}
+#toast.on { visibility: visible; animation: toast-in .2s ease-out both; }
+#toast::before {
+  content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
+}
+#toast.row { max-width: none; padding: var(--s1) var(--s3); text-align: center; }
+#toast.row::before { display: none; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear both; } }

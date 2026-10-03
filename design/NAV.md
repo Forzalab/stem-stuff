@@ -35,6 +35,17 @@ Why not "codes this browser already opened" in server mode:
 
 So: server mode looks exactly as it does today (the code bar), and the empty page stays blank.
 
+### Mastery order
+
+On top of the seeded shuffle, `shuffle.mjs` `mastery(order, recOf, cur)` sorts the list (nav.js `order()`, with `mark(c)` as `recOf`):
+answered questions (done `correct` or `out`) first, in their seeded order; then the open question `cur` if it is unanswered; then the
+other unanswered ones, the families with the most wrong tries first (family = prefix + the suffix's first letter, `CSCI26_C2A` →
+`CSCI26_C`; weight = all wrong tries `x` of its members, a wrong-then-right still counts). Seeded order breaks ties. So Next after a
+graded try goes to the weakest topic. Silent: no message, nothing else changes. The order is recomputed on a graded try
+(`drill:state`, from `offline.js` `donePut`), a bank change and the shuffle button; opening a problem keeps it, so Prev / Next walk
+a list that holds still (re-sorting on every open would bounce Next between two open questions). `window.stemOrder` (the first
+problem of an upload or a bank) uses the same order. Unit tests: `tests/shuffle.test.mjs`.
+
 When the bank is loaded but the current problem is not in it (a server code typed after an upload), the list shows with no row marked, and Prev / Next are disabled.
 
 ## Titles

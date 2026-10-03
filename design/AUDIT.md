@@ -20,4 +20,4 @@ Tony: "read Refactoring UI to see what's wrong with the site too, but aim for ex
 
 - The "Scratchpad" label (Tony asked for it) and the A–E letter badges (the Copy payload records letters).
 - The freeform placeholder "e.g. 9/2, sqrt(3), dne". It is the only place that shows the answer syntax. Candidate to drop if Tony wants zero text.
-- The "Not quite. One more try." and "Correct" words next to their icons. They are candidates to become icon-only; I'm asking Tony first.
+- ~~The "Not quite. One more try." and "Correct" words next to their icons.~~ Done (Tony, Oct 1): icon-only. The verdict is the icon in the answer box's arrow slot (`i-ok` green, `i-x` red with a dashed box until the student types, `i-lock` when out of tries); MC keeps its badge icon. The words stay for screen readers only (`say()`). A wrong try with one left also shows the toast "One more try, so choose wisely. 😈".
