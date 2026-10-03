@@ -17,7 +17,6 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 - `vercel deploy` (preview) first: answer files 404, `/check` grades, offline reload works. `--prod` only on Tony's word.
 - Domain: free `*.vercel.app` first. `csci4x.com` later. Pointing the root at Vercel ends the `:5567` site (a subdomain keeps both). Pick the final domain before phones cache it: the service worker cache is per origin.
 - Tokens for Claude: scope = the team that owns the project (`forzalab's projects`), short expiry, in the cloud environment as `VERCEL_TOKEN`, never in chat or files. A token without team access can read the user but gets "forbidden" on projects (Oct 3).
-
 - Old server `csci4x.com:5567`: `STEM_REDIRECT=https://stem-stuff.vercel.app ./deploy.sh` turns it into a redirect (302, POST 307, never 301: a 301 sticks in browsers and could not be undone).
 - Vercel project: framework preset must be "Other" (null). The "python" preset sends every path to the function, so `/` returned `{"error": "not found"}` (Oct 3). Git auto-deploy disabled (it would ship without the exam banks).
 
