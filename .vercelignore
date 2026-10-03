@@ -12,3 +12,4 @@ host.log
 .host.pid
 stem-stuff.html
 public
+.env*

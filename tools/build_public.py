@@ -19,7 +19,7 @@ def build(out):
         rel = os.path.relpath(d, ROOT)
         dirs[:] = [x for x in dirs if not (x in SKIP_DIRS and rel == ".") and x not in ("node_modules", "__pycache__", ".git")]
         for f in files:
-            if rel == "." and f in SKIP_FILES:
+            if rel == "." and (f in SKIP_FILES or f.startswith(".")):   # dotfiles: .env.local (vercel link), .vercelignore, ...
                 continue
             dst = os.path.join(out, rel, f)
             os.makedirs(os.path.dirname(dst), exist_ok=True)

@@ -38,6 +38,7 @@ class BuildPublic(unittest.TestCase):
         for d in serve.BLOCK_PREFIX:
             self.assertFalse(os.path.exists(os.path.join(self.out, d.strip("/"))), d)
         self.assertFalse(os.path.exists(os.path.join(self.out, "api")))
+        self.assertEqual([f for f in os.listdir(self.out) if f.startswith(".")], [], "a dotfile (.env.local holds tokens) reached public/")
 
     def test_client_is_there(self):
         for f in ("index.html", "app.js", "app.css", "sw.js", "offline.js", "vendor/katex/katex.min.js"):
