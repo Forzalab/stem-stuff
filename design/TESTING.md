@@ -39,6 +39,10 @@ tests and root-causes red ones.
   The next run (same code rebased, @d5424d1) was all green → intermittent, not fonts. Made robust instead of re-running:
   `disabled.pw` pickMC waits until option i is enabled (the reconcile race); `render.pw` padPage waits for every animation to
   finish before measuring (the crossfade). If either goes red again, the cause is elsewhere: look at fonts next.
+- **Exit codes through a pipe** (Oct 3): `cmd | tail -1 && git push` pushed a red test (`tail` exits 0). Judge a command by its
+  own exit code: `set -o pipefail`, or `${PIPESTATUS[0]}`, never by the last command of a pipe.
+- **Brain banks by shallow git clone** (#45): replaced by the GitLab-API bank hatch (`tools/brain_banks.py`): Tony's phone has no
+  brain clone and the brain is heavy. The hatch is tested against a local fake GitLab API in `tests/test_ship.py` (`Stub`).
 - Polling Vercel build state from Claude: banned (Tony). `ship.sh` may wait (`vercel inspect --wait`) because it is a script.
 - `vercel curl`: everything after `--` goes to curl, so global flags (`--scope`) must come before the subcommand and the token
   comes from `$VERCEL_TOKEN`, never `--token`.

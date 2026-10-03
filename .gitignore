@@ -8,3 +8,4 @@ tries.json
 tries.json.tmp
 public/
 .vercel/
+.env

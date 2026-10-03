@@ -1,0 +1,27 @@
+# Trunk style: prune done branches (tools/prune-branches.sh). Weekly, or by hand: Actions → prune-branches → Run workflow.
+name: prune-branches
+on:
+  schedule:
+    - cron: "17 11 * * 1"   # Mondays 04:17 PT
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: "Unmerged branches with no commit for this many days go too"
+        default: "7"
+      dry_run:
+        description: "List only, delete nothing"
+        type: boolean
+        default: false
+permissions:
+  contents: write
+  pull-requests: read
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: tools/prune-branches.sh ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.max_age_days || '7' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
