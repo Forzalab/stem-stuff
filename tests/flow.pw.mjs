@@ -116,7 +116,11 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await shot();   // 5: keyboard down, the box in view
 
   await step(`${T} the Scratchpad button: pad off the page; button >= 48px, above the bar, off the answer controls; hidden while typing an answer`, async () => {
+    /* the button steps off answer controls where it (re)appears, then holds still while scrolling (Tony, Oct 3: it must not jump
+       with the scroll; tests/fab.pw.mjs). So scroll first, then make it reappear (typing hides it, blur shows it), then check. */
     await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(200);
+    await page.locator(fix).focus(); await page.waitForTimeout(250);
+    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
     assert.ok(await page.locator("#work").isHidden(), "pad on the plain page");
     const g = await page.evaluate(() => { const f = document.querySelector("#padFab").getBoundingClientRect(), d = document.querySelector("#dock").getBoundingClientRect();
       const hits = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > f.left && q.left < f.right && q.bottom > f.top && q.top < f.bottom).length;
