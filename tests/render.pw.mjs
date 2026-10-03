@@ -83,6 +83,14 @@ async function run(browserType, label, opts = {}) {
           await page.waitForTimeout(150);
           if (await page.locator("#more").isVisible()) { shown = true; break; }
         }
+        if (code === "CALC1_X2P" && !shown) {
+          /* MC lock-in (b86eac5, Tony Oct 2): while a choice is picked the grab handle is hidden, so it covers nothing;
+             unpick and check the handle against the plain choices */
+          assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#more")).visibility), "hidden", "handle shown while a choice is picked");
+          await page.locator('.opt[data-id="a"]').click();
+          await page.waitForTimeout(150);
+          shown = await page.locator("#more").isVisible();
+        }
         assert.ok(shown, `${code}: #more never appeared`);
         const hit = () => page.evaluate(() => {
           const m = document.querySelector("#more").getBoundingClientRect(), strip = document.querySelector("#freezeIn").getBoundingClientRect();

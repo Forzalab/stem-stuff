@@ -90,7 +90,7 @@ html.start .top {
 }
 html.start .dock { width: 100%; max-width: calc(40rem + 2 * var(--gut)); padding: 0 var(--gut) var(--s7); }
 html.start .start-title {
-  display: block; margin: 0 0 var(--s5); text-align: center; text-wrap: balance;
+  display: block; margin: 0 auto var(--s5); text-align: center;   /* auto: centred like the entry under it in the bottom dock */ text-wrap: balance;
   font-size: var(--t-lg); font-weight: 700; line-height: 1.25; color: var(--ink);
 }
 html.start .entry {
