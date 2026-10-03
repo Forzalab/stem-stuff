@@ -36,7 +36,14 @@ const st = page => page.evaluate(() => ({
   wrong: [...document.querySelectorAll("#q .opt.wrong")].map(o => o.dataset.id), right: [...document.querySelectorAll("#q .opt.right")].map(o => o.dataset.id).sort(),
   dis: [...document.querySelectorAll("#q .opt:disabled")].map(o => o.dataset.id).sort(), go: document.querySelector("#mcGo")?.disabled,
   fb: document.querySelector("#fb").textContent, finished: window.__drill.state.finished, focus: document.activeElement?.dataset?.id || document.activeElement?.id }));
-async function check(page) { await page.click("#mcGo"); await page.waitForSelector("#fb .verdict", { timeout: 4000 }); await page.waitForTimeout(150); }
+/* graded: take 5f put no verdict words on the page (rows / boxes carry the icons, "One more try" is the toast), so wait for
+   the feedback area (hint, lock or can't-read line) or a right row instead of "#fb .verdict" */
+async function check(page) {
+  await page.click("#mcGo");
+  await page.waitForFunction(() => document.querySelector("#fb").textContent.trim() || document.querySelector("#q .opt.right"), null, { timeout: 4000 });
+  await page.waitForTimeout(150);
+}
+const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
@@ -80,10 +87,10 @@ try {
     await step(`${name}: wrong set: first distractor (authored order) struck, other ticks stay; Enter = Check`, async () => {
       await tap(row(page, "d")); await tap(row(page, "a")); await tap(row(page, "b"));
       await row(page, "a").focus(); await page.keyboard.press("Enter");
-      await page.waitForSelector("#fb .verdict"); await page.waitForTimeout(150);
+      await page.waitForSelector("#toast.on"); await page.waitForTimeout(150);
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
-      assert.match(s.fb, /One more try/); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
+      assert.match(await page.textContent("#toast.on"), /One more try/); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
       const t = await page.evaluate(() => window.__drill.state.tries.at(-1));
       assert.deepEqual([[...t.c].sort(), t.v, t.s, t.a.length], [["a", "b", "d"], "wrong", "b", 3]);   // copy payload: ids + letters per try
       const ls = await page.$$eval("#q .opt", (os, c) => c.map(id => os.find(o => o.dataset.id === id).dataset.l), t.c);
@@ -108,9 +115,9 @@ try {
       await p2.goto(`${BASE}/#${CODE}`); await opened(p2, CODE);
       await (touch ? row(p2, "c").tap() : row(p2, "c").click()); await (touch ? row(p2, "a").tap() : row(p2, "a").click());
       await check(p2);
-      let s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.match(s.fb, /Correct/);
+      let s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.deepEqual(await okRows(p2), ["a", "c"]);
       await p2.reload(); await opened(p2, CODE); await p2.waitForTimeout(300);
-      s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.match(s.fb, /Correct/);
+      s = await st(p2); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true); assert.deepEqual(await okRows(p2), ["a", "c"]);
     });
     await c2.close();
 
@@ -159,7 +166,7 @@ try {
       await box("b").locator("input").press("Enter");                          // Enter in the last box = Check
       await p3.waitForTimeout(400);
       const s = await st(p3);
-      assert.match(s.fb, /Correct/); assert.deepEqual(s.right, ["a", "c"]);
+      assert.deepEqual(await okRows(p3), ["a", "c"]); assert.deepEqual(s.right, ["a", "c"]);
       assert.ok(await box("d").evaluate(e => e.classList.contains("ok")));
     });
     await c3.close();
@@ -196,7 +203,7 @@ try {
     await page.reload(); await opened(page, "CSCI26_U01"); await page.waitForTimeout(300);
     s = await st(page); assert.deepEqual(s.on, ["a"]); assert.match(s.fb, /U01 miss/); assert.equal(s.finished, false);
     await row(page, "c").click(); await check(page);
-    s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.match(s.fb, /Correct/);
+    s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.deepEqual(await okRows(page), ["a", "c"]);
   });
   await ctx.close();
 } finally { await browser.close(); srv.kill(); }

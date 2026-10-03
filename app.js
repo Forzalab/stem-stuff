@@ -365,7 +365,8 @@ async function load(code) {
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
-  const rec = doneStore() ? doneStore().doneGet(code) : null;
+  root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
+  const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
   if (rec) paint(rec);
@@ -611,7 +612,7 @@ async function submitAll() {
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
-    if (r.triesLeft <= 0) finish();
+    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o || $("#q .choices"));   // take 5f, as on single MC: on the struck row
   } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
   else if (r.verdict === "locked") finish();
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
