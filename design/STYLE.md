@@ -108,7 +108,19 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 
 ### 2.6 Borders
 
-- Controls and fields: 2px `--edge`. Hover: `--muted`. Focus: `--focus`. Selected: `--c1`. Right: `--ok` solid. Wrong: `--bad` **dashed** (dash = not accepted, so it survives grayscale).
+One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and disparate"; picked per state from variants A / B / C, then "one rule"). Tokens in `app.css :root`.
+
+| what | border |
+|---|---|
+| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), choices `.opt`, badges, `.md th` | `--bw` (1px). Hover `--muted`. Selected `--c1`. Right `--ok`. Pending `--c1` dashed |
+| Buttons `.btn` | fill-first: `--bw` **transparent**, the fill carries it; hover = `--raised` fill only. `.btn-go` keeps its `--c1` edge |
+| Field focus (every field, the pad too) | border `--focus` + `inset 0 0 0 1px var(--focus)` = one 2px blue edge. **No outline** |
+| Keyboard focus (buttons, FAB, sash, anything `:focus-visible`) | `--ring` (2px) `--focus` outline at 2px offset (-3px inside a field) |
+| Wrong (`.opt.wrong`, `.ff.bad`) | `--bw-alarm` (2px) `--bad` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
+| Toast | 1.5px `--line`: the one listed exception (Tony: "slight thicker") |
+
+- Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.
+- A wrong border adds `--bw-up` (1px). The box takes it back from its padding and the arrow / verdict offsets, so the text and the ✕ never move (render.pw: "the x is where the arrow was", "nothing moved").
 - Surfaces have no border. A background change separates them.
 - Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom). The toast's edge is the one 1.5px `--line` border.
 - No colored side stripes on anything.
@@ -148,22 +160,22 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Button (`.btn`)
 
-- Anatomy: 48×48 (`--btn`), 2px `--edge` border, 8px radius, `--sheet` fill, one 24px sprite icon in `--ink`. `aria-label` and `title` when there is no word.
-- States: hover `--raised` + `--muted` border; active 1px down; focus 3px `--focus` outline at 2px offset; disabled 45% opacity, no hover, no press.
+- Anatomy: 48×48 (`--btn`), no visible border (`--bw` transparent, §2.6), 8px radius, `--sheet` fill, one 24px sprite icon in `--ink`. `aria-label` and `title` when there is no word.
+- States: hover `--raised` fill; active 1px down; keyboard focus `--ring` (2px) `--focus` outline at 2px offset; disabled 45% opacity, no hover, no press.
 - Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-state switch (today: q | a).
 - Do: one `.btn-go` visible per field. Put the arrow flush inside its field.
 - Don't: text-only buttons, a "→" after a word, a second filled color, round or pill buttons (named exceptions: the start field's buttons, the q | a switch, the Scratchpad button).
 
 ### Code box (`.code-box`) and suggestions
 
-- Anatomy: in the bar, the same height (`--btn`), surface (`--sheet`), 2px `--edge` border and 8px radius as the buttons beside it, so tops and bottoms line up. Text: the bar's label text (`--t-sm` bold, Atkinson Hyperlegible, uppercase because codes are). Paste (empty box) or the Go arrow (typed) sits flush inside the border: `--btn` minus 4px, 6px radius. Paste is an icon button (transparent, `--muted` icon, `--raised` + `--ink` on hover); Go is the one filled control.
-- Focus: one ring. The border turns `--focus` and a 1px inset makes it 3px. No outline around it.
+- Anatomy: in the bar, the same height (`--btn`), surface (`--sheet`) and 8px radius as the buttons beside it, with a `--bw` `--edge` border (a field), so tops and bottoms line up. Text: the bar's label text (`--t-sm` bold, Atkinson Hyperlegible, uppercase because codes are). Paste (empty box) or the Go arrow (typed) sits flush inside the border: `--btn` minus 4px, 6px radius. Paste is an icon button (transparent, `--muted` icon, `--raised` + `--ink` on hover); Go is the one filled control.
+- Focus: the field rule (§2.6): border `--focus` + 1px inset = 2px. No outline around it.
 - Suggestions (`suggest.mjs`): while typing, the codes this browser knows (opened here before, newest first; the live bank and its list; an uploaded file) that contain the typed text. **Banks first, then questions**, order kept inside each group. A `--sheet` card, 10px, `--shadow-3`, floating under the bar (above it when the bar is the phone dock). Rows `--btn` tall: `i-list` for a bank, `i-doc` for a question, the code in `--t-sm` bold; hover / marked row `--raised`. Combobox keys: ArrowDown / ArrowUp, Enter, Escape. The browser's own form history is off (no `name`).
 
 ### Start page (`html.start`: no problem open)
 
 - Like a search home page: one line of title, "Upload or type code to start." (`--t-lg` bold `--ink`, centred), over one wide field (up to 40rem), both centred on the page. On phones the area is the part above the keyboard (`--kb-top` / `--kb-bottom`), so the field never hides under it.
-- The field: a pill, `--sheet`, 2px `--edge`, `--shadow-1`; hover `--muted` border + `--shadow-3`; focus `--focus` border (3px, as the code box) + `--shadow-3`. Upload (left) and Paste / Go (right) are round 48px buttons inside it, transparent until hovered; Go stays the one filled control.
+- The field: a pill, `--sheet`, `--bw` `--edge`, `--shadow-1`; hover `--muted` border + `--shadow-3`; focus the field rule (2px `--focus`) + `--shadow-3`. Upload (left) and Paste / Go (right) are round 48px buttons inside it, transparent until hovered; Go stays the one filled control.
 - Once a problem opens, the bar goes back to its place. Nothing animates in on load; hover and focus transitions only, off with reduced motion.
 
 ### Math in text
@@ -174,15 +186,15 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Answer box (`.ff`)
 
-- Anatomy: 52px tall (`--fld`), `--field` fill, 2px border, 8px radius, optional muted lead text, `--mono` 18px input, and a 48px **arrow slot** on the right that is always reserved.
+- Anatomy: 52px tall (`--fld`), `--field` fill, `--bw` border, 8px radius, optional muted lead text, `--mono` 18px input, and a 48px **arrow slot** on the right that is always reserved.
 - States:
 
 | state | border | arrow slot | text |
 |---|---|---|---|
 | idle, empty | `--edge` | empty (arrow hidden) | `--hint` placeholder |
 | typed | `--edge` | `.btn-go` arrow | `--ink` |
-| focus | `--focus` | arrow if typed | `--ink` |
-| wrong, try left | `--bad` dashed | `i-x` in `--bad` | `--ink`, editable |
+| focus | `--focus`, 2px (field rule) | arrow if typed | `--ink` |
+| wrong, try left | `--bad` 2px dashed | `i-x` in `--bad` | `--ink`, editable |
 | correct | `--ok` | `i-ok` in `--ok` | `--ok`, read-only |
 | locked (out of tries) | `--edge`, 50% opacity | `i-lock` in `--muted` | read-only, not-allowed cursor |
 
@@ -191,8 +203,8 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Multiple-choice choice (`.opt`)
 
-- Anatomy: full-width row, min 52px, `--sheet` fill, 2px border, 8px radius, a 2rem round letter badge, the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
-- States: idle (boundary, see Inconsistencies), hover `--edge`/`--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
+- Anatomy: full-width row, min 52px, `--sheet` fill, `--bw` border, 8px radius, a 2rem round letter badge, the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
+- States: idle (boundary, see Inconsistencies), hover `--edge`/`--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` 2px dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
 - Do: tap again to deselect; keys A to E, 1 to 5, arrows (existing keys; see Keyboard in §5).
 - Don't: submit on the first tap; color the whole row red or green.
 
@@ -218,8 +230,8 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Scratchpad (`.xb`)
 
-- Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, 2px `--edge`, 8px radius, `--mono` 16px / 1.6, no line numbers. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
-- States: focus = `--focus` border only (one ring, Tony). Copy done = `--ok` icon and border.
+- Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, `--bw` `--edge`, 8px radius, `--mono` 16px / 1.6, no line numbers. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
+- States: focus = the field rule, 2px `--focus` edge, no outline (one ring, Tony). Copy done = `--ok` icon and border.
 - Don't: a resize handle, a second scroll inside the page scroll when it can grow instead.
 
 ### Multitask (`#stage`, the pad page, side by side)
@@ -340,8 +352,7 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 
 | # | where | what | fix |
 |---|---|---|---|
-| 1 | `design/explain-box.css` `.xb textarea:focus` | Sets an outline that `app.css` then removes. | Drop the outline in explain-box.css. |
-| 2 | `app.css` `.opt` | Choice boundary is `--line` (1.51:1, fails 3:1); hover goes to `--edge`. | Idle `--edge`, hover `--muted`, like `.ff`. |
+| 2 | `app.css` `.opt` | Choice boundary is `--line` (1.51:1, fails 3:1), now 1px (Tony's pick, Oct 3); hover goes to `--edge`. | Idle `--edge`, hover `--muted`, like `.ff`; ask Tony first, it is his picked look. |
 | 3 | `design/explain-box.css` textarea | Radius 6px; every other field is 8px. | 8px. |
 | 4 | `app.css` `.cluck` | 8px radius; surfaces are 10px. | 10px. |
 | 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |

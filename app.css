@@ -15,6 +15,8 @@
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
   /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
+  --bw: 1px; --bw-alarm: 2px; --ring: 2px;   /* borders (STYLE.md 2.6): one line weight; only a wrong answer is heavier; one keyboard ring */
+  --bw-up: calc(var(--bw-alarm) - var(--bw));   /* what a wrong border adds: taken back from the padding / offsets, so nothing inside moves */
   --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
   /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
@@ -35,7 +37,7 @@ body {
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: default; }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .ico { width: 1.5rem; height: 1.5rem; flex: none; display: block; }
 
 /* ---------- entry box (dock) ---------- */
@@ -47,11 +49,11 @@ button:disabled { cursor: default; }
    Paste / Go sit flush inside the border as icon buttons (--btn minus the border, 6px: "inside a control"). */
 .code-box {
   flex: 1 1 auto; min-width: 0; height: var(--btn); display: flex; align-items: center;
-  background: var(--sheet); border: 2px solid var(--edge); border-radius: 8px; padding-left: var(--s3);
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 8px; padding-left: var(--s3);
   transition: background-color .12s ease-out, border-color .12s ease-out, box-shadow .12s ease-out;
 }
 .code-box:hover { border-color: var(--muted); }
-/* focus: one ring (STYLE.md 2.6). The border turns --focus and a 1px inset thickens it to 3px, as strong as a button's outline */
+/* field focus, everywhere (STYLE.md 2.6): the border turns --focus and a 1px inset doubles it to 2px. No outer ring */
 .code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
@@ -96,7 +98,7 @@ html.start .start-title {
 }
 html.start .entry {
   gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
-  background: var(--sheet); border: 2px solid var(--edge); border-radius: calc(var(--btn) / 2 + var(--s1) + 2px);
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: calc(var(--btn) / 2 + var(--s1) + 2px);
   box-shadow: var(--shadow-1);
   transition: border-color .12s ease-out, box-shadow .2s ease-out;
 }
@@ -159,13 +161,13 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 .btn {
   flex: none; position: relative; box-sizing: border-box; width: var(--btn); height: var(--btn); margin: 0; padding: 0;
   display: inline-grid; place-items: center;
-  background: var(--sheet); color: var(--ink); border: 2px solid var(--edge); border-radius: 8px;
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid transparent; border-radius: 8px;   /* fill-first: the fill carries a button, no idle line (Tony, Oct 3) */
   cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
   transition: background-color .12s ease-out, border-color .12s ease-out;
 }
 .btn .ico, .btn > svg { width: var(--ico); height: var(--ico); }
-.btn:hover { background: var(--raised); border-color: var(--muted); }
-.btn:focus-visible, label.btn:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn:hover { background: var(--raised); }
+.btn:focus-visible, label.btn:focus-within { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .btn:active { transform: translateY(1px); }
 .btn-go { background: var(--c1); border-color: var(--c1); color: var(--field); }
 .btn-go:hover { background: var(--c1-hi); border-color: var(--c1-hi); }
@@ -220,7 +222,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .tbl { overflow-x: auto; margin: 0 0 var(--s3); }
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
-.md th { color: var(--muted); font-weight: 700; border-bottom: 2px solid var(--edge); }
+.md th { color: var(--muted); font-weight: 700; border-bottom: var(--bw) solid var(--edge); }
 .md code { font-size: 0.95em; background: var(--field); padding: 0 var(--s1); border-radius: 4px; }
 
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
@@ -238,13 +240,13 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt {
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
-  background: var(--sheet); border: 2px solid var(--line); border-radius: 8px; color: var(--ink);
+  background: var(--sheet); border: var(--bw) solid var(--line); border-radius: 8px; color: var(--ink);
   transition: border-color .12s ease-out, background-color .12s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--edge); }
 .opt .badge {
   flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%;
-  border: 2px solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-sm);
+  border: var(--bw) solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-sm);
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
@@ -258,7 +260,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
-.opt.wrong { border-style: dashed; border-color: var(--bad); color: var(--muted); }
+.opt.wrong { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); padding: calc(var(--s2) - var(--bw-up)) calc(var(--btn) + 8px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
 .opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2px; }
 .opt.wrong .badge { border-color: var(--bad); color: var(--bad); }
 .opt.right { border-color: var(--ok); background: var(--raised); }
@@ -294,11 +296,11 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
-  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: var(--btn);   /* the arrow's room is always reserved */
-  background: var(--field); border: 2px solid var(--edge); border-radius: 8px;
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw-up));   /* the arrow's room is always reserved (it sits --bw-up inside the border) */
+  background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
-.ff:focus-within { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+.ff:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
@@ -332,9 +334,9 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
 .mparts .ff { grid-area: bx; }
-.ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders): nothing jumps when it appears */
+.ff .send { position: absolute; right: var(--bw-up); top: var(--bw-up); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
 /* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
-.ff .vk { position: absolute; right: 0; top: 0; width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk { position: absolute; right: var(--bw-up); top: var(--bw-up); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
 .ff .vk .ico { width: var(--ico); height: var(--ico); }
 .ff .vk[data-v="i-ok"] { color: var(--ok); }
 .ff .vk[data-v="i-x"] { color: var(--bad); }
@@ -348,7 +350,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
-.ff.bad { border-color: var(--bad); border-style: dashed; }
+.ff.bad { border: var(--bw-alarm) dashed var(--bad); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
+.ff.bad :is(.send, .vk) { right: 0; top: 0; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
 .ff.shut { opacity: 0.5; }   /* right ones too: closed = looks disabled */
@@ -397,8 +400,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .xb-field { position: relative; font-size: var(--t-sm); }   /* 16px: smaller, still no iOS focus zoom */
 .xb-field textarea { max-width: none; padding-bottom: calc(var(--btn) + 8px); transition: none; }
 /* free padding 30px: last line (25.6px at 16px/1.6) + 30px >= button (48) + inset (6), so only the LAST line can reach the button */
-/* focus: the 2px --focus border is the one ring (Tony: two glows, "ew") */
-.xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: none; }
+/* focus: the field rule (explain-box.css), one 2px edge, no outer ring (Tony: two glows, "ew") */
+.xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
 .xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy, .xb-cut { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
 .xb-cut { right: calc(12px + var(--btn) + var(--xb-sb, 0px)); }   /* Cut all sits left of Copy */
@@ -569,7 +572,7 @@ html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); 
 .pad-fab .ico { width: var(--ico); height: var(--ico); }
 .pad-fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
 .pad-fab:hover { background: var(--sheet); }
-.pad-fab:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pad-fab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .mt-mode .qa-l { transition: none; } }
 
 /* the handle: a 36x4 --edge pill in the gap, touched big (88x44 phone, 48 wide desktop); --muted on hover and while dragging */
@@ -578,7 +581,7 @@ html.mt .sash, html.side .sash { display: block; position: relative; touch-actio
 .sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
 .sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
 html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   /* thin bar (round 3d) */
-.sash:focus-visible::before { outline: 3px solid var(--focus); outline-offset: 3px; }
+.sash:focus-visible::before { outline: var(--ring) solid var(--focus); outline-offset: 3px; }
 
 /* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
 html.side main {
@@ -643,7 +646,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #toast {
   position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
   display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
-  background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker" */
+  background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker"; the one listed exception to --bw (STYLE.md 2.6) */
   font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: balance; cursor: pointer;
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
