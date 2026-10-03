@@ -101,6 +101,7 @@ Stops guessing. Turn it on with a public `fix` on the problem: `"fix": { "type":
 - Every row is either **ticked** (true) or **X'd** (false). There is no blank. Each X'd row that isn't locked opens a box under it, where you type the corrected value.
 - Key: every false, unlocked choice's `wrong` entry carries `fix: { answer, accept?, tol?, points?, wrong? }`. It is graded like a `multi` part, with type and var taken from the problem's `fix`. Locked rows ("None of these") never take a fix.
 - One shared type for all rows keeps the public file from leaking which rows are false.
+- **Ticking the locked "None of these" X's every other unlocked row and opens its box** (Tony, Oct 3). It used to clear them to blank, and blank rows can never be sent here, so a None pick could not be checked (PHYS_NPT). Ticking another row ✓ still clears None. Unticking None leaves the X's.
 - Request: `{ code, choices: [ticked], fixes: { id: text } }`, where `fixes` holds exactly the X'd unlocked ids. A missing, empty or extra fix → `invalid`.
 - Grading:
   1. the set is graded first, as in §3 (wrong set → struck/miss, fixes not graded);
