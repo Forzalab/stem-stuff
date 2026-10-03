@@ -74,7 +74,7 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .drag.f5x .rail.r { display: none; }
 
 /* ---------- the pad page (open) ---------- */
-.mt { position: absolute; inset: 0; display: grid; grid-template-rows: 36% var(--s4) minmax(0, 1fr); padding: var(--s2) var(--s2) 22px; }   /* 22: the home indicator */
+.mt { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 36% var(--s4) minmax(0, 1fr); padding: var(--s2) var(--s2) 22px; }   /* 22: the home indicator */
 .tile { background: var(--sheet); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
 .tile .prob { flex: 1 1 auto; overflow: hidden; }
 .tile .fig { width: 100%; max-width: 14rem; height: auto; display: block; margin: var(--s2) auto 0; }
@@ -83,7 +83,7 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .handle { position: relative; }
 .handle::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
 .pad { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
-.phead { display: flex; align-items: center; justify-content: space-between; }
+.phead { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
 .pill { position: relative; display: inline-flex; align-items: center; gap: var(--s1); height: var(--btn); padding: 0 var(--s1); border: 2px solid var(--line); border-radius: 12px; background: var(--paper); }
 .pill span { width: 40px; height: 36px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
 .pill span.on { background: var(--raised); color: var(--c1); }
@@ -109,12 +109,13 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .g5 .mt, .g6 .mt { grid-template-rows: minmax(0, 1fr); }
 .g4 .handle, .g5 .handle, .g6 .handle, .g5 .tile, .g6 .tile { display: none; }
 .strip { display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: var(--s2) var(--s4); margin-bottom: var(--s2); border-radius: 10px; background: var(--sheet); }
-.strip .ptxt { flex: 1; font-size: var(--t-md); }
+.strip .ptxt { flex: 1; min-width: 0; font-size: var(--t-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .strip .eq { margin: 0; font-size: 1.25rem; white-space: nowrap; }
 .strip .ico { width: 20px; height: 20px; color: var(--muted); flex: none; }
 .g4 .tile { display: none; }
-.hq { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--s2); padding: 0 var(--s3); font-size: var(--t-sm); color: var(--ink); white-space: nowrap; overflow: hidden; }
+.hq { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: var(--s2); padding: 0 var(--s3); font-size: var(--t-sm); color: var(--ink); white-space: nowrap; overflow: hidden; }
 .hq .eq { margin: 0; font-size: 1.15rem; }
+.hq .ptxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .g5 .pad { padding-top: var(--s2); }
 .nb { font-family: "Atkinson Hyperlegible"; white-space: normal; color: var(--muted); padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 1px solid var(--line); font-size: var(--t-md); line-height: 1.4; }
 .nb .eq { color: var(--ink); }
@@ -137,7 +138,7 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .ch.wrong span:last-child { text-decoration: line-through; color: var(--muted); }
 /* q | a letter pill: one face per variant (all already shipped by the app) */
 .pill span.l { font-size: 1.5rem; line-height: 1; padding-bottom: 2px; }
-.ql1 span.l { font-family: KaTeX_Math; font-style: italic; font-size: 1.875rem; }   /* the pick, a touch bigger (Tony, twice) */
+.ql1 span.l { font-family: KaTeX_Math; font-style: italic; }   /* the pick, at the original size (Tony, ~00:24) */
 .ql2 span.l { font-family: KaTeX_Main; }
 .ql3 span.l { font-family: KaTeX_Main; font-style: italic; font-weight: 700; }
 .ql4 span.l { font-family: KaTeX_Fraktur; }
@@ -198,9 +199,14 @@ function plain() {
     <div class="qa">${choices()}<div class="go"><span>${ico("i-go")}</span></div></div></div>
     <span class="rail l"></span><span class="rail r"></span>${fab()}`;
 }
-const SHORT = P.get("short") === "1", g = +(P.get("g") || 0);
-const QSHORT = `<p class="ptxt">Solve for <i>x</i>:</p><p class="eq"><i>x</i> + 2 = 11</p>`;
-const QSHORT1 = `<span class="ptxt">Solve for <i>x</i>:</span><span class="eq"><i>x</i> + 2 = 11</span>`;
+const FIGQ = `<svg class="fig" viewBox="0 0 220 110" aria-hidden="true"><circle cx="110" cy="55" r="18" fill="none" stroke="var(--c1)" stroke-width="2"/><circle cx="110" cy="55" r="48" fill="none" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="158" cy="55" r="5" fill="var(--c2)"/></svg>`;
+/* ?len=1..4: question length (1 one line · 2 a line + an equation · 3 three lines · 4 long + figure); ?short=1 = len 2 */
+const LEN = +(P.get("len") || (P.get("short") === "1" ? 2 : 0)), SHORT = LEN > 0, g = +(P.get("g") || 0);
+const QS = { 1: ["Differentiate <i>y</i> = <i>x</i>³ + 2<i>x</i>.", ""], 2: ["Solve for <i>x</i>:", "<i>x</i> + 2 = 11"],
+  3: ["A 2.0 kg block slides from rest down a frictionless 30° incline. How fast is it moving after 3.0 m?", ""],
+  4: ["A satellite is in a circular orbit around the Earth at an altitude that is four times the Earth's radius. Choose all that apply.", "fig"] }[LEN] || ["", ""];
+const QSHORT = `<p class="ptxt">${QS[0]}</p>${QS[1] && QS[1] !== "fig" ? `<p class="eq">${QS[1]}</p>` : ""}${QS[1] === "fig" ? FIGQ : ""}`;
+const QSHORT1 = `<span class="ptxt">${QS[0]}</span>${QS[1] && QS[1] !== "fig" ? `<span class="eq">${QS[1]}</span>` : ""}`;
 const CHS = [["A", "−9"], ["B", "13"], ["C", "9"], ["D", "11/2"], ["E", "22"]];
 const FIG = `<svg class="fig" viewBox="0 0 220 110" aria-hidden="true"><circle cx="110" cy="55" r="18" fill="none" stroke="var(--c1)" stroke-width="2"/><circle cx="110" cy="55" r="48" fill="none" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="158" cy="55" r="5" fill="var(--c2)"/><path d="M110 55h48" stroke="var(--muted)" stroke-width="1.5"/><text x="128" y="50" fill="var(--muted)" font-size="11">5R</text></svg>`;
 function open() {
@@ -236,6 +242,10 @@ document.fonts.ready.then(() => {
   if (state === "open" && SHORT && g === 2) {                                      /* the largest size (≤ 2.25rem) whose question still fits its tile */
     const pr = scr.querySelector(".tile .prob"), tl = scr.querySelector(".tile");
     for (let f = 2.25; f >= 1.125; f -= 0.125) { phone.style.setProperty("--fit", f + "rem"); if (pr.scrollHeight <= tl.clientHeight) break; }
+  }
+  if (state === "open" && SHORT && g === 4) {                                      /* the strip only when the question fits one line; else hug */
+    const st = scr.querySelector(".strip"), tx = st.querySelector(".ptxt");
+    if (tx.scrollWidth > tx.clientWidth + 1 || QS[1] === "fig") { st.remove(); phone.classList.remove("g4"); phone.classList.add("g1"); }
   }
   if (state === "open" && SHORT && g === 3) {                                      /* both fit in 45% of the screen? else back to q | a */
     const tl = scr.querySelector(".tile");

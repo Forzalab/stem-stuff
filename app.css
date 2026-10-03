@@ -543,7 +543,7 @@ html.mt #scratch { min-height: var(--pad-max, 8rem); }
 html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
 html.mt.mt-a #problem { display: none; }
 .mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-family: KaTeX_Math, "Atkinson Hyperlegible", serif; font-style: italic;
-  font-size: 1.875rem; line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters */
+  font-size: 1.5rem; line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters */
 /* phones: the pad is off the page until the Scratchpad button opens the pad page */
 html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */

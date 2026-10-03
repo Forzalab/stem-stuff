@@ -64,7 +64,7 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 
 ### 2.2 Type
 
-- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.875rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
+- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.5rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
 - Scale (phones; desktop raises all three):
 
 | token | px | for |

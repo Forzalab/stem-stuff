@@ -219,7 +219,7 @@ Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3
 ## Round 3b (Oct 2 ~22:05 PT, Tony's picks)
 
 - **Button: 2**, pen + "Scratchpad" (M3 extended FAB). Rounds 1/3/4/5 stay as history shots.
-- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), a touch bigger: 1.75rem, then 1.875rem (~23:59).**
+- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), 1.75rem, then 1.875rem, then back to the original 1.5rem (Oct 3 ~00:24).**
 - Tony ~22:50: toast text layout was ugly (it wrapped mid-phrase at 16rem) → one line, centred, width up to the column; border 1px → 1.5px; the Scratchpad button's dot removed (it read as noise).
 - **Toast: hybrid** = the shipped take-5f look (page `--paper`, 1px `--line`, `--shadow-1`, `--t-md` 400) + its 14px caret, on every toast: under its anchor (caret up), above it (`.up`, caret down: the onboarding note over the button), and on the MC row (`.side`: lies on the struck choice's text, caret points left at the X badge, so no live choice is covered).
 - Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer view here." · "Drag the button anywhere."
@@ -232,6 +232,20 @@ Tony: a short question leaves a big empty tile; kill the gap, dynamic by screen 
 0 today (⅓ tile) · 1 **hug** (Tony: tile = content, at most 45% of the screen) · 2 big type (the question grows to fill its tile, ≤ 2.25rem) · 3 both fit (question + answer in one tile when they fit in 45%, the pill hides; else falls back to 1) · 4 one-line strip (a question that fits one line becomes a 56px strip; tap to expand) · 5 in the header (the question sits in the pad's header row; no tile) · 6 notebook page (the question is the pad's first, read-only lines and scrolls away as you write).
 **Pick: 4 when the question fits one line at this width, else 1** (both are content- and screen-sized; the pad gets the most room, nothing new to learn). Runner-up: 1 alone.
 Shots: `mt3c-gap-{0..6}-{390,375}.png`.
+
+Length test (Oct 3 ~00:30; `?len=1..4`: one line · a line + an equation · three lines · long + figure; pad height in px at 390×844 / 375×667):
+
+| variant | 1 line | line + eq | 3 lines | long + fig | note |
+|---|---|---|---|---|---|
+| 0 today | 426 / 313 | 426 / 313 | 426 / 313 | 426 / 313 | the gap |
+| 1 hug | 645 / 468 | 596 / 419 | 590 / 413 | 470 / 293 | long + figure on a small phone: 20px **less** than today (45% cap > ⅓) |
+| 2 big type | 426 / 313 | same | same | same | gains nothing |
+| 3 both fit | 357 / → 1 | → 1 | → 1 | → 1 | only a 1-line MC fits on a tall phone |
+| 4 strip | 658 / 481 | 658 / 481 | → 1 | → 1 | strip only when the question fits one line, else hug |
+| 5 header | 714 / 537 | 714 / 537 | cut off | cut off | long questions are lost behind "…" |
+| 6 notebook | 714 / 537 | 714 / 537 | 714 / 537 | 714 / 537 | most room, but the question scrolls away while you write |
+
+Pick stays **4, else 1**, with the hug cap made screen-dependent: at most ⅓ of the screen under 700px tall, 45% above, so a long question never costs pad room vs today.
 
 ## The mock
 
