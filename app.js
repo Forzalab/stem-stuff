@@ -1370,8 +1370,8 @@ function shutMT() {
 }
 function closeMT(toAnswer) {
   if (!mtOpen) return;
-  if (toAnswer) focusField("problem");                                            // in the tap: the keyboard can stay
   shutMT();
+  if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
   if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
 }
 addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
