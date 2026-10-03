@@ -619,6 +619,9 @@ function tick(o, m = "on") {
   if (m === "x" && (lock || !fixOf(o))) return;
   const next = markOf(o) === m ? "" : m;
   for (const x of opts()) if (x !== o && next === "on" && (lock || x.hasAttribute("data-lock")) && markOf(x) === "on") mark(x, "");
+  /* prove mode: "None of these" says every other row is false, so it X's them and opens their boxes (blank rows could never be
+     sent: Check needs every row marked. Tony, Oct 3, PHYS_NPT). Struck rows keep their X already. */
+  if (lock && next === "on" && S.prob.fix) for (const x of opts()) if (x !== o && !x.hasAttribute("data-lock") && !x.classList.contains("wrong") && fixOf(x) && markOf(x) !== "x") mark(x, "x");
   mark(o, next);
   syncTicks();
 }

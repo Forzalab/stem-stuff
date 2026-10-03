@@ -19,6 +19,14 @@ const CODE = "CSCI26_A7K";
 const FILE = { v: 1, problems: [{ code: "CSCI26_U01", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Even numbers?" }],
   choices: [{ id: "a", md: "2" }, { id: "b", md: "3" }, { id: "c", md: "4" }, { id: "d", md: "5" }, { id: "e", md: "None of these", lock: true }],
   correct: ["a", "c"], miss: "QUACK. U01 miss", wrong: ["b", "d", "e"].map(c => ({ choice: c, error: "misread", hint: `QUACK. U01 ${c}` })) }] };
+/* its own file: an upload opens the first problem in this browser's shuffled list order (offline.js first()), so a second problem in
+   FILE would open instead of U01 half the time.
+   prove mode + a locked "None of these" (PHYS_NPT, Oct 3: ticking None left the other rows blank, so Check never lit up) */
+const FILE2 = { v: 1, problems: [{ code: "CSCI26_U02", type: "mc", pick: "all", shuffle: false, fix: { type: "num", how: "a number" }, body: [{ type: "text", md: "Squares?" }],
+    choices: [{ id: "a", md: "$2^2 = 4$" }, { id: "b", md: "$3^2 = 8$" }, { id: "c", md: "None of these", lock: true }, { id: "d", md: "$4^2 = 15$" }],
+    correct: ["a"], miss: "QUACK. U02 miss",
+    wrong: [{ choice: "b", error: "misread", hint: "QUACK. U02 b", fix: { answer: "9" } }, { choice: "d", error: "misread", hint: "QUACK. U02 d", fix: { answer: "16" } },
+      { choice: "c", error: "other", hint: "QUACK. U02 none" }] }] };
 
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_TRIES: TRIES }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
@@ -208,6 +216,27 @@ try {
     s = await st(page); assert.deepEqual(s.on, ["a"]); assert.match(s.fb, /U01 miss/); assert.equal(s.finished, false);
     await row(page, "c").click(); await check(page);
     s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.deepEqual(await okRows(page), ["a", "c"]);
+  });
+  await step("upload prove: ticking None X's every other row and opens its box; filled = Check; graded, not invalid", async () => {
+    const c5 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), page = await c5.newPage();   // fresh: the start page and its upload button
+    await page.goto(BASE + "/");
+    const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
+    await fc.setFiles({ name: "prove.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE2)) });
+    await opened(page, "CSCI26_U02"); await page.waitForTimeout(200);
+    const go = page.locator("#mcGo");
+    await row(page, "c").click();
+    const marks = await page.evaluate(() => [...document.querySelectorAll("#q .opt")].map(o => [o.dataset.id, o.getAttribute("aria-checked") === "true" ? "on" : o.dataset.mark || "",
+      !!o.parentElement.querySelector(".fix:not([hidden])")]));
+    assert.deepEqual(marks, [["a", "x", true], ["b", "x", true], ["c", "on", false], ["d", "x", true]], "None X's the rest, boxes open");
+    assert.ok(await go.isDisabled(), "Check is off until every box has a value");
+    for (const [id, v] of [["a", "4"], ["b", "9"], ["d", "16"]]) await page.locator(`#q .opt[data-id="${id}"]`).locator("xpath=..").locator(".fix input").fill(v);
+    assert.ok(await go.isEnabled(), "Check is on once every X has its value");
+    await check(page);
+    const s = await st(page);
+    assert.match(s.fb, /U02 none/, `the None row's hint (${s.fb})`);
+    await row(page, "a").click();
+    assert.equal(await page.locator('#q .opt[data-id="c"]').getAttribute("aria-checked"), "false", "ticking a row clears None (old rule)");
+    await c5.close();
   });
   await ctx.close();
 } finally { await browser.close(); srv.kill(); }
