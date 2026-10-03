@@ -1,5 +1,7 @@
 # Bounce at the end of a scroll (research and mock, nothing in the app yet)
 
+**Dropped (Tony, Oct 3 ~07:20 PT): "bounce literally doesnt work lol … add a bottom margin for the question box and thats it, KISS".** Shipped instead: bottom room (`--s6`) inside the pad page's question and answer boxes (`app.css`, `html.mt .p` / `html.mt .q`). The research below stays for reference.
+
 Owner: Tony picks. Ask (Oct 3 ~02:15 PT): a bounce up / down when the question-answer box or the scratchpad is scrolled to its top or bottom. Inspo: Apple rubber-band, Android stretch.
 Scope: research and a mock only. `app.js` and `app.css` are untouched. Mock: [mockups/bounce.html](mockups/bounce.html) (`?v=1` native, `?v=2` rubber-band, `?v=3` bump). Shots: `shots/bounce-v{1,2,3}-390.png`.
 Each source below was fetched. A line marked *unverified* is general knowledge, not read on a page; test it on a real phone before building.

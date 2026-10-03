@@ -496,7 +496,7 @@ html.swap-problem .pad-peek .ico { width: 1.25rem; height: 1.25rem; color: var(-
 .pad-peek.empty span { font-family: inherit; font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
 html.swap-problem .stage { padding-bottom: 0; }
 /* keyboard up: no expand icon, no pill, no toggle; switching is closing the keyboard, tapping the question, or the pad peek */
-html.kbup #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }
+html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }   /* the pad page keeps q | a with the keyboard up (Tony, Oct 3); it never takes focus */
 #swap { display: none !important; }
 .fix-how { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); color: var(--muted); font-size: var(--t-sm); line-height: 1.35; }
 
@@ -530,8 +530,8 @@ html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; ov
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
 html.mt #fb:empty { display: none; }
 html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
-html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
+html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s6); }   /* bottom room: the end of a scroll lands with air, not on the edge (Tony, Oct 3: KISS over a bounce) */
+html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s6); }
 html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
 html.mt .xb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
