@@ -44,6 +44,8 @@ async function run(browserType, label, opts = {}) {
       await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
     };
+    /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
+    const padPage = async () => { if (vname !== "phone") return; await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); };
 
     for (const code of CODES) {
       await step(`${label} ${vname} ${code}: renders TeX, no raw TeX visible`, async () => {
@@ -72,55 +74,20 @@ async function run(browserType, label, opts = {}) {
     }
 
     // ipad + desktop are side by side (design/MULTITASK.md "Desktop, revised"): the problem column has no pull-tab
-    if (vname === "phone") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
-      const tab = async (code, closedOnly) => {
-        await open(code);
-        if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
-        if (code === "CSCI26_M5V") { await page.locator("#q .ans").nth(0).fill("14"); if (vname !== "desktop") await page.evaluate(() => document.activeElement.blur()); }   // phone / touch: a focused field + a short viewport = keyboard up = Swap, which has no #more (design/SWAP.md), so blur first
-        // closed: shrink the viewport until the strip is clipped and the tab shows
-        let shown = false;
-        for (const h of vname === "phone" ? [600, 500, 400, 320] : [500, 400, 320, 260]) {
-          await page.setViewportSize({ width: viewport.width, height: h });
-          await page.waitForTimeout(150);
-          if (await page.locator("#more").isVisible()) { shown = true; break; }
-        }
-        if (code === "CALC1_X2P" && !shown) {
-          /* MC lock-in (b86eac5, Tony Oct 2): while a choice is picked the grab handle is hidden, so it covers nothing;
-             unpick and check the handle against the plain choices */
-          assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#more")).visibility), "hidden", "handle shown while a choice is picked");
-          await page.locator('.opt[data-id="a"]').click();
-          await page.waitForTimeout(150);
-          shown = await page.locator("#more").isVisible();
-        }
-        assert.ok(shown, `${code}: #more never appeared`);
-        const hit = () => page.evaluate(() => {
-          const m = document.querySelector("#more").getBoundingClientRect(), strip = document.querySelector("#freezeIn").getBoundingClientRect();
-          const open = document.querySelector("#freeze").classList.contains("open");
-          const bad = [];
-          for (const el of document.querySelectorAll(".send, #ansGo, .opt, .ans, .ff")) {
-            const cs = getComputedStyle(el); if (el.hidden || cs.display === "none" || cs.visibility === "hidden") continue;
-            let r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
-            if (!open) r = { left: r.left, right: r.right, top: Math.max(r.top, strip.top), bottom: Math.min(r.bottom, strip.bottom) };   // clipped by the strip's own scroll
-            if (r.right > m.left && r.left < m.right && r.bottom > m.top && r.top < m.bottom) bad.push(el.className || el.id);
+    /* phones since round 3b (Tony, Oct 3: "big ass dark space"): the pad is off the page, so there is no frozen strip and no pull-tab;
+       the whole problem stays in the page at every height */
+    if (vname === "phone") await step(`${label} ${vname} no pull-tab on phones: the problem is never clipped (pad off)`, async () => {
+      try {
+        for (const code of ["CALC1_X2P", "CSCI26_M5V", "CALC1_T6B"]) {
+          await open(code);
+          for (const h of [600, 500, 400, 320]) {
+            await page.setViewportSize({ width: viewport.width, height: h }); await page.waitForTimeout(150);
+            assert.ok(await page.locator("#more").isHidden(), `${code} at ${h}px: pull-tab shown`);
+            assert.ok(!(await page.evaluate(() => document.querySelector("#freeze").classList.contains("clipped"))), `${code} at ${h}px: clipped`);
           }
-          return { bad, top: m.top, stripBottom: strip.bottom, w: m.width, h: m.height, cx: (m.left + m.right) / 2, vw: innerWidth };
-        });
-        let g = await hit();
-        assert.deepEqual(g.bad, [], `${code} closed: #more covers ${g.bad}`);
-        assert.ok(Math.abs(g.cx - g.vw / 2) < 2 && g.w === 88 && g.h === 44, "grab handle not centred 88x44");   // Tony: variant A (pill, 44px touch area)
-        if (SHOTS && code === "CALC1_X2P") await page.screenshot({ path: `${SHOTS}/more-fix-closed-${viewport.width}.png` });
-        const wk = await page.evaluate(() => { const m = document.querySelector("#more").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), l = document.querySelector(".xb-label").getBoundingClientRect(); const pill = m.top + parseFloat(getComputedStyle(document.querySelector("#more")).paddingTop) + 4; return { gap: l.top - pill, wk: w.top - m.bottom }; });   // the visible pill; the rest of the touch area may lie over the (non-control) title
-        if (!closedOnly) {
-          assert.ok(wk.gap >= 4, `pill within ${wk.gap}px of the Scratchpad label`);
-          await page.locator("#more").click(); await page.waitForTimeout(200);
-          g = await hit();
-          assert.deepEqual(g.bad, [], `${code} open: #more covers ${g.bad}`);
-          assert.ok((await page.locator("#more").getAttribute("aria-expanded")) === "true");
-          if (SHOTS && code === "CALC1_X2P") await page.screenshot({ path: `${SHOTS}/more-fix-open-${viewport.width}.png` });
+          await page.setViewportSize(viewport);
         }
-        await page.setViewportSize(viewport);
-      };
-      for (const c of ["CALC1_X2P", "CSCI26_M5V", "CALC1_T6B"]) await tab(c, false);
+      } finally { await page.setViewportSize(viewport); }
     });
 
     await step(`${label} ${vname} MC: select shows arrow, reselect hides it, wrong strikes`, async () => {
@@ -185,6 +152,7 @@ async function run(browserType, label, opts = {}) {
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
       await open(`PHYS_S2K`);
       await page.waitForSelector(".fig svg");
+      await padPage();
       const ta = page.locator("#scratch");
       await ta.click();
       await ta.fill(Array.from({ length: 60 }, (_, i) => `line ${i + 1}: resolve mg along the slope, then balance with kx.`).join("\n"));
@@ -273,7 +241,9 @@ async function run(browserType, label, opts = {}) {
       assert.deepEqual(hs[0], hs[1], "code box and upload button: same top and bottom");
       if (SHOTS && vname === "phone") await page.screenshot({ path: `${SHOTS}/paste-placeholder-390.png` });
       // a whole code pasted into the answer box or the scratchpad moves to the code box; the field itself is unchanged
-      for (const [sel, txt, want] of [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]) {
+      const pasteInto = [["#ans", "  calc1-a9r ", "CALC1_A9R"], ["#scratch", "#PHYS F3N", "PHYS_F3N"], ["#scratch", "PHYS_S2K\n", "PHYS_S2K"]]
+        .filter(([sel]) => sel !== "#scratch" || vname !== "phone");   // phones: the pad is on its own page (round 3b); the answer box covers the redirect there
+      for (const [sel, txt, want] of pasteInto) {
         await page.locator(sel).fill("keep"); await clip(txt); await page.locator(sel).focus();
         await page.keyboard.press("Control+V");
         assert.equal(await code.inputValue(), want, `${sel} paste of ${JSON.stringify(txt)}`);
@@ -283,9 +253,8 @@ async function run(browserType, label, opts = {}) {
         assert.equal(await page.evaluate(() => document.querySelector("#pcode").textContent), "CALC1_T6B", "auto-opened");
         await code.fill(""); assert.ok(await pasteBtn.isVisible(), "paste button not back after emptying");
       }
-      if (SHOTS && vname === "phone") { await page.locator("#scratch").fill("keep"); await clip("PHYS_F3N"); await page.locator("#scratch").focus(); await page.keyboard.press("Control+V"); await page.screenshot({ path: `${SHOTS}/paste-redirected-390.png` }); await code.fill(""); }
       // normal text, and a code inside longer text, paste normally
-      for (const txt of ["3.20 m/s", "see CALC1_A9R for this", "CALC1_A9R and PHYS_F3N"]) {
+      for (const txt of vname === "phone" ? [] : ["3.20 m/s", "see CALC1_A9R for this", "CALC1_A9R and PHYS_F3N"]) {
         await page.locator("#scratch").fill(""); await clip(txt); await page.locator("#scratch").focus();
         await page.keyboard.press("Control+V");
         assert.equal(await page.locator("#scratch").inputValue(), txt);
@@ -415,6 +384,7 @@ async function run(browserType, label, opts = {}) {
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
       await open("CALC1_T6B");
+      await padPage();
       const ta = page.locator("#scratch");
       // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
       const clear = () => page.evaluate(() => {
@@ -453,6 +423,11 @@ async function run(browserType, label, opts = {}) {
         const nh = await ta.evaluate(t => t.offsetHeight); if (nh !== h) { lines++; h = nh; }
       }
       assert.ok(toggles <= 2 * lines + 2, `padding flickered: ${toggles} toggles for ${lines} height changes`);
+      if (vname === "phone") {   // the pad page: the tool row (q | a, collapse, Cut, Copy) keeps its band under the text at all times
+        const pb = await ta.evaluate(t => parseFloat(getComputedStyle(t).paddingBottom));
+        assert.ok(pb >= 48, `tool row band ${pb}px`);
+        return;
+      }
       // last line runs into the corner -> reserved
       const reserved = await page.evaluate(async side => {
         const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
@@ -570,6 +545,7 @@ async function run(browserType, label, opts = {}) {
       await step(`${label} ${vname} scratchpad stops at the visible bottom and scrolls; Cut all copies then clears`, async () => {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
         await open("CALC1_T6B");
+        await padPage();
         const ta = page.locator("#scratch");
         await ta.click();
         await ta.fill(Array.from({ length: 60 }, (_, i) => `line ${i + 1}: resolve mg along the slope, then balance with kx.`).join("\n"));
