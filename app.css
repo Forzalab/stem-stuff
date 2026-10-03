@@ -571,8 +571,11 @@ html.mt .sash, html.side .sash { display: block; position: relative; touch-actio
 .sash::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
 .sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
 .sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
-html.mt .sash { background: linear-gradient(var(--line), var(--line)) center / 100% 1px no-repeat; }   /* the hairline between question and pad */
-html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; box-shadow: 0 0 0 4px var(--paper); }   /* thin bar (round 3d) */
+html.mt .sash {                                                                   /* the hairline between question and pad, open where the bar sits */
+  background: linear-gradient(var(--line), var(--line)) left center / calc(50% - 22px) 1px no-repeat,
+              linear-gradient(var(--line), var(--line)) right center / calc(50% - 22px) 1px no-repeat;
+}
+html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   /* thin bar (round 3d) */
 .sash:focus-visible::before { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 /* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
