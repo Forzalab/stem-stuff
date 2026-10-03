@@ -829,7 +829,22 @@ function saveDone(r) {
   if (r.verdict === "wrong") u.hint = r.hint || null;                  // the hint for the student's own wrong answer
   if (typeof r.gen === "number") u.gen = r.gen;
   if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
-  st.donePut(S.code, wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice()));
+  const rec = wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice());
+  st.donePut(S.code, rec);
+  if (rec.done === "correct") doneExit(S);
+}
+/* all correct: nothing is left to type here, so after a beat to see the ticks the pad page and the keyboard step away and the
+   question row (Next) comes back into view (Tony, Oct 3). Out of tries keeps the pad: the student may want to find the mistake. */
+function doneExit(mine) {
+  setTimeout(() => {
+    if (S !== mine) return;                                                      // moved on already
+    const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur();
+    if (mtOpen) closeMT(false);
+    if (swapOn) setSwap(false);
+    root.classList.remove("dock-away", "bar-off");
+    if (root.classList.contains("qnav-on") && root.classList.contains("dock-bottom"))
+      scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, 900);
 }
 /* upload mode: gradeLocal picks up where it was */
 function seedLocal(code, rec, p) {
@@ -1513,8 +1528,10 @@ function fabEnd(e) {
   if (!d.moved) return;
   fabMoved = true;
   const dx = e ? e.clientX - d.x0 : 0, dy = e ? e.clientY - d.y0 : 0, b = fabBounds();
-  const lift = Math.max(0, innerHeight - root.clientHeight);                     // the URL bar's height while it is slid away (else 0)
-  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy - lift));
+  /* the drop, measured against the bar on screen (both rects are visual): no guess at how tall a slid-away URL bar is. Firefox for
+     Android moves fixed-bottom things with its bottom toolbar (bug 1880375), Chrome by resizing; innerHeight means different things */
+  const bar = dockRoom() ? dock.getBoundingClientRect().top : innerHeight, gap = bar - (d.r.bottom + dy);
+  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, root.clientHeight - dockRoom() - gap - b.h));
   mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
   mtMem.fabMoved = 1; mtSave();
   fabPlace();                                                                     // keep the drop spot: no step-off
