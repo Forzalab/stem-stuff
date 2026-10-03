@@ -1,6 +1,6 @@
 # Figure design language
 
-Reference build: `design/specimen.html`. Every number in its script's top block (`SW`, `DASH`, `HATCH`, `OFF`, `PAD`, `FILL`) comes from this page. Contrast is WCAG 2.x against sheet `#1d2839`, the card the figure sits on. Style: clean technical textbook line drawing. The figure sits straight on the card with no frame, border or background of its own.
+Reference build: `design/specimen.html`. Every number in its script's top block (`SW`, `DASH`, `HATCH`, `OFF`, `PAD`, `FILL`) comes from this page. Contrast is WCAG 2.x against sheet `#1d2839`. Since Oct 3 the figure sits on the question box `--qbox` `#192232` (darker, so every ratio below only rises); fills and label knockouts use `--body` / `--knock`, which follow the box. Style: clean technical textbook line drawing. The figure sits straight on the card with no frame, border or background of its own.
 
 ## 1. Color tokens
 

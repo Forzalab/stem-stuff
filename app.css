@@ -2,10 +2,11 @@
 :root {
   --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers (columns line up); not the code box */
   --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
+  --qbox: #192232;   /* the question box: halfway between --paper and --sheet (Tony, Oct 3) */
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
-  --body: var(--sheet); --ramp: var(--sheet); --knock: rgb(29 40 57 / 0.85);
+  --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(25 34 50 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
      --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
   --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
@@ -206,7 +207,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .12s ease-out; }
 .more:hover::before { background: var(--muted); }
 
-.p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
+.p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
@@ -352,7 +353,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
-.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }
 
 /* feedback */
@@ -447,7 +448,7 @@ html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) 
 html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
-html.swap .freeze-in { background: var(--sheet); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
+html.swap .freeze-in { background: var(--qbox); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
 html.swap .p, html.swap .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
 html.swap .q, html.swap .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
 html.swap .fb { margin: 0; padding: var(--s2) var(--s4) 0; }
@@ -523,7 +524,7 @@ html.mt.mt-fit main { grid-template-rows: var(--tile-h, 33%) var(--s3) minmax(0,
 html.mt.mt-r0 main { grid-template-rows: auto var(--s3) minmax(0, 1fr); }
 html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
 html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
-html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: none; border-radius: 0; }   /* the question bleeds into the page */
+html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--qbox); border-radius: 10px; }
 html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
 html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
@@ -571,10 +572,6 @@ html.mt .sash, html.side .sash { display: block; position: relative; touch-actio
 .sash::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
 .sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
 .sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
-html.mt .sash {                                                                   /* the hairline between question and pad, open where the bar sits */
-  background: linear-gradient(var(--line), var(--line)) left center / calc(50% - 22px) 1px no-repeat,
-              linear-gradient(var(--line), var(--line)) right center / calc(50% - 22px) 1px no-repeat;
-}
 html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   /* thin bar (round 3d) */
 .sash:focus-visible::before { outline: 3px solid var(--focus); outline-offset: 3px; }
 
@@ -598,7 +595,7 @@ html.side #scratch { min-height: var(--pad-max, 60vh); }
 html.side.mt-r0 .freeze-in { display: none; }
 html.side .pstrip {
   display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
-  background: var(--sheet); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
+  background: var(--qbox); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
 }
 html.side .pstrip[hidden] { display: none; }
 html.side .pstrip:hover { background: var(--raised); color: var(--ink); }

@@ -37,7 +37,8 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 | token | hex | role |
 |---|---|---|
 | `--paper` | #151d2b | page background, the dock, the freeze strip, toast |
-| `--sheet` | #1d2839 | surfaces: problem card, list card, Cluck, outline buttons |
+| `--qbox` | #192232 | the question box, everywhere (card, pad-page tile, keyboard-up card, desktop strip): halfway between `--paper` and `--sheet` (Tony, Oct 3) |
+| `--sheet` | #1d2839 | surfaces: list card, Cluck, outline buttons, the q \| a switch |
 | `--field` | #111826 | inside text fields; ink on filled buttons |
 | `--raised` | #243149 | hover, selected, current row, open state, the Scratchpad button |
 | `--ink` | #e7edf6 | body text, icons in buttons |
@@ -217,7 +218,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Multitask (`#stage`, the pad page, side by side)
 
-- Phone (under 720px): the pad is hidden. The Scratchpad button opens the pad page: the question on top (no card: it bleeds into the page), a hairline with a thin 3×32px bar (44px touch area), the pad below. No header row: the pad's tool row, inside its box, holds q | a (left) and collapse, Cut, Copy (right), in thumb reach.
+- Phone (under 720px): the pad is hidden. The Scratchpad button opens the pad page: the question on top in its `--qbox` box, a thin 3×32px bar (44px touch area), the pad below. No header row: the pad's tool row, inside its box, holds q | a (left) and collapse, Cut, Copy (right), in thumb reach.
 - The top area hugs what it shows: at most ⅓ of a screen under 700px tall, 45% above. Dragging the bar sets a size until the page closes.
 - The tile has a q | a switch: **q** shows the problem only (text and figure); **a** shows the answer control only, for every type. Opening goes to q with a big pad.
 - Desktop and landscape tablet (720px and up): side by side, problem and answer left, pad right. Never the pad under the problem. Why: Tony, "pad down = bad". No Scratchpad button there.
