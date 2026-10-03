@@ -6,9 +6,10 @@
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit
 # wins: [banks-dir] > the brain repo (projects/*/_files/*-bank/BANK_*.json; if one name sits at several brain paths, the one
 # with the newest commit) > banks/*.json in this checkout (only banks the brain does not have, e.g. BANK_PSY6). One line says where each bank came from: `banks: BANK_X(brain) ...`.
-# Brain clone: $BRAIN_DIR, else ~/brain, else /home/claude/brain (pulled, best effort); none → shallow clone of
-# ${BRAIN_URL:-https://gitlab.com/Forzalab-bravo/brain.git} with $BRAIN_TOKEN (GitLab PAT, read_repository) into a temp dir.
-# The token goes in as a one-shot git config header: never printed, never traced, never saved in a .git/config.
+# Brain: a local clone if there is one ($BRAIN_DIR, ~/brain, /home/claude/brain; pulled, best effort). Else the bank hatch,
+# tools/brain_banks.py: GitLab's API lists and fetches only the BANK_*.json files with $BRAIN_TOKEN (read_api; see .env.example).
+# No clone: the brain is heavy and the phone has none. A hatch error (bad token, network, a file that is not a bank) stops the
+# deploy: a partial bank set never ships. The token is never printed.
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
 #   (no worktree, no Vercel; demo|live optional).
 # A repo-root .env (gitignored; see .env.example) is loaded first. Vercel token: $VERCEL_TOKEN if set (cloud), else your
@@ -62,17 +63,6 @@ brain_dir() {
     BRAIN="$d"; return 0
   done
   set +f
-  [ -n "${BRAIN_TOKEN:+x}" ] || { warn "brain: no clone (BRAIN_DIR, ~/brain, /home/claude/brain) and no BRAIN_TOKEN, skipped"; return 0; }
-  local url="${BRAIN_URL:-https://gitlab.com/Forzalab-bravo/brain.git}" ok=
-  BTMP="$(mktemp -d)"
-  # The header rides in GIT_CONFIG_* (git ≥ 2.31) for this one command: not in argv (ps), not in the clone's .git/config,
-  # and scoped to $url so a redirect elsewhere never sees it. git's own stderr may echo the URL, so it is dropped.
-  xoff
-  if ( export GIT_TERMINAL_PROMPT=0 GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.$url.extraHeader" \
-         GIT_CONFIG_VALUE_0="Authorization: Basic $(printf '%s' "oauth2:$BRAIN_TOKEN" | base64 | tr -d '\n')"
-       git clone -q --depth 50 --single-branch "$url" "$BTMP/brain" </dev/null >/dev/null 2>&1 ); then ok=1; fi
-  xon
-  if [ -n "$ok" ]; then BRAIN="$BTMP/brain"; else warn "brain: clone failed (check BRAIN_TOKEN / BRAIN_URL), skipped"; fi
 }
 
 # --- candidates: "name<tab>rank<tab>time<tab>source<tab>path"; lowest rank, then newest time, wins per name ---
@@ -88,6 +78,13 @@ if [ -z "$NOBRAIN" ]; then
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
       add 1 "${t:-0}" brain "$f"
     done
+  elif [ -n "${BRAIN_TOKEN:+x}" ]; then
+    BTMP="$(mktemp -d)"; rc=0
+    HATCH="$(python3 "$ROOT/tools/brain_banks.py" "$BTMP")" || rc=$?
+    [ "$rc" -eq 0 ] || { warn "bank hatch failed, nothing deployed (see the line above)"; exit 1; }
+    while IFS="$(printf '\t')" read -r t f; do [ -n "$f" ] && add 1 "$t" brain "$f"; done <<<"$HATCH"
+  else
+    warn "brain: no clone (BRAIN_DIR, ~/brain, /home/claude/brain) and no BRAIN_TOKEN, skipped"
   fi
 fi
 CHOSEN="$(LC_ALL=C sort -t "$(printf '\t')" -k1,1 -k2,2n -k3,3nr -k5,5 "$CAND" | awk -F '\t' '!seen[$1]++ { print $1 "\t" $4 "\t" $5 }')"
