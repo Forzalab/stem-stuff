@@ -113,6 +113,11 @@ try {
       assert.equal(await label(page), vname === "phone" ? "mine" : "mine.json");
     });
 
+    await step(`${vname}: type just "ab12" -> the bank again, where it was`, async () => {
+      await typeCode(page, "ab12"); await opened(page, "CALC1_B02");
+      assert.equal(await label(page), "BANK_AB12");
+    });
+
     await step(`${vname}: #BANK_AB12 link opens the bank again`, async () => {
       await page.goto("about:blank"); await page.goto(BASE + "/#BANK_AB12"); await opened(page, "CALC1_B02");
       assert.equal(await label(page), "BANK_AB12");

@@ -2,7 +2,7 @@
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
-import { suggest, remember, isBank } from "./suggest.mjs";
+import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -228,13 +228,6 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
 let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
-/* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
-   Accept lower case, "-" (old links), a space, or no separator at all. */
-function normalize(raw) {
-  const s = raw.toUpperCase().trim().replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS|PSY|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
-  return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
-}
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
@@ -307,8 +300,8 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
-  const n = normalize(codeIn.value);
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
+  const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
+  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
   codeIn.blur();
   if (n.prefix === "BANK") openBank(n.code); else load(n.code);
 });
