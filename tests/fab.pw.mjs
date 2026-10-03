@@ -44,6 +44,17 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await page.evaluate(() => scrollTo(0, 0)); await settle();
   const start = await fabTop();
 
+  await step(`${T} bottom of the page: no dead gap above the bar, last control clear of the bar and of the button at its default spot`, async () => {
+    await page.evaluate(() => scrollTo(0, 1e6)); await settle();
+    const g = await page.evaluate(() => { const r = e => e.getBoundingClientRect(), d = r(document.querySelector("#dock")), f = r(document.querySelector("#padFab"));
+      const c = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].filter(e => e.offsetParent).map(r).sort((a, b) => b.bottom - a.bottom)[0];
+      return { cb: c.bottom, ct: c.top, cl: c.left, cr: c.right, dockTop: d.top, fabTop: f.top, fabBottom: f.bottom, fl: f.left, fr: f.right }; });
+    assert.ok(g.dockTop - g.cb <= 90, `dead gap ${Math.round(g.dockTop - g.cb)}px between the last control and the bar (max 90)`);
+    assert.ok(g.cb <= g.dockTop, `last control under the bar: bottom ${g.cb} vs bar top ${g.dockTop}`);
+    assert.ok(g.cb <= g.fabTop || g.cr <= g.fl || g.cl >= g.fr, `last control under the button: control bottom ${g.cb} vs button top ${g.fabTop}`);
+    await page.evaluate(() => scrollTo(0, 0)); await settle();
+  });
+
   await step(`${T} setup: the page scrolls and the button is shown`, async () => {
     assert.ok(await page.locator("#padFab").isVisible(), "button hidden");
     assert.ok(await range() > 600, `page too short to scroll: ${await range()}`);
