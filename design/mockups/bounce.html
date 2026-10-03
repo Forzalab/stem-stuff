@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bounce mockup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<style>
+/* End-of-scroll bounce (design/BOUNCE.md). Only app.css tokens. Mock chrome (variant chips, notes) is dashed. ?v=1 native, ?v=2 rubber-band, ?v=3 bump. */
+body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; gap: var(--s6); }
+.phone { position: relative; flex: none; width: min(100vw, 390px); height: min(100dvh, 844px); overflow: hidden; background: var(--paper); display: flex; flex-direction: column; }
+@media (min-width: 760px) { body { padding: var(--s5) !important; } .phone { border: 2px solid var(--line); border-radius: 10px; } }
+.mbar { flex: none; height: 44px; display: flex; align-items: center; gap: var(--s1); padding: 0 var(--s2); background: var(--field); border-bottom: 1px dashed var(--line); font-size: var(--t-xs); color: var(--muted); }
+.mbar .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mbar .lbl b { color: var(--ink); }
+.chip { flex: none; width: 30px; height: 30px; padding: 0; border: 1px dashed var(--line); border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); }
+.chip[aria-pressed="true"] { border-style: solid; border-color: var(--c1); color: var(--c1); }
+.pane { position: relative; flex: 1 1 0; min-height: 0; margin: var(--s2); }
+.pane + .pane { margin-top: 0; }
+.box { height: 100%; overflow-y: auto; background: var(--qbox); border-radius: 10px; overscroll-behavior: contain; scrollbar-width: none; touch-action: pan-y; }
+.box::-webkit-scrollbar { display: none; }
+.in { padding: var(--s3) var(--s4); will-change: transform; }   /* the only thing that moves: transform, never layout */
+.code { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.in p { margin: 0 0 var(--s2); max-width: 65ch; }
+.opt { display: block; width: 100%; margin: 0 0 var(--s2); padding: var(--s2) var(--s3); text-align: left; border: 1.5px solid var(--edge); border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; }
+.pad { width: 100%; height: 100%; box-sizing: border-box; resize: none; padding: var(--s3) var(--s4); border: 1.5px solid var(--edge); border-radius: 10px; background: var(--field); color: var(--ink); font: inherit; font-family: var(--mono); overscroll-behavior: contain; }
+.pad:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pad-wrap { overflow: hidden; border-radius: 10px; }
+.notes { display: none; }
+@media (min-width: 760px) {
+  .notes { display: block; width: 22rem; font-size: var(--t-sm); color: var(--muted); border: 1px dashed var(--line); border-radius: 10px; padding: var(--s4); }
+  .notes h1 { margin: 0 0 var(--s3); font-size: var(--t-md); color: var(--ink); }
+  .notes li { margin-bottom: var(--s2); }
+  .notes b { color: var(--ink); }
+}
+</style>
+</head>
+<body>
+<main class="phone" id="phone">
+  <div class="mbar"><span class="lbl" id="lbl"></span>
+    <button class="chip" data-v="1" aria-pressed="false" aria-label="Variant 1, native">1</button>
+    <button class="chip" data-v="2" aria-pressed="false" aria-label="Variant 2, rubber-band">2</button>
+    <button class="chip" data-v="3" aria-pressed="false" aria-label="Variant 3, bump">3</button></div>
+  <section class="pane" aria-label="Question and answer"><div class="box" id="qbox"><div class="in" id="qin"></div></div></section>
+  <section class="pane pad-wrap" aria-label="Scratchpad"><textarea class="pad" id="pad" aria-label="Scratchpad"></textarea></section>
+</main>
+<aside class="notes"><h1>Bounce</h1><ol>
+  <li><b>1 Native.</b> Nothing added. <code>overscroll-behavior: contain</code> keeps whatever the platform draws (iOS rubber-band, Android stretch), nothing on desktop Chrome.</li>
+  <li><b>2 Rubber-band.</b> The content follows the finger, damped by x·d·c/(d + c·x), c = 0.55, then springs back (WAAPI). Drag with a finger or the mouse at the top or bottom.</li>
+  <li><b>3 Bump.</b> No finger follow. A wheel or fling that reaches the edge plays one short out-and-back, scaled by speed.</li>
+  <li>Reduced motion: no transform in any variant.</li></ol></aside>
+<script>
+const $ = s => document.querySelector(s);
+const V = Math.min(3, Math.max(1, +new URLSearchParams(location.search).get("v") || 1));
+const RM = matchMedia("(prefers-reduced-motion: reduce)");
+const NAMES = { 1: "native (contain)", 2: "rubber-band", 3: "bump" };
+$("#lbl").innerHTML = `<b>v${V}</b> ${NAMES[V]}`;
+document.querySelectorAll(".chip").forEach(c => { c.setAttribute("aria-pressed", String(+c.dataset.v === V)); c.onclick = () => { location.search = "?v=" + c.dataset.v; }; });
+$("#qin").innerHTML = `<p class="code">PHYS2A_X01</p>` + Array.from({ length: 7 }, (_, i) => `<p>Claim ${i + 1}: a block of ${i + 2} kg slides along a rough track and the friction force on it changes with the angle of the track.</p>`).join("")
+  + ["a", "b", "c", "d"].map(l => `<button class="opt" type="button">${l}. Raising the angle changes the force on the block</button>`).join("");
+$("#pad").value = Array.from({ length: 30 }, (_, i) => `line ${i + 1}: N = mg cos30 = 33.9`).join("\n");
+
+const C = 0.55;
+const damp = (x, d) => (x * d * C) / (d + C * x);           // Apple's rubber-band
+const SPRING = { duration: 520, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+const edge = el => ({ top: el.scrollTop <= 0, bottom: el.scrollTop + el.clientHeight >= el.scrollHeight - 1 });
+const move = (el, y) => { el.style.transform = y ? `translate3d(0, ${y}px, 0)` : ""; };
+
+/* v2: finger follow. Vertical drags only; on the pad it stands aside while text is selected (caret and handles stay native). */
+function rubber(el, inner, isPad) {
+  let y0 = null, start = 0, dir = 0, active = false, anim = null;
+  const begin = y => { if (anim) { anim.cancel(); anim = null; } y0 = y; active = false; dir = 0; };
+  const drag = (y, ev) => {
+    if (y0 === null) return;
+    const e = edge(el), dy = y - y0;
+    if (!active) {
+      if (isPad && getSelection().toString()) return;
+      if ((dy > 0 && e.top) || (dy < 0 && e.bottom)) { active = true; dir = dy > 0 ? 1 : -1; start = y; } else return;
+    }
+    const past = (y - start) * dir;
+    if (past < 0) { active = false; move(inner, 0); return; }
+    if (ev.cancelable) ev.preventDefault();
+    move(inner, dir * damp(past, el.clientHeight));
+  };
+  const end = () => {
+    y0 = null; if (!active) return; active = false;
+    const m = new DOMMatrix(getComputedStyle(inner).transform).m42;
+    anim = inner.animate([{ transform: `translate3d(0,${m}px,0)` }, { transform: "translate3d(0,0,0)" }], SPRING);
+    anim.onfinish = () => { move(inner, 0); anim = null; };
+  };
+  el.addEventListener("touchstart", e => begin(e.touches[0].clientY), { passive: true });
+  el.addEventListener("touchmove", e => drag(e.touches[0].clientY, e), { passive: false });
+  el.addEventListener("touchend", end); el.addEventListener("touchcancel", end);
+  el.addEventListener("pointerdown", e => { if (e.pointerType === "mouse" && !isPad) { begin(e.clientY); el.setPointerCapture(e.pointerId); } });
+  el.addEventListener("pointermove", e => { if (e.pointerType === "mouse" && y0 !== null) drag(e.clientY, e); });
+  el.addEventListener("pointerup", e => { if (e.pointerType === "mouse") end(); });
+}
+
+/* v3: one out-and-back when a wheel, a push or a fling meets the edge. Cooldown so a long fling plays once. */
+function bump(el, inner) {
+  let busy = 0, lastTop = el.scrollTop, lastT = performance.now(), t0 = null;
+  const play = (dir, speed) => {
+    if (performance.now() < busy) return;
+    const peak = dir * Math.min(24, el.clientHeight * 0.06) * Math.min(1, 0.4 + speed / 3);
+    busy = performance.now() + 700;
+    inner.animate([{ transform: "translate3d(0,0,0)" }, { transform: `translate3d(0,${peak}px,0)`, offset: 0.18 }, { transform: "translate3d(0,0,0)" }],
+      { duration: 520, easing: "cubic-bezier(0.22, 1, 0.36, 1)" });
+  };
+  el.addEventListener("wheel", e => { const x = edge(el); if ((e.deltaY < 0 && x.top) || (e.deltaY > 0 && x.bottom)) play(e.deltaY < 0 ? 1 : -1, Math.abs(e.deltaY) / 60); }, { passive: true });
+  el.addEventListener("touchstart", e => { t0 = e.touches[0].clientY; }, { passive: true });
+  el.addEventListener("touchmove", e => { const y = e.touches[0].clientY, x = edge(el); if (t0 !== null && ((y > t0 + 12 && x.top) || (y < t0 - 12 && x.bottom))) { play(y > t0 ? 1 : -1, 1); t0 = null; } }, { passive: true });
+  el.addEventListener("scroll", () => {      // a fling that arrives at the edge by itself
+    const now = performance.now(), v = (el.scrollTop - lastTop) / Math.max(1, now - lastT); lastTop = el.scrollTop; lastT = now;
+    const x = edge(el); if (Math.abs(v) > 0.8 && ((v < 0 && x.top) || (v > 0 && x.bottom))) play(v < 0 ? 1 : -1, Math.abs(v));
+  }, { passive: true });
+}
+
+if (!RM.matches && V > 1) for (const [el, inner, isPad] of [[$("#qbox"), $("#qin"), false], [$("#pad"), $("#pad"), true]]) (V === 2 ? rubber : bump)(el, inner, isPad);
+RM.addEventListener?.("change", () => location.reload());
+</script>
+</body>
+</html>
