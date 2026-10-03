@@ -4,8 +4,8 @@
 #   demo  = `vercel deploy`        → prints the preview URL (log in to Vercel to open it)
 #   live  = `vercel deploy --prod` → the public site
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit
-# wins: [banks-dir] > banks/*.json in this checkout > the brain repo (projects/*/_files/*-bank/BANK_*.json; if one name sits at
-# several brain paths, the one with the newest commit). One line says where each bank came from: `banks: BANK_X(brain) ...`.
+# wins: [banks-dir] > the brain repo (projects/*/_files/*-bank/BANK_*.json; if one name sits at several brain paths, the one
+# with the newest commit) > banks/*.json in this checkout (only banks the brain does not have, e.g. BANK_PSY6). One line says where each bank came from: `banks: BANK_X(brain) ...`.
 # Brain clone: $BRAIN_DIR, else ~/brain, else /home/claude/brain (pulled, best effort); none → shallow clone of
 # ${BRAIN_URL:-https://gitlab.com/Forzalab-bravo/brain.git} with $BRAIN_TOKEN (GitLab PAT, read_repository) into a temp dir.
 # The token goes in as a one-shot git config header: never printed, never traced, never saved in a .git/config.
@@ -80,13 +80,13 @@ CAND="$(mktemp)"
 add() { printf '%s\t%s\t%s\t%s\t%s\n' "$(basename "$4")" "$1" "$2" "$3" "$4" >>"$CAND"; }
 shopt -s nullglob
 if [ -n "$BANKS" ]; then for f in "$BANKS"/*.json; do add 0 0 arg "$f"; done; fi
-for f in "$ROOT"/banks/*.json; do add 1 0 repo "$f"; done
+for f in "$ROOT"/banks/*.json; do add 2 0 repo "$f"; done   # rank 2: a stale local copy never beats the brain (Tony, Oct 3)
 if [ -z "$NOBRAIN" ]; then
   brain_dir
   if [ -n "$BRAIN" ]; then
     for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json; do
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
-      add 2 "${t:-0}" brain "$f"
+      add 1 "${t:-0}" brain "$f"
     done
   fi
 fi

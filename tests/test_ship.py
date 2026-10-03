@@ -1,4 +1,4 @@
-"""tools/ship.sh --print-banks: which file each bank comes from ([banks-dir] > checkout banks/ > newest in the brain repo),
+"""tools/ship.sh --print-banks: which file each bank comes from ([banks-dir] > newest in the brain repo > checkout banks/),
 --no-brain, and BRAIN_TOKEN never reaching stdout/stderr (not even under bash -x). No worktree, no Vercel.
 ship.sh runs from a copy in a temp root, so this checkout's banks/ and .env stay out; HOME is a temp dir and SHIP_BRAIN_SEARCH is empty, so ~/brain and /home/claude/brain do too.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
@@ -76,9 +76,11 @@ class PrintBanks(unittest.TestCase):
         git(self.brain, "commit", "-q", "-am", "touch beta", when="2026-03-01T00:00:00Z")
         self.assertEqual(self.chosen(self.ship())["BANK_ZZ1.json"], ("brain", os.path.join(self.brain, self.OLD)))
 
-    def test_checkout_banks_beat_brain_and_banks_dir_beats_both(self):
-        repo = put(self.root, "banks/BANK_ZZ1.json", "{}")
-        self.assertEqual(self.chosen(self.ship())["BANK_ZZ1.json"], ("repo", repo))
+    def test_brain_beats_checkout_banks_and_banks_dir_beats_both(self):
+        put(self.root, "banks/BANK_ZZ1.json", "{}")                       # a stale local copy never wins over the brain
+        self.assertEqual(self.chosen(self.ship())["BANK_ZZ1.json"][0], "brain")
+        only = put(self.root, "banks/BANK_ZZ9.json", "{}")                # a bank the brain does not have still ships
+        self.assertEqual(self.chosen(self.ship())["BANK_ZZ9.json"], ("repo", only))
         extra = os.path.join(self.tmp, "extra")
         mine = put(extra, "BANK_ZZ1.json", "{}")
         put(extra, "BANK_ZZ2.json", "{}")
