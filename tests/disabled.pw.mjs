@@ -61,7 +61,10 @@ async function run(w, h) {
   const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const page = await b.newPage({ viewport: { width: w, height: h } });
   const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }).catch(() => {}); await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${w}.png` }); } };
-  const pickMC = async i => { const o = (await page.$$("#q .opt:not(:disabled)"))[i]; await o.click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await page.waitForTimeout(150); };
+  /* wait for option i to be live: a reopened problem paints its cached record first and the /state reconcile re-enables it a
+     moment later (app.js load → paint → syncServer); CI was red once on this race (design/TESTING.md) */
+  const pickMC = async i => { await page.waitForFunction(n => document.querySelectorAll("#q .opt:not(:disabled)").length > n, i, { timeout: 5000 });
+    const o = (await page.$$("#q .opt:not(:disabled)"))[i]; await o.click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await page.waitForTimeout(150); };
 
   await step(`${w} mc: locked after two wrong`, async () => {
     await open(page, "CALC1_X2P", WRONG2);
