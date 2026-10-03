@@ -1,0 +1,14 @@
+# Uploaded by `vercel deploy` from Tony's machine: banks/ and problems.json DO go up (answers stay server-side:
+# tools/build_public.py keeps them out of public/, vercel.json bundles them into api/index.py only).
+.git
+.claude
+node_modules
+tests
+design/shots
+design/mockups
+tries.json
+tries.json.tmp
+host.log
+.host.pid
+stem-stuff.html
+public
