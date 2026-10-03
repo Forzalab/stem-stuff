@@ -53,6 +53,25 @@ test("§2.5 radius: only the listed radii", () => {
   assert.deepEqual(bad.map(fmt), [], "radius follows size (STYLE.md §2.5)");
 });
 
+test("§2.6 borders: one weight (--bw), only a wrong answer is heavier (--bw-alarm)", () => {
+  const ok = d => {
+    const v = d.value.replace(/var\(--bw(-alarm)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
+    const px = v.match(/\d*\.?\d+px/g) || [];
+    return px.every(p => p === "1px" || (p === "1.5px" && d.sel === "#toast"));                // 1px dividers; the toast is the listed exception
+  };
+  const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
+  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers, the toast's 1.5px (STYLE.md §2.6)");
+});
+test("§2.6 field focus: the 2px edge, never an outline too", () => {
+  const field = s => /:focus-within|textarea:focus/.test(s) && !/\.btn\b/.test(s);
+  const bad = ALL.filter(d => field(d.sel) && d.prop === "outline" && d.value !== "none");
+  assert.deepEqual(bad.map(fmt), [], "a focused field turns its border --focus + 1px inset; no outline (STYLE.md §2.6)");
+});
+test("§2.6 keyboard ring: one width (--ring)", () => {
+  const bad = ALL.filter(d => (d.prop === "outline" && d.value !== "none" && !d.value.startsWith("var(--ring)")) || d.prop === "outline-width");
+  assert.deepEqual(bad.map(fmt), [], "outline: var(--ring) solid var(--focus) (STYLE.md §2.6)");
+});
+
 test("§2.2 type: Atkinson, Atkinson Mono or KaTeX only", () => {
   const first = v => v.split(",")[0].trim().replace(/["']/g, "");
   const OK = v => ["inherit", "var(--mono)", "Atkinson Hyperlegible", "Atkinson Hyperlegible Mono"].includes(first(v)) || /^KaTeX_/.test(first(v));

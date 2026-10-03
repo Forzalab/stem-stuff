@@ -2,7 +2,7 @@
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
-import { suggest, remember, isBank } from "./suggest.mjs";
+import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -110,7 +110,13 @@ function md(text, inline = false) {
   } else {
     html = esc(s).split(/\n{2,}/).map(p => inline ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
   }
-  return html.replace(/KXMATH(\d+)Z/g, (_, i) => { const m = math[+i]; return m.lit ? "$" : renderMath(m.t, m.d); });
+  /* inline math keeps the punctuation that touches it on its line: "($v$)." never leaves "." or "(" alone on a line (.mx) */
+  return html.replace(/(\(?)KXMATH(\d+)Z([.,;:!?)]*)/g, (_, pre, i, post) => {
+    const m = math[+i];
+    if (m.lit) return pre + "$" + post;
+    const k = renderMath(m.t, m.d);
+    return (pre || post) && !m.d ? `<span class="mx">${pre}${k}${post}</span>` : pre + k + post;
+  });
 }
 
 /* ================= grading: THE one place =================
@@ -228,13 +234,6 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
 let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
-/* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
-   Accept lower case, "-" (old links), a space, or no separator at all. */
-function normalize(raw) {
-  const s = raw.toUpperCase().trim().replace(/^#/, "");
-  const m = s.match(/^(CALC1|CSCI26|PHYS|PSY|BANK)[\s_-]*([A-Z0-9]{3,6})$/);
-  return m ? { prefix: m[1], code: `${m[1]}_${m[2]}` } : null;
-}
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
@@ -307,8 +306,8 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
-  const n = normalize(codeIn.value);
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B."; codeIn.focus(); return; }
+  const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
+  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
   codeIn.blur();
   if (n.prefix === "BANK") openBank(n.code); else load(n.code);
 });
@@ -511,8 +510,24 @@ function fitChoices() {
     }
   }
   g.classList.toggle("inline", fits);
+  fitMath(g);
   g.querySelectorAll(".fix").forEach(fitFix);
   if (fits !== was) layoutFreeze();
+}
+/* inline math wider than its row (KaTeX can't wrap a fraction or a root): shrink it to fit, down to 85%; still too wide -> it
+   scrolls sideways on its own (.kx-scroll), never clipped and never wider than the card. Re-run from scratch on every resize. */
+const MATH_MIN = 0.85;
+function fitMath(root) {
+  for (const k of root.querySelectorAll(".opt .txt .katex")) {
+    const u = k.closest(".mx") || k, box = k.closest(".txt");
+    k.style.fontSize = ""; u.classList.remove("kx-scroll");
+    const span = () => { const a = u.getBoundingClientRect(), b = k.getBoundingClientRect(); return Math.max(a.right, b.right) - Math.min(a.left, b.left); };   // a root sign can overhang its span
+    const avail = box.clientWidth, w = span();
+    if (!avail || w <= avail + 0.5) continue;
+    const px = parseFloat(getComputedStyle(k).fontSize), f = Math.max(MATH_MIN, avail / w);
+    k.style.fontSize = (px * f).toFixed(2) + "px";
+    if (span() > avail + 0.5) u.classList.add("kx-scroll");
+  }
 }
 function opts() { return [...document.querySelectorAll("#q .opt")]; }
 /* a fix box's placeholder is the problem's fix.how. When it is wider than the box (it clipped: "Type increases or decr…" at 390px),
@@ -1542,6 +1557,7 @@ const fromHash = () => {
 };
 addEventListener("hashchange", fromHash);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S) { drawFigures(); fitChoices(); layoutFreeze(); } });
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", () => { if (S) fitChoices(); });   // KaTeX loads a size font on first use: re-fit the math
 layoutDock();
 /* offline.js (it runs after this module) restores an uploaded bank from IndexedDB first, so #CODE of an uploaded problem opens */
 /* the splash (index.html) waits for this: the #CODE problem opened (or failed), so the page never flashes the empty entry state first */
