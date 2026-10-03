@@ -307,7 +307,7 @@ From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactori
 10. Every animation and transition has a reduced-motion path.
 11. Copy is short, sentence case, no emoji; QUACK only in Cluck.
 12. Impeccable scan: 0 findings (static and live, 390 and 1920).
-13. `npm test` passes, including `tests/style.test.mjs` (this file as code).
+13. `npm test` passes, including `tests/style.test.mjs` (this file as code: colours, shadows, radii, fonts, `--mark`, emoji, toast, key handlers; §9 items are its `todo` tests).
 14. Floating things (toast, Scratchpad button) clear every live control at 375×667, 390×844 and in landscape.
 15. No new keyboard shortcut; no humour in chrome.
 
