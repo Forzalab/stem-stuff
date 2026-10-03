@@ -176,16 +176,6 @@ function init() {
   });
   /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
      pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
-  /* [ and ]: previous / next. Not while typing, not over the file picker dialog, not with Ctrl/Cmd (AltGr layouts still work) */
-  document.addEventListener("keydown", e => {
-    if ((e.key !== "[" && e.key !== "]") || nav.hidden || e.defaultPrevented) return;
-    if (e.metaKey || (e.ctrlKey && !(e.getModifierState && e.getModifierState("AltGraph")))) return;
-    const t = e.target;
-    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-    if (document.querySelector(".so:not([hidden])")) return;
-    e.preventDefault();
-    go(e.key === "]" ? 1 : -1);
-  });
   addEventListener("drill:problem", e => update(e.detail && e.detail.code, false));
   addEventListener("drill:state", () => { if (!nav.hidden) update(cur); });     // a graded try (offline.js donePut)
   addEventListener("drill:bank", () => update(cur));                             // a bank opened or left (app.js)

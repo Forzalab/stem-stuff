@@ -186,6 +186,94 @@ Fixes found while shipping: the pull-tab's margin rule (`.freeze + .work`) misse
 
 Tests that encoded the replaced behaviour (old → new): render "pull-tab" all views → phone only (side by side has none); render "balance" pad under the card → pad beside it, tops aligned; render "copy band" a tap on the pad → script focus on the phone (a tap opens the pad page), a column-tall pad walks the long line to the bottom row, a touch tablet's bar band always clears the buttons; polish (c) and swap.pw `#swap` clicks → the question peek / the pad peek; choose-all A8F caption on phones → placeholder (the short how fits). New: `tests/flow.pw.mjs` (390, 375, 1440), shots `design/shots/flow-{1..8}-390.png`, `flow-desktop-1440.png`. Impeccable live, app at 390 and 1920: 0 and 0.
 
+## Round 3 (Oct 2, Tony on PR #32)
+
+Rulings (Fri ~21:50 PT): tapping into the pad opens the **Question tile + big pad**; the pill becomes **Question | Answer** and the Question tile hides the answer control for every type (STYLE.md's "the problem pane always shows the answer control" gets rewritten at ship); on phones the **pad is hidden by default** and a **draggable floating button** shows it (reference: an M3 FAB, 56px rounded square, bottom right); the plain-page expand button goes. Onboarding: toasts under 10 words, only on a new device (no `stem-*` key in localStorage).
+
+Mock: `design/mockups/fab.html` — `?f=1..5` button, `?i=1..5` icon pair, `?state=closed|open|drag|toast`, `?tile=q|a`, `?pad=0` (empty pad), `?idle=1` (3, dimmed).
+
+| f | button | lens | drag | risk |
+|---|---|---|---|---|
+| 1 | M3 FAB | the reference: 56px, 16px corners, tonal `--raised`, pencil, dot = pad has text | anywhere, snaps to the left or right edge | covers a 56px square of content |
+| 2 | M3 extended FAB | pencil + "Scratchpad" label (shrinks to 1 on scroll) | same as 1 | widest; covers the most |
+| 3 | AssistiveTouch puck | iOS: translucent with a ring, dims to 45% after 3s idle | same as 1 | low contrast on `--paper`; reads as system UI |
+| 4 | Edge tab | Slide Over grabber: 16x76 on the screen edge, 44x88 touch area | up and down the edge only | hard to find; a chevron says little |
+| 5 | Pad-peek chip | the stage-2 pad peek as the button: pencil + the pad's last line | up and down, centred | covers the bottom centre (the Check arrow's row on short problems) |
+
+| i | Question | Answer |
+|---|---|---|
+| 1 | document | pencil in a box |
+| 2 | "?" speech bubble | check in a circle |
+| 3 | text lines | radio list |
+| 4 | magnifier | letter A |
+| 5 | speech bubble with lines | checklist |
+
+Onboarding copy (each once per new device, take-5f toast look): FAB first paint "Tap the pencil for your scratchpad." · first pad open "Switch question and answer view here." · after 2 opens with no drag "Drag the button anywhere."
+
+**Pick: button 1 + pair 2.** The FAB is the pattern Tony pointed at, finds itself (contrast, size, the dot), and snaps to an edge so it never parks over a choice for long. Pair 2 reads without a label: "?" = the question, check = your answer. **Runner-up: button 5 + pair 3** (the chip tells you what is in the pad before you open it; lines | radios mirror what the tile shows).
+
+Edge cases for ship: the button never rests over `#q` controls (snap nudges it off); hidden while an answer field has focus (keyboard up); a wrong answer in Question mode switches the tile to Answer before the toast; the dot follows the pad per problem; at 720px and up the button is gone and the pad is beside the problem; reduced motion = no snap animation; private mode = defaults, one toast per session.
+
+Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3-idle-390.png`, `mt3-qa-{1..5}-{q,a}-390.png`, `mt3-toast-open-390.png`. Impeccable live on the mock, 8 states at 390: 0 (fixed: the mock strip's vertical padding).
+
+## Round 3b (Oct 2 ~22:05 PT, Tony's picks)
+
+- **Button: 2**, pen + "Scratchpad" (M3 extended FAB). Rounds 1/3/4/5 stay as history shots.
+- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), 1.75rem, then 1.875rem, then back to the original 1.5rem (Oct 3 ~00:24).**
+- Tony ~22:50: toast text layout was ugly (it wrapped mid-phrase at 16rem) → one line, centred, width up to the column; border 1px → 1.5px; the Scratchpad button's dot removed (it read as noise).
+- **Toast: hybrid** = the shipped take-5f look (page `--paper`, 1px `--line`, `--shadow-1`, `--t-md` 400) + its 14px caret, on every toast: under its anchor (caret up), above it (`.up`, caret down: the onboarding note over the button), and on the MC row (`.side`: lies on the struck choice's text, caret points left at the X badge, so no live choice is covered).
+- Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer view here." · "Drag the button anywhere."
+- Impeccable live, 7 states at 390: 0, except the MC row state's "text covered by an opaque element" = the struck choice under the toast, on purpose (dead text; the app's take 5f does the same).
+- Shots: `mt3b-qa-{1..7}-{q,a}-390.png`, `mt3b-toast-{fab,pill,mc}-390.png`, `mt3b-fab-2-closed-390.png`.
+
+## Round 3c (Oct 3 ~00:20 PT): the gap under a short question
+
+Tony: a short question leaves a big empty tile; kill the gap, dynamic by screen size, 5 variants beyond "hug". Mock `?short=1&g=0..6&state=open&q=1`:
+0 today (⅓ tile) · 1 **hug** (Tony: tile = content, at most 45% of the screen) · 2 big type (the question grows to fill its tile, ≤ 2.25rem) · 3 both fit (question + answer in one tile when they fit in 45%, the pill hides; else falls back to 1) · 4 one-line strip (a question that fits one line becomes a 56px strip; tap to expand) · 5 in the header (the question sits in the pad's header row; no tile) · 6 notebook page (the question is the pad's first, read-only lines and scrolls away as you write).
+**Pick: 4 when the question fits one line at this width, else 1** (both are content- and screen-sized; the pad gets the most room, nothing new to learn). Runner-up: 1 alone.
+Shots: `mt3c-gap-{0..6}-{390,375}.png`.
+
+Length test (Oct 3 ~00:30; `?len=1..4`: one line · a line + an equation · three lines · long + figure; pad height in px at 390×844 / 375×667):
+
+| variant | 1 line | line + eq | 3 lines | long + fig | note |
+|---|---|---|---|---|---|
+| 0 today | 426 / 313 | 426 / 313 | 426 / 313 | 426 / 313 | the gap |
+| 1 hug | 645 / 468 | 596 / 419 | 590 / 413 | 470 / 293 | long + figure on a small phone: 20px **less** than today (45% cap > ⅓) |
+| 2 big type | 426 / 313 | same | same | same | gains nothing |
+| 3 both fit | 357 / → 1 | → 1 | → 1 | → 1 | only a 1-line MC fits on a tall phone |
+| 4 strip | 658 / 481 | 658 / 481 | → 1 | → 1 | strip only when the question fits one line, else hug |
+| 5 header | 714 / 537 | 714 / 537 | cut off | cut off | long questions are lost behind "…" |
+| 6 notebook | 714 / 537 | 714 / 537 | 714 / 537 | 714 / 537 | most room, but the question scrolls away while you write |
+
+Pick stays **4, else 1**, with the hug cap made screen-dependent: at most ⅓ of the screen under 700px tall, 45% above, so a long question never costs pad room vs today.
+
+## Round 3d (Oct 3 ~00:35 PT): no header row
+
+Tony: the collapse button belongs to the pad, so it goes inside the pad box; the q | a switch moves into the answer view, or the tile bleeds into the page; a thin drag bar; no dead space; one-hand reach; 5 variants. Mock `design/mockups/pad3d.html?v=1..5&tile=q|a&len=1..4` (tile hugs its content, at most ⅓ of a short screen, 45% of a tall one). Every variant: collapse inside the pad's bottom-left, Cut / Copy bottom-right, a 3×32px bar with a 44px touch area.
+
+| v | name | the switch | tile | pad px (q short / a / q long, 390×844) |
+|---|---|---|---|---|
+| 1 | corner kit | rides the tile's bottom-right corner | card | 620 / 478 / 506 |
+| 2 | bleed + thumb row | in the pad's bottom row, next to collapse | bleeds into the page, a hairline divides | 668 / 526 / 554 |
+| 3 | pad toolbar | left end of one tool row along the pad's bottom edge (collapse, Cut, Copy right) | card | 668 / 526 / 554 |
+| 4 | the handle is the switch | one pill on the divider: tap q or a, drag it to resize | bleeds | 628 / 486 / 514 |
+| 5 | swipe pages | none: swipe the tile sideways, or tap the q · a marks under it | bleeds | 628 / 486 / 514 |
+
+**Tony picked 3 (~00:31), "consider my 3 points first" → shipped as 3 + bleed, then (~00:34) the question box at halfway between 2 and 3: `--qbox` #192232 everywhere, no hairline** (point 2: the question bleeds into the page, a hairline + the thin bar divide it from the pad; point 1: collapse in the pad's tool row; point 3: all in thumb reach). The tile hugs its content on every open (cap ⅓ under 700px tall, 45% above) until the handle is used. Strip-for-one-liners (3c 4) not built: hug already kills the gap (YAGNI).
+
+alt's pick was 2. Every control is in the bottom thumb band, the tile costs no frame, the most pad room. Runner-up: 4 (one control does both jobs; the switch sits right where the eye crosses from question to pad). Impeccable live at 390, all five: 0.
+Shots: `mt3d-{1..5}-{q2,a2,q4}-390.png`.
+
+## Shipped (round 3, Oct 3)
+
+In the app: phones hide the pad; the Scratchpad button (extended FAB, drag + edge snap, kept per device, off answer controls, above the bar, hidden while typing an answer or while the code bar is revealed) opens the pad page: the question box (`--qbox`) hugging its content (⅓ cap under 700px tall, 45% above), a thin bar, the pad with its tool row (q | a; collapse, Cut, Copy; saving / saved). One pointy toast (`.up`, `.row`), onboarding once per new device, no keyboard shortcuts. Phones have no freeze strip (the pad is off the page).
+
+Bugs found while porting the tests: the button covered Retry (it re-places when the bar grows, hides while the bar is revealed); the save status had no place on the pad page (now in the tool row); an onboarding toast outlived its anchor and blocked the button (a toast closes when its anchor goes); tapping the problem on q left the caret nowhere (close, then focus); the tool row sat under the home indicator (bottom safe area).
+
+Tests, old → new: autosave: types after opening the pad page. bar: (e) strip handle → none on phones, the whole problem in the page; (grow) the plain-page pad → the pad page fills to the bottom and scrolls, the bar away. render: pull-tab → never on phones at any height (viewport always restored); freeze, balance, copy band, pad-stops-at-bottom → on the pad page (the band is always reserved there); paste into the pad → checked where the pad is on the page (phones: the answer box). polish: focus ring, top bar, type sizes, gap → on the pad page. flow: rewritten for round 3 (peek → pad page, tap question → back to the field, the button, tool row, hug, q | a, thin bar, button drag + memory, onboarding, MC caret); desktop: no q | a. swap: entered from an answer field; the scratch pane (now unreachable) checks dropped, covered by flow / polish / bar / render; the crossfade and reduced motion → the q | a switch; safe areas → also the pad page. New: `tests/style.test.mjs`.
+
+Open: the Swap scratch-pane code in app.js (`setPane("scratch")`, the question-peek tap) is unreachable on phones now; remove it in a follow-up.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.

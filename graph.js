@@ -111,7 +111,7 @@
   }
   function pointSvg(x, y, m) {
     return m.open
-      ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`
+      ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`
       : `<circle cx="${n2(x)}" cy="${n2(y)}" r="4.5" style="fill:${col(m.color)}"/>`;
   }
   function arcPath(c, r, a0, a1, st, w, dash = "") {
@@ -140,7 +140,7 @@
       pts: inclinePts,
       draw(m, k) {
         const v = inclinePts(m).map(k.X);
-        let s = `<polygon points="${P(v)}" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+        let s = `<polygon points="${P(v)}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
         s += hatch(v[0], v[1], m.flip ? "left" : "right");
         const r = 30, a0 = m.flip ? 180 - m.angle : 0, a1 = m.flip ? 180 : m.angle;
         s += arcPath(v[0], r, a0, a1, col("muted"), SW.con);
@@ -154,8 +154,8 @@
         return [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(p => add(m.at, rot(p, (m.angle || 0) * deg))); },
       draw(m, k) {
         const [x, y] = k.X(m.at), st = col(m.color);
-        /* outline only (DESIGN-LANGUAGE.md 6): sheet fill so the body covers lines behind it */
-        const fill = m.fill ? `fill:${col(m.color || "c1")};fill-opacity:${FILL}` : "fill:var(--sheet)";
+        /* outline only (DESIGN-LANGUAGE.md 6): the card's own fill (--body) so the body covers lines behind it */
+        const fill = m.fill ? `fill:${col(m.color || "c1")};fill-opacity:${FILL}` : "fill:var(--body)";
         let s;
         if (m.shape === "box" || m.shape === "rod") {
           const w = m.w * k.s, h = Math.max(m.h * k.s, m.shape === "rod" ? 6 : 0), rx = m.shape === "rod" ? Math.min(h / 2, 3) : 2;
@@ -165,7 +165,7 @@
         } else {
           const r = m.r * k.s;
           s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
-          if (m.shape === "ring") s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1, r - 5))}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>`;
+          if (m.shape === "ring") s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1, r - 5))}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
           s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="2.5" style="fill:${st}"/>`;
         }
         if (m.label) k.label(m.label, [x, y], m.anchor || (m.shape === "dot" ? "ne" : "c"), m.color);
@@ -211,8 +211,8 @@
         const [x, y] = k.X(m.at), r = m.r * k.s, st = col(m.color);
         let s = "";
         if (m.mount) { const q = k.X(m.mount), [ux, uy] = norm(q[0] - x, q[1] - y);
-          s += `<polygon points="${P([[x, y], [q[0] - 7 * uy, q[1] + 7 * ux], [q[0] + 7 * uy, q[1] - 7 * ux]])}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>`; }
-        s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>`;
+          s += `<polygon points="${P([[x, y], [q[0] - 7 * uy, q[1] + 7 * ux], [q[0] + 7 * uy, q[1] - 7 * ux]])}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`; }
+        s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
         s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1, r - 4))}" fill="none" style="stroke:var(--muted)" stroke-width="${SW.con}"/>`;
         s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:${st}"/>`;
         if (m.label) k.label(m.label, [x + r, y - r], m.anchor || "ne", m.color);
@@ -230,8 +230,8 @@
           if (dist > 0.5 && dist < 40) { d = norm(c[0] - x, c[1] - y); h = Math.max(10, dist); }
         }
         const bx = x + h * d[0], by = y + h * d[1], hw = Math.max(8, 0.6 * h);
-        return `<polygon points="${P([[x, y], [bx - hw * d[1], by + hw * d[0]], [bx + hw * d[1], by - hw * d[0]]])}" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
-          `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:var(--sheet);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+        return `<polygon points="${P([[x, y], [bx - hw * d[1], by + hw * d[0]], [bx + hw * d[1], by - hw * d[0]]])}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
+          `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
       }
     },
     path: {
@@ -626,8 +626,8 @@
           k.label(tex(texName(n.id)) + v, [x, y], "w", "ink", "", true);
         } else {
           const top = y - u / 2, bx = x + (n.op.b === "not" ? 0.75 : 1) * u;
-          let s = `<path d="${gateBody(n.op.b, x, top, u)}" style="fill:var(--bg, var(--sheet));stroke:${ink}" stroke-width="${SW.out}"/>`;
-          if (n.op.inv) s += `<circle cx="${n2(bx + br)}" cy="${n2(y)}" r="${n2(br)}" style="fill:var(--bg, var(--sheet));stroke:${ink}" stroke-width="${SW.out}"/>`;
+          let s = `<path d="${gateBody(n.op.b, x, top, u)}" style="fill:var(--bg, var(--body));stroke:${ink}" stroke-width="${SW.out}"/>`;
+          if (n.op.inv) s += `<circle cx="${n2(bx + br)}" cy="${n2(y)}" r="${n2(br)}" style="fill:var(--bg, var(--body));stroke:${ink}" stroke-width="${SW.out}"/>`;
           bodies += `<g data-gate="${esc(n.id)}" data-op="${esc(n.q.op)}">${s}</g>`;
           if (n.q.label) k.label(n.q.label, [x + 0.5 * u, top], "n", "", "tick");
         }
@@ -739,7 +739,7 @@
       }
       nodes.forEach((v, i) => {
         const [x, y] = X[i], st = col(v.color);
-        svg += `<g data-node="${esc(v.id)}"><circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:var(--sheet);stroke:${st}" stroke-width="${SW.out}"/>` +
+        svg += `<g data-node="${esc(v.id)}"><circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>` +
           (v.color ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:${st}" fill-opacity="${FILL}"/>` : "") + "</g>";
         k.label(v.label || texName(v.id), [x, y], "c", v.color);
       });

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scratchpad button mockup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">   <!-- @font-face only: the q | a letters use faces the app already ships -->
+<style>
+/* Multitask round 3 mock (design/MULTITASK.md "Round 3"): the pad is hidden on phones; a floating button shows it.
+   ?f=1..5 the button (round 3b pick: 2), ?q=1..7 the q | a letter pill font (?i=1..5 = round 3 icon pairs), ?state=closed|open|drag|toast|wrong,
+   ?tile=q|a, ?pad=0 (empty pad). Round 3c, a short question's gap: ?short=1 + ?g=0..6 (0 = today's 1/3 tile).
+   app.css tokens only. Mock chrome (the top strip) is dashed so it never reads as product UI. */
+body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; }
+.phone { position: relative; flex: none; width: min(100vw, 390px); height: min(100dvh, 844px); overflow: hidden; background: var(--paper); }
+@media (min-width: 760px) { body { padding: var(--s5) !important; } .phone { border: 2px solid var(--line); border-radius: 10px; } }
+.mbar { position: absolute; z-index: 40; top: 0; left: 0; right: 0; height: 36px; display: flex; align-items: center; padding: var(--s2) var(--s3);
+  border-bottom: 1px dashed var(--line); background: var(--field); color: var(--muted); font-size: var(--t-xs); }
+.mbar b { color: var(--ink); margin-right: var(--s2); }
+.screen { position: absolute; top: 36px; left: 0; right: 0; bottom: 0; overflow: hidden; }
+.homebar { position: absolute; z-index: 41; left: 50%; bottom: 8px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: var(--edge); }
+
+/* ---------- the plain page (pad hidden) ---------- */
+.page { position: absolute; inset: 0; overflow: hidden; padding: var(--s4) var(--gut) 0; }
+.card { background: var(--sheet); border-radius: 10px; }
+.prob { padding: var(--s4); }
+.ptxt { margin: 0; font-size: var(--t-md); line-height: var(--lh); }
+.qa { margin-top: var(--s3); }
+.how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); }
+.ch { display: flex; align-items: center; gap: var(--s3); min-height: 56px; margin-bottom: var(--s2); padding: var(--s2) var(--s3);
+  border: 2px solid var(--line); border-radius: 10px; font-size: var(--t-md); line-height: 1.35; }
+.box { flex: none; width: 26px; height: 26px; border: 2px solid var(--edge); border-radius: 6px; }
+.lt { flex: none; width: 1rem; color: var(--muted); font-weight: 700; font-size: var(--t-sm); }
+.go { display: flex; justify-content: flex-end; }
+.go span { width: var(--btn); height: var(--btn); border-radius: 10px; background: var(--c1); opacity: .45; display: grid; place-items: center; color: var(--field); }
+
+/* ---------- the floating button, 5 ways ---------- */
+.fab { position: absolute; z-index: 30; right: var(--s4); bottom: calc(var(--s4) + 22px); display: grid; place-items: center; color: var(--ink);
+  border: 0; padding: 0; font: inherit; touch-action: none; }
+.fab .ico { width: var(--ico); height: var(--ico); }
+.fab .dot { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--c1); box-shadow: 0 0 0 2px var(--raised); }
+/* 1: M3 FAB (the reference): 56px, 16px corners, tonal */
+.f1 { width: 56px; height: 56px; border-radius: 16px; background: var(--raised); box-shadow: var(--shadow-3); }
+/* 2: M3 extended FAB: icon + label (collapses to 1 while the page scrolls) */
+.f2 { height: 56px; padding: 0 var(--s5) 0 var(--s4); grid-auto-flow: column; gap: var(--s2); border-radius: 16px; background: var(--raised); box-shadow: var(--shadow-3); font-weight: 700; font-size: var(--t-sm); }
+.f2 .dot { top: -3px; right: -3px; box-shadow: 0 0 0 2px var(--paper); }
+/* 3: AssistiveTouch puck: translucent, rings, dims when idle */
+.f3 { width: 56px; height: 56px; border-radius: 16px; background: rgb(17 24 38 / 0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px var(--line); }
+.f3::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgb(162 179 203 / 0.35); }
+.f3 .ico { width: 22px; height: 22px; color: var(--muted); }
+.f3 .dot { box-shadow: 0 0 0 2px var(--field); }
+.f3.idle { opacity: .45; }
+/* 4: edge tab: a slim grabber stuck to the edge (Slide Over); the touch area is 44x88 */
+.f4 { right: 0; width: 16px; height: 76px; border-radius: 12px 0 0 12px; background: var(--raised); box-shadow: inset 1px 0 0 var(--line), var(--shadow-1); bottom: 40%; }
+.f4::after { content: ""; position: absolute; right: 0; top: -6px; width: 44px; height: 88px; }
+.f4 .ico { width: 16px; height: 16px; color: var(--muted); }
+.f4 .dot { top: 6px; right: auto; left: -4px; width: 8px; height: 8px; box-shadow: 0 0 0 2px var(--paper); }
+/* 5: pad-peek chip: the pad's last line, bottom centre */
+.f5 { left: 50%; right: auto; transform: translateX(-50%); height: 48px; width: min(280px, calc(100% - 2 * var(--s5))); padding: 0 var(--s4); grid-template-columns: auto 1fr; gap: var(--s2);
+  border-radius: 24px; background: var(--raised); box-shadow: var(--shadow-3); justify-items: start; }
+.f5 .ico { width: 20px; height: 20px; color: var(--muted); }
+.f5 .ln { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--mono); font-size: var(--t-xs); color: var(--muted); text-align: left; }
+.f5 .ln.empty { font-family: inherit; }
+/* dragging: lifted, the snap rails show */
+.drag .fab { box-shadow: var(--shadow-4); transform: scale(1.06); }
+.drag .f5 { transform: translateX(-50%) scale(1.06); }
+.rail { display: none; position: absolute; z-index: 29; top: var(--s4); bottom: calc(var(--s4) + 22px); width: 4px; border-radius: 2px; background: var(--c1); opacity: .5; }
+.drag .rail { display: block; }
+.rail.l { left: 6px; } .rail.r { right: 6px; }
+.drag.f5x .rail { top: auto; left: var(--s6); right: var(--s6); width: auto; height: 4px; bottom: 26px; }
+.drag.f5x .rail.r { display: none; }
+
+/* ---------- the pad page (open) ---------- */
+.mt { position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 36% var(--s4) minmax(0, 1fr); padding: var(--s2) var(--s2) 22px; }   /* 22: the home indicator */
+.tile { background: var(--sheet); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.tile .prob { flex: 1 1 auto; overflow: hidden; }
+.tile .fig { width: 100%; max-width: 14rem; height: auto; display: block; margin: var(--s2) auto 0; }
+.tile .qa { margin: 0; padding: var(--s3) var(--s3) var(--s2); overflow: hidden; }
+.tile .ch { min-height: 48px; padding: var(--s1) var(--s3); font-size: var(--t-sm); }
+.handle { position: relative; }
+.handle::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
+.pad { display: flex; flex-direction: column; gap: var(--s2); min-height: 0; }
+.phead { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
+.pill { position: relative; display: inline-flex; align-items: center; gap: var(--s1); height: var(--btn); padding: 0 var(--s1); border: 2px solid var(--line); border-radius: 12px; background: var(--paper); }
+.pill span { width: 40px; height: 36px; display: grid; place-items: center; border-radius: 8px; color: var(--muted); }
+.pill span.on { background: var(--raised); color: var(--c1); }
+.pill .ico { width: var(--ico); height: var(--ico); }
+.ta { flex: 1 1 auto; min-height: 0; position: relative; border: 2px solid var(--focus); border-radius: 10px; background: var(--field); padding: var(--s3) var(--s4);
+  font-family: var(--mono); font-size: var(--t-sm); line-height: 1.6; white-space: pre; color: var(--ink); }
+.ta .cc { position: absolute; right: var(--s2); bottom: var(--s2); display: flex; gap: var(--s2); }
+.ta .cc span { width: var(--btn); height: var(--btn); border: 2px solid var(--line); border-radius: 10px; display: grid; place-items: center; color: var(--ink); }
+.ta .cc .ico { width: var(--ico); height: var(--ico); }
+
+/* ---------- round 3c: kill the gap under a short question (?g=1..6); sizes come from the content and the screen ---------- */
+.eq { margin: var(--s3) 0 0; text-align: center; font-family: KaTeX_Main; font-size: 1.4rem; }
+.eq i, .ptxt i { font-family: KaTeX_Math; font-style: italic; }
+.g1 .mt, .g3 .mt { grid-template-rows: auto var(--s4) minmax(0, 1fr); }            /* the tile hugs its content */
+.g1 .tile, .g3 .tile { max-height: 45dvh; }                                       /* never more than 45% of the screen */
+.g1 .tile .prob, .g3 .tile .prob { flex: none; }
+.g2 .tile .prob { display: flex; flex-direction: column; justify-content: center; }  /* big type: the question fills its tile */
+.g2 .tile .ptxt { font-size: var(--fit, 1.5rem); line-height: 1.3; }
+.g2 .tile .eq { font-size: calc(var(--fit, 1.5rem) * 1.35); }
+.g3 .tile .qa { padding-top: 0; }
+.g3 .pill { display: none; }                                                     /* both fit: nothing to switch */
+.g4 .mt { grid-template-rows: auto minmax(0, 1fr); }
+.g5 .mt, .g6 .mt { grid-template-rows: minmax(0, 1fr); }
+.g4 .handle, .g5 .handle, .g6 .handle, .g5 .tile, .g6 .tile { display: none; }
+.strip { display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: var(--s2) var(--s4); margin-bottom: var(--s2); border-radius: 10px; background: var(--sheet); }
+.strip .ptxt { flex: 1; min-width: 0; font-size: var(--t-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.strip .eq { margin: 0; font-size: 1.25rem; white-space: nowrap; }
+.strip .ico { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.g4 .tile { display: none; }
+.hq { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: var(--s2); padding: 0 var(--s3); font-size: var(--t-sm); color: var(--ink); white-space: nowrap; overflow: hidden; }
+.hq .eq { margin: 0; font-size: 1.15rem; }
+.hq .ptxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.g5 .pad { padding-top: var(--s2); }
+.nb { font-family: "Atkinson Hyperlegible"; white-space: normal; color: var(--muted); padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 1px solid var(--line); font-size: var(--t-md); line-height: 1.4; }
+.nb .eq { color: var(--ink); }
+.g6 .pad { padding-top: var(--s2); }
+
+/* ---------- onboarding toast (take 5f look: page paper, --line hairline) ---------- */
+/* round 3b hybrid: the app's #toast (paper, hairline, --shadow-1, --t-md 400) with its 14px caret; .up = the toast sits above its anchor, caret on the bottom edge */
+.tst { position: absolute; z-index: 35; width: max-content; max-width: calc(100% - 2 * var(--s4)); min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--s3) var(--s4);
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker" */
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; color: var(--ink); }
+.tst::before { content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0; }
+.tst.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }
+/* MC row: the toast lies on the struck choice's text (dead, so it covers no live control); the caret points left at the X badge */
+.tst.side { min-height: 0; padding: var(--s2) var(--s3); }
+.tst.side::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
+.ch.wrong { border-color: var(--bad); }
+.ch.wrong .box { border-color: var(--bad); display: grid; place-items: center; color: var(--bad); }
+.ch.wrong .box .ico { width: 18px; height: 18px; }
+.ch.wrong span:last-child { text-decoration: line-through; color: var(--muted); }
+/* q | a letter pill: one face per variant (all already shipped by the app) */
+.pill span.l { font-size: 1.5rem; line-height: 1; padding-bottom: 2px; }
+.ql1 span.l { font-family: KaTeX_Math; font-style: italic; }   /* the pick, at the original size (Tony, ~00:24) */
+.ql2 span.l { font-family: KaTeX_Main; }
+.ql3 span.l { font-family: KaTeX_Main; font-style: italic; font-weight: 700; }
+.ql4 span.l { font-family: KaTeX_Fraktur; }
+.ql5 span.l { font-family: KaTeX_Typewriter; }
+.ql6 span.l { font-family: "Atkinson Hyperlegible Mono"; font-weight: 700; font-size: 1.375rem; }
+.ql7 span.l { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-size: 1.375rem; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 4l-6.5 6.5M13.5 5v5.5H19M4 20l6.5-6.5M10.5 19v-5.5H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8.5L19 18M8 15.5L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12h13M12.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <!-- Question | Answer pairs -->
+    <symbol id="q1" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="a1" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 15.5l.6-2.6 5.2-5.2a1.4 1.4 0 0 1 2 2l-5.2 5.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="q2" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 1-4.3 15.8L3.5 20.5l1.2-4.1A8.5 8.5 0 0 1 12 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="a2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12.3l2.7 2.7L16 9.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="q3" viewBox="0 0 24 24"><path d="M4 6h16M4 10.5h16M4 15h16M4 19.5h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="a3" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="17" r="2.5" fill="currentColor"/><path d="M11.5 7H20M11.5 17H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="q4" viewBox="0 0 24 24"><circle cx="11.5" cy="11.5" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M14.5 14.5l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="a4" viewBox="0 0 24 24"><path d="M5 20L12 4l7 16M7.6 14h8.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="q5" viewBox="0 0 24 24"><path d="M5 4.5h14A1.5 1.5 0 0 1 20.5 6v9a1.5 1.5 0 0 1-1.5 1.5h-8L6.5 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V6A1.5 1.5 0 0 1 5 4.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M7.5 9h9M7.5 12.5h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="a5" viewBox="0 0 24 24"><path d="M4 6.5l1.8 1.8L9 5M4 15.5l1.8 1.8L9 14M12.5 7h7.5M12.5 16h7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+<div class="phone" id="phone">
+  <div class="mbar" id="mbar"></div>
+  <div class="screen" id="screen"></div>
+  <div class="homebar"></div>
+</div>
+<script>
+const P = new URLSearchParams(location.search);
+const f = +(P.get("f") || 2), i = +(P.get("i") || 1), qf = P.get("q") ? +P.get("q") : 0, state = P.get("state") || "closed", tile = P.get("tile") || "q", padOn = P.get("pad") !== "0";
+const ico = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
+const QTXT = "A satellite is in a circular orbit around the Earth at an altitude that is four times the Earth's radius. Choose all that apply.";
+const CHOICES = [["A", "Its period is 5.67 × 10⁴ s."], ["B", "Its period is 15.7 h."], ["C", "Its orbit radius is 2.55 × 10⁷ m."], ["D", "Its speed is 3.53 km/s."]];
+const PAD = "r = 5 R_E = 3.19e7\nv = sqrt(GM/r) = 3.53e3\nT = 2 pi r / v";
+const LAST = PAD.split("\n").pop();
+const NAMES = { 1: "M3 FAB", 2: "M3 extended FAB", 3: "AssistiveTouch puck", 4: "Edge tab", 5: "Pad-peek chip" };
+const FONTS = { 1: "KaTeX Math italic", 2: "KaTeX Main", 3: "KaTeX Main bold italic", 4: "KaTeX Fraktur", 5: "KaTeX Typewriter", 6: "Atkinson Mono 700", 7: "Atkinson 700" };
+const PAIRS = { 1: "doc | pencil box", 2: "? bubble | check", 3: "lines | radios", 4: "magnifier | A", 5: "speech | checklist" };
+const choices = wrong => CHOICES.map(([l, t]) => `<div class="ch${l === wrong ? " wrong" : ""}"><span class="box">${l === wrong ? ico("i-x") : ""}</span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
+const dot = padOn ? `<span class="dot"></span>` : "";
+function fab() {
+  if (f === 2) return `<button class="fab f2" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span>Scratchpad</span></button>`;   // no dot (round 3b: it read as noise)
+  if (f === 4) return `<button class="fab f4" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-chev")}${dot}</button>`;
+  if (f === 5) return `<button class="fab f5" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span class="ln${padOn ? "" : " empty"}">${padOn ? LAST : "Scratchpad"}</span></button>`;
+  return `<button class="fab f${f}${f === 3 && state === "closed" && P.get("idle") ? " idle" : ""}" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}${dot}</button>`;
+}
+function plain() {
+  return `<div class="page"><div class="card prob"><p class="ptxt">${QTXT}</p></div>
+    <div class="qa">${choices()}<div class="go"><span>${ico("i-go")}</span></div></div></div>
+    <span class="rail l"></span><span class="rail r"></span>${fab()}`;
+}
+const FIGQ = `<svg class="fig" viewBox="0 0 220 110" aria-hidden="true"><circle cx="110" cy="55" r="18" fill="none" stroke="var(--c1)" stroke-width="2"/><circle cx="110" cy="55" r="48" fill="none" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="158" cy="55" r="5" fill="var(--c2)"/></svg>`;
+/* ?len=1..4: question length (1 one line · 2 a line + an equation · 3 three lines · 4 long + figure); ?short=1 = len 2 */
+const LEN = +(P.get("len") || (P.get("short") === "1" ? 2 : 0)), SHORT = LEN > 0, g = +(P.get("g") || 0);
+const QS = { 1: ["Differentiate <i>y</i> = <i>x</i>³ + 2<i>x</i>.", ""], 2: ["Solve for <i>x</i>:", "<i>x</i> + 2 = 11"],
+  3: ["A 2.0 kg block slides from rest down a frictionless 30° incline. How fast is it moving after 3.0 m?", ""],
+  4: ["A satellite is in a circular orbit around the Earth at an altitude that is four times the Earth's radius. Choose all that apply.", "fig"] }[LEN] || ["", ""];
+const QSHORT = `<p class="ptxt">${QS[0]}</p>${QS[1] && QS[1] !== "fig" ? `<p class="eq">${QS[1]}</p>` : ""}${QS[1] === "fig" ? FIGQ : ""}`;
+const QSHORT1 = `<span class="ptxt">${QS[0]}</span>${QS[1] && QS[1] !== "fig" ? `<span class="eq">${QS[1]}</span>` : ""}`;
+const CHS = [["A", "−9"], ["B", "13"], ["C", "9"], ["D", "11/2"], ["E", "22"]];
+const FIG = `<svg class="fig" viewBox="0 0 220 110" aria-hidden="true"><circle cx="110" cy="55" r="18" fill="none" stroke="var(--c1)" stroke-width="2"/><circle cx="110" cy="55" r="48" fill="none" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="158" cy="55" r="5" fill="var(--c2)"/><path d="M110 55h48" stroke="var(--muted)" stroke-width="1.5"/><text x="128" y="50" fill="var(--muted)" font-size="11">5R</text></svg>`;
+function open() {
+  const shortCh = () => CHS.map(([l, t]) => `<div class="ch"><span class="box"></span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
+  const qBody = SHORT ? QSHORT : `<p class="ptxt">${QTXT}</p>${FIG}`;
+  let top = tile === "a" ? `<div class="qa">${SHORT ? shortCh() : choices()}</div>` : `<div class="prob">${qBody}</div>`;
+  if (SHORT && g === 3) top = `<div class="prob">${qBody}</div><div class="qa">${shortCh()}</div>`;
+  const strip = SHORT && g === 4 ? `<div class="strip">${QSHORT1}<svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></div>` : "";
+  const head = SHORT && g === 5 ? `<span class="hq">${QSHORT1}</span>` : "";
+  const nb = SHORT && g === 6 ? `<div class="nb">${QSHORT}</div>` : "";
+  return `<div class="mt">${strip}<div class="tile">${top}</div><div class="handle"></div>
+    <div class="pad"><div class="phead">
+      ${qf ? `<span class="pill ql${qf}" role="group" aria-label="Show above the pad"><span class="l${tile === "q" ? " on" : ""}" aria-label="Question">q</span><span class="l${tile === "a" ? " on" : ""}" aria-label="Answer">a</span></span>`
+        : `<span class="pill" role="group" aria-label="Show above the pad"><span class="${tile === "q" ? "on" : ""}" aria-label="Question">${ico("q" + i)}</span><span class="${tile === "a" ? "on" : ""}" aria-label="Answer">${ico("a" + i)}</span></span>`}
+      ${head}<span class="btn" aria-label="Hide the scratchpad">${ico("i-collapse")}</span></div>
+      <div class="ta">${nb}${padOn ? PAD : ""}<span class="cc"><span>${ico("i-cut")}</span><span>${ico("i-copy")}</span></span></div></div></div>`;
+}
+const scr = document.getElementById("screen"), phone = document.getElementById("phone");
+if (state === "open") {
+  scr.innerHTML = open();
+  if (SHORT) phone.classList.add("g" + g);
+  const GN = ["today: 1/3 tile", "hug (Tony)", "big type", "both fit", "one-line strip", "in the header", "notebook page"];
+  if (SHORT) document.getElementById("mbar").innerHTML = `<b>gap ${g}</b>${GN[g]} · tile ${tile === "q" ? "q" : "a"}`;
+  else document.getElementById("mbar").innerHTML = qf ? `<b>q | a · ${qf}</b>${FONTS[qf]} · tile ${tile === "q" ? "Question" : "Answer"}` : `<b>Open · pair ${i}</b>${PAIRS[i]} · tile ${tile === "q" ? "Question" : "Answer"}`;
+} else {
+  scr.innerHTML = plain();
+  if (state === "drag") { phone.classList.add("drag"); if (f === 5) phone.classList.add("f5x"); const b = scr.querySelector(".fab"); if (f === 4) b.style.bottom = "62%"; else if (f !== 5) { b.style.right = "auto"; b.style.left = "40%"; b.style.bottom = "48%"; } else b.style.bottom = "34%"; }
+  if (state === "wrong") scr.querySelector(".qa").innerHTML = choices("B") + `<div class="go"><span>${ico("i-go")}</span></div>`;
+  document.getElementById("mbar").innerHTML = `<b>${f}: ${NAMES[f]}</b>${state}${padOn ? " · pad has text" : ""}`;
+}
+/* toasts are placed from measured boxes, so only after the fonts are in (the rows change height when Atkinson loads) */
+document.fonts.ready.then(() => {
+  if (state === "open" && SHORT && g === 2) {                                      /* the largest size (≤ 2.25rem) whose question still fits its tile */
+    const pr = scr.querySelector(".tile .prob"), tl = scr.querySelector(".tile");
+    for (let f = 2.25; f >= 1.125; f -= 0.125) { phone.style.setProperty("--fit", f + "rem"); if (pr.scrollHeight <= tl.clientHeight) break; }
+  }
+  if (state === "open" && SHORT && g === 4) {                                      /* the strip only when the question fits one line; else hug */
+    const st = scr.querySelector(".strip"), tx = st.querySelector(".ptxt");
+    if (tx.scrollWidth > tx.clientWidth + 1 || QS[1] === "fig") { st.remove(); phone.classList.remove("g4"); phone.classList.add("g1"); }
+  }
+  if (state === "open" && SHORT && g === 3) {                                      /* both fit in 45% of the screen? else back to q | a */
+    const tl = scr.querySelector(".tile");
+    const qa = tl.querySelector(".qa");
+    if (tl.scrollHeight > tl.clientHeight + 1 || qa.scrollHeight > qa.clientHeight + 1) { phone.classList.remove("g3"); phone.classList.add("g1"); qa.remove(); }
+  }
+  if (state === "wrong") {
+    const row = [...scr.querySelectorAll(".ch")][1], bx = row.querySelector(".box").getBoundingClientRect(), rr = row.getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
+    const lt = row.querySelector(".lt").getBoundingClientRect();
+    t.className = "tst side"; t.textContent = "One more try, so choose wisely."; scr.appendChild(t);
+    t.style.left = (bx.right - s.left + 12) + "px"; t.style.maxWidth = (rr.right - bx.right - 18) + "px";
+    t.style.top = (rr.top + rr.height / 2 - s.top) + "px"; t.style.transform = "translateY(-50%)";
+  }
+  if (state === "toast") {
+    const b = scr.querySelector(".fab").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
+    t.className = "tst up"; t.textContent = f === 2 ? "Tap Scratchpad to open your pad." : "Tap the pencil for your scratchpad."; scr.appendChild(t);
+    t.style.top = (b.top - s.top - t.offsetHeight - 12) + "px"; t.style.right = Math.max(16, s.right - b.right) + "px";
+    const tr = t.getBoundingClientRect(); t.style.setProperty("--px", (b.left + b.width / 2 - tr.left) + "px");
+  }
+if (state === "open" && P.get("toast")) {
+  const p = scr.querySelector(".pill").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
+  t.className = "tst"; t.textContent = "Switch question and answer view here."; scr.appendChild(t);
+  t.style.top = (p.bottom - s.top + 12) + "px"; t.style.left = (p.left - s.left) + "px";
+  t.style.setProperty("--px", (p.width / 2) + "px");
+}
+});
+</script>
+</body>
+</html>

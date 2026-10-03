@@ -37,7 +37,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   await page.route("**/p/PHYS_ZZ1.json", r => r.fulfill({ json: LONG }));
   const shot = async n => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/bar-${n}-${W}.png` }); };
 
-  await step(`${W} (e) grab handle: shown when clipped, tap opens and folds, drag down opens, drag up folds`, async () => {
+  await step(`${W} (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side`, async () => {
     await page.goto(BASE + "/#PHYS_ZZ1"); await opened(page, "PHYS_ZZ1");
     await page.mouse.wheel(0, 600); await page.waitForTimeout(500);
     const more = page.locator("#more");
@@ -47,22 +47,11 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       assert.ok(g[1] > g[0], "pad beside the problem");
       return;
     }
-    assert.ok(await more.isVisible(), "handle visible on a clipped strip");
-    const look = await more.evaluate(e => { const s = getComputedStyle(e), p = getComputedStyle(e, "::before"); return { bg: s.backgroundColor, bw: s.borderTopWidth, w: e.offsetWidth, h: e.offsetHeight, pw: p.width, ph: p.height }; });
-    assert.deepEqual([look.bg, look.bw, look.pw, look.ph], ["rgba(0, 0, 0, 0)", "0px", "36px", "4px"], "a pill, no button chrome");
-    assert.ok(look.w >= 44 && look.h >= 44, "44px touch area");
-    await shot("handle");
-    await more.click(); await page.waitForTimeout(250);
-    assert.equal(await more.getAttribute("aria-expanded"), "true");
-    await more.click(); await page.waitForTimeout(250);
-    assert.equal(await more.getAttribute("aria-expanded"), "false");
-    const r = await more.boundingBox(), x = r.x + r.width / 2, y = r.y + r.height / 2;
-    await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + 40, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(250);
-    assert.equal(await more.getAttribute("aria-expanded"), "true", "drag down opens");
-    await more.scrollIntoViewIfNeeded(); await page.waitForTimeout(200);
-    const r2 = await more.boundingBox(), x2 = r2.x + r2.width / 2, y2 = r2.y + r2.height / 2;
-    await page.mouse.move(x2, y2); await page.mouse.down(); await page.mouse.move(x2, y2 - 40, { steps: 4 }); await page.mouse.up(); await page.waitForTimeout(250);
-    assert.equal(await more.getAttribute("aria-expanded"), "false", "drag up folds");
+    /* phones since round 3b: the pad is off the page, so nothing below needs room: no frozen strip, no handle (Tony, Oct 3: "big ass
+       dark space"); the whole problem reads in the page flow */
+    assert.ok(await more.isHidden(), "no strip handle on phones (pad off)");
+    const fz = await page.evaluate(() => ({ clipped: document.querySelector("#freeze").classList.contains("clipped"), sh: document.querySelector("#freezeIn").scrollHeight, ch: document.querySelector("#freezeIn").clientHeight }));
+    assert.ok(!fz.clipped && fz.sh <= fz.ch + 1, `problem clipped on the phone page: ${JSON.stringify(fz)}`);
   });
 
   if (!phone) {
@@ -98,32 +87,22 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await swipe(-40); assert.ok(await page.isVisible("#code"), "swipe up reveals");
       await swipe(40); assert.ok(!(await page.isVisible("#code")), "swipe down hides");
     });
-    await step(`${W} (grow) the scratchpad grows DOWN into the freed room; revealing the bar while typing moves nothing`, async () => {
+    /* phones since round 3b: the pad lives on the pad page (Scratchpad button), the code bar is away there; the pad fills to the
+       bottom and scrolls inside itself, the caret always visible */
+    await step(`${W} (grow) pad page: the pad fills to the bottom and scrolls; the code bar is away; the caret stays visible`, async () => {
       await page.goto(BASE + "/#PHYS_ZZ1"); await opened(page, "PHYS_ZZ1");
+      await page.tap("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"));
       await page.locator("#scratch").focus();
-      await page.$eval("#scratch", e => e.scrollIntoView({ block: "start" }));
-      await page.waitForTimeout(300);
-      const top0 = (await caret(page)).top;
       for (let i = 1; i <= 40; i++) await page.keyboard.type(i === 1 ? "line 1" : `\nline ${i}`);
       await page.waitForTimeout(300);
-      const c0 = await caret(page);
-      assert.equal(c0.top, top0, "top edge fixed while it grew");
-      const room = await page.evaluate(() => { const v = visualViewport, t = document.querySelector("#scratch").getBoundingClientRect(); return Math.round(v.offsetTop + v.height - t.bottom); });
-      assert.ok(room >= 40 && room <= 50, `box stops at the strip (room under it ${room}px)`);
-      assert.ok(c0.y >= c0.top && c0.y < c0.barTop, "caret visible above the strip");
-      await page.tap("#barTab"); await page.waitForTimeout(300);
-      const c1 = await caret(page);
-      assert.ok(c1.focus, "focus kept");
-      const lh = await page.$eval("#scratch", t => parseFloat(getComputedStyle(t).lineHeight));
-      assert.ok(c1.y + lh <= c1.barTop, `caret line under the revealed bar: ${c1.y}+${lh} > ${c1.barTop}`);
-      assert.equal(c1.y, c0.y, "caret did not move on reveal"); assert.equal(c1.h, c0.h, "box did not shrink");
-      await shot("typing-revealed");
-      await page.keyboard.type("!");
-      await page.tap("#barTab"); await page.waitForTimeout(300);
-      const c2 = await caret(page);
-      assert.equal(c2.y, c0.y, "caret did not move on hide"); assert.ok(c2.focus);
-      assert.ok(c2.y + lh <= c2.barTop, "caret visible");
-      await shot("typing");
+      const g = await page.evaluate(() => { const v = visualViewport, t = document.querySelector("#scratch"), r = t.getBoundingClientRect();
+        return { bottom: r.bottom, vb: v.offsetTop + v.height, sh: t.scrollHeight, ch: t.clientHeight, away: document.documentElement.classList.contains("dock-away") }; });
+      assert.ok(g.bottom <= g.vb + 0.5, `pad past the visible bottom: ${g.bottom} > ${g.vb}`);
+      assert.ok(g.sh > g.ch, "the pad scrolls inside itself");
+      assert.ok(g.away, "the code bar is away on the pad page");
+      const c = await caret(page);
+      assert.ok(c.focus && c.y >= c.top && c.y < c.top + c.h, `caret not visible: ${JSON.stringify(c)}`);
+      await shot("pad-page-typing");
     });
   }
   await b.close();

@@ -1,4 +1,6 @@
-// Pentest for Swap, line numbers and the one-row MC, at phone sizes (design/SWAP.md). Needs a running server and Playwright:
+// Pentest for Swap (keyboard up = one pane), the one-row MC and safe areas, at phone sizes (design/SWAP.md). Since round 3b the phone pad
+// lives on the pad page (design/MULTITASK.md), so Swap is entered from an answer field and its pane is the problem; the old scratch pane
+// is unreachable (the pad peek and the Scratchpad button open the pad page; flow / polish / bar / render check that page). Needs a server:
 //   python3 serve.py 8812 &   then   node tests/swap.pw.mjs http://localhost:8812 [shotDir]
 // The software keyboard is simulated the only way headless Chromium can: the viewport height shrinks to 55% after a field is focused,
 // and grows back. (The layout viewport and the visual viewport shrink together, so visualViewport.offsetTop stays 0 here.)
@@ -33,6 +35,7 @@ for (const [W, H] of SIZES) {
   const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });   // onboarding: flow.pw checks it
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(String(e)));
@@ -114,157 +117,57 @@ for (const [W, H] of SIZES) {
     assert.ok(a.n > 0, "audit found nothing");
     return a;
   };
-  /* the #swap toggle is gone (multitask ship: keyboard up shows no toggle): the SCRATCHPAD pane goes to the problem by a tap on the question peek
-     (top left: the problem text, never a choice), the PROBLEM pane to the pad by the pad peek above the keyboard */
-  const toggle = async () => (await paneNow()) === "scratch" ? page.locator("#freeze").click({ position: { x: 24, y: 12 } }) : page.locator("#padPeek").click();
 
-  /* ================= Swap: freeform ================= */
-  await step(`${T} swap: keyboard down looks as today; keyboard up shows one pane; toggle swaps; focus picks the pane`, async () => {
+  /* ================= Swap: entered from an answer field ================= */
+  const ansUp = async sel => { await page.locator(sel).first().focus(); await kbUp(); };
+  await step(`${T} swap: keyboard down looks as today; an answer field + keyboard up = the problem pane with the pad peek; keyboard down = as it was`, async () => {
     await open("CALC1_T6B");
-    const before = await page.evaluate(() => ({ y: scrollY, ta: document.querySelector("#scratch").getBoundingClientRect().top, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
+    const before = await page.evaluate(() => ({ y: scrollY, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
     assert.equal(await paneNow(), "off");
-    assert.ok(await page.locator("#swap").isHidden(), "toggle visible with the keyboard down");
-    await page.locator("#scratch").focus();
-    assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
-    await kbUp();
-    assert.equal(await paneNow(), "scratch", `focus on the scratchpad shows SCRATCHPAD (${await cls()})`);
-    assert.ok(await page.locator("#swap").isHidden(), "the old toggle is back");
-    await shot("swap-scratch-empty");
-    await clean("scratch pane");
-    await mustBeInside("#scratch"); await mustBeInside("#freeze");
-    // toggle -> PROBLEM, focus moves into the answer box (keyboard stays: focus is in a text field)
-    await toggle(); await settle();
-    assert.equal(await paneNow(), "problem");
-    assert.equal(await page.evaluate(() => document.activeElement.id), "ans", "toggle did not focus the answer box");
-    await mustBeInside("#padPeek");
-    await mustBeInside("#ans"); await mustBeInside("#ansGo"); await mustBeInside("#ff");
+    assert.ok(await page.locator("#swap").isHidden(), "old toggle");
+    await ansUp("#ans");
+    assert.equal(await paneNow(), "problem", `focus in the answer shows PROBLEM (${await cls()})`);
+    assert.equal(await page.evaluate(() => document.activeElement.id), "ans");
+    await mustBeInside("#ans"); await mustBeInside("#ansGo"); await mustBeInside("#padPeek");
     await page.locator("#ans").fill("12");
     await shot("swap-problem-freeform");
     await clean("problem pane");
-    // toggle back -> SCRATCHPAD, focus in the scratchpad
-    await toggle(); await settle();
-    assert.equal(await paneNow(), "scratch");
-    assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
-    // focus picks the pane: focusing the answer input by script (Tab, a hardware key) reveals PROBLEM; focusing the scratchpad SCRATCHPAD
-    await page.evaluate(() => document.querySelector("#ans").focus()); await settle();
-    assert.equal(await paneNow(), "problem", "focusing the answer did not show PROBLEM");
-    await page.evaluate(() => document.querySelector("#scratch").focus()); await settle();
-    assert.equal(await paneNow(), "scratch", "focusing the scratchpad did not show SCRATCHPAD");
-    // keyboard down: back to exactly the page as it was
     await kbDown();
     assert.equal(await paneNow(), "off", `swap stayed on after the keyboard closed (${await cls()})`);
-    const after = await page.evaluate(() => ({ y: scrollY, ta: document.querySelector("#scratch").getBoundingClientRect().top, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
+    const after = await page.evaluate(() => ({ y: scrollY, fz: document.querySelector("#freeze").getBoundingClientRect().top }));
     assert.ok(Math.abs(after.y - before.y) <= 1 && Math.abs(after.fz - before.fz) <= 1, `page moved: ${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
-    assert.ok(await page.locator("#swap").isHidden());
   });
 
-  await step(`${T} swap: the swap toggle keeps the keyboard-up state stable (no flip-flop over 1s)`, async () => {
+  await step(`${T} swap: the keyboard-up state is stable (no flip-flop over 1s)`, async () => {
     await open("CALC1_T6B");
-    await page.locator("#scratch").focus(); await kbUp();
+    await ansUp("#ans");
     const seen = new Set();
     for (let i = 0; i < 10; i++) { seen.add(await cls()); await page.waitForTimeout(100); }
     assert.equal(seen.size, 1, `classes changed by themselves: ${[...seen].join(" | ")}`);
     await kbDown();
   });
 
-  /* ================= Swap: scratchpad grows upward, then scrolls ================= */
-  await step(`${T} swap: scratchpad is anchored above the keyboard, fills up to a small gap under the peek (Tony, polish d), then scrolls with the caret visible`, async () => {
-    await open("CSCI26_Q8C");                                          // a short question: the peek is small, so there is room to grow
-    await page.locator("#scratch").focus(); await kbUp();
-    const geo = () => page.evaluate(() => {
-      const t = document.querySelector("#scratch"), r = t.getBoundingClientRect(), f = document.querySelector("#freezeIn").getBoundingClientRect();
-      const vv = window.visualViewport, cs = getComputedStyle(t);
-      return { top: r.top, bottom: r.bottom, h: r.height, peekBottom: f.bottom, peekTop: f.top, sh: t.scrollHeight, ch: t.clientHeight, st: t.scrollTop, vvb: vv.offsetTop + vv.height, min: parseFloat(cs.minHeight), lh: parseFloat(cs.lineHeight) };
-    });
-    const g0 = await geo();
-    assert.ok(Math.abs(g0.vvb - g0.bottom) <= 16, `not anchored to the bottom: bottom ${g0.bottom} vs visible bottom ${g0.vvb}`);
-    assert.ok(g0.h >= 3 * g0.lh + 24, `under 3 lines: ${g0.h}`);
-    const ta = page.locator("#scratch"); await ta.focus();
-    const tops = [g0.top]; let last = g0;
-    for (let i = 1; i <= 24; i++) {
-      await page.keyboard.type(i === 1 ? `line ${i}` : `\nline ${i}`);
-      const g = await geo();
-      assert.ok(Math.abs(g.bottom - g0.bottom) <= 1, `bottom moved at line ${i}: ${g.bottom} vs ${g0.bottom}`);
-      assert.ok(g.top >= g.peekBottom, `pad overlaps the peek at line ${i}: pad top ${g.top}, peek bottom ${g.peekBottom}`);
-      assert.ok(g.top <= tops.at(-1) + 1, `pad moved DOWN at line ${i}`);
-      tops.push(g.top); last = g;
-    }
-    assert.ok(g0.top - g0.peekBottom < 14, `empty box stops ${g0.top - g0.peekBottom}px short of the peek`);
-    assert.ok(tops.every(t => Math.abs(t - g0.top) < 1), "box moved while typing");
-    assert.ok(last.sh > last.ch, "not scrollable after 24 lines");
-    assert.ok(last.top - last.peekBottom < 14, `stopped ${last.top - last.peekBottom}px short of the peek`);
-    // caret: typing at the end keeps the last line in view
-    assert.ok(last.st + last.ch >= last.sh - last.lh - 30, `caret line not visible: scrollTop ${last.st}, client ${last.ch}, scroll ${last.sh}`);
-    await shot("swap-scratch-capped");
-    await clean("scratch pane, long text");
-    // newlines continue downward inside it: 5 more lines, the box does not move, the text scrolls
-    await page.keyboard.type("\nmore\nmore\nmore\nmore\nmore");
-    const g2 = await geo();
-    assert.ok(Math.abs(g2.top - last.top) < 1 && g2.st > last.st, "box moved or did not scroll");
-    assert.ok(g2.st + g2.ch >= g2.sh - g2.lh - 30, "caret out of view after more lines");
-    await kbDown();
-  });
-
-  /* ================= line numbers ================= */
-  /* ================= long question: peek starts at the first line; pane shows the question from the start ================= */
-  for (const code of ["PHYS_F3N", "CSCI26_CE3", "CSCI26_LQ1"]) {
-    await step(`${T} swap: ${code}: the peek shows the question FROM ITS START; problem pane too; answer pinned`, async () => {
+  /* ================= long question: the problem pane shows it from its start, the answer pinned ================= */
+  for (const [code, sel] of [["PHYS_F3N", "#q .ans"], ["CSCI26_CE3", "#q .ans"], ["CSCI26_LQ1", "#ans"]]) {
+    await step(`${T} swap: ${code}: the problem pane shows the question FROM ITS START; answer pinned`, async () => {
       await open(code);
-      await page.locator("#scratch").focus(); await kbUp();
-      assert.equal(await paneNow(), "scratch");
-      const peek = () => page.evaluate(() => {
-        const fi = document.querySelector("#freezeIn"), r = fi.getBoundingClientRect(), first = document.querySelector("#blocks > *").getBoundingClientRect(), vv = window.visualViewport;
-        const ta = document.querySelector("#scratch").getBoundingClientRect(), how = document.querySelector("#how");
-        return { st: fi.scrollTop, top: r.top, bottom: r.bottom, h: r.height, firstTop: first.top, firstBottom: first.bottom, sh: fi.scrollHeight, ch: fi.clientHeight, vh: vv.height, taTop: ta.top, fade: document.querySelector("#freeze").classList.contains("clipped"), howInside: how ? fi.contains(how) : true };
-      });
-      let p = await peek();
-      assert.equal(p.st, 0, `peek is scrolled (${p.st})`);
-      assert.ok(p.firstTop >= p.top - 0.5 && p.firstTop + 12 <= p.bottom, `first line not visible: block top ${p.firstTop}, peek ${p.top}..${p.bottom}`);
-      assert.ok(p.howInside, "how line is not inside the card");
-      assert.ok(p.h <= p.vh * 0.6 + 1, `peek is ${p.h}px, over 60% of ${p.vh}`);
-      assert.ok(p.taTop >= p.bottom, "scratchpad overlaps the peek");
-      // it shows the whole question when it fits, else clamps with a fade and its own scroll
-      if (p.sh > p.ch + 2) assert.ok(p.fade, "clamped peek has no fade"); else assert.ok(!p.fade && p.h <= p.vh * 0.6 + 1, "whole question but faded");
-      await shot(`swap-scratch-${code}`);
-      // typing does not scroll the peek to its end
-      await page.keyboard.type("abc\ndef"); await page.waitForTimeout(150);
-      assert.equal((await peek()).st, 0, "typing scrolled the peek");
-      // problem pane: from the start too, answer pinned at the bottom of the card
-      await toggle(); await settle();
+      await ansUp(sel);
+      assert.equal(await paneNow(), "problem");
       const q = await page.evaluate(() => {
         const c = document.querySelector("#freezeIn").getBoundingClientRect(), pr = document.querySelector("#problem"), q = document.querySelector("#q").getBoundingClientRect(), first = document.querySelector("#blocks > *").getBoundingClientRect(), pRect = pr.getBoundingClientRect();
-        return { pst: pr.scrollTop, qBottom: q.bottom, cBottom: c.bottom, firstTop: first.top, pTop: pRect.top, cTop: c.top };
+        return { pst: pr.scrollTop, qBottom: q.bottom, cBottom: c.bottom, firstTop: first.top, pTop: pRect.top };
       });
       assert.equal(q.pst, 0); assert.ok(q.firstTop >= q.pTop - 0.5, "problem starts scrolled");
       assert.ok(q.cBottom - q.qBottom <= 20, `answer not pinned at the card's bottom (${q.cBottom - q.qBottom}px above it)`);
-      const focusSel = await page.evaluate(() => document.activeElement.id ? "#" + document.activeElement.id : null);
-      if (focusSel === "#ans") { await mustBeInside("#ans"); await mustBeInside("#ansGo"); }
       await shot(`swap-problem-${code}`);
       await clean(`${code} problem pane`);
       await kbDown();
     });
   }
 
-  /* ================= Swap with MC and multi ================= */
-  await step(`${T} swap: MC problem: toggle to PROBLEM focuses a choice; choices and arrow inside the visible area; toggle back`, async () => {
-    await open("CSCI26_TFM");
-    await page.locator("#scratch").focus(); await kbUp();
-    await toggle(); await settle();
-    assert.equal(await paneNow(), "problem", `swap ended when focus went to a choice (${await cls()})`);
-    assert.equal(await page.evaluate(() => document.activeElement.className.includes("opt")), true, "no choice focused");
-    await page.locator('.opt[data-id="m"]').click();
-    await mustBeInside('.ch[data-id="m"] .send'); await mustBeInside('.opt[data-id="m"]');
-    await shot("swap-problem-mc-row");
-    await clean("MC row in problem pane");
-    await toggle(); await settle();
-    assert.equal(await paneNow(), "scratch");
-    assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
-    await kbDown();
-  });
   await step(`${T} swap: multi problem: boxes and arrow inside the visible area in the problem pane`, async () => {
     await open("CSCI26_CE3");
-    await page.locator("#scratch").focus(); await kbUp();
-    await toggle(); await settle();
+    await ansUp("#q .ans");
     assert.equal(await paneNow(), "problem");
     const boxes = page.locator("#q .ans");
     for (let i = 0; i < 3; i++) { await boxes.nth(i).focus(); await boxes.nth(i).fill("1"); await mustBeInside(`#q .part:nth-child(${i + 1}) .ans`); await mustBeInside(`#go${i}`); }   // the arrow shows once there is text
@@ -272,49 +175,26 @@ for (const [W, H] of SIZES) {
     await clean("multi in problem pane");
     await kbDown();
   });
-  await step(`${T} swap: 5 stacked choices: reachable (scroll inside the card), taps >= 44px`, async () => {
-    await open("CALC1_X2P");
-    await page.locator("#scratch").focus(); await kbUp();
-    await toggle(); await settle();
-    assert.equal(await paneNow(), "problem");
-    await page.locator('.opt[data-id="d"]').click();            // Playwright scrolls it into view inside the card
-    await mustBeInside('.opt[data-id="d"]'); await mustBeInside('.ch[data-id="d"] .send');
-    await shot("swap-problem-mc-stacked");
-    await clean("stacked MC in problem pane");
-    await kbDown();
-  });
 
-  /* ================= reduced motion: instant ================= */
-  await step(`${T} swap: prefers-reduced-motion switches instantly; the top bar hides and shows instantly`, async () => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
+  /* ================= the pad page's q | a switch: a crossfade, instant with reduced motion ================= */
+  await step(`${T} pad page: q | a is a ~200-250ms crossfade (View Transitions); reduced motion switches instantly`, async () => {
     await open("CALC1_T6B");
-    await page.locator("#scratch").focus(); await kbUp();
-    await toggle();
-    assert.equal(await paneNow(), "problem", "not instant with reduced motion");
-    await page.evaluate(() => document.querySelector("#scratch").focus());
-    assert.equal(await paneNow(), "scratch");
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#padPeek")).transitionDuration), "0s");
-    await kbDown();
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-  });
-
-  /* ================= the crossfade really runs ================= */
-  await step(`${T} swap: the switch is a ~200-250ms crossfade (View Transitions), the layout is final right after`, async () => {
-    await open("CALC1_T6B");
-    await page.locator("#scratch").focus(); await kbUp();
+    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();
     const r = await page.evaluate(async () => {
-      const has = !!document.startViewTransition;
-      const t0 = performance.now();
-      let ran = 0;
+      const has = !!document.startViewTransition, t0 = performance.now(); let ran = 0;
       const orig = document.startViewTransition.bind(document);
       document.startViewTransition = cb => { const v = orig(cb); v.finished.then(() => { ran = performance.now() - t0; }, () => {}); return v; };
-      document.querySelector("#freeze").click();   // the question peek
+      document.querySelector("#mtMode").click();
       await new Promise(r => setTimeout(r, 600));
       return { has, ran };
     });
     assert.ok(r.has, "no View Transitions in this browser (falls back to instant)");
     assert.ok(r.ran >= 180 && r.ran <= 450, `transition ran ${Math.round(r.ran)}ms`);
-    await kbDown();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.click("#mtMode");
+    assert.ok(await page.evaluate(() => document.documentElement.classList.contains("mt-q")), "not instant with reduced motion");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt"));
   });
 
   /* ================= MC on one row ================= */
@@ -407,73 +287,37 @@ for (const [W, H] of SIZES) {
     assert.equal((await rowInfo()).inline, true, "did not come back");
   });
 
-  /* ================= top bar hides while the scratchpad has focus ================= */
-  await step(`${T} top bar: hides on scratchpad focus (keyboard down and up), keeps its space, comes back on blur; swap toggle stays`, async () => {
+  /* ================= a bank upload replaces the problem: one scratchpad, the nav shows ================= */
+  await step(`${T} upload a bank: the nav shows; a second problem load leaves one scratchpad`, async () => {
     await open("CALC1_T6B");
     const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
     for (const p of bank.problems) p.code = p.code.replace("_", "_N");   // insert, not swap: a swap made codes collide
     if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-    // the list is shuffled per browser (design/NAV.md): whichever uploaded problem opens first
     await page.waitForFunction(() => { const c = document.querySelector("#pcode")?.textContent; return !!c && window.stemOffline.has(c); }, null, { timeout: 8000 });
     assert.ok(await page.locator("#qnav").isVisible(), "nav not shown");
     assert.equal(await page.locator("#scratch").count(), 1, "a second problem load left a second scratchpad");
-    const st = () => page.evaluate(() => { const n = document.querySelector("#qnav"), c = getComputedStyle(n), ta = document.querySelector("#scratch").getBoundingClientRect(), fz = document.querySelector("#freeze").getBoundingClientRect(); return { op: +c.opacity, vis: c.visibility, ty: c.transform, taTop: ta.top, fzTop: fz.top, y: scrollY, off: document.documentElement.classList.contains("bar-off"), qr: n.getBoundingClientRect().bottom }; });
-    await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(100);
-    const a = await st();
-    assert.equal(a.op, 1); assert.equal(a.vis, "visible");
-    await shot("swap-bar-visible");
-    await page.evaluate(() => document.querySelector("#scratch").focus({ preventScroll: true }));       // keyboard still down
-    await page.waitForTimeout(80);
-    const mid = await st(); assert.ok(mid.op < 1 && mid.op >= 0, `no fade: opacity ${mid.op}`);
-    await page.waitForTimeout(320);
-    const b = await st();
-    assert.equal(b.op, 0); assert.equal(b.vis, "hidden"); assert.ok(b.off);
-    assert.ok(Math.abs(b.taTop - a.taTop) < 0.5 && Math.abs(b.fzTop - a.fzTop) < 0.5 && b.y === a.y, `layout jumped: ${JSON.stringify(a)} -> ${JSON.stringify(b)}`);
-    assert.ok(await page.evaluate(() => { const q = document.querySelector("#qnav").getBoundingClientRect(), m = document.querySelector("#main").getBoundingClientRect(); return q.bottom <= m.top + 1; }), "nav moved below the top");
-    await shot("swap-bar-hidden-keyboard-down");
-    await page.evaluate(() => document.querySelector("#scratch").blur()); await page.waitForTimeout(350);
-    const c = await st(); assert.equal(c.op, 1); assert.equal(c.vis, "visible"); assert.ok(!c.off, "bar-off stayed");
-    // keyboard up: the stage covers the bar; the toggle is reachable
-    await page.evaluate(() => document.querySelector("#scratch").focus({ preventScroll: true })); await kbUp();
-    assert.equal(await paneNow(), "scratch");
-    const up = await st(); assert.equal(up.op, 0, "bar visible with keyboard up + scratchpad focus");
-    await mustBeInside("#freeze"); await toggle(); await settle();
-    assert.equal(await paneNow(), "problem"); assert.ok(!(await st()).off === false || true);
-    const after = await audit(); assert.deepEqual(after.overlaps, []);
-    // first line of the question visible with the bar hidden
-    await page.evaluate(() => document.querySelector("#scratch").focus({ preventScroll: true })); await settle();
-    const fl = await page.evaluate(() => { const fi = document.querySelector("#freezeIn").getBoundingClientRect(), f = document.querySelector("#blocks > *").getBoundingClientRect(); return f.top >= fi.top - 0.5 && f.top + 24 <= fi.bottom && document.querySelector("#freezeIn").scrollTop === 0; });
-    assert.ok(fl, "first line of the question not visible with the bar hidden");
-    await shot("swap-bar-hidden-keyboard-up");
-    await kbDown();
-    await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(350);
-    const d = await st(); assert.equal(d.op, 1); assert.equal(d.vis, "visible");
-    await shot("swap-bar-back");
-  });
-  await step(`${T} top bar: reduced motion hides / shows it instantly`, async () => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.evaluate(() => { document.querySelector("#scratch").focus({ preventScroll: true }); });
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#qnav")).visibility), "hidden");
-    await page.evaluate(() => document.activeElement.blur());
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#qnav")).visibility), "visible");
-    await page.emulateMedia({ reducedMotion: "no-preference" });
   });
 
   /* ================= safe areas ================= */
-  await step(`${T} swap: respects safe-area insets (notch, side cutouts)`, async () => {
+  await step(`${T} swap + pad page: respect safe-area insets (notch, side cutouts)`, async () => {
     const cdp = await ctx.newCDPSession(page);
     let ok = true;
     try { await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 47, bottom: 34, left: 0, right: 0 } }); } catch { ok = false; }
     if (!ok) { console.log("     (skipped: this Chromium cannot override safe-area insets)"); return; }
     await open("CALC1_T6B");
-    await page.locator("#scratch").focus(); await kbUp();
+    await ansUp("#ans");
     const top = await page.evaluate(() => document.querySelector("#freeze").getBoundingClientRect().top);
-    assert.ok(top >= 47 - 0.5, `question peek under the notch: top ${top}`);
-    await mustBeInside("#scratch");
+    assert.ok(top >= 47 - 0.5, `problem pane under the notch: top ${top}`);
+    await mustBeInside("#ans");
+    await kbDown(); await page.evaluate(() => document.activeElement.blur());
+    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();
+    const g = await page.evaluate(() => ({ tile: document.querySelector("#freeze").getBoundingClientRect().top, cut: document.querySelector("#cut").getBoundingClientRect().bottom, vh: innerHeight }));
+    assert.ok(g.tile >= 47 - 0.5, `pad page under the notch: tile top ${g.tile}`);
+    assert.ok(g.cut <= g.vh - 34 + 0.5, `tool row under the home indicator: ${g.cut} > ${g.vh - 34}`);
     await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 0, bottom: 0, left: 0, right: 0 } });
-    await kbDown();
+    await page.click("#mtExp");
   });
 
   await step(`${T} no page errors`, async () => { assert.deepEqual(errors, [], errors.join(" | ")); });

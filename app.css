@@ -2,10 +2,11 @@
 :root {
   --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers (columns line up); not the code box */
   --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
+  --qbox: #192232;   /* the question box: halfway between --paper and --sheet (Tony, Oct 3) */
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
-  --body: var(--sheet); --ramp: var(--sheet); --knock: rgb(29 40 57 / 0.85);
+  --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(25 34 50 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
      --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
   --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
@@ -206,7 +207,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .12s ease-out; }
 .more:hover::before { background: var(--muted); }
 
-.p { background: var(--sheet); border-radius: 10px; padding: var(--s4) 1.25rem; }
+.p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
@@ -352,7 +353,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
-.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--sheet); border-radius: 0 0 10px 10px; }
+.boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }
 
 /* feedback */
@@ -447,7 +448,7 @@ html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) 
 html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
-html.swap .freeze-in { background: var(--sheet); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
+html.swap .freeze-in { background: var(--qbox); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
 html.swap .p, html.swap .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
 html.swap .q, html.swap .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
 html.swap .fb { margin: 0; padding: var(--s2) var(--s4) 0; }
@@ -500,12 +501,12 @@ html.kbup #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !i
 .fix-how { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); color: var(--muted); font-size: var(--t-sm); line-height: 1.35; }
 
 /* ---------- multitask (design/MULTITASK.md) ---------- */
-/* the pad's header: label left; expand (phone page) or the pill (side by side) right */
-.xb-label { min-height: var(--btn); }
-.xb-label .mt-exp, .xb-label .mt-mode { margin-left: auto; color: var(--ink); }
-.xb-label .mt-exp .ico, .xb-label .mt-mode .ico { width: var(--ico); height: var(--ico); }
-.xb-label .mt-mode .ico { color: var(--muted); }
-.xb-label .mt-mode[data-pane="problem"] .t-doc, .xb-label .mt-mode[data-pane="scratch"] .t-pen { color: var(--c1); }
+/* the pad page's tool row (round 3d, variant 3), inside the pad's box: q | a at the left; collapse, Cut, Copy at the right */
+.xb-field .mt-mode, .xb-field .mt-exp { position: absolute; bottom: 6px; color: var(--ink); }
+.xb-field .mt-mode { left: 6px; }
+.xb-field .mt-exp { right: calc(18px + 2 * var(--btn) + var(--xb-sb, 0px)); }
+.xb-field .mt-exp .ico { width: var(--ico); height: var(--ico); }
+.mt-mode[data-pane="problem"] .t-doc, .mt-mode[data-pane="scratch"] .t-pen { color: var(--c1); }
 .sash { display: none; }
 .pstrip { display: none; }
 
@@ -516,15 +517,15 @@ html.mt body::before { content: ""; position: fixed; z-index: 14; left: 0; right
 html.mt main {
   position: fixed; z-index: 15; top: var(--kb-top, 0px); left: 0; right: 0; width: min(100%, 52rem); margin: 0 auto;
   height: var(--vv-h, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: calc(var(--r, .5) * (100% - var(--s4))) var(--s4) minmax(0, 1fr);
-  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) var(--s2);
+  grid-template-rows: calc(var(--r, .5) * (100% - var(--s3))) var(--s3) minmax(0, 1fr);
+  padding: max(var(--s2), env(safe-area-inset-top)) var(--s2) max(var(--s2), env(safe-area-inset-bottom));   /* the tool row stays above the home indicator */
 }
-html.mt.mt-r0 main { grid-template-rows: auto var(--s4) minmax(0, 1fr); }
+html.mt.mt-fit main { grid-template-rows: var(--tile-h, 33%) var(--s3) minmax(0, 1fr); }   /* the tile hugs its content (layoutMT) */
+html.mt.mt-r0 main { grid-template-rows: auto var(--s3) minmax(0, 1fr); }
 html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
 html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
-html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--sheet); border-radius: 10px; }
+html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--qbox); border-radius: 10px; }
 html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
-html.mt.mt-r0 #problem { display: none; }
 html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
 html.mt #fb:empty { display: none; }
@@ -534,17 +535,46 @@ html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; p
 html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
 html.mt .xb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
-html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico, html.mt #xbSave { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-html.mt .xb-label .mt-mode { margin-left: 0; }
-html.mt .xb-label .mt-exp { margin-left: auto; }
+html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html.mt .xb-label { display: contents; }                                         /* no header row: the tool row is in the pad */
+html.mt .xb { position: relative; }
+html.mt #xbSave { position: absolute; z-index: 1; left: calc(6px + 88px + var(--s3)); bottom: calc(6px + (var(--btn) - 1.2em) / 2); margin: 0; }   /* saving / saved, in the tool row right of q | a */
 html.mt .xb-field { flex: 1 1 auto; min-height: 0; max-width: none; }
+html.mt .xb-field textarea, html.mt .xb-field textarea.xb-free { padding-bottom: calc(var(--btn) + var(--s4)); }   /* the tool row's band, always */
+html.mt .xb-field::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: calc(var(--btn) + 12px); border-top: 1px solid var(--line); pointer-events: none; }
 html.mt #scratch { min-height: var(--pad-max, 8rem); }
+
+/* round 3b: the tile shows the problem (q) or the answer control (a), never both */
+html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
+html.mt.mt-a #problem { display: none; }
+.mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-family: KaTeX_Math, "Atkinson Hyperlegible", serif; font-style: italic;
+  font-size: 1.5rem; line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters */
+/* phones: the pad is off the page until the Scratchpad button opens the pad page */
+html.pad-off #work, html.pad-off #sash { display: none; }
+html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
+html.pad-off .freeze-in { max-height: none; overflow: visible; }
+html.pad-off .more { display: none; }
+html.fab-on main::after { content: ""; display: block; height: calc(56px + 2 * var(--s4)); }   /* the last control can scroll above the button */
+.pad-fab {
+  position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); top: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
+  display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);
+  box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+.pad-fab.left { right: auto; left: max(var(--s4), env(safe-area-inset-left)); }
+.pad-fab[hidden], html.bar-open .pad-fab { display: none; }   /* the revealed code bar owns the bottom (its buttons stay reachable) */
+.pad-fab .ico { width: var(--ico); height: var(--ico); }
+.pad-fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
+.pad-fab:hover { background: var(--sheet); }
+.pad-fab:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .mt-mode .qa-l { transition: none; } }
 
 /* the handle: a 36x4 --edge pill in the gap, touched big (88x44 phone, 48 wide desktop); --muted on hover and while dragging */
 html.mt .sash, html.side .sash { display: block; position: relative; touch-action: none; cursor: row-resize; outline: none; }
 .sash::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
 .sash::after { content: ""; position: absolute; left: 50%; top: 50%; width: 88px; height: 44px; margin: -22px 0 0 -44px; }
 .sash:hover::before, html.mt-drag .sash::before { background: var(--muted); }
+html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   /* thin bar (round 3d) */
 .sash:focus-visible::before { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 /* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
@@ -563,11 +593,14 @@ html.side .sash::before { position: sticky; display: block; top: 40vh; left: aut
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
+.q-label { display: none; }
+html.side .freeze .q-label { display: flex; }                                       /* side by side only: the boxes start level */
+html.side.mt-r0 .freeze .q-label, html.mt .freeze .q-label { display: none; }   /* the pad page's .xb-label rule (display: contents) must not show it */
 html.side #scratch { min-height: var(--pad-max, 60vh); }
 html.side.mt-r0 .freeze-in { display: none; }
 html.side .pstrip {
   display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
-  background: var(--sheet); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
+  background: var(--qbox); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
 }
 html.side .pstrip[hidden] { display: none; }
 html.side .pstrip:hover { background: var(--raised); color: var(--ink); }
@@ -599,7 +632,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
-/* ---------- toast (app.js toast(); design/TOAST.md take 5f "page note", Tony Oct 2) ----------
+/* ---------- toast (app.js toast(); rules: design/STYLE.md §3 Toast) ----------
    The page's own paper, the part divider's 1px --line hairline as its edge (--shadow-1 only: Impeccable flags hairline + wide shadow); text in the part prompt's style (400, --t-md).
    No accent colour, no icon. JS sets left/top from the wrong box; --px = the verdict mark's x (the caret). On MC (.row) it lies
    exactly on the struck-out choice, no caret. 200ms ease-out, 8px; reduced motion = fade only (app.css turns transitions off, so
@@ -607,8 +640,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #toast {
   position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
   display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
-  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);
-  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; cursor: pointer;
+  background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker" */
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: balance; cursor: pointer;
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
 #toast.on { visibility: visible; animation: toast-in .2s ease-out both; }
@@ -616,8 +649,9 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
   background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
 }
-#toast.row { max-width: none; padding: var(--s1) var(--s3); text-align: center; }
-#toast.row::before { display: none; }
+#toast.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }                         /* above its anchor: caret on the bottom edge */
+#toast.row { min-height: 0; padding: var(--s2) var(--s3); }                                       /* MC: on the struck text, caret left at the X */
+#toast.row::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear both; } }

@@ -15,22 +15,42 @@ const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
-/* the "one more try" note (design/TOAST.md, take 5f): hangs under the wrong answer box with a caret at its verdict mark; on MC it
-   lies on the struck-out choice (a dead control, so no live choice is covered). Page type, no colour of its own. 2.5 s, paused while
-   the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
+/* onboarding (STYLE.md §3 Toast): only on a new device, i.e. no stem-* key at the first load; remembered as stem-ob until all are shown */
+const onboard = (() => { try {
+  if (!Object.keys(localStorage).some(k => k.startsWith("stem-"))) localStorage.setItem("stem-ob", "1");
+  return localStorage.getItem("stem-ob") === "1";
+} catch { return false; } })();
+function obToast(n, text, at) {
+  if (!onboard || toastAt || !at || at.hidden) return;                           // a wrong-answer note wins; try again next time
+  try { if (localStorage.getItem("stem-ob-" + n)) return; localStorage.setItem("stem-ob-" + n, "1");
+    if ([1, 2, 3].every(i => localStorage.getItem("stem-ob-" + i))) localStorage.setItem("stem-ob", "done"); } catch { return; }
+  toast(text, at);
+}
+/* the toast (design/STYLE.md §3 Toast): one look for the "one more try" note and the onboarding notes. Under its anchor with a caret
+   at the verdict mark; above it (.up, caret on the bottom edge) when there is no room below or the anchor floats (the Scratchpad
+   button); on MC it lies on the struck-out choice's text (a dead control, so no live choice is covered) with the caret pointing left
+   at the X badge. 2.5 s, paused while the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
 let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
 function placeToast() {
   const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
-  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt");
-  const m = (toastAt.querySelector(".vk, .badge") || toastAt).getBoundingClientRect(), mx = m.left + m.width / 2;
+  if (!toastAt.getClientRects().length) { hideToast(); return; }                // its anchor went away (the button while the pad is open)
+  const mk = toastAt.querySelector(".vk, .badge"), mr = mk && mk.getBoundingClientRect();
+  const m = mr && mr.width ? mr : toastAt.getBoundingClientRect(), mx = m.left + m.width / 2;   // a one-row pill has no badge: its centre
+  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt") && !!(mr && mr.width);   // on the struck text only beside a badge
   const gut = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gut")) || 20;
   t.classList.toggle("row", row);
-  if (row) { t.style.width = b.width + "px"; t.style.minHeight = b.height + "px"; t.style.left = b.left + "px"; t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return; }
-  t.style.width = ""; t.style.minHeight = "";
-  const w = t.offsetWidth;
+  if (row) {                                                                     // on the struck text, after the badge
+    t.classList.remove("up");
+    t.style.maxWidth = Math.max(120, b.right - m.right - 18) + "px";
+    t.style.left = (m.right + 12) + "px"; t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return;
+  }
+  t.style.maxWidth = "";
+  const w = t.offsetWidth, h = t.offsetHeight, bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - dockRoom();
   let x = mx > b.left + b.width / 2 ? b.right - w : b.left;
   x = Math.min(Math.max(gut, x), innerWidth - gut - w);
-  t.style.left = x + "px"; t.style.top = (b.bottom + 12) + "px";
+  const up = toastAt.id === "padFab" || b.bottom + 12 + h > bottom;             // no room under it: flip above, caret on the bottom edge
+  t.classList.toggle("up", up);
+  t.style.left = x + "px"; t.style.top = (up ? b.top - 12 - h : b.bottom + 12) + "px";
   t.style.setProperty("--px", Math.max(18, Math.min(w - 18, mx - x)) + "px");
 }
 function hideToast() { clearTimeout(toastT); toastLeft = 0; toastAt = null; $("#toast")?.classList.remove("on"); }
@@ -39,6 +59,7 @@ function holdToast() { if (toastLeft) { clearTimeout(toastT); toastLeft = Math.m
 function goToast() { if (toastLeft && toastAt) armToast(toastLeft); }
 function toast(text, at) {
   const t = $("#toast"); if (!t || !at) return;
+  if (mtOpen && mtTile === "q" && $("#q").contains(at)) setTile("a", false);       // the note is about the answer: show it first
   t.textContent = text; toastAt = at; t.classList.add("on");
   placeToast(); armToast(2500);
 }
@@ -203,7 +224,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
 
 /* ================= entry box: code bar + upload ================= */
 const codeIn = $("#code"), dock = $("#dock"), mainEl = $("#main");
-let swapOn = false, lostAt = 0, mtOpen = false, lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
+let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;   // mtOpen: the phone's pad page (variant 9); lastEdit: see backInView          // Swap state (see "Swap" below)
 /* canonical code: PREFIX_SUFFIX ("_" joins words, so one double-tap on a phone selects the whole code).
    Accept lower case, "-" (old links), a space, or no separator at all. */
 function normalize(raw) {
@@ -1052,7 +1073,12 @@ function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
   if (swapOn) { layoutSwap(); return; }
-  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes                                         // one pane above the keyboard: none of the strip logic applies
+  if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes
+  if (root.classList.contains("pad-off")) {                                      // phones, pad off: nothing below needs room, so no strip
+    freeze.classList.remove("clipped", "stuck", "open"); more.hidden = true;     // cap, no fade, no pull-tab (Tony: "big ass dark space")
+    root.style.setProperty("--freeze-h", "0px");
+    return;
+  }                                         // one pane above the keyboard: none of the strip logic applies
   const dockH = dockRoom();
   const h = (vv ? vv.height : innerHeight) - dockH;
   const kb = editing() && h + dockH < tallest * 0.8;                            // software keyboard is up
@@ -1074,7 +1100,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches) { freeze.classList.remove("stuck"); return; }
+  if (!S || freeze.hidden || swapOn || mtOpen || sideMQ.matches || root.classList.contains("pad-off")) { freeze.classList.remove("stuck"); return; }
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
@@ -1218,6 +1244,7 @@ padPeek.hidden = false;                                                         
 for (const ev of ["pointerdown", "mousedown"]) padPeek.addEventListener(ev, e => e.preventDefault());
 padPeek.addEventListener("click", () => {
   if (!S || !S.box) return;
+  if (root.classList.contains("pad-off")) openMT();                              // phones: the pad lives on the pad page
   const ta = S.box.el, n = ta.value.length;
   ta.focus({ preventScroll: true }); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight;
   setPane("scratch");
@@ -1237,10 +1264,10 @@ function backInView() {
 }
 
 /* ================= Multitask (design/MULTITASK.md) =================
-   Phone (< 720px): variant 9, Answer sliver. Tapping the pad (or its expand icon) opens the pad page: the problem tile on top (its bottom
-   edge is the answer, always there), one drag handle in the gap, the pad below. Anchors 1/2, 1/3 and the sliver (answer only); drag snaps,
-   tap = next. The pill: document = problem and pad, pencil = pad wide (sliver). Exits: Back (a pushed history entry), tapping the
-   problem (caret into the answer), the collapse icon in the pad's top-right. The keyboard going down never closes it.
+   Phone (< 720px): the pad is hidden; the floating Scratchpad button (#padFab) opens the pad page: the tile on top, one drag handle in
+   the gap, the pad below. The tile's q | a switch: q = the problem only, a = the answer control only (round 3b). It opens on q with a big
+   pad (1/3). Anchors 1/2, 1/3 and the smallest tile; drag snaps, tap = next. Exits: Back (a pushed history entry), tapping the problem
+   (caret into the answer), the collapse icon in the pad's top-right. The keyboard going down never closes it.
    Desktop (>= 720px): side by side, always: problem + answer left, pad right. Anchors strip (52px), 1/3, 1/2, 2/3.
    Memory: per device (localStorage, every access in try/catch). */
 const sash = $("#sash"), mtMode = $("#mtMode"), mtExp = $("#mtExp"), pstrip = $("#pstrip");
@@ -1250,23 +1277,29 @@ let mtMem = {};
 try { mtMem = JSON.parse(localStorage.getItem("stem-mt") || "{}") || {}; } catch { mtMem = {}; }
 const mtKind = () => sideMQ.matches ? "desk" : "phone";
 const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r) ? b : a);
-function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : 1 / 2; }
+const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                                 // phone: a big pad
+function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "problem strip" : "answer only") : "problem " + ANAME(r);
-let dragR = null;
+let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
   root.classList.toggle("mt", mtOpen);
-  root.classList.toggle("mt-r0", on && dragR == null && r === 0);
+  const fit = mtOpen && mtFit && dragR == null;
+  root.classList.toggle("mt-fit", fit);
+  root.classList.toggle("mt-r0", on && !fit && dragR == null && r === 0);
   root.classList.toggle("mt-drag", dragR != null);
   root.style.setProperty("--r", r);
-  sash.hidden = !on; mtMode.hidden = !on; pstrip.hidden = !(side && r === 0 && dragR == null);
-  mtMode.dataset.pane = r === 0 ? "scratch" : "problem";
-  mtMode.setAttribute("aria-label", r === 0 ? "Show the problem" : "Pad wide");
-  mtExp.hidden = side;
+  root.classList.toggle("mt-q", mtOpen && mtTile === "q");
+  root.classList.toggle("mt-a", mtOpen && mtTile === "a");
+  root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
+  sash.hidden = !on; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && r === 0 && dragR == null);
+  mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
+  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show the answer" : "Show the question");
+  mtExp.hidden = side || !mtOpen;                                               // the collapse corner of the pad page only
   mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
   mtExp.setAttribute("aria-label", mtOpen ? "Close the scratchpad page" : "Open the scratchpad");
   mtExp.title = mtExp.getAttribute("aria-label");
@@ -1277,6 +1310,8 @@ function applyMT() {
   sash.setAttribute("aria-valuetext", anchorName(k, r));
   sash.setAttribute("aria-label", `Problem size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
+  if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
+  fabSync();
 }
 /* the sizes CSS cannot know: the visible height (phone), and the pad's height (it fills its tile / column) */
 let mtCap = null;
@@ -1287,6 +1322,13 @@ function layoutMT() {
     const h = vv ? vv.height : innerHeight;
     root.style.setProperty("--vv-h", Math.round(h) + "px");
     root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+    if (mtFit) {                                                                 // hug: what the tile shows, at most 1/3 of a short screen, 45% of a tall one
+      const parts = mtTile === "q" ? [problemEl] : [$("#fb"), $("#q")];
+      root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
+      const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
+      const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
+      root.style.setProperty("--tile-h", Math.round(Math.max(56, Math.min(need, cap))) + "px");
+    }
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
     if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
@@ -1297,21 +1339,31 @@ function layoutMT() {
   };
   fill(); requestAnimationFrame(fill);
 }
+function mtSave() { try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ } }
 function setRatio(r, animate = true) {
   const k = mtKind();
+  mtFit = false;
   mtMem[k] = r; if (r > 0) mtMem[k + "Last"] = r;
-  try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ }
+  mtSave();
   if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
 }
-const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : 1 / 2; };
+const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : mtDef(k); };
+function setTile(t, animate = true) {
+  if (mtTile === t) return;
+  mtTile = t;
+  if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
+}
 function openMT() {
   if (mtOpen || !S || sideMQ.matches) return;
   swapY = scrollY;
   root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
   if (swapOn) setSwap(false);
-  mtOpen = true;
+  mtOpen = true; mtTile = "q"; mtFit = true;
+  if (toastAt === fab) hideToast();
+  mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
+  setTimeout(() => obToast(2, "Switch question and answer view here.", mtMode), 400);
 }
 let mtSkipPop = false;
 function shutMT() {
@@ -1323,16 +1375,14 @@ function shutMT() {
 }
 function closeMT(toAnswer) {
   if (!mtOpen) return;
-  if (toAnswer) focusField("problem");                                            // in the tap: the keyboard can stay
   shutMT();
+  if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
   if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
 }
 addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (mtOpen) shutMT(); });   // Back closes it, never leaves the page
-/* open: a tap into the pad (not a script's focus: Swap still serves those), or the expand icon */
-$("#xbField").addEventListener("pointerdown", e => { if (!mtOpen && !sideMQ.matches && S && S.box && e.target === S.box.el) openMT(); });
 for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
-mtExp.addEventListener("click", () => { if (mtOpen) closeMT(false); else openMT(); });
-mtMode.addEventListener("click", () => setRatio(mtRatio() === 0 ? lastPeek() : 0));
+mtExp.addEventListener("click", () => closeMT(false));
+mtMode.addEventListener("click", () => setTile(mtTile === "q" ? "a" : "q"));
 pstrip.addEventListener("click", () => setRatio(lastPeek()));
 /* tap the problem (not the answer) = close, caret in the answer */
 for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (mtOpen) e.preventDefault(); });
@@ -1377,6 +1427,75 @@ sash.addEventListener("keydown", e => {
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
 if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); layoutFreeze(); });
+
+/* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
+   follows the finger; on release it snaps to the nearer side edge, stays between the top and the bottom bar, and steps off any answer
+   control it would rest on. Its place is kept per device (stem-mt .fab = { side, y: 0 top .. 1 bottom }). */
+const fab = $("#padFab");
+let fabDrag = null, fabMoved = false, fabSeen = false;
+function fabSync() {
+  const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
+  const show = root.classList.contains("pad-off") && !typing;
+  root.classList.toggle("fab-on", show);
+  if (fab.hidden === !show) return;
+  fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
+  if (!show) return;
+  fabPlace(); requestAnimationFrame(() => requestAnimationFrame(fabPlace));        // again once the bottom bar is back in place
+  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap Scratchpad to open your pad.", fab), 700); }
+  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag the button anywhere.", fab), 700);
+}
+function fabBounds() {
+  const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;
+  const vh = vv ? vv.height : innerHeight, dk = dock.getBoundingClientRect();
+  const floor = Math.min(vh - dockRoom(), dk.height && dk.top < vh ? dk.top : vh);   // the bar as it really sits, whatever state it is in
+  return { min: s + 8, max: Math.max(s + 8, floor - s - h), h };
+}
+function fabPlace() {
+  const m = mtMem.fab || {}, b = fabBounds();
+  let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
+  fab.classList.toggle("left", m.side === "l");
+  fab.style.top = "0px"; fab.style.transform = "";
+  const r = fab.getBoundingClientRect();
+  /* step off answer controls under it (up first, then down), a few tries at most */
+  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  for (let n = 0; n < 6; n++) {
+    const hit = ctl.find(q => q.bottom > top && q.top < top + b.h); if (!hit) break;
+    const upY = hit.top - b.h - 8, downY = hit.bottom + 8;
+    top = upY >= b.min ? upY : downY <= b.max ? downY : top;
+    if (top !== upY && top !== downY) break;
+  }
+  fab.style.top = Math.round(Math.min(b.max, Math.max(b.min, top))) + "px";
+}
+fab.addEventListener("pointerdown", e => {
+  if (e.button > 0) return;
+  const r = fab.getBoundingClientRect();
+  fabDrag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, r, moved: false };
+  try { fab.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
+});
+fab.addEventListener("pointermove", e => {
+  const d = fabDrag; if (!d || e.pointerId !== d.id) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+  d.moved = true; fab.classList.add("dragging");
+  fab.style.transform = `translate(${e.clientX - d.x0}px, ${e.clientY - d.y0}px)`;     // follows the finger (direct manipulation)
+});
+function fabEnd(e) {
+  const d = fabDrag; if (!d || (e && e.pointerId !== d.id)) return;
+  fabDrag = null; fab.classList.remove("dragging");
+  if (!d.moved) return;
+  fabMoved = true;
+  const dx = e ? e.clientX - d.x0 : 0, dy = e ? e.clientY - d.y0 : 0, b = fabBounds();
+  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy));
+  mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
+  mtMem.fabMoved = 1; mtSave();
+  fabPlace();
+}
+fab.addEventListener("pointerup", fabEnd);
+fab.addEventListener("pointercancel", fabEnd);
+fab.addEventListener("click", () => { if (fabMoved) { fabMoved = false; return; } openMT(); });   // a drag is not a tap
+document.addEventListener("focusin", fabSync);
+document.addEventListener("focusout", () => setTimeout(fabSync, 0));
+addEventListener("resize", () => { if (!fab.hidden) fabPlace(); });
+new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);         // the bar grew (Retry, an error line): stay above it
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;

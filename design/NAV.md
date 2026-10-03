@@ -108,7 +108,7 @@ Solved marks in the list: not built (out of scope). Grading state is private to 
 
 | key | where | does |
 |---|---|---|
-| `[` / `]` | anywhere except while typing (input, textarea, contenteditable), and not while the file picker dialog is open | previous / next |
+| ~~`[` / `]`~~ (removed Oct 2 ~23:59 PT, Tony: "kill key shortcut"; STYLE.md §5 Keyboard) | anywhere except while typing (input, textarea, contenteditable), and not while the file picker dialog is open | previous / next |
 | Enter / Space | list button | toggle the list |
 | ArrowDown | list button | open the list |
 | ArrowUp / ArrowDown, Home / End | in the list | move between rows |

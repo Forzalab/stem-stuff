@@ -5,18 +5,26 @@ Figures and graphs (strokes, arrowheads, dashes, labels, bodies): see [DESIGN-LA
 Reference build of the tokens: `app.css` `:root`. If this file and `app.css` disagree, fix one of them in the same commit.
 
 Write new rules here, short and imperative. Record the why in one clause. Put long histories in the feature's own `design/*.md`.
+When a ruling changes, edit the rule here and add one line to the feature doc. Never keep two versions.
 
 ---
 
 ## 1. Principles
 
+**Style: Calm Textbook.** A quiet page that teaches. Typography is the interface; the student always sees one clear next step; small jokes live in the content, never in the chrome.
+**Precedents:** Calm Technology (Weiser and Brown; Amber Case), Rams' "less but better", the GOV.UK autism design poster, W3C COGA, Tufte's data-ink, iA Writer, Apple HIG and Material 3 canonical layouts, tiling window managers, Atkinson Hyperlegible (Braille Institute). Impeccable is a hard gate (§7).
+
 1. **One system.** Every control comes from the same tokens and the same `.btn` / field rules. Why: the student learns the page once.
 2. **Calm (baby-friendly).** Dark, quiet surfaces; color only for state; no shouting, no scolding. Why: a drill is stressful already.
-3. **Icons over words.** A known icon in a state color replaces a label. Words only where no icon is clear. Why: less to read, faster to scan.
+3. **Icons first, words when asked.** A known icon in a state color replaces a label. Words only where no icon is clear or Tony names an exception: the Scratchpad button, the bank-code list button. Why: less to read, and a familiar icon with a word is still familiar.
 4. **One primary action.** Only one filled control is visible per field or step: the submit arrow (`.btn-go`). Everything else is outlined. Why: the eye goes to the next step.
-5. **Nothing jumps.** Reserve space for what can appear (the arrow slot, the verdict icon, the copy band). Overlays are `fixed`; in-flow panels push content only after a tap. Why: nothing moves under a finger.
-6. **Motion answers a tap.** Animate only what the person caused (open, swap, confirm). No ambient motion except a "busy" signal. Why: motion that explains, never decorates.
+5. **Nothing jumps.** Reserve space for what can appear (the arrow slot, the verdict icon, the copy band). Overlays are `fixed`; in-flow panels push content only after a tap. A floating thing never rests on a live control. Why: nothing moves under a finger.
+6. **Motion answers a tap.** Animate only what the person caused (open, swap, confirm). No ambient motion except a "busy" signal. Direct manipulation is not animation: a pane or a button may follow the finger. Why: motion that explains, never decorates.
 7. **Show state, never hide it.** Right, wrong, tries left and locked are always visible on the thing they are about. Why: the student never has to guess.
+8. **Improve by removing.** Before you add a control, try to remove one. Why: less, but better.
+9. **Calm at the edge of attention.** Help waits at the edge and comes forward only when needed; when something fails, it fails quietly (no modal, no alarm). Why: the problem holds the attention, not the chrome.
+10. **Honest.** No streaks, no guilt, no fake urgency, no trends. Why: the student trusts the page under exam stress.
+11. **One tap away is not hidden.** A feature behind an always-visible control is not hidden; a feature with no visible control is unshipped. Why: the phone pad sits behind the Scratchpad button, which is always on screen.
 
 ---
 
@@ -28,13 +36,14 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 
 | token | hex | role |
 |---|---|---|
-| `--paper` | #151d2b | page background, the dock, the freeze strip |
-| `--sheet` | #1d2839 | surfaces: problem card, list card, Cluck, toast, outline buttons |
+| `--paper` | #151d2b | page background, the dock, the freeze strip, toast |
+| `--qbox` | #192232 | the question box, everywhere (card, pad-page tile, keyboard-up card, desktop strip): halfway between `--paper` and `--sheet` (Tony, Oct 3) |
+| `--sheet` | #1d2839 | surfaces: list card, Cluck, outline buttons, the q \| a switch |
 | `--field` | #111826 | inside text fields; ink on filled buttons |
-| `--raised` | #243149 | hover, selected, current row, open state |
+| `--raised` | #243149 | hover, selected, current row, open state, the Scratchpad button |
 | `--ink` | #e7edf6 | body text, icons in buttons |
 | `--muted` | #a2b3cb | secondary text, hover border, locked state |
-| `--hint` | #7d8ea8 | placeholder, autosave status, line numbers, "gone" list rows (lowest text) |
+| `--hint` | #7d8ea8 | placeholder, autosave status, "gone" list rows (lowest text) |
 | `--line` | #34445d | dividers and grid only. Never a control boundary (1.5:1) |
 | `--edge` | #6b7f9e | the boundary of every control and field (3.64:1 on sheet) |
 | `--focus` | #8fb0ff | focus ring, focused field border, caret |
@@ -47,21 +56,21 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 |---|---|---|---|
 | `--ok` | right | check icon, right choice border and badge, right answer text, Copy done | decoration, "success" toasts for routine saves |
 | `--bad` | wrong | X icon, dashed border on a wrong answer, strike on a wrong choice, list X marks, the entry error line | hover, delete buttons, emphasis |
-| `--mark` | careful / look here | warning: one try left (toast ring, the drawn devil); Cluck's duck; figure highlight | a second series next to `--c2`; a full-surface fill |
+| `--mark` | look here | Cluck's duck; figure highlight | a warning, a toast, a second series next to `--c2`, a full-surface fill |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no separate warning token: `--mark` is the warning color. Do not add yellow, amber or orange variants.
+There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange.
 
 Contrast floor: text 4.5:1 on its real background (check `--raised` too), control boundaries and icons 3:1.
 
 ### 2.2 Type
 
-- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family.
+- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.5rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
 - Scale (phones; desktop raises all three):
 
 | token | px | for |
 |---|---|---|
-| `--t-md` | 18 | problem text, choices, typed answers, toast |
+| `--t-md` | 18 | problem text, choices, typed answers, toast (weight 400) |
 | `--t-sm` | 16 | labels, how line, scratchpad, list button, error line |
 | `--t-xs` | 14 | status only (autosave) |
 | `--t-lg` | 28 (desktop 36) | the start page's title only |
@@ -89,9 +98,10 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 
 | radius | for |
 |---|---|
-| 10px | surfaces that hold content: problem card, list card, Cluck, toast, swap card |
+| 16px | the Scratchpad button (M3 FAB) |
+| 10px | surfaces that hold content: problem card, list card, Cluck, toast, pane tiles |
 | 8px | controls: `.btn`, fields (`.ff`, code box, scratchpad), choices, list rows |
-| 6px | something inside a control (the swap toggle's pill, Paste / Go inside the code box, a suggestion row) |
+| 6px | something inside a control (the q | a switch's active pill, Paste / Go inside the code box, a suggestion row) |
 | pill / 50% | the start page's field and the round buttons inside it (nested: outer radius minus the 4px gap) |
 | 4px / 3px | inline code / figure label knockout |
 | 50% | choice badges only |
@@ -100,7 +110,7 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 
 - Controls and fields: 2px `--edge`. Hover: `--muted`. Focus: `--focus`. Selected: `--c1`. Right: `--ok` solid. Wrong: `--bad` **dashed** (dash = not accepted, so it survives grayscale).
 - Surfaces have no border. A background change separates them.
-- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom).
+- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom). The toast's edge is the one 1.5px `--line` border.
 - No colored side stripes on anything.
 
 ### 2.7 Elevation
@@ -111,11 +121,12 @@ A shadow means "this floats over content". Allowed only on:
 |---|---|
 | freeze strip, while stuck | `--shadow-3` |
 | phone dock (fixed, bottom) | the upward version of `--shadow-3` |
-| toast | `--shadow-3` |
+| toast | `--shadow-1` (with the 1px `--line` hairline: Impeccable flags a hairline with a wide shadow) |
+| the Scratchpad button (floats over the page) | `--shadow-3`; `--shadow-4` while dragged |
 | code suggestions (floats over the page) | `--shadow-3` |
 | start page field | `--shadow-1` at rest, `--shadow-3` on hover / focus (Tony: "popping, like Google"; the only thing on that page) |
 
-Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
+Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The start field and the Scratchpad button are the two named exceptions among controls.
 
 ### 2.8 Motion
 
@@ -128,7 +139,8 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 - Easing: `ease-out` (enter and feedback). No bounce, no elastic, no spring overshoot.
 - Move at most 14px. Animate `opacity` and `transform` only; never animate layout (height, top, width).
 - Loops: only for "busy" (autosave sweep, splash). Stop them the moment the work ends.
-- Reduced motion: `app.css` turns off every transition. Every `@keyframes` and every View Transition needs its own `prefers-reduced-motion` rule: no movement; a fade of `--d-move` or less, or an instant change.
+- Direct manipulation (the sash, dragging the Scratchpad button) follows the finger with no transition; the release snap is `--d-move` ease-out. Why: the hand moves it, so it is not layout animation.
+- Reduced motion: `app.css` turns off every transition. Every `@keyframes` and every View Transition needs its own `prefers-reduced-motion` rule: no movement; a fade of `--d-move` or less, or an instant change. Snaps are instant.
 
 ---
 
@@ -138,9 +150,9 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 
 - Anatomy: 48×48 (`--btn`), 2px `--edge` border, 8px radius, `--sheet` fill, one 24px sprite icon in `--ink`. `aria-label` and `title` when there is no word.
 - States: hover `--raised` + `--muted` border; active 1px down; focus 3px `--focus` outline at 2px offset; disabled 45% opacity, no hover, no press.
-- Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-icon switch.
+- Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-state switch (today: q | a).
 - Do: one `.btn-go` visible per field. Put the arrow flush inside its field.
-- Don't: text-only buttons, a "→" after a word, a second filled color, round or pill buttons.
+- Don't: text-only buttons, a "→" after a word, a second filled color, round or pill buttons (named exceptions: the start field's buttons, the q | a switch, the Scratchpad button).
 
 ### Code box (`.code-box`) and suggestions
 
@@ -175,16 +187,16 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 
 - Anatomy: full-width row, min 52px, `--sheet` fill, 2px border, 8px radius, a 2rem round letter badge, the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
 - States: idle (boundary, see Inconsistencies), hover `--edge`/`--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
-- Do: tap again to deselect; keys A to E, 1 to 5, arrows.
+- Do: tap again to deselect; keys A to E, 1 to 5, arrows (existing keys; see Keyboard in §5).
 - Don't: submit on the first tap; color the whole row red or green.
 
-### Toast / nudge (`#toast`)
+### Toast (`#toast`)
 
-- One job: tell the student about a state change that has no other place, today only "one try left".
-- Anatomy: `--sheet` surface, 10px radius, 2px `--mark` ring, `--shadow-3`, `--t-md` bold text, the drawn devil icon at the end. `role="status"`, `aria-live="polite"`.
-- Placement: anchored **under the answer box it is about** (MC: under the struck choice), right edges aligned, `position: fixed` so nothing moves. If that would cover a live control, flip above the box. The variant is being picked in [TOAST.md](TOAST.md); that file owns the details.
-- Timing: in `--d-move`, stays 2.5 s, closes on tap or Esc.
-- Don't: use it for "Saved", "Correct" or anything already shown on the control; stack two toasts; use a solid yellow slab.
+- Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
+- Anatomy: page `--paper`, 1.5px `--line` border (Tony: "slight thicker"), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
+- Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
+- Timing: in `--d-move`, stays 2.5 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
+- Don't: use it for "Saved", "Correct" or anything already shown on the control; stack two toasts (a wrong-answer note wins over onboarding); a tinted or yellow slab.
 
 ### Cluck hint (`.cluck`)
 
@@ -200,18 +212,28 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 
 ### Scratchpad (`.xb`)
 
-- Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, 2px `--edge`, 8px radius, `--mono` 16px / 1.6, line numbers in `--hint`. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
+- Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, 2px `--edge`, 8px radius, `--mono` 16px / 1.6, no line numbers. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
 - States: focus = `--focus` border only (one ring, Tony). Copy done = `--ok` icon and border.
 - Don't: a resize handle, a second scroll inside the page scroll when it can grow instead.
 
-### Panes and split (`#stage`, multitask)
+### Multitask (`#stage`, the pad page, side by side)
 
-- One surface per pane. Panes are siblings on `--paper`, separated by a `--s2` gap (or a 1px `--line` divider when they touch). Never a card inside a card.
-- The active pane is shown by its switch (`.btn-tgl`: active icon in `--c1` on a `--raised` pill), not by a colored frame or a shadow.
-- A pane switch is a `--d-move` crossfade (View Transition); with reduced motion it is instant.
-- A pane that is hidden stays laid out and focusable; switching never resets its scroll or caret.
-- Minimum content per pane: the problem pane always shows the answer control; the scratchpad pane always has at least 3 lines.
-- [MULTITASK.md](MULTITASK.md) owns the layout; it uses these rules.
+- Phone (under 720px): the pad is hidden. The Scratchpad button opens the pad page: the question on top in its `--qbox` box, a thin 3×32px bar (44px touch area), the pad below. No header row: the pad's tool row, inside its box, holds q | a (left) and collapse, Cut, Copy (right), in thumb reach.
+- The top area hugs what it shows: at most ⅓ of a screen under 700px tall, 45% above. Dragging the bar sets a size until the page closes.
+- The tile has a q | a switch: **q** shows the problem only (text and figure); **a** shows the answer control only, for every type. Opening goes to q with a big pad.
+- Desktop and landscape tablet (720px and up): side by side, problem and answer left, pad right. Never the pad under the problem. Why: Tony, "pad down = bad". No Scratchpad button there.
+- Side by side, both columns start with a label row (`i-doc` + "Question", `i-pen` + "Scratchpad"), so the question box and the pad box start level; the top bar spans the same width as the two columns (its ends sit on the content's edges). Why: Tony, Oct 3, "looks unbalanced".
+- One surface per pane. Panes are siblings on `--paper`: a `--s2` gap, `--s4` where a handle sits. Never a card inside a card.
+- The active side is shown by its switch (`.btn-tgl`: active letter in `--c1` on a `--raised` pill), not by a colored frame or a shadow.
+- A switch is a `--d-move` crossfade (View Transition); with reduced motion it is instant. Hidden panes stay laid out and focusable; switching never resets scroll or caret.
+- The pad always has at least 3 lines.
+- [MULTITASK.md](MULTITASK.md) owns the details.
+
+### Scratchpad button (`#padFab`, phone only)
+
+- Anatomy: M3 extended FAB. `i-pen` + "Scratchpad", 56px tall, 16px radius, `--raised`, `--shadow-3`, `--ink`, `--t-sm` bold. No badge or dot (Tony, round 3b: it read as noise). `aria-expanded`.
+- Behavior: tap opens the pad page. You can drag it; on release it snaps to the left or right edge, never under the dock or the home indicator, and never rests over an answer control. Hidden while an answer field has focus. Its place is remembered per device.
+- Why: one tap to the pad, and the pad never covers the problem.
 
 ### Figure frame (`.fig`)
 
@@ -225,11 +247,10 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 - **Sprite only.** Every icon is a `<symbol>` in the `index.html` sprite, used with `<svg class="ico"><use href="#i-..."/></svg>`. No icon fonts, no inline one-off paths, no Unicode glyphs (✓ ✗ → ⚠) as icons.
 - Drawing: 24×24 viewBox, 2px stroke, round caps and joins, no fill, `currentColor`. Exceptions: `i-duck` (filled character).
 - Sizes: `--ico` (24px, grows on desktop) inside buttons and the arrow slot; 20px (`1.25rem`) next to text (verdict, label, list marks); the duck at 28px. No other sizes.
-- Color is the state token of what it shows: `--ink` in buttons, `--ok` check, `--bad` X, `--muted` lock and wait, `--mark` duck and devil, `--field` on the filled arrow.
+- Color is the state token of what it shows: `--ink` in buttons, `--ok` check, `--bad` X, `--muted` lock and wait, `--mark` duck, `--field` on the filled arrow.
 - Icon-only buttons have `aria-label`; icons next to words are `aria-hidden`.
 - **Emoji policy.** No color emoji in the UI: they render differently on every OS, ignore the tokens, and read as AI slop. Keep the personality as drawn characters:
-  - Cluck = `i-duck` in `--mark`.
-  - The 😈 = a drawn `i-imp` symbol (horned face, 2px stroke, `currentColor`) shown in `--mark` at 20px after the toast text, `aria-hidden`. The words carry the meaning. Use it only for the one-try-left nudge.
+  - Cluck = `i-duck` in `--mark`. He is the only character.
   - New characters follow the same rule: one symbol, one token color, one place.
 
 ---
@@ -242,7 +263,12 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows.
 - Errors say what happened and what to do. No apology, no blame.
 - No exclamation marks, no "Oops", no "Great job!". Calm, not cheerful.
 - **Cluck's voice** ("QUACK." then one short question or nudge) appears only inside the Cluck hint. Never in buttons, toasts or errors.
-- The devil's tone ("choose wisely") appears only in the one-try-left nudge.
+- **Humour lives in content and easter eggs** (Cluck, a bank's own lines, the scratchpad placeholder "Paste GPT answer here, but me be sad...", lowercase where it is a wink). Never in chrome: buttons, toasts, errors, labels. The wrong-answer toast's "choose wisely" is the only edge it has.
+
+### Keyboard
+
+- No keyboard shortcuts. Keys only do what a focused control already means: the code box and list comboboxes, MC choice keys inside the focused group, Enter to submit a box, Esc to close. Nothing global (`[` / `]` prev / next removed Oct 2 ~23:59 PT). Why: Tony, "NO KEYBOARD SHORTCUT", "kill key shortcut".
+- The sash takes arrows, Home and End only while focused, for assistive tech; it is never shown or documented.
 
 ---
 
@@ -262,6 +288,11 @@ From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactori
 10. Gray text on a colored fill; text under 4.5:1; control borders in `--line`.
 11. Placeholder-only meaning (a field whose purpose is only in its placeholder) for anything except the answer syntax hint.
 12. Raw hex, px font sizes or off-scale spacing in component CSS.
+13. A tinted or yellow slab, an icon or an emoji in a toast.
+14. A floating control that parks over a live control.
+15. The pad under the problem on wide screens.
+16. Humour in chrome; streaks, guilt or fake urgency anywhere.
+17. A new keyboard shortcut.
 
 ---
 
@@ -279,6 +310,9 @@ From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactori
 10. Every animation and transition has a reduced-motion path.
 11. Copy is short, sentence case, no emoji; QUACK only in Cluck.
 12. Impeccable scan: 0 findings (static and live, 390 and 1920).
+13. `npm test` passes, including `tests/style.test.mjs` (this file as code: colours, shadows, radii, fonts, `--mark`, emoji, toast, key handlers; §9 items are its `todo` tests).
+14. Floating things (toast, Scratchpad button) clear every live control at 375×667, 390×844 and in landscape.
+15. No new keyboard shortcut; no humour in chrome.
 
 ---
 
@@ -289,33 +323,29 @@ From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactori
 - Claude Design system prompt (community archive): https://github.com/asgeirtj/system_prompts_leaks/blob/main/Anthropic/claude-design/claude-design.md: max 1 to 2 fonts, 0 to 2 accents, hit targets 44px or more, no emoji unless part of the brand, no rounded containers with a left-border accent, "every element earns its place", whitespace and minimalism.
 - Impeccable: https://github.com/pbakaus/impeccable, https://impeccable.style, craft floor `https://raw.githubusercontent.com/pbakaus/impeccable/main/.claude/skills/impeccable/reference/craft-floor.md`: calm by default, one action per screen, never hide critical information; bans side-tab borders, card-in-card, gradient text, glows, bounce easing, pulsing dots, emoji or Unicode as icons; text 4.5:1; one authored motion moment.
 - Refactoring UI (Wathan and Schoger), as already applied in [AUDIT.md](AUDIT.md), [FREEZE.md](FREEZE.md), [NAV.md](NAV.md): labels are a last resort, limit choices, fewer borders, one primary action, a spacing system, two-part shadows for elevation.
+- Style precedents (§1): Calm Technology https://calmtech.institute/calm-tech-principles · Rams https://vitsoe.com/us/about/good-design · GOV.UK autism poster https://accessibility.blog.gov.uk/2016/09/02/dos-and-donts-on-designing-for-accessibility/ · W3C COGA https://www.w3.org/TR/coga-usable/ · iA Writer https://ia.net/topics/writer-vs-word · M3 canonical layouts https://developer.android.com/develop/ui/compose/layouts/adaptive/canonical-layouts · Atkinson Hyperlegible https://en.wikipedia.org/wiki/Atkinson_Hyperlegible.
 - This repo: [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md), [SWAP.md](SWAP.md), [DONE.md](DONE.md), [TOAST.md](TOAST.md), `app.css`, `nav.css`, `design/explain-box.css`, `index.html`, `design/specimen.html`.
 
 ---
 
-## 9. Inconsistencies found
+## 9. Open inconsistencies
 
-Line numbers are from the working tree on 2026-10-01 (other agents are editing `app.css`, `index.html` and `app.js`; re-find by selector). Nothing below is fixed yet.
+Re-find by selector (line numbers drift). Remove a row in the commit that fixes it.
 
 | # | where | what | fix |
 |---|---|---|---|
-| 1 | `app.css:48`, `app.css:213` | (Code box: fixed Oct 2, one ring.) Code box and answer box show a `--focus` border **and** a 3px outline: two rings. The scratchpad (`app.css:313`) has one ring, by Tony's rule. | Fields: `--focus` border only, no outline. Buttons keep the outline. |
-| 2 | `design/explain-box.css:30` | Scratchpad focus sets the outline that `app.css:313` then removes. | Drop the outline in explain-box.css. |
-| 3 | `app.css:172`, `app.css:175` | MC choice boundary is `--line` (1.51:1, fails 3:1); hover goes to `--edge`. Buttons and fields use `--edge` / `--muted`. | Choice idle `--edge`, hover `--muted`, like `.ff`. Keep `--line` only for dividers. |
-| 4 | `design/explain-box.css:22` | Scratchpad radius 6px; every other field is 8px. | 8px. |
-| 5 | `app.css:284`, `app.css:431` | Cluck panel and toast use 8px; they are surfaces (problem card, list are 10px). | 10px (toast: in the TOAST.md variant). |
-| 6 | `app.css:105`, `nav.css:9`, `app.css:225`, `app.css:266` | Disabled is 0.45 opacity for buttons, 0.5 for closed answers. `nav.css:9-11` copies the `.btn-go:disabled` rule. | One `.btn:disabled` rule in app.css (0.45, no hover, no press); closed answers 0.45. Delete the nav.css copy. |
-| 7 | `app.css:76, 96, 118, 139, 173, 187, 328, 331, 342, 345, 424, 433`; `nav.css:52` | Six durations (.12 .15 .2 .22 .25 .3 s) and two easings (`ease`, `ease-out`). | Add `--d-fast` 120ms, `--d-move` 200ms, `--d-dim` 300ms and use `ease-out`: .15 → fast; .22 and .25 → move; .3 → dim. |
-| 8 | `design/TOAST.md` vs `app.css:433` | Toast in-time 320ms in the doc, 200ms in the CSS. | `--d-move` (200ms) in both. |
-| 9 | `app.css:64` | Dock shadow is a raw value. | Token `--shadow-up` (the upward `--shadow-3`). |
-| 10 | `app.css:18`, `app.css:20` | `--shadow-1` and `--shadow-4` are defined and used nowhere (the subject menu is gone). FREEZE.md still describes `--shadow-4`. | Delete both tokens; update FREEZE.md. |
-| 11 | `app.css:37` vs `--ico` | Bare `.ico` is 1.5rem, so it does not grow with `--ico` on desktop. | `.ico { width: var(--ico); height: var(--ico); }`. |
-| 12 | `app.css:180, 281, 285, 294`; `nav.css:63`; `app.css:76` | Icon sizes 1.1rem, 1.25rem, 20px, 1.75rem: four values in two units. | Add `--ico-sm: 1.25rem` for icons next to text (verdict, label, list marks, bar tab, badge); duck at 1.75rem is the one character size. |
-| 13 | `app.css:142`, `app.css:271` | Card side padding 1.25rem (20px) is off the spacing scale. | `--s4` (phones already use it, `app.css:322`) or `--s5`. |
-| 14 | `design/explain-box.css:2, 3, 4, 17` | Off-scale values: margins 0.35rem / 0.75rem, hint 0.95rem, padding 0.9rem; label 1rem in `--ink` (app.css overrides it to `--t-sm` `--muted`). | `--s2` / `--s3` margins, `--t-sm` hint, `--s3` / `--s4` padding; delete the label rule that app.css overrides. |
-| 15 | `nav.css:22`, `nav.css:23`, `app.css:353` | Column width written as `52rem` instead of `var(--col)`. | `var(--col)`. |
-| 16 | `nav.css:66-67` | "Gone" rows use `--hint`: 4.46:1 on `--sheet` and 3.92:1 on `--raised` (current row). Below 4.5:1. | Raise `--hint` to `#899ab3` (4.56 on raised, 5.19 on sheet), or use `--muted` for the struck title. |
-| 17 | `app.js:22` | The toast uses a color emoji (😈). | Draw `i-imp` in the sprite; render it in `--mark` after the text (Iconography). |
-| 18 | `app.js:33-34` + `app.js:423, 463, 514` | A wrong answer says "Not quite. One more try." in the verdict **and** "One more try, so choose wisely." in the toast: the same fact twice. | Done (Oct 1): the verdict words are gone; the icon in the arrow slot and the toast stay (AUDIT.md "Kept on purpose"). |
-| 19 | `design/DESIGN-LANGUAGE.md:90`, `design/specimen.html:22-23, 58` | Refer to a site `--blue` #3a67d8 and `#fff` on it. The app has no `--blue`; the primary fill is `--c1` with `--field` ink. | Remove `--blue` from both; specimen buttons use `.btn` / `--c1`. |
-| 20 | `index.html:123` | Paste was a filled `.btn-go` in the code box (Tony: a light-blue slab, unlike every other button). | Fixed Oct 2: Paste is an outlined-family icon button; only the Go arrow is filled, and the two stay mutually exclusive. |
+| 1 | `design/explain-box.css` `.xb textarea:focus` | Sets an outline that `app.css` then removes. | Drop the outline in explain-box.css. |
+| 2 | `app.css` `.opt` | Choice boundary is `--line` (1.51:1, fails 3:1); hover goes to `--edge`. | Idle `--edge`, hover `--muted`, like `.ff`. |
+| 3 | `design/explain-box.css` textarea | Radius 6px; every other field is 8px. | 8px. |
+| 4 | `app.css` `.cluck` | 8px radius; surfaces are 10px. | 10px. |
+| 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |
+| 6 | `app.css`, `nav.css` transitions | Durations .12 .15 .2 .22 .25 .3 s, two easings. | Add `--d-fast` 120ms, `--d-move` 200ms, `--d-dim` 300ms, `ease-out`. |
+| 7 | `app.css` `.dock-bottom .dock` | Raw upward shadow. | Token `--shadow-up`. |
+| 9 | `app.css` `.ico` | 1.5rem, does not grow with `--ico` on desktop. | `width/height: var(--ico)`. |
+| 10 | `app.css`, `nav.css` icons next to text | 1.1rem, 1.25rem, 20px, 1.75rem. | `--ico-sm: 1.25rem`; the duck stays 1.75rem. |
+| 11 | `app.css` `.p`, `.boxed .q` | Side padding 1.25rem, off the scale. | `--s4` or `--s5`. |
+| 12 | `design/explain-box.css` | Off-scale margins and padding (0.35, 0.75, 0.9, 0.95rem). | Scale tokens; delete the label rule app.css overrides. |
+| 13 | `nav.css` `.dock-bottom .qnav/.qlist`; `app.css` stage and start page | `52rem` written out instead of `var(--col)`. | `var(--col)`. |
+| 14 | `nav.css` gone rows | `--hint` is 4.46:1 on `--sheet`, 3.92:1 on `--raised`. | Raise `--hint` to `#899ab3`, or `--muted` for the struck title. |
+| 15 | `design/DESIGN-LANGUAGE.md`, `design/specimen.html` | A site `--blue` #3a67d8 the app does not have. | Remove; specimen buttons use `.btn` / `--c1`. |
+| 16 | `app.css` desktop tokens vs `app.js` `sideMQ` | Desktop type scale switches at `700.02px` + `pointer: fine`; side by side at 720px. | One breakpoint constant. |

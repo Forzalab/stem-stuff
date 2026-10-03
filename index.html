@@ -144,10 +144,10 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     <button type="button" class="btn" id="qshuf" aria-label="Shuffle questions" title="Shuffle questions">
       <svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg>
     </button>
-    <button type="button" class="btn" id="qprev" aria-label="Previous question" title="Previous question ([)" aria-keyshortcuts="[">
+    <button type="button" class="btn" id="qprev" aria-label="Previous question" title="Previous question">
       <svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg>
     </button>
-    <button type="button" class="btn" id="qnext" aria-label="Next question" title="Next question (])" aria-keyshortcuts="]">
+    <button type="button" class="btn" id="qnext" aria-label="Next question" title="Next question">
       <svg class="ico" aria-hidden="true"><use href="#i-next"/></svg>
     </button>
   </nav>
@@ -166,6 +166,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <section class="freeze" id="freeze" aria-labelledby="pcode" hidden>
     <!-- desktop, pad wide: the problem stashed to a 52px strip with its code written down the side; tap = the problem back -->
     <button type="button" class="pstrip" id="pstrip" aria-label="Show the problem" hidden><span id="pstripCode"></span></button>
+    <!-- side by side: the question's label row, the twin of the pad's "Scratchpad" row, so both boxes start at the same height (Tony, Oct 3) -->
+    <div class="xb-label q-label" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span>Question</span></div>
     <div class="freeze-in" id="freezeIn">
       <article class="p" id="problem">
         <h1 class="pcode sr-only" id="pcode"></h1>
@@ -183,11 +185,6 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <section class="work" id="work" hidden>
     <div class="xb" id="xb">
       <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Scratchpad</span><span class="xb-save" id="xbSave" role="status"></span>
-        <!-- multitask: the two-icon pill (problem and pad | pad wide) and the expand / collapse corner -->
-        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Pad wide" hidden>
-          <svg class="ico t-doc" aria-hidden="true"><use href="#i-doc"/></svg><svg class="ico t-pen" aria-hidden="true"><use href="#i-pen"/></svg>
-        </button>
-        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Open the scratchpad" title="Open the scratchpad"><svg class="ico" aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
@@ -198,6 +195,12 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
         <button type="button" class="btn xb-copy" id="copy" aria-label="Copy answer, scratchpad and history" title="Copy">
           <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>
         </button>
+        <!-- the pad page's tool row (round 3d, variant 3): the q | a switch at the left, collapse left of Cut. Both belong to the pad, so they
+             live in its box, in thumb reach. q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
+        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show the answer" hidden>
+          <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>
+        </button>
+        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Close the scratchpad page" title="Close the scratchpad page" hidden><svg class="ico" aria-hidden="true"><use href="#i-collapse"/></svg></button>
       </div>
     </div>
   </section>
@@ -205,6 +208,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <!-- keyboard up, problem pane: a one-line glimpse of the pad just above the keyboard; a tap goes to the pad in the same tap -->
   <div class="pad-peek" id="padPeek" role="button" aria-label="Go to the scratchpad" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="padPeekTx">Scratchpad</span></div>
 </main>
+<!-- phones: the pad is hidden; this floating button opens the pad page. Drag it: it snaps to a side edge (STYLE.md §3) -->
+<button type="button" class="pad-fab" id="padFab" aria-controls="work" aria-expanded="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Scratchpad</span></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 </body>

@@ -38,7 +38,7 @@ Files: `index.html` (`#freeze`, `#freezeIn`, `#more`), `app.css` (section "freez
 
 ## Refactoring UI rules applied (Wathan and Schoger)
 
-- **Depth: "Use shadows to convey elevation" and "Shadows can have two parts" (pp. 158-166).** The stuck layer is a raised element, so it gets `--shadow-3`: a large soft shadow plus a tight dark one. The subject menu sits higher, so it gets `--shadow-4`, where the tight part is fainter. The page has no other shadows, so the frozen layer is clearly "closer".
+- **Depth: "Use shadows to convey elevation" and "Shadows can have two parts" (pp. 158-166).** The stuck layer is a raised element, so it gets `--shadow-3`: a large soft shadow plus a tight dark one. The subject menu sat higher, so it got `--shadow-4` (history: the menu is gone; see STYLE.md §2.7). The page has no other shadows, so the frozen layer is clearly "closer".
 - **"Overlap elements to create layers" (p. 170).** The expand chevron straddles the frozen layer's bottom edge, so it reads as belonging to that layer.
 - **"Emphasize by de-emphasizing" (p. 39) and "Balance weight and contrast" (p. 48).** The problem code is small and muted. The subject-group marks in the menu are small and muted, so the three subject buttons carry the weight. The one filled control is the submit arrow (c1 fill), the primary action. Everything else is an outline button ("Semantics are secondary", p. 52: primary solid, secondary outlined).
 - **"Keep your line length in check" (p. 99), 45-75 characters.** Problem prose is capped at 65ch. (The scratchpad's 68ch cap was dropped Tue 9/29 for balance: it now spans the column.) Figures and tables use the full column ("Dealing with wider content", p. 100).

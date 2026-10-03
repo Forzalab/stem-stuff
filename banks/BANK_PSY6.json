@@ -1107,7 +1107,7 @@
     },
     {
      "id": "d",
-     "md": "Paid $1 liars liked a dull task more than $20 liars"
+     "md": "Paid \\$1 liars liked a dull task more than \\$20 liars"
     }
    ],
    "correct": "a",
@@ -1334,7 +1334,7 @@
     },
     {
      "id": "b",
-     "md": "Paid $1 liars liked a dull task more than $20 liars"
+     "md": "Paid \\$1 liars liked a dull task more than \\$20 liars"
     },
     {
      "id": "c",
@@ -1377,11 +1377,11 @@
    "choices": [
     {
      "id": "a",
-     "md": "Paid $1 liars liked a dull task more than $20 liars"
+     "md": "Paid \\$1 liars liked a dull task more than \\$20 liars"
     },
     {
      "id": "b",
-     "md": "Paid $20 liars liked a dull task more than $1 liars"
+     "md": "Paid \\$20 liars liked a dull task more than \\$1 liars"
     },
     {
      "id": "c",
@@ -1483,7 +1483,7 @@
     },
     {
      "id": "d",
-     "md": "Paid $1 liars liked a dull task more than $20 liars"
+     "md": "Paid \\$1 liars liked a dull task more than \\$20 liars"
     }
    ],
    "correct": "a",
