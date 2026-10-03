@@ -1,4 +1,5 @@
-// mc pick all (design/CHOOSE-ALL.md §4): checkboxes, exclusive "None of these", keys, strike + ticks kept, miss, restore on reload.
+// mc pick all (design/CHOOSE-ALL.md §4) in HARD mode (design/EASY.md: the stem-mode=hard cookie, as ADMIN_ sets it): checkboxes, no
+// "None of these" row (nothing ticked is the answer "none"), keys, strike + ticks kept, miss, prove mode, restore on reload.
 // Server mode uses CSCI26_A7K from problems.json; upload mode an inline file. Starts its own serve.py with a throwaway tries.json:
 //   node tests/choose-all.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -54,13 +55,15 @@ async function check(page) {
 const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const newCtx = browser.newContext.bind(browser);
+browser.newContext = async o => { const c = await newCtx(o); await c.addCookies([{ name: "stem-mode", value: "hard", url: BASE }]); return c; };
 try {
   for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1280, height: 900 }, false]]) {
     const ctx = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" }), page = await ctx.newPage();
     const tap = l => touch ? l.tap() : l.click();
     await page.goto(`${BASE}/#${CODE}`); await opened(page, CODE);
 
-    await step(`${name}: checkbox group, how line, Check off, never one row`, async () => {
+    await step(`${name}: checkbox group, how line, no None row, Check live with nothing ticked, never one row`, async () => {
       const a = await page.evaluate(() => {
         const g = document.querySelector("#q .choices");
         return { role: g.getAttribute("role"), lab: g.getAttribute("aria-labelledby"), how: document.querySelector("#how")?.textContent,
@@ -68,19 +71,20 @@ try {
           radius: getComputedStyle(g.querySelector(".badge")).borderRadius, letters: [...g.querySelectorAll(".lt")].map(x => x.textContent).join(""),
           arrows: g.querySelectorAll(".send").length };
       });
-      assert.deepEqual([a.role, a.lab, a.inline, a.letters, a.arrows], ["group", "how", false, "ABCDE", 0]);
+      assert.deepEqual([a.role, a.lab, a.inline, a.letters, a.arrows], ["group", "how", false, "ABCD", 0]);
       assert.ok(a.how && a.how.length > 3, "how line");
       assert.ok(a.roles.every(r => r === "checkbox"));
       assert.equal(a.radius, "4px", "square badge");
-      assert.equal((await st(page)).go, true, "Check disabled with nothing ticked");
+      assert.equal((await st(page)).go, false, "nothing ticked = none true: Check is live");
     });
-    await step(`${name}: ticks toggle; None of these is exclusive; no lock-in dimming`, async () => {
+    await step(`${name}: ticks toggle; no lock-in dimming; back to none keeps Check live`, async () => {
       await tap(row(page, "a")); await tap(row(page, "c"));
       let s = await st(page); assert.deepEqual(s.on, ["a", "c"]); assert.equal(s.go, false);
       assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#problem")).filter), "none");
-      await tap(row(page, "e")); assert.deepEqual((await st(page)).on, ["e"]);
-      await tap(row(page, "b")); assert.deepEqual((await st(page)).on, ["b"]);
-      await tap(row(page, "b")); s = await st(page); assert.deepEqual(s.on, []); assert.equal(s.go, true);
+      assert.equal(await row(page, "e").count(), 0, "None of these row");
+      await tap(row(page, "b")); assert.deepEqual((await st(page)).on, ["a", "b", "c"]);
+      for (const id of ["a", "b", "c"]) await tap(row(page, id));
+      s = await st(page); assert.deepEqual(s.on, []); assert.equal(s.go, false);
     });
     await step(`${name}: keys: arrows move focus only, Space / letter / digit toggle`, async () => {
       const first = page.locator("#q .opt").first(), ids = await page.$$eval("#q .opt", os => os.map(o => o.dataset.id));
@@ -217,25 +221,21 @@ try {
     await row(page, "c").click(); await check(page);
     s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.deepEqual(await okRows(page), ["a", "c"]);
   });
-  await step("upload prove: ticking None X's every other row and opens its box; filled = Check; graded, not invalid", async () => {
+  await step("upload prove (hard): no None row; X the false rows with their fixes; graded", async () => {
     const c5 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), page = await c5.newPage();   // fresh: the start page and its upload button
     await page.goto(BASE + "/");
     const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
     await fc.setFiles({ name: "prove.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE2)) });
     await opened(page, "CSCI26_U02"); await page.waitForTimeout(200);
     const go = page.locator("#mcGo");
-    await row(page, "c").click();
-    const marks = await page.evaluate(() => [...document.querySelectorAll("#q .opt")].map(o => [o.dataset.id, o.getAttribute("aria-checked") === "true" ? "on" : o.dataset.mark || "",
-      !!o.parentElement.querySelector(".fix:not([hidden])")]));
-    assert.deepEqual(marks, [["a", "x", true], ["b", "x", true], ["c", "on", false], ["d", "x", true]], "None X's the rest, boxes open");
-    assert.ok(await go.isDisabled(), "Check is off until every box has a value");
-    for (const [id, v] of [["a", "4"], ["b", "9"], ["d", "16"]]) await page.locator(`#q .opt[data-id="${id}"]`).locator("xpath=..").locator(".fix input").fill(v);
+    assert.deepEqual(await page.$$eval("#q .opt", os => os.map(o => o.dataset.id)), ["a", "b", "d"], "None row gone");
+    assert.ok(await go.isDisabled(), "prove mode: Check is off until every row is marked");
+    await row(page, "a").click();
+    for (const id of ["b", "d"]) { await row(page, id).click(); await row(page, id).click(); }   // tick, then X
+    for (const [id, v] of [["b", "9"], ["d", "16"]]) await page.locator(`#q .opt[data-id="${id}"]`).locator("xpath=..").locator(".fix input").fill(v);
     assert.ok(await go.isEnabled(), "Check is on once every X has its value");
     await check(page);
-    const s = await st(page);
-    assert.match(s.fb, /U02 none/, `the None row's hint (${s.fb})`);
-    await row(page, "a").click();
-    assert.equal(await page.locator('#q .opt[data-id="c"]').getAttribute("aria-checked"), "false", "ticking a row clears None (old rule)");
+    assert.deepEqual(await okRows(page), ["a"]);
     await c5.close();
   });
   await ctx.close();
