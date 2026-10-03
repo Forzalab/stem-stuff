@@ -82,3 +82,12 @@ Outline only (Tony picked variant B): 2px ink outline, no fill. The body is fill
 ## 8. Graphs
 
 Grid 1px, axes 1.5px muted with filled heads, tick marks 6px, tick step from 1-2-5 at about 56px spacing. Shade at 22% of the curve's color. Bars: 20–48px wide, 8px gap, 24px between groups, zero line in ink.
+
+## 9. Problem figures: colorway and angle room (Tony, Oct 3)
+
+Picked from five mockups (A–E); this is variant C, "pure ink". Tony first chose B (one accent) and then switched to C.
+- No accent color on problem scenes. Arrowheads, dashes and labels carry the meaning: velocity is labelled v, a dashed line is a guide, a force is labelled F or by name.
+- Dashed guides (orbits, reference lines, "to center") are `muted`; everything else (bodies, planets, pucks, seats, springs, ropes, arrows, angle and ω arcs, labels) stays default ink or muted, with no fills.
+- Do not color by mark type: a pink arc reads as acceleration, an orange block as velocity, a blue velocity arrow as a force. Section 1 colors stay for graphs (series) and for figures whose only job is to compare kinds of vectors.
+- Angle room: an angle arc's radius is about half its arrows' length or more. Two angles at one point use clearly different radii, so their labels do not stack. The label sits outside the arc and clear of the arrow labels. Check at 390px before shipping.
+- A label never states a value the question asks the student to find.
