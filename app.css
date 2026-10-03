@@ -559,7 +559,7 @@ html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
 html.pad-off .freeze-in { max-height: none; overflow: visible; }
 html.pad-off .more { display: none; }
-html.fab-on main::after { content: ""; display: block; height: calc(56px + 2 * var(--s4)); }   /* the last control can scroll above the button */
+html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); }   /* ONE reservation: dock bar + button, so the last control scrolls above both (no extra ::after on top) */
 .pad-fab {
   position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); top: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
   display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);

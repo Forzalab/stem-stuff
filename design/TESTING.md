@@ -28,6 +28,9 @@ tests and root-causes red ones.
   asynchronously. A test that reopens a problem an earlier step locked can see the old state for a moment.
 
 ## Paths already walked (do not repeat)
+- **Dead gap at the bottom of a phone problem page** (Oct 3): three reservations stacked: `main` padding-bottom (dock 44 + 24), `html.fab-on main::after`
+  (88, room for the Scratchpad button) and `.freeze` padding (12) = 168 above the page end, i.e. 124px between the last control and the bar. Rule kept:
+  ONE reservation, `html.fab-on main { padding-bottom: dock-h + 56px + s4 }` (no `::after`), gap now 84px. `fab.pw` asserts gap <= 90 and no overlap.
 - **Bounce at the end of scroll** (Oct 3): researched and mocked (design/BOUNCE.md), Tony: "doesn't work, KISS" → bottom
   padding in the pad page's boxes instead.
 - **CI-only reds on the first GitHub run (Oct 3, PR #44 @67bbea8)**: `disabled.pw` "390 mc: correct" (`reading 'click'` of
@@ -36,6 +39,10 @@ tests and root-causes red ones.
   The next run (same code rebased, @d5424d1) was all green → intermittent, not fonts. Made robust instead of re-running:
   `disabled.pw` pickMC waits until option i is enabled (the reconcile race); `render.pw` padPage waits for every animation to
   finish before measuring (the crossfade). If either goes red again, the cause is elsewhere: look at fonts next.
+- **Exit codes through a pipe** (Oct 3): `cmd | tail -1 && git push` pushed a red test (`tail` exits 0). Judge a command by its
+  own exit code: `set -o pipefail`, or `${PIPESTATUS[0]}`, never by the last command of a pipe.
+- **Brain banks by shallow git clone** (#45): replaced by the GitLab-API bank hatch (`tools/brain_banks.py`): Tony's phone has no
+  brain clone and the brain is heavy. The hatch is tested against a local fake GitLab API in `tests/test_ship.py` (`Stub`).
 - Polling Vercel build state from Claude: banned (Tony). `ship.sh` may wait (`vercel inspect --wait`) because it is a script.
 - `vercel curl`: everything after `--` goes to curl, so global flags (`--scope`) must come before the subcommand and the token
   comes from `$VERCEL_TOKEN`, never `--token`.
