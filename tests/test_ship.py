@@ -188,6 +188,23 @@ class PrintBanks(unittest.TestCase):
         self.assertEqual(self.chosen(r), {})
         self.assertIn("no BRAIN_TOKEN", r.stderr)
 
+    def test_stale_ship_sh_stops_the_deploy(self):
+        origin = os.path.join(self.tmp, "origin.git")
+        subprocess.run(["git", "init", "-q", "--bare", origin], check=True)
+        git(self.root, "init", "-q", "-b", "main")
+        git(self.root, "add", "tools")
+        git(self.root, "commit", "-q", "-m", "tools")
+        git(self.root, "remote", "add", "origin", origin)
+        git(self.root, "push", "-q", "origin", "main")
+        with open(os.path.join(self.root, "tools", "ship.sh"), "a") as f:
+            f.write("# an old copy\n")
+        e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_"))}
+        e.update(HOME=self.home, BRAIN_DIR=self.brain, SHIP_BRAIN_SEARCH="")
+        r = subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo"], capture_output=True, text=True, env=e, timeout=60)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("pull --ff-only", r.stderr)
+        self.assertNotIn("deploying", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

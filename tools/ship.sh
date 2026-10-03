@@ -12,6 +12,7 @@
 # deploy: a partial bank set never ships. The token is never printed.
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
 #   (no worktree, no Vercel; demo|live optional).
+# A deploy stops if tools/ship.sh or brain_banks.py differs from origin/main's (pull first).
 # A repo-root .env (gitignored; see .env.example) is loaded first. Vercel token: $VERCEL_TOKEN if set (cloud), else your
 # `vercel login`. Already-built demo → live without a rebuild: Vercel dashboard → Deployments → ⋯ → Promote.
 # design/DEPLOY.md has the why.
@@ -98,6 +99,11 @@ fi
 
 W="$(mktemp -d)"; LOG="$(mktemp)"   # the log stays outside the upload
 git -C "$ROOT" fetch -q origin main
+# This script runs from your checkout but deploys origin/main. A checkout that was never pulled runs an old ship.sh (Oct 3:
+# the phone's pre-brain copy shipped live with only BANK_PSY6). Stop instead.
+if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py; then
+  warn "this ship.sh is not origin/main's: run  git -C \"$ROOT\" pull --ff-only  then ship again"; exit 1
+fi
 git -C "$ROOT" worktree add -q --detach "$W" origin/main
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
