@@ -1305,6 +1305,7 @@ function applyMT() {
   sash.setAttribute("aria-valuetext", anchorName(k, r));
   sash.setAttribute("aria-label", `Problem size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
+  if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
   fabSync();
 }
 /* the sizes CSS cannot know: the visible height (phone), and the pad's height (it fills its tile / column) */
@@ -1489,6 +1490,7 @@ fab.addEventListener("click", () => { if (fabMoved) { fabMoved = false; return; 
 document.addEventListener("focusin", fabSync);
 document.addEventListener("focusout", () => setTimeout(fabSync, 0));
 addEventListener("resize", () => { if (!fab.hidden) fabPlace(); });
+new ResizeObserver(() => { if (!fab.hidden) fabPlace(); }).observe(dock);         // the bar grew (Retry, an error line): stay above it
 
 /* figures and wrapped text depend on width: redraw on width changes only (not on keyboard height changes) */
 let figW = 0;

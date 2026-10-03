@@ -13,6 +13,8 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 600)); }
 }
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
+/* phones (round 3b): the pad is hidden behind the Scratchpad button; open the pad page before typing in it */
+const pad = async page => { if (await page.isVisible("#padFab")) { await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); } };
 const status = page => page.$eval("#xbSave", e => ({ t: e.textContent, c: e.className, anim: getComputedStyle(e).animationName }));
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -20,7 +22,7 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h } });
   const page = await ctx.newPage();
   await step(`${w} status: nothing, then saving (sweep) at 3 s, saved, gone 2 s later`, async () => {
-    await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P");
+    await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);
     await page.fill("#scratch", "x = 9");
     const t0 = Date.now();
     await page.waitForTimeout(2000);
@@ -41,12 +43,12 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
     assert.ok(Date.now() - t0 > 3000);
   });
   await step(`${w} draft is per code and comes back on reopen`, async () => {
-    await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
+    await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B"); await pad(page);
     assert.equal(await page.inputValue("#scratch"), "", "other code: empty");
     await page.fill("#scratch", "limit is 12");
-    await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P");   // left before 3 s: pagehide flushes
+    await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);   // left before 3 s: pagehide flushes
     assert.equal(await page.inputValue("#scratch"), "x = 9!");
-    await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");
+    await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B"); await pad(page);
     assert.equal(await page.inputValue("#scratch"), "limit is 12");
     await page.fill("#scratch", "");                                          // emptied: the draft goes
     await page.waitForTimeout(3300);
@@ -57,7 +59,7 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
 await step("reduced motion: saving is static", async () => {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   const page = await ctx.newPage();
-  await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P");
+  await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);
   await page.fill("#scratch", "a");
   await page.waitForFunction(() => document.querySelector("#xbSave").textContent === "saving", null, { timeout: 4000 });
   const s = await page.$eval("#xbSave", e => { const c = getComputedStyle(e); return { a: c.animationName, m: c.maskImage || c.webkitMaskImage }; });
