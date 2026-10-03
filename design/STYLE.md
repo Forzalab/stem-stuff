@@ -120,6 +120,7 @@ One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and dispar
 | Toast | 1.5px `--line`: the one listed exception (Tony: "slight thicker") |
 
 - Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.
+- A wrong border adds `--bw-up` (1px). The box takes it back from its padding and the arrow / verdict offsets, so the text and the ✕ never move (render.pw: "the x is where the arrow was", "nothing moved").
 - Surfaces have no border. A background change separates them.
 - Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom). The toast's edge is the one 1.5px `--line` border.
 - No colored side stripes on anything.

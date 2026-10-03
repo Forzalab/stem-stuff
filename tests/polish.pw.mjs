@@ -42,14 +42,14 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
   const padPage = async () => { if (!phone || await page.evaluate(() => document.documentElement.classList.contains("mt"))) return;
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await page.waitForTimeout(300); };
-  await step(`${W} (a) focused scratchpad: one ring (the border), no outline`, async () => {
+  await step(`${W} (a) focused scratchpad: one edge (border --focus + 1px inset = 2px, STYLE.md 2.6), no outline`, async () => {
     await padPage();
     await page.locator("#scratch").focus(); await page.waitForTimeout(200);
     await shot("focus");
     if (!ONLY_SHOTS) {
       const s = await page.$eval("#scratch", e => { const c = getComputedStyle(e); return { o: c.outlineStyle, w: c.outlineWidth, bc: c.borderTopColor, sh: c.boxShadow }; });
       assert.ok(s.o === "none" || s.w === "0px", `outline ${s.o} ${s.w}`);
-      assert.equal(s.sh, "none");
+      assert.equal(s.sh, "rgb(143, 176, 255) 0px 0px 0px 1px inset", "the 1px inset that makes the edge 2px");
       assert.equal(s.bc, "rgb(143, 176, 255)", "border in --focus");
     }
   });

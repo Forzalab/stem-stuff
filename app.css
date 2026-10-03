@@ -16,6 +16,7 @@
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
   /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
   --bw: 1px; --bw-alarm: 2px; --ring: 2px;   /* borders (STYLE.md 2.6): one line weight; only a wrong answer is heavier; one keyboard ring */
+  --bw-up: calc(var(--bw-alarm) - var(--bw));   /* what a wrong border adds: taken back from the padding / offsets, so nothing inside moves */
   --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
   /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
@@ -256,7 +257,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
-.opt.wrong { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); }
+.opt.wrong { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); padding: calc(var(--s2) - var(--bw-up)) calc(var(--btn) + 8px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
 .opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2px; }
 .opt.wrong .badge { border-color: var(--bad); color: var(--bad); }
 .opt.right { border-color: var(--ok); background: var(--raised); }
@@ -292,7 +293,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
-  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: var(--btn);   /* the arrow's room is always reserved */
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw-up));   /* the arrow's room is always reserved (it sits --bw-up inside the border) */
   background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
@@ -330,9 +331,9 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
 .mparts .ff { grid-area: bx; }
-.ff .send { position: absolute; right: 0; top: 0; }                    /* flush inside the border (48px in a 52px box with 2px borders): nothing jumps when it appears */
+.ff .send { position: absolute; right: var(--bw-up); top: var(--bw-up); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
 /* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
-.ff .vk { position: absolute; right: 0; top: 0; width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk { position: absolute; right: var(--bw-up); top: var(--bw-up); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
 .ff .vk .ico { width: var(--ico); height: var(--ico); }
 .ff .vk[data-v="i-ok"] { color: var(--ok); }
 .ff .vk[data-v="i-x"] { color: var(--bad); }
@@ -346,7 +347,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
-.ff.bad { border: var(--bw-alarm) dashed var(--bad); }
+.ff.bad { border: var(--bw-alarm) dashed var(--bad); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
+.ff.bad :is(.send, .vk) { right: 0; top: 0; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
 .ff.shut { opacity: 0.5; }   /* right ones too: closed = looks disabled */
