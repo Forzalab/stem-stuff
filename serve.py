@@ -350,10 +350,14 @@ def _load_tries():
         return
     _tries.clear()
     _last.clear()
-    _gen["n"], _gen["loaded"] = 0, TRIES
+    _gen["n"], _gen["loaded"], _gen["kv_bad"] = 0, TRIES, False
     try:
         if all(KV):
-            data = json.loads(_kv("GET", KV_KEY) or "{}")
+            try:
+                data = json.loads(_kv("GET", KV_KEY) or "{}")
+            except (OSError, ValueError):
+                _gen["kv_bad"] = True         # unread is not empty: never save over it (_save_tries)
+                raise
         else:
             with open(TRIES, encoding="utf-8") as f:
                 data = json.load(f)
@@ -370,6 +374,9 @@ def _load_tries():
 def _save_tries():
     data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}, "last": _last}
     if all(KV):
+        if _gen.get("kv_bad"):
+            print("tries not saved: KV was unreadable on load", file=sys.stderr)
+            return
         try:
             _kv("SET", KV_KEY, json.dumps(data))
         except (OSError, ValueError) as e:

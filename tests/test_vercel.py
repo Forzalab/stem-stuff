@@ -92,6 +92,18 @@ class Kv(unittest.TestCase):
         status, _, st = call("GET", "/state/PHYS_F3N", cookie=cookie)
         self.assertEqual((status, st["wrong"]), (200, 1))
 
+    def test_unreadable_kv_is_never_overwritten(self):
+        self.db[serve.KV_KEY] = '{"gen": 7, "tries": {}, "last": {}}'
+        good = serve._kv
+
+        def down(*cmd):
+            if cmd[0] == "GET":
+                raise OSError("network down")
+            return good(*cmd)
+        serve._kv = down
+        call("POST", "/check", json.dumps({"code": "PHYS_F3N", "answer": "1"}).encode(), "sid=" + "d" * 32)
+        self.assertEqual(json.loads(self.db[serve.KV_KEY])["gen"], 7)
+
 
 if __name__ == "__main__":
     unittest.main()
