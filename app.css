@@ -535,8 +535,10 @@ html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; p
 html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
 html.mt .xb { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
-html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico, html.mt #xbSave { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-html.mt .xb-label { display: none; }                                             /* no header row: the tool row is in the pad */
+html.mt .xb-label .xb-name, html.mt #xbName, html.mt .xb-label > .ico { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+html.mt .xb-label { display: contents; }                                         /* no header row: the tool row is in the pad */
+html.mt .xb { position: relative; }
+html.mt #xbSave { position: absolute; z-index: 1; left: calc(6px + 88px + var(--s3)); bottom: calc(6px + (var(--btn) - 1.2em) / 2); margin: 0; }   /* saving / saved, in the tool row right of q | a */
 html.mt .xb-field { flex: 1 1 auto; min-height: 0; max-width: none; }
 html.mt .xb-field textarea, html.mt .xb-field textarea.xb-free { padding-bottom: calc(var(--btn) + var(--s4)); }   /* the tool row's band, always */
 html.mt .xb-field::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: calc(var(--btn) + 12px); border-top: 1px solid var(--line); pointer-events: none; }
@@ -560,7 +562,7 @@ html.fab-on main::after { content: ""; display: block; height: calc(56px + 2 * v
   user-select: none; -webkit-user-select: none;
 }
 .pad-fab.left { right: auto; left: max(var(--s4), env(safe-area-inset-left)); }
-.pad-fab[hidden] { display: none; }
+.pad-fab[hidden], html.bar-open .pad-fab { display: none; }   /* the revealed code bar owns the bottom (its buttons stay reachable) */
 .pad-fab .ico { width: var(--ico); height: var(--ico); }
 .pad-fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
 .pad-fab:hover { background: var(--sheet); }
