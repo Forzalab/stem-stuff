@@ -216,6 +216,15 @@ Edge cases for ship: the button never rests over `#q` controls (snap nudges it o
 
 Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3-idle-390.png`, `mt3-qa-{1..5}-{q,a}-390.png`, `mt3-toast-open-390.png`. Impeccable live on the mock, 8 states at 390: 0 (fixed: the mock strip's vertical padding).
 
+## Round 3b (Oct 2 ~22:05 PT, Tony's picks)
+
+- **Button: 2**, pen + "Scratchpad" (M3 extended FAB). Rounds 1/3/4/5 stay as history shots.
+- **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter.
+- **Toast: hybrid** = the shipped take-5f look (page `--paper`, 1px `--line`, `--shadow-1`, `--t-md` 400) + its 14px caret, on every toast: under its anchor (caret up), above it (`.up`, caret down: the onboarding note over the button), and on the MC row (`.side`: lies on the struck choice's text, caret points left at the X badge, so no live choice is covered).
+- Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer here." · "Drag the button anywhere."
+- Impeccable live, 7 states at 390: 0, except the MC row state's "text covered by an opaque element" = the struck choice under the toast, on purpose (dead text; the app's take 5f does the same).
+- Shots: `mt3b-qa-{1..7}-{q,a}-390.png`, `mt3b-toast-{fab,pill,mc}-390.png`, `mt3b-fab-2-closed-390.png`.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.

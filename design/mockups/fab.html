@@ -7,9 +7,11 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
 <link rel="stylesheet" href="../../app.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">   <!-- @font-face only: the q | a letters use faces the app already ships -->
 <style>
 /* Multitask round 3 mock (design/MULTITASK.md "Round 3"): the pad is hidden on phones; a floating button shows it.
-   ?f=1..5 the button, ?i=1..5 the Question | Answer icon pair, ?state=closed|open|drag|toast, ?tile=q|a, ?pad=0 (empty pad).
+   ?f=1..5 the button (round 3b pick: 2), ?q=1..7 the q | a letter pill font (?i=1..5 = round 3 icon pairs), ?state=closed|open|drag|toast|wrong,
+   ?tile=q|a, ?pad=0 (empty pad).
    app.css tokens only. Mock chrome (the top strip) is dashed so it never reads as product UI. */
 body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; }
 .phone { position: relative; flex: none; width: min(100vw, 390px); height: min(100dvh, 844px); overflow: hidden; background: var(--paper); }
@@ -93,8 +95,29 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .ta .cc .ico { width: var(--ico); height: var(--ico); }
 
 /* ---------- onboarding toast (take 5f look: page paper, --line hairline) ---------- */
-.tst { position: absolute; z-index: 35; max-width: 15rem; padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
-  box-shadow: var(--shadow-1); font-size: var(--t-sm); line-height: 1.35; color: var(--ink); }
+/* round 3b hybrid: the app's #toast (paper, hairline, --shadow-1, --t-md 400) with its 14px caret; .up = the toast sits above its anchor, caret on the bottom edge */
+.tst { position: absolute; z-index: 35; width: max-content; max-width: 16rem; min-height: 52px; display: flex; align-items: center; padding: var(--s3) var(--s4);
+  border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-1);
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; color: var(--ink); }
+.tst::before { content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
+  background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0; }
+.tst.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }
+/* MC row: the toast lies on the struck choice's text (dead, so it covers no live control); the caret points left at the X badge */
+.tst.side { min-height: 0; padding: var(--s2) var(--s3); }
+.tst.side::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
+.ch.wrong { border-color: var(--bad); }
+.ch.wrong .box { border-color: var(--bad); display: grid; place-items: center; color: var(--bad); }
+.ch.wrong .box .ico { width: 18px; height: 18px; }
+.ch.wrong span:last-child { text-decoration: line-through; color: var(--muted); }
+/* q | a letter pill: one face per variant (all already shipped by the app) */
+.pill span.l { font-size: 1.5rem; line-height: 1; padding-bottom: 2px; }
+.ql1 span.l { font-family: KaTeX_Math; font-style: italic; }
+.ql2 span.l { font-family: KaTeX_Main; }
+.ql3 span.l { font-family: KaTeX_Main; font-style: italic; font-weight: 700; }
+.ql4 span.l { font-family: KaTeX_Fraktur; }
+.ql5 span.l { font-family: KaTeX_Typewriter; }
+.ql6 span.l { font-family: "Atkinson Hyperlegible Mono"; font-weight: 700; font-size: 1.375rem; }
+.ql7 span.l { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-size: 1.375rem; }
 </style>
 </head>
 <body>
@@ -105,6 +128,7 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8.5L19 18M8 15.5L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
     <symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12h13M12.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <!-- Question | Answer pairs -->
     <symbol id="q1" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -126,15 +150,16 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 </div>
 <script>
 const P = new URLSearchParams(location.search);
-const f = +(P.get("f") || 1), i = +(P.get("i") || 1), state = P.get("state") || "closed", tile = P.get("tile") || "q", padOn = P.get("pad") !== "0";
+const f = +(P.get("f") || 2), i = +(P.get("i") || 1), qf = P.get("q") ? +P.get("q") : 0, state = P.get("state") || "closed", tile = P.get("tile") || "q", padOn = P.get("pad") !== "0";
 const ico = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const QTXT = "A satellite is in a circular orbit around the Earth at an altitude that is four times the Earth's radius. Choose all that apply.";
 const CHOICES = [["A", "Its period is 5.67 × 10⁴ s."], ["B", "Its period is 15.7 h."], ["C", "Its orbit radius is 2.55 × 10⁷ m."], ["D", "Its speed is 3.53 km/s."]];
 const PAD = "r = 5 R_E = 3.19e7\nv = sqrt(GM/r) = 3.53e3\nT = 2 pi r / v";
 const LAST = PAD.split("\n").pop();
 const NAMES = { 1: "M3 FAB", 2: "M3 extended FAB", 3: "AssistiveTouch puck", 4: "Edge tab", 5: "Pad-peek chip" };
+const FONTS = { 1: "KaTeX Math italic", 2: "KaTeX Main", 3: "KaTeX Main bold italic", 4: "KaTeX Fraktur", 5: "KaTeX Typewriter", 6: "Atkinson Mono 700", 7: "Atkinson 700" };
 const PAIRS = { 1: "doc | pencil box", 2: "? bubble | check", 3: "lines | radios", 4: "magnifier | A", 5: "speech | checklist" };
-const choices = cls => CHOICES.map(([l, t]) => `<div class="ch ${cls || ""}"><span class="box"></span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
+const choices = wrong => CHOICES.map(([l, t]) => `<div class="ch${l === wrong ? " wrong" : ""}"><span class="box">${l === wrong ? ico("i-x") : ""}</span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
 const dot = padOn ? `<span class="dot"></span>` : "";
 function fab() {
   if (f === 2) return `<button class="fab f2" aria-label="Show the scratchpad" aria-expanded="false">${ico("i-pen")}<span>Scratchpad</span>${dot}</button>`;
@@ -152,29 +177,43 @@ function open() {
   const top = tile === "a" ? `<div class="qa">${choices()}</div>` : `<div class="prob"><p class="ptxt">${QTXT}</p>${FIG}</div>`;
   return `<div class="mt"><div class="tile">${top}</div><div class="handle"></div>
     <div class="pad"><div class="phead">
-      <span class="pill" role="group" aria-label="Show above the pad"><span class="${tile === "q" ? "on" : ""}" aria-label="Question">${ico("q" + i)}</span><span class="${tile === "a" ? "on" : ""}" aria-label="Answer">${ico("a" + i)}</span></span>
+      ${qf ? `<span class="pill ql${qf}" role="group" aria-label="Show above the pad"><span class="l${tile === "q" ? " on" : ""}" aria-label="Question">q</span><span class="l${tile === "a" ? " on" : ""}" aria-label="Answer">a</span></span>`
+        : `<span class="pill" role="group" aria-label="Show above the pad"><span class="${tile === "q" ? "on" : ""}" aria-label="Question">${ico("q" + i)}</span><span class="${tile === "a" ? "on" : ""}" aria-label="Answer">${ico("a" + i)}</span></span>`}
       <span class="btn" aria-label="Hide the scratchpad">${ico("i-collapse")}</span></div>
       <div class="ta">${padOn ? PAD : ""}<span class="cc"><span>${ico("i-cut")}</span><span>${ico("i-copy")}</span></span></div></div></div>`;
 }
 const scr = document.getElementById("screen"), phone = document.getElementById("phone");
 if (state === "open") {
   scr.innerHTML = open();
-  document.getElementById("mbar").innerHTML = `<b>Open · pair ${i}</b>${PAIRS[i]} · tile ${tile === "q" ? "Question" : "Answer"}`;
+  document.getElementById("mbar").innerHTML = qf ? `<b>q | a · ${qf}</b>${FONTS[qf]} · tile ${tile === "q" ? "Question" : "Answer"}` : `<b>Open · pair ${i}</b>${PAIRS[i]} · tile ${tile === "q" ? "Question" : "Answer"}`;
 } else {
   scr.innerHTML = plain();
   if (state === "drag") { phone.classList.add("drag"); if (f === 5) phone.classList.add("f5x"); const b = scr.querySelector(".fab"); if (f === 4) b.style.bottom = "62%"; else if (f !== 5) { b.style.right = "auto"; b.style.left = "40%"; b.style.bottom = "48%"; } else b.style.bottom = "34%"; }
-  if (state === "toast") {
-    const b = scr.querySelector(".fab").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
-    t.className = "tst"; t.textContent = "Tap the pencil for your scratchpad."; scr.appendChild(t);
-    t.style.top = (b.top - s.top - t.offsetHeight - 10) + "px"; t.style.right = Math.max(16, s.right - b.right) + "px";
-  }
+  if (state === "wrong") scr.querySelector(".qa").innerHTML = choices("B") + `<div class="go"><span>${ico("i-go")}</span></div>`;
   document.getElementById("mbar").innerHTML = `<b>${f}: ${NAMES[f]}</b>${state}${padOn ? " · pad has text" : ""}`;
 }
+/* toasts are placed from measured boxes, so only after the fonts are in (the rows change height when Atkinson loads) */
+document.fonts.ready.then(() => {
+  if (state === "wrong") {
+    const row = [...scr.querySelectorAll(".ch")][1], bx = row.querySelector(".box").getBoundingClientRect(), rr = row.getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
+    const lt = row.querySelector(".lt").getBoundingClientRect();
+    t.className = "tst side"; t.textContent = "One more try, so choose wisely."; scr.appendChild(t);
+    t.style.left = (bx.right - s.left + 12) + "px"; t.style.maxWidth = (rr.right - bx.right - 18) + "px";
+    t.style.top = (rr.top + rr.height / 2 - s.top) + "px"; t.style.transform = "translateY(-50%)";
+  }
+  if (state === "toast") {
+    const b = scr.querySelector(".fab").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
+    t.className = "tst up"; t.textContent = f === 2 ? "Tap Scratchpad to open your pad." : "Tap the pencil for your scratchpad."; scr.appendChild(t);
+    t.style.top = (b.top - s.top - t.offsetHeight - 12) + "px"; t.style.right = Math.max(16, s.right - b.right) + "px";
+    const tr = t.getBoundingClientRect(); t.style.setProperty("--px", (b.left + b.width / 2 - tr.left) + "px");
+  }
 if (state === "open" && P.get("toast")) {
   const p = scr.querySelector(".pill").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
   t.className = "tst"; t.textContent = "Switch question and answer here."; scr.appendChild(t);
-  t.style.top = (p.bottom - s.top + 8) + "px"; t.style.left = (p.left - s.left) + "px";
+  t.style.top = (p.bottom - s.top + 12) + "px"; t.style.left = (p.left - s.left) + "px";
+  t.style.setProperty("--px", (p.width / 2) + "px");
 }
+});
 </script>
 </body>
 </html>
