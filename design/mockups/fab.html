@@ -209,7 +209,7 @@ document.fonts.ready.then(() => {
   }
 if (state === "open" && P.get("toast")) {
   const p = scr.querySelector(".pill").getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
-  t.className = "tst"; t.textContent = "Switch question and answer here."; scr.appendChild(t);
+  t.className = "tst"; t.textContent = "Switch question and answer view here."; scr.appendChild(t);
   t.style.top = (p.bottom - s.top + 12) + "px"; t.style.left = (p.left - s.left) + "px";
   t.style.setProperty("--px", (p.width / 2) + "px");
 }

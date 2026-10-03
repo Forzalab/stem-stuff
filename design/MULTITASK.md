@@ -208,7 +208,7 @@ Mock: `design/mockups/fab.html` — `?f=1..5` button, `?i=1..5` icon pair, `?sta
 | 4 | magnifier | letter A |
 | 5 | speech bubble with lines | checklist |
 
-Onboarding copy (each once per new device, take-5f toast look): FAB first paint "Tap the pencil for your scratchpad." · first pad open "Switch question and answer here." · after 2 opens with no drag "Drag the button anywhere."
+Onboarding copy (each once per new device, take-5f toast look): FAB first paint "Tap the pencil for your scratchpad." · first pad open "Switch question and answer view here." · after 2 opens with no drag "Drag the button anywhere."
 
 **Pick: button 1 + pair 2.** The FAB is the pattern Tony pointed at, finds itself (contrast, size, the dot), and snaps to an edge so it never parks over a choice for long. Pair 2 reads without a label: "?" = the question, check = your answer. **Runner-up: button 5 + pair 3** (the chip tells you what is in the pad before you open it; lines | radios mirror what the tile shows).
 
@@ -222,7 +222,7 @@ Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3
 - **Toggle: lowercase q | a as text**, not icons. Faces tried (all already shipped, zero new bytes): `?q=1..7` = KaTeX_Math italic, KaTeX_Main, KaTeX_Main bold italic, KaTeX_Fraktur (the one wink), KaTeX_Typewriter, Atkinson Mono 700, Atkinson 700. **Pick: 1 KaTeX_Math italic** — it is how *q* and *a* already look in the problem text. Runner-up: 5 Typewriter. **Tony locked 1 (~22:50), a touch bigger: 1.75rem, then 1.875rem (~23:59).**
 - Tony ~22:50: toast text layout was ugly (it wrapped mid-phrase at 16rem) → one line, centred, width up to the column; border 1px → 1.5px; the Scratchpad button's dot removed (it read as noise).
 - **Toast: hybrid** = the shipped take-5f look (page `--paper`, 1px `--line`, `--shadow-1`, `--t-md` 400) + its 14px caret, on every toast: under its anchor (caret up), above it (`.up`, caret down: the onboarding note over the button), and on the MC row (`.side`: lies on the struck choice's text, caret points left at the X badge, so no live choice is covered).
-- Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer here." · "Drag the button anywhere."
+- Onboarding copy: "Tap Scratchpad to open your pad." · "Switch question and answer view here." · "Drag the button anywhere."
 - Impeccable live, 7 states at 390: 0, except the MC row state's "text covered by an opaque element" = the struck choice under the toast, on purpose (dead text; the app's take 5f does the same).
 - Shots: `mt3b-qa-{1..7}-{q,a}-390.png`, `mt3b-toast-{fab,pill,mc}-390.png`, `mt3b-fab-2-closed-390.png`.
 

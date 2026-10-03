@@ -1347,7 +1347,7 @@ function openMT() {
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Switch question and answer here.", mtMode), 400);
+  setTimeout(() => obToast(2, "Switch question and answer view here.", mtMode), 400);
 }
 let mtSkipPop = false;
 function shutMT() {
