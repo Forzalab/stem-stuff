@@ -215,6 +215,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .md p, .md ul, .md ol { margin: 0 0 var(--s3); max-width: 65ch; }
 .md li + li { margin-top: var(--s1); }
 .md .katex { font-size: 1.08em; }
+.mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
 .md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .tbl { overflow-x: auto; margin: 0 0 var(--s3); }
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -247,6 +248,8 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
+.opt .txt .katex { white-space: nowrap; }                          /* a choice's formula is one unit: "d =" never alone on a line; app.js fitMath shrinks it to fit */
+.opt .txt .kx-scroll { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; scrollbar-width: thin; }   /* app.js fitMath: too wide even at 85% */
 .opt[aria-checked="true"] { border-color: var(--c1); background: var(--raised); }
 .opt[aria-checked="true"] .badge { background: var(--c1); border-color: var(--c1); color: var(--field); }
 /* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */

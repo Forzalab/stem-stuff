@@ -166,6 +166,12 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 - The field: a pill, `--sheet`, 2px `--edge`, `--shadow-1`; hover `--muted` border + `--shadow-3`; focus `--focus` border (3px, as the code box) + `--shadow-3`. Upload (left) and Paste / Go (right) are round 48px buttons inside it, transparent until hovered; Go stays the one filled control.
 - Once a problem opens, the bar goes back to its place. Nothing animates in on load; hover and focus transitions only, off with reduced motion.
 
+### Math in text
+
+- Inline math keeps the punctuation that touches it: `$x$.`, `($v$)` render as one unit (`.mx`, nowrap), so a "." or "(" is never alone on a line (Tony, Oct 3).
+- In a choice row a formula is one unit (`.opt .txt .katex` nowrap): "d =" never sits alone above its fraction. Too wide for the row → `fitMath` (app.js) shrinks it, down to 85%; still too wide → that formula scrolls sideways on its own (`.kx-scroll`). Re-fit on every resize and when a KaTeX font finishes loading.
+- `tests/katex-wrap.pw.mjs` checks 320 / 390 / 768 / 1440: no orphan punctuation, no broken formula, no overflow, no word split. `KW_BANKS=<dir>` surveys real banks.
+
 ### Answer box (`.ff`)
 
 - Anatomy: 52px tall (`--fld`), `--field` fill, 2px border, 8px radius, optional muted lead text, `--mono` 18px input, and a 48px **arrow slot** on the right that is always reserved.
