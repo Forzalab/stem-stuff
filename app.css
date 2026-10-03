@@ -655,3 +655,12 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear both; } }
+/* "New version ready" (offline.js): stays until tapped; top centre, a --raised button */
+#updateBar {
+  position: fixed; z-index: 60; top: max(var(--s3), env(safe-area-inset-top)); left: 0; right: 0; margin: 0 auto;   /* not translate: toast-in animates transform */
+  width: max-content; max-width: calc(100vw - 2 * var(--gut)); min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
+  background: var(--raised); color: var(--ink); border: 1.5px solid var(--muted); border-radius: 10px; box-shadow: var(--shadow-1);
+  font: inherit; font-size: var(--t-md); font-weight: 700; line-height: var(--lh); text-align: center; cursor: pointer;
+  touch-action: manipulation; animation: toast-in .2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }

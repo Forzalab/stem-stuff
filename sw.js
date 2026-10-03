@@ -1,5 +1,5 @@
 /* stem-stuff service worker. See OFFLINE.md.
- * shell (index.html, its css/js, KaTeX): cache-first, updated in the background.
+ * shell (index.html, its css/js, KaTeX): cache-first, updated in the background; a changed file tells the page (update bar).
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
 const VERSION = "stem-v3";
@@ -69,6 +69,19 @@ const keyOf = req => {
 };
 const good = r => r && (r.ok || r.type === "opaque");
 
+// The shell is served from cache, so the page you see can be one deploy behind. When the background refresh brings a
+// different file, tell every open page: it shows "New version ready. Tap to update." (offline.js).
+async function differs(a, b) {
+  const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
+  if (x.byteLength !== y.byteLength) return true;
+  const u = new Uint8Array(x), v = new Uint8Array(y);
+  for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) return true;
+  return false;
+}
+async function newVersion() {
+  for (const cl of await self.clients.matchAll({ type: "window" })) cl.postMessage({ type: "stem-update" });
+}
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   const kind = route(req.url, req.method, self.registration.scope);
@@ -91,7 +104,13 @@ self.addEventListener("fetch", e => {
   e.respondWith((async () => {
     const c = await caches.open(SHELL);
     const hit = await c.match(key);
-    const fresh = fetch(req).then(async r => { if (good(r)) await c.put(key, r.clone()); return r; });
+    const old = hit && new URL(key).origin === location.origin ? hit.clone() : null;   // CDN files are pinned by version
+    const fresh = fetch(req).then(async r => {
+      if (!good(r)) return r;
+      if (old && await differs(old, r.clone())) newVersion();
+      await c.put(key, r.clone());
+      return r;
+    });
     if (hit) { e.waitUntil(fresh.catch(() => {})); return hit; }
     return fresh.catch(() => Response.error());
   })());

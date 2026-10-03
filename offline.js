@@ -111,6 +111,24 @@
 
   if (CAN_SW) navigator.serviceWorker.register("sw.js").catch(() => { api.mode = "online"; });
 
+  /* New version: sw.js says a shell file changed (or a new sw.js took over this page). One bar that stays until you tap
+     it, because the page you see is one deploy behind until it reloads. Tap = reload. */
+  if (CAN_SW) {
+    const had = !!navigator.serviceWorker.controller;   // the first install also changes controller: not an update
+    const bar = () => {
+      if (document.getElementById("updateBar")) return;
+      const b = document.createElement("button");
+      b.id = "updateBar"; b.type = "button"; b.setAttribute("role", "status");
+      b.textContent = "New version ready. Tap to update.";
+      b.addEventListener("click", () => location.reload());
+      document.body.appendChild(b);
+    };
+    const show = () => document.body ? bar() : addEventListener("DOMContentLoaded", bar, { once: true });
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "stem-update") show(); });
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) show(); });
+    navigator.serviceWorker.startMessages();
+  }
+
   function validate(p) {
     if (!p || typeof p !== "object" || Array.isArray(p)) return "not a problem file";
     if (typeof p.code !== "string" || !CODE.test(p.code)) return "no problem code";
