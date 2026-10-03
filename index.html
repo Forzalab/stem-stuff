@@ -183,12 +183,6 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <section class="work" id="work" hidden>
     <div class="xb" id="xb">
       <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Scratchpad</span><span class="xb-save" id="xbSave" role="status"></span>
-        <!-- multitask: the two-icon pill (problem and pad | pad wide) and the expand / collapse corner -->
-        <!-- the pad page's q | a switch: q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
-        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show the answer" hidden>
-          <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>
-        </button>
-        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Open the scratchpad" title="Open the scratchpad"><svg class="ico" aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
@@ -199,6 +193,12 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
         <button type="button" class="btn xb-copy" id="copy" aria-label="Copy answer, scratchpad and history" title="Copy">
           <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>
         </button>
+        <!-- the pad page's tool row (round 3d, variant 3): the q | a switch at the left, collapse left of Cut. Both belong to the pad, so they
+             live in its box, in thumb reach. q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
+        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show the answer" hidden>
+          <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>
+        </button>
+        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Close the scratchpad page" title="Close the scratchpad page" hidden><svg class="ico" aria-hidden="true"><use href="#i-collapse"/></svg></button>
       </div>
     </div>
   </section>

@@ -259,7 +259,9 @@ Tony: the collapse button belongs to the pad, so it goes inside the pad box; the
 | 4 | the handle is the switch | one pill on the divider: tap q or a, drag it to resize | bleeds | 628 / 486 / 514 |
 | 5 | swipe pages | none: swipe the tile sideways, or tap the q · a marks under it | bleeds | 628 / 486 / 514 |
 
-**Pick: 2.** Every control is in the bottom thumb band, the tile costs no frame, the most pad room. Runner-up: 4 (one control does both jobs; the switch sits right where the eye crosses from question to pad). Impeccable live at 390, all five: 0.
+**Tony picked 3 (~00:40), "consider my 3 points first" → shipped as 3 + bleed** (point 2: the question bleeds into the page, a hairline + the thin bar divide it from the pad; point 1: collapse in the pad's tool row; point 3: all in thumb reach). The tile hugs its content on every open (cap ⅓ under 700px tall, 45% above) until the handle is used. Strip-for-one-liners (3c 4) not built: hug already kills the gap (YAGNI).
+
+alt's pick was 2. Every control is in the bottom thumb band, the tile costs no frame, the most pad room. Runner-up: 4 (one control does both jobs; the switch sits right where the eye crosses from question to pad). Impeccable live at 390, all five: 0.
 Shots: `mt3d-{1..5}-{q2,a2,q4}-390.png`.
 
 ## The mock

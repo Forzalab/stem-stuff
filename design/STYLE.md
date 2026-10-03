@@ -217,7 +217,8 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 ### Multitask (`#stage`, the pad page, side by side)
 
-- Phone (under 720px): the pad is hidden. The Scratchpad button opens the pad page: the problem tile on top, the pad below, one drag handle (sash) in the gap.
+- Phone (under 720px): the pad is hidden. The Scratchpad button opens the pad page: the question on top (no card: it bleeds into the page), a hairline with a thin 3×32px bar (44px touch area), the pad below. No header row: the pad's tool row, inside its box, holds q | a (left) and collapse, Cut, Copy (right), in thumb reach.
+- The top area hugs what it shows: at most ⅓ of a screen under 700px tall, 45% above. Dragging the bar sets a size until the page closes.
 - The tile has a q | a switch: **q** shows the problem only (text and figure); **a** shows the answer control only, for every type. Opening goes to q with a big pad.
 - Desktop and landscape tablet (720px and up): side by side, problem and answer left, pad right. Never the pad under the problem. Why: Tony, "pad down = bad". No Scratchpad button there.
 - One surface per pane. Panes are siblings on `--paper`: a `--s2` gap, `--s4` where a handle sits. Never a card inside a card.

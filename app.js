@@ -1276,14 +1276,16 @@ const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                               
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "problem strip" : "answer only") : "problem " + ANAME(r);
-let dragR = null;
+let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
   root.classList.toggle("mt", mtOpen);
-  root.classList.toggle("mt-r0", on && dragR == null && r === 0);
+  const fit = mtOpen && mtFit && dragR == null;
+  root.classList.toggle("mt-fit", fit);
+  root.classList.toggle("mt-r0", on && !fit && dragR == null && r === 0);
   root.classList.toggle("mt-drag", dragR != null);
   root.style.setProperty("--r", r);
   root.classList.toggle("mt-q", mtOpen && mtTile === "q");
@@ -1314,6 +1316,13 @@ function layoutMT() {
     const h = vv ? vv.height : innerHeight;
     root.style.setProperty("--vv-h", Math.round(h) + "px");
     root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
+    if (mtFit) {                                                                 // hug: what the tile shows, at most 1/3 of a short screen, 45% of a tall one
+      const parts = mtTile === "q" ? [problemEl] : [$("#fb"), $("#q")];
+      root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
+      const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
+      const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
+      root.style.setProperty("--tile-h", Math.round(Math.max(56, Math.min(need, cap))) + "px");
+    }
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
     if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
@@ -1327,6 +1336,7 @@ function layoutMT() {
 function mtSave() { try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ } }
 function setRatio(r, animate = true) {
   const k = mtKind();
+  mtFit = false;
   mtMem[k] = r; if (r > 0) mtMem[k + "Last"] = r;
   mtSave();
   if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
@@ -1342,7 +1352,7 @@ function openMT() {
   swapY = scrollY;
   root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
   if (swapOn) setSwap(false);
-  mtOpen = true; mtTile = "q";
+  mtOpen = true; mtTile = "q"; mtFit = true;
   if (toastAt === fab) hideToast();
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
