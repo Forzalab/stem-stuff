@@ -39,7 +39,11 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   await page.waitForTimeout(300);
 
   const normal = { p: await fontOf(page, "#blocks .md p"), opt: await fontOf(page, "#q .opt .txt") };
+  /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
+  const padPage = async () => { if (!phone || await page.evaluate(() => document.documentElement.classList.contains("mt"))) return;
+    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await page.waitForTimeout(300); };
   await step(`${W} (a) focused scratchpad: one ring (the border), no outline`, async () => {
+    await padPage();
     await page.locator("#scratch").focus(); await page.waitForTimeout(200);
     await shot("focus");
     if (!ONLY_SHOTS) {
@@ -50,43 +54,38 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
     }
   });
   if (phone) {
-    await step(`${W} (b) top bar stays away while the scratchpad keeps focus after the keyboard goes`, async () => {
-      await page.locator("#scratch").focus(); await page.waitForTimeout(250);
-      const hidden = () => page.$eval("#qnav", e => getComputedStyle(e).visibility === "hidden");
-      if (!ONLY_SHOTS) assert.ok(await hidden(), "hidden on focus");
+    await step(`${W} (b) pad page: the top bar is out of the way while it is open; back when it closes`, async () => {
+      await padPage();
+      const navSeen = () => page.evaluate(() => { const n = document.querySelector("#qnav"); if (!n || n.hidden) return false;
+        const r = n.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, Math.max(1, r.top + r.height / 2)); return !!h && n.contains(h); });
+      if (!ONLY_SHOTS) assert.ok(!(await navSeen()), "top bar visible over the pad page");
       await kbUp(); await kbDown();
-      /* some browsers send focusout / focusin pairs while the layout changes under a focused field: must not bring it back */
-      await page.$eval("#scratch", e => e.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
-      await page.waitForTimeout(700);
-      assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");
-      await shot("kb-down");
-      if (!ONLY_SHOTS) assert.ok(await hidden(), "hidden after the keyboard went, focus kept");
-      await page.$eval("#scratch", e => e.blur()); await page.waitForTimeout(500);
-      if (!ONLY_SHOTS) assert.ok(!(await hidden()), "back after blur");
+      if (!ONLY_SHOTS) assert.ok(!(await navSeen()), "top bar back while the pad page is still open");
+      await shot("pad-page");
+      await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt")); await page.waitForTimeout(300);
+      if (!ONLY_SHOTS) assert.ok(await navSeen(), "top bar not back after the pad page closed");
     });
-    await step(`${W} (c) same type sizes in Swap as in the normal view`, async () => {
-      await page.locator("#scratch").focus(); await kbUp();
-      assert.ok(await page.evaluate(() => document.documentElement.classList.contains("swap-scratch")), "swap on");
-      await shot("swap-scratch");
-      const sw = { p: await fontOf(page, "#blocks .md p") };
-      if (!ONLY_SHOTS) assert.equal(sw.p, normal.p, "question text");
-      await page.click("#freeze"); await page.waitForTimeout(400);   // the #swap toggle is gone (design/MULTITASK.md): the question peek goes to the problem
-      await shot("swap-problem");
-      if (!ONLY_SHOTS) { assert.equal(await fontOf(page, "#blocks .md p"), normal.p); assert.equal(await fontOf(page, "#q .opt .txt"), normal.opt); }
-      await page.click("#padPeek"); await page.waitForTimeout(400);   // and the pad peek goes back
-      if (!ONLY_SHOTS) assert.equal(await page.evaluate(() => document.activeElement.id), "scratch", "pad peek: the pad has focus");
+    await step(`${W} (c) same type sizes in the pad page's tile (q and a) as in the normal view`, async () => {
+      await padPage();
+      if (!ONLY_SHOTS) assert.equal(await fontOf(page, "#blocks .md p"), normal.p, "question text");
+      await shot("tile-q");
+      await page.click("#mtMode"); await page.waitForTimeout(400);
+      await shot("tile-a");
+      if (!ONLY_SHOTS) assert.equal(await fontOf(page, "#q .opt .txt"), normal.opt, "choices");
+      await page.click("#mtMode"); await page.waitForTimeout(300);
     });
-    await step(`${W} (d) Swap: scratchpad grows up to a small gap under the question`, async () => {
+    await step(`${W} (d) pad page: the pad starts a small gap under the tile and reaches the bottom`, async () => {
+      await padPage();
       const g = await page.evaluate(() => {
         const f = document.querySelector("#freeze").getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(),
-          st = document.querySelector("#stage").getBoundingClientRect();
-        return { gap: t.top - f.bottom, bottomRoom: st.bottom - t.bottom };
+          m = document.querySelector("#main").getBoundingClientRect(), v = visualViewport;
+        return { gap: t.top - f.bottom, bottomRoom: Math.min(m.bottom, v.offsetTop + v.height) - t.bottom };
       });
       if (!ONLY_SHOTS) {
-        assert.ok(g.gap >= 4 && g.gap <= 12, `gap to the question ${g.gap}px`);
-        assert.ok(g.bottomRoom >= 0 && g.bottomRoom <= 8, `box reaches the stage bottom (${g.bottomRoom}px left)`);
+        assert.ok(g.gap >= 4 && g.gap <= 16, `gap to the tile ${g.gap}px`);
+        assert.ok(g.bottomRoom >= 0 && g.bottomRoom <= 16, `pad reaches the bottom (${g.bottomRoom}px left)`);
       }
-      await kbDown(); await page.$eval("#scratch", e => e.blur());
+      await page.click("#mtExp"); await page.waitForFunction(() => !document.documentElement.classList.contains("mt"));
     });
   } else {
     await step(`${W} (c) type scale: problem, choices at body size; labels one size`, async () => {
