@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One click to Vercel: demo (a private preview URL) or live (stem-stuff.vercel.app).
-# usage: tools/ship.sh demo|live [banks-dir]
+# usage: tools/ship.sh demo|live [banks-dir]     (then it smoke-tests the deployment; exit 1 = red)
 #   demo  = `vercel deploy`        → prints the preview URL (log in to Vercel to open it)
 #   live  = `vercel deploy --prod` → the public site
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub: banks/*.json from this checkout,
@@ -37,4 +37,24 @@ else
   [ -n "$URL" ] || { cat "$LOG" >&2; exit 1; }
   echo "$MODE building (log stream dropped, the build goes on): $URL"
 fi
+
+# Smoke (5 checks, ~20 s): wait for the build, then ask the deployment itself. `vercel curl` gets past the preview login wall.
+# A red line here = do not trust this deployment (and for live: Vercel dashboard → Deployments → an older one → Promote = undo).
+V() { (cd "$W" && NODE_USE_ENV_PROXY=1 npx -y vercel@latest --scope forzalabs-projects "$@"); }   # flags before "$@": `vercel curl` hands everything after -- to curl; token via $VERCEL_TOKEN
+if ! V inspect "$URL" --wait --timeout 5m >/dev/null 2>&1; then echo "smoke: build not ready after 5 min, check $URL by hand" >&2; exit 1; fi
+bad=0
+check() {   # check <what> <want> <path> [curl args...]: <want> = a status code, or text the body must contain
+  local what="$1" want="$2" p="$3"; shift 3
+  local got; got="$(V curl "$p" --deployment "$URL" -- -sS -w '\n%{http_code}' "$@" 2>/dev/null | grep -v '^>' || true)"
+  if [[ "$want" =~ ^[0-9]{3}$ ]] && [ "$(tail -n 1 <<<"$got")" = "$want" ] || { ! [[ "$want" =~ ^[0-9]{3}$ ]] && grep -q "$want" <<<"$got"; }; then
+    echo "  ok   $what"; else echo "  FAIL $what (wanted $want)"; bad=1; fi
+}
+echo "smoke:"
+check "page loads"                 200 /
+check "a problem loads"            200 /p/PHYS_F3N.json
+check "answers stay hidden"        404 /problems.json
+check "banks stay hidden"          404 /banks/BANK_P2X.json
+check "grading works"              '"correct"' /check -X POST -H 'Content-Type: application/json' -d '{"code":"PHYS_F3N","answer":"3.2"}'
+if [ "$bad" -ne 0 ]; then echo "SMOKE RED: $URL" >&2; exit 1; fi
+echo "smoke green"
 if [ "$MODE" = live ]; then echo "live site: https://stem-stuff.vercel.app"; fi

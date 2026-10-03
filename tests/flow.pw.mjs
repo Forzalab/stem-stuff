@@ -291,3 +291,4 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
 }
 await browser.close();
 console.log(failures ? `\n${failures} FAIL` : "\nall ok");
+process.exit(failures ? 1 : 0);

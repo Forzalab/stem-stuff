@@ -1,0 +1,23 @@
+# Every PR and every push to main: the whole suite (tests/run-all.sh). Red here = nobody needs to open a chat to know.
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install sympy
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      # the .pw scripts require("playwright"); tests/package.json pins only playwright-core, so add the same version here
+      - run: |
+          cd tests && npm ci
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --with-deps chromium
+      - run: tests/run-all.sh
