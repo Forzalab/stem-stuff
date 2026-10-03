@@ -490,6 +490,7 @@ function select(o) {
     x.setAttribute("aria-checked", on);
     x.parentElement.querySelector(".send").hidden = !on;
   }
+  placeToast();   // a row of choices reflows when the arrow shows: the toast follows its struck choice, never lands on a live one
 }
 /* #q outlives every problem (only its innerHTML changes), so wire it ONCE: a listener per load stacked up and one tap
    ran select() twice (select, then "tap again = deselect"), leaving the choice with only its hover border. */
