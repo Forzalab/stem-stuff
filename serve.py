@@ -631,7 +631,18 @@ def dispatch(method, path, cookie_header="", body=b""):
     return out
 
 
+# STEM_REDIRECT=https://new.site: this server only sends every request there (same path; the browser keeps the #CODE).
+# 302/307, never 301: browsers cache a 301 for good, so unsetting the variable would not bring the old site back.
+REDIRECT = os.environ.get("STEM_REDIRECT", "").rstrip("/")
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
+    def moved(self, status):
+        self.send_response(status)
+        self.send_header("Location", REDIRECT + self.path)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
@@ -647,6 +658,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(data)
 
     def route(self, head=False):
+        if REDIRECT:
+            self.moved(302)
+            return
         path = self.path.split("?")[0]
         if path in BLOCK or path.startswith(BLOCK_PREFIX):
             self.send_error(404)
@@ -666,6 +680,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.route(head=True)
 
     def do_POST(self):
+        if REDIRECT:
+            self.moved(307)                               # 307 keeps POST + body
+            return
         try:
             n = min(int(self.headers.get("Content-Length") or 0), 4097)
         except ValueError:
