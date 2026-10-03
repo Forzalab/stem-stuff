@@ -1,5 +1,7 @@
 // Tapping the "Scratchpad" title (or anywhere outside the box) must dismiss the keyboard: the title is not a <label>,
 // which would refocus the textarea. Also: no line-number gutter, 16px text, 2-icon swap toggle.
+// Tablet width (side by side): the pad and its title are on the page. On a phone the pad is off until the Scratchpad button opens
+// the pad page, which has no title row at all (design/MULTITASK.md), so the title-tap case only exists here.
 // usage: node tests/blur.pw.mjs http://localhost:8812
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -7,7 +9,7 @@ const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const BASE = process.argv[2] || "http://localhost:8812";
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true })).newPage();
+const page = await (await b.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true })).newPage();
 await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "networkidle" });
 await page.waitForSelector("#scratch");
 await page.tap("#scratch");

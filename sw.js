@@ -25,7 +25,7 @@ function route(url, method, scope) {
     if (/(^|\/)(k|log)\//.test(rel) || /(^|\/)check(\/|$)/.test(rel) || /^\.|\/\./.test(rel)) return "pass";
     if (/^p\/[A-Za-z0-9_-]+\.json$/.test(rel)) return "problem";
     if (rel === "" || rel === "index.html" || rel === "stem-stuff.html") return "shell";
-    if (/^(tests|tools|schema)\//.test(rel) || rel === "sw.js") return "pass";
+    if (/^(tests|tools|schema|_vercel)\//.test(rel) || rel === "sw.js") return "pass";   // _vercel/: analytics, never cached
     if (/^[\w./-]+\.(js|mjs|css|woff2|svg|png|ico)$/.test(rel) && !rel.includes("..")) return "shell";
     return "pass";
   }
