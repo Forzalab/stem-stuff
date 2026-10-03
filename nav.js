@@ -127,7 +127,7 @@ function init() {
 
   /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js).
      Seeded shuffle, then mastery (design/NAV.md "Mastery order"): answered first, the open one, then the families with the most
-     wrong tries. Silent: it re-sorts on a graded try (drill:state), a bank change and the shuffle button; opening a problem keeps the order. */
+     wrong tries. Silent: it re-sorts on a bank change, the shuffle button, and the first open after a mark changed (drill:marks). */
   const order = all => mastery(shuffled(all, seed(ORDER, "")), mark, cur);
   window.stemOrder = all => order(all);
   shuf.addEventListener("click", () => {
@@ -176,9 +176,12 @@ function init() {
   });
   /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
      pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
-  addEventListener("drill:problem", e => update(e.detail && e.detail.code, false));
-  addEventListener("drill:state", () => { if (!nav.hidden) update(cur); });     // a graded try (offline.js donePut)
-  addEventListener("drill:bank", () => update(cur));                             // a bank opened or left (app.js)
+  /* the order is a snapshot: it changes on a bank, a shuffle, or the first open after a mark changed (Tony, Oct 3: never
+     under your thumb while you are on a question). The re-sort runs inside the open's own update, so Prev never flickers. */
+  let dirty = false;
+  addEventListener("drill:problem", e => { update(e.detail && e.detail.code, dirty); dirty = false; });
+  addEventListener("drill:marks", () => { dirty = true; if (!nav.hidden) update(cur, false); });   // offline.js: a mark changed
+  addEventListener("drill:bank", () => { dirty = false; update(cur); });                          // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) update(s.code);
 }

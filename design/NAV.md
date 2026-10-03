@@ -41,9 +41,13 @@ On top of the seeded shuffle, `shuffle.mjs` `mastery(order, recOf, cur)` sorts t
 answered questions (done `correct` or `out`) first, in their seeded order; then the open question `cur` if it is unanswered; then the
 other unanswered ones, the families with the most wrong tries first (family = prefix + the suffix's first letter, `CSCI26_C2A` →
 `CSCI26_C`; weight = all wrong tries `x` of its members, a wrong-then-right still counts). Seeded order breaks ties. So Next after a
-graded try goes to the weakest topic. Silent: no message, nothing else changes. The order is recomputed on a graded try
-(`drill:state`, from `offline.js` `donePut`), a bank change and the shuffle button; opening a problem keeps it, so Prev / Next walk
-a list that holds still (re-sorting on every open would bounce Next between two open questions). `window.stemOrder` (the first
+graded try goes to the weakest topic. Silent: no message, nothing else changes. The order is a snapshot, recomputed on a bank
+change, the shuffle button, and the first open after a mark changed (`drill:marks`, from `offline.js` `donePut`/`doneDrop`, fired
+only when the list's mark, wrong tries or done, really changed; a server gen sync is silent). Answering never moves the list under
+you (Tony, Oct 3: Prev flickered off after every Next, because a quiet sync re-sorted the current question to the front). Other
+opens keep it, so Prev / Next walk a list that holds still (re-sorting on every open would bounce Next between two open questions).
+In a bank, Next opens the question from the bank in memory at once; `p/CODE.json` still goes out in the background (the server's
+resume pointer). `window.stemOrder` (the first
 problem of an upload or a bank) uses the same order. Unit tests: `tests/shuffle.test.mjs`.
 
 When the bank is loaded but the current problem is not in it (a server code typed after an upload), the list shows with no row marked, and Prev / Next are disabled.

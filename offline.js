@@ -91,18 +91,23 @@
       }, "done");
     } catch (e) { /* blocked storage: the Map is this page's only copy */ }
   }
-  const changed = code => dispatchEvent(new CustomEvent("drill:state", { detail: { code } }));
+  /* "drill:marks" { code }: a mark the list shows changed (wrong tries, done). A write that changes nothing visible (a
+     server gen sync, saved hints) stays silent, so the list never re-sorts on noise (nav.js, design/NAV.md). */
+  const look = rec => rec ? `${rec.x || 0} ${rec.done || "open"}` : "0 open";
+  const changed = (code, before, after) => {
+    if (look(before) !== look(after)) dispatchEvent(new CustomEvent("drill:marks", { detail: { code } }));
+  };
   api.doneKey = doneKey;
   api.doneGet = code => done.get(doneKey(code)) || null;
   api.donePut = (code, rec) => {
-    const k = doneKey(code); done.set(k, rec);
+    const k = doneKey(code), before = done.get(k); done.set(k, rec);
     idb("readwrite", s => s.put(rec, k), "done").catch(() => {});
-    changed(code);
+    changed(code, before, rec);
   };
   api.doneDrop = code => {
-    const k = doneKey(code); done.delete(k);
+    const k = doneKey(code), before = done.get(k); done.delete(k);
     idb("readwrite", s => s.delete(k), "done").catch(() => {});
-    changed(code);
+    changed(code, before, null);
   };
 
   const doneLoaded = loadDone();

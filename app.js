@@ -370,7 +370,12 @@ async function openBank(code, { go = true, quiet = false } = {}) {
 /* ================= problem state ================= */
 let busy = false;    // a grading request is out (MC and typed answers)
 let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, selected, box }
-async function fetchProblem(code) {
+/* one problem source: the open bank already holds every question (the same public view the server sends), so it answers at
+   once; p/CODE.json still goes out in the background (the server's resume pointer for this browser). Else the network
+   (offline.js answers it for an uploaded file). design/NAV.md */
+async function getProblem(code) {
+  const p = bank && bank.get.get(code);
+  if (p) { net(`p/${code}.json`).then(r => r.text()).catch(() => {}); return structuredClone(p); }   // a copy, like a fresh fetch
   const r = await net(`p/${code}.json`);
   if (r.ok) return r.json();
   r.text().catch(() => {});   // drain the 404 body so the request completes
@@ -380,7 +385,7 @@ async function load(code) {
   if (!CODE_RE.test(code)) return;
   let prob;
   retryLoad.hidden = true;
-  try { prob = await fetchProblem(code); }
+  try { prob = await getProblem(code); }
   catch (e) {
     $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }

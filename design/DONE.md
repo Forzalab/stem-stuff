@@ -17,7 +17,7 @@ Status: **built** (Tony approved variant A, tries.json, and re-showing the old h
 - `/state/<CODE>` returns `{wrong, done, gen}`, or `{parts: [...]}` for a multi. `/check` replies carry `gen`.
 - tries.json: `{ "gen": N, "tries": { "<sid> <CODE>": {...}, "<sid> <CODE> <part>": {...} } }`, written atomically after
   every graded try; `$STEM_TRIES` overrides the path (tests). Blocked from serving, git-ignored; deploy.sh's checkout keeps it.
-- Code: `offline.js` (store `done`, DB v2, `doneGet/donePut/doneDrop`, `drill:state`), `app.js` (`saveDone`, `paint`,
+- Code: `offline.js` (store `done`, DB v2, `doneGet/donePut/doneDrop`, `drill:marks`), `app.js` (`saveDone`, `paint`,
   `syncServer`, `seedLocal`), `nav.js`/`nav.css` (marks), `serve.py` (`state`, `_load_tries/_save_tries`, gen).
 - Tests: `tests/done.pw.mjs` (starts and restarts its own server), `tests/test_serve.py` (`Persist`, `/state`).
   render/swap tests clear cookies per page (a new sid = fresh server tries, now that tries outlive a page).
@@ -89,7 +89,7 @@ Rules (Tony's):
 - Crossed = title `line-through` (2px) + number and title in `--hint`. The row stays a link: tappable, focusable, no `aria-disabled`. Opening it shows the read-only question (section 2).
 - Marks are the existing `i-x` (in `--bad`) and `i-ok` (in `--ok`) symbols, 20px, no text. Screen readers get an sr-only phrase after the title: "One wrong try, one left." / "Out of tries." / "Correct."
 - The current row keeps its raised background and `c1` number, crossed or not.
-- nav.js reads the Map from section 1; app.js dispatches `drill:state` after each graded try so the list updates without a reload.
+- nav.js reads the Map from section 1; offline.js dispatches `drill:marks` when a write changes a visible mark, so the list updates without a reload.
 - Server mode has no list (NAV.md), so marks exist only for uploads. The read-only reopen works in both modes.
 
 ### The one real choice: where the marks go
@@ -101,6 +101,6 @@ Recommendation: **A**. Fresh lists look exactly like today, and the marks read a
 
 ## Files this will touch (after approval)
 
-`offline.js` (IDB store `done`, key hashing), `app.js` (load from record, write after grading, read-only render, `drill:state`, 1-try 2-choice), `nav.js` / `nav.css` (marks, `.gone`), `app.css` (dimmed disabled choices), `serve.py` (`/state`, tries.json, gen, 1-try 2-choice), SCHEMA.md (note on 2-choice tries), tests (reload -> reopen read-only; list marks; server restart keeps tries; gen reset).
+`offline.js` (IDB store `done`, key hashing), `app.js` (load from record, write after grading, read-only render, `drill:marks`, 1-try 2-choice), `nav.js` / `nav.css` (marks, `.gone`), `app.css` (dimmed disabled choices), `serve.py` (`/state`, tries.json, gen, 1-try 2-choice), SCHEMA.md (note on 2-choice tries), tests (reload -> reopen read-only; list marks; server restart keeps tries; gen reset).
 
 Mockup files: `mockups/done-list-a.html`, `done-list-b.html`, `done-open-correct.html`, `done-open-out.html`, `done.css` (proposed CSS; the `mock-*` rules are scaffolding). Impeccable: 0 findings static and live at 390x844 and 1920x1080 for all four.
