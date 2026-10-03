@@ -411,6 +411,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
   :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }
   main { padding-top: var(--s4); }
   .p { padding: var(--s3) var(--s4); }
+  :where(.qnav-on.dock-bottom) main { padding-top: var(--s1); }   /* list row → question box = question box → answers (12px; Tony, Oct 3) */
 }
 /* ---------- top bar steps away while the scratchpad has focus (design/SWAP.md) ----------
    Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
@@ -562,7 +563,7 @@ html.pad-off .freeze-in { max-height: none; overflow: visible; }
 html.pad-off .more { display: none; }
 html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); }   /* ONE reservation: dock bar + button, so the last control scrolls above both (no extra ::after on top) */
 .pad-fab {
-  position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); top: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
+  position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
   display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);
   box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none;
   user-select: none; -webkit-user-select: none;

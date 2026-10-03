@@ -1478,7 +1478,7 @@ function fabPlace({ avoid } = {}) {
   const m = mtMem.fab || {}, b = fabBounds();
   let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
   fab.classList.toggle("left", m.side === "l");
-  fab.style.top = "0px"; fab.style.transform = "";
+  fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
   const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
@@ -1488,7 +1488,9 @@ function fabPlace({ avoid } = {}) {
     top = upY >= b.min ? upY : downY <= b.max ? downY : top;
     if (top !== upY && top !== downY) break;
   }
-  fab.style.top = Math.round(Math.min(b.max, Math.max(b.min, top))) + "px";
+  /* anchored by its distance from the bottom, like the bar: when a phone's URL bar slides away, the bar and the button move down
+     together (top-anchored, the button stayed put and left a dead band the height of the URL bar above the bar; Tony, Oct 3) */
+  fab.style.bottom = Math.round(root.clientHeight - Math.min(b.max, Math.max(b.min, top)) - b.h) + "px";
 }
 fab.addEventListener("pointerdown", e => {
   if (e.button > 0) return;
@@ -1508,7 +1510,8 @@ function fabEnd(e) {
   if (!d.moved) return;
   fabMoved = true;
   const dx = e ? e.clientX - d.x0 : 0, dy = e ? e.clientY - d.y0 : 0, b = fabBounds();
-  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy));
+  const lift = Math.max(0, innerHeight - root.clientHeight);                     // the URL bar's height while it is slid away (else 0)
+  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy - lift));
   mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
   mtMem.fabMoved = 1; mtSave();
   fabPlace();                                                                     // keep the drop spot: no step-off
