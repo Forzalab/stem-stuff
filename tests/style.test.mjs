@@ -57,10 +57,10 @@ test("§2.6 borders: one weight (--bw), only a wrong answer is heavier (--bw-ala
   const ok = d => {
     const v = d.value.replace(/var\(--bw(-alarm)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
     const px = v.match(/\d*\.?\d+px/g) || [];
-    return px.every(p => p === "1px" || (p === "1.5px" && d.sel === "#toast"));                // 1px dividers; the toast is the listed exception
+    return px.every(p => p === "1px");                                                          // 1px dividers
   };
   const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
-  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers, the toast's 1.5px (STYLE.md §2.6)");
+  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers (STYLE.md §2.6)");
 });
 test("§2.6 field focus: the 2px edge, never an outline too", () => {
   const field = s => /:focus-within|textarea:focus/.test(s) && !/\.btn\b/.test(s);

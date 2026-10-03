@@ -108,21 +108,20 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 
 ### 2.6 Borders
 
-One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and disparate"; picked per state from variants A / B / C, then "one rule"). Tokens in `app.css :root`.
+One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and disparate"; picked per state from variants A / B / C, then "one rule"; "if conflicting, choose the more unified one"). Tokens in `app.css :root`.
 
 | what | border |
 |---|---|
-| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), choices `.opt`, badges, `.md th` | `--bw` (1px). Hover `--muted`. Selected `--c1`. Right `--ok`. Pending `--c1` dashed |
+| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), choices `.opt`, badges, `.md th`, the toast | `--bw` (1px), `--edge` (toast `--line`). Hover `--muted`. Selected `--c1`. Right `--ok`. Pending `--c1` dashed |
 | Buttons `.btn` | fill-first: `--bw` **transparent**, the fill carries it; hover = `--raised` fill only. `.btn-go` keeps its `--c1` edge |
 | Field focus (every field, the pad too) | border `--focus` + `inset 0 0 0 1px var(--focus)` = one 2px blue edge. **No outline** |
 | Keyboard focus (buttons, FAB, sash, anything `:focus-visible`) | `--ring` (2px) `--focus` outline at 2px offset (-3px inside a field) |
 | Wrong (`.opt.wrong`, `.ff.bad`) | `--bw-alarm` (2px) `--bad` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
-| Toast | 1.5px `--line`: the one listed exception (Tony: "slight thicker") |
 
 - Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.
 - A wrong border adds `--bw-up` (1px). The box takes it back from its padding and the arrow / verdict offsets, so the text and the ✕ never move (render.pw: "the x is where the arrow was", "nothing moved").
 - Surfaces have no border. A background change separates them.
-- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom). The toast's edge is the one 1.5px `--line` border.
+- Dividers: 1px `--line` (part rows, table rows, the stuck strip's bottom).
 - No colored side stripes on anything.
 
 ### 2.7 Elevation
@@ -198,14 +197,14 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 ### Multiple-choice choice (`.opt`)
 
 - Anatomy: full-width row, min 52px, `--sheet` fill, `--bw` border, 8px radius, a 2rem round letter badge, the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
-- States: idle (boundary, see Inconsistencies), hover `--edge`/`--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` 2px dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
+- States: idle `--edge`, hover `--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` 2px dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
 - Do: tap again to deselect; keys A to E, 1 to 5, arrows (existing keys; see Keyboard in §5).
 - Don't: submit on the first tap; color the whole row red or green.
 
 ### Toast (`#toast`)
 
 - Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
-- Anatomy: page `--paper`, 1.5px `--line` border (Tony: "slight thicker"), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
+- Anatomy: page `--paper`, `--bw` `--line` border (was 1.5px; unified Oct 3), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
 - Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
 - Timing: in `--d-move`, stays 2.5 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
 - Don't: use it for "Saved", "Correct" or anything already shown on the control; stack two toasts (a wrong-answer note wins over onboarding); a tinted or yellow slab.
@@ -346,7 +345,6 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 
 | # | where | what | fix |
 |---|---|---|---|
-| 2 | `app.css` `.opt` | Choice boundary is `--line` (1.51:1, fails 3:1), now 1px (Tony's pick, Oct 3); hover goes to `--edge`. | Idle `--edge`, hover `--muted`, like `.ff`; ask Tony first, it is his picked look. |
 | 3 | `design/explain-box.css` textarea | Radius 6px; every other field is 8px. | 8px. |
 | 4 | `app.css` `.cluck` | 8px radius; surfaces are 10px. | 10px. |
 | 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |
