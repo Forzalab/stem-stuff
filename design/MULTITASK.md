@@ -226,6 +226,13 @@ Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3
 - Impeccable live, 7 states at 390: 0, except the MC row state's "text covered by an opaque element" = the struck choice under the toast, on purpose (dead text; the app's take 5f does the same).
 - Shots: `mt3b-qa-{1..7}-{q,a}-390.png`, `mt3b-toast-{fab,pill,mc}-390.png`, `mt3b-fab-2-closed-390.png`.
 
+## Round 3c (Oct 3 ~00:20 PT): the gap under a short question
+
+Tony: a short question leaves a big empty tile; kill the gap, dynamic by screen size, 5 variants beyond "hug". Mock `?short=1&g=0..6&state=open&q=1`:
+0 today (⅓ tile) · 1 **hug** (Tony: tile = content, at most 45% of the screen) · 2 big type (the question grows to fill its tile, ≤ 2.25rem) · 3 both fit (question + answer in one tile when they fit in 45%, the pill hides; else falls back to 1) · 4 one-line strip (a question that fits one line becomes a 56px strip; tap to expand) · 5 in the header (the question sits in the pad's header row; no tile) · 6 notebook page (the question is the pad's first, read-only lines and scrolls away as you write).
+**Pick: 4 when the question fits one line at this width, else 1** (both are content- and screen-sized; the pad gets the most room, nothing new to learn). Runner-up: 1 alone.
+Shots: `mt3c-gap-{0..6}-{390,375}.png`.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.

@@ -11,7 +11,7 @@
 <style>
 /* Multitask round 3 mock (design/MULTITASK.md "Round 3"): the pad is hidden on phones; a floating button shows it.
    ?f=1..5 the button (round 3b pick: 2), ?q=1..7 the q | a letter pill font (?i=1..5 = round 3 icon pairs), ?state=closed|open|drag|toast|wrong,
-   ?tile=q|a, ?pad=0 (empty pad).
+   ?tile=q|a, ?pad=0 (empty pad). Round 3c, a short question's gap: ?short=1 + ?g=0..6 (0 = today's 1/3 tile).
    app.css tokens only. Mock chrome (the top strip) is dashed so it never reads as product UI. */
 body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content: center; align-items: flex-start; }
 .phone { position: relative; flex: none; width: min(100vw, 390px); height: min(100dvh, 844px); overflow: hidden; background: var(--paper); }
@@ -94,6 +94,32 @@ body { padding: 0 !important; min-height: 100dvh; display: flex; justify-content
 .ta .cc span { width: var(--btn); height: var(--btn); border: 2px solid var(--line); border-radius: 10px; display: grid; place-items: center; color: var(--ink); }
 .ta .cc .ico { width: var(--ico); height: var(--ico); }
 
+/* ---------- round 3c: kill the gap under a short question (?g=1..6); sizes come from the content and the screen ---------- */
+.eq { margin: var(--s3) 0 0; text-align: center; font-family: KaTeX_Main; font-size: 1.4rem; }
+.eq i, .ptxt i { font-family: KaTeX_Math; font-style: italic; }
+.g1 .mt, .g3 .mt { grid-template-rows: auto var(--s4) minmax(0, 1fr); }            /* the tile hugs its content */
+.g1 .tile, .g3 .tile { max-height: 45dvh; }                                       /* never more than 45% of the screen */
+.g1 .tile .prob, .g3 .tile .prob { flex: none; }
+.g2 .tile .prob { display: flex; flex-direction: column; justify-content: center; }  /* big type: the question fills its tile */
+.g2 .tile .ptxt { font-size: var(--fit, 1.5rem); line-height: 1.3; }
+.g2 .tile .eq { font-size: calc(var(--fit, 1.5rem) * 1.35); }
+.g3 .tile .qa { padding-top: 0; }
+.g3 .pill { display: none; }                                                     /* both fit: nothing to switch */
+.g4 .mt { grid-template-rows: auto minmax(0, 1fr); }
+.g5 .mt, .g6 .mt { grid-template-rows: minmax(0, 1fr); }
+.g4 .handle, .g5 .handle, .g6 .handle, .g5 .tile, .g6 .tile { display: none; }
+.strip { display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: var(--s2) var(--s4); margin-bottom: var(--s2); border-radius: 10px; background: var(--sheet); }
+.strip .ptxt { flex: 1; font-size: var(--t-md); }
+.strip .eq { margin: 0; font-size: 1.25rem; white-space: nowrap; }
+.strip .ico { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.g4 .tile { display: none; }
+.hq { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--s2); padding: 0 var(--s3); font-size: var(--t-sm); color: var(--ink); white-space: nowrap; overflow: hidden; }
+.hq .eq { margin: 0; font-size: 1.15rem; }
+.g5 .pad { padding-top: var(--s2); }
+.nb { font-family: "Atkinson Hyperlegible"; white-space: normal; color: var(--muted); padding-bottom: var(--s3); margin-bottom: var(--s3); border-bottom: 1px solid var(--line); font-size: var(--t-md); line-height: 1.4; }
+.nb .eq { color: var(--ink); }
+.g6 .pad { padding-top: var(--s2); }
+
 /* ---------- onboarding toast (take 5f look: page paper, --line hairline) ---------- */
 /* round 3b hybrid: the app's #toast (paper, hairline, --shadow-1, --t-md 400) with its 14px caret; .up = the toast sits above its anchor, caret on the bottom edge */
 .tst { position: absolute; z-index: 35; width: max-content; max-width: calc(100% - 2 * var(--s4)); min-height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--s3) var(--s4);
@@ -172,20 +198,33 @@ function plain() {
     <div class="qa">${choices()}<div class="go"><span>${ico("i-go")}</span></div></div></div>
     <span class="rail l"></span><span class="rail r"></span>${fab()}`;
 }
+const SHORT = P.get("short") === "1", g = +(P.get("g") || 0);
+const QSHORT = `<p class="ptxt">Solve for <i>x</i>:</p><p class="eq"><i>x</i> + 2 = 11</p>`;
+const QSHORT1 = `<span class="ptxt">Solve for <i>x</i>:</span><span class="eq"><i>x</i> + 2 = 11</span>`;
+const CHS = [["A", "−9"], ["B", "13"], ["C", "9"], ["D", "11/2"], ["E", "22"]];
 const FIG = `<svg class="fig" viewBox="0 0 220 110" aria-hidden="true"><circle cx="110" cy="55" r="18" fill="none" stroke="var(--c1)" stroke-width="2"/><circle cx="110" cy="55" r="48" fill="none" stroke="var(--edge)" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="158" cy="55" r="5" fill="var(--c2)"/><path d="M110 55h48" stroke="var(--muted)" stroke-width="1.5"/><text x="128" y="50" fill="var(--muted)" font-size="11">5R</text></svg>`;
 function open() {
-  const top = tile === "a" ? `<div class="qa">${choices()}</div>` : `<div class="prob"><p class="ptxt">${QTXT}</p>${FIG}</div>`;
-  return `<div class="mt"><div class="tile">${top}</div><div class="handle"></div>
+  const shortCh = () => CHS.map(([l, t]) => `<div class="ch"><span class="box"></span><span class="lt">${l}</span><span>${t}</span></div>`).join("");
+  const qBody = SHORT ? QSHORT : `<p class="ptxt">${QTXT}</p>${FIG}`;
+  let top = tile === "a" ? `<div class="qa">${SHORT ? shortCh() : choices()}</div>` : `<div class="prob">${qBody}</div>`;
+  if (SHORT && g === 3) top = `<div class="prob">${qBody}</div><div class="qa">${shortCh()}</div>`;
+  const strip = SHORT && g === 4 ? `<div class="strip">${QSHORT1}<svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg></div>` : "";
+  const head = SHORT && g === 5 ? `<span class="hq">${QSHORT1}</span>` : "";
+  const nb = SHORT && g === 6 ? `<div class="nb">${QSHORT}</div>` : "";
+  return `<div class="mt">${strip}<div class="tile">${top}</div><div class="handle"></div>
     <div class="pad"><div class="phead">
       ${qf ? `<span class="pill ql${qf}" role="group" aria-label="Show above the pad"><span class="l${tile === "q" ? " on" : ""}" aria-label="Question">q</span><span class="l${tile === "a" ? " on" : ""}" aria-label="Answer">a</span></span>`
         : `<span class="pill" role="group" aria-label="Show above the pad"><span class="${tile === "q" ? "on" : ""}" aria-label="Question">${ico("q" + i)}</span><span class="${tile === "a" ? "on" : ""}" aria-label="Answer">${ico("a" + i)}</span></span>`}
-      <span class="btn" aria-label="Hide the scratchpad">${ico("i-collapse")}</span></div>
-      <div class="ta">${padOn ? PAD : ""}<span class="cc"><span>${ico("i-cut")}</span><span>${ico("i-copy")}</span></span></div></div></div>`;
+      ${head}<span class="btn" aria-label="Hide the scratchpad">${ico("i-collapse")}</span></div>
+      <div class="ta">${nb}${padOn ? PAD : ""}<span class="cc"><span>${ico("i-cut")}</span><span>${ico("i-copy")}</span></span></div></div></div>`;
 }
 const scr = document.getElementById("screen"), phone = document.getElementById("phone");
 if (state === "open") {
   scr.innerHTML = open();
-  document.getElementById("mbar").innerHTML = qf ? `<b>q | a · ${qf}</b>${FONTS[qf]} · tile ${tile === "q" ? "Question" : "Answer"}` : `<b>Open · pair ${i}</b>${PAIRS[i]} · tile ${tile === "q" ? "Question" : "Answer"}`;
+  if (SHORT) phone.classList.add("g" + g);
+  const GN = ["today: 1/3 tile", "hug (Tony)", "big type", "both fit", "one-line strip", "in the header", "notebook page"];
+  if (SHORT) document.getElementById("mbar").innerHTML = `<b>gap ${g}</b>${GN[g]} · tile ${tile === "q" ? "q" : "a"}`;
+  else document.getElementById("mbar").innerHTML = qf ? `<b>q | a · ${qf}</b>${FONTS[qf]} · tile ${tile === "q" ? "Question" : "Answer"}` : `<b>Open · pair ${i}</b>${PAIRS[i]} · tile ${tile === "q" ? "Question" : "Answer"}`;
 } else {
   scr.innerHTML = plain();
   if (state === "drag") { phone.classList.add("drag"); if (f === 5) phone.classList.add("f5x"); const b = scr.querySelector(".fab"); if (f === 4) b.style.bottom = "62%"; else if (f !== 5) { b.style.right = "auto"; b.style.left = "40%"; b.style.bottom = "48%"; } else b.style.bottom = "34%"; }
@@ -194,6 +233,15 @@ if (state === "open") {
 }
 /* toasts are placed from measured boxes, so only after the fonts are in (the rows change height when Atkinson loads) */
 document.fonts.ready.then(() => {
+  if (state === "open" && SHORT && g === 2) {                                      /* the largest size (≤ 2.25rem) whose question still fits its tile */
+    const pr = scr.querySelector(".tile .prob"), tl = scr.querySelector(".tile");
+    for (let f = 2.25; f >= 1.125; f -= 0.125) { phone.style.setProperty("--fit", f + "rem"); if (pr.scrollHeight <= tl.clientHeight) break; }
+  }
+  if (state === "open" && SHORT && g === 3) {                                      /* both fit in 45% of the screen? else back to q | a */
+    const tl = scr.querySelector(".tile");
+    const qa = tl.querySelector(".qa");
+    if (tl.scrollHeight > tl.clientHeight + 1 || qa.scrollHeight > qa.clientHeight + 1) { phone.classList.remove("g3"); phone.classList.add("g1"); qa.remove(); }
+  }
   if (state === "wrong") {
     const row = [...scr.querySelectorAll(".ch")][1], bx = row.querySelector(".box").getBoundingClientRect(), rr = row.getBoundingClientRect(), s = scr.getBoundingClientRect(), t = document.createElement("div");
     const lt = row.querySelector(".lt").getBoundingClientRect();
