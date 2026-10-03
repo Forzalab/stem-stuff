@@ -186,6 +186,36 @@ Fixes found while shipping: the pull-tab's margin rule (`.freeze + .work`) misse
 
 Tests that encoded the replaced behaviour (old → new): render "pull-tab" all views → phone only (side by side has none); render "balance" pad under the card → pad beside it, tops aligned; render "copy band" a tap on the pad → script focus on the phone (a tap opens the pad page), a column-tall pad walks the long line to the bottom row, a touch tablet's bar band always clears the buttons; polish (c) and swap.pw `#swap` clicks → the question peek / the pad peek; choose-all A8F caption on phones → placeholder (the short how fits). New: `tests/flow.pw.mjs` (390, 375, 1440), shots `design/shots/flow-{1..8}-390.png`, `flow-desktop-1440.png`. Impeccable live, app at 390 and 1920: 0 and 0.
 
+## Round 3 (Oct 2, Tony on PR #32)
+
+Rulings (Fri ~21:50 PT): tapping into the pad opens the **Question tile + big pad**; the pill becomes **Question | Answer** and the Question tile hides the answer control for every type (STYLE.md's "the problem pane always shows the answer control" gets rewritten at ship); on phones the **pad is hidden by default** and a **draggable floating button** shows it (reference: an M3 FAB, 56px rounded square, bottom right); the plain-page expand button goes. Onboarding: toasts under 10 words, only on a new device (no `stem-*` key in localStorage).
+
+Mock: `design/mockups/fab.html` — `?f=1..5` button, `?i=1..5` icon pair, `?state=closed|open|drag|toast`, `?tile=q|a`, `?pad=0` (empty pad), `?idle=1` (3, dimmed).
+
+| f | button | lens | drag | risk |
+|---|---|---|---|---|
+| 1 | M3 FAB | the reference: 56px, 16px corners, tonal `--raised`, pencil, dot = pad has text | anywhere, snaps to the left or right edge | covers a 56px square of content |
+| 2 | M3 extended FAB | pencil + "Scratchpad" label (shrinks to 1 on scroll) | same as 1 | widest; covers the most |
+| 3 | AssistiveTouch puck | iOS: translucent with a ring, dims to 45% after 3s idle | same as 1 | low contrast on `--paper`; reads as system UI |
+| 4 | Edge tab | Slide Over grabber: 16x76 on the screen edge, 44x88 touch area | up and down the edge only | hard to find; a chevron says little |
+| 5 | Pad-peek chip | the stage-2 pad peek as the button: pencil + the pad's last line | up and down, centred | covers the bottom centre (the Check arrow's row on short problems) |
+
+| i | Question | Answer |
+|---|---|---|
+| 1 | document | pencil in a box |
+| 2 | "?" speech bubble | check in a circle |
+| 3 | text lines | radio list |
+| 4 | magnifier | letter A |
+| 5 | speech bubble with lines | checklist |
+
+Onboarding copy (each once per new device, take-5f toast look): FAB first paint "Tap the pencil for your scratchpad." · first pad open "Switch question and answer here." · after 2 opens with no drag "Drag the button anywhere."
+
+**Pick: button 1 + pair 2.** The FAB is the pattern Tony pointed at, finds itself (contrast, size, the dot), and snaps to an edge so it never parks over a choice for long. Pair 2 reads without a label: "?" = the question, check = your answer. **Runner-up: button 5 + pair 3** (the chip tells you what is in the pad before you open it; lines | radios mirror what the tile shows).
+
+Edge cases for ship: the button never rests over `#q` controls (snap nudges it off); hidden while an answer field has focus (keyboard up); a wrong answer in Question mode switches the tile to Answer before the toast; the dot follows the pad per problem; at 720px and up the button is gone and the pad is beside the problem; reduced motion = no snap animation; private mode = defaults, one toast per session.
+
+Shots (390x844, DPR 2): `mt3-fab-{1..5}-{closed,drag,toast}-390.png`, `mt3-fab-3-idle-390.png`, `mt3-qa-{1..5}-{q,a}-390.png`, `mt3-toast-open-390.png`. Impeccable live on the mock, 8 states at 390: 0 (fixed: the mock strip's vertical padding).
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.
