@@ -184,8 +184,9 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     <div class="xb" id="xb">
       <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Scratchpad</span><span class="xb-save" id="xbSave" role="status"></span>
         <!-- multitask: the two-icon pill (problem and pad | pad wide) and the expand / collapse corner -->
-        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Pad wide" hidden>
-          <svg class="ico t-doc" aria-hidden="true"><use href="#i-doc"/></svg><svg class="ico t-pen" aria-hidden="true"><use href="#i-pen"/></svg>
+        <!-- the pad page's q | a switch: q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
+        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show the answer" hidden>
+          <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>
         </button>
         <button type="button" class="btn mt-exp" id="mtExp" aria-label="Open the scratchpad" title="Open the scratchpad"><svg class="ico" aria-hidden="true"><use href="#i-expand"/></svg></button>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
@@ -205,6 +206,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <!-- keyboard up, problem pane: a one-line glimpse of the pad just above the keyboard; a tap goes to the pad in the same tap -->
   <div class="pad-peek" id="padPeek" role="button" aria-label="Go to the scratchpad" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="padPeekTx">Scratchpad</span></div>
 </main>
+<!-- phones: the pad is hidden; this floating button opens the pad page. Drag it: it snaps to a side edge (STYLE.md §3) -->
+<button type="button" class="pad-fab" id="padFab" aria-controls="work" aria-expanded="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Scratchpad</span></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 </body>

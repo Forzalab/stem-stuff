@@ -338,7 +338,6 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |
 | 6 | `app.css`, `nav.css` transitions | Durations .12 .15 .2 .22 .25 .3 s, two easings. | Add `--d-fast` 120ms, `--d-move` 200ms, `--d-dim` 300ms, `ease-out`. |
 | 7 | `app.css` `.dock-bottom .dock` | Raw upward shadow. | Token `--shadow-up`. |
-| 8 | `app.css :root` | `--shadow-4` is used nowhere until the dragged Scratchpad button ships. | Use it there, or delete it. |
 | 9 | `app.css` `.ico` | 1.5rem, does not grow with `--ico` on desktop. | `width/height: var(--ico)`. |
 | 10 | `app.css`, `nav.css` icons next to text | 1.1rem, 1.25rem, 20px, 1.75rem. | `--ico-sm: 1.25rem`; the duck stays 1.75rem. |
 | 11 | `app.css` `.p`, `.boxed .q` | Side padding 1.25rem, off the scale. | `--s4` or `--s5`. |
@@ -347,4 +346,3 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | 14 | `nav.css` gone rows | `--hint` is 4.46:1 on `--sheet`, 3.92:1 on `--raised`. | Raise `--hint` to `#899ab3`, or `--muted` for the struck title. |
 | 15 | `design/DESIGN-LANGUAGE.md`, `design/specimen.html` | A site `--blue` #3a67d8 the app does not have. | Remove; specimen buttons use `.btn` / `--c1`. |
 | 16 | `app.css` desktop tokens vs `app.js` `sideMQ` | Desktop type scale switches at `700.02px` + `pointer: fine`; side by side at 720px. | One breakpoint constant. |
-| 17 | `app.css` `#toast.row::before` | The MC-row toast has no caret; no bottom-edge caret yet. | Ship the §3 Toast placements (MULTITASK.md Round 3b). |

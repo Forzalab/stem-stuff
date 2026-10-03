@@ -73,7 +73,7 @@ test("§4 no colour emoji in the UI", () => {
 test("§3 Toast: one element", () => {
   assert.equal((read("index.html").match(/id="toast"/g) || []).length, 1, "one #toast (STYLE.md §3 Toast)");
 });
-test("§3 Toast: the caret on every toast, the MC row too", { todo: "STYLE.md §9 #17 (multitask round 3b ship)" }, () => {
+test("§3 Toast: the caret on every toast, the MC row too", () => {
   const off = ALL.filter(d => d.sel.includes("#toast") && d.sel.includes("::before") && d.prop === "display" && d.value === "none");
   assert.deepEqual(off.map(fmt), []);
 });

@@ -524,7 +524,6 @@ html.mt #sentinel, html.mt .pad-peek, html.mt .more { display: none; }
 html.mt .freeze, html.mt .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-height: 0; }
 html.mt .freeze-in { height: 100%; max-height: none; display: flex; flex-direction: column; overflow: hidden; background: var(--sheet); border-radius: 10px; }
 html.mt.mt-r0 .freeze-in { max-height: calc(var(--vv-h, 100dvh) * .45); }
-html.mt.mt-r0 #problem { display: none; }
 html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; overscroll-behavior: contain; cursor: pointer; }
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
 html.mt #fb:empty { display: none; }
@@ -539,6 +538,28 @@ html.mt .xb-label .mt-mode { margin-left: 0; }
 html.mt .xb-label .mt-exp { margin-left: auto; }
 html.mt .xb-field { flex: 1 1 auto; min-height: 0; max-width: none; }
 html.mt #scratch { min-height: var(--pad-max, 8rem); }
+
+/* round 3b: the tile shows the problem (q) or the answer control (a), never both */
+html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
+html.mt.mt-a #problem { display: none; }
+.mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-family: KaTeX_Math, "Atkinson Hyperlegible", serif; font-style: italic;
+  font-size: 1.875rem; line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters */
+/* phones: the pad is off the page until the Scratchpad button opens the pad page */
+html.pad-off #work, html.pad-off #sash { display: none; }
+html.fab-on main::after { content: ""; display: block; height: calc(56px + 2 * var(--s4)); }   /* the last control can scroll above the button */
+.pad-fab {
+  position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); top: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
+  display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);
+  box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+.pad-fab.left { right: auto; left: max(var(--s4), env(safe-area-inset-left)); }
+.pad-fab[hidden] { display: none; }
+.pad-fab .ico { width: var(--ico); height: var(--ico); }
+.pad-fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
+.pad-fab:hover { background: var(--sheet); }
+.pad-fab:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .mt-mode .qa-l { transition: none; } }
 
 /* the handle: a 36x4 --edge pill in the gap, touched big (88x44 phone, 48 wide desktop); --muted on hover and while dragging */
 html.mt .sash, html.side .sash { display: block; position: relative; touch-action: none; cursor: row-resize; outline: none; }
@@ -607,8 +628,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #toast {
   position: fixed; z-index: 50; left: 0; top: 0; width: max-content; max-width: min(26rem, calc(100vw - 2 * var(--gut)));
   display: flex; align-items: center; justify-content: center; min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
-  background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);
-  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-wrap: balance; cursor: pointer;
+  background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-1);   /* 1.5px: Tony, "slight thicker" */
+  font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: balance; cursor: pointer;
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
 #toast.on { visibility: visible; animation: toast-in .2s ease-out both; }
@@ -616,8 +637,9 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
   background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
 }
-#toast.row { max-width: none; padding: var(--s1) var(--s3); text-align: center; }
-#toast.row::before { display: none; }
+#toast.up::before { top: auto; bottom: -8px; transform: rotate(225deg); }                         /* above its anchor: caret on the bottom edge */
+#toast.row { min-height: 0; padding: var(--s2) var(--s3); }                                       /* MC: on the struck text, caret left at the X */
+#toast.row::before { top: calc(50% - 7px); left: -8px; transform: rotate(-45deg); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 @keyframes toast-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #toast.on { animation: toast-fade .2s linear both; } }
