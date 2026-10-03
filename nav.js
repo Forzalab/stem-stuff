@@ -91,7 +91,7 @@ function init() {
      a list that holds still (re-sorting on every open would bounce Next between two open questions) */
   function update(code, resort = true) {
     cur = code;
-    const o = off(), all = o && o.codes ? o.codes() : [], key = [...all].sort().join(" ");
+    const o = off(), all = (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))), key = [...all].sort().join(" ");
     if (resort || key !== setKey) codes = all.length ? order(all) : [];
     setKey = key;
     const on = codes.length > 0;
