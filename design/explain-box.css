@@ -18,7 +18,7 @@
   font: 400 1rem/1.6 var(--mono, "Atkinson Hyperlegible Mono", ui-monospace, monospace);
   color: var(--ink);
   background: var(--field);
-  border: 2px solid var(--edge);
+  border: var(--bw, 1px) solid var(--edge);
   border-radius: 6px;
   caret-color: var(--focus);
   tab-size: 4;
@@ -27,4 +27,4 @@
 }
 .xb textarea::placeholder { color: var(--hint); opacity: 1; }
 .xb textarea:hover { border-color: var(--muted); }
-.xb textarea:focus { border-color: var(--focus); outline: 3px solid var(--focus); outline-offset: 2px; }
+.xb textarea:focus { border-color: var(--focus); outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
