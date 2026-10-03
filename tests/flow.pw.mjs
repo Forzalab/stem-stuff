@@ -164,6 +164,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     assert.ok(await has("mt-q") && await page.locator("#problem").isVisible() && await page.locator("#q").isHidden(), "q: problem only");
     await page.locator("#scratch").focus(); await kbUp();
     assert.ok(await has("mt") && !(await has("swap")), `still the pad page (${await cls()})`);
+    assert.ok(await page.locator("#mtMode").isVisible(), "q | a hidden with the keyboard up on the pad page");
+    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
+    assert.ok(await has("mt-a") && await page.evaluate(() => document.activeElement.id) === "scratch", "q | a with the keyboard up: a, and the pad keeps focus");
+    await page.locator("#mtMode").tap(); await page.waitForTimeout(400);
     await kbDown();
     assert.ok(await has("mt"), "keyboard down never closes");
     await page.locator("#problem").tap({ position: { x: 30, y: 20 } }); await page.waitForTimeout(400);
