@@ -71,7 +71,8 @@ async function run(browserType, label, opts = {}) {
       });
     }
 
-    if (vname !== "ipad") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
+    // ipad + desktop are side by side (design/MULTITASK.md "Desktop, revised"): the problem column has no pull-tab
+    if (vname === "phone") await step(`${label} ${vname} pull-tab #more never covers answer controls (MC, multi, num; closed and open)`, async () => {
       const tab = async (code, closedOnly) => {
         await open(code);
         if (code === "CALC1_X2P") { await page.locator('.opt[data-id="a"]').click(); await page.locator('.ch[data-id="a"] .send').waitFor(); }
@@ -203,8 +204,12 @@ async function run(browserType, label, opts = {}) {
 
     await step(`${label} ${vname} balance: scratchpad spans the column (right edge = the problem card's)`, async () => {
       // Tony, Tue 9/29 ~15:15 PT: "unbalanced UI" -> the 68ch cap is gone; the box runs to the column edge like the card
-      const w = await page.evaluate(() => ({ box: document.querySelector("#xbField").getBoundingClientRect().right, card: document.querySelector("#problem").getBoundingClientRect().right }));
-      assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
+      const w = await page.evaluate(() => { scrollTo(0, 0); const b = document.querySelector("#xbField").getBoundingClientRect(), c = document.querySelector("#problem").getBoundingClientRect(), k = document.querySelector("#work").getBoundingClientRect();
+        return { box: b.right, card: c.right, left: b.left, cardTop: c.top, workTop: k.top }; });
+      if (viewport.width >= 720) {   // side by side (design/MULTITASK.md "Desktop, revised"): the pad is the right column, never under the problem
+        assert.ok(w.left >= w.card && w.left - w.card <= 48, `pad not beside the problem: pad left ${w.left}, card right ${w.card}`);
+        assert.ok(Math.abs(w.workTop - w.cardTop) <= 2, `pad top ${w.workTop} vs problem top ${w.cardTop}`);
+      } else assert.ok(Math.abs(w.box - w.card) <= 1, `scratchpad right ${w.box} vs card ${w.card}`);
     });
 
     await step(`${label} ${vname} entry box: upload + code bar only; start page = title + entry, centred; placement`, async () => {
@@ -440,7 +445,8 @@ async function run(browserType, label, opts = {}) {
       assert.ok(c.inside && c.apart, "Cut and Copy not both inside the textarea box, side by side");
       assert.equal(c.hits, 0, "placeholder under the button");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
-      await ta.click();
+      const side = viewport.width >= 720;   // side by side: the pad fills its column (design/MULTITASK.md), it does not grow with the text
+      await ta.focus();   // a tap on a phone opens the pad page (variant 9); the band is checked on the plain page, as before
       // legit toggles: at most on (last line reaches the corner) and off (it wraps) once per new line
       let toggles = 0, prev = (await clear()).free, lines = 0, h = await ta.evaluate(t => t.offsetHeight);
       for (let i = 0; i < 40; i++) {
@@ -452,16 +458,22 @@ async function run(browserType, label, opts = {}) {
       }
       assert.ok(toggles <= 2 * lines + 2, `padding flickered: ${toggles} toggles for ${lines} height changes`);
       // last line runs into the corner -> reserved
-      const reserved = await page.evaluate(async () => {
+      const reserved = await page.evaluate(async side => {
         const t = document.querySelector("#scratch"), base = "resolve mg along the slope then balance with kx ";
+        if (side && document.documentElement.classList.contains("bar-mini")) return true;   // touch: the bar's band (>= 56px) always sits under the text
+        if (side) {   // a column-tall box: walk one full line down to the bottom row; it must reserve before the box would scroll
+          for (let k = 0; k < 400; k++) { t.value = "\n".repeat(k) + base + "x".repeat(400); t.dispatchEvent(new Event("input"));
+            if (!t.classList.contains("xb-free")) return k > 0; if (t.scrollHeight > t.clientHeight + 1) return false; }   // the band's own padding may then scroll it a little
+          return false;
+        }
         for (let n = 1; n < 400; n++) { t.value = base + "x".repeat(n); /* one line of prose: stays under the height cap (a capped box always keeps the band) */ t.dispatchEvent(new Event("input")); if (!t.classList.contains("xb-free")) return true; }
         return false;
-      });
+      }, side);
       assert.ok(reserved, "never reserved the band for a long last line");
       assert.equal((await clear()).hits, 0);
       if (SHOTS && vname === "phone") await page.locator("#work").screenshot({ path: `${SHOTS}/app-copy-reserved-390.png` });
       // short last line -> normal padding
-      await page.evaluate(() => { const t = document.querySelector("#scratch"); t.value = t.value + "\nok"; t.dispatchEvent(new Event("input")); });
+      await page.evaluate(side => { const t = document.querySelector("#scratch"); t.value = side ? "ok" : t.value + "\nok"; t.dispatchEvent(new Event("input")); }, side);   // side: a short note in a tall pad
       c = await clear();
       assert.ok(c.free, "short last line still reserves the band");
       assert.equal(c.hits, 0);

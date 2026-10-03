@@ -1287,7 +1287,7 @@ function layoutMT() {
   const fill = () => {
     if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
     if (mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
-    else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - ta.getBoundingClientRect().top - 24));
+    else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
     root.style.setProperty("--pad-max", mtCap + "px");
     S.box.limit();
   };

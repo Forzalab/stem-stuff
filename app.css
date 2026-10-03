@@ -373,7 +373,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
-.freeze:has(.more:not([hidden])) + .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
+.freeze:has(.more:not([hidden])) ~ .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
 .xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
@@ -443,7 +443,7 @@ html.swap #swap { flex: none; align-self: flex-start; }
 /* both panes share one grid cell; the one not shown stays laid out (and focusable) but see-through and untouchable, so focus can move into it before it appears */
 html.swap .stage { flex: 1 1 0; min-height: 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); position: relative; overflow: clip; padding-bottom: 6px; }
 html.swap .stage > .freeze, html.swap .stage > .work { grid-area: 1 / 1; min-width: 0; min-height: 0; }
-html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) + .work */
+html.swap #stage > #work { margin: 0; }      /* an id: beats .freeze:has(.more) ~ .work */
 html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; }
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
