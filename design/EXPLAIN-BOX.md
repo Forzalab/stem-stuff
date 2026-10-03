@@ -76,5 +76,6 @@ Tony: Copy sits inside the Scratchpad's bottom-right corner, and text wraps as i
 - Cut (scissors, left of Copy): copies the same payload as Copy, then empties the box; the clear is kept in the edit history. A failed copy clears nothing.
 
 ## Update (Sep 29): line numbers + cap override
+> Line numbers were removed later (no `.xb-gutter` in the app); see [STYLE.md](STYLE.md) §3 Scratchpad.
 - `ExplainBox.lineNumbers(textarea, gutterEl)`: a gutter of logical-line numbers over the textarea's left padding (`.xb-gutter`, app.css). Each number sits on the first visual row of its line; a hidden mirror div (same font, width, padding and wrapping) gives every line's height. It follows the textarea's scroll and is `aria-hidden`. See `design/SWAP.md`.
 - `mount(el, { cap })`: `cap()` returns a px height (or null) that replaces the "bottom of the visible viewport" cap. Swap uses it so the box stops growing where the question peek ends.

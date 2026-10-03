@@ -67,6 +67,8 @@ Shared: text in the part prompt's style (400, `--t-md`, `--ink`, `--lh`), no bol
 
 The mock now shows the part hint as main renders it under a wrong part (verdict line "Not quite. One more try." + the Cluck card). Every take covers the top of that hint for 2.5 s. 5h covers the verdict line, which says the same words.
 
+> Superseded Oct 2 ~22:05: the shipped look is take 5f (paper, `--line` hairline, `--shadow-1`) with its caret on every toast (MC row and onboarding too). Rules: [STYLE.md](STYLE.md) §3 Toast. Everything below is history.
+
 **Pick: 5h.** It is part of the box, not a sticker on top of it. It covers only the verdict line that repeats it. Runner-up: 5g.
 
 Also in this round: a right answer box in a closed part (or question) dims like every closed box (`opacity: .5`); its green edge and check stay (app.css `.ff.shut`, `.q.closed .ff`; test `disabled.pw.mjs` updated). A right MC choice still stays bright (main, PR #30).
