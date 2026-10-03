@@ -178,6 +178,14 @@ Impeccable (`npx impeccable detect`; live with Chromium, states `a` and `full` o
 
 Mock: `?v=desk` (or `?v=desk&opt=r2`), `?v=desk&state=full` for the strip. Shots: `mt-desk-r2-1440.png`, `mt-desk-r2-1920.png`, `mt-desk-r2-full-1440.png`, narrow fallback `mt-desk-r2-800.png` (still side by side) and `mt-desk-r2-700.png` (phone page).
 
+## Shipped (stage 2, Oct 2)
+
+In the app: phone = variant 9 (tap the pad or the expand icon), desktop and landscape tablets = side by side from 720px. No keyboard shortcuts; the sash takes arrows / Home / End only when focused (WAI-ARIA splitter). Keyboard up hides the expand icon, the pill and the old `#swap` toggle (gone); switching = keyboard down, a tap on the question peek, or the **pad peek** (one line above the keyboard: pencil + the pad's last line; a tap focuses the pad in the same tap). After keyboard down or Back the last edited field scrolls back into view, not focused; no pane change resets scroll. A fix box's `how` is its placeholder (20 characters at most, SCHEMA.md), with a wrapping caption as the fallback.
+
+Fixes found while shipping: the pull-tab's margin rule (`.freeze + .work`) missed `#work` once the sash sat between them (`~` now); on a touch tablet the side-by-side pad now stops above the bottom bar (Cut / Copy were under it).
+
+Tests that encoded the replaced behaviour (old → new): render "pull-tab" all views → phone only (side by side has none); render "balance" pad under the card → pad beside it, tops aligned; render "copy band" a tap on the pad → script focus on the phone (a tap opens the pad page), a column-tall pad walks the long line to the bottom row, a touch tablet's bar band always clears the buttons; polish (c) and swap.pw `#swap` clicks → the question peek / the pad peek; choose-all A8F caption on phones → placeholder (the short how fits). New: `tests/flow.pw.mjs` (390, 375, 1440), shots `design/shots/flow-{1..8}-390.png`, `flow-desktop-1440.png`. Impeccable live, app at 390 and 1920: 0 and 0.
+
 ## The mock
 
 `design/mockups/multitask.html` links `../../app.css` and `../../vendor/fonts/atkinson.css`. The dashed strip at the top is mock chrome: variant chips 1–11, a toggle for the simulated on-screen keys (a grey 300px block; its ⌄ key hides it without closing the pad) and a Back button that calls `history.back()`.

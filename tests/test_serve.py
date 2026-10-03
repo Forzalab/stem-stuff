@@ -112,7 +112,7 @@ class Grade(unittest.TestCase):
         self.assertEqual((r["verdict"], r["error"]), ("wrong", "incomplete"))
         self.assertNotIn("fixWrong", r)
         self.assertEqual(self.g("CSCI26_A8F", "f2", choices=["a", "c"], fixes={"b": "10", "d": "2^4"})["verdict"], "correct")
-        self.assertEqual(serve.public(BANK["CSCI26_A8F"])["fix"], {"type": "num", "how": "Type the correct count."})
+        self.assertEqual(serve.public(BANK["CSCI26_A8F"])["fix"], {"type": "num", "how": "whole number"})
 
     def test_text(self):
         r = self.g("CSCI26_Q8C", "t1", answer="q -> p")

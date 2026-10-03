@@ -133,9 +133,9 @@ try {
       await t3("a"); assert.equal((await marks()).a, "x"); assert.ok(await box("a").isVisible());
       /* the how is shown whole: the placeholder when it fits the box, else a wrapping line right above the box (390px; it used to clip) */
       const ph = await p3.getAttribute('#q .ch[data-id="a"] .fix input', "placeholder"), cap = p3.locator('#q .ch[data-id="a"] .fix-how');
-      if (ph) { assert.equal(ph, "Type the correct count."); assert.ok(await cap.isHidden()); }
-      else { assert.ok(await cap.isVisible(), "caption"); assert.equal((await cap.textContent()).trim(), "Type the correct count."); }
-      assert.equal(name === "phone" ? !ph : !!ph, true, `${name}: ${ph ? "placeholder" : "caption"}`);
+      if (ph) { assert.equal(ph, "whole number"); assert.ok(await cap.isHidden()); }
+      else { assert.ok(await cap.isVisible(), "caption"); assert.equal((await cap.textContent()).trim(), "whole number"); }
+      assert.ok(ph, `${name}: caption; a fix.how of 20 characters or less fits the box (SCHEMA.md), flow.pw.mjs covers the caption`);
       await t3("a"); assert.equal((await marks()).a, ""); assert.ok(!(await box("a").isVisible()));
       await row(p3, "b").focus();
       await p3.keyboard.press("x"); assert.equal((await marks()).b, "x");

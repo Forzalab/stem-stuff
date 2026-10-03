@@ -97,7 +97,7 @@ plus an `if pick=all then correct is array and miss is required` rule. The key f
 
 ## 4b. Prove mode: fix every false row (Tony, 10-02)
 
-Stops guessing. Turn it on with a public `fix` on the problem: `"fix": { "type": "num" | "expr" | "text", "how"?: "Type the correct count.", "var"?: "x" }`. It is only allowed with `pick: "all"`.
+Stops guessing. Turn it on with a public `fix` on the problem: `"fix": { "type": "num" | "expr" | "text", "how"?: "whole number", "var"?: "x" }`. It is only allowed with `pick: "all"`.
 - Every row is either **ticked** (true) or **X'd** (false). There is no blank. Each X'd row that isn't locked opens a box under it, where you type the corrected value.
 - Key: every false, unlocked choice's `wrong` entry carries `fix: { answer, accept?, tol?, points?, wrong? }`. It is graded like a `multi` part, with type and var taken from the problem's `fix`. Locked rows ("None of these") never take a fix.
 - One shared type for all rows keeps the public file from leaking which rows are false.
