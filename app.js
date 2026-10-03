@@ -1432,8 +1432,8 @@ sash.addEventListener("keydown", e => {
 if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); layoutFreeze(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
-   follows the finger; on release it snaps to the nearer side edge, stays between the top and the bottom bar, and steps off any answer
-   control it would rest on. Its place is kept per device (stem-mt .fab = { side, y: 0 top .. 1 bottom }). */
+   follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped
+   (a drop is the user's choice: no step-off, even over an answer control). Where it (re)appears it steps off answer controls. Its place is kept per device (stem-mt .fab = { side, y: 0 top .. 1 bottom }). */
 const fab = $("#padFab");
 let fabDrag = null, fabMoved = false, fabSeen = false;
 function fabSync() {
@@ -1452,7 +1452,7 @@ function fabBounds() {
   const floor = root.clientHeight - dockRoom();   // layout viewport and the bar's resting height: nothing that moves while scrolling or while the URL bar slides
   return { min: s + 8, max: Math.max(s + 8, floor - s - h), h };
 }
-/* avoid: step off answer controls under it. Only explicit placements ask for it (first show, drag end); a resize never does, or the
+/* avoid: step off answer controls under it. Only (re)appearing asks for it; a drag end never does (the drop is the user's choice), and a resize never does, or the
    button hops by a control's height with the scroll offset it happens to be at. */
 function fabPlace({ avoid } = {}) {
   const m = mtMem.fab || {}, b = fabBounds();
@@ -1491,7 +1491,7 @@ function fabEnd(e) {
   const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy));
   mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
   mtMem.fabMoved = 1; mtSave();
-  fabPlace({ avoid: true });
+  fabPlace();                                                                     // keep the drop spot: no step-off
 }
 fab.addEventListener("pointerup", fabEnd);
 fab.addEventListener("pointercancel", fabEnd);
