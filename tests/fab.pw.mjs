@@ -1,5 +1,5 @@
 // The Scratchpad button holds its place on the screen (phones): scrolling, the URL bar sliding (viewport height +-56px) and the bottom bar
-// moving must not make it jump, and a resize must never step it off answer controls (only first show / drag end / a new problem do).
+// moving must not make it jump, and a resize or a drag end must never step it off answer controls (only (re)appearing does).
 // Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/fab.pw.mjs http://localhost:8812 [shotDir]
 // With a shotDir it saves fab-{top,mid,end}-390.png (the button at three scroll positions).
@@ -111,6 +111,28 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     const g2 = await geo();
     assert.ok(g2.left <= 24, "side not kept after reload");
     assert.ok(Math.abs(g2.top - placed) <= 24, `height not kept after reload: ${g2.top} vs ${placed}`);
+  });
+
+  if (W === 390) await step(`${T} drop on the answer choices: it stays where it was dropped (no step-off after a drag), also while scrolling`, async () => {
+    /* a drop is the user's explicit choice: drag end keeps the spot (clamped, side snap only); the step-off is for (re)appearing only */
+    const opts = page.locator("#q .opt");
+    await opts.nth(2).evaluate(e => e.scrollIntoView({ block: "center" })); await settle();
+    const c = await page.evaluate(() => { const r = [...document.querySelectorAll("#q .opt")].map(e => e.getBoundingClientRect()).filter(q => q.bottom > 0 && q.top < innerHeight);
+      return { top: Math.min(...r.map(q => q.top)), bottom: Math.max(...r.map(q => q.bottom)) }; });
+    const f = await page.locator("#padFab").boundingBox();
+    const cdp = await ctx.newCDPSession(page);
+    const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+    const x0 = f.x + f.width / 2, y0 = f.y + f.height / 2, ty = (c.top + c.bottom) / 2, tx = W * 0.75;
+    await touch("touchStart", x0, y0);
+    for (let i = 1; i <= 8; i++) await touch("touchMove", x0 + i * (tx - x0) / 8, y0 + i * (ty - y0) / 8);
+    await touch("touchEnd"); await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "a drag opened the pad page");
+    const want = f.y + (ty - y0), g = await geo();
+    const over = await page.evaluate(() => { const f = document.querySelector("#padFab").getBoundingClientRect();
+      return [...document.querySelectorAll("#q .opt")].map(e => e.getBoundingClientRect()).some(q => q.right > f.left && q.left < f.right && q.bottom > f.top && q.top < f.bottom); });
+    assert.ok(Math.abs(g.top - want) <= 2, `moved off the drop point: top ${g.top} vs dropped at ${Math.round(want)} (choices ${Math.round(c.top)}..${Math.round(c.bottom)})`);
+    assert.ok(over, `rests over no choice: fab ${g.top}..${g.bottom}, choices ${c.top}..${c.bottom}`);
+    for (const y of [0, 300, await range()]) { await page.evaluate(y => scrollTo(0, y), y); await settle(); assert.ok(Math.abs(await fabTop() - want) <= 2, `scroll ${y}: ${await fabTop()} vs ${Math.round(want)}`); }
   });
 
   await step(`${T} no page errors`, async () => assert.deepEqual(errors, []));
