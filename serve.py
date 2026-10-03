@@ -26,6 +26,7 @@ import secrets
 import socketserver
 import sys
 import threading
+import urllib.request
 
 import sympy
 from sympy.parsing.sympy_parser import auto_number, parse_expr
@@ -36,9 +37,10 @@ try:
 except Exception:  # noqa: BLE001
     bundle = None
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5567
+MAIN = __name__ == "__main__"   # argv is ours only when run as the server (imported: tests, api/index.py on Vercel)
+PORT = int(sys.argv[1]) if MAIN and len(sys.argv) > 1 else 5567
 ROOT = os.path.dirname(os.path.abspath(__file__))
-BANK = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
+BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how")
@@ -328,16 +330,33 @@ def _tup(x):
     return tuple(_tup(y) for y in x) if isinstance(x, list) else x
 
 
+# Where tries live: the TRIES file, or (serverless, e.g. Vercel: read-only disk, no process between requests) an Upstash
+# Redis key over its REST API, picked when KV_REST_API_URL + KV_REST_API_TOKEN are set. One JSON blob either way.
+KV = (os.environ.get("KV_REST_API_URL"), os.environ.get("KV_REST_API_TOKEN"))
+KV_KEY = "stem:tries"
+
+
+def _kv(*cmd):
+    req = urllib.request.Request(KV[0], data=json.dumps(cmd).encode(), method="POST",
+                                 headers={"Authorization": "Bearer " + KV[1], "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        return json.load(r).get("result")
+
+
 def _load_tries():
-    """Read TRIES once per path (tests point TRIES elsewhere). A missing or broken file = no tries yet."""
-    if _gen["loaded"] == TRIES:
+    """Read TRIES once per path (tests point TRIES elsewhere); from KV, on every call (another instance may have written).
+    Missing or broken = no tries yet."""
+    if not all(KV) and _gen["loaded"] == TRIES:
         return
     _tries.clear()
     _last.clear()
     _gen["n"], _gen["loaded"] = 0, TRIES
     try:
-        with open(TRIES, encoding="utf-8") as f:
-            data = json.load(f)
+        if all(KV):
+            data = json.loads(_kv("GET", KV_KEY) or "{}")
+        else:
+            with open(TRIES, encoding="utf-8") as f:
+                data = json.load(f)
         _gen["n"] = int(data.get("gen", 0))
         for k, v in data.get("tries", {}).items():
             bits = k.split(" ")
@@ -350,6 +369,12 @@ def _load_tries():
 
 def _save_tries():
     data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}, "last": _last}
+    if all(KV):
+        try:
+            _kv("SET", KV_KEY, json.dumps(data))
+        except (OSError, ValueError) as e:
+            print("tries not saved to KV:", e, file=sys.stderr)
+        return
     tmp = TRIES + ".tmp"
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -542,16 +567,73 @@ def ensure_bundle():
             print("bundle failed:", e, file=sys.stderr)
 
 
-class Handler(http.server.SimpleHTTPRequestHandler):
-    _cookie = None
+def new_sid(cookie_header):
+    """(this browser's id from the Cookie header, the Set-Cookie value to send or None). A new id if missing or malformed."""
+    jar = http.cookies.SimpleCookie()
+    try:
+        jar.load(cookie_header or "")
+    except http.cookies.CookieError:
+        pass
+    if "sid" in jar and re.fullmatch(r"[0-9a-f]{32}", jar["sid"].value):
+        return jar["sid"].value, None
+    sid = secrets.token_hex(16)
+    return sid, f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
 
+
+def _json(status, obj, cookie):
+    head = {"Content-Type": "application/json", "Cache-Control": "no-store"}
+    if cookie:
+        head["Set-Cookie"] = cookie
+    return status, head, json.dumps(obj).encode()
+
+
+def dispatch(method, path, cookie_header="", body=b""):
+    """The API, shared by Handler (this server) and api/index.py (Vercel): (status, headers, bytes), or None when the
+    path is not an API path (a static file)."""
+    path = path.split("?")[0]
+    if method == "POST":
+        if path != "/check":
+            return None
+        sid, cookie = new_sid(cookie_header)
+        try:
+            b = json.loads(body) if 0 < len(body) <= 4096 else None
+        except (ValueError, UnicodeDecodeError):
+            b = None
+        if not isinstance(b, dict):
+            return _json(400, {"verdict": "invalid"}, cookie)
+        p = problems().get(str(b.get("code", "")))
+        if p is None:
+            return _json(404, {"verdict": "invalid"}, cookie)
+        return _json(200, grade(p, sid, b), cookie)
+    m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path)
+    if not m:
+        return None
+    sid, cookie = new_sid(cookie_header)
+    if m.re is BANK_PATH:
+        b = bank_payload(m.group(1), sid)
+        if b is None and m.group(1) != "last":
+            return _json(404, {"error": "not found"}, cookie)
+        return _json(200, b, cookie)                 # no last bank: null, a normal answer (no red console line)
+    p = problems().get(m.group(1))
+    if p is None:
+        return _json(404, {"error": "not found"}, cookie)
+    if m.re is STATE_PATH:
+        return _json(200, state(p, sid), cookie)
+    out = _json(200, public(p, sid), cookie)
+    seen(p["code"], sid)
+    return out
+
+
+class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
-    def send_json(self, status, obj, head=False):
-        data = json.dumps(obj).encode()
+    def reply(self, res, head=False):
+        status, headers, data = res
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
+        for k, v in headers.items():
+            if k != "Cache-Control":                      # end_headers sends it on every response
+                self.send_header(k, v)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         if not head:
@@ -562,33 +644,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if path in BLOCK or path.startswith(BLOCK_PREFIX):
             self.send_error(404)
             return
-        m = STATE_PATH.match(path)
-        if m:
-            p = problems().get(m.group(1))
-            if p is None:
-                self.send_error(404)
-            else:
-                self.send_json(200, state(p, self.sid()), head)
-            return
-        m = CODE_PATH.match(path)
-        if m:
-            p = problems().get(m.group(1))
-            if p is None:
-                self.send_error(404)
-            else:
-                sid = self.sid()
-                self.send_json(200, public(p, sid), head)
-                seen(p["code"], sid)
-            return
-        m = BANK_PATH.match(path)
-        if m:
-            b = bank_payload(m.group(1), self.sid())
-            if b is None and m.group(1) == "last":
-                self.send_json(200, None, head)      # no last bank: a normal answer, not an error (no red console line)
-            elif b is None:
-                self.send_error(404)
-            else:
-                self.send_json(200, b, head)
+        res = dispatch("GET", path, self.headers.get("Cookie", ""))
+        if res:
+            self.reply(res, head)
             return
         if path == "/stem-stuff.html":
             ensure_bundle()
@@ -601,41 +659,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.route(head=True)
 
     def do_POST(self):
-        if self.path.split("?")[0] != "/check":
+        try:
+            n = min(int(self.headers.get("Content-Length") or 0), 4097)
+        except ValueError:
+            n = 0
+        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), self.rfile.read(n) if n > 0 else b"")
+        if res:
+            self.reply(res)
+        else:
             self.send_error(404)
-            return
-        try:
-            n = int(self.headers.get("Content-Length") or 0)
-            body = json.loads(self.rfile.read(n)) if 0 < n <= 4096 else None
-        except (ValueError, UnicodeDecodeError):
-            body = None
-        if not isinstance(body, dict):
-            self.send_json(400, {"verdict": "invalid"})
-            return
-        p = problems().get(str(body.get("code", "")))
-        if p is None:
-            self.send_json(404, {"verdict": "invalid"})
-            return
-        self.send_json(200, grade(p, self.sid(), body))
-
-    def sid(self):
-        """This browser's id (cookie). A new one is set on the response if missing or malformed."""
-        jar = http.cookies.SimpleCookie()
-        try:
-            jar.load(self.headers.get("Cookie", ""))
-        except http.cookies.CookieError:
-            pass
-        if "sid" in jar and re.fullmatch(r"[0-9a-f]{32}", jar["sid"].value):
-            return jar["sid"].value
-        sid = secrets.token_hex(16)
-        self._cookie = f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
-        return sid
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
-        if self._cookie:
-            self.send_header("Set-Cookie", self._cookie)
-            self._cookie = None
         super().end_headers()
 
 

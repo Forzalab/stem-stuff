@@ -1,0 +1,13 @@
+{
+  "buildCommand": "python3 tools/build_public.py",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.py": { "includeFiles": "{serve.py,problems.json,banks/**}" }
+  },
+  "rewrites": [
+    { "source": "/p/:code.json", "destination": "/api/index?path=/p/:code.json" },
+    { "source": "/state/:code", "destination": "/api/index?path=/state/:code" },
+    { "source": "/b/:bank.json", "destination": "/api/index?path=/b/:bank.json" },
+    { "source": "/check", "destination": "/api/index?path=/check" }
+  ]
+}
