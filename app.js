@@ -326,6 +326,7 @@ $("#entry").addEventListener("submit", e => {
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
 window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
+window.stemBrainrotWarm = () => modeOf() === "sugar";                                // brainrot.js: may buffer off screen
 window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c) && modeHidden(o.get(c), modeOf())); };   // nav.js: uploads
 /* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */

@@ -77,6 +77,13 @@ try {
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
 
+  await step("sugar start page: the players warm up off screen (no question yet); no YouTube controls, no keyboard", async () => {
+    await page.waitForSelector("#rot.parked", { state: "attached", timeout: 6000 });
+    assert.equal(await page.$eval("#rot", e => e.inert && e.getAttribute("aria-hidden")), "true");
+    const s = await page.$eval("#rot iframe", f => f.src);
+    for (const k of ["controls=0", "disablekb=1", "fs=0", "mute=1", "autoplay=1", "playsinline=1"]) assert.ok(s.includes(k), k);
+  });
+
   await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
     await typeCode(page, "BANK_EZ12");
     await page.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
@@ -168,7 +175,7 @@ try {
     assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
-    assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode");
+    assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$$eval("#q .fix", f => f.length), 0, "fix boxes in diet mode (prove mode is gone)");

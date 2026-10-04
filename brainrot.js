@@ -6,13 +6,17 @@
    that would cover one is skipped, and if all would, it stashes. Hidden while the pad page, the keyboard or the code bar is up.
    app.js calls window.stemBrainrot.sync() after every question opens and on layout changes. Nothing loads until it first shows. */
 (() => {
-  const VIDS = [["vTfD20dbxho", "Subway Surfers gameplay, muted"], ["z84bmLDzIIk", "Parkour gameplay, muted"]];   // Tony's links
+  const VIDS = [["vTfD20dbxho", "Subway Surfers gameplay, muted", 0], ["z84bmLDzIIk", "Parkour gameplay, muted", 0]];   // Tony's links [id, title, start s]
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { /* blocked */ } return null; };
   const sess = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch { /* blocked */ } return null; };
   const ico = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
-  const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&modestbranding=1`;
+  /* no controls, no keyboard, no fullscreen, no annotations, no end screen of other channels; the title strip YouTube still draws is
+     cropped off by the box (app.css .rot .vid iframe). The video itself can't be cached (cross-origin stream, YouTube's terms): the
+     player is warmed instead, built off screen once the page settles, so it is already buffering when a question opens. */
+  const src = (id, start) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
+    + `&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1${start ? "&start=" + start : ""}`;
 
   let el = null, duo = null, tab = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
@@ -21,7 +25,7 @@
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Brainrot corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t], i) => `<div class="vid">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make it small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide it for this session">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, start], i) => `<div class="vid">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make it small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide it for this session">${ico("i-x")}</button></div>`}<iframe src="${src(id, start)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show the brainrot corner");
     el.append(duo, tab);                                     // both stay put: moving an iframe reloads it, so stashing only hides the duo
@@ -92,10 +96,21 @@
       && !root.classList.contains("dock-away") && !document.querySelector("#q input:focus");
     if (want && !el) build();
     if (!el) return;
-    on = want; el.hidden = !want;
+    const warm = !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !sess("stem-rot-off");
+    on = want;
+    el.hidden = !want && !warm;                              // diet / hidden for the session: gone
+    el.classList.toggle("parked", warm);                     // sugar, just not now (pad page, keyboard...): off screen, still buffering
+    el.inert = warm; el.setAttribute("aria-hidden", String(warm));
     if (want) requestAnimationFrame(() => place(false));
   }
-  window.stemBrainrot = { sync };
+  /* sugar: build the players off screen as soon as the page is idle, so the first question doesn't wait for YouTube */
+  function warmUp() {
+    if (el || !(window.stemBrainrotWarm && window.stemBrainrotWarm()) || sess("stem-rot-off")) return;
+    build(); sync();
+  }
+  const idle = window.requestIdleCallback || (f => setTimeout(f, 1200));
+  addEventListener("load", () => idle(warmUp, { timeout: 3000 }));
+  window.stemBrainrot = { sync, warmUp };
   addEventListener("resize", () => { if (on) place(false); });
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));
