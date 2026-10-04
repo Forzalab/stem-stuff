@@ -1,4 +1,4 @@
-// mc pick all under click spam (easy mode; the prove cases set the stem-mode=hard cookie) (Tony, Oct 3: "I can click multiple times"). The /check route is slowed so taps land while a
+// mc pick all under click spam (prove mode is gone in both modes since #57, so its cases went with it) (Tony, Oct 3: "I can click multiple times"). The /check route is slowed so taps land while a
 // request is out. Every burst must send ONE request and spend at most one try; a finished problem sends nothing more.
 // Starts its own serve.py with a throwaway tries.json:   node tests/choose-all-spam.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -91,34 +91,6 @@ try {
       assert.equal(s.tries, 1); assert.equal(s.finished, true);
       await page.reload(); await opened(page, "CSCI26_A7K"); await page.waitForTimeout(300);
       const r = await st(page); assert.deepEqual(r.right, ["a", "c"]); assert.equal(r.tries, 1);
-    });
-    await ctx.close();
-
-    /* prove mode (CSCI26_A8F: right = a + c, fixes b = 10, d = 16): wrong fix spammed, the same values again, then the right fix */
-    ctx = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" });
-    await ctx.addCookies([{ name: "stem-mode", value: "hard", url: BASE }]);       // fix boxes are hard mode only (design/EASY.md)
-    ({ page, sent, got } = await rig(ctx));
-    await page.goto(`${BASE}/#CSCI26_A8F`); await opened(page, "CSCI26_A8F");
-    const fix = id => page.locator(`#q .ch[data-id="${id}"] .fix input`);
-    await step(`${name} prove: wrong fix spammed = one request, one try`, async () => {
-      for (const id of ["a", "c", "b", "b", "d", "d"]) await tapOn(page, id);
-      await fix("b").fill("20"); await fix("d").fill("16");
-      await burst(page, touch);
-      assert.equal(sent.length, 1, `requests sent: ${sent.length}`);
-      assert.deepEqual([got[0].verdict, got[0].triesLeft, got[0].fixWrong], ["wrong", 1, "b"]);
-      assert.equal((await st(page)).tries, 1);
-    });
-    await step(`${name} prove: same values spammed again = free repeat, no try spent`, async () => {
-      await burst(page, touch);
-      assert.ok(sent.length <= 2, `requests sent: ${sent.length}`);
-      for (const r of got.slice(1)) assert.equal(r.triesLeft, 1, "a repeat spends nothing");
-    });
-    await step(`${name} prove: right fix spammed = one request, correct, finished`, async () => {
-      const before = sent.length;
-      await fix("b").fill("10.00");
-      await burst(page, touch);
-      const s = await st(page);
-      assert.equal(sent.length, before + 1); assert.equal(got.at(-1).verdict, "correct"); assert.equal(s.finished, true);
     });
     await ctx.close();
   }
