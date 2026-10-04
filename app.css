@@ -376,6 +376,42 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 8px; padding: var(--s3) var(--s4); }
 .cluck > .ico { color: var(--mark); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .cluck .md p { margin: 0; }
+/* the brainrot corner (brainrot.js, design/FORMULA-CARD.md round 2 pick 1): two bare videos, iOS picture-in-picture plain */
+.rot { position: fixed; z-index: 30; left: 0; top: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.rot[hidden] { display: none; }
+.rot.snap { transition: transform .2s ease-out; }
+.rot .duo { position: relative; display: grid; gap: var(--s2); width: var(--w, 176px); }
+.rot.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }   /* still playing, out of sight */
+.rot .vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
+.rot.drag .vid { box-shadow: var(--shadow-4); }
+.rot .vid iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }   /* the whole duo drags */
+.rot .ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }
+.rot:hover .ctl, .rot.show .ctl, .rot:focus-within .ctl { opacity: 1; pointer-events: auto; }
+@media (hover: none) { .rot:hover:not(.show) .ctl { opacity: 0; pointer-events: none; } }
+.rot .ctl button, .rot .rtab { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--ink);
+  background: color-mix(in srgb, var(--field) 72%, transparent); cursor: pointer; }
+.rot .ctl .ico, .rot .rtab .ico { width: 1.25rem; height: 1.25rem; }
+.rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
+.rot .rtab.r { border-radius: 10px 0 0 10px; }
+.rot.stashed .rtab { display: grid; }
+.rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
+/* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
+.fcard { margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
+.fcard .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
+.fcard ol { list-style: none; margin: 0; padding: 0; }
+.fcard .st { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); align-items: baseline; }
+.fcard .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); font-size: var(--t-sm); font-weight: 700; align-self: start; font-variant-numeric: tabular-nums; }
+.fcard .f { align-self: center; font-size: var(--t-md); line-height: 1.4; }
+.fcard .f .katex { white-space: nowrap; }
+.fcard .g { grid-column: 2; font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
+.fcard .then { position: relative; margin: var(--s1) 0 var(--s1) calc(2rem + var(--s3)); font-size: var(--t-xs); color: var(--muted); }
+.fcard .then::before { content: ""; position: absolute; left: calc(-1rem - var(--s3) - 0.5px); top: -0.25rem; bottom: -0.25rem; border-left: 1px solid var(--edge); }
+@media (min-width: 45rem) {
+  .fcard ol { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); }
+  .fcard .then { margin: 0; padding-top: 0.4rem; display: flex; align-items: center; gap: var(--s2); }
+  .fcard .then::before, .fcard .then::after { content: ""; position: static; width: var(--s5); border-left: 0; border-top: 1px solid var(--edge); }
+}
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }

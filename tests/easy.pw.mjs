@@ -22,7 +22,7 @@ const P = {
   all: { code: "CALC1_E01", title: "Original E01", type: "mc", pick: "all", shuffle: false,
     body: [{ type: "text", md: "Which are true?" }], choices: [row("a", "two"), row("b", "three"), row("c", "four"), NONE],
     correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. b" }], miss: "QUACK. Missing one.",
-    saccharine: { title: "Practice Exam 2, Question 1: even numbers", tip: "Add the areas above the axis, subtract the ones below.",
+    saccharine: { title: "Practice Exam 2, Question 1: even numbers", tip: "Add the areas above the axis, subtract the ones below.", part: ["W_AREA", "WE_THM"],
       key: "Use: $W = \\Delta K$\nTick: a, c", slip: { b: "3 is odd." }, narration: "POOF. Two and four." } },
   none: { code: "CALC1_E02", type: "mc", shuffle: false, body: [{ type: "text", md: "Pick the even prime above 2." }],
     choices: [row("a", "3"), row("b", "5"), row("c", "7"), NONE], correct: "e" },
@@ -32,6 +32,8 @@ const P = {
     key: "Tick: a, c", slip: { b: "3 times 3 is 9." } },
 };
 mkdirSync(BANKS);
+writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 1, groups: [{ name: "Work and Energy",
+  rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }] }));
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 let asked = 0;
@@ -81,6 +83,19 @@ try {
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
     assert.match(await page.textContent("#how"), /None true\? Check with none ticked/);
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
+  });
+
+  await step("sugar: the formula card (stepper) in order of use; the brainrot corner with the 2 muted players", async () => {
+    assert.deepEqual(await page.$$eval("#fcard .st .n", n => n.map(x => x.textContent.trim())), ["1", "2"]);
+    assert.equal(await page.$$eval("#fcard .then", t => t.length), 1);
+    assert.match(await page.textContent("#fcard .st .g"), /Work and Energy/);
+    await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
+    const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
+    assert.equal(srcs.length, 2);
+    for (const [s, id] of [[srcs[0], "vTfD20dbxho"], [srcs[1], "z84bmLDzIIk"]]) { assert.ok(s.includes(id) && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
+    const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
+    const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
+    assert.equal(hits, 0, "the corner covers an answer control");
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {
@@ -133,6 +148,8 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
+    assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
+    assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.ok(await page.$$eval("#q .fix", f => f.length) > 0, "no fix boxes in diet mode");

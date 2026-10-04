@@ -325,6 +325,7 @@ $("#entry").addEventListener("submit", e => {
   if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Diet mode on." : "Sugar mode on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
+window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
 window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c) && modeHidden(o.get(c), modeOf())); };   // nav.js: uploads
 /* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
@@ -426,6 +427,7 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  window.stemBrainrot?.sync();
 }
 
 function render() {
@@ -503,6 +505,19 @@ function renderQuestion() {
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
+  formulaCard();
+}
+/* sugar: the formula card, stepper look (design/FORMULA-CARD.md round 2, Tony's pick 5): the question's formula-sheet rows in the
+   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint. */
+function formulaCard() {
+  $("#fcard")?.remove();
+  const fs = S && S.prob.formulas;
+  if (!fs || !fs.length || modeOf() !== "sugar") return;
+  const sec = document.createElement("section");
+  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
+  sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
+    <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span><span class="g">${esc(f.group)}</span></li>`).join("")}</ol>`;
+  $("#q").after(sec);
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
@@ -987,6 +1002,7 @@ function feedback(r, typed) {
   say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
   layoutFreeze();
   if (r.verdict === "wrong") wishOnWrong();
+  window.stemBrainrot?.sync();
 }
 
 /* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
@@ -1069,6 +1085,7 @@ function wishPaint() {
   });
   if (w.done && w.open) say("Cluck's solution is open.");
   layoutFreeze();
+  window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
 const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
 const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
@@ -1592,6 +1609,7 @@ if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT()
 const fab = $("#padFab");
 let fabDrag = null, fabMoved = false, fabSeen = false;
 function fabSync() {
+  window.stemBrainrot?.sync();
   const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
   const show = root.classList.contains("pad-off") && !typing;
   root.classList.toggle("fab-on", show);
