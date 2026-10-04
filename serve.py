@@ -152,14 +152,14 @@ def sheet():
     return _sheet["rows"]
 
 
-def formulas(p):
-    """easy mode's formula card: the sheet rows the problem's `part` names, in that order; unknown ids skipped (stderr)."""
+def formulas(code, part):
+    """sugar mode's formula card: the sheet rows `part` names, in that order; unknown ids skipped (stderr)."""
     rows, out = sheet(), []
-    for i in p.get("part") or []:
+    for i in part or []:
         if i in rows:
             out.append(rows[i])
         else:
-            print(f"{p.get('code')}: part {i} is not on the formula sheet", file=sys.stderr)
+            print(f"{code}: part {i} is not on the formula sheet", file=sys.stderr)
     return out
 
 
@@ -198,14 +198,24 @@ def max_tries(p):
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
-# ---------------- modes (design/EASY.md): easy is the default; hard = the cookie stem-mode=hard (code box: ADMIN_<code>) ----------------
+# ---------------- modes (design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
+# Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet (cookies set before the rename still work).
+SUGAR_KEYS = ("title", "tip", "part", "key", "slip", "narration")
+
+
 def mode_of(cookie_header):
     jar = http.cookies.SimpleCookie()
     try:
         jar.load(cookie_header or "")
     except http.cookies.CookieError:
         pass
-    return "hard" if "stem-mode" in jar and jar["stem-mode"].value == "hard" else "easy"
+    return "diet" if "stem-mode" in jar and jar["stem-mode"].value in ("diet", "hard") else "sugar"
+
+
+def sugar(p):
+    """the problem's saccharine layer (schema: one "saccharine" block; flat tip/part/key/slip are read until the banks move)."""
+    s = p.get("saccharine")
+    return s if isinstance(s, dict) else {k: p[k] for k in SUGAR_KEYS if k in p and k != "title"}
 
 
 def locks(p):
@@ -213,29 +223,32 @@ def locks(p):
 
 
 def hidden(p, mode):
-    """easy mode leaves out a question whose answer is "None of these" (Tony, Oct 3)."""
+    """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3)."""
     lk = locks(p)
-    return mode == "easy" and bool(lk) and rights(p) <= lk
+    return mode == "sugar" and bool(lk) and rights(p) <= lk
 
 
 def view(p, mode):
     """The problem as a mode serves and grades it. Both modes (Tony, Oct 3): "None of these" is gone; an mc that had it becomes
-    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Easy also drops prove mode
-    (fix boxes). The try count stays the authored list's. A problem with neither is returned as is."""
-    if mode == "hard" and "tip" in p:                         # the "what to do" line on twisted questions: easy only
-        p = {k: v for k, v in p.items() if k != "tip"}
-    if mode == "easy" and p.get("part"):                      # the formula card (design/EASY.md); `part` itself stays server side
-        p = dict(p, formulas=formulas(p))
+    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Sugar also drops prove mode
+    (fix boxes) and shows its saccharine title, tip and formula card. The try count stays the authored list's. The layer's key,
+    slip and narration never travel with the problem (/explain and /narrate read them from problems())."""
+    sg = sugar(p)
+    p = {k: v for k, v in p.items() if k not in SUGAR_KEYS[1:] and k != "saccharine"}
+    if mode == "sugar":
+        p.update({k: v for k, v in (("title", sg.get("title")), ("tip", sg.get("tip"))) if v})
+        if sg.get("part"):
+            p["formulas"] = formulas(p["code"], sg["part"])
     if p.get("type") != "mc":
         return p
     lk = locks(p)
-    if not lk and (mode == "hard" or "fix" not in p):
+    if not lk and (mode == "diet" or "fix" not in p):
         return p
     q = dict(p, choices=[c for c in shown(p) if not c.get("lock")], tries=max_tries(p))
     if lk:
         q.update(pick="all", correct=sorted(rights(p) - lk), wrong=[w for w in p.get("wrong", []) if w.get("choice") not in lk])
         q.setdefault("miss", NONE_MISS)
-    if mode == "easy":
+    if mode == "sugar":
         q.pop("fix", None)
     return q
 
@@ -534,7 +547,7 @@ def mark(p, sid):
     return {"x": x, "done": done} if x or done != "open" else None
 
 
-def bank_payload(code, sid, mode="easy"):
+def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md)."""
     all_banks = banks()
@@ -711,7 +724,8 @@ Open with one genie line, like "POOF! You rubbed the lamp wrong, but a wish is a
 You are given the correct solution (KEY) and the slip behind the student's pick (SLIP). Paraphrase them. Never change a number, sign, unit, or the answer. Never add physics that is not in the KEY.
 Format: plain text and LaTeX only. No markdown at all: no **, no *, no #, no bullet symbols, no code. Math in $...$.
 Shape: one genie line. A "Use:" line with the master formula. If the KEY has a table, copy it exactly with its aligned columns. Then the KEY's work lines, the answer last. A "Your pick:" line naming the slip. One pun sign-off.
-Short words. Short lines. Nothing the student must read twice."""
+Short words. Short lines. Nothing the student must read twice.
+Audience: community college students in Fresno taking physics as a general requirement, mostly biology and computer science majors, many reading English as a second language. Plain everyday words; explain any physics word the first time."""
 
 
 def explain_allowed(sid, auto, now=None):
@@ -733,12 +747,13 @@ def explain_prompt(p, answer):
     lines = [f"QUESTION:\n{text}", figs]
     if p.get("type") == "mc":
         lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
-    picked = answer if isinstance(answer, list) else [answer]
-    slips = [p.get("slip", {}).get(str(a)) for a in picked]
-    lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}", f"KEY:\n{p['key']}",
+    sg, picked = sugar(p), answer if isinstance(answer, list) else [answer]
+    slips = [(sg.get("slip") or {}).get(str(a)) for a in picked]
+    lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}", f"KEY:\n{sg['key']}",
               "SLIP: " + (" ".join(x for x in slips if x) or "(none written; name the likely slip from the KEY)")]
-    if p.get("formulas"):
-        lines.append("SHEET FORMULAS: " + "; ".join(f["tex"] for f in p["formulas"]))
+    fs = formulas(p.get("code"), sg.get("part"))
+    if fs:
+        lines.append("SHEET FORMULAS: " + "; ".join(f["tex"] for f in fs))
     return "\n\n".join(x for x in lines if x)
 
 
@@ -803,7 +818,7 @@ def explain(cookie_header, body):
         b = None
     mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
     p = problems().get(str(b.get("code", ""))) if isinstance(b, dict) else None
-    if p is None or mode != "easy" or hidden(p, mode) or not p.get("key"):
+    if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key"):
         return 404, head, iter([b""])
     if not key:
         return 503, head, iter([b""])
@@ -812,7 +827,7 @@ def explain(cookie_header, body):
 
     def gen():
         try:
-            for t in explain_stream(view(p, "easy"), b.get("answer"), key):
+            for t in explain_stream(p, b.get("answer"), key):
                 yield t.encode()
         except Exception as e:  # noqa: BLE001
             print(f"explain {p['code']}: {e}", file=sys.stderr)
@@ -832,7 +847,7 @@ def dispatch(method, path, cookie_header="", body=b""):
     path is not an API path (a static file)."""
     path = path.split("?")[0]
     if method == "POST":
-        if path != "/check":
+        if path not in ("/check", "/narrate"):
             return None
         sid, cookie = new_sid(cookie_header)
         try:
@@ -842,6 +857,9 @@ def dispatch(method, path, cookie_header="", body=b""):
         if not isinstance(b, dict):
             return _json(400, {"verdict": "invalid"}, cookie)
         p, mode = problems().get(str(b.get("code", ""))), mode_of(cookie_header)
+        if path == "/narrate":                       # the pre-written voiceover (saccharine.narration): sugar mode only
+            text = sugar(p).get("narration") if p is not None and mode == "sugar" and not hidden(p, mode) else None
+            return _json(200 if text else 404, {"text": text or ""}, cookie)
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
         return _json(200, grade(view(p, mode), sid, b), cookie)
@@ -861,7 +879,7 @@ def dispatch(method, path, cookie_header="", body=b""):
     if m.re is STATE_PATH:
         return _json(200, state(view(p, mode), sid), cookie)
     if hidden(p, mode):
-        return _json(404, {"error": "not in easy mode"}, cookie)
+        return _json(404, {"error": "not in sugar mode"}, cookie)
     out = _json(200, public(view(p, mode), sid), cookie)
     seen(p["code"], sid)
     return out

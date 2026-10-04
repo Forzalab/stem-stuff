@@ -316,13 +316,13 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
-  const mp = modePrefix(codeIn.value);                                    // ADMIN_<code> = hard mode, UNADMIN_<code> = easy (design/EASY.md)
+  const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
-  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "hard" ? "Hard mode on." : "Easy mode on."); });
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Diet mode on." : "Sugar mode on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
 window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c) && modeHidden(o.get(c), modeOf())); };   // nav.js: uploads
@@ -403,7 +403,7 @@ async function load(code) {
   try {
     prob = await getProblem(code);
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
-      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is hard-mode only.`; return; }
+      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is diet-mode only.`; return; }
       prob = modeView(prob, modeOf());
     }
   }
@@ -1007,8 +1007,11 @@ function wishReset() {
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
 }
 function wishOnWrong() {
-  if (modeOf() !== "easy" || !S || (wish && wish.code === S.code)) return;
-  wish = { code: S.code, text: "", started: false, done: false, open: false, failed: 0 };
+  if (modeOf() !== "sugar" || !S || (wish && wish.code === S.code)) return;
+  wish = { code: S.code, text: "", narration: "", started: false, done: false, open: false, failed: 0 };
+  const w = wish;                                                          // the voiceover is pre-written (saccharine.narration): free
+  fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
+    .then(r => r.ok ? r.json() : null).then(j => { if (j && j.text) w.narration = j.text; }).catch(() => {});
   if (wishLog().length < WISH_AUTO) wishStart(true);
   wishPaint();
 }
@@ -1033,7 +1036,7 @@ async function wishStart(auto) {
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
-  if (w.open && w.text) voiceSay(w.text);
+  if (w.open && w.text) voiceSay(w.narration || w.text);
 }
 /* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
 const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
@@ -1055,12 +1058,12 @@ function wishPaint() {
   el.querySelector(".wchip").addEventListener("click", () => {
     if (!w.started || w.failed) { w.failed = 0; w.text = ""; w.done = false; w.open = true; wishStart(false); wishPaint(); return; }
     w.open = !w.open;
-    if (w.open && w.done) voiceSay(w.text); else voiceStop();
+    if (w.open && w.done) voiceSay(w.narration || w.text); else voiceStop();
     wishPaint();
   });
   el.querySelector(".wvoice")?.addEventListener("click", () => {
     try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
-    if (voiceOn()) { if (w.done) voiceSay(w.text); } else voiceStop();
+    if (voiceOn()) { if (w.done) voiceSay(w.narration || w.text); } else voiceStop();
     wishPaint();
   });
   if (w.done && w.open) say("Cluck's solution is open.");

@@ -1,5 +1,5 @@
-// Easy mode (the default) vs hard mode (ADMIN_<code>), design/EASY.md: no "None of these" in either; easy hides None-is-the-answer
-// questions, drops fix boxes and shows the "what to do" tip; nothing ticked is a real answer; UNADMIN_ goes back. Starts its own
+// Sugar mode (saccharine, the default) vs diet (DIET_<code>, the original questions), design/EASY.md: no "None of these" in either;
+// sugar hides None-is-the-answer questions, drops fix boxes, shows the saccharine title and tip, and Cluck; SUGAR_ goes back. Starts its own
 // serve.py with a throwaway banks/ folder and tries.json:   node tests/easy.pw.mjs [port]
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
@@ -19,10 +19,11 @@ const TMP = mkdtempSync(join(tmpdir(), "easy-")), BANKS = join(TMP, "banks");
 const row = (id, md, x = {}) => ({ id, md, ...x });
 const NONE = row("e", "None of these", { lock: true });
 const P = {
-  all: { code: "CALC1_E01", type: "mc", pick: "all", shuffle: false, tip: "Add the areas above the axis, subtract the ones below.",
+  all: { code: "CALC1_E01", title: "Original E01", type: "mc", pick: "all", shuffle: false,
     body: [{ type: "text", md: "Which are true?" }], choices: [row("a", "two"), row("b", "three"), row("c", "four"), NONE],
     correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. b" }], miss: "QUACK. Missing one.",
-    key: "Use: $W = \\Delta K$\nTick: a, c", slip: { b: "3 is odd." } },
+    saccharine: { title: "Practice Exam 2, Question 1: even numbers", tip: "Add the areas above the axis, subtract the ones below.",
+      key: "Use: $W = \\Delta K$\nTick: a, c", slip: { b: "3 is odd." }, narration: "POOF. Two and four." } },
   none: { code: "CALC1_E02", type: "mc", shuffle: false, body: [{ type: "text", md: "Pick the even prime above 2." }],
     choices: [row("a", "3"), row("b", "5"), row("c", "7"), NONE], correct: "e" },
   prove: { code: "CALC1_E03", type: "mc", pick: "all", shuffle: false, fix: { type: "num", how: "4 sig figs" },
@@ -75,7 +76,9 @@ try {
     assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E03"]);
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.deepEqual(await rows(page), ["two", "three", "four"]);
-    assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.tip);
+    assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
+    assert.equal(await page.title(), "CALC1_E01");
+    assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
     assert.match(await page.textContent("#how"), /None true\? Check with none ticked/);
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
@@ -118,9 +121,9 @@ try {
     await page.waitForSelector('#q .opt.right[data-id="a"]', { timeout: 4000 });
   });
 
-  await step("ADMIN_EZ12: hard mode, every question, no tip, fix boxes back, still no None row", async () => {
-    await typeCode(page, "ADMIN_EZ12");
-    await page.waitForFunction(() => /stem-mode=hard/.test(document.cookie), null, { timeout: 4000 });
+  await step("DIET_EZ12: the original questions, every one, no tip, original titles, fix boxes back, still no None row", async () => {
+    await typeCode(page, "DIET_EZ12");
+    await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
     await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 3, null, { timeout: 8000 });
     assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E02", "CALC1_E03"]);
     await page.evaluate(() => { location.hash = "CALC1_E02"; }); await opened(page, "CALC1_E02");
@@ -128,17 +131,18 @@ try {
     await page.click("#mcGo");                                               // None was the key: nothing ticked is right
     await page.waitForSelector("#q.closed", { timeout: 4000 });
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
-    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in hard mode");
+    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
+    assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
-    assert.ok(await page.$$eval("#q .fix", f => f.length) > 0, "no fix boxes in hard mode");
+    assert.ok(await page.$$eval("#q .fix", f => f.length) > 0, "no fix boxes in diet mode");
   });
 
-  await step("UNADMIN_EZ12: easy again; the prefixed form is never remembered", async () => {
-    await typeCode(page, "UNADMIN_EZ12");
-    await page.waitForFunction(() => !/stem-mode=hard/.test(document.cookie), null, { timeout: 4000 });
+  await step("SUGAR_EZ12: sugar again; the prefixed form is never remembered", async () => {
+    await typeCode(page, "SUGAR_EZ12");
+    await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
     await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 2, null, { timeout: 8000 });
     const saved = await page.evaluate(() => localStorage.getItem("stem-codes") || "");
-    assert.ok(!/ADMIN/.test(saved), saved);
+    assert.ok(!/DIET|SUGAR/.test(saved), saved);
   });
 } finally {
   await browser.close();

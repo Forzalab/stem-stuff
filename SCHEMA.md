@@ -377,26 +377,39 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
           "maxLength": 120,
           "description": "text/multi: how to type the answer, shown right above the answer box. Plain text + $..$ + `code`."
         },
+        "saccharine": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "SUGAR mode layer (design/EASY.md schema v2). The problem's own fields are the DIET question, untouched. Server only except title, tip and the formula rows from part. A problem without it is diet-only (BANK_PSY6).",
+          "properties": {
+            "title": {"type": "string", "minLength": 3, "maxLength": 120, "description": "\"Practice Exam 2, Question X: [condition changed]\" (or \"Practice Exam 2, Question X\" when unchanged)"},
+            "tip": {"type": "string", "minLength": 3, "maxLength": 160, "description": "one 'what to do' line on top: plain statements, never a question; plain text + $..$"},
+            "part": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"}, "description": "formula-sheet.json row ids, in order of use: the formula card"},
+            "key": {"type": "string", "minLength": 3, "description": "server only: the full presolved solution, plain text + LaTeX; Cluck paraphrases it"},
+            "slip": {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}, "description": "server only: choice id -> the slip that gives it"},
+            "narration": {"type": "string", "minLength": 3, "maxLength": 700, "description": "the voiceover after a wrong answer: plain spoken words, no $ or LaTeX, numbers and units spelled as said, <= 90 words"}
+          }
+        },
         "tip": {
           "type": "string",
           "minLength": 3,
           "maxLength": 160,
-          "description": "easy mode only (design/EASY.md): one 'what to do' line shown on top of a twisted question. Plain statements, never a question. Plain text + $..$."
+          "description": "LEGACY flat form of saccharine.tip (read until the banks move to the block)."
         },
         "part": {
           "type": "array",
           "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"},
-          "description": "easy mode (design/EASY.md): ids of the formula-sheet rows that solve it (formula-sheet.json). Shown as the formula card."
+          "description": "LEGACY flat form of saccharine.part."
         },
         "key": {
           "type": "string",
           "minLength": 3,
-          "description": "server only (design/EASY.md): the presolved solution, plain text + LaTeX. The AI paraphrases it; never sent to the browser."
+          "description": "LEGACY flat form of saccharine.key (server only)."
         },
         "slip": {
           "type": "object",
           "additionalProperties": {"type": "string", "minLength": 3},
-          "description": "server only: choice id -> the one slip that produces that wrong choice."
+          "description": "LEGACY flat form of saccharine.slip (server only)."
         },
         "choices": {
           "type": "array",
