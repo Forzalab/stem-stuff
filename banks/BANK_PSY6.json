@@ -46,7 +46,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: negative evaluations are stronger than equally strong positive ones. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: attitude = an evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components.\nAnswer: a) attitude",
+   "slip": {
+    "b": "attitude centrality means how closely an attitude is linked to a person's other attitudes.",
+    "c": "attitude accessibility means how readily an attitude comes to mind.",
+    "d": "negativity bias means negative evaluations are stronger than equally strong positive ones."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAB",
@@ -93,7 +101,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: how closely an attitude is linked to a person's other attitudes. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Likert scale = a numerical scale with labeled anchors at each extreme, used to assess attitudes.\nAnswer: a) Likert scale",
+   "slip": {
+    "b": "implicit attitude measure means an indirect measure of attitudes that does not involve a self-report.",
+    "c": "response latency means the time it takes to respond to a stimulus, such as an attitude question.",
+    "d": "attitude centrality means how closely an attitude is linked to a person's other attitudes."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAC",
@@ -140,7 +156,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: an indirect measure of attitudes that does not involve a self-report. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: response latency = the time it takes to respond to a stimulus, such as an attitude question.\nAnswer: a) response latency",
+   "slip": {
+    "b": "attitude accessibility means how readily an attitude comes to mind.",
+    "c": "Likert scale means a numerical scale with labeled anchors at each extreme, used to assess attitudes.",
+    "d": "implicit attitude measure means an indirect measure of attitudes that does not involve a self-report."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAD",
@@ -187,7 +211,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: an evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: attitude accessibility = how readily an attitude comes to mind.\nAnswer: a) attitude accessibility",
+   "slip": {
+    "b": "attitude centrality means how closely an attitude is linked to a person's other attitudes.",
+    "c": "response latency means the time it takes to respond to a stimulus, such as an attitude question.",
+    "d": "attitude means an evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAE",
@@ -234,7 +266,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: an evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: attitude centrality = how closely an attitude is linked to a person's other attitudes.\nAnswer: a) attitude centrality",
+   "slip": {
+    "b": "attitude accessibility means how readily an attitude comes to mind.",
+    "c": "cognitive consistency theories means theories that we rationalize our behavior to keep attitudes and actions consistent.",
+    "d": "attitude means an evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAF",
@@ -281,7 +321,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: people infer their own attitudes by observing their behavior and the context it occurred in. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: implicit attitude measure = an indirect measure of attitudes that does not involve a self-report.\nAnswer: a) implicit attitude measure",
+   "slip": {
+    "b": "Likert scale means a numerical scale with labeled anchors at each extreme, used to assess attitudes.",
+    "c": "response latency means the time it takes to respond to a stimulus, such as an attitude question.",
+    "d": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAG",
@@ -328,7 +376,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: how readily an attitude comes to mind. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: negativity bias = negative evaluations are stronger than equally strong positive ones.\nAnswer: a) negativity bias",
+   "slip": {
+    "b": "mortality salience means making a person's own death prominent in their mind.",
+    "c": "cognitive dissonance theory means inconsistency between thoughts, sentiments, and actions creates an aversive state that motivates restoring consistency.",
+    "d": "attitude accessibility means how readily an attitude comes to mind."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAH",
@@ -375,7 +431,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: inconsistency between thoughts, sentiments, and actions creates an aversive state that motivates restoring consistency. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: cognitive consistency theories = theories that we rationalize our behavior to keep attitudes and actions consistent.\nAnswer: a) cognitive consistency theories",
+   "slip": {
+    "b": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in.",
+    "c": "system justification theory means people are motivated to see the existing sociopolitical system as desirable, fair, and legitimate.",
+    "d": "cognitive dissonance theory means inconsistency between thoughts, sentiments, and actions creates an aversive state that motivates restoring consistency."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAJ",
@@ -422,7 +486,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: bolstering other core values to buffer a threat to the self. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: cognitive dissonance theory = inconsistency between thoughts, sentiments, and actions creates an aversive state that motivates restoring consistency.\nAnswer: a) cognitive dissonance theory",
+   "slip": {
+    "b": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in.",
+    "c": "cognitive consistency theories means theories that we rationalize our behavior to keep attitudes and actions consistent.",
+    "d": "self-affirmation means bolstering other core values to buffer a threat to the self."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAK",
@@ -469,7 +541,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: rewarding an enjoyable activity lowers intrinsic interest in it. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: effort justification = reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it.\nAnswer: a) effort justification",
+   "slip": {
+    "b": "insufficient justification means too little outside reason for an act, so the person changes their attitude to explain it.",
+    "c": "induced (forced) compliance means subtly compelling people to act against their attitudes, which creates dissonance and attitude change.",
+    "d": "overjustification effect means rewarding an enjoyable activity lowers intrinsic interest in it."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAL",
@@ -516,7 +596,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: people infer their own attitudes by observing their behavior and the context it occurred in. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: induced (forced) compliance = subtly compelling people to act against their attitudes, which creates dissonance and attitude change.\nAnswer: a) induced (forced) compliance",
+   "slip": {
+    "b": "effort justification means reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it.",
+    "c": "insufficient justification means too little outside reason for an act, so the person changes their attitude to explain it.",
+    "d": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAM",
@@ -563,7 +651,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: subtly compelling people to act against their attitudes, which creates dissonance and attitude change. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: insufficient justification = too little outside reason for an act, so the person changes their attitude to explain it.\nAnswer: a) insufficient justification",
+   "slip": {
+    "b": "overjustification effect means rewarding an enjoyable activity lowers intrinsic interest in it.",
+    "c": "effort justification means reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it.",
+    "d": "induced (forced) compliance means subtly compelling people to act against their attitudes, which creates dissonance and attitude change."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAN",
@@ -610,7 +706,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: living on after death through culture, values, or offspring. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: self-affirmation = bolstering other core values to buffer a threat to the self.\nAnswer: a) self-affirmation",
+   "slip": {
+    "b": "effort justification means reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it.",
+    "c": "system justification theory means people are motivated to see the existing sociopolitical system as desirable, fair, and legitimate.",
+    "d": "symbolic immortality means living on after death through culture, values, or offspring."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAP",
@@ -657,7 +761,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: bolstering other core values to buffer a threat to the self. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: self-perception theory = people infer their own attitudes by observing their behavior and the context it occurred in.\nAnswer: a) self-perception theory",
+   "slip": {
+    "b": "cognitive dissonance theory means inconsistency between thoughts, sentiments, and actions creates an aversive state that motivates restoring consistency.",
+    "c": "embodied cognition means thoughts, feelings, and attitudes are partly grounded in bodily states and movements.",
+    "d": "self-affirmation means bolstering other core values to buffer a threat to the self."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAQ",
@@ -704,7 +816,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: people infer their own attitudes by observing their behavior and the context it occurred in. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: overjustification effect = rewarding an enjoyable activity lowers intrinsic interest in it.\nAnswer: a) overjustification effect",
+   "slip": {
+    "b": "insufficient justification means too little outside reason for an act, so the person changes their attitude to explain it.",
+    "c": "effort justification means reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it.",
+    "d": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAR",
@@ -751,7 +871,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: negative evaluations are stronger than equally strong positive ones. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: embodied cognition = thoughts, feelings, and attitudes are partly grounded in bodily states and movements.\nAnswer: a) embodied cognition",
+   "slip": {
+    "b": "self-perception theory means people infer their own attitudes by observing their behavior and the context it occurred in.",
+    "c": "implicit attitude measure means an indirect measure of attitudes that does not involve a self-report.",
+    "d": "negativity bias means negative evaluations are stronger than equally strong positive ones."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAS",
@@ -798,7 +926,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: theories that we rationalize our behavior to keep attitudes and actions consistent. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: system justification theory = people are motivated to see the existing sociopolitical system as desirable, fair, and legitimate.\nAnswer: a) system justification theory",
+   "slip": {
+    "b": "compensatory stereotypes means beliefs that people in less-privileged roles get compensating benefits, like being poor but happy.",
+    "c": "terror management theory means people manage death anxiety by upholding cultural worldviews and living up to their standards (symbolic immortality).",
+    "d": "cognitive consistency theories means theories that we rationalize our behavior to keep attitudes and actions consistent."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAT",
@@ -845,7 +981,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: bolstering other core values to buffer a threat to the self. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: compensatory stereotypes = beliefs that people in less-privileged roles get compensating benefits, like being poor but happy.\nAnswer: a) compensatory stereotypes",
+   "slip": {
+    "b": "system justification theory means people are motivated to see the existing sociopolitical system as desirable, fair, and legitimate.",
+    "c": "negativity bias means negative evaluations are stronger than equally strong positive ones.",
+    "d": "self-affirmation means bolstering other core values to buffer a threat to the self."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAU",
@@ -892,7 +1036,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: living on after death through culture, values, or offspring. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: terror management theory = people manage death anxiety by upholding cultural worldviews and living up to their standards (symbolic immortality).\nAnswer: a) terror management theory",
+   "slip": {
+    "b": "system justification theory means people are motivated to see the existing sociopolitical system as desirable, fair, and legitimate.",
+    "c": "mortality salience means making a person's own death prominent in their mind.",
+    "d": "symbolic immortality means living on after death through culture, values, or offspring."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAV",
@@ -939,7 +1091,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: people manage death anxiety by upholding cultural worldviews and living up to their standards (symbolic immortality). Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: mortality salience = making a person's own death prominent in their mind.\nAnswer: a) mortality salience",
+   "slip": {
+    "b": "symbolic immortality means living on after death through culture, values, or offspring.",
+    "c": "negativity bias means negative evaluations are stronger than equally strong positive ones.",
+    "d": "terror management theory means people manage death anxiety by upholding cultural worldviews and living up to their standards (symbolic immortality)."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAW",
@@ -986,7 +1146,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: beliefs that people in less-privileged roles get compensating benefits, like being poor but happy. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: symbolic immortality = living on after death through culture, values, or offspring.\nAnswer: a) symbolic immortality",
+   "slip": {
+    "b": "mortality salience means making a person's own death prominent in their mind.",
+    "c": "self-affirmation means bolstering other core values to buffer a threat to the self.",
+    "d": "compensatory stereotypes means beliefs that people in less-privileged roles get compensating benefits, like being poor but happy."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAX",
@@ -1033,7 +1201,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: free-choice paradigm = choose between two similar items, then re-rate them.\nAnswer: a) free-choice paradigm",
+   "slip": {
+    "b": "forbidden toy paradigm means children get a mild or severe threat against playing with a toy.",
+    "c": "induced (forced) compliance means subtly compelling people to act against their attitudes, which creates dissonance and attitude change.",
+    "d": "effort justification means reducing dissonance by deciding that time, effort, or money spent on a disappointing thing was worth it."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAY",
@@ -1080,7 +1256,15 @@
      "error": "misread",
      "hint": "QUACK. That one is: subtly compelling people to act against their attitudes, which creates dissonance and attitude change. Which word in the definition rules it out?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: forbidden toy paradigm = children get a mild or severe threat against playing with a toy.\nAnswer: a) forbidden toy paradigm",
+   "slip": {
+    "b": "free-choice paradigm means choose between two similar items, then re-rate them.",
+    "c": "overjustification effect means rewarding an enjoyable activity lowers intrinsic interest in it.",
+    "d": "induced (forced) compliance means subtly compelling people to act against their attitudes, which creates dissonance and attitude change."
+   },
+   "tip": "Find the key words in the definition. Match them to the term."
   },
   {
    "code": "PSY_DAZ",
@@ -1127,7 +1311,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: LaPiere (1934) found this.\nAnswer: a) Nearly all places served a Chinese couple in person, but most said by letter they would refuse",
+   "slip": {
+    "b": "That is the Fazio & Williams (1986) finding.",
+    "c": "That is the Aronson & Mills (1959) finding.",
+    "d": "That is the Festinger & Carlsmith (1959) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA2",
@@ -1174,7 +1366,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Fazio & Williams (1986) found this.\nAnswer: a) Fast responders voted in line with their attitudes",
+   "slip": {
+    "b": "That is the LaPiere (1934) finding.",
+    "c": "That is the Wilson et al. (1984) finding.",
+    "d": "That is the Ito, Cacioppo et al. (1998) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA3",
@@ -1221,7 +1421,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Wilson et al. (1984) found this.\nAnswer: a) Listing reasons made attitudes predict a relationship's future worse",
+   "slip": {
+    "b": "That is the Fazio & Williams (1986) finding.",
+    "c": "That is the Lord, Lepper & Mackie (1984) finding.",
+    "d": "That is the Wells & Petty (1980) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA4",
@@ -1268,7 +1476,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Lord, Lepper & Mackie (1984) found this.\nAnswer: a) Attitudes predicted behavior only when the target fit the person's prototype",
+   "slip": {
+    "b": "That is the Wilson et al. (1984) finding.",
+    "c": "That is the LaPiere (1934) finding.",
+    "d": "That is the Knox & Inkster (1968) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA5",
@@ -1315,7 +1531,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Knox & Inkster (1968) found this.\nAnswer: a) Bettors felt more confident right after betting",
+   "slip": {
+    "b": "That is the Aronson & Mills (1959) finding.",
+    "c": "That is the Fazio & Williams (1986) finding.",
+    "d": "That is the Aronson & Carlsmith (1963) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA6",
@@ -1362,7 +1586,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Aronson & Mills (1959) found this.\nAnswer: a) Severe initiation made a boring group seem better",
+   "slip": {
+    "b": "That is the Festinger & Carlsmith (1959) finding.",
+    "c": "That is the Knox & Inkster (1968) finding.",
+    "d": "That is the Aronson & Carlsmith (1963) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA7",
@@ -1409,7 +1641,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Festinger & Carlsmith (1959) found this.\nAnswer: a) Paid $1 liars liked a dull task more than $20 liars",
+   "slip": {
+    "b": "Flipped the result. Festinger & Carlsmith (1959): Paid $1 liars liked a dull task more than $20 liars.",
+    "c": "That is the Aronson & Mills (1959) finding.",
+    "d": "That is the Greene, Sternberg & Lepper (1976) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA8",
@@ -1456,7 +1696,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Aronson & Carlsmith (1963) found this.\nAnswer: a) A mild threat made children devalue a toy",
+   "slip": {
+    "b": "Flipped the result. Aronson & Carlsmith (1963): A mild threat made children devalue a toy.",
+    "c": "That is the Greene, Sternberg & Lepper (1976) finding.",
+    "d": "That is the Aronson & Mills (1959) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DA9",
@@ -1503,7 +1751,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Greene, Sternberg & Lepper (1976) found this.\nAnswer: a) Rewarded children later played math games less",
+   "slip": {
+    "b": "That is the Aronson & Carlsmith (1963) finding.",
+    "c": "That is the Wells & Petty (1980) finding.",
+    "d": "That is the Festinger & Carlsmith (1959) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBA",
@@ -1550,7 +1806,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Wells & Petty (1980) found this.\nAnswer: a) Nodding while listening increased agreement",
+   "slip": {
+    "b": "That is the Cacioppo, Priester & Berntson (1993) finding.",
+    "c": "That is the Risen & Critcher (2011) finding.",
+    "d": "That is the Greene, Sternberg & Lepper (1976) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBB",
@@ -1597,7 +1861,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Cacioppo, Priester & Berntson (1993) found this.\nAnswer: a) Pulling the arm in (flexion) made ideographs liked more",
+   "slip": {
+    "b": "That is the Wells & Petty (1980) finding.",
+    "c": "Flipped the result. Cacioppo, Priester & Berntson (1993): Pulling the arm in (flexion) made ideographs liked more.",
+    "d": "That is the Risen & Critcher (2011) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBC",
@@ -1644,7 +1916,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Risen & Critcher (2011) found this.\nAnswer: a) People in a warm room believed in global warming more",
+   "slip": {
+    "b": "That is the Wells & Petty (1980) finding.",
+    "c": "That is the Landau et al. (2004) finding.",
+    "d": "That is the Cacioppo, Priester & Berntson (1993) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBD",
@@ -1691,7 +1971,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Heine & Lehman (1997) found this.\nAnswer: a) Japanese participants showed no post-choice dissonance when choosing for themselves",
+   "slip": {
+    "b": "That is the Landau et al. (2004) finding.",
+    "c": "That is the Knox & Inkster (1968) finding.",
+    "d": "Flipped the result. Heine & Lehman (1997): Japanese participants showed no post-choice dissonance when choosing for themselves."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBE",
@@ -1738,7 +2026,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Landau et al. (2004) found this.\nAnswer: a) Death reminders raised ratings of Bush",
+   "slip": {
+    "b": "Flipped the result. Landau et al. (2004): Death reminders raised ratings of Bush.",
+    "c": "That is the Risen & Critcher (2011) finding.",
+    "d": "That is the Heine & Lehman (1997) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   },
   {
    "code": "PSY_DBF",
@@ -1785,7 +2081,15 @@
      "error": "misread",
      "hint": "QUACK. Picture the actual setup of this study. Who were the participants, and what was varied?"
     }
-   ]
+   ],
+   "part": [],
+   "key": "Anchor: Ito, Cacioppo et al. (1998) found this.\nAnswer: a) Negative pictures produced more brain activity than positive ones",
+   "slip": {
+    "b": "That is the Fazio & Williams (1986) finding.",
+    "c": "Flipped the result. Ito, Cacioppo et al. (1998): Negative pictures produced more brain activity than positive ones.",
+    "d": "That is the Landau et al. (2004) finding."
+   },
+   "tip": "Recall what the study changed and what happened. Match that result."
   }
  ]
 }

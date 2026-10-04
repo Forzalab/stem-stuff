@@ -43,7 +43,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
@@ -100,6 +100,8 @@ def _bank_files():
     for n in names:
         if not n.endswith(".json"):
             continue
+        if n == SHEET_NAME:
+            continue
         if BANK_CODE.match(n[:-5]):
             out[n[:-5]] = os.path.join(BANKS, n)
         elif n not in _bank["skipped"]:
@@ -125,6 +127,39 @@ def _index():
             _bank.update(sig=sig, by_code=by_code, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
         return _bank
 
+
+
+SHEET_NAME = "formula-sheet.json"          # banks/formula-sheet.json: the exam's formula sheet (design/EASY.md), shipped with the banks
+_sheet = {"mtime": None, "rows": {}}
+
+
+def sheet():
+    """formula id -> {"id", "group", "tex"}, from banks/formula-sheet.json; re-read when it changes; {} without one."""
+    path = os.path.join(BANKS, SHEET_NAME)
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return {}
+    if _sheet["mtime"] != mtime:
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            _sheet["rows"] = {r["id"]: {"id": r["id"], "group": g["name"], "tex": r["tex"]} for g in data["groups"] for r in g["rows"]}
+        except Exception as e:  # noqa: BLE001
+            print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
+        _sheet["mtime"] = mtime
+    return _sheet["rows"]
+
+
+def formulas(p):
+    """easy mode's formula card: the sheet rows the problem's `part` names, in that order; unknown ids skipped (stderr)."""
+    rows, out = sheet(), []
+    for i in p.get("part") or []:
+        if i in rows:
+            out.append(rows[i])
+        else:
+            print(f"{p.get('code')}: part {i} is not on the formula sheet", file=sys.stderr)
+    return out
 
 
 def problems():
@@ -188,6 +223,8 @@ def view(p, mode):
     (fix boxes). The try count stays the authored list's. A problem with neither is returned as is."""
     if mode == "hard" and "tip" in p:                         # the "what to do" line on twisted questions: easy only
         p = {k: v for k, v in p.items() if k != "tip"}
+    if mode == "easy" and p.get("part"):                      # the formula card (design/EASY.md); `part` itself stays server side
+        p = dict(p, formulas=formulas(p))
     if p.get("type") != "mc":
         return p
     lk = locks(p)

@@ -433,6 +433,19 @@ class Banks(unittest.TestCase):
         with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
             json.dump(data, f)
 
+    def test_formula_card_and_keys_stay_server_side(self):                    # design/EASY.md
+        self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
+        p = dict(BANK["CALC1_X2P"], code="CALC1_FK1", part=["WE_THM", "NOPE"], key="Use: $W = \\Delta K$", slip={"a": "sign"}, tip="Add the areas.")
+        self.write("BANK_FK12", {"v": 1, "problems": [p]})
+        self.assertNotIn("formula-sheet", serve.banks())                       # the sheet is not a bank
+        easy = serve.public(serve.view(serve.problems()["CALC1_FK1"], "easy"), "f1")
+        self.assertEqual(easy["formulas"], [{"id": "WE_THM", "group": "Work and Energy", "tex": "W = \\Delta K"}])   # unknown id skipped
+        self.assertEqual(easy["tip"], "Add the areas.")
+        hard = serve.public(serve.view(serve.problems()["CALC1_FK1"], "hard"), "f1")
+        self.assertFalse({"formulas", "tip"} & set(hard))
+        for out in (easy, hard, *serve.bank_payload("BANK_FK12", "f2", "easy")["problems"]):
+            self.assertFalse({"key", "slip", "part", "correct", "wrong"} & set(out), out.keys())
+
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")
         self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])

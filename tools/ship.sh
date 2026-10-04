@@ -89,7 +89,7 @@ for f in "$ROOT"/banks/*.json; do add 2 0 repo "$f"; done   # rank 2: a stale lo
 if [ -z "$NOBRAIN" ]; then
   brain_dir
   if [ -n "$BRAIN" ]; then
-    for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json; do
+    for f in "$BRAIN"/projects/*/_files/*-bank/BANK_*.json "$BRAIN"/projects/*/_files/*-bank/formula-sheet.json; do   # + the formula sheet (design/EASY.md)
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
       add 1 "${t:-0}" brain "$f"
     done

@@ -22,7 +22,7 @@ import urllib.request
 API = os.environ.get("BRAIN_API", "https://gitlab.com/api/v4").rstrip("/")
 PROJECT = urllib.parse.quote(os.environ.get("BRAIN_PROJECT", "Forzalab-bravo/brain"), safe="")
 REF = os.environ.get("BRAIN_REF", "main")
-BANK = re.compile(r"^projects/[^/]+/_files/[^/]+-bank/(BANK_[A-Z0-9]{3,6}\.json)$")
+BANK = re.compile(r"^projects/[^/]+/_files/[^/]+-bank/(BANK_[A-Z0-9]{3,6}\.json|formula-sheet\.json)$")   # + the formula sheet (design/EASY.md)
 
 
 class Fail(Exception):
@@ -69,7 +69,7 @@ def main(out):
         path = max(paths, key=lambda p: (when[p], p))
         raw = get(f"repository/files/{urllib.parse.quote(path, safe='')}/raw", token, ref=REF).read()
         try:
-            ok = isinstance(json.loads(raw).get("problems"), list)
+            ok = isinstance(json.loads(raw).get("groups" if name == "formula-sheet.json" else "problems"), list)
         except (ValueError, AttributeError):
             ok = False
         if not ok:
