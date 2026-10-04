@@ -1197,7 +1197,9 @@ function origRender() {
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
-  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Q${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
+  /* T1 (Tony, Oct 4, picked variant A "Free hint card"): it read as a topic bar, so it is now a filled casino button that says what you
+     get. FREE only while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">See how the exam solved it</span><span class="rw-hint-s">Same steps, new numbers${lvl < 3 ? ' <span class="rw-free">FREE</span>' : ""}</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>
     <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
     <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
@@ -1215,6 +1217,17 @@ function origRender() {
   });
   origPlace();
   origOpen(S.orig.open);
+  hintNudge(el.querySelector(".rw-hint"));
+}
+/* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
+const HINT_BULB = `<span class="rw-hint-coin" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><linearGradient id="hbA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient><linearGradient id="hbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient></defs><path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#hbA)"/><path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/><path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/><rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#hbB)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/></svg></span>`;
+function hintNudge(btn) {
+  let seen = false; try { seen = sessionStorage.getItem("stem-hint-nudged") === "1"; } catch { /* blocked: nudge once anyway */ }
+  if (!btn || seen || reduceMQ.matches || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver((es, io) => {
+    if (!es[0].isIntersecting) return; io.disconnect();
+    setTimeout(() => { btn.classList.add("rw-nudge"); try { sessionStorage.setItem("stem-hint-nudged", "1"); } catch { /* */ } }, 900);
+  }, { threshold: 0.9 }).observe(btn);
 }
 function origPeeked() {
   if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free

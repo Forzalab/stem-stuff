@@ -51,7 +51,7 @@ async function run(type, label, launchOpts) {
     ctx = await launch(); await pin(ctx); page = ctx.pages()[0] || await ctx.newPage();
     await page.goto(BASE + "/#CALC1_ZZ9");
     await opened(page, "CALC1_ZZ9");
-    assert.equal((await page.innerText("#qlistName")).trim(), "mine", "list button names the file");
+    assert.equal(await page.getAttribute("#qlistBtn", "title"), "mine.json", "the list button's title names the file (it says Questions)");
     assert.equal(await page.isHidden("#qnav"), false, "question nav back");
     await answer(page, "2");
     assert.equal(await verdict(page), "i-ok");

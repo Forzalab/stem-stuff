@@ -159,7 +159,10 @@ try {
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
     assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
-    assert.match(await d.textContent("#origHd"), /Original: Practice Exam 2, Q7/);
+    assert.match(await d.textContent("#origHd"), /See how the exam solved it/);   // T1 variant A: a button that says what you get
+    assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
+    assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
+    assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
     await d.click("#origHd");
     assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");
@@ -175,6 +178,7 @@ try {
     assert.equal(await xp(d) - x0, 2, "a peeked snack pays 2");
     await go(d, "CALC1_S01");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "level 3: folded after a first-try correct on Q7");
+    assert.equal(await d.$$eval("#orig .rw-free", f => f.length), 0, "no FREE at level 3: looking again before answering is a peek");
     await dc.close();
     const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
     await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
@@ -183,6 +187,7 @@ try {
     assert.equal(await p.$eval("#orig", e => e.parentElement.id), "freezeIn", "phone: on top of the problem");
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
     await p.click("#origHd");
+    assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "the tap opens it");
     assert.equal(await p.isVisible("#orig .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
     await pc.close();

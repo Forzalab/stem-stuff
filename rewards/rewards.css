@@ -99,6 +99,40 @@ html.start .rw-hud { display: none; }
   1.4% { transform: rotate(-6deg); } 2.8% { transform: rotate(6deg); } 4.2% { transform: rotate(-6deg); } 5.6% { transform: rotate(6deg); } 7% { transform: rotate(-3deg); }
 }
 
+/* ---------- the Original card's header, variant A "Free hint card" (T1; Tony, Oct 4) ----------
+   One solid tangerine fill, light top edge, dark base, a round chevron button, a bulb in a sun coin, a FREE sticker (app.js only while
+   opening it is free). .rw-nudge (app.js hintNudge): one 600 ms lift + one shine pass per session. Transform / opacity only. */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.rw-hint {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 8px 10px 12px 8px; overflow: hidden;
+  text-align: left; color: var(--rw-tang-ink); border: 0; border-radius: var(--rw-r-m); background: var(--rw-tang); cursor: pointer;
+  box-shadow: inset 0 3px 0 #ffc48a, inset 0 -5px 0 var(--rw-tang-dk), 0 3px 0 var(--rw-rust);
+}
+.rw-hint:hover { background: #ffa852; }
+.rw-hint:active { transform: translateY(2px); box-shadow: inset 0 3px 0 #ffc48a, inset 0 -3px 0 var(--rw-tang-dk), 0 1px 0 var(--rw-rust); }
+.rw-hint:focus-visible { outline: 2px solid #8fb0ff; outline-offset: 3px; }
+.rw-hint[aria-expanded="true"] { border-radius: var(--rw-r-m) var(--rw-r-m) 0 0; }
+.rw-hint-coin { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--rw-sun);
+  box-shadow: inset 0 3px 0 var(--rw-cream), inset 0 -4px 0 var(--rw-sun-dk); }
+.rw-hint-coin svg { width: 32px; height: 32px; display: block; }
+.rw-hint-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rw-hint-t { font: 700 1.125rem/1.2 var(--rw-font); }
+.rw-hint-s { font: 700 0.875rem/1.3 var(--rw-font); color: #4a1d00; }
+.rw-hint-chev { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; background: var(--rw-tang-dk);
+  box-shadow: inset 0 -3px 0 var(--rw-rust), inset 0 2px 0 #e07a2a; }
+.rw-hint-chev svg { width: 26px; height: 26px; transition: transform .2s ease-out; }
+.rw-hint[aria-expanded="true"] .rw-hint-chev svg { transform: rotate(180deg); }
+.rw-free {   /* the sticker as a badge on the caption line: inside the card, so nothing covers it */
+  display: inline-block; margin-left: 6px; padding: 1px 8px 2px; border-radius: var(--rw-pill); vertical-align: 1px;
+  font: 700 0.75rem/1.2 var(--rw-font); letter-spacing: .04em; color: var(--rw-text); background: var(--rw-sun); border: 2px solid #fff; transform: rotate(-4deg);
+}
+.rw-hint::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent 30%, rgb(255 255 255 / .55) 50%, transparent 70%); }
+.rw-hint.rw-nudge { animation: rw-lift .6s ease-out 1; }
+.rw-hint.rw-nudge::after { animation: rw-glint .6s ease-out 1; }
+@keyframes rw-lift { 40% { transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes rw-glint { 0% { opacity: 1; transform: translateX(-120%) skewX(-18deg); } 100% { opacity: 1; transform: translateX(120%) skewX(-18deg); } }
+
 /* ---------- FX: shared layers ---------- */
 .fx-layer { position: fixed; inset: 0; z-index: 150; pointer-events: none; overflow: hidden; }
 .fx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -202,6 +236,7 @@ html.start .rw-hud { display: none; }
 @keyframes fx-blink { 50% { opacity: .25; } }
 @keyframes fx-bob { from { transform: translateY(-6px) rotate(-5deg); } to { transform: translateY(6px) rotate(5deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle { animation: none !important; }
+  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle, .rw-hint.rw-nudge, .rw-hint.rw-nudge::after { animation: none !important; }
+  .rw-hint-chev svg { transition: none; }
   .rw-bar i, .rw-flame { transition: none; }
 }

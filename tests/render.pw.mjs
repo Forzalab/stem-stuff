@@ -288,7 +288,7 @@ async function run(browserType, label, opts = {}) {
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
-      assert.equal((await page.textContent("#qlistName")).trim(), "my-problems.json", "list button names the file");
+      assert.equal(await page.getAttribute("#qlistBtn", "title"), "my-problems.json", "the list button's title names the file (it says Questions)");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
       const f3n = "PHYS_QF3N";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
@@ -318,7 +318,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
       for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
       // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
-      assert.equal((await btn.innerText()).trim(), vname === "desktop" ? "bank.json" : "bank", "list button label");
+      assert.equal((await btn.innerText()).trim(), "Questions", "list button label"); assert.equal(await btn.getAttribute("title"), "bank.json", "its title names the file");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
       const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
