@@ -1027,13 +1027,20 @@ function wishReset() {
   wish = null; voiceStop();
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
 }
+/* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
+   else the live /explain stream. The voice reads that same string, once the typing ends. */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
-  wish = { code: S.code, text: "", narration: "", started: false, done: false, open: false, failed: 0 };
-  const w = wish;                                                          // the voiceover is pre-written (saccharine.narration): free
+  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false };
+  const w = wish;
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
-    .then(r => r.ok ? r.json() : null).then(j => { if (j && j.text) w.narration = j.text; }).catch(() => {});
-  if (wishLog().length < WISH_AUTO) wishStart(true);
+    .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+      if (wish !== w) return;
+      if (j && j.text) { w.text = j.text; w.done = true; }
+      else if (wishLog().length < WISH_AUTO) { wishStart(true); return; }
+      else w.started = false;                                              // past the cap: "Ask Cluck" does it
+      wishPaint();
+    });
   wishPaint();
 }
 async function wishStart(auto) {
@@ -1057,16 +1064,40 @@ async function wishStart(auto) {
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
-  if (w.open && w.text) voiceSay(w.narration || w.text);
 }
 /* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
 const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
   esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
-let wishRaf = 0;
-function wishText() {
-  if (wishRaf) return;
-  wishRaf = requestAnimationFrame(() => { wishRaf = 0; const x = $("#wish .wtext"); if (x && wish) x.innerHTML = wishHTML(wish.text) + (wish.done ? "" : '<span class="wcaret" aria-hidden="true"></span>'); });
+/* the ChatGPT feel (Tony, Oct 4: "bit delay feels gud"): ~900 ms of a lone blinking caret (STYLE.md bans pulsing dots), then the text
+   types out at ~35 chars/s word by word, a $..$ always whole, the caret riding the end. A tap on the box skips to the end; reduced motion =
+   no typing (the wait stays). */
+const WISH_DOTS = 900, WISH_CPS = 35;
+const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
+function wishCut(t, n) {                                                  // n chars, moved to a word end; a half-open $..$ waits
+  n = Math.min(t.length, Math.ceil(n));
+  while (n < t.length && /\S/.test(t[n])) n++;
+  if ((t.slice(0, n).match(/\$/g) || []).length % 2) { const e = t.indexOf("$", n); n = e < 0 ? Math.max(0, t.lastIndexOf("$", n - 1)) : e + 1; }
+  return n;
 }
+let wishRaf = 0;
+function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); }
+function wishDraw() { cancelAnimationFrame(wishRaf); wishRaf = 0; wishFrame(performance.now()); }
+function wishFrame(now) {
+  wishRaf = 0;
+  const x = $("#wish .wtext"), w = wish;
+  if (!x || !w || !w.open) return;
+  if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
+  const t = w.text;
+  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; if (!w.done || now < w.at) wishText(); return; }
+  const dt = now - (w.tick || now); w.tick = now;
+  w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
+  w.shown = Math.max(w.shown, wishCut(t, w.pos));
+  const end = w.done && w.shown >= t.length;
+  if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
+  if (!end) { wishText(); return; }
+  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's solution is open."); }   // what the box shows is what is spoken
+}
+const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
   const el = wishEl(), w = wish;
   if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
@@ -1075,19 +1106,19 @@ function wishPaint() {
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
     w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
     w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
-  if (w.open) wishText();
+  if (w.open) { w.drawn = w.ended = undefined; wishDraw(); }
   el.querySelector(".wchip").addEventListener("click", () => {
-    if (!w.started || w.failed) { w.failed = 0; w.text = ""; w.done = false; w.open = true; wishStart(false); wishPaint(); return; }
+    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, open: true, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); wishPaint(); return; }
     w.open = !w.open;
-    if (w.open && w.done) voiceSay(w.narration || w.text); else voiceStop();
+    if (w.open) w.said = false; else { voiceStop(); w.tick = 0; }          // reopened: spoken again once the text is out
     wishPaint();
   });
+  el.querySelector(".wtext")?.addEventListener("click", () => { if (!w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });
   el.querySelector(".wvoice")?.addEventListener("click", () => {
     try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
-    if (voiceOn()) { if (w.done) voiceSay(w.narration || w.text); } else voiceStop();
+    if (voiceOn()) { if (wishTyped(w)) voiceSay(w.text); } else voiceStop();
     wishPaint();
   });
-  if (w.done && w.open) say("Cluck's solution is open.");
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
@@ -1096,7 +1127,7 @@ const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off
 function voiceSay(t) {
   if (!voiceOK() || !voiceOn()) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.35; u.rate = 1.05;   // Tony: not too loud, but audible
+  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.2; u.rate = 1.05;    // Tony, Oct 4: smaller voice
   speechSynthesis.speak(u);
 }
 function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }

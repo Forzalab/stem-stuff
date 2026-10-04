@@ -442,7 +442,7 @@ html.side #work > .orig { margin: 0; }
 .wchip:hover { border-color: var(--muted); }
 .wchip:focus-visible, .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .wvoice { min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); }
-.wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; }
+.wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer; }   /* a tap skips the typing */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }

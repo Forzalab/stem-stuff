@@ -37,7 +37,11 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   `OPENROUTER_MODELS` (fallback list), key `OPENROUTER_API_KEY` (Vercel env). Plain text only: the `Plain` filter drops markdown.
   The first wrong answer of a question fires it in the background (at most 5 questions an hour: localStorage `stem-wish` + the
   server's per-browser count); past that, "Ask Cluck" (40 an hour in all). A question without a key, or no API key: the block stays hidden.
-  The text is read aloud at volume 0.35 (`speechSynthesis`, `speak.mjs`), muted per browser (`stem-voice=off`), stopped on a new question.
+  One text source (Tony, Oct 4): the box shows the item's pre-written `narration` (`POST /narrate`) when it has one: instant, free, no
+  API key, no `/explain` call. No narration → the `/explain` stream above. Shown ChatGPT style: ~900 ms of a lone blinking caret, then typed at
+  ~35 chars/s word by word (`$..$` whole), caret at the end; a tap on the box skips; reduced motion = the wait, then the whole text.
+  Once the typing ends, the box text (and only it) is read aloud at volume 0.2 (`speechSynthesis`, `speak.mjs`; Tony: "smaller voice"),
+  muted per browser (`stem-voice=off`), stopped on a new question.
 - Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
   corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
   the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides
@@ -52,7 +56,7 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
 - `formula-sheet.json` next to the bank: `{ v: 1, groups: [{ name, rows: [{ id, tex }] }] }`, id `^[A-Z][A-Z0-9_]{1,15}$`.
 - Schema v2 (Tony, Oct 3): the problem's own fields are the DIET question, untouched; everything sugar sits in ONE block:
   `"saccharine": { title, tip, part, key, slip, narration }` (SCHEMA.md). `title` = "Practice Exam 2, Question X: [condition changed]";
-  `narration` = the pre-written voiceover (`POST /narrate`, sugar only). Flat `tip/part/key/slip` are still read until the banks move.
+  `narration` = the pre-written Cluck box text, also read aloud (`POST /narrate`, sugar only). Flat `tip/part/key/slip` are still read until the banks move.
 - Audience (Tony): community college GenEd physics in Fresno, mostly biology and CS majors: plain words, ESL friendly (also in CLUCK_GENIE).
 
 Code: `serve.py` (`mode_of`, `locks`, `hidden`, `view`, `numtext`, `sigfig`, `figures`), `mode.mjs`, `app.js` (code box, upload
