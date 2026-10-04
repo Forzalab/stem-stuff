@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brainrot corner round 2</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<style>
+/* Easy mode brainrot corner, round 2 (design/FORMULA-CARD.md "Round 2"). Tony's round-1 pick: variant 4, "Stacked duo".
+   Tony, round 2: plain, like iOS picture-in-picture YouTube. No frame, no card, no border, no tab bar, no labels. Just 2 bare videos
+   (Subway on top, parkour under), 10px corners, --shadow-3. Collapse and close show only on hover or tap, as small see-through
+   overlays on the video. The 5 variants differ in placement, size and behaviour only.
+   ?v=1..5  &state=collapsed (the small form)  &state=expanded (skip the short-screen rule)  &ctl=1 (controls shown, as after a tap).
+   Shared: drag it anywhere (the players take no pointer, so the drag always works); release snaps to an edge in --d-move ease-out;
+   it steps off live controls (choices, Check, the Scratchpad button, the bar): same edge, other edge, then it collapses.
+   Starts collapsed under 700px tall. ✕ hides it for the session. Reduced motion: players load paused, start collapsed, snaps instant.
+   app.css tokens only (see-through = color-mix of a token). The dashed top strip is mock chrome. */
+body { padding: 0 !important; }
+.mbar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; padding: var(--s2) var(--gut); border-bottom: 1px dashed var(--line);
+  background: var(--field); color: var(--muted); font-size: var(--t-xs); line-height: 1.4; }
+.mbar b { color: var(--ink); }
+.wrap { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) calc(var(--btn) + var(--s7) * 2); }
+.desk .wrap { padding-top: var(--s6); }
+.md p { margin: 0; }
+.ico { width: var(--ico); height: var(--ico); }
+
+/* the bottom bar strip */
+.dockm { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; padding: var(--s3) var(--gut) max(var(--s3), env(safe-area-inset-bottom));
+  background: var(--paper); border-top: 1px solid var(--line); }
+.dockm .in { max-width: calc(var(--col) - 2 * var(--gut)); margin: 0 auto; display: flex; gap: var(--s2); align-items: center; }
+.dockm .lbl { display: inline-flex; align-items: center; gap: var(--s2); width: auto; padding: 0 var(--s3); font-size: var(--t-sm); font-weight: 700; }
+.dockm .sp { flex: 1; }
+
+/* the Scratchpad button (phone only, STYLE.md §3): the floating precedent the corner lives beside */
+.fab { position: fixed; z-index: 30; right: var(--s4); display: inline-flex; align-items: center; gap: var(--s2); height: 56px; padding: 0 var(--s4);
+  border: 0; border-radius: 16px; background: var(--raised); color: var(--ink); box-shadow: var(--shadow-3); font-size: var(--t-sm); font-weight: 700; }
+.desk .fab { display: none; }
+
+/* ---------- the corner: two bare videos, nothing around them ---------- */
+.rot { position: fixed; z-index: 30; left: 0; top: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.rot[hidden] { display: none; }
+.rot.snap { transition: transform .2s ease-out; }
+.duo { position: relative; display: grid; gap: var(--s2); width: var(--w); }
+.vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
+.rot.drag .vid { box-shadow: var(--shadow-4); }
+.vid iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }   /* no pointer: the whole duo drags */
+/* the overlay controls: hidden until hover, a tap or keyboard focus (iOS PiP); small, see-through, on the video itself */
+.ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }
+.rot:hover .ctl, .rot.show .ctl, .rot:focus-within .ctl { opacity: 1; pointer-events: auto; }
+.ctl button, .tab { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--ink);
+  background: color-mix(in srgb, var(--field) 72%, transparent); }
+.ctl button:hover, .tab:hover { background: var(--field); }
+.ctl .ico, .tab .ico { width: 1.25rem; height: 1.25rem; }
+@media (hover: none) { .rot:hover:not(.show) .ctl { opacity: 0; pointer-events: none; } }
+@media (prefers-reduced-motion: reduce) { .rot.snap, .ctl { transition: none; } }
+
+/* collapsed forms (same bare language: a see-through control with a soft shadow, or a mini duo) */
+.tab { box-shadow: var(--shadow-3); }
+.stash { width: 44px; height: 96px; border-radius: 0 10px 10px 0; }   /* v1: iOS PiP stash, the video slid into the edge */
+.stash.r { border-radius: 10px 0 0 10px; }
+.edgeb { width: var(--btn); height: var(--btn); border-radius: 10px; }   /* v2, v5: one quiet button at the edge */
+.fabc { width: 56px; height: 56px; border-radius: 16px; background: var(--raised); }   /* v3: an M3 FAB, mirror of the Scratchpad button */
+.v3 .ctl { top: auto; bottom: var(--s1); }   /* v3: controls on the lower video's bottom edge, where the thumb is */
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- copies of the index.html sprite, plus 2 new symbols drawn to STYLE.md §4 (24 grid, 2px stroke, round caps, no fill): i-min, i-play -->
+  <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h9A1.5 1.5 0 0 1 20 4.5v11a1.5 1.5 0 0 1-1.5 1.5H16M7.4 11.2a2.1 2.1 0 1 1 2.9 1.95c-.5.25-.8.65-.8 1.2v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="6" width="13" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="17.6" r=".95" fill="currentColor"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-6.5 6.5M10 20H4v-6M4 20l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<div class="mbar"><b>Brainrot corner, round 2</b><span id="lab"></span></div>
+<div class="wrap">
+  <div class="p md"><p>A cart rolls down a ramp with no friction. Tick every true one.</p></div>
+  <div class="q"><div class="choices all" role="group" aria-label="Choices" id="choices"></div>
+    <div class="chk"><button type="button" class="btn btn-go send" aria-label="Check" disabled><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></div></div>
+</div>
+<button type="button" class="fab" id="fab" aria-label="Show the scratchpad" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg>Scratchpad</button>
+<div class="dockm" id="dock"><div class="in">
+  <button type="button" class="btn lbl" aria-label="Questions"><svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>PHYS1</button><span class="sp"></span>
+  <button type="button" class="btn" aria-label="Previous"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg></button>
+  <button type="button" class="btn" aria-label="Next"><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></button></div></div>
+<div id="rot" class="rot" role="region" aria-label="Brainrot corner"></div>
+<script>
+const P = new URLSearchParams(location.search), v = +(P.get("v") || 1), desk = innerWidth >= 720;
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.body.classList.add(desk ? "desk" : "phone");
+const NAME = { 1: "iOS PiP corner", 2: "Calm periphery", 3: "Fitts thumb zone", 4: "PiP sizes", 5: "Swiss grid slot" };
+const ico = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+const G = 16;   // --s4: the inset from an edge
+
+document.getElementById("choices").innerHTML = ["Its speed grows on the way down", "Gravity does negative work on it",
+  "Its mechanical energy stays the same", "The normal force does no work"].map((t, i) =>
+  `<div class="ch"><button type="button" class="opt" role="checkbox" aria-checked="false"><span class="badge">${ico("i-ok")}</span>
+   <span class="lt">${"ABCD"[i]}</span><span class="txt">${t}</span></button></div>`).join("");
+
+// the 2 players (Tony's links): muted autoplay, looped, no YouTube controls. Reduced motion: loaded, not playing.
+const VIDS = [["vTfD20dbxho", "Subway Surfers gameplay, muted"], ["z84bmLDzIIk", "Parkour gameplay, muted"]];
+const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM ? 0 : 1}&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&modestbranding=1`;
+const ctl = `<div class="ctl"><button type="button" data-act="min" aria-label="Make it small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide it for this session">${ico("i-x")}</button></div>`;
+// the players are built once and moved, never rebuilt: a collapse or a drag must not restart the videos
+const duoEl = document.createElement("div");
+duoEl.className = "duo";
+duoEl.innerHTML = VIDS.map(([id, t], i) => `<div class="vid">${i === (v === 3 ? 1 : 0) ? ctl : ""}<iframe src="${src(id)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+
+const rot = document.getElementById("rot"), fab = document.getElementById("fab"), dock = document.getElementById("dock");
+const wrapEl = document.querySelector(".wrap"), qbox = document.querySelector(".p"), chk = document.querySelector(".chk .btn");
+rot.classList.add("v" + v);
+const colL = () => qbox.getBoundingClientRect().left, colR = () => qbox.getBoundingClientRect().right;
+const gutter = () => colL();                                   // free width beside the column on each side
+
+// per variant: player width (expanded, and v4's sizes), the collapsed form, where it rests by default
+let size = "l";                                                // v4: l (large) | s (small, while you answer) | m (mini = collapsed)
+const width = () => ({
+  1: desk ? 320 : 176,
+  2: desk ? Math.min(360, gutter() - 2 * 24) : 120,            // desktop: as wide as the empty gutter allows
+  3: desk ? 360 : 208,
+  4: ({ l: desk ? 320 : 184, s: desk ? 200 : 120, m: desk ? 120 : 80 })[size],
+  5: desk ? Math.min(320, gutter() - 2 * 24) : Math.min(208, chk.getBoundingClientRect().left - colL() - G),
+})[v];
+const SHUT = {
+  1: r => `<button type="button" class="tab stash${r ? " r" : ""}" data-act="open" aria-label="Show the brainrot corner">${ico(r ? "i-prev" : "i-next")}</button>`,
+  2: () => `<button type="button" class="tab edgeb" data-act="open" aria-label="Show the brainrot corner">${ico("i-expand")}</button>`,
+  3: () => `<button type="button" class="tab fabc" data-act="open" aria-label="Show the brainrot corner">${ico("i-play")}</button>`,
+  5: () => `<button type="button" class="tab edgeb" data-act="open" aria-label="Show the brainrot corner">${ico("i-play")}</button>`,
+}[v];   // v4 has none: collapsed = the mini size, still the duo
+
+let collapsed = P.get("state") === "collapsed" || (P.get("state") !== "expanded" && (innerHeight < 700 || RM));
+let right = false, pos = null;
+const label = () => { document.getElementById("lab").textContent = `v${v} · ${NAME[v]} · ${desk ? "desktop" : "phone"} · ${collapsed ? "collapsed" : "expanded"}`; };
+
+const topY = () => document.querySelector(".mbar").getBoundingClientRect().bottom + G;
+const floorY = h => dock.getBoundingClientRect().top - G - h;
+fab.style.bottom = `${innerHeight - dock.getBoundingClientRect().top + G}px`;
+const parked = document.createElement("div"); parked.hidden = true; document.body.append(parked);   // where the players wait while collapsed
+
+function render() {
+  if (v === 4) size = collapsed ? "m" : (size === "m" ? "l" : size);
+  const shut = collapsed && SHUT;
+  if (shut) { parked.append(duoEl); rot.innerHTML = SHUT(right); }
+  else { duoEl.style.setProperty("--w", `${width()}px`); if (duoEl.parentNode !== rot) { rot.innerHTML = ""; rot.append(duoEl); } }
+}
+function live() { return [...document.querySelectorAll(".opt, .ff, .chk .btn, .dockm .btn")].concat(desk ? [] : [fab]).map(e => e.getBoundingClientRect()); }
+const hit = (x, y, w, h) => live().some(c => x < c.right + 4 && x + w > c.left - 4 && y < c.bottom + 4 && y + h > c.top - 4);
+
+function edgeX(w, r) {
+  if (desk && (v === 2 || v === 5) && gutter() >= 200 + 48) {   // gutter variants: centred in the empty side
+    const g = gutter(); return r ? colR() + (g - w) / 2 : (g - w) / 2;
+  }
+  const inset = collapsed && v === 1 ? 0 : (v === 5 && !desk ? colL() : G);   // v1 stash is flush; v5 sits on the column's left line
+  return r ? innerWidth - w - inset : inset;
+}
+// where it wants to rest, before stepping off controls
+function home(h) {
+  if (desk && v === 2) return (innerHeight - h) / 2;                        // periphery: centred on the window's height
+  if (desk && v === 5) return qbox.getBoundingClientRect().top;            // grid: top on the question box's top line
+  if (!desk && v === 5) return chk.getBoundingClientRect().top;            // grid: top on the Check row, in the slot left of it
+  if (!desk && v === 2) return (innerHeight - h) / 2 + 80;                 // periphery: mid-edge, off the thumb's path
+  return floorY(h);                                                        // corner, thumb zone, sizes: the bottom corner
+}
+function place(wantY) {
+  render();
+  const b = rot.firstElementChild.getBoundingClientRect(), w = b.width, h = b.height;
+  const clampY = y => Math.max(topY(), Math.min(floorY(h), y));
+  const tries = [];
+  for (const r of [right, !right]) tries.push([r, clampY(wantY ?? home(h))], [r, floorY(h)]);
+  for (const [r, y] of tries) {
+    const x = edgeX(w, r);
+    if (!hit(x, y, w, h)) { if (r !== right) { right = r; render(); } pos = { x: edgeX(rot.firstElementChild.getBoundingClientRect().width, r), y }; return apply(); }
+  }
+  if (!collapsed) { collapsed = true; label(); return place(wantY); }
+  pos = { x: edgeX(w, right), y: floorY(h) }; apply();
+}
+function apply() { rot.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y)}px)`; }
+
+// a tap on the video shows the controls for 3 s (iOS PiP); hover shows them too (CSS). Drag follows the finger, release snaps.
+let drag = null, hideT = 0;
+function showCtl() { rot.classList.add("show"); clearTimeout(hideT); if (!P.get("ctl")) hideT = setTimeout(() => rot.classList.remove("show"), 3000); }
+rot.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  drag = { sx: e.clientX, sy: e.clientY, x: pos.x, y: pos.y, moved: false, btn: e.target.closest("button") };
+  rot.setPointerCapture(e.pointerId);
+});
+rot.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+  drag.moved = true; rot.classList.remove("snap"); rot.classList.add("drag");
+  pos = { x: drag.x + dx, y: drag.y + dy }; apply();
+});
+rot.addEventListener("pointerup", () => {
+  if (!drag) return;
+  const d = drag; drag = null; rot.classList.remove("drag");
+  if (!d.moved) {
+    if (d.btn && (rot.classList.contains("show") || d.btn.dataset.act === "open" || matchMedia("(hover: hover)").matches)) act(d.btn.dataset.act);
+    else if (v === 4 && !collapsed && rot.classList.contains("show")) { size = size === "l" ? "s" : "l"; place(pos.y); }   // v4: tap again = other size
+    else showCtl();
+    return;
+  }
+  const b = rot.firstElementChild.getBoundingClientRect();
+  right = pos.x + b.width / 2 > innerWidth / 2;
+  const y = v === 1 ? (pos.y + b.height / 2 < innerHeight / 2 ? topY() : floorY(b.height)) : pos.y;   // v1: snaps to the 4 corners (iOS)
+  rot.classList.add("snap"); place(y);
+});
+rot.addEventListener("click", e => { if (e.detail === 0) { const b = e.target.closest("button"); if (b) act(b.dataset.act); } });   // keyboard
+function act(a) {
+  if (a === "x") { rot.hidden = true; return; }   // the app: hidden until the tab closes (sessionStorage in try / catch); the mock: until reload
+  if (a === "min") collapsed = true;
+  if (a === "open") collapsed = false;
+  rot.classList.remove("snap", "show"); label(); place(null);
+}
+// v4 behaviour: while an answer control is in use, the duo steps down to the small size; back to large when you leave it
+if (v === 4) {
+  wrapEl.addEventListener("focusin", () => { if (!collapsed && size === "l") { size = "s"; place(null); } });
+  wrapEl.addEventListener("focusout", () => { if (!collapsed && size === "s") { size = "l"; place(null); } });
+}
+addEventListener("resize", () => place(pos && pos.y));
+if (P.get("ctl")) rot.classList.add("show");
+label(); place(null);
+</script>
+</body>
+</html>
