@@ -132,6 +132,7 @@ try {
     await page.waitForSelector("#q.closed", { timeout: 4000 });
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
+    assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.ok(await page.$$eval("#q .fix", f => f.length) > 0, "no fix boxes in diet mode");

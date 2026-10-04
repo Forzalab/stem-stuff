@@ -63,16 +63,16 @@ try {
     const tap = l => touch ? l.tap() : l.click();
     await page.goto(`${BASE}/#${CODE}`); await opened(page, CODE);
 
-    await step(`${name}: checkbox group, how line, no None row, Check live with nothing ticked, never one row`, async () => {
+    await step(`${name}: checkbox group, no default how line in diet, no None row, Check live with nothing ticked, never one row`, async () => {
       const a = await page.evaluate(() => {
         const g = document.querySelector("#q .choices");
-        return { role: g.getAttribute("role"), lab: g.getAttribute("aria-labelledby"), how: document.querySelector("#how")?.textContent,
+        return { role: g.getAttribute("role"), lab: g.getAttribute("aria-label"), how: document.querySelector("#how")?.textContent,
           roles: [...g.querySelectorAll(".opt")].map(o => o.getAttribute("role")), inline: g.classList.contains("inline"),
           radius: getComputedStyle(g.querySelector(".badge")).borderRadius, letters: [...g.querySelectorAll(".lt")].map(x => x.textContent).join(""),
           arrows: g.querySelectorAll(".send").length };
       });
-      assert.deepEqual([a.role, a.lab, a.inline, a.letters, a.arrows], ["group", "how", false, "ABCD", 0]);
-      assert.ok(a.how && a.how.length > 3, "how line");
+      assert.deepEqual([a.role, a.lab, a.inline, a.letters, a.arrows], ["group", "Choices", false, "ABCD", 0]);
+      assert.equal(a.how, undefined, "diet shows the question as authored: no default how line");
       assert.ok(a.roles.every(r => r === "checkbox"));
       assert.equal(a.radius, "4px", "square badge");
       assert.equal((await st(page)).go, false, "nothing ticked = none true: Check is live");

@@ -467,7 +467,7 @@ function renderQuestion() {
   if (p.type === "mc") {
     const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
     const many = all(p);       // pick all: square check badge + the letter beside it, one Check button under the list (CHOOSE-ALL.md §4)
-    q.innerHTML = `${howLine(p)}<div class="choices${many ? " all" : ""}" ${many ? 'role="group" aria-labelledby="how"' : 'role="radiogroup" aria-label="Choices"'}>${list.map((c, i) => `
+    q.innerHTML = `${howLine(p)}<div class="choices${many ? " all" : ""}" ${many ? (howLine(p) ? 'role="group" aria-labelledby="how"' : 'role="group" aria-label="Choices"') : 'role="radiogroup" aria-label="Choices"'}>${list.map((c, i) => `
       <div class="ch" data-id="${esc(c.id)}">
         <button type="button" class="opt" role="${many ? "checkbox" : "radio"}" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}"${c.lock ? " data-lock" : ""}>
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
@@ -506,7 +506,8 @@ function renderQuestion() {
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-const howLine = p => { const h = p.how || (all(p) ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
+const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
