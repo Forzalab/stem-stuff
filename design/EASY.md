@@ -20,6 +20,11 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   +1.07e+14, 107 000 (`numtext` / `numText`).
 
 ## Sugar only (BANK_P2X; BANK_PSY6 is internal and has no saccharine layer)
+- Sugar v2 (Tony via main, Oct 3: "sugar = no choose-all, no typed; prune 75%"): `saccharine.hide` leaves a question out of sugar
+  (P2X keeps 25 of 100). `saccharine.split` turns a choose-all into one True/False question per row, in its place
+  (`sub` codes like PHYS_U8BA; 1 try; the row's slip, tip and narration; the parent's key and formulas; the parent's how-to-tick
+  paragraph is dropped, its "Use g = ..." line kept). Real P2X: 67 sugar items (11 single answer + 56 rows), 100 in diet.
+  Sub codes 404 in diet. (serve.py `subs`, `sub_problem`, `lookup`.)
 - A question whose answer is None is hidden (bank payload, `p/CODE.json` 404, uploads left out of the list).
 - No prove mode: `fix` is dropped, rows are tick / blank only.
 - `tip`: one "what to do" line on top of a twisted question. Plain statements, never a question; plain text + `$..$`.

@@ -27,8 +27,9 @@ export const NONE_MISS = "QUACK. A true one is still unticked, or a false one is
 
 /* sugar leaves out a question whose answer is "None of these" */
 export function hidden(p, mode) {
-  const lk = locks(p);
-  return mode === "sugar" && lk.size > 0 && [...rightsOf(p)].every(id => lk.has(id));
+  if (mode !== "sugar") return false;
+  const lk = locks(p), sg = p.saccharine && typeof p.saccharine === "object" ? p.saccharine : {};
+  return !!sg.hide || (lk.size > 0 && !sg.split && [...rightsOf(p)].every(id => lk.has(id)));   // pruned, or None as the key (unsplit)
 }
 /* both modes: no "None of these" (an mc that had it becomes tick-every-true-one; None as the key = the empty set); prove mode (X + typed fix) is gone in both. tries = the authored list's count (2-choice mc = 1, else 2). Untouched problems come back as they are. */
 const LAYER = ["tip", "part", "key", "slip", "narration", "saccharine"];

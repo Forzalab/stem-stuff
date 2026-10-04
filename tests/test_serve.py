@@ -464,6 +464,36 @@ class Banks(unittest.TestCase):
         self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "stem-mode=diet", json.dumps({"code": "CALC1_SB1"}).encode())[2])["text"], "")
         self.assertTrue(sw["wish"]); self.assertNotIn("wish", dt)
 
+    def test_sugar_hide_and_split(self):                                       # main's sugar v2: prune + one True/False per row
+        pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SP1", body=[{"type": "text", "md": "Q body"},
+                    {"type": "text", "md": "Tap a row to tick it. Leave false rows blank. Use $g = 9.80\\ \\text{m/s}^2$."}],
+                    saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c", "narration": "parent",
+                                "split": [{"sub": "CSCI26_SP1A", "stem": "True or false: row A.", "answer": "true", "slip": "A is true.", "narration": "A says"},
+                                          {"sub": "CSCI26_SP1B", "stem": "True or false: row B.", "answer": "false", "slip": "B is false.", "tip": "Look at B."}]})
+        gone = dict(BANK["CALC1_X2P"], code="CALC1_HD1", saccharine={"hide": True, "key": "k"})
+        self.write("BANK_SP12", {"v": 1, "problems": [gone, pick, BANK["CALC1_T6B"]]})
+        sugar_codes = [p["code"] for p in serve.bank_payload("BANK_SP12", "x1", "sugar")["problems"]]
+        diet_codes = [p["code"] for p in serve.bank_payload("BANK_SP12", "x1", "diet")["problems"]]
+        self.assertEqual(sugar_codes, ["CSCI26_SP1A", "CSCI26_SP1B", "CALC1_T6B"])                # hidden gone, parent replaced in place
+        self.assertEqual(diet_codes, ["CALC1_HD1", "CSCI26_SP1", "CALC1_T6B"])                    # diet: as authored
+        a = serve.public(serve.view(serve.lookup("CSCI26_SP1A", "sugar"), "sugar"), "x1")
+        self.assertEqual(([c["md"] for c in a["choices"]], a["title"], a.get("pick")), (["True", "False"], "Practice Exam 2, Question 3", None))
+        texts = [b["md"] for b in a["body"]]
+        self.assertEqual(texts[0], "Q body"); self.assertIn("True or false: row A.", texts[-1]); self.assertIn("Use $g", texts[-1])
+        self.assertFalse(any("Tap a row" in t for t in texts))
+        self.assertEqual(serve.max_tries(serve.lookup("CSCI26_SP1B", "sugar")), 1)
+        b = serve.lookup("CSCI26_SP1B", "sugar")
+        r = serve.grade(b, "x2", {"choice": "t"})
+        self.assertEqual((r["verdict"], r["hint"], r["triesLeft"]), ("wrong", "B is false.", 0))
+        self.assertEqual(serve.grade(b, "x3", {"choice": "f"})["verdict"], "correct")
+        st, _, data = serve.dispatch("POST", "/check", "", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())
+        self.assertEqual(json.loads(data)["verdict"], "correct")
+        self.assertEqual(serve.dispatch("POST", "/check", "stem-mode=diet", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())[0], 404)
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CSCI26_SP1A"}).encode())[2])["text"], "A says")
+        self.assertIn("B is false.", serve.explain_prompt(b, "t")); self.assertIn("Tick: a, c", serve.explain_prompt(b, "t"))
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet")[0], 200)
+
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")
         self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])

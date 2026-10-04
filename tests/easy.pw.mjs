@@ -34,7 +34,12 @@ const P = {
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 1, groups: [{ name: "Work and Energy",
   rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }] }));
-writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove] }));
+P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Two rows." }, { type: "text", md: "Tap a row to tick it." }],
+  choices: [row("a", "first"), row("b", "second")], correct: ["a"], miss: "QUACK. Missing one.",
+  saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", split: [
+    { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
+    { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
+writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 let asked = 0;
 const stub = createServer((req, res) => {
@@ -75,7 +80,7 @@ try {
   await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
     await typeCode(page, "BANK_EZ12");
     await page.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
-    assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E03"]);
+    assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E03", "CALC1_E04A", "CALC1_E04B"]);   // the choose-all E04 split into rows
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.deepEqual(await rows(page), ["two", "three", "four"]);
     assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
@@ -96,6 +101,20 @@ try {
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
+  });
+
+  await step("sugar: a split row is a True/False question, one try, its own slip", async () => {
+    await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
+    assert.deepEqual(await rows(page), ["True", "False"]);
+    assert.match(await page.textContent("#blocks"), /True or false: second\./);
+    assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
+    await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
+    await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
+    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too
+    asked = 0;
+    await page.evaluate(() => localStorage.removeItem("stem-wish"));
+    await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {
@@ -139,8 +158,8 @@ try {
   await step("DIET_EZ12: the original questions, every one, no tip, original titles, no fix boxes, no None row", async () => {
     await typeCode(page, "DIET_EZ12");
     await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
-    await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 3, null, { timeout: 8000 });
-    assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E02", "CALC1_E03"]);
+    await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 4, null, { timeout: 8000 });
+    assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E02", "CALC1_E03", "CALC1_E04"]);
     await page.evaluate(() => { location.hash = "CALC1_E02"; }); await opened(page, "CALC1_E02");
     assert.deepEqual(await rows(page), ["3", "5", "7"]);
     await page.click("#mcGo");                                               // None was the key: nothing ticked is right
@@ -158,7 +177,7 @@ try {
   await step("SUGAR_EZ12: sugar again; the prefixed form is never remembered", async () => {
     await typeCode(page, "SUGAR_EZ12");
     await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
-    await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 2, null, { timeout: 8000 });
+    await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 4, null, { timeout: 8000 });
     const saved = await page.evaluate(() => localStorage.getItem("stem-codes") || "");
     assert.ok(!/DIET|SUGAR/.test(saved), saved);
   });

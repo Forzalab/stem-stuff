@@ -223,9 +223,61 @@ def locks(p):
 
 
 def hidden(p, mode):
-    """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3)."""
+    """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3), and every one the bank prunes
+    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics)."""
+    if mode != "sugar":
+        return False
     lk = locks(p)
-    return mode == "sugar" and bool(lk) and rights(p) <= lk
+    sg = sugar(p)
+    return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split"))   # split rows answer for themselves
+
+
+# ---- sugar split (Tony, Oct 3: "sugar = no choose-all"): a choose-all becomes one True/False question per row, in its place ----
+INSTR = re.compile(r"^\s*(tap a row|mark every row)", re.I)       # the parent's how-to-tick paragraph: meaningless for one row
+G_LINE = re.compile(r"Use \$g\s*=[^$]*\$\.?")
+CODE_RE = re.compile(r"^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$")
+_subs = {"sig": None, "map": {}}
+
+
+def subs():
+    """sub code -> (parent, row) for every saccharine.split row; rebuilt when the banks change."""
+    idx = _index()
+    if _subs["sig"] != idx["sig"]:
+        _subs["map"] = {r["sub"]: (p, r) for p in idx["by_code"].values() for r in (sugar(p).get("split") or [])
+                        if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))}
+        _subs["sig"] = idx["sig"]
+    return _subs["map"]
+
+
+def sub_problem(parent, row):
+    """one row of a split choose-all as its own 2-choice question (1 try): the parent's figures and text, then the row's stem."""
+    sg, right = sugar(parent), "t" if str(row.get("answer")).lower() == "true" else "f"
+    body, g = [], None
+    for b in parent.get("body", []):
+        md = b.get("md") if b.get("type") == "text" else None
+        text = "\n".join(md) if isinstance(md, list) else md
+        if text is not None and INSTR.match(text):
+            m = G_LINE.search(text)
+            g = m.group(0) if m else g
+            continue
+        body.append(b)
+    body.append({"type": "text", "md": row.get("stem", "") + ("\n\n" + g if g else "")})
+    wrong = "f" if right == "t" else "t"
+    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"),
+             "slip": {wrong: row.get("slip")} if row.get("slip") else {}, "narration": row.get("narration")}
+    return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
+            "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
+            "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],
+            "saccharine": {k: v for k, v in layer.items() if v}}
+
+
+def lookup(code, mode):
+    """a problem by code; in sugar a split row's sub code too (its parent not pruned). None when there's no such thing."""
+    p = problems().get(code)
+    if p is not None:
+        return p
+    hit = subs().get(code) if mode == "sugar" else None
+    return sub_problem(*hit) if hit and not hidden(hit[0], mode) else None
 
 
 def view(p, mode):
@@ -559,7 +611,13 @@ def bank_payload(code, sid, mode="sugar"):
     if code not in all_banks:
         return None
     by_code = problems()
-    ps = [view(by_code[c], mode) for c in all_banks[code] if c in by_code and not hidden(by_code[c], mode)]
+    ps = []
+    for c in all_banks[code]:
+        p = by_code.get(c)
+        if p is None or hidden(p, mode):
+            continue
+        rows = sugar(p).get("split") if mode == "sugar" else None
+        ps += [view(sub_problem(p, r), mode) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [view(p, mode)]
     marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
     with _tries_lock:
         _load_tries()
@@ -818,7 +876,7 @@ def explain(cookie_header, body):
     except (ValueError, UnicodeDecodeError):
         b = None
     mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
-    p = problems().get(str(b.get("code", ""))) if isinstance(b, dict) else None
+    p = lookup(str(b.get("code", "")), mode) if isinstance(b, dict) else None
     if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key"):
         return 404, head, iter([b""])
     if not key:
@@ -857,7 +915,8 @@ def dispatch(method, path, cookie_header="", body=b""):
             b = None
         if not isinstance(b, dict):
             return _json(400, {"verdict": "invalid"}, cookie)
-        p, mode = problems().get(str(b.get("code", ""))), mode_of(cookie_header)
+        mode = mode_of(cookie_header)
+        p = lookup(str(b.get("code", "")), mode)
         if path == "/narrate":                       # the pre-written voiceover (saccharine.narration): sugar mode only
             text = sugar(p).get("narration") if p is not None and mode == "sugar" and not hidden(p, mode) else None
             return _json(200, {"text": text or ""}, cookie)   # none written: empty, not an error
@@ -874,7 +933,7 @@ def dispatch(method, path, cookie_header="", body=b""):
         if b is None and m.group(1) != "last":
             return _json(404, {"error": "not found"}, cookie)
         return _json(200, b, cookie)                 # no last bank: null, a normal answer (no red console line)
-    p = problems().get(m.group(1))
+    p = lookup(m.group(1), mode)
     if p is None:
         return _json(404, {"error": "not found"}, cookie)
     if m.re is STATE_PATH:
