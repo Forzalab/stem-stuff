@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formula card round 2</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<style>
+/* Easy mode formula card, round 2 (design/FORMULA-CARD.md "Round 2"). Tony's round-1 pick: variant 5, "Steps in order".
+   ?v=1..5 (&open=0|1 for v4). Phone under 720px, desktop above (the app's own breakpoint). Generic physics only.
+   app.css tokens only (STYLE.md §2): no --mark, borders --bw or 1px dividers, radii 6 / 8 / 10, weights 400 / 700.
+   The dashed top strip is mock chrome, never product UI. */
+body { padding: 0 !important; }
+.mbar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; padding: var(--s2) var(--gut); border-bottom: 1px dashed var(--line);
+  background: var(--field); color: var(--muted); font-size: var(--t-xs); line-height: 1.4; }
+.mbar b { color: var(--ink); }
+.wrap { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) var(--s7); }
+.desk .wrap { padding-top: var(--s6); }
+.md p:not(.tip) { margin: 0; }
+.k { white-space: nowrap; }
+.q { margin-top: var(--s3); }
+
+/* shared step anatomy: number, formula, group line. "then" sits between two steps */
+.fc { margin-top: var(--s4); }
+.fc .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; color: var(--ink); }
+.fc ol { list-style: none; margin: 0; padding: 0; }
+.fc .n { font-size: var(--t-sm); font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.4; }
+.fc .f { font-size: var(--t-md); line-height: 1.4; }
+.fc .f .katex { font-size: 1.12em; white-space: nowrap; }   /* a formula is one unit (STYLE.md: Math in text) */
+.fc .g { font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
+.fc .then { font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
+
+/* 1 Swiss grid: one --sheet surface, fixed columns (number | formula | group), all flush left. "then" is its own row: the word,
+   then a 1px divider to the right edge, so the steps read as one ruled table. */
+.v1 { background: var(--sheet); border-radius: 10px; padding: var(--s3) var(--s4); }
+.v1 li { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); column-gap: var(--s2); align-items: baseline; padding: var(--s1) 0; }
+.v1 li .g { grid-column: 2; }
+.v1 li.tr { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) 0; }
+.v1 li.tr::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.desk .v1 li { grid-template-columns: 2.5rem 22rem minmax(0, 1fr); }
+.desk .v1 li .g { grid-column: 3; grid-row: 1; }
+
+/* 2 Refactoring UI hierarchy: no box, no line. Weight and colour carry the order: the formula in --ink and larger, the number
+   and group in --muted, the gaps do the grouping (tight inside a step, wide between). Sits on the page like the tip line does. */
+.v2 { padding: 0 var(--s1); }
+.v2 .hd { color: var(--muted); }
+.v2 li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); column-gap: var(--s2); align-items: baseline; }
+.v2 li .f .katex { font-size: 1.2em; }
+.v2 li .g { grid-column: 2; margin-top: 2px; }
+.v2 .then { grid-column: 2; display: block; margin: var(--s2) 0; }
+
+/* 3 Gestalt common region: the steps live inside the question box, under the answer, after a 1px divider. One region =
+   one job: question, answer, the way to it. No new surface on the page. */
+.boxed3 .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
+.boxed3 .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); }
+.boxed3 .fc { margin: 0; padding: var(--s3) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
+.boxed3 .fc .in { border-top: 1px solid var(--line); padding-top: var(--s3); }
+.v3 li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); column-gap: var(--s2); align-items: baseline; padding: var(--s1) 0; }
+.v3 li .g { grid-column: 2; }
+.v3 .then { display: block; padding-left: calc(1.75rem + var(--s2)); }
+.desk .v3 ol { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); }
+.desk .v3 li { grid-template-columns: auto auto; padding: 0; }
+.desk .v3 li .g { grid-column: 2; }
+.desk .v3 .then { padding: 0; align-self: center; }
+
+/* 4 Progressive disclosure: one quiet row shows the chain (formulas joined by "then"); a tap opens the full steps with their
+   sheet group. Phone starts folded (the answer stays near the thumb); desktop starts open (room to spare). */
+.v4 { background: var(--sheet); border-radius: 10px; }
+.v4 summary { list-style: none; display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: var(--s2) var(--s2) var(--s2) var(--s4);
+  border-radius: 10px; cursor: pointer; }
+.v4 summary::-webkit-details-marker { display: none; }
+.v4 summary:hover { background: var(--raised); }
+.v4 summary:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.v4 .chain { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--s2); row-gap: var(--s1); }
+.v4 .chain .lab { font-size: var(--t-sm); font-weight: 700; margin-right: var(--s1); }
+.v4[open] .chain .f, .v4[open] .chain .then { display: none; }
+.v4 .tw { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); color: var(--muted); }
+.v4 .tw .ico { width: var(--ico); height: var(--ico); transition: transform .2s ease-out; }
+.v4[open] .tw .ico { transform: rotate(180deg); }
+.v4 ol { padding: 0 var(--s4) var(--s3); }
+.v4 li { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); column-gap: var(--s2); align-items: baseline; padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.v4 li .g { grid-column: 2; }
+.v4 li .then { grid-column: 2; grid-row: 1; margin-bottom: var(--s1); }
+.v4 li.t .n { grid-row: 2; } .v4 li.t .f { grid-row: 2; grid-column: 2; } .v4 li.t .g { grid-row: 3; }
+@media (prefers-reduced-motion: reduce) { .v4 .tw .ico { transition: none; } }
+
+/* 5 Horizontal stepper (Material 3 stepper on a Swiss row): desktop runs the 3 steps left to right in equal columns, joined by
+   a 1px rule with "then" on it; phone stacks them on a 1px rail down the number column (Gestalt connectedness). */
+.v5 { background: var(--sheet); border-radius: 10px; padding: var(--s3) var(--s4) var(--s4); }
+.v5 ol { position: relative; }
+.v5 li { position: relative; display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); align-items: baseline; }
+.v5 li .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); color: var(--ink); align-self: start; }
+.v5 li .f { align-self: center; }
+.v5 li .g { grid-column: 2; }
+.v5 .then { display: block; position: relative; margin: var(--s1) 0 var(--s1) calc(2rem + var(--s3)); }
+.v5 .then::before { content: ""; position: absolute; left: calc(-1rem - var(--s3) - 0.5px); top: -0.25rem; bottom: -0.25rem; border-left: 1px solid var(--edge); }
+.desk .v5 ol { display: grid; grid-template-columns: repeat(5, auto); justify-content: start; align-items: start; column-gap: var(--s3); }
+.desk .v5 li { grid-template-columns: 2rem minmax(0, 1fr); }
+.desk .v5 .then { margin: 0; padding-top: 0.4rem; display: flex; align-items: center; gap: var(--s2); }
+.desk .v5 .then::before { position: static; content: ""; width: var(--s5); border-left: 0; border-top: 1px solid var(--edge); }
+.desk .v5 .then::after { content: ""; width: var(--s5); border-top: 1px solid var(--edge); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<div class="mbar"><b>Formula card, round 2</b><span id="lab"></span></div>
+<div class="wrap" id="wrap"></div>
+<script>
+const P = new URLSearchParams(location.search), v = +(P.get("v") || 1), desk = innerWidth >= 720;
+document.body.classList.add(desk ? "desk" : "phone");
+const NAME = { 1: "Swiss grid", 2: "Hierarchy, no box", 3: "Common region", 4: "Disclosure", 5: "Stepper" };
+document.getElementById("lab").textContent = `v${v} · ${NAME[v]} · ${desk ? "desktop" : "phone"}`;
+const K = t => katex.renderToString(t, { throwOnError: false });
+// the question's sheet rows, in the order they get used (the card's whole job)
+const STEPS = [ { t: "W = \\text{area under } F\\text{-}x", g: "Work and Energy" },
+                { t: "W_{net} = \\Delta K", g: "Work and Energy" },
+                { t: "K = \\tfrac12 m v^2", g: "Work and Energy" } ];
+const question = `<div class="p md"><p class="tip">Net work goes into kinetic energy. Start from the speed you know.</p>
+  <p>The net force on a <span class="k">${K("3.0\\ \\text{kg}")}</span> cart does <span class="k">${K("12\\ \\text{J}")}</span> of work: the area under its
+  <span class="k">${K("F")}</span>-<span class="k">${K("x")}</span> graph. The cart starts at <span class="k">${K("4.0\\ \\text{m/s}")}</span>. Find its final speed in m/s.</p></div>`;
+const answer = `<div class="q"><label class="ff"><input type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 9/2, sqrt(3), dne" aria-label="Answer"></label></div>`;
+const then = '<span class="then">then</span>';
+const step = (s, i) => `<span class="n">${i + 1}</span><span class="f">${K(s.t)}</span><span class="g">${s.g}</span>`;
+const HD = '<p class="hd">Do it in this order</p>';
+const cards = {
+  1: () => `<section class="fc v1" aria-label="Formulas, in order">${HD}<ol>${STEPS.map((s, i) => `${i ? `<li class="tr" aria-hidden="true">${then}</li>` : ""}<li>${step(s, i)}</li>`).join("")}</ol></section>`,
+  2: () => `<section class="fc v2" aria-label="Formulas, in order">${HD}<ol>${STEPS.map((s, i) => `${i ? `<li aria-hidden="true">${then}</li>` : ""}<li>${step(s, i)}</li>`).join("")}</ol></section>`,
+  3: () => `<section class="fc v3" aria-label="Formulas, in order"><div class="in">${HD}<ol>${STEPS.map((s, i) => `${i ? `<li aria-hidden="true" style="display:contents">${then}</li>` : ""}<li>${step(s, i)}</li>`).join("")}</ol></div></section>`,
+  4: () => {
+    const open = P.has("open") ? P.get("open") === "1" : desk;
+    return `<details class="fc v4"${open ? " open" : ""}><summary><span class="chain"><span class="lab">Do it in this order</span>${STEPS.map((s, i) => `${i ? then : ""}<span class="f">${K(s.t)}</span>`).join("")}</span>
+      <span class="tw"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg></span></summary>
+      <ol>${STEPS.map((s, i) => `<li class="${i ? "t" : ""}">${i ? then : ""}${step(s, i)}</li>`).join("")}</ol></details>`;
+  },
+  5: () => `<section class="fc v5" aria-label="Formulas, in order">${HD}<ol>${STEPS.map((s, i) => `${i ? `<li aria-hidden="true" style="display:contents">${then}</li>` : ""}<li>${step(s, i)}</li>`).join("")}</ol></section>`,
+};
+const wrap = document.getElementById("wrap");
+wrap.innerHTML = v === 3 ? `<div class="boxed3">${question}${answer}${cards[3]()}</div>` : question + answer + cards[v]();
+</script>
+</body>
+</html>
