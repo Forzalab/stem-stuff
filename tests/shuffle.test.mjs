@@ -58,3 +58,14 @@ test("mastery: cur stays right after the answered ones", () => {
   // an answered cur stays in the answered prefix
   assert.deepEqual(mastery(order, r, "CSCI26_D1"), ["CSCI26_D1", "CSCI26_B1", "CSCI26_A1", "CSCI26_C1"]);
 });
+
+test("glue: each snack right before its real, after any shuffle; a lost target leaves the snack in place", async () => {
+  const { glue } = await import("../shuffle.mjs");
+  const before = { PHYS_S1: "PHYS_R3", PHYS_S2: "PHYS_R3", PHYS_S3: "PHYS_R1", PHYS_S9: "PHYS_GONE" };
+  const order = ["PHYS_R3", "PHYS_S3", "PHYS_R1", "PHYS_S9", "PHYS_S1", "PHYS_R2", "PHYS_S2"];
+  assert.deepEqual(glue(order, c => before[c] || null), ["PHYS_S1", "PHYS_S2", "PHYS_R3", "PHYS_S3", "PHYS_R1", "PHYS_S9", "PHYS_R2"]);
+  assert.deepEqual(glue(["PHYS_R1", "PHYS_R2"], () => null), ["PHYS_R1", "PHYS_R2"]);
+  const big = shuffled([...Array(30).keys()].map(i => i % 3 ? "PHYS_R" + i : "PHYS_S" + i), "x");
+  const g = glue(big, c => c.startsWith("PHYS_S") ? "PHYS_R" + (+c.slice(6) + 1) : null);
+  for (const [i, c] of g.entries()) if (c.startsWith("PHYS_S")) assert.equal(g[i + 1], "PHYS_R" + (+c.slice(6) + 1));
+});
