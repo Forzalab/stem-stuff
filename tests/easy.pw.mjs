@@ -110,6 +110,22 @@ try {
     assert.equal(hits, 0, "the corner covers an answer control");
   });
 
+  await step("sugar: drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+    const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
+    const vw = await page.evaluate(() => [innerWidth, innerHeight]);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(60, vw[1] - 60, { steps: 8 }); await page.mouse.up();
+    await page.waitForTimeout(400);
+    const st = await page.$eval("#rot", e => ({ b: e.style.bottom, l: e.style.left, t: e.style.top, rect: e.getBoundingClientRect().toJSON() }));
+    assert.ok(st.b.endsWith("px") && st.t === "auto" && st.l.endsWith("px"), JSON.stringify(st));
+    assert.ok(st.rect.bottom > vw[1] / 2 && st.rect.left < vw[0] / 2, "not in the bottom left: " + JSON.stringify(st.rect));
+    assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
+    await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForTimeout(100);
+    assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
+    const code = await page.textContent("#pcode");                    // back to the step-off default for the steps below
+    await page.evaluate(() => { localStorage.removeItem("stem-rot"); localStorage.removeItem("stem-rot-pick"); }); await page.reload(); await opened(page, code);
+  });
+
   await step("sugar: a split row is a True/False question, one try, its own slip", async () => {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
     assert.deepEqual(await rows(page), ["True", "False"]);
