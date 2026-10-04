@@ -44,7 +44,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "before", "original")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
@@ -224,9 +224,10 @@ def locks(p):
 
 def hidden(p, mode):
     """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3), and every one the bank prunes
-    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics)."""
+    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics). Diet leaves out every sugar_only item (the snacks,
+    design/REWARDS-WIRING.md): diet is the bank as it was before they were added."""
     if mode != "sugar":
-        return False
+        return bool(p.get("sugar_only"))
     lk = locks(p)
     sg = sugar(p)
     return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split"))   # split rows answer for themselves
@@ -250,7 +251,8 @@ def subs():
 
 
 def sub_problem(parent, row):
-    """one row of a split choose-all as its own 2-choice question (1 try): the parent's figures and text, then the row's stem."""
+    """one row of a split choose-all as its own question: the parent's figures and text, then the row's stem. A row with its own
+    choices is an mc (2 tries for 3+ choices); a row without them is True/False (1 try)."""
     sg, right = sugar(parent), "t" if str(row.get("answer")).lower() == "true" else "f"
     body, g = [], None
     for b in parent.get("body", []):
@@ -262,9 +264,17 @@ def sub_problem(parent, row):
             continue
         body.append(b)
     body.append({"type": "text", "md": row.get("stem", "") + ("\n\n" + g if g else "")})
+    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"), "narration": row.get("narration")}
+    ch = row.get("choices")
+    if isinstance(ch, list) and len(ch) >= 2:                 # main's v3 rows: a row is its own mc (answer = a choice id, slip per wrong id), the authored tries
+        slip = row.get("slip") if isinstance(row.get("slip"), dict) else {}
+        layer["slip"] = slip
+        return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "body": body,
+                "choices": [{k: c[k] for k in ("id", "md") if k in c} for c in ch if isinstance(c, dict)], "correct": str(row.get("answer")),
+                "wrong": [{"choice": i, "hint": h} for i, h in slip.items() if i != str(row.get("answer"))],
+                "saccharine": {k: v for k, v in layer.items() if v}}
     wrong = "f" if right == "t" else "t"
-    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"),
-             "slip": {wrong: row.get("slip")} if row.get("slip") else {}, "narration": row.get("narration")}
+    layer["slip"] = {wrong: row.get("slip")} if row.get("slip") else {}
     return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
             "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
             "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],
@@ -275,7 +285,7 @@ def lookup(code, mode):
     """a problem by code; in sugar a split row's sub code too (its parent not pruned). None when there's no such thing."""
     p = problems().get(code)
     if p is not None:
-        return p
+        return None if mode != "sugar" and p.get("sugar_only") else p   # a snack does not exist in diet (/p, /check, /state, /narrate, /explain)
     hit = subs().get(code) if mode == "sugar" else None
     return sub_problem(*hit) if hit and not hidden(hit[0], mode) else None
 
@@ -293,6 +303,13 @@ def view(p, mode):
             p["wish"] = True                                  # Cluck can answer this one (/explain); the key itself stays here
         if sg.get("part"):
             p["formulas"] = formulas(p["code"], sg["part"])
+        if sg.get("snack"):                                   # a snack: its target (nav order) and the original it twists (design/REWARDS-WIRING.md)
+            p["snack"] = True
+            if sg.get("before"):
+                p["before"] = sg["before"]
+            o = sg.get("original")
+            if isinstance(o, dict) and o.get("body"):
+                p["original"] = {k: o[k] for k in ("q", "body", "solution") if k in o}
     if p.get("type") != "mc":
         return p
     lk = locks(p)
@@ -602,6 +619,22 @@ def mark(p, sid):
     return {"x": x, "done": done} if x or done != "open" else None
 
 
+def snacks_placed(items):
+    """[(problem, before)] -> [problem]: each snack (before = its target's code, a sub code or a code) goes right before its
+    target, snacks with one target in file order; a snack whose target is not in the list stays where the file put it."""
+    live = {p["code"] for p, b in items if not b}
+    by = {}
+    for p, b in items:
+        if b and b in live:
+            by.setdefault(b, []).append(p)
+    out = []
+    for p, b in items:
+        if b and b in live:
+            continue
+        out += by.get(p["code"], []) + [p]
+    return out
+
+
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md)."""
@@ -619,7 +652,9 @@ def bank_payload(code, sid, mode="sugar"):
         if p is None or hidden(p, mode):
             continue
         rows = sugar(p).get("split") if mode == "sugar" else None
-        ps += [view(sub_problem(p, r), mode) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [view(p, mode)]
+        before = sugar(p).get("before") if mode == "sugar" and sugar(p).get("snack") else None
+        ps += [(view(sub_problem(p, r), mode), None) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [(view(p, mode), before)]
+    ps = snacks_placed(ps)
     marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
     with _tries_lock:
         _load_tries()

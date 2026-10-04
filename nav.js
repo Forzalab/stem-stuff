@@ -4,7 +4,7 @@
    new one), so a topic can't be guessed from its position. Neither: no list (codes are the gate), so the nav stays hidden.
    The list button's text is the bank code; for an upload, the file name (".json" dimmed, hidden on phones).
    Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
-import { shuffled, seed, newSeed, mastery } from "./shuffle.mjs";
+import { shuffled, seed, newSeed, mastery, glue } from "./shuffle.mjs";
 const MAX = 60;
 const ORDER = "stem-order";
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -128,7 +128,10 @@ function init() {
   /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js).
      Seeded shuffle, then mastery (design/NAV.md "Mastery order"): answered first, the open one, then the families with the most
      wrong tries. Silent: it re-sorts on a bank change, the shuffle button, and the first open after a mark changed (drill:marks). */
-  const order = all => mastery(shuffled(all, seed(ORDER, "")), mark, cur);
+  /* sugar snacks ride right before their real (glue, design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
+  const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
+  const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
+  const order = all => glue(mastery(shuffled(all, seed(ORDER, "")), mark, cur), beforeOf);
   window.stemOrder = all => order(all);
   shuf.addEventListener("click", () => {
     newSeed(ORDER);
@@ -156,8 +159,13 @@ function init() {
   }
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
   function go(d) {
-    const i = codes.indexOf(cur), c = codes[i + d];
+    const i = codes.indexOf(cur);
+    let k = i + d;
+    /* Next steps over a snack while the student is cruising (last 10 first tries > 90% right: the rewards decide, app.js) */
+    while (d > 0 && codes[k + 1] && snack(codes[k]) && window.stemSkipSnack && window.stemSkipSnack()) k++;
+    const c = codes[k];
     if (i < 0 || !c) return;
+    d = k - i;
     close(false);
     location.hash = c;                                               // app.js: hashchange -> load(c)
     say(`${i + d + 1} of ${codes.length}. ${titleOf(off().get(c))}`);

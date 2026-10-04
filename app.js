@@ -428,6 +428,8 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  rwSync();
+  origRender();
   window.stemBrainrot?.sync();
 }
 
@@ -458,7 +460,7 @@ function render() {
   layoutFreeze();
 }
 function drawFigures() {
-  document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
+  document.querySelectorAll("#blocks .fig, #orig .orig-body:not([hidden]) .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -818,7 +820,7 @@ async function submitPart(i) {
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
     else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN, partEls(i).box); }
-    if (mine.parts.every(x => x.shut)) settle();
+    if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
   } finally { busy = false; }
@@ -843,6 +845,7 @@ function record(a, r) {
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
+  rewardTry(a, r);
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
@@ -1097,6 +1100,123 @@ function voiceSay(t) {
   speechSynthesis.speak(u);
 }
 function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
+
+/* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
+   Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
+   an FX node or a stem-rw key. record() is the one funnel: a first-try correct pays (XP, maybe a drop), a wrong one only halves the
+   streak, silently: no FX, no sound, no words (Cluck, the "one more try" toast and the voice own a wrong answer). State per bank. */
+const RW = () => window.Rewards || null, FXL = () => window.FX || {};
+const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack) && !!RW();
+const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
+const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
+window.stemSkipSnack = () => modeOf() === "sugar" && !!RW() && RW().on() && RW().skipSnack();   // nav.js: Next steps over a snack while cruising
+let rwHud = null;
+function rwSync() {
+  const on = rewardOn();
+  if (on) {
+    RW().use(rwKey());
+    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
+    else RW().render(0);
+  }
+  if (rwHud) rwHud.hidden = !on;
+}
+function rewardTry(a, r) {
+  if (!rewardOn() || (r.verdict !== "correct" && r.verdict !== "wrong")) return;
+  const p = S.prob, multi = p.type === "multi";
+  if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
+  const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
+  rewardGo(S, { correct: r.verdict === "correct", firstTry });
+}
+function rewardMulti(mine) {
+  if (!rewardOn() || S !== mine || !S.solved) return;
+  rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") });
+}
+function rewardGo(mine, o) {
+  const p = mine.prob;
+  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
+    dwellMs: Date.now() - mine.start });
+  if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
+  if (!res.xp) { RW().render(0); return; }                                       // wrong, or a second try: the numbers change, nothing moves
+  requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
+}
+/* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
+   A snack (one constant swapped) shows its Practice Exam 2 original with the worked solution. Desktop (side by side): in the pad column,
+   in the scratchpad's place while it is open. Phone: a card on top of the problem, folded until tapped. Fading per original question:
+   level 1 (its first snack) the whole solution; 2 (a later snack) the last line behind "Peek"; 3 (after a first-try correct on one
+   of its snacks) folded. Peeking (the hidden line, or opening a level 3 original) before answering pays 2 XP and rolls no drop. */
+let origEl = null;
+function origRender() {
+  if (origEl) { origEl.remove(); origEl = null; }
+  $("#work").classList.remove("orig-on");
+  const p = S && S.prob, o = p && p.original;
+  if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
+  const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
+  if (live) R.origSeen(o.q, S.code);
+  S.orig = { lvl, open: sideMQ.matches && lvl < 3, peeked: false };
+  const el = origEl = document.createElement("section");
+  el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
+  const sol = Array.isArray(o.solution) ? o.solution : [];
+  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Q${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
+    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Worked solution</p><ol class="orig-sol">${sol.map((l, i) =>
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek at the last line</button>' : ""}
+    <p class="orig-note" hidden>Peeked: this one pays 2 XP.</p></div>`;
+  const q = el.querySelector(".orig-q");
+  for (const b of o.body) {
+    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
+    else if (b.type === "graph") { const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt || "figure"); f._block = b; q.append(f); }
+  }
+  el.querySelector(".orig-hd").addEventListener("click", () => {
+    if (!S.orig.open && S.orig.lvl === 3) origPeeked();                        // folded away: looking again is a peek
+    origOpen(!S.orig.open);
+  });
+  el.querySelector(".orig-peek")?.addEventListener("click", e => {
+    el.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
+  });
+  origPlace();
+  origOpen(S.orig.open);
+}
+function origPeeked() {
+  if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
+  S.orig.peeked = S.rwPeek = true;
+  origEl.querySelector(".orig-note").hidden = false;
+  say("Peeked: this one pays 2 XP.");
+}
+function origOpen(open) {
+  if (!origEl) return;
+  S.orig.open = open;
+  origEl.querySelector(".orig-hd").setAttribute("aria-expanded", String(open));
+  origEl.querySelector(".orig-body").hidden = !open;
+  $("#work").classList.toggle("orig-on", open && sideMQ.matches);              // desktop: in the scratchpad's place while open
+  if (open) origEl.querySelectorAll(".orig-body .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
+  layoutFreeze();
+}
+function origPlace() {
+  if (!origEl) return;
+  if (sideMQ.matches) $("#work").prepend(origEl); else $("#freezeIn").prepend(origEl);
+  $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
+}
+async function rewardShow(mine, res) {
+  const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
+  const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
+  fx.pop && fx.pop(at);
+  fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");
+  const coin = $("#rwCoin"), cr = coin && rwHud && !rwHud.hidden ? coin.getBoundingClientRect() : null;
+  if (cr && cr.width && cr.bottom > 0 && cr.top < innerHeight) { if (fx.coinFly) fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); }
+  else if (fx.float) fx.float(at, `+${res.xp} XP`);                              // the HUD is scrolled away: the XP rises off the answer
+  setTimeout(() => RW().render(res.xp), 450);
+  say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
+  if (!res.drop && !res.burst && !res.streakNote) return;
+  await wait(600);
+  if (res.drop && fx.slots) await fx.slots(res.drop);
+  if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
+  if (res.burst && fx.burst) {
+    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` }
+      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS LEVEL", sub: res.sub || res.line };
+    await fx.burst(res.burst, opt);
+  }
+  const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
+  if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+}
 
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
@@ -1602,7 +1722,7 @@ sash.addEventListener("keydown", e => {
   e.preventDefault();
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); layoutFreeze(); });
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); layoutFreeze(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
    follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped

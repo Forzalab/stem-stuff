@@ -25,6 +25,9 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   (`sub` codes like PHYS_U8BA; 1 try; the row's slip, tip and narration; the parent's key and formulas; the parent's how-to-tick
   paragraph is dropped, its "Use g = ..." line kept). Real P2X: 67 sugar items (11 single answer + 56 rows), 100 in diet.
   Sub codes 404 in diet. (serve.py `subs`, `sub_problem`, `lookup`.)
+- Snacks (`sugar_only: true`, `saccharine.snack`, design/REWARDS-WIRING.md): sugar only. Diet leaves them out everywhere (bank list, `p/`, `/check`,
+  `/state`, `/narrate`, `/explain`: `lookup` returns nothing), so a diet bank payload is byte-identical to the bank without them. Sugar puts each
+  snack right before its `saccharine.before` code (a sub code or a code; `snacks_placed`); no such code in the list = where the file put it.
 - A question whose answer is None is hidden (bank payload, `p/CODE.json` 404, uploads left out of the list).
 - No prove mode: `fix` is dropped, rows are tick / blank only.
 - `tip`: one "what to do" line on top of a twisted question. Plain statements, never a question; plain text + `$..$`.

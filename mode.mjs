@@ -25,9 +25,9 @@ function shown(p) {                                       // app.js shown() / se
 const locks = p => p.type === "mc" ? new Set(shown(p).filter(c => c.lock).map(c => c.id)) : new Set();
 export const NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again.";   // serve.py NONE_MISS
 
-/* sugar leaves out a question whose answer is "None of these" */
+/* sugar leaves out a question whose answer is "None of these"; diet leaves out every sugar_only item (the snacks) */
 export function hidden(p, mode) {
-  if (mode !== "sugar") return false;
+  if (mode !== "sugar") return !!(p && p.sugar_only);
   const lk = locks(p), sg = p.saccharine && typeof p.saccharine === "object" ? p.saccharine : {};
   return !!sg.hide || (lk.size > 0 && !sg.split && [...rightsOf(p)].every(id => lk.has(id)));   // pruned, or None as the key (unsplit)
 }
@@ -37,7 +37,15 @@ export function view(p, mode) {
   if (!p) return p;
   const block = p.saccharine && typeof p.saccharine === "object", sg = block ? p.saccharine : p;   // schema v2: one "saccharine" block (flat = old)
   if (LAYER.some(k => k in p)) { p = { ...p }; for (const k of LAYER) delete p[k]; }
-  if (mode === "sugar") { if (block && sg.title) p.title = sg.title; if (sg.tip) p.tip = sg.tip; }
+  if (mode === "sugar") {
+    if (block && sg.title) p.title = sg.title; if (sg.tip) p.tip = sg.tip;
+    if (block && sg.snack) {                                 // serve.py view(): a snack's target and its original
+      p.snack = true;
+      if (sg.before) p.before = sg.before;
+      const o = sg.original;
+      if (o && typeof o === "object" && o.body) p.original = Object.fromEntries(["q", "body", "solution"].filter(k => k in o).map(k => [k, o[k]]));
+    }
+  }
   if (p.type !== "mc") return p;
   const lk = locks(p);
   if (!lk.size && !p.fix) return p;

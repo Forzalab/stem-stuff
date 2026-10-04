@@ -34,3 +34,12 @@ export function mastery(order, recOf, cur) {
     .sort((a, b) => b.w - a.w || a.i - b.i).map(o => o.c);
   return [...done, ...head, ...rest];
 }
+/* snacks (sugar, design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
+   (beforeOf(code) -> that code, or null for a real). Several snacks with one target keep their order; a snack whose target is not in
+   the list stays where it is. Runs after mastery(), so the shuffle and the mastery sort never pull a snack away from its real. */
+export function glue(order, beforeOf) {
+  const live = new Set(order.filter(c => !beforeOf(c))), by = new Map();
+  const moves = c => { const b = beforeOf(c); return !!b && live.has(b); };
+  for (const c of order) if (moves(c)) { const b = beforeOf(c); by.set(b, [...(by.get(b) || []), c]); }
+  return order.flatMap(c => moves(c) ? [] : [...(by.get(c) || []), c]);
+}

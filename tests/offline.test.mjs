@@ -23,11 +23,17 @@ test("problems: network-first", () => {
 });
 test("shell: cache-first", () => {
   for (const p of ["", "index.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs",
-    "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css"])
+    "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css",
+    "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", "vendor/fonts/press-start-2p-latin-400-normal.woff2"])
     assert.equal(r(p), "shell", p);
   for (const p of ["sw.js", "_vercel/insights/script.js", "tests/x.js", "tools/bundle.py", "problems.json", "SCHEMA.md", "serve.py"]) assert.equal(r(p), "pass", p);
 });
 test("offline.js never stores or reads k/", () => {
   const off = readFileSync(new URL("../offline.js", import.meta.url), "utf8");
   assert.ok(!/["'`]k\//.test(off));
+});
+
+test("the sugar rewards files are precached (design/REWARDS-WIRING.md §6)", () => {
+  for (const f of ["rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js",
+    "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2"]) assert.ok(src.includes(`"${f}"`), f);
 });
