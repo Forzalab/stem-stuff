@@ -20,7 +20,7 @@
   const popKF = (s, o = 0) => [{ transform: 'scale(1)', opacity: 1 }, { transform: `scale(${s})`, opacity: 1, offset: .4 }, { transform: 'scale(1)', opacity: o || 1 }];
   const enterKF = (from) => [{ transform: `scale(${from})`, opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }];
   const COLORS = ['#ff8a1f', '#ffd36b', '#d63fa8', '#fff3b0', '#ffb347'];
-  const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 };
+  const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 }, CONF = { small: 24, medium: 40, large: 70 };
 
 
   // shared fixed particle layer (never causes page overflow)
@@ -68,11 +68,9 @@
     tier = COUNT[tier] ? tier : 'small';
     const p = mid(el);
     spray(layer(), p.x, p.y, COUNT[tier], DIST[tier]);
-    if (tier === 'large') {
-      if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());
-      if (layerConfetti) layerConfetti({ particleCount: 70, spread: 80, startVelocity: 32, ticks: 120, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
-        origin: { x: p.x / innerWidth, y: p.y / innerHeight } });
-    }
+    if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());   // confetti on every correct (Tony, Oct 4)
+    if (layerConfetti) layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 120, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
+      origin: { x: p.x / innerWidth, y: p.y / innerHeight } });
   }
 
   function coinFly(fromEl, toEl, n) {
@@ -195,6 +193,7 @@
 
   const KIND = {
     levelup: { t: 'LEVEL UP', d: 1200 },
+    win: { t: 'WIN!', d: 1200 },
     bonus: { t: 'BONUS LEVEL', d: 1200 },
     legend: { t: 'THE GOLDEN DUCK HAS NOTICED YOU.', s: '+50 XP', d: 2000 }
   };
@@ -245,7 +244,7 @@
     const ov = overlay('fx-burst fx-' + kind, () => { clearTimeout(timer); ov.close(); });
     ov.el.innerHTML = '<div class="fx-rays"></div><div class="fx-dots"></div>';
     const c = ov.el.appendChild(mk('div', 'fx-bc'));
-    if (!calm && kind === 'levelup') c.append(stars());
+    if (!calm && (kind === 'levelup' || kind === 'win')) c.append(stars());   // the 3-star WIN banner of the slot kit
     const duck = !calm && kind === 'legend' && c.appendChild(mk('div', 'fx-duck', img('duck_color', 'fx-gold')));
     const t = c.appendChild(titleEl(title));
     const s = sub ? c.appendChild(txt('div', kind === 'levelup' ? 'fx-plate' : 'fx-sub', sub)) : null;
@@ -265,14 +264,21 @@
     return ov.done;
   }
 
-  // "+10 XP" rising off the answer (used when the HUD coin is scrolled out of view, so no coin can fly to it)
-  function float(el, text) {
+  // "+10 XP" rising off the answer on every correct; cls "fx-float-sm" = a wrong try's quiet "+1"
+  function float(el, text, cls) {
     if (!el || still()) return;
-    const p = mid(el), f = layer().appendChild(txt('div', 'fx-float', text));
+    const p = mid(el), f = layer().appendChild(txt('div', 'fx-float' + (cls ? ' ' + cls : ''), text));
     f.style.cssText = `left:${p.x}px;top:${p.y}px`;
     run(f, [{ transform: 'translate(-50%,-50%) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-110%) scale(1)', opacity: 1, offset: .25 },
       { transform: 'translate(-50%,-220%) scale(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' });
   }
 
-  window.FX = { pop, sparks, coinFly, toast, slots, burst, float };
+  // one light sweep across the HUD coin pill (rewards.css .rw-shine)
+  function shine(el) {
+    if (!el || still()) return;
+    el.classList.remove('rw-shine'); void el.offsetWidth; el.classList.add('rw-shine');
+    el.addEventListener('animationend', () => el.classList.remove('rw-shine'), { once: true });
+  }
+
+  window.FX = { pop, sparks, coinFly, toast, slots, burst, float, shine };
 })();

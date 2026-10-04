@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { speakable } from "../speak.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -41,11 +42,11 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
+const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
 let asked = 0;
 const stub = createServer((req, res) => {
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
-  const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
   let i = 0;
   const t = setInterval(() => {
     if (i < parts.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i++] } }] })}\n\n`);
@@ -73,7 +74,14 @@ const rows = page => page.$$eval("#q .opt .txt", xs => xs.map(x => x.textContent
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+  await ctx.addInitScript(() => {
+    try { localStorage.setItem("stem-ob", "done"); } catch { /* */ }
+    window.__said = [];                                                    // the voice: what was spoken, how loud (no audio in CI)
+    if (!("speechSynthesis" in window)) Object.defineProperty(window, "speechSynthesis", { value: { cancel() {}, speaking: false } });
+    if (typeof SpeechSynthesisUtterance !== "function") window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    speechSynthesis.speak = u => window.__said.push({ text: u.text, volume: u.volume });
+    speechSynthesis.cancel = () => {};
+  });
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
 
@@ -145,15 +153,23 @@ try {
     await page.waitForFunction(() => /Missing one/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
   });
 
-  await step("easy: the first wrong answer asks Cluck in the background; the chip opens the streamed solution", async () => {
+  await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed, then the voice reads the same string at 0.2", async () => {
+    const said = () => page.evaluate(() => window.__said);
     await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
-    assert.equal(asked, 1);
+    assert.equal(asked, 0, "the pre-written text needs no /explain");
+    await page.evaluate(() => { window.__said = []; });
     await page.click("#wish .wchip");
-    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 4000 });
-    const t = await page.textContent("#wish .wtext");
-    assert.match(t, /POOF! A wish is a wish\./); assert.match(t, /Egg-cellent/);
-    assert.ok(await page.$("#wish .wtext .katex"), "math rendered");
-    assert.ok(!/\*\*/.test(t));
+    assert.ok(await page.$("#wish .wtext .wcaret") && !(await page.$("#wish .wtext .wl")), "the thinking caret comes first, alone");
+    assert.equal((await said()).length, 0, "spoken before the text is out");
+    await page.waitForFunction(() => document.querySelector("#wish .wtext .wl"), null, { timeout: 2000 });
+    const first = (await page.textContent("#wish .wtext")).trim();
+    assert.ok(first.length < P.all.saccharine.narration.length, "no typing: " + first);
+    await page.waitForFunction(t => document.querySelector("#wish .wtext")?.textContent.trim() === t && !document.querySelector("#wish .wcaret"),
+      P.all.saccharine.narration, { timeout: 4000 });
+    const s = await said();
+    assert.equal(s.length, 1, JSON.stringify(s));
+    assert.equal(s[0].text, speakable(P.all.saccharine.narration));
+    assert.ok(Math.abs(s[0].volume - 0.2) < 1e-6, "volume " + s[0].volume);
   });
 
   await step("past 5 auto wishes an hour, nothing fires until Ask Cluck", async () => {
@@ -163,11 +179,17 @@ try {
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
     await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForTimeout(400);
-    assert.equal(asked, 1, "fired on its own past the cap");
+    assert.equal(asked, 0, "fired on its own past the cap");
+    await page.evaluate(() => { window.__said = []; });
     await page.click("#wish .wchip");
-    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 6000 })
+    await page.click("#wish .wtext");                                       // a tap skips the wait + typing: the text shows as it streams
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 1500 })
       .catch(async e => { throw new Error(e.message + " | wish: " + await page.innerHTML("#wish") + " | asked " + asked); });
-    assert.equal(asked, 2);
+    assert.equal(asked, 1);
+    const t = await page.textContent("#wish .wtext");
+    assert.match(t, /POOF! A wish is a wish\./); assert.ok(await page.$("#wish .wtext .katex"), "math rendered"); assert.ok(!/\*\*/.test(t));
+    await page.waitForFunction(() => window.__said.length === 1, null, { timeout: 2000 });
+    assert.equal(await page.evaluate(() => window.__said[0].text), speakable(parts.join("")), "the voice reads the box text");
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
   });
 

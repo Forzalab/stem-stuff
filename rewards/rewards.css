@@ -34,7 +34,11 @@ html.start .rw-hud { display: none; }
   border-radius: var(--rw-pill); background: var(--rw-v900);
   box-shadow: inset 0 2px 0 var(--rw-v700), inset 0 -2px 0 var(--rw-v950);
 }
-.rw-coin { flex: 0 0 auto; }
+.rw-coin { flex: 0 0 auto; overflow: hidden; }
+/* impeccable waiver: casino-themed (Tony, Oct 4): one light sweep across the coin pill on each correct (FX.shine), transform only */
+.rw-coin.rw-shine::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgb(255 255 255 / .55), transparent); transform: translateX(-120%); animation: rw-shine .6s ease-out; }
+@keyframes rw-shine { to { transform: translateX(300%); } }
 .rw-coin-ic { width: 30px; height: 30px; flex: none; filter: drop-shadow(0 2px 0 var(--rw-v950)); }
 .rw-coin-ic img, .rw-flame img { width: 100%; height: 100%; display: block; }
 .rw-num { font: 700 20px/1 var(--rw-font); color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--rw-v950); }
@@ -81,6 +85,7 @@ html.start .rw-hud { display: none; }
 .fx-sp3 { width: 14px; height: 14px; margin: -7px; border-radius: 0; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
 .fx-fly { position: absolute; left: 0; top: 0; width: 22px; height: 22px; filter: drop-shadow(0 2px 2px rgb(0 0 0 / .45)); }
 .fx-float { position: absolute; font: 700 22px/1 var(--rw-font); color: var(--rw-sun); text-shadow: 0 2px 0 var(--rw-v950); white-space: nowrap; }
+.fx-float-sm { font-size: 14px; color: var(--rw-cream); }                 /* a wrong try's +1: small, no gold */
 
 /* ---------- drop banner (FX.toast): a sticker under the top edge; never takes a tap, never with #toast (app.js hides that first) ---------- */
 .fx-toast-host {
@@ -124,6 +129,7 @@ html.start .rw-hud { display: none; }
 .fx-burst { background: var(--fx-b2); }
 .fx-levelup { --fx-b1: var(--rw-v400); --fx-b2: var(--rw-v500); --fx-b3: var(--rw-v700); }
 .fx-bonus { --fx-b1: var(--rw-pink); --fx-b2: var(--rw-magenta); --fx-b3: var(--rw-v700); }
+.fx-win { --fx-b1: var(--rw-tang); --fx-b2: var(--rw-rust); --fx-b3: var(--rw-v900); }   /* a common drop: the red-gold kit's WIN */
 .fx-legend { --fx-b1: var(--rw-cream); --fx-b2: var(--rw-tang); --fx-b3: var(--rw-tang-dk); --fx-dot: rgb(90 30 0 / .3); }
 .fx-rays {
   position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax;
@@ -165,6 +171,6 @@ html.start .rw-hud { display: none; }
 @keyframes fx-blink { 50% { opacity: .25; } }
 @keyframes fx-bob { from { transform: translateY(-6px) rotate(-5deg); } to { transform: translateY(6px) rotate(5deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse { animation: none !important; }
+  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after { animation: none !important; }
   .rw-bar i, .rw-flame { transition: none; }
 }

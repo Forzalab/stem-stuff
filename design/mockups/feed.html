@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en" class="rw-skin"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark"><title>Feed mode</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css"><link rel="stylesheet" href="../../rewards/rewards.css">
+<!--
+  Feed mode (design/UX-TOPDOWN.md §4): TikTok-shaped sugar drill. One question per screen; answer, see the reward in place, swipe up.
+  Static mock: made-up questions (no bank text), placeholder clip. Phone = full screen; desktop = a centred phone column + the rail.
+  Plain parts use the app tokens (STYLE.md). Casino parts (HUD, reward pop, the Cluck chip) carry the waiver comment.
+-->
+<style>
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); }
+.page { position: relative; height: 100dvh; }
+.phone { position: relative; height: 100%; overflow: hidden; }
+@media (min-width: 720px) {
+  .page { display: grid; place-items: center; }
+  .phone { width: 420px; height: min(900px, calc(100dvh - 48px)); overflow: visible; border-radius: 28px; outline: var(--bw) solid var(--line); }
+  .feed { border-radius: 28px; }
+  .side { position: absolute; left: calc(50% - 210px - 320px); top: 50%; width: 260px; transform: translateY(-50%); color: var(--muted); font-size: var(--t-sm); }
+  .side h1 { margin: 0 0 var(--s2); color: var(--ink); font-size: var(--t-md); }
+  .side p { margin: 0 0 var(--s3); }
+}
+@media (max-width: 719.98px) { .side { display: none; } }
+@media (max-width: 1099.98px) { .side { display: none; } }
+
+/* ---------- the feed: one question per screen, scroll-snap ---------- */
+.feed { max-width: none; margin: 0; padding: 0; height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.feed::-webkit-scrollbar { display: none; }
+.slide { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding-top: 76px; background: var(--qbox); }
+.qz { flex: 0 0 auto; padding: 0 var(--s4); }
+.fig { display: block; height: 128px; margin: 0 0 var(--s2); }
+.fig svg { display: block; height: 100%; width: 100%; color: var(--ink); }
+.tip { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; color: var(--mark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tip svg { width: 1.25rem; height: 1.25rem; flex: none; }
+.lines { margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: var(--t-md); line-height: 1.4; }
+.lines li { margin: 0 0 2px; }
+.lines .ask { margin-top: var(--s2); font-weight: 700; }
+/* answer pills: the thumb zone, at the seam above the clip */
+.ans { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); padding: var(--s3) var(--s4); }
+.pill { position: relative; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 52px; padding: 0 var(--s3);
+  font-weight: 700; font-size: var(--t-md); color: var(--ink); background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 999px; }
+.pill:hover { border-color: var(--muted); }
+.pill:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.pill svg { width: 1.25rem; height: 1.25rem; }
+.pill.ok { border: var(--bw-alarm) solid var(--ok); color: var(--ok); }
+.pill.no { border: var(--bw-alarm) dashed var(--bad); color: var(--bad); }
+.pill[disabled] { cursor: default; }
+
+/* ---------- the clip: Subway-format split screen, the bottom part (placeholder) ---------- */
+.clip { position: relative; flex: 1 1 auto; min-height: 0; margin-top: auto; overflow: hidden; }
+.clip .ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--hint); font-size: var(--t-xs); background: var(--field); }
+.clip .ph svg { width: 100%; height: 100%; position: absolute; inset: 0; color: var(--line); }
+.clip .ph span { position: relative; padding: var(--s1) var(--s3); border-radius: 999px; background: var(--field); }
+/* Cluck as captions over the clip (TikTok captions) */
+.cap { position: absolute; left: var(--s3); right: 84px; bottom: var(--s4); display: flex; gap: var(--s2); align-items: flex-start; padding: var(--s2) var(--s3);
+  border-radius: 12px; background: rgb(10 14 22 / .88); color: var(--ink); font-size: var(--t-sm); line-height: 1.4; }
+.cap svg { width: 1.5rem; height: 1.5rem; flex: none; color: var(--mark); }
+.next { position: absolute; left: 50%; top: var(--s3); display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s3) var(--s1) var(--s2);
+  border-radius: 999px; background: var(--raised); color: var(--ink); font-size: var(--t-sm); font-weight: 700; transform: translateX(-50%); }
+.next svg { width: 1.25rem; height: 1.25rem; animation: nx 1.6s ease-out 3; }
+@keyframes nx { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-5px); } }
+
+/* ---------- top: story segments + HUD (fixed over the feed) ---------- */
+.fhead { position: absolute; z-index: 5; left: 0; right: 0; top: 0; padding: var(--s3) var(--s3) var(--s1); background: var(--qbox); }
+@media (min-width: 720px) { .fhead { border-radius: 28px 28px 0 0; } }
+.segs { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; height: 6px; margin: 0 0 var(--s2); }
+.segs i { display: block; border-radius: 3px; background: var(--line); }
+.segs i.done { background: var(--ok); }
+.segs i.miss { background: var(--muted); }
+.segs i.now { background: var(--ink); }
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.hud { display: flex; align-items: center; gap: 6px; height: 44px; font-family: var(--rw-font); font-weight: 700; color: #fff; }
+.hp { display: flex; align-items: center; gap: 6px; height: 40px; padding: 4px 10px 4px 4px; border-radius: var(--rw-pill); background: var(--rw-v900);
+  box-shadow: inset 0 2px 0 var(--rw-v700), inset 0 -2px 0 var(--rw-v950); white-space: nowrap; }
+.hp svg { width: 30px; height: 30px; flex: none; }
+.hp b { font-size: 18px; line-height: 1; }
+.hp small { font-size: 12px; color: var(--rw-soft); }
+.hp.lv { flex: 1; min-width: 0; }
+.hp.lv .bar { flex: 1; min-width: 30px; height: 10px; border-radius: 99px; background: var(--rw-v950); overflow: hidden; }
+.hp.lv .bar i { display: block; height: 100%; width: 100%; transform: scaleX(.6); transform-origin: left; background: var(--rw-sun); }
+.hp.st { background: #4a2208; box-shadow: inset 0 2px 0 #6b3510, inset 0 -2px 0 var(--rw-tang-ink); color: #ffc48a; }
+
+/* ---------- right rail: icon + one word each ---------- */
+.rail { position: absolute; z-index: 6; right: var(--s2); bottom: var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
+@media (min-width: 720px) { .rail { right: auto; left: calc(100% + var(--s4)); bottom: var(--s6); } }
+.rb { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; padding: 0; border: 0; background: none; color: var(--ink); font-size: var(--t-xs); font-weight: 700; }
+.rb .disc { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--raised); border: var(--bw) solid var(--edge); }
+.rb .disc svg { width: 24px; height: 24px; }
+.rb span:last-child { padding: 0 6px; border-radius: 6px; background: rgb(10 14 22 / .88); }
+.rb:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 12px; }
+.rb[aria-pressed="false"] .disc { color: var(--muted); }
+/* the Cluck rail button: the casino chip shrunk to a coin (the wchip in orig-bar.html, same rim and coin) */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.rb.ck .disc { width: 52px; height: 52px; border: 3px solid #ffc21a; color: #fff;
+  background: radial-gradient(circle at 35% 30%, #b58cff, #6b2fd8 55%, #3a118a); box-shadow: 0 0 0 2px #3d0d00, inset 0 -3px 0 rgb(20 0 60 / .5), 0 3px 0 #3d0d00; }
+
+/* ---------- reward pop, in place on the right answer ---------- */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.pop { position: absolute; z-index: 2; right: -6px; top: -22px; padding: 4px 10px; border-radius: var(--rw-r-s); border: 3px solid #fff; transform: rotate(-6deg);
+  font: 700 17px/1 var(--rw-font); color: var(--rw-text); background: var(--rw-sun); box-shadow: 0 3px 0 var(--rw-v950); animation: pop .5s cubic-bezier(.16, 1, .3, 1) 1; }
+@keyframes pop { 0% { opacity: 0; transform: rotate(-6deg) translateY(10px) scale(.6); } 100% { opacity: 1; transform: rotate(-6deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .feed { scroll-behavior: auto; }
+  .next svg, .pop { animation: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="f-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="f-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></symbol>
+  <symbol id="f-up" viewBox="0 0 24 24"><path d="M6 14.5l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="f-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="f-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="f-voice" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="f-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="#ffb86b"/><circle cx="9.8" cy="7.9" r="1" fill="#3a118a"/></symbol>
+  <!-- HUD art (casino scope): a plain gold coin with a star stamp (not the Fluent coin, which shows a bank building), a star, a flame -->
+  <symbol id="f-coin" viewBox="0 0 32 32"><circle cx="16" cy="17" r="13" fill="#c99a00"/><circle cx="16" cy="15.5" r="13" fill="#ffe14d"/><circle cx="16" cy="15.5" r="9.5" fill="none" stroke="#c99a00" stroke-width="2"/><path d="M16 9.5l1.9 3.9 4.3.6-3.1 3 .7 4.3-3.8-2-3.8 2 .7-4.3-3.1-3 4.3-.6z" fill="#c99a00"/></symbol>
+  <symbol id="f-star" viewBox="0 0 32 32"><path d="M16 2.5l4.1 8.4 9.2 1.3-6.6 6.5 1.6 9.2L16 23.6l-8.3 4.3 1.6-9.2-6.6-6.5 9.2-1.3z" fill="#ffe14d" stroke="#c99a00" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="f-flame" viewBox="0 0 32 32"><path d="M16 3c1 5 7 7.5 7 15a7 7 0 0 1-14 0c0-3.5 1.8-5.6 3.5-7.2.3 2.2 1.2 3.4 2.5 4C14.5 11 15 7 16 3z" fill="#ff9a3c"/><path d="M16 15c.6 2.6 3.5 3.6 3.5 7a3.5 3.5 0 0 1-7 0c0-2.2 1.6-3.5 3.5-7z" fill="#ffe14d"/></symbol>
+  <symbol id="f-carts" viewBox="0 0 340 128">
+    <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 104h320" opacity=".5"/>
+      <rect x="40" y="58" width="80" height="36" rx="6"/><circle cx="60" cy="98" r="6"/><circle cx="100" cy="98" r="6"/>
+      <path d="M130 76h56M178 70l8 6-8 6"/>
+      <rect x="220" y="66" width="56" height="28" rx="6"/><circle cx="234" cy="98" r="6"/><circle cx="262" cy="98" r="6"/>
+    </g>
+    <g fill="currentColor" font-family="Atkinson Hyperlegible, sans-serif" font-size="15"><text x="58" y="81">2.0 kg</text><text x="226" y="85">1.0 kg</text><text x="138" y="64">3.0 m/s</text><text x="226" y="52">at rest</text></g>
+  </symbol>
+  <symbol id="f-pucks" viewBox="0 0 340 128">
+    <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="40" cy="64" r="14"/><path d="M62 64h60M114 58l8 6-8 6"/><circle cx="160" cy="64" r="14"/><path d="M174 64h150" stroke-dasharray="4 5" opacity=".6"/>
+      <path d="M174 64l100-58M263 5l11 1-5 10"/><path d="M174 64l34 59M210 111l-2 12-9-7"/>
+    </g>
+    <g fill="currentColor" font-family="Atkinson Hyperlegible, sans-serif" font-size="14"><text x="240" y="50">30°</text><text x="214" y="104">60°</text></g>
+  </symbol>
+  <symbol id="f-run" viewBox="0 0 400 300" preserveAspectRatio="none"><g fill="none" stroke="currentColor" stroke-width="3"><path d="M150 0L60 300M200 0v300M250 0l90 300"/><path d="M0 220h400M0 160h400M0 120h400" opacity=".5"/></g></symbol>
+</defs></svg>
+
+<div class="page">
+  <aside class="side">
+    <h1>Feed mode (mock)</h1>
+    <p>One question per screen. Answer with your thumb, see the reward where you tapped, swipe up for the next.</p>
+    <p>The bar on top is this round of 10. The rail holds help: Hint (the exam's worked original), Cluck, Pad, Voice.</p>
+    <p>The clip under the question is the brainrot corner, made a split screen.</p>
+  </aside>
+
+  <div class="phone">
+    <div class="fhead">
+      <div class="segs" role="progressbar" aria-label="This round" aria-valuemin="0" aria-valuemax="10" aria-valuenow="4" aria-valuetext="Question 4 of 10">
+        <i class="done"></i><i class="done"></i><i class="miss"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="hud" aria-label="Your score">
+        <span class="hp" aria-label="12 coins"><svg aria-hidden="true"><use href="#f-coin"/></svg><b>12</b><small>coins</small></span>
+        <span class="hp lv" aria-label="Level 1, 18 XP to level 2"><svg aria-hidden="true"><use href="#f-star"/></svg><span class="bar"><i></i></span><small>18 to Lv 2</small></span>
+        <span class="hp st" aria-label="3 right in a row"><svg aria-hidden="true"><use href="#f-flame"/></svg><b>3</b><small>in a row</small></span>
+      </div>
+    </div>
+
+    <main class="feed" id="feed" aria-label="Questions, one per screen">
+      <!-- slide 4 of 10: answered right, the reward sits on the answer, the next one waits below -->
+      <section class="slide" aria-label="Question 4">
+        <div class="qz">
+          <div class="fig" role="img" aria-label="A 2.0 kilogram cart at 3.0 metres per second rolls toward a 1.0 kilogram cart at rest."><svg viewBox="0 0 340 128"><use href="#f-carts"/></svg></div>
+          <p class="tip"><svg aria-hidden="true"><use href="#f-bulb"/></svg>Momentum before = after.</p>
+          <ul class="lines">
+            <li>A 2.0 kg cart rolls at 3.0 m/s.</li>
+            <li>It hits a 1.0 kg cart at rest.</li>
+            <li>They stick together.</li>
+            <li class="ask">How fast do they move?</li>
+          </ul>
+        </div>
+        <div class="ans" role="radiogroup" aria-label="Answers">
+          <button type="button" class="pill" disabled>1.0 m/s</button>
+          <button type="button" class="pill" disabled>1.5 m/s</button>
+          <button type="button" class="pill ok" disabled aria-label="2.0 m/s, correct"><svg aria-hidden="true"><use href="#f-ok"/></svg>2.0 m/s<span class="pop" aria-hidden="true">+11 XP</span></button>
+          <button type="button" class="pill" disabled>3.0 m/s</button>
+        </div>
+        <div class="clip">
+          <div class="ph"><svg aria-hidden="true"><use href="#f-run"/></svg><span>brainrot clip · muted · loops</span></div>
+          <div class="next"><svg aria-hidden="true"><use href="#f-up"/></svg>Swipe up</div>
+          <p class="cap"><svg aria-hidden="true"><use href="#f-duck"/></svg><span>QUACK. 2.0 kg times 3.0 is 6. Share it over 3.0 kg: 2.0 m/s.</span></p>
+        </div>
+      </section>
+
+      <!-- slide 5: fresh -->
+      <section class="slide" aria-label="Question 5">
+        <div class="qz">
+          <div class="fig" role="img" aria-label="Puck 1 moves right into puck 2; after the hit puck 1 leaves 30 degrees above the line, puck 2 60 degrees below."><svg viewBox="0 0 340 128"><use href="#f-pucks"/></svg></div>
+          <p class="tip"><svg aria-hidden="true"><use href="#f-bulb"/></svg>Split each speed into x and y.</p>
+          <ul class="lines">
+            <li>Two 1.5 kg pucks on ice.</li>
+            <li>One hits the other at 5.0 m/s.</li>
+            <li>They leave at 30° and 60°.</li>
+            <li class="ask">What is v<sub>1</sub>?</li>
+          </ul>
+        </div>
+        <div class="ans" role="radiogroup" aria-label="Answers">
+          <button type="button" class="pill" data-r="0">2.50 m/s</button>
+          <button type="button" class="pill" data-r="1">4.33 m/s</button>
+          <button type="button" class="pill" data-r="0">5.00 m/s</button>
+          <button type="button" class="pill" data-r="0">3.54 m/s</button>
+        </div>
+        <div class="clip"><div class="ph"><svg aria-hidden="true"><use href="#f-run"/></svg><span>brainrot clip · muted · loops</span></div></div>
+      </section>
+
+      <!-- slide 6: fresh -->
+      <section class="slide" aria-label="Question 6">
+        <div class="qz">
+          <div class="fig" role="img" aria-label="A 2.0 kilogram cart at 3.0 metres per second rolls toward a 1.0 kilogram cart at rest."><svg viewBox="0 0 340 128"><use href="#f-carts"/></svg></div>
+          <p class="tip"><svg aria-hidden="true"><use href="#f-bulb"/></svg>Kinetic energy is ½mv².</p>
+          <ul class="lines">
+            <li>Same carts as before.</li>
+            <li>They stick and move at 2.0 m/s.</li>
+            <li class="ask">How much energy is lost?</li>
+          </ul>
+        </div>
+        <div class="ans" role="radiogroup" aria-label="Answers">
+          <button type="button" class="pill" data-r="0">0 J</button>
+          <button type="button" class="pill" data-r="1">3.0 J</button>
+          <button type="button" class="pill" data-r="0">6.0 J</button>
+          <button type="button" class="pill" data-r="0">9.0 J</button>
+        </div>
+        <div class="clip"><div class="ph"><svg aria-hidden="true"><use href="#f-run"/></svg><span>brainrot clip · muted · loops</span></div></div>
+      </section>
+    </main>
+
+    <nav class="rail" aria-label="Help">
+      <button type="button" class="rb"><span class="disc"><svg aria-hidden="true"><use href="#f-bulb"/></svg></span><span>Hint</span></button>
+      <button type="button" class="rb ck"><span class="disc"><svg aria-hidden="true"><use href="#f-duck"/></svg></span><span>Cluck</span></button>
+      <button type="button" class="rb"><span class="disc"><svg aria-hidden="true"><use href="#f-pen"/></svg></span><span>Pad</span></button>
+      <button type="button" class="rb" aria-pressed="true"><span class="disc"><svg aria-hidden="true"><use href="#f-voice"/></svg></span><span>Voice</span></button>
+    </nav>
+  </div>
+</div>
+
+<script>
+/* mock behaviour: a tap grades the pill in place; a right one pops XP, then the feed moves to the next screen */
+(function () {
+  var feed = document.getElementById("feed"), still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  feed.addEventListener("click", function (e) {
+    var b = e.target.closest(".pill[data-r]"); if (!b || b.disabled) return;
+    var all = b.parentElement.querySelectorAll(".pill");
+    all.forEach(function (x) { x.disabled = true; });
+    var right = b.dataset.r === "1";
+    b.classList.add(right ? "ok" : "no");
+    b.insertAdjacentHTML("afterbegin", '<svg aria-hidden="true"><use href="#' + (right ? "f-ok" : "f-x") + '"/></svg>');
+    if (right) {
+      b.insertAdjacentHTML("beforeend", '<span class="pop" aria-hidden="true">+11 XP</span>');
+      var slide = b.closest(".slide");
+      setTimeout(function () { var n = slide.nextElementSibling; if (n) n.scrollIntoView({ behavior: still ? "auto" : "smooth" }); }, 1100);
+    }
+  });
+  document.querySelector(".rail [aria-pressed]").addEventListener("click", function (e) {
+    var b = e.currentTarget; b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+  });
+})();
+</script>
+</body></html>

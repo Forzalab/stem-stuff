@@ -12,6 +12,14 @@ if (location.protocol === "https:" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   const va = document.createElement("script"); va.defer = true; va.src = "/_vercel/insights/script.js"; document.head.appendChild(va);
 }
+/* the blind-locale test (blind/locale.js): ?blind=ka|am|th swaps every UI word into a script Tony can't read, the question stays
+   English. Kept for the tab; ?blind=off ends it. Without the flag nothing loads. */
+try {
+  const q = new URLSearchParams(location.search).get("blind");
+  if (q === "off") sessionStorage.removeItem("stem-blind"); else if (q) sessionStorage.setItem("stem-blind", q);
+  const lang = sessionStorage.getItem("stem-blind");
+  if (lang && /^[a-z]{2}$/.test(lang)) { const b = document.createElement("script"); b.src = "blind/locale.js"; b.dataset.lang = lang; document.head.appendChild(b); }
+} catch { /* storage blocked: no blind test */ }
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
@@ -1027,13 +1035,20 @@ function wishReset() {
   wish = null; voiceStop();
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
 }
+/* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
+   else the live /explain stream. The voice reads that same string, once the typing ends. */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
-  wish = { code: S.code, text: "", narration: "", started: false, done: false, open: false, failed: 0 };
-  const w = wish;                                                          // the voiceover is pre-written (saccharine.narration): free
+  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false };
+  const w = wish;
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
-    .then(r => r.ok ? r.json() : null).then(j => { if (j && j.text) w.narration = j.text; }).catch(() => {});
-  if (wishLog().length < WISH_AUTO) wishStart(true);
+    .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+      if (wish !== w) return;
+      if (j && j.text) { w.text = j.text; w.done = true; }
+      else if (wishLog().length < WISH_AUTO) { wishStart(true); return; }
+      else w.started = false;                                              // past the cap: "Ask Cluck" does it
+      wishPaint();
+    });
   wishPaint();
 }
 async function wishStart(auto) {
@@ -1057,16 +1072,40 @@ async function wishStart(auto) {
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
-  if (w.open && w.text) voiceSay(w.narration || w.text);
 }
 /* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
 const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
   esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
-let wishRaf = 0;
-function wishText() {
-  if (wishRaf) return;
-  wishRaf = requestAnimationFrame(() => { wishRaf = 0; const x = $("#wish .wtext"); if (x && wish) x.innerHTML = wishHTML(wish.text) + (wish.done ? "" : '<span class="wcaret" aria-hidden="true"></span>'); });
+/* the ChatGPT feel (Tony, Oct 4: "bit delay feels gud"): ~900 ms of a lone blinking caret (STYLE.md bans pulsing dots), then the text
+   types out at ~35 chars/s word by word, a $..$ always whole, the caret riding the end. A tap on the box skips to the end; reduced motion =
+   no typing (the wait stays). */
+const WISH_DOTS = 900, WISH_CPS = 35;
+const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
+function wishCut(t, n) {                                                  // n chars, moved to a word end; a half-open $..$ waits
+  n = Math.min(t.length, Math.ceil(n));
+  while (n < t.length && /\S/.test(t[n])) n++;
+  if ((t.slice(0, n).match(/\$/g) || []).length % 2) { const e = t.indexOf("$", n); n = e < 0 ? Math.max(0, t.lastIndexOf("$", n - 1)) : e + 1; }
+  return n;
 }
+let wishRaf = 0;
+function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); }
+function wishDraw() { cancelAnimationFrame(wishRaf); wishRaf = 0; wishFrame(performance.now()); }
+function wishFrame(now) {
+  wishRaf = 0;
+  const x = $("#wish .wtext"), w = wish;
+  if (!x || !w || !w.open) return;
+  if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
+  const t = w.text;
+  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; if (!w.done || now < w.at) wishText(); return; }
+  const dt = now - (w.tick || now); w.tick = now;
+  w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
+  w.shown = Math.max(w.shown, wishCut(t, w.pos));
+  const end = w.done && w.shown >= t.length;
+  if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
+  if (!end) { wishText(); return; }
+  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's solution is open."); }   // what the box shows is what is spoken
+}
+const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
   const el = wishEl(), w = wish;
   if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
@@ -1075,19 +1114,19 @@ function wishPaint() {
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
     w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
     w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
-  if (w.open) wishText();
+  if (w.open) { w.drawn = w.ended = undefined; wishDraw(); }
   el.querySelector(".wchip").addEventListener("click", () => {
-    if (!w.started || w.failed) { w.failed = 0; w.text = ""; w.done = false; w.open = true; wishStart(false); wishPaint(); return; }
+    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, open: true, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); wishPaint(); return; }
     w.open = !w.open;
-    if (w.open && w.done) voiceSay(w.narration || w.text); else voiceStop();
+    if (w.open) w.said = false; else { voiceStop(); w.tick = 0; }          // reopened: spoken again once the text is out
     wishPaint();
   });
+  el.querySelector(".wtext")?.addEventListener("click", () => { if (!w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });
   el.querySelector(".wvoice")?.addEventListener("click", () => {
     try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
-    if (voiceOn()) { if (w.done) voiceSay(w.narration || w.text); } else voiceStop();
+    if (voiceOn()) { if (wishTyped(w)) voiceSay(w.text); } else voiceStop();
     wishPaint();
   });
-  if (w.done && w.open) say("Cluck's solution is open.");
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
@@ -1096,15 +1135,15 @@ const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off
 function voiceSay(t) {
   if (!voiceOK() || !voiceOn()) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.35; u.rate = 1.05;   // Tony: not too loud, but audible
+  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.2; u.rate = 1.05;    // Tony, Oct 4: smaller voice
   speechSynthesis.speak(u);
 }
 function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
 
 /* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
    Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
-   an FX node or a stem-rw key. record() is the one funnel: a first-try correct pays (XP, maybe a drop), a wrong one only halves the
-   streak, silently: no FX, no sound, no words (Cluck, the "one more try" toast and the voice own a wrong answer). State per bank. */
+   an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
+   quiet +1 (a small "+1" by the coin, no sound, no words: Cluck, the "one more try" toast and the voice own a wrong answer). State per bank. */
 const RW = () => window.Rewards || null, FXL = () => window.FX || {};
 const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack) && !!RW();
 const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
@@ -1136,7 +1175,8 @@ function rewardGo(mine, o) {
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
-  if (!res.xp) { RW().render(0); return; }                                       // wrong, or a second try: the numbers change, nothing moves
+  if (!res.xp) { RW().render(0); return; }                                       // a done code: the numbers change, nothing moves
+  if (res.tick) { rewardTick(res); return; }                                    // a wrong try: +1 for trying, tiny
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
 }
 /* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
@@ -1195,14 +1235,22 @@ function origPlace() {
   if (sideMQ.matches) $("#work").prepend(origEl); else $("#freezeIn").prepend(origEl);
   $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
 }
+/* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
+   so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
+function rewardTick(res) {
+  const coin = $("#rwCoin"), fx = FXL();
+  if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, "+1", "fx-float-sm");
+  RW().render(res.xp);
+}
+const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
 async function rewardShow(mine, res) {
   const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
-  fx.pop && fx.pop(at);
-  fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");
-  const coin = $("#rwCoin"), cr = coin && rwHud && !rwHud.hidden ? coin.getBoundingClientRect() : null;
-  if (cr && cr.width && cr.bottom > 0 && cr.top < innerHeight) { if (fx.coinFly) fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); }
-  else if (fx.float) fx.float(at, `+${res.xp} XP`);                              // the HUD is scrolled away: the XP rises off the answer
+  fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
+  fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
+  fx.float && fx.float(at, `+${res.xp} XP`);
+  const coin = $("#rwCoin");
+  if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   setTimeout(() => RW().render(res.xp), 450);
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
   if (!res.drop && !res.burst && !res.streakNote) return;
@@ -1210,7 +1258,7 @@ async function rewardShow(mine, res) {
   if (res.drop && fx.slots) await fx.slots(res.drop);
   if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
   if (res.burst && fx.burst) {
-    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` }
+    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
       : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS LEVEL", sub: res.sub || res.line };
     await fx.burst(res.burst, opt);
   }
