@@ -377,6 +377,27 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
           "maxLength": 120,
           "description": "text/multi: how to type the answer, shown right above the answer box. Plain text + $..$ + `code`."
         },
+        "tip": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "easy mode only (design/EASY.md): one 'what to do' line shown on top of a twisted question. Plain statements, never a question. Plain text + $..$."
+        },
+        "part": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"},
+          "description": "easy mode (design/EASY.md): ids of the formula-sheet rows that solve it (formula-sheet.json). Shown as the formula card."
+        },
+        "key": {
+          "type": "string",
+          "minLength": 3,
+          "description": "server only (design/EASY.md): the presolved solution, plain text + LaTeX. The AI paraphrases it; never sent to the browser."
+        },
+        "slip": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "minLength": 3},
+          "description": "server only: choice id -> the one slip that produces that wrong choice."
+        },
         "choices": {
           "type": "array",
           "minItems": 2,

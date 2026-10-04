@@ -72,9 +72,10 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CALC1_X2P", "a4", choice="b")["verdict"], "correct")
 
     def test_pick_all(self):                                                    # design/CHOOSE-ALL.md §3
-        for bad in ({"choices": []}, {"choices": "a"}, {"choices": ["a", "a"]}, {"choices": ["z"]}, {"choices": ["a", "e"]},
+        for bad in ({"choices": "a"}, {"choices": ["a", "a"]}, {"choices": ["z"]}, {"choices": ["a", "e"]},
                     {"choice": "a"}, {"choices": [1]}):
             self.assertEqual(self.g("CSCI26_A7K", "k1", **bad)["verdict"], "invalid", bad)   # not a try
+        self.assertEqual(self.g("CSCI26_A7K", "k0", choices=[])["error"], "incomplete")   # nothing ticked = "none true": a real try
         r = self.g("CSCI26_A7K", "k1", choices=["a"])                          # right but incomplete: miss, nothing struck
         self.assertEqual((r["verdict"], r["triesLeft"], r["error"]), ("wrong", 1, "incomplete"))
         self.assertNotIn("struck", r)
@@ -115,6 +116,46 @@ class Grade(unittest.TestCase):
         self.assertNotIn("fixWrong", r)
         self.assertEqual(self.g("CSCI26_A8F", "f2", choices=["a", "c"], fixes={"b": "10", "d": "2^4"})["verdict"], "correct")
         self.assertEqual(serve.public(BANK["CSCI26_A8F"])["fix"], {"type": "num", "how": "whole number"})
+
+    def test_modes(self):                                                       # design/EASY.md
+        a7k, a8f = BANK["CSCI26_A7K"], BANK["CSCI26_A8F"]
+        none_key = dict(a7k, code="CSCI26_N0N", correct=["e"], wrong=[w for w in a7k.get("wrong", []) if w.get("choice") != "e"])
+        self.assertEqual((serve.mode_of(""), serve.mode_of("sid=x; stem-mode=hard"), serve.mode_of("stem-mode=easy")), ("easy", "hard", "easy"))
+        for mode in ("easy", "hard"):                                           # None of these is gone in both
+            v = serve.view(a7k, mode)
+            self.assertNotIn("e", [c["id"] for c in v["choices"]], mode)
+            self.assertEqual((v["pick"], v["tries"]), ("all", serve.max_tries(a7k)))
+            self.assertNotIn("lock", str(serve.public(v, "m1")["choices"]))
+        self.assertTrue(serve.hidden(none_key, "easy"))                         # None as the key: hidden in easy
+        self.assertFalse(serve.hidden(none_key, "hard") or serve.hidden(a7k, "easy"))
+        hv = serve.view(none_key, "hard")                                       # hard: the empty set is the answer
+        self.assertEqual(hv["correct"], [])
+        self.assertEqual(serve.grade(hv, "m2", {"choices": []})["verdict"], "correct")
+        self.assertEqual(serve.grade(hv, "m3", {"choices": ["a"]})["verdict"], "wrong")
+        ev = serve.view(a8f, "easy")                                            # easy: no prove mode, no fix boxes
+        self.assertNotIn("fix", serve.public(ev))
+        self.assertEqual(serve.grade(ev, "m4", {"choices": ["a", "c"]})["verdict"], "correct")
+        self.assertIn("fix", serve.public(serve.view(a8f, "hard")))           # hard keeps them
+        self.assertIs(serve.view(BANK["CALC1_X2P"], "easy"), BANK["CALC1_X2P"])  # a plain mc is untouched
+
+    def test_number_forms(self):                                                # hard fix boxes: how people type 1.07 x 10^14
+        u = {"type": "num", "answer": "1.07e14"}
+        for t in ("1.07e14", "1.07E14", "1.07x10^14", "1.07 X 10^14", "1.07*10^14", "1.07×10^14", "1.07·10^14", "1.07 10^14",
+                  "+1.07e+14", "107000000000000", "107 000 000 000 000"):
+            self.assertAlmostEqual(serve.signature(u, t), 1.07e14, delta=1e3, msg=t)
+        self.assertAlmostEqual(serve.signature(u, "10^4"), 1e4)
+
+    def test_fix_sig_figs(self):                                                # 1 unit of slack in the last asked-for figure
+        u = {"type": "num", "answer": "15.588", "how": "4 sig figs", "fixbox": True}
+        for t, ok in (("15.59", True), ("15.58", True), ("15.60", True), ("15.61", False), ("15.57", False), ("1.559 x 10^1", True)):
+            self.assertEqual(serve.unit_correct(u, serve.signature(u, t)), ok, t)
+        u3 = dict(u, how="3 sig figs")
+        for t, ok in (("15.6", True), ("15.5", True), ("15.7", True), ("15.4", False)):
+            self.assertEqual(serve.unit_correct(u3, serve.signature(u3, t)), ok, t)
+        self.assertEqual(serve.figures({"sf": 2, "how": "4 sig figs"}), 2)
+        self.assertEqual(serve.figures({"how": "whole number"}), 3)                 # Tony, Oct 3: grade to 3 by default
+        for how in ("≥4 sigfigs, no unit", "at least 4 sig figs"):                  # the ask, not the grade
+            self.assertEqual(serve.figures({"how": how}), 3, how)
 
     def test_text(self):
         r = self.g("CSCI26_Q8C", "t1", answer="q -> p")

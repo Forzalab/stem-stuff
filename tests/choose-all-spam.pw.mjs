@@ -1,4 +1,4 @@
-// mc pick all under click spam (Tony, Oct 3: "I can click multiple times"). The /check route is slowed so taps land while a
+// mc pick all under click spam (easy mode; the prove cases set the stem-mode=hard cookie) (Tony, Oct 3: "I can click multiple times"). The /check route is slowed so taps land while a
 // request is out. Every burst must send ONE request and spend at most one try; a finished problem sends nothing more.
 // Starts its own serve.py with a throwaway tries.json:   node tests/choose-all-spam.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -95,7 +95,9 @@ try {
     await ctx.close();
 
     /* prove mode (CSCI26_A8F: right = a + c, fixes b = 10, d = 16): wrong fix spammed, the same values again, then the right fix */
-    ({ page, sent, got } = await rig(ctx = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" })));
+    ctx = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" });
+    await ctx.addCookies([{ name: "stem-mode", value: "hard", url: BASE }]);       // fix boxes are hard mode only (design/EASY.md)
+    ({ page, sent, got } = await rig(ctx));
     await page.goto(`${BASE}/#CSCI26_A8F`); await opened(page, "CSCI26_A8F");
     const fix = id => page.locator(`#q .ch[data-id="${id}"] .fix input`);
     await step(`${name} prove: wrong fix spammed = one request, one try`, async () => {

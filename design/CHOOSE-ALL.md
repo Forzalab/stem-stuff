@@ -2,6 +2,8 @@
 
 Design for a multiple-answer question: "Choose all answers that apply." Closes the open question in `MC.md` §2 ("Single-answer only in v2. Multiple-answer is an open question"). Spec only: no code in this change. Grading stays server-side (`SECURITY.md`).
 
+> Oct 3: "None of these" rows are gone in both modes and nothing ticked is a real answer; easy mode drops prove mode. See design/EASY.md.
+
 ## 1. What other systems do
 
 | System | Control | Grading | Count hint | Feedback |

@@ -43,9 +43,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
+NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -156,7 +157,49 @@ def rights(p):
 def max_tries(p):
     """Tries by choice count (Tony, locked): a 2-choice mc gets ONE try; 3+ choices, and every typed type, get TWO.
     app.js maxTries() is the same rule; tests/test_serve.py and tests/tries.test.mjs pin both to one table."""
+    if "tries" in p:                                         # a mode view (view()) keeps the count of the authored list
+        return p["tries"]
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
+
+
+# ---------------- modes (design/EASY.md): easy is the default; hard = the cookie stem-mode=hard (code box: ADMIN_<code>) ----------------
+def mode_of(cookie_header):
+    jar = http.cookies.SimpleCookie()
+    try:
+        jar.load(cookie_header or "")
+    except http.cookies.CookieError:
+        pass
+    return "hard" if "stem-mode" in jar and jar["stem-mode"].value == "hard" else "easy"
+
+
+def locks(p):
+    return {c["id"] for c in shown(p) if c.get("lock")} if p.get("type") == "mc" else set()
+
+
+def hidden(p, mode):
+    """easy mode leaves out a question whose answer is "None of these" (Tony, Oct 3)."""
+    lk = locks(p)
+    return mode == "easy" and bool(lk) and rights(p) <= lk
+
+
+def view(p, mode):
+    """The problem as a mode serves and grades it. Both modes (Tony, Oct 3): "None of these" is gone; an mc that had it becomes
+    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Easy also drops prove mode
+    (fix boxes). The try count stays the authored list's. A problem with neither is returned as is."""
+    if mode == "hard" and "tip" in p:                         # the "what to do" line on twisted questions: easy only
+        p = {k: v for k, v in p.items() if k != "tip"}
+    if p.get("type") != "mc":
+        return p
+    lk = locks(p)
+    if not lk and (mode == "hard" or "fix" not in p):
+        return p
+    q = dict(p, choices=[c for c in shown(p) if not c.get("lock")], tries=max_tries(p))
+    if lk:
+        q.update(pick="all", correct=sorted(rights(p) - lk), wrong=[w for w in p.get("wrong", []) if w.get("choice") not in lk])
+        q.setdefault("miss", NONE_MISS)
+    if mode == "easy":
+        q.pop("fix", None)
+    return q
 
 
 def shuffled(choices, seed):
@@ -270,10 +313,20 @@ def signature(u, text):
     var = u.get("var", "x")
     if u["type"] == "expr":
         return tuple(evaluate(text, var, x) for x in u["points"])
-    v = evaluate(text, var)
+    v = evaluate(numtext(text), var)
     if math.isnan(v):
         raise ValueError("nan")
     return v
+
+
+SCI = re.compile(r"(\d)\s*(?:[x×·*]\s*)?10\s*\^", re.I)
+
+
+def numtext(text):
+    """a typed number in any of the usual ways: 1.07e14, 1.07E14, 1.07x10^14, 1.07 X 10^14, 1.07*10^14, 1.07×10^14,
+    1.07·10^14, 1.07 10^14, 10^14, +1.07e+14, 1 070 000. The letter x before 10^ is a times sign here (num answers only)."""
+    t = SCI.sub(r"\1*10^", str(text).strip())
+    return re.sub(r"(?<=\d) (?=\d{3}(?!\d))", "", t)
 
 
 def same(a, b, tol):
@@ -296,11 +349,30 @@ def sig3(a, b):
     return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 2) * (1 + 1e-9)
 
 
+def sigfig(a, b, n):
+    """hard-mode fix boxes (Tony, Oct 3): right to n significant figures, give or take 1 in the last one (rounding order)."""
+    if isinstance(a, str) or isinstance(b, str) or not (math.isfinite(a) and math.isfinite(b)) or b == 0:
+        return False
+    unit = 10 ** (math.floor(math.log10(abs(b))) - (n - 1))
+    return abs(a - round(b / unit) * unit) <= unit * (1 + 1e-9)          # the key rounded to n figures, then +-1 in the last
+
+
+def figures(u):
+    """how many significant figures a fix box grades to: fix.sf, else "N sig fig(s)" in its how text, else 3.
+    Tony (Oct 3): grade to 3, the prompt asks for at least 4, so a "≥N" / "at least N" in the how text is the ask, not the grade."""
+    if isinstance(u.get("sf"), int) and u["sf"] > 0:
+        return u["sf"]
+    m = re.search(r"(?<![≥>\d])(?<!at least )(\d+)\s*sig", str(u.get("how", "")), re.I)
+    return int(m.group(1)) if m else 3
+
+
 def unit_correct(u, sig):
     tol = u.get("tol", 1e-6)
     if u["type"] == "text":
         return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
+    if u.get("fixbox") and not isinstance(sig, tuple):
+        return same(sig, ans, tol) or sigfig(sig, ans, figures(u))
     return same(sig, ans, tol) or sig3(sig, ans)
 
 
@@ -426,7 +498,7 @@ def mark(p, sid):
     return {"x": x, "done": done} if x or done != "open" else None
 
 
-def bank_payload(code, sid):
+def bank_payload(code, sid, mode="easy"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md)."""
     all_banks = banks()
@@ -437,7 +509,7 @@ def bank_payload(code, sid):
     if code not in all_banks:
         return None
     by_code = problems()
-    ps = [by_code[c] for c in all_banks[code] if c in by_code]
+    ps = [view(by_code[c], mode) for c in all_banks[code] if c in by_code and not hidden(by_code[c], mode)]
     marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
     with _tries_lock:
         _load_tries()
@@ -446,7 +518,8 @@ def bank_payload(code, sid):
         if me["bank"] != code:
             me["bank"] = code
             _save_tries()
-    return {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in all_banks[code] else None}
+    live = {p["code"] for p in ps}
+    return {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in live else None}
 
 
 def seen(code, sid):
@@ -495,7 +568,7 @@ def _grade(p, st, body, multi, idx):
     if p["type"] == "mc" and p.get("pick") == "all":         # design/CHOOSE-ALL.md §3: grade the ticked set, all or nothing
         ids, sh = body.get("choices"), shown(p)
         locked = {c["id"] for c in sh if c.get("lock")}
-        if (not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids) or len(set(ids)) != len(ids)
+        if (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids) or len(set(ids)) != len(ids)
                 or not set(ids) <= {c["id"] for c in sh} or (set(ids) & locked and len(ids) > 1)):
             return {"verdict": "invalid", "triesLeft": left()}
         hint_of = {w.get("choice"): w for w in p.get("wrong", [])}
@@ -512,7 +585,7 @@ def _grade(p, st, body, multi, idx):
             if "fix" in p:
                 sig = (sig, *(squash(fixes[i])[:200] for i in xs))
         elif "fix" in p:                                         # right set: now every fix must be right too
-            units = [(i, {**p["fix"], **hint_of[i]["fix"]}, str(fixes[i])[:200]) for i in xs]
+            units = [(i, {**p["fix"], **hint_of[i]["fix"], "fixbox": True}, str(fixes[i])[:200]) for i in xs]
             try:
                 sigs = [signature(u, t) for _, u, t in units]
             except UNREADABLE:
@@ -609,16 +682,17 @@ def dispatch(method, path, cookie_header="", body=b""):
             b = None
         if not isinstance(b, dict):
             return _json(400, {"verdict": "invalid"}, cookie)
-        p = problems().get(str(b.get("code", "")))
-        if p is None:
+        p, mode = problems().get(str(b.get("code", ""))), mode_of(cookie_header)
+        if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
-        return _json(200, grade(p, sid, b), cookie)
+        return _json(200, grade(view(p, mode), sid, b), cookie)
     m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path)
     if not m:
         return None
     sid, cookie = new_sid(cookie_header)
+    mode = mode_of(cookie_header)
     if m.re is BANK_PATH:
-        b = bank_payload(m.group(1), sid)
+        b = bank_payload(m.group(1), sid, mode)
         if b is None and m.group(1) != "last":
             return _json(404, {"error": "not found"}, cookie)
         return _json(200, b, cookie)                 # no last bank: null, a normal answer (no red console line)
@@ -626,8 +700,10 @@ def dispatch(method, path, cookie_header="", body=b""):
     if p is None:
         return _json(404, {"error": "not found"}, cookie)
     if m.re is STATE_PATH:
-        return _json(200, state(p, sid), cookie)
-    out = _json(200, public(p, sid), cookie)
+        return _json(200, state(view(p, mode), sid), cookie)
+    if hidden(p, mode):
+        return _json(404, {"error": "not in easy mode"}, cookie)
+    out = _json(200, public(view(p, mode), sid), cookie)
     seen(p["code"], sid)
     return out
 
