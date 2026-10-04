@@ -37,7 +37,15 @@ export function view(p, mode) {
   if (!p) return p;
   const block = p.saccharine && typeof p.saccharine === "object", sg = block ? p.saccharine : p;   // schema v2: one "saccharine" block (flat = old)
   if (LAYER.some(k => k in p)) { p = { ...p }; for (const k of LAYER) delete p[k]; }
-  if (mode === "sugar") { if (block && sg.title) p.title = sg.title; if (sg.tip) p.tip = sg.tip; }
+  if (mode === "sugar") {
+    if (block && sg.title) p.title = sg.title; if (sg.tip) p.tip = sg.tip;
+    if (block && sg.snack) {                                 // serve.py view(): a snack's target and its original
+      p.snack = true;
+      if (sg.before) p.before = sg.before;
+      const o = sg.original;
+      if (o && typeof o === "object" && o.body) p.original = Object.fromEntries(["q", "body", "solution"].filter(k => k in o).map(k => [k, o[k]]));
+    }
+  }
   if (p.type !== "mc") return p;
   const lk = locks(p);
   if (!lk.size && !p.fix) return p;

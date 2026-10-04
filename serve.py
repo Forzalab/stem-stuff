@@ -44,7 +44,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "before", "original")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
@@ -294,6 +294,13 @@ def view(p, mode):
             p["wish"] = True                                  # Cluck can answer this one (/explain); the key itself stays here
         if sg.get("part"):
             p["formulas"] = formulas(p["code"], sg["part"])
+        if sg.get("snack"):                                   # a snack: its target (nav order) and the original it twists (design/REWARDS-WIRING.md)
+            p["snack"] = True
+            if sg.get("before"):
+                p["before"] = sg["before"]
+            o = sg.get("original")
+            if isinstance(o, dict) and o.get("body"):
+                p["original"] = {k: o[k] for k in ("q", "body", "solution") if k in o}
     if p.get("type") != "mc":
         return p
     lk = locks(p)

@@ -387,9 +387,24 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
             "part": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"}, "description": "formula-sheet.json row ids, in order of use: the formula card"},
             "key": {"type": "string", "minLength": 3, "description": "server only: the full presolved solution, plain text + LaTeX; Cluck paraphrases it"},
             "slip": {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}, "description": "server only: choice id -> the slip that gives it"},
-            "narration": {"type": "string", "minLength": 3, "maxLength": 700, "description": "the voiceover after a wrong answer: plain spoken words, no $ or LaTeX, numbers and units spelled as said, <= 90 words"}
+            "narration": {"type": "string", "minLength": 3, "maxLength": 700, "description": "the voiceover after a wrong answer: plain spoken words, no $ or LaTeX, numbers and units spelled as said, <= 90 words"},
+            "hide": {"type": "boolean", "description": "true: left out of sugar (sugar v2 prune)"},
+            "split": {"type": "array", "minItems": 1, "description": "sugar: a choose-all becomes one True/False question per row, in its place (serve.py sub_problem)",
+              "items": {"type": "object", "required": ["sub", "stem", "answer"], "additionalProperties": false, "properties": {
+                "sub": {"type": "string", "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,7}$"}, "stem": {"type": "string", "minLength": 3},
+                "choices": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/choice"}, "description": "a row with its own choices: an mc (answer = a choice id); none = True/False"},
+                "answer": {"type": ["string", "boolean"], "description": "\"true\" / \"false\" (True/False row) or the right choice id"},
+                "slip": {"oneOf": [{"type": "string", "minLength": 3}, {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}}], "description": "the wrong pick's slip (True/False), or choice id -> slip"},
+                "tip": {"type": "string", "minLength": 3, "maxLength": 200},
+                "narration": {"type": "string", "minLength": 3, "maxLength": 700}}}},
+            "snack": {"type": "boolean", "description": "a very easy twin of a Practice Exam question (design/REWARDS-WIRING.md); goes with top-level sugar_only"},
+            "before": {"type": "string", "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,7}$", "description": "snack: the code (or split sub code) it is served right before"},
+            "original": {"type": "object", "required": ["body"], "additionalProperties": false, "description": "snack: the original question and its worked solution, shown beside it (sugar side panel)",
+              "properties": {"q": {"type": "integer", "minimum": 1}, "body": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},
+                "solution": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "worked lines, plain text + $..$, the original's numbers"}}}
           }
         },
+        "sugar_only": {"type": "boolean", "description": "true: a sugar-only item (a snack). Diet never sees it: bank list, p/, /check, /state, /narrate, /explain"},
         "tip": {
           "type": "string",
           "minLength": 3,

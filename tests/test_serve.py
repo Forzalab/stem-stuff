@@ -503,7 +503,8 @@ class Banks(unittest.TestCase):
                     "split": [{"sub": "CSCI26_SN1A", "stem": "Row A.", "answer": "true"}, {"sub": "CSCI26_SN1B", "stem": "Row B.", "answer": "false"}]})
         snack = lambda code, before: dict(BANK["CALC1_T6B"], code=code, sugar_only=True,
                                           saccharine={"title": "Practice Exam 2, Question 1: k changed", "key": "Use: k", "narration": "Snack says",
-                                                      "snack": True, "before": before})
+                                                      "snack": True, "before": before,
+                                                      "original": {"q": 1, "body": [{"type": "text", "md": "The original."}], "solution": ["Use: k", "Answer: 3"]}})
         reals = [pick, BANK["CALC1_T6B"], BANK["CALC1_A9R"]]
         snacks = [snack("CALC1_SK1", "CSCI26_SN1B"), snack("CALC1_SK2", "CALC1_A9R"), snack("CALC1_SK3", "CALC1_A9R"), snack("CALC1_SK4", "CALC1_NOPE")]
         self.write("BANK_SN1", {"v": 1, "problems": reals})
@@ -521,6 +522,10 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_SK1.json", "")[0], 200)                  # sugar: a question like any other
         self.assertEqual(json.loads(serve.dispatch("POST", "/check", "", json.dumps({"code": "CALC1_SK1", "answer": "12"}).encode())[2])["verdict"], "correct")
         self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CALC1_SK1"}).encode())[2])["text"], "Snack says")
+        pub = json.loads(serve.dispatch("GET", "/p/CALC1_SK1.json", "")[2])
+        self.assertEqual((pub["snack"], pub["before"], pub["original"]["q"], pub["original"]["solution"][-1]), (True, "CSCI26_SN1B", 1, "Answer: 3"))
+        self.assertFalse({"answer", "correct", "wrong", "key", "slip", "narration", "saccharine", "sugar_only"} & set(pub), pub)
+        self.assertNotIn("snack", json.loads(serve.dispatch("GET", "/p/CALC1_T6B.json", "")[2]))   # a real has none of it
 
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")

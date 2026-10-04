@@ -13,3 +13,14 @@ test("diet leaves out sugar_only items (the snacks); sugar keeps them", () => {
   assert.equal(hidden(real, "diet"), false);
   assert.equal(hidden(real, "sugar"), false);
 });
+
+test("sugar view: a snack carries snack, before and its original (serve.py view); diet never sees them", async () => {
+  const { view } = await import("../mode.mjs");
+  const s = { ...snack, saccharine: { ...snack.saccharine, key: "k", original: { q: 2, body: [{ type: "text", md: "Orig" }], solution: ["Answer: 1"] } } };
+  const v = view(s, "sugar");
+  assert.equal(v.snack, true); assert.equal(v.before, "PHYS_R1"); assert.deepEqual(v.original.solution, ["Answer: 1"]);
+  assert.equal("saccharine" in v, false);
+  const d = view(s, "diet");
+  assert.equal("snack" in d || "original" in d || "before" in d, false);
+  assert.equal("snack" in view(real, "sugar"), false);
+});
