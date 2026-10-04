@@ -2,12 +2,14 @@
    mock and research: design/rewards/, design/REWARDS.md). Sets window.Rewards. Inert until app.js calls Rewards.use(key) in sugar mode:
    no DOM, no listeners, no storage before that, so diet is untouched.
    State: localStorage "stem-rw:<bank code | file:name | solo>", one per bank, per device. Every access in try/catch.
-   XP (first try only): real 9-12, a 2-choice True/False row 6-8, snack 3-5, peeked at the original 2, second try 0. Each code pays once.
-   Drop roll on a first-try correct held >= 3 s: p = 0.25 real, 0.15 True/False, 0.10 snack, +0.05 per streak step (cap 0.5); pity after
-   6 dry; common 80 / rare 17 / legend 3. A wrong answer halves the streak once per question and never rolls. */
+   Dead easy, a participation trophy (Tony, Oct 4). XP: real first try 12-16, a 2-choice True/False row 8-10, snack 6, peeked at the
+   original 2; a second-try correct 6 (snack 3); a wrong try +1 "for trying". Each code's correct pays once.
+   Drop roll on every correct held >= 1 s (a peek at the original still rolls none): p = 0.6 real, 0.5 True/False, 0.45 snack; pity after
+   2 dry; common 70 / rare 25 / legend 5.
+   The streak never halves: a wrong try only pauses it; any correct adds one. A wrong try never rolls (no loss dressed up as a win). */
 (function (g) {
   'use strict';
-  var PRE = 'stem-rw:', CAP_MS = 60000, cfg = { minDwell: 3000 };
+  var PRE = 'stem-rw:', CAP_MS = 15000, cfg = { minDwell: 1000 };
   var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
     "Formula fed. Duck fed.", "Physics is scared of you.", "Streak sauce added.", "You did not guess that. Nice.",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
@@ -32,8 +34,8 @@
   function on() { return key !== null; }
 
   var ri = function (a, b) { return a + Math.floor(Math.random() * (b - a + 1)); };
-  // cumulative XP to reach level L: per-level cost 30, 40, 50 ...
-  function floorOf(L) { return 20 * (L - 1) + 5 * (L - 1) * L; }
+  // cumulative XP to reach level L: per-level cost 20, 30, 40 ...
+  function floorOf(L) { return 20 * (L - 1) + 5 * (L - 1) * (L - 2); }
   function levelOf(xp) { var L = 1; while (floorOf(L + 1) <= xp) L++; return L; }
   function rate() { return s.hist.length ? s.hist.reduce(function (a, b) { return a + b; }, 0) / s.hist.length : null; }
   function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i]; }
@@ -50,7 +52,7 @@
   /* o: { code, correct, firstTry, snack, tf (2-choice True/False row), peeked, dwellMs } -> what to show */
   function answer(o) {
     o = o || {};
-    var r = { xp: 0, levelUp: false, level: 1, drop: null, line: null, sub: null, streakNote: null, burst: null, toast: false, streak: 0, paid: false };
+    var r = { xp: 0, levelUp: false, level: 1, drop: null, line: null, sub: null, streakNote: null, burst: null, toast: false, streak: 0, paid: false, tick: false };
     if (!s) return r;
     s = load();                                                    // another tab may have written since
     var code = o.code || '', first = !!o.firstTry, L0 = levelOf(s.xp), big = null;
@@ -58,33 +60,31 @@
     if (code && s.paid[code]) return r;                            // a code pays once (reload, a reset by Tony, two tabs)
     if (first) { s.hist.push(o.correct ? 1 : 0); if (s.hist.length > 10) s.hist.shift(); }
     if (!o.correct) {
-      if (!code || !s.missed[code]) s.streak = Math.floor(s.streak / 2);   // once per question, never to 0 from a high run
       if (code) s.missed[code] = 1;
+      r.xp = 1; r.tick = true;                                      // "for trying": tiny, no fanfare, the streak just waits
     } else {
       if (code) s.paid[code] = 1;
       r.paid = true;
       if (o.snack) s.snacks++; else s.real++;
-      if (first) {
-        s.streak++;
-        r.xp = o.peeked ? 2 : o.snack ? ri(3, 5) : o.tf ? ri(6, 8) : ri(9, 12);
-        var p = Math.min(0.5, (o.snack ? 0.10 : o.tf ? 0.15 : 0.25) + 0.05 * s.streak);
-        if (!o.peeked && (o.dwellMs || 0) >= cfg.minDwell && (s.dry >= 6 || Math.random() < p)) {
-          var q = Math.random() * 100;
-          r.drop = q < 80 ? 'common' : q < 97 ? 'rare' : 'legend';
-          s.dry = 0;
-        } else if (!o.peeked) s.dry++;
-        if (r.drop === 'common') r.line = commonLine();
-        else if (r.drop === 'rare') { r.line = 'BONUS LEVEL!'; r.sub = commonLine(); big = 'bonus'; }
-        else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
-        if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' in a row';
-      }
+      s.streak++;
+      r.xp = !first ? (o.snack ? 3 : 6) : o.peeked ? 2 : o.snack ? 6 : o.tf ? ri(8, 10) : ri(12, 16);
+      var p = o.snack ? 0.45 : o.tf ? 0.5 : 0.6;
+      if (!o.peeked && (o.dwellMs || 0) >= cfg.minDwell && (s.dry >= 2 || Math.random() < p)) {
+        var q = Math.random() * 100;
+        r.drop = q < 70 ? 'common' : q < 95 ? 'rare' : 'legend';
+        s.dry = 0;
+      } else if (!o.peeked) s.dry++;
+      if (r.drop === 'common') { r.line = commonLine(); big = 'win'; }
+      else if (r.drop === 'rare') { r.line = 'BONUS LEVEL!'; r.sub = commonLine(); big = 'bonus'; }
+      else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
+      if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' in a row';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;
     var now = Date.now();
-    if (r.levelUp) { r.burst = 'levelup'; s.lastBurst = now; }               // a level up beats the cap
+    if (r.levelUp && !r.tick) { r.burst = 'levelup'; s.lastBurst = now; }    // a level up beats the cap (a +1 for trying stays quiet)
     else if (big && now - s.lastBurst >= CAP_MS) { r.burst = big; s.lastBurst = now; }
-    r.toast = !!r.drop && (!big || r.burst !== big);                         // a capped big drop becomes a toast
+    r.toast = !!r.drop && r.burst !== big;                                   // a capped drop becomes a toast
     r.streak = s.streak;
     save();
     return r;

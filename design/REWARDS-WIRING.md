@@ -2,6 +2,7 @@
 
 Build guide for wiring the sugar reward layer (`design/rewards/`: engine.js, fx.js, loop.js, hud.css, fx.css, icons/) into the
 real app. Spec: brain `projects/calc/topics/sugar-rewards.md` (main owns the bank). Mock research: `design/REWARDS.md`.
+**Numbers superseded Oct 4 (dead easy): design/REWARDS.md "Dead easy".**
 Line numbers are as of commit 0bfcae8.
 
 ## As built (phase 2, Oct 4; Tony took every default: snack order A + skip, Quiz Pop dark, HUD in flow, Q2/Q3 full XP, T/F rows 6-8 XP p 0.15)

@@ -1,5 +1,5 @@
-// Sugar rewards in the real page (design/REWARDS-WIRING.md): the HUD row, XP on a first-try correct, silence on a wrong one, no XP on
-// try 2, a drop (slots + banner, never with #toast), state across a reload, snacks right before their real, the fading original,
+// Sugar rewards in the real page (design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
+// 6 XP on try 2, a drop (slots + the WIN burst, never with #toast), state across a reload, snacks right before their real, the fading original,
 // and nothing at all in diet. Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/rewards.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -43,13 +43,21 @@ async function typeCode(page, code) {
 async function pick(page, id) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`#q .opt[data-id="${id}"]`); await page.click(`#q .ch[data-id="${id}"] .send`);
-  await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 6000 });
+  await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 6000 })
+    .catch(async e => { throw new Error(e.message + " | pick " + id + " | " + JSON.stringify(await page.evaluate(() => [window.__drill.state.tries, document.querySelector("#q").className,
+      document.querySelector("#fb").textContent, document.querySelector("#toast")?.textContent]))); });
 }
 const xp = page => page.evaluate(() => window.Rewards.state().xp);
 const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 });
+/* the engine's rolls on the next answer only (confetti and the rest keep the real Math.random) */
+const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
+  try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
+/* the list toggle by script: on desktop the brainrot corner can sit over the toggle of an open list (a pre-existing race on main;
+   the overlap is in design/UX-TOPDOWN.md), and this file tests rewards, not the corner */
+const toggleList = page => page.$eval("#qlistBtn", b => b.click());
 const listOrder = page => page.$$eval("#qlist a", as => as.map(a => a.getAttribute("href").slice(1)));
 /* every .fx-* node added to the page from now on */
-const watchFx = async page => { await page.waitForFunction(() => !document.querySelector(".fx-layer > *, .fx-ov"), null, { timeout: 6000 }); return page.evaluate(() => { window.__fx = 0; new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && /(^| )fx-/.test(n.className)) window.__fx++; }).observe(document.body, { childList: true, subtree: true }); }); };
+const watchFx = async page => { await page.waitForFunction(() => !document.querySelector(".fx-layer > :not(canvas), .fx-ov"), null, { timeout: 6000 }); return page.evaluate(() => { window.__fx = 0; window.__fxc = []; window.__fxo?.disconnect(); (window.__fxo = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && /(^| )fx-/.test(n.className)) { window.__fx++; window.__fxc.push(n.className); } })).observe(document.body, { childList: true, subtree: true }); }); };
 const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().toJSON() : null; }), sels);
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
@@ -63,7 +71,7 @@ try {
   await page.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
 
   await step("sugar: snacks sit right before their real in the list; the HUD row sits in the top bar", async () => {
-    await page.click("#qlistBtn"); const o = await listOrder(page); await page.click("#qlistBtn");
+    await toggleList(page); const o = await listOrder(page); await toggleList(page);
     assert.equal(o.length, 5);
     assert.equal(o[o.indexOf("CALC1_S01") + 1], "CALC1_R01", o.join(" "));
     assert.equal(o[o.indexOf("CALC1_S02") + 1], "CALC1_R03", o.join(" "));
@@ -75,46 +83,53 @@ try {
     assert.equal(await xp(page), 0);
   });
 
-  await step("a first-try correct pays 9-12 XP, with FX; #toast stays off", async () => {
+  await step("a first-try correct pays 12-16 XP with the bells (float, coins, coin-pill shine); #toast stays off", async () => {
     await watchFx(page);
+    await rig(page, [0.5, 0.99]);                                               // 14 XP, no drop
     await pick(page, "a");
+    await page.waitForSelector("#rwCoin.rw-shine", { state: "attached", timeout: 3000 });
     await page.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
     const x = await xp(page);
-    assert.ok(x >= 9 && x <= 12, String(x));
-    assert.ok(await page.evaluate(() => window.__fx) > 0, "FX nodes " + JSON.stringify(await page.evaluate(() => [window.__fx, document.querySelectorAll(".fx-layer *").length, document.documentElement.className])));
+    assert.equal(x, 14);
+    const c = await page.evaluate(() => window.__fxc);
+    for (const k of ["fx-float", "fx-fly"]) assert.ok(c.some(n => n.split(" ").includes(k)), k + " in " + c.join(","));
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x, { timeout: 3000 });
     assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP, level 1`));
     await quiet(page);
   });
 
-  await step("a wrong answer: no FX node, no XP, the streak halves; the second-try correct pays 0", async () => {
+  await step("a wrong try: one small quiet +1, nothing else; the streak waits; the second-try correct pays 6 with the bells", async () => {
     await go(page, "CALC1_R02");
     const x0 = await xp(page), s0 = await page.evaluate(() => window.Rewards.state().streak);
     await watchFx(page);
     await pick(page, "b");
     await page.waitForTimeout(1500);
-    assert.equal(await page.evaluate(() => window.__fx), 0, "a wrong answer made an FX node");
-    assert.equal(await xp(page), x0);
-    assert.equal(await page.evaluate(() => window.Rewards.state().streak), Math.floor(s0 / 2));
+    assert.deepEqual(await page.evaluate(() => window.__fxc), ["fx-float fx-float-sm"], "a wrong try: only the small +1");
+    assert.equal(await xp(page), x0 + 1);
+    assert.equal(await page.evaluate(() => window.Rewards.state().streak), s0, "the streak never halves");
+    await rig(page, [0.99]);                                                    // no drop
     await pick(page, "a");
-    await page.waitForTimeout(800);
-    assert.equal(await xp(page), x0, "no XP on try 2");
-    assert.equal(await page.evaluate(() => window.__fx), 0, "no FX on try 2");
+    await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
+      .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
+    assert.ok(await page.evaluate(() => window.__fx) > 1, "the bells on try 2");
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
+    await quiet(page);                                                          // 21 XP: the level-up burst
   });
 
-  await step("a drop (first try, held 3 s+): slots, then the drop banner; #toast never shows with it", async () => {
+  await step("a common drop (held 1 s+): slots, then the WIN burst with stars, out of the 15 s cap; #toast never shows with it", async () => {
     await go(page, "CALC1_R03");
-    await page.evaluate(() => { const q = [0, 0, 0, 0], r = Math.random; Math.random = () => q.length ? q.shift() : r(); });   // 9 XP, a drop, common, line 1
-    await page.waitForTimeout(3100);
+    await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.lastBurst = 0; s.dry = 0; localStorage.setItem(k, JSON.stringify(s)); });
+    await rig(page, [0, 0, 0, 0]);                                              // 12 XP, a drop, common, line 1
+    await page.waitForTimeout(1100);
     await pick(page, "a");
     await page.waitForSelector(".fx-slots-ov", { timeout: 4000 });
-    await page.waitForSelector(".fx-toast", { timeout: 8000 });
-    assert.equal(await page.textContent(".fx-toast-t"), "QUACK! Brain +1.");
-    assert.equal(await page.$eval(".fx-toast-host", h => h.getAttribute("aria-hidden")), "true");
+    await page.waitForSelector(".fx-ov.fx-win .fx-stars", { timeout: 8000 });
+    assert.match(await page.textContent(".fx-ov.fx-win .fx-title"), /WIN!/);
+    assert.match(await page.textContent(".fx-ov.fx-win"), /QUACK! Brain \+1\./);
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
     assert.match(await page.textContent("#sr"), /Correct\. Plus \d+ XP\. QUACK! Brain \+1\./);
+    await quiet(page);
   });
 
   await step("reload: XP kept; a done question pays nothing again", async () => {
@@ -126,7 +141,7 @@ try {
   });
 
   await step("Next steps over a snack only while the last 10 first tries are above 90%", async () => {
-    await page.click("#qlistBtn"); const o = await listOrder(page); await page.click("#qlistBtn");
+    await toggleList(page); const o = await listOrder(page); await toggleList(page);
     const before = o[o.indexOf("CALC1_S02") - 1];
     if (!before) return;                                                        // the snack opens the list: nothing steps onto it
     await go(page, before);
@@ -148,7 +163,7 @@ try {
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
     await d.click("#origHd");
     assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");
-    await pick(d, "b"); await pick(d, "a");                                   // not a first-try correct: the original stays unsolved
+    await pick(d, "b"); await rig(d, [0.99]); await pick(d, "a");             // not a first-try correct: the original stays unsolved
     await go(d, "CALC1_S02");
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
     await d.click("#orig .orig-peek");
@@ -179,7 +194,7 @@ try {
     await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
     await page.reload();
     await page.waitForFunction(() => /^CALC1_R/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
-    await page.click("#qlistBtn"); const o = await listOrder(page); await page.click("#qlistBtn");
+    await toggleList(page); const o = await listOrder(page); await toggleList(page);
     assert.deepEqual([...o].sort(), ["CALC1_R01", "CALC1_R02", "CALC1_R03"]);
     await go(page, "CALC1_R02");
     await watchFx(page);
@@ -214,6 +229,7 @@ try {
     const p3 = await rm.newPage();
     await p3.goto(BASE + "/#CALC1_R02"); await opened(p3, "CALC1_R02");
     await watchFx(p3);
+    await rig(p3, [0.5, 0.99]);
     await pick(p3, "a");
     await p3.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
     assert.equal(await p3.$$eval(".fx-sp, .fx-fly, .fx-ring", e => e.length), 0);

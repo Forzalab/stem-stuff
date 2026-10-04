@@ -27,47 +27,58 @@ test("inert until use(): no state, answer() pays nothing", () => {
   assert.equal(g.Rewards.state(), null);
 });
 
-test("XP: real 9-12, True/False row 6-8, snack 3-5, peeked 2, second try 0", () => {
+const one = (code, x, scr) => { fresh(); script = scr; return ok(code, x); };   // a fresh bank: no pity carried over
+
+test("XP: real 12-16, True/False row 8-10, snack 6, peeked 2; second try 6 (snack 3); a wrong try +1", () => {
   for (let i = 0; i < 40; i++) {
-    script = [0.5, 0.99]; const r = ok("R" + i); assert.ok(r.xp >= 9 && r.xp <= 12, r.xp);
-    script = [0.5, 0.99]; const t = ok("T" + i, { tf: true }); assert.ok(t.xp >= 6 && t.xp <= 8, t.xp);
-    script = [0.5, 0.99]; const s = ok("S" + i, { snack: true }); assert.ok(s.xp >= 3 && s.xp <= 5, s.xp);
-    fresh();
+    const r = one("R", {}, [i / 40, 0.99]); assert.ok(r.xp >= 12 && r.xp <= 16, r.xp);
+    const t = one("T", { tf: true }, [i / 40, 0.99]); assert.ok(t.xp >= 8 && t.xp <= 10, t.xp);
   }
-  assert.equal(ok("P", { peeked: true }).xp, 2);
-  no("W"); assert.equal(R.answer({ code: "W", correct: true, firstTry: false }).xp, 0);
-  assert.deepEqual([R.state().real, R.state().snacks], [2, 0]);
-});
-
-test("levels: 30, 70, 120, 180 XP", () => {
-  script = [0, 0.99, 0, 0.99, 0, 0.99];               // 9 XP each, no drop
-  for (const c of ["A", "B", "C"]) ok(c);
-  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [27, 1, 30]);
-  script = [0, 0.99]; const r = ok("D");
-  assert.equal(r.levelUp, true); assert.equal(r.burst, "levelup"); assert.equal(R.state().level, 2); assert.equal(R.state().next, 70);
-});
-
-test("drop roll: p by kind, the 3 s dwell, pity after 6 dry, rarity bands", () => {
-  script = [0, 0.24]; assert.ok(ok("R1").drop);                         // p(real) = 0.25 + 0.05 streak: 0.24 drops
-  fresh(); script = [0, 0.16]; assert.equal(ok("S1", { snack: true }).drop, null);   // p(snack) = 0.10 + 0.05 = 0.15
-  fresh(); script = [0, 0.19]; assert.ok(ok("T1", { tf: true }).drop);  // p(T/F) = 0.15 + 0.05
-  fresh(); script = [0, 0]; assert.equal(ok("D1", { dwellMs: 2999 }).drop, null);    // under 3 s never rolls
+  assert.equal(one("S", { snack: true }, [0.99]).xp, 6);
+  assert.equal(one("P", { peeked: true }, [0.99]).xp, 2);
   fresh();
-  for (let i = 0; i < 6; i++) { script = [0, 0.999]; assert.equal(ok("P" + i, { snack: true }).drop, null); }
-  script = [0, 0.5]; assert.equal(ok("P6", { snack: true }).drop, "common");          // pity: no roll needed
-  fresh(); script = [0, 0, 0.79]; assert.equal(ok("C").drop, "common");
-  fresh(); script = [0, 0, 0.80]; assert.equal(ok("C").drop, "rare");
-  fresh(); script = [0, 0, 0.97, 0]; const l = ok("C"); assert.equal(l.drop, "legend"); assert.ok(l.xp >= 59); assert.ok(R.LEGEND.includes(l.line));
+  assert.equal(no("W").xp, 1);
+  script = [0.99]; assert.equal(R.answer({ code: "W", correct: true, firstTry: false, dwellMs: 5000 }).xp, 6);
+  assert.equal(no("V", { snack: true }).xp, 1);
+  script = [0.99]; assert.equal(R.answer({ code: "V", correct: true, firstTry: false, snack: true, dwellMs: 5000 }).xp, 3);
+  assert.deepEqual([R.state().real, R.state().snacks], [1, 1]);
 });
 
-test("a wrong answer: no roll, no XP, no toast, no burst; the streak halves once per question", () => {
-  for (const c of ["A", "B", "C", "D"]) { script = [0, 0.999]; ok(c); }
+test("levels: 20, 50 XP (each level costs 10 more)", () => {
+  script = [0, 0.99]; ok("A");                                         // 12 XP, no drop
+  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [12, 1, 20]);
+  script = [0, 0.99]; const r = ok("B");
+  assert.equal(r.levelUp, true); assert.equal(r.burst, "levelup"); assert.equal(R.state().level, 2); assert.equal(R.state().next, 50);
+});
+
+test("drop roll on every correct: p by kind, any try, the 1 s dwell, pity after 2 dry, rarity bands", () => {
+  assert.ok(one("R1", {}, [0, 0.59]).drop); assert.equal(one("R2", {}, [0, 0.61]).drop, null);              // p(real) = 0.6
+  assert.ok(one("S1", { snack: true }, [0.44]).drop); assert.equal(one("S2", { snack: true }, [0.46]).drop, null);   // 0.45
+  assert.ok(one("T1", { tf: true }, [0, 0.49]).drop); assert.equal(one("T2", { tf: true }, [0, 0.51]).drop, null);   // 0.5
+  assert.equal(one("D1", { dwellMs: 999 }, [0, 0]).drop, null);                                            // under 1 s never rolls
+  fresh(); no("X"); script = [0.59];
+  assert.ok(R.answer({ code: "X", correct: true, firstTry: false, dwellMs: 5000 }).drop, "a second-try correct rolls too");
+  fresh();
+  for (let i = 0; i < 2; i++) { script = [0.999]; assert.equal(ok("P" + i, { snack: true }).drop, null); }
+  script = [0.5]; assert.equal(ok("P2", { snack: true }).drop, "common");                                  // pity: no roll needed
+  assert.equal(one("C", {}, [0, 0, 0.69]).drop, "common");
+  assert.equal(one("C", {}, [0, 0, 0.70]).drop, "rare");
+  assert.equal(one("C", {}, [0, 0, 0.94]).drop, "rare");
+  const l = one("C", {}, [0, 0, 0.95, 0]); assert.equal(l.drop, "legend"); assert.ok(l.xp >= 62); assert.ok(R.LEGEND.includes(l.line));
+});
+
+test("a wrong try: +1 for trying, no roll, no toast, no burst; the streak waits", () => {
+  for (const c of ["A", "B", "C", "D"]) { script = [0]; ok(c, { dwellMs: 0 }); }
   assert.equal(R.state().streak, 4);
   const w = no("E");
-  assert.deepEqual([w.xp, w.drop, w.toast, w.burst, w.line], [0, null, false, null, null]);
-  assert.equal(R.state().streak, 2);
+  assert.deepEqual([w.xp, w.tick, w.drop, w.toast, w.burst, w.line], [1, true, null, false, null, null]);
+  assert.equal(R.state().streak, 4);
   R.answer({ code: "E", correct: false, firstTry: false });
-  assert.equal(R.state().streak, 2, "the second wrong try on E does not halve again");
+  assert.equal(R.state().streak, 4, "a second wrong try on E does not touch it");
+  fresh(); script = [0]; ok("F", { dwellMs: 0 });                       // 12 XP
+  for (let i = 0; i < 7; i++) no("G" + i);                              // 19 XP
+  const q = no("H");
+  assert.deepEqual([q.levelUp, q.burst], [true, null], "a level reached by a +1 stays quiet");
 });
 
 test("a code pays once; state is per bank", () => {
@@ -79,9 +90,10 @@ test("a code pays once; state is per bank", () => {
   R.use("T" + (n - 1)); assert.equal(R.state().xp, xp);
 });
 
-test("burst cap: a second rare drop inside 60 s becomes a toast; a level up always bursts", () => {
+test("burst cap 15 s: a second drop inside it becomes a toast; a common drop bursts as WIN", () => {
   script = [0, 0, 0.9]; const a = ok("A"); assert.equal(a.burst, "bonus"); assert.equal(a.toast, false);
-  script = [0, 0, 0.9]; const b = ok("B"); assert.equal(b.burst, null); assert.equal(b.toast, true);
+  script = [0, 0.9]; const b = ok("B", { snack: true }); assert.equal(b.drop, "rare"); assert.equal(b.burst, null); assert.equal(b.toast, true);
+  const c = one("C", {}, [0, 0, 0.5]); assert.equal(c.drop, "common"); assert.equal(c.burst, "win"); assert.equal(c.toast, false);
 });
 
 test("skipSnack: only after 10 first tries above 90% right", () => {
