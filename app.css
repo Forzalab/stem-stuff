@@ -423,7 +423,7 @@ html.side #work > .orig { margin: 0; }
 .fcard ol { list-style: none; margin: 0; padding: 0; }
 .fcard .st { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); align-items: baseline; }
 .fcard .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); font-size: var(--t-sm); font-weight: 700; align-self: start; font-variant-numeric: tabular-nums; }
-.fcard .f { align-self: center; font-size: var(--t-md); line-height: 1.4; }
+.fcard .f { align-self: center; min-width: 0; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
 .fcard .f .katex { white-space: nowrap; }
 .fcard .g { grid-column: 2; font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
 .fcard .then { position: relative; margin: var(--s1) 0 var(--s1) calc(2rem + var(--s3)); font-size: var(--t-xs); color: var(--muted); }
