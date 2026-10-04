@@ -25,9 +25,9 @@ function shown(p) {                                       // app.js shown() / se
 const locks = p => p.type === "mc" ? new Set(shown(p).filter(c => c.lock).map(c => c.id)) : new Set();
 export const NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again.";   // serve.py NONE_MISS
 
-/* sugar leaves out a question whose answer is "None of these" */
+/* sugar leaves out a question whose answer is "None of these"; diet leaves out every sugar_only item (the snacks) */
 export function hidden(p, mode) {
-  if (mode !== "sugar") return false;
+  if (mode !== "sugar") return !!(p && p.sugar_only);
   const lk = locks(p), sg = p.saccharine && typeof p.saccharine === "object" ? p.saccharine : {};
   return !!sg.hide || (lk.size > 0 && !sg.split && [...rightsOf(p)].every(id => lk.has(id)));   // pruned, or None as the key (unsplit)
 }

@@ -224,9 +224,10 @@ def locks(p):
 
 def hidden(p, mode):
     """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3), and every one the bank prunes
-    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics)."""
+    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics). Diet leaves out every sugar_only item (the snacks,
+    design/REWARDS-WIRING.md): diet is the bank as it was before they were added."""
     if mode != "sugar":
-        return False
+        return bool(p.get("sugar_only"))
     lk = locks(p)
     sg = sugar(p)
     return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split"))   # split rows answer for themselves
@@ -275,7 +276,7 @@ def lookup(code, mode):
     """a problem by code; in sugar a split row's sub code too (its parent not pruned). None when there's no such thing."""
     p = problems().get(code)
     if p is not None:
-        return p
+        return None if mode != "sugar" and p.get("sugar_only") else p   # a snack does not exist in diet (/p, /check, /state, /narrate, /explain)
     hit = subs().get(code) if mode == "sugar" else None
     return sub_problem(*hit) if hit and not hidden(hit[0], mode) else None
 
@@ -602,6 +603,22 @@ def mark(p, sid):
     return {"x": x, "done": done} if x or done != "open" else None
 
 
+def snacks_placed(items):
+    """[(problem, before)] -> [problem]: each snack (before = its target's code, a sub code or a code) goes right before its
+    target, snacks with one target in file order; a snack whose target is not in the list stays where the file put it."""
+    live = {p["code"] for p, b in items if not b}
+    by = {}
+    for p, b in items:
+        if b and b in live:
+            by.setdefault(b, []).append(p)
+    out = []
+    for p, b in items:
+        if b and b in live:
+            continue
+        out += by.get(p["code"], []) + [p]
+    return out
+
+
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md)."""
@@ -619,7 +636,9 @@ def bank_payload(code, sid, mode="sugar"):
         if p is None or hidden(p, mode):
             continue
         rows = sugar(p).get("split") if mode == "sugar" else None
-        ps += [view(sub_problem(p, r), mode) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [view(p, mode)]
+        before = sugar(p).get("before") if mode == "sugar" and sugar(p).get("snack") else None
+        ps += [(view(sub_problem(p, r), mode), None) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [(view(p, mode), before)]
+    ps = snacks_placed(ps)
     marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
     with _tries_lock:
         _load_tries()

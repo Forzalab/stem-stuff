@@ -498,6 +498,30 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet")[0], 200)
 
+    def test_sugar_only_snacks(self):                                          # design/REWARDS-WIRING.md: snacks are sugar only
+        pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SN1", saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c",
+                    "split": [{"sub": "CSCI26_SN1A", "stem": "Row A.", "answer": "true"}, {"sub": "CSCI26_SN1B", "stem": "Row B.", "answer": "false"}]})
+        snack = lambda code, before: dict(BANK["CALC1_T6B"], code=code, sugar_only=True,
+                                          saccharine={"title": "Practice Exam 2, Question 1: k changed", "key": "Use: k", "narration": "Snack says",
+                                                      "snack": True, "before": before})
+        reals = [pick, BANK["CALC1_T6B"], BANK["CALC1_A9R"]]
+        snacks = [snack("CALC1_SK1", "CSCI26_SN1B"), snack("CALC1_SK2", "CALC1_A9R"), snack("CALC1_SK3", "CALC1_A9R"), snack("CALC1_SK4", "CALC1_NOPE")]
+        self.write("BANK_SN1", {"v": 1, "problems": reals})
+        plain = json.dumps(serve.bank_payload("BANK_SN1", "d1", "diet"))
+        self.write("BANK_SN1", {"v": 1, "problems": [snacks[3], reals[0], snacks[0], reals[1], snacks[1], snacks[2], reals[2]]})
+        self.assertEqual(json.dumps(serve.bank_payload("BANK_SN1", "d1", "diet")), plain)          # diet: byte for byte the bank without snacks
+        self.assertEqual([p["code"] for p in serve.bank_payload("BANK_SN1", "s1", "sugar")["problems"]],
+                         ["CALC1_SK4", "CSCI26_SN1A", "CALC1_SK1", "CSCI26_SN1B", "CALC1_T6B", "CALC1_SK2", "CALC1_SK3", "CALC1_A9R"])   # before its target; no target = where it was
+        diet = "stem-mode=diet"
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_SK1.json", diet)[0], 404)
+        self.assertEqual(serve.dispatch("GET", "/state/CALC1_SK1", diet)[0], 404)
+        self.assertEqual(serve.dispatch("POST", "/check", diet, json.dumps({"code": "CALC1_SK1", "answer": "12"}).encode())[0], 404)
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", diet, json.dumps({"code": "CALC1_SK1"}).encode())[2])["text"], "")
+        self.assertEqual(serve.explain(diet, json.dumps({"code": "CALC1_SK1", "answer": "1"}).encode())[0], 404)
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_SK1.json", "")[0], 200)                  # sugar: a question like any other
+        self.assertEqual(json.loads(serve.dispatch("POST", "/check", "", json.dumps({"code": "CALC1_SK1", "answer": "12"}).encode())[2])["verdict"], "correct")
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CALC1_SK1"}).encode())[2])["text"], "Snack says")
+
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")
         self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])
