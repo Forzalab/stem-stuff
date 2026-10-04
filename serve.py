@@ -251,7 +251,8 @@ def subs():
 
 
 def sub_problem(parent, row):
-    """one row of a split choose-all as its own 2-choice question (1 try): the parent's figures and text, then the row's stem."""
+    """one row of a split choose-all as its own question: the parent's figures and text, then the row's stem. A row with its own
+    choices is an mc (2 tries for 3+ choices); a row without them is True/False (1 try)."""
     sg, right = sugar(parent), "t" if str(row.get("answer")).lower() == "true" else "f"
     body, g = [], None
     for b in parent.get("body", []):
@@ -263,9 +264,17 @@ def sub_problem(parent, row):
             continue
         body.append(b)
     body.append({"type": "text", "md": row.get("stem", "") + ("\n\n" + g if g else "")})
+    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"), "narration": row.get("narration")}
+    ch = row.get("choices")
+    if isinstance(ch, list) and len(ch) >= 2:                 # main's v3 rows: a row is its own mc (answer = a choice id, slip per wrong id), the authored tries
+        slip = row.get("slip") if isinstance(row.get("slip"), dict) else {}
+        layer["slip"] = slip
+        return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "body": body,
+                "choices": [{k: c[k] for k in ("id", "md") if k in c} for c in ch if isinstance(c, dict)], "correct": str(row.get("answer")),
+                "wrong": [{"choice": i, "hint": h} for i, h in slip.items() if i != str(row.get("answer"))],
+                "saccharine": {k: v for k, v in layer.items() if v}}
     wrong = "f" if right == "t" else "t"
-    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"),
-             "slip": {wrong: row.get("slip")} if row.get("slip") else {}, "narration": row.get("narration")}
+    layer["slip"] = {wrong: row.get("slip")} if row.get("slip") else {}
     return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
             "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
             "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],

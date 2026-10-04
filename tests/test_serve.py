@@ -495,6 +495,17 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.dispatch("POST", "/check", "stem-mode=diet", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())[0], 404)
         self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CSCI26_SP1A"}).encode())[2])["text"], "A says")
         self.assertIn("B is false.", serve.explain_prompt(b, "t")); self.assertIn("Tick: a, c", serve.explain_prompt(b, "t"))
+        five = dict(pick, code="CSCI26_SP5", saccharine={"title": "Q12", "key": "k", "split": [{"sub": "CSCI26_SP5A", "stem": "Seat force at the top?",
+                    "choices": [{"id": i, "md": m} for i, m in zip("abcde", ["$mg+x$", "$mg-x$", "$mg$", "$x-mg$", "$x$"])], "answer": "b",
+                    "slip": {"a": "Bottom sign.", "c": "No circle."}, "tip": "At the top, minus.", "narration": "Row says"}]})
+        self.write("BANK_SP5", {"v": 1, "problems": [five]})
+        r5 = serve.lookup("CSCI26_SP5A", "sugar")
+        self.assertEqual((r5["correct"], len(r5["choices"]), serve.max_tries(r5)), ("b", 5, 2))                 # main's v3 row: its own 5-choice mc, 2 tries
+        w = serve.grade(r5, "x5", {"choice": "a"})
+        self.assertEqual((w["verdict"], w["hint"], w["triesLeft"]), ("wrong", "Bottom sign.", 1))
+        self.assertEqual(serve.grade(r5, "x5", {"choice": "b"})["verdict"], "correct")
+        self.assertIn("Bottom sign.", serve.explain_prompt(r5, "a"))
+        self.assertEqual(sorted(c["md"] for c in serve.public(serve.view(r5, "sugar"), "x5")["choices"])[0], "$mg$")
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet")[0], 200)
 
