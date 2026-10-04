@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark"><title>Original bar variants</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css"><link rel="stylesheet" href="../../rewards/rewards.css">
+<!--
+  T1 (design/UX-TOPDOWN.md): the "Original: Practice Exam 2, Q7" bar reads as a topic heading, not a button. Two ways to make it
+  read as "tap me, it's free help":  ?v=a  Free hint card   ·   ?v=b  Teaser   ·   no param: both.
+  T4: the "Explain my mistake" casino chip (wchip), lift-ready block at the end.
+  The question is made up (no bank text: exam content never goes to GitHub).
+-->
+<style>
+/* impeccable-disable side-tab: the "stripes" are the Quiz Pop / slot-kit bevel (light top edge + dark base) on the casino pieces only (.oa-*, .wchip2, .wc-coin). impeccable waiver: casino-themed (Tony, Oct 4) */
+/* ---------- mock-only page frame ---------- */
+body { padding: var(--s5) var(--gut) var(--s7); }
+.mk { max-width: 88rem; margin: 0 auto; }
+.mk-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: 0 0 var(--s5); }
+.mk-top h1 { margin: 0 var(--s3) 0 0; font-size: 2.125rem; line-height: 1.15; }
+.mk-tgl { display: flex; gap: var(--s2); }
+.mk-tgl .btn { width: auto; padding: 0 var(--s4); font-weight: 700; font-size: var(--t-sm); }
+.mk-tgl .btn[aria-pressed="true"] { border-color: var(--mark); color: var(--mark); }
+.mk-sec { margin: 0 0 var(--s7); }
+.mk-h { margin: 0 0 var(--s2); font-size: 1.625rem; line-height: 1.2; }
+.mk-note { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); max-width: 46rem; }
+.mk-grid { display: grid; gap: var(--s6); }
+@media (min-width: 1100px) { html:not([data-v]) .mk-grid.both { grid-template-columns: 1fr 1fr; } }
+.mk-var > h3 { margin: 0 0 var(--s3); font-size: var(--t-sm); color: var(--muted); }
+html[data-v="a"] .mk-var.vb, html[data-v="b"] .mk-var.va { display: none; }
+
+/* a stand-in for the app's question box, so the bar is judged in place (app tokens) */
+.qcol { display: grid; gap: var(--s4); }
+@media (min-width: 720px) { html[data-v] .qcol { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } html[data-v] .qcol > .qbox { order: -1; } }
+.qbox { padding: var(--s4); border-radius: 10px; background: var(--qbox); }
+.qbox p { margin: 0 0 var(--s3); }
+.qbox .tip { font-size: var(--t-sm); font-weight: 700; }
+.fig svg { display: block; width: 100%; max-width: 22rem; height: auto; margin: var(--s2) auto; color: var(--ink); }
+.qopts { display: grid; gap: var(--s2); margin-top: var(--s3); }
+.qopt { display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border: var(--bw) solid var(--edge); border-radius: 8px; background: var(--sheet); }
+.qopt b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: var(--bw) solid var(--edge); font-size: var(--t-xs); color: var(--muted); }
+
+/* the opened original (shared by A and B) */
+.ob-body { padding: var(--s4); border-radius: 0 0 16px 16px; background: var(--sheet); }
+.ob-body p { margin: 0 0 var(--s3); }
+.ob-sol { margin: 0; padding-left: var(--s5); }
+.ob-sol li { margin: var(--s2) 0; }
+.ob-h { margin: var(--s3) 0 var(--s1); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
+
+/* ================= Variant A: Free hint card =================
+   Quiz Pop accent (rewards.css tokens): one solid tangerine fill, light top edge, dark base, a round chevron "button" on the right,
+   a Fluent-style bulb in a sun coin, a FREE sticker. The whole card is one <button>. */
+.oa { position: relative; }
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.oa-btn {
+  position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 76px; padding: 10px 12px 14px 10px; overflow: hidden;
+  text-align: left; color: var(--rw-tang-ink); border: 0; border-radius: var(--rw-r-m); background: var(--rw-tang);
+  box-shadow: inset 0 3px 0 #ffc48a, inset 0 -5px 0 var(--rw-tang-dk), 0 3px 0 var(--rw-rust);
+  transition: transform .12s ease-out;
+}
+.oa-btn:hover { background: #ffa852; }
+.oa-btn:active { transform: translateY(2px); box-shadow: inset 0 3px 0 #ffc48a, inset 0 -3px 0 var(--rw-tang-dk), 0 1px 0 var(--rw-rust); }
+.oa-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.oa-btn[aria-expanded="true"] { border-radius: var(--rw-r-m) var(--rw-r-m) 0 0; }
+.oa-coin { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--rw-sun); box-shadow: inset 0 3px 0 var(--rw-cream), inset 0 -4px 0 var(--rw-sun-dk); }
+.oa-coin svg { width: 34px; height: 34px; display: block; }
+.oa-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.oa-t { font: 700 1.1875rem/1.2 "Atkinson Hyperlegible", system-ui, sans-serif; }
+.oa-s { font: 700 var(--t-xs)/1.3 "Atkinson Hyperlegible", system-ui, sans-serif; color: #4a1d00; }
+.oa-chev { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; background: var(--rw-tang-dk); box-shadow: inset 0 -3px 0 var(--rw-rust), inset 0 2px 0 #e07a2a; }
+.oa-chev svg { width: 26px; height: 26px; transition: transform .2s ease-out; }
+.oa-btn[aria-expanded="true"] .oa-chev svg { transform: rotate(180deg); }
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.oa-free {
+  position: absolute; z-index: 2; top: -10px; right: 58px; padding: 3px 10px 4px; border-radius: var(--rw-pill); pointer-events: none;
+  font: 700 var(--t-xs)/1.1 "Atkinson Hyperlegible", system-ui, sans-serif; color: var(--rw-text); background: var(--rw-sun);
+  border: 2px solid #fff; transform: rotate(-6deg); box-shadow: 0 2px 0 var(--rw-v950);
+}
+/* the one nudge: a 600 ms lift + one shine pass, once per session (JS adds .nudge), never with reduced motion. Transform/opacity only */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.oa-btn::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent 30%, rgb(255 255 255 / .55) 50%, transparent 70%);
+}
+.oa.nudge .oa-btn { animation: oa-lift .6s ease-out 1; }
+.oa.nudge .oa-btn::after { animation: oa-shine .6s ease-out 1; }
+@keyframes oa-lift { 40% { transform: translateY(-4px); } 100% { transform: none; } }
+@keyframes oa-shine { 0% { opacity: 1; transform: translateX(-120%) skewX(-18deg); } 100% { opacity: 1; transform: translateX(120%) skewX(-18deg); } }
+@media (prefers-reduced-motion: reduce) { .oa.nudge .oa-btn, .oa.nudge .oa-btn::after { animation: none; } .oa-chev svg { transition: none; } }
+
+/* ================= Variant B: Teaser =================
+   The first solution line is already on screen; the rest fades under a solid bar "Tap to see every step". The whole card is the
+   button (curiosity gap: you can see there is more, and how much). Plain app tokens: no casino styling. */
+.ob-tz { border-radius: 16px; background: var(--sheet); }
+.tz-btn {
+  display: block; width: 100%; padding: 0; text-align: left; border: var(--bw) solid var(--edge); border-radius: 16px; background: var(--sheet); overflow: hidden;
+  transition: border-color .12s ease-out;
+}
+.tz-btn:hover { border-color: var(--muted); }
+.tz-btn:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.tz-btn[aria-expanded="true"] { border-radius: 16px 16px 0 0; }
+.tz-hd { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4) 0; font-size: var(--t-sm); font-weight: 700; color: var(--ink); }
+.tz-hd svg { width: 1.25rem; height: 1.25rem; color: var(--mark); flex: none; }
+.tz-hd .tz-n { margin-left: auto; white-space: nowrap; color: var(--muted); font-weight: 400; font-size: var(--t-xs); }
+.tz-pv { position: relative; display: block; padding: var(--s2) var(--s4) 0; }
+.tz-l { display: flex; gap: var(--s3); padding: var(--s1) 0; color: var(--ink); }
+.tz-l i { font-style: normal; flex: none; display: grid; place-items: center; width: 24px; height: 24px; margin-top: 2px; border-radius: 50%; background: var(--raised); color: var(--ink); font-size: var(--t-xs); font-weight: 700; }
+.tz-l em { font-style: italic; }
+.tz-fade { display: block; -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 90%); mask-image: linear-gradient(180deg, #000 0%, transparent 90%); }
+.tz-bar { display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--btn); margin-top: var(--s1); padding: var(--s3) var(--s4);
+  font-size: var(--t-sm); font-weight: 700; color: var(--field); background: var(--c1); }
+.tz-btn:hover .tz-bar { background: var(--c1-hi); }
+.tz-bar svg { width: 1.25rem; height: 1.25rem; transition: transform .2s ease-out; }
+.tz-btn[aria-expanded="true"] .tz-bar svg { transform: rotate(180deg); }
+.tz-btn[aria-expanded="true"] .tz-fade { display: none; }
+@media (prefers-reduced-motion: reduce) { .tz-bar svg { transition: none; } }
+
+/* ================= T4 =================
+   ref (Tony, Oct 4, re-sent): slot kit PAYTABLE / SPIN pills, red-gold kit round chips, ECONEV glossy pill. Redrawn as our own CSS +
+   SVG (no pixels copied): dark outline, thick gold rim, red-orange body, light top edge, gloss cap, dark base, white glyph in a candy coin. */
+.mk-stage { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s5); padding: var(--s5); border-radius: 16px; background: var(--qbox); }
+.mk-cap { width: 100%; margin: 0; color: var(--muted); font-size: var(--t-sm); }
+.mk-cluck { width: 100%; margin: 0; padding: var(--s3) var(--s4); border-radius: 10px; background: var(--sheet); color: var(--ink); }
+
+/* LIFT: wchip ------------------------------------------------------------------------------------------------------
+   Drop-in for app.js wishPaint()'s .wchip. Markup:
+   <button type="button" class="wchip2" aria-expanded="false"><span class="wc-coin" aria-hidden="true"><svg viewBox="0 0 24 24">…duck…</svg></span>
+     <span class="wc-tx">Explain my mistake</span></button>
+   Idle wiggle: 3 quick swings (±6deg, ~500 ms) every 6 s; .tapped stops it for good; off under reduced motion. Transform only. */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.wchip2 {
+  --wc-out: #3d0d00; --wc-rim-hi: #fff2a8; --wc-rim: #ffc21a; --wc-rim-lo: #b86a00;
+  --wc-hi: #ff7a3d; --wc-mid: #d8361f; --wc-lo: #9e1a12; --wc-base: #5a1200;
+  position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 24px 8px 6px;
+  font: 700 1.25rem/1 "Atkinson Hyperlegible", system-ui, sans-serif; color: #fff; text-shadow: 0 2px 0 var(--wc-base);
+  border: 4px solid transparent; border-radius: 999px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  background: linear-gradient(180deg, var(--wc-hi), var(--wc-mid) 55%, var(--wc-lo)) padding-box,
+              linear-gradient(180deg, var(--wc-rim-hi), var(--wc-rim) 45%, var(--wc-rim-lo)) border-box;
+  box-shadow: 0 0 0 2px var(--wc-out), inset 0 3px 0 rgb(255 255 255 / .35), inset 0 -5px 0 rgb(90 18 0 / .55), 0 5px 0 var(--wc-out), 0 10px 18px -6px rgb(0 0 0 / .6);
+  transform-origin: 50% 60%; animation: wc-wiggle 6s ease-in-out 1.2s infinite;
+}
+.wchip2::before {   /* the gloss cap on the top half, like the refs' pills */
+  content: ""; position: absolute; left: 14%; right: 6%; top: 3px; height: 38%; border-radius: 999px; pointer-events: none;
+  background: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .08));
+}
+.wchip2:hover { filter: brightness(1.06); }
+.wchip2:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--wc-out), inset 0 3px 0 rgb(255 255 255 / .35), inset 0 -3px 0 rgb(90 18 0 / .55), 0 2px 0 var(--wc-out); }
+.wchip2:focus-visible { outline: 3px solid #8fb0ff; outline-offset: 5px; }
+.wchip2.tapped { animation: none; }
+.wc-coin {   /* the candy coin: violet chip, gold ring, gloss dot, white glyph */
+  position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b58cff, #6b2fd8 55%, #3a118a);
+  box-shadow: 0 0 0 3px var(--wc-rim), 0 0 0 5px var(--wc-out), inset 0 -3px 0 rgb(20 0 60 / .5);
+}
+.wc-coin::after { content: ""; position: absolute; left: 9px; top: 6px; width: 13px; height: 7px; border-radius: 50%; background: rgb(255 255 255 / .6); transform: rotate(-25deg); }
+.wc-coin svg { position: relative; width: 26px; height: 26px; display: block; color: #fff; filter: drop-shadow(0 2px 0 rgb(30 0 70 / .6)); }
+.wc-tx { position: relative; white-space: nowrap; }
+@keyframes wc-wiggle {
+  0%, 8.4%, 100% { transform: rotate(0); }
+  1.4% { transform: rotate(-6deg); } 2.8% { transform: rotate(6deg); } 4.2% { transform: rotate(-6deg); }
+  5.6% { transform: rotate(6deg); } 7% { transform: rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce) { .wchip2 { animation: none; } }
+/* /LIFT: wchip ----------------------------------------------------------------------------------------------------- */
+</style>
+<script>
+/* ?v=a | ?v=b | none (both) */
+(function () { var v = new URLSearchParams(location.search).get("v"); if (v === "a" || v === "b") document.documentElement.dataset.v = v; })();
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="m-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="m-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <!-- a bulb drawn in the Fluent Emoji color style (our own drawing; the set in rewards/icons is Fluent, MIT) -->
+  <symbol id="m-bulb" viewBox="0 0 32 32">
+    <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient>
+    <path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#bg1)"/>
+    <path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+    <path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/>
+    <rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#bg2)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/>
+  </symbol>
+  <symbol id="m-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="#ffb86b"/><circle cx="9.8" cy="7.9" r="1" fill="#3a118a"/></symbol>
+  <symbol id="m-pucks" viewBox="0 0 340 170">
+    <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="30" cy="85" r="14"/><path d="M52 85h60M104 79l8 6-8 6"/>
+      <circle cx="150" cy="85" r="14"/><path d="M164 85h160" stroke-dasharray="4 5" opacity=".6"/>
+      <path d="M164 85l118-68M271 16l11 1-5 10"/>
+      <path d="M164 85l45 78M211 151l-2 12-9-7"/>
+      <path d="M232 85A68 68 0 0 0 223 51" opacity=".8"/><path d="M214 85A50 50 0 0 1 189 128" opacity=".8"/>
+    </g>
+    <g fill="currentColor" font-family="Atkinson Hyperlegible, sans-serif" font-size="15" font-style="italic"><text x="70" y="74">v₀</text><text x="222" y="36">v₁</text><text x="166" y="150">v₂</text></g>
+    <g fill="currentColor" font-family="Atkinson Hyperlegible, sans-serif" font-size="14"><text x="238" y="70">30°</text><text x="214" y="122">60°</text></g>
+  </symbol>
+</defs></svg>
+
+<div class="mk rw-skin">
+  <header class="mk-top">
+    <h1>Original bar: make it read as a free hint</h1>
+    <nav class="mk-tgl" aria-label="Variant">
+      <a class="btn" href="?" data-v="">Both</a><a class="btn" href="?v=a" data-v="a">A: Free hint card</a><a class="btn" href="?v=b" data-v="b">B: Teaser</a>
+    </nav>
+  </header>
+
+  <section class="mk-sec" aria-labelledby="t1h">
+    <h2 class="mk-h" id="t1h">T1: the bar above a snack question</h2>
+    <p class="mk-note">Today it looks like a section title (doc icon, muted grey, flat sheet). A top-down student reads it as "this question is from Exam 2" and never taps it. Both variants say what you get and that it costs nothing, and look pressable.</p>
+    <div class="mk-grid both">
+
+      <!-- ================= A ================= -->
+      <div class="mk-var va">
+        <h3>A: Free hint card (filled, raised, round chevron, FREE sticker, one nudge per session)</h3>
+        <div class="qcol">
+          <div class="oa" id="oa">
+            <span class="oa-free" aria-hidden="true">FREE</span>
+            <button type="button" class="oa-btn" aria-expanded="false" aria-controls="oaBody">
+              <span class="oa-coin" aria-hidden="true"><svg><use href="#m-bulb"/></svg></span>
+              <span class="oa-tx"><span class="oa-t">See how the exam solved it</span><span class="oa-s">Free · same steps, other numbers</span></span>
+              <span class="oa-chev" aria-hidden="true"><svg><use href="#m-down"/></svg></span>
+            </button>
+            <div class="ob-body" id="oaBody" hidden>
+              <p>Exam version: a 2.0 kg puck at 4.0 m/s hits a resting 2.0 kg puck. They leave at 30° above and 60° below the line. Find <em>v</em><sub>1</sub>.</p>
+              <p class="ob-h">Worked solution</p>
+              <ol class="ob-sol">
+                <li>Momentum is kept along x and along y.</li>
+                <li>y: 0 = <em>v</em><sub>1</sub> sin 30° − <em>v</em><sub>2</sub> sin 60°</li>
+                <li>x: 4.0 = <em>v</em><sub>1</sub> cos 30° + <em>v</em><sub>2</sub> cos 60°</li>
+                <li>Solve the pair: <em>v</em><sub>1</sub> = 3.46 m/s</li>
+              </ol>
+            </div>
+          </div>
+          <div class="qbox">
+            <p class="tip">Same steps as the exam: momentum in x and in y.</p>
+            <p>A 1.5 kg puck at 5.0 m/s hits a resting 1.5 kg puck on ice. After the hit they leave at 30° above and 60° below the line.</p>
+            <p>Find the speed <em>v</em><sub>1</sub> in m/s.</p>
+            <div class="fig" role="img" aria-label="Puck 1 moves right into puck 2; after the hit puck 1 leaves 30 degrees above the line, puck 2 60 degrees below."><svg viewBox="0 0 340 170"><use href="#m-pucks"/></svg></div>
+            <div class="qopts"><div class="qopt"><b>A</b>4.33</div><div class="qopt"><b>B</b>2.50</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= B ================= -->
+      <div class="mk-var vb">
+        <h3>B: Teaser (step 1 visible, the rest fades under "Tap to see every step")</h3>
+        <div class="qcol">
+          <div class="ob-tz">
+            <button type="button" class="tz-btn" id="tzBtn" aria-expanded="false" aria-controls="tzAll">
+              <span class="tz-hd"><svg aria-hidden="true"><use href="#m-eye"/></svg>How the exam solved it<span class="tz-n">4 steps · free</span></span>
+              <span class="tz-pv">
+                <span class="tz-l"><i>1</i><span>Momentum is kept along x and along y.</span></span>
+                <span class="tz-fade" aria-hidden="true">
+                  <span class="tz-l"><i>2</i><span>y: 0 = <em>v</em><sub>1</sub> sin 30° − <em>v</em><sub>2</sub> sin 60°</span></span>
+                  <span class="tz-l"><i>3</i><span>x: 4.0 = <em>v</em><sub>1</sub> cos 30° + …</span></span>
+                </span>
+              </span>
+              <span class="tz-bar"><span class="tz-lbl">Tap to see every step</span><svg aria-hidden="true"><use href="#m-down"/></svg></span>
+            </button>
+            <div class="ob-body" id="tzAll" hidden>
+              <p>Exam version: a 2.0 kg puck at 4.0 m/s hits a resting 2.0 kg puck. They leave at 30° above and 60° below the line. Find <em>v</em><sub>1</sub>.</p>
+              <ol class="ob-sol">
+                <li>Momentum is kept along x and along y.</li>
+                <li>y: 0 = <em>v</em><sub>1</sub> sin 30° − <em>v</em><sub>2</sub> sin 60°</li>
+                <li>x: 4.0 = <em>v</em><sub>1</sub> cos 30° + <em>v</em><sub>2</sub> cos 60°</li>
+                <li>Solve the pair: <em>v</em><sub>1</sub> = 3.46 m/s</li>
+              </ol>
+            </div>
+          </div>
+          <div class="qbox">
+            <p class="tip">Same steps as the exam: momentum in x and in y.</p>
+            <p>A 1.5 kg puck at 5.0 m/s hits a resting 1.5 kg puck on ice. After the hit they leave at 30° above and 60° below the line.</p>
+            <p>Find the speed <em>v</em><sub>1</sub> in m/s.</p>
+            <div class="fig" role="img" aria-label="Puck 1 moves right into puck 2; after the hit puck 1 leaves 30 degrees above the line, puck 2 60 degrees below."><svg viewBox="0 0 340 170"><use href="#m-pucks"/></svg></div>
+            <div class="qopts"><div class="qopt"><b>A</b>4.33</div><div class="qopt"><b>B</b>2.50</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mk-sec" aria-labelledby="t4h">
+    <h2 class="mk-h" id="t4h">T4: "Explain my mistake" (the Cluck button, casino chip)</h2>
+    <p class="mk-note">Shows after a wrong answer, where "Ask Cluck" sits today. The look follows Tony's slot and panel kit refs (gold rim, bevel, gloss, candy coin), redrawn as our own CSS and SVG. It wiggles three times every 6 s until tapped.</p>
+    <div class="mk-stage">
+      <button type="button" class="wchip2" id="wc" aria-expanded="false" aria-controls="wcText">
+        <span class="wc-coin" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#m-duck"/></svg></span><span class="wc-tx">Explain my mistake</span>
+      </button>
+      <p class="mk-cap">Tap it: the wiggle stops for good and Cluck's words appear below (captions, read aloud at 0.2).</p>
+      <p class="mk-cluck" id="wcText" hidden>POOF! A wish is a wish. You added the two speeds. Momentum adds as arrows: split each one into x and y first.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var v = document.documentElement.dataset.v || "";
+  document.querySelectorAll(".mk-tgl [data-v]").forEach(function (a) { a.setAttribute("aria-pressed", String(a.dataset.v === v)); });
+  function toggle(btn, body, onOpen) {
+    btn.addEventListener("click", function () {
+      var open = btn.getAttribute("aria-expanded") !== "true";
+      btn.setAttribute("aria-expanded", String(open)); body.hidden = !open; if (onOpen) onOpen(open);
+    });
+  }
+  /* A: the one nudge per session, a beat after the card is on screen */
+  var oa = document.getElementById("oa"), oaBtn = oa.querySelector(".oa-btn");
+  toggle(oaBtn, document.getElementById("oaBody"));
+  var seen = false; try { seen = sessionStorage.getItem("orig-nudged") === "1"; } catch (e) { /* blocked: nudge anyway, once */ }
+  if (!seen && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    new IntersectionObserver(function (es, io) {
+      if (!es[0].isIntersecting) return; io.disconnect();
+      setTimeout(function () { oa.classList.add("nudge"); try { sessionStorage.setItem("orig-nudged", "1"); } catch (e) { /* */ } }, 900);
+    }, { threshold: 0.9 }).observe(oaBtn);
+  }
+  /* B */
+  var tz = document.getElementById("tzBtn");
+  toggle(tz, document.getElementById("tzAll"), function (open) { tz.querySelector(".tz-lbl").textContent = open ? "Hide the steps" : "Tap to see every step"; });
+  /* T4 */
+  var wc = document.getElementById("wc");
+  toggle(wc, document.getElementById("wcText"), function () { wc.classList.add("tapped"); });
+})();
+</script>
+</body></html>
