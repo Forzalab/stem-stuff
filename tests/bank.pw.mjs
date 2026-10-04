@@ -42,7 +42,7 @@ async function typeCode(page, code) {
   if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
-const label = page => page.innerText("#qlistName").then(t => t.trim());   // what shows: ".json" is hidden on phones
+const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button itself says "Questions")
 const rowTexts = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); return page.$$eval("#qlist a", as => as.map(a => a.textContent.trim())); };
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -60,15 +60,16 @@ try {
 
     await step(`${vname}: unknown bank says so`, async () => {
       await typeCode(page, "BANK_NOPE");
-      await page.waitForFunction(() => document.querySelector("#entryMsg").textContent === "No bank BANK_NOPE.", null, { timeout: 4000 });
+      await page.waitForFunction(() => document.querySelector("#entryMsg").textContent === "BANK_NOPE not found.", null, { timeout: 4000 });
       assert.ok(await page.isHidden("#qnav"));
     });
 
-    await step(`${vname}: type "bank ab12" -> first question, list button = the code, checklist icon`, async () => {
+    await step(`${vname}: type "bank ab12" -> first question, list button says Questions (title = the code), checklist icon`, async () => {
       await typeCode(page, "bank ab12");
       await opened(page, "CALC1_B01");
       assert.equal(await label(page), "BANK_AB12");
-      assert.equal(await page.getAttribute("#qlistBtn", "aria-label"), "BANK_AB12 questions list");
+      assert.equal(await page.getAttribute("#qlistBtn", "aria-label"), "Question list");
+      assert.equal((await page.innerText("#qlistName")).trim(), "Questions");
       assert.deepEqual(await rowTexts(page), ["1Bank one: 1 + 1", "2Bank two: 1 + 2", "3Bank three: 2 + 2"]);
       const r = await page.locator("#qlistBtn").boundingBox();
       assert.ok(r.height >= 48, "list button under 48px");
@@ -106,11 +107,11 @@ try {
       const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
       await opened(page, "CALC1_U01");
-      assert.equal(await label(page), vname === "phone" ? "mine" : "mine.json");
+      assert.equal(await label(page), "mine.json");
       await page.goto("about:blank"); await page.goto(BASE + "/"); await page.waitForTimeout(1200);
       assert.ok(!/^CALC1_B/.test(await page.textContent("#pcode")), "the bank took over after an upload");
       await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_U02"); await opened(page, "CALC1_U02");
-      assert.equal(await label(page), vname === "phone" ? "mine" : "mine.json");
+      assert.equal(await label(page), "mine.json");
     });
 
     await step(`${vname}: type just "ab12" -> the bank again, where it was`, async () => {

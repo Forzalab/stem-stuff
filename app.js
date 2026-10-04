@@ -94,8 +94,8 @@ function vmark(box, id) {
   m.dataset.v = id; m.innerHTML = icon(id);
 }
 /* the words the screen reader hears (the page shows only the icon) */
-const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries."
-  : r.verdict === "wrong" ? "Not quite. One more try." : "";
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "No tries left."
+  : r.verdict === "wrong" ? "Wrong. 1 try left." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
@@ -161,7 +161,7 @@ async function check(code, answer) {
 /* mirror of serve.py grade(): keep the two in step */
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
-const FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math.";   // serve.py FIX_NUDGE
+const FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math.";   // serve.py FIX_NUDGE
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -241,7 +241,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
   if (!repeat) st.wrong.push(sig);
-  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
+  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Put your answer back in. Does it work?") };
   if (hit && hit.error) out.error = hit.error;
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
@@ -327,10 +327,10 @@ $("#entry").addEventListener("submit", e => {
   const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
+  if (!n) { $("#entryMsg").textContent = "Not a code. Try CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
-  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Diet mode on." : "Sugar mode on."); });
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Original questions on." : "Easy questions on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
 window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
@@ -377,12 +377,12 @@ async function openBank(code, { go = true, quiet = false } = {}) {
     if (r.ok) b = await r.json(); else r.text().catch(() => {});
   } catch (e) {
     if (!quiet) {
-      $("#entryMsg").textContent = timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
+      $("#entryMsg").textContent = timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
   }
-  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `No bank ${code}.`; return false; }
+  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `${code} not found.`; return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
   src(b.code);
   remembered(b.code);
@@ -413,12 +413,12 @@ async function load(code) {
   try {
     prob = await getProblem(code);
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
-      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is diet-mode only.`; return; }
+      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `Can't open ${code} here.`; return; }
       prob = modeView(prob, modeOf());
     }
   }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
+    $("#entryMsg").textContent = e.status === 404 ? `${code} not found.` : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -486,9 +486,9 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
         </button>
-        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
-        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "correct value")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
-          data-how="${esc(p.fix.how || "correct value")}" placeholder="${esc(p.fix.how || "correct value")}"></div>` : ""}
+        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
+        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Type the right answer")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
+          data-how="${esc(p.fix.how || "Type the right answer")}" placeholder="${esc(p.fix.how || "Type the right answer")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -501,18 +501,18 @@ function renderQuestion() {
       const l = esc(u.label || LETTERS[i].toLowerCase());
       return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
-          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Submit ${l}" hidden>${icon("i-go")}</button></div>
+          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}</button></div>
         <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
     }).join("")}</div>`;
     wireParts();
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
-    const ph = p.type === "expr" ? "in terms of " + v : p.type === "num" ? "e.g. 9/2, sqrt(3), dne" : "";
+    const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Like 9/2, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
           ${INPUT_ATTRS} placeholder="${ph}">
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" disabled>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
@@ -533,7 +533,7 @@ function formulaCard() {
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
-const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tap all true ones, then Check. None? Just tap Check." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -805,9 +805,9 @@ function partFeedback(i, r, typed) {
   const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
   if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
-  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   hint.innerHTML = h;
   row.classList.toggle("hinted", !!h);
@@ -839,7 +839,7 @@ function settle() {
   S.solved = right === n;
   finish();
   $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
-    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
+    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
 }
 
@@ -1002,11 +1002,11 @@ function feedback(r, typed) {
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
-  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>timeout</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
-    h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
+    h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   fb.innerHTML = h;
   const again = $("#retry");
@@ -1103,19 +1103,20 @@ function wishFrame(now) {
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's solution is open."); }   // what the box shows is what is spoken
+  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); }   // what the box shows is what is spoken
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
   const el = wishEl(), w = wish;
   if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
   el.hidden = false;
-  const label = !w.started ? "Ask Cluck" : w.failed ? "The lamp flickered. Ask again" : w.done ? "Cluck has your wish" : "Cluck is granting your wish";
-  el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
-    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
+  const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
+    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Turn voice off" : "Turn voice on"}</button>` : ""}</div>${
     w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
   if (w.open) { w.drawn = w.ended = undefined; wishDraw(); }
   el.querySelector(".wchip").addEventListener("click", () => {
+    w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, open: true, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); wishPaint(); return; }
     w.open = !w.open;
     if (w.open) w.said = false; else { voiceStop(); w.tick = 0; }          // reopened: spoken again once the text is out
@@ -1197,9 +1198,9 @@ function origRender() {
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
   el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Q${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
-    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Worked solution</p><ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek at the last line</button>' : ""}
-    <p class="orig-note" hidden>Peeked: this one pays 2 XP.</p></div>`;
+    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
+    <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
   const q = el.querySelector(".orig-q");
   for (const b of o.body) {
     if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
@@ -1219,7 +1220,7 @@ function origPeeked() {
   if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
   S.orig.peeked = S.rwPeek = true;
   origEl.querySelector(".orig-note").hidden = false;
-  say("Peeked: this one pays 2 XP.");
+  say("You peeked, so only 2 XP.");
 }
 function origOpen(open) {
   if (!origEl) return;
@@ -1259,7 +1260,7 @@ async function rewardShow(mine, res) {
   if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
   if (res.burst && fx.burst) {
     const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
-      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS LEVEL", sub: res.sub || res.line };
+      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS!", sub: res.sub || res.line };
     await fx.burst(res.burst, opt);
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
@@ -1338,7 +1339,7 @@ async function copyPad(b, icon, clear) {
   if (ok && clear && box.el.value === text) { box.el.value = ""; box.el.dispatchEvent(new Event("input")); box.snapshot(); }
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Copy failed.");
+  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Didn't copy. Try again.");
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", icon); }, 1600);
 }
 $("#copy").addEventListener("click", () => copyPad($("#copy"), "#i-copy", false));
@@ -1368,7 +1369,7 @@ function barOpen(open) {
   root.classList.toggle("bar-open", open);
   if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
   barTab.setAttribute("aria-expanded", open);
-  barTab.setAttribute("aria-label", open ? "Hide the code bar" : "Show the code bar");
+  barTab.setAttribute("aria-label", open ? "Hide code box" : "Show code box");
 }
 /* tap toggles; a swipe (20px+) up opens, down closes. The tab never takes focus: the scratchpad keeps its caret and keyboard */
 function swipeTab(el, act) {
@@ -1472,7 +1473,7 @@ function toggleMore() {
   const open = !freeze.classList.contains("open");
   freeze.classList.toggle("open", open);
   more.setAttribute("aria-expanded", open);
-  more.setAttribute("aria-label", open ? "Freeze the problem again" : "Show the whole problem");
+  more.setAttribute("aria-label", open ? "Make question small" : "Show whole question");
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 }
@@ -1509,7 +1510,7 @@ function applyPane() {
   root.classList.toggle("swap-problem", pane === "problem");
   root.classList.toggle("swap-scratch", pane === "scratch");
   swapBtn.dataset.pane = pane;
-  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show the scratchpad" : "Show the problem");
+  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show notes" : "Show question");
   padPeekText();
   layoutSwap();                                                                   // scroll positions are left alone (a reset lost the field you typed in)
 }
@@ -1581,7 +1582,7 @@ const padPeek = $("#padPeek"), padPeekTx = $("#padPeekTx");
 function padPeekText() {
   const t = S && S.box ? S.box.el.value : "";
   const last = t.split("\n").map(x => x.trim()).filter(Boolean).pop();
-  padPeekTx.textContent = last || "Scratchpad";
+  padPeekTx.textContent = last || "Notes";
   padPeek.classList.toggle("empty", !last);
 }
 padPeek.hidden = false;                                                         // CSS shows it only in the PROBLEM pane
@@ -1624,7 +1625,7 @@ const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r
 const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                                 // phone: a big pad
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
-const anchorName = (k, r) => r === 0 ? (k === "desk" ? "problem strip" : "answer only") : "problem " + ANAME(r);
+const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
 let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
@@ -1642,17 +1643,17 @@ function applyMT() {
   root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
   sash.hidden = !on; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && r === 0 && dragR == null);
   mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
-  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show the answer" : "Show the question");
+  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show answer" : "Show question");
   mtExp.hidden = side || !mtOpen;                                               // the collapse corner of the pad page only
   mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
-  mtExp.setAttribute("aria-label", mtOpen ? "Close the scratchpad page" : "Open the scratchpad");
+  mtExp.setAttribute("aria-label", mtOpen ? "Close notes" : "Open notes");
   mtExp.title = mtExp.getAttribute("aria-label");
   /* a11y only (WAI-ARIA window splitter), never shown */
   sash.setAttribute("aria-orientation", side ? "vertical" : "horizontal");
   sash.setAttribute("aria-valuemin", "0"); sash.setAttribute("aria-valuemax", String(Math.round(Math.max(...ANCH[k]) * 100)));
   sash.setAttribute("aria-valuenow", String(Math.round(r * 100)));
   sash.setAttribute("aria-valuetext", anchorName(k, r));
-  sash.setAttribute("aria-label", `Problem size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
+  sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
   if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
   fabSync();
@@ -1707,7 +1708,7 @@ function openMT() {
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Switch question and answer view here.", mtMode), 400);
+  setTimeout(() => obToast(2, "Tap to switch question / answer.", mtMode), 400);
 }
 let mtSkipPop = false;
 function shutMT() {
@@ -1786,8 +1787,8 @@ function fabSync() {
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
   if (!show) return;
   fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
-  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap Scratchpad to open your pad.", fab), 700); }
-  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag the button anywhere.", fab), 700);
+  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap here to write notes.", fab), 700); }
+  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move this button.", fab), 700);
 }
 function fabBounds() {
   const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;

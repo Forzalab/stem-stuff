@@ -436,11 +436,8 @@ html.side #work > .orig { margin: 0; }
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
-.wchip { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s4) 0 var(--s3); border: var(--bw) solid var(--edge);
-  border-radius: 10px; background: var(--raised); color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: 700; cursor: pointer; }
-.wchip .ico { width: 1.25rem; height: 1.25rem; }
-.wchip:hover { border-color: var(--muted); }
-.wchip:focus-visible, .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
+.wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .wvoice { min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); }
 .wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer; }   /* a tap skips the typing */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }

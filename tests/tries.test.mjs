@@ -126,7 +126,7 @@ test("prove: wrong set strikes first; a wrong fix names its row; repeat is free;
   assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint, r.triesLeft], ["wrong", "b", "arithmetic", "QUACK. fix b", 0]);
   const q = prove("T_p3");
   r = gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6", d: "15" } });
-  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "QUACK. Right call on which ones are false. One fix is off: redo that row's math."]);
+  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "QUACK. You found the false ones. One fix is wrong. Redo its math."]);
   assert.equal(gradeLocal(q, { choices: ["c", "a"], fixes: { d: "15.0", b: "6" } }).repeat, true);   // same values: a repeat
   assert.equal(gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6.000", d: "15.588" } }).verdict, "correct");
 });

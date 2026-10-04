@@ -45,9 +45,9 @@ BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.j
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "before", "original")
-DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
-FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
-NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
+DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
+FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
+NONE_MISS = "QUACK. Some taps are wrong. Check each row again."
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -927,7 +927,7 @@ def explain(cookie_header, body):
                 yield t.encode()
         except Exception as e:  # noqa: BLE001
             print(f"explain {p['code']}: {e}", file=sys.stderr)
-            yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
+            yield "\n(Cluck stopped early. Sorry!)".encode()
     return 200, head, gen()
 
 

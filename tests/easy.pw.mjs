@@ -101,7 +101,7 @@ try {
     assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
-    assert.match(await page.textContent("#how"), /None true\? Check with none ticked/);
+    assert.match(await page.textContent("#how"), /Tap all true ones, then Check\. None\? Just tap Check\./);
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
@@ -142,7 +142,7 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too
+    await page.waitForFunction(() => /Show Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too
     asked = 0;
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
@@ -155,10 +155,17 @@ try {
 
   await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed, then the voice reads the same string at 0.2", async () => {
     const said = () => page.evaluate(() => window.__said);
-    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
+    await page.waitForFunction(() => /Show Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
     assert.equal(asked, 0, "the pre-written text needs no /explain");
     await page.evaluate(() => { window.__said = []; });
+    const anim = () => page.$eval("#wish .wchip", c => getComputedStyle(c).animationName);
+    assert.equal(await anim(), "rw-wiggle", "the ad wiggle runs until the first tap (T4)");
+    await page.emulateMedia({ reducedMotion: "reduce" }); assert.equal(await anim(), "none", "no wiggle with reduced motion");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    assert.match(await page.textContent("#wish .wchip"), /Show Cluck's steps/);
     await page.click("#wish .wchip");
+    assert.equal(await page.$eval("#wish .wchip", c => c.classList.contains("rw-wiggle")), false, "a tap stops the wiggle for good");
+    assert.match(await page.textContent("#wish .wchip"), /Hide Cluck's steps/);
     assert.ok(await page.$("#wish .wtext .wcaret") && !(await page.$("#wish .wtext .wl")), "the thinking caret comes first, alone");
     assert.equal((await said()).length, 0, "spoken before the text is out");
     await page.waitForFunction(() => document.querySelector("#wish .wtext .wl"), null, { timeout: 2000 });
@@ -172,12 +179,12 @@ try {
     assert.ok(Math.abs(s[0].volume - 0.2) < 1e-6, "volume " + s[0].volume);
   });
 
-  await step("past 5 auto wishes an hour, nothing fires until Ask Cluck", async () => {
+  await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
-    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForTimeout(400);
     assert.equal(asked, 0, "fired on its own past the cap");
     await page.evaluate(() => { window.__said = []; });

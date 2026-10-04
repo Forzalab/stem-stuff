@@ -128,7 +128,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     assert.ok(g.h >= 48 && g.w >= 48, `size ${g.w}x${g.h}`);
     assert.ok(g.bottom <= g.dockTop + 0.5, `over the bar: ${g.bottom} > ${g.dockTop}`);
     assert.equal(g.hits, 0, "rests over an answer control");
-    assert.equal((await page.locator("#padFab").textContent()).trim(), "Scratchpad");
+    assert.equal((await page.locator("#padFab").textContent()).trim(), "Open notes");
     await page.locator(fix).focus(); await page.waitForTimeout(250);
     assert.ok(await page.locator("#padFab").isHidden(), "shown while an answer field has focus");
     await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(250);
@@ -223,10 +223,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const toastText = () => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });
   await step("390 onboarding: new device only, once each (button, then q | a)", async () => {
     await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "networkidle" }); await page.waitForTimeout(1200);
-    assert.equal(await toastText(), "Tap Scratchpad to open your pad.");
+    assert.equal(await toastText(), "Tap here to write notes.");
     assert.ok(await page.evaluate(() => document.querySelector("#toast").classList.contains("up")), "the caret points down at the button");
     await page.locator("#padFab").tap(); await page.waitForTimeout(900);
-    assert.equal(await toastText(), "Switch question and answer view here.");
+    assert.equal(await toastText(), "Tap to switch question / answer.");
     await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
     await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);
     assert.equal(await toastText(), "", "shown again");

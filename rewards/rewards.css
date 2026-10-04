@@ -5,6 +5,7 @@
    z ladder (app.css): stage 15 · dock 20 · brainrot 30 · Scratchpad button 40 · #toast 50 · drop banner 55 · update bar 60 ·
    splash 100 · FX overlays 140 · FX particles 150. */
 /* impeccable-disable radial-halo: the burst's speed lines live only inside the 1.2-2 s overlay, never on the resting page */
+/* impeccable-disable side-tab: the slot-kit bevel (light top edge + dark base) of the Cluck chip (.rw-chip). impeccable waiver: casino-themed (Tony, Oct 4) */
 
 .rw-skin {
   --rw-floor: #15102e; --rw-bar: #1f1850; --rw-text: #1d1747; --rw-soft: #d9d4ff; --rw-lav: #ece9ff;
@@ -67,6 +68,36 @@ html.start .rw-hud { display: none; }
 @container (max-width: 230px) { .rw-to, .rw-streak { display: none; } }
 @container (max-width: 150px) { .rw-lvl { display: none; } }
 @keyframes rw-pulse { 30% { transform: scale(1.07); filter: brightness(1.25); } 100% { transform: none; filter: none; } }
+
+/* ---------- the Cluck chip, "Explain my mistake" (T4; Tony, Oct 4: "ask ai button should shake like an ad button") ----------
+   The slot / red-gold kit pill, redrawn as our own CSS (no pixels copied): dark outline, thick gold rim, red-orange body, light top
+   edge, gloss cap, dark base, white duck in a candy coin. .rw-wiggle (app.js wishPaint, until the first tap on this question): 3 quick
+   swings, ±6°, every 6 s. Transform only; none with reduced motion. app.js keeps .wchip on it as the hook. */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.rw-chip {
+  --rw-wc-out: #3d0d00; --rw-wc-rim-hi: #fff2a8; --rw-wc-rim: #ffc21a; --rw-wc-rim-lo: #b86a00; --rw-wc-hi: #ff7a3d; --rw-wc-mid: #d8361f; --rw-wc-lo: #9e1a12; --rw-wc-base: #5a1200;
+  position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 20px 6px 4px;
+  font: 700 var(--t-sm, 1rem)/1.15 var(--rw-font); color: #fff; text-shadow: 0 2px 0 var(--rw-wc-base); text-align: left;
+  border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer;
+  background: linear-gradient(180deg, var(--rw-wc-hi), var(--rw-wc-mid) 55%, var(--rw-wc-lo)) padding-box,
+              linear-gradient(180deg, var(--rw-wc-rim-hi), var(--rw-wc-rim) 45%, var(--rw-wc-rim-lo)) border-box;
+  box-shadow: 0 0 0 2px var(--rw-wc-out), inset 0 3px 0 rgb(255 255 255 / .35), inset 0 -4px 0 rgb(90 18 0 / .55), 0 4px 0 var(--rw-wc-out);
+  transform-origin: 50% 60%;
+}
+.rw-chip::before { content: ""; position: absolute; left: 14%; right: 6%; top: 3px; height: 38%; border-radius: var(--rw-pill); pointer-events: none;
+  background: linear-gradient(180deg, rgb(255 255 255 / .55), rgb(255 255 255 / .08)); }
+.rw-chip > span { position: relative; }
+.rw-chip:hover { filter: brightness(1.06); }
+.rw-chip:active { transform: translateY(2px); box-shadow: 0 0 0 2px var(--rw-wc-out), inset 0 3px 0 rgb(255 255 255 / .35), inset 0 -3px 0 rgb(90 18 0 / .55), 0 2px 0 var(--rw-wc-out); }
+.rw-chip:focus-visible { outline: 2px solid #8fb0ff; outline-offset: 5px; }
+.rw-coin2 { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b58cff, #6b2fd8 55%, #3a118a); box-shadow: 0 0 0 3px var(--rw-wc-rim), 0 0 0 5px var(--rw-wc-out), inset 0 -3px 0 rgb(20 0 60 / .5); }
+.rw-coin2 svg { width: 24px; height: 24px; color: #fff; }
+.rw-chip.rw-wiggle { animation: rw-wiggle 6s ease-in-out 1.2s infinite; }
+@keyframes rw-wiggle {
+  0%, 8.4%, 100% { transform: rotate(0); }
+  1.4% { transform: rotate(-6deg); } 2.8% { transform: rotate(6deg); } 4.2% { transform: rotate(-6deg); } 5.6% { transform: rotate(6deg); } 7% { transform: rotate(-3deg); }
+}
 
 /* ---------- FX: shared layers ---------- */
 .fx-layer { position: fixed; inset: 0; z-index: 150; pointer-events: none; overflow: hidden; }
@@ -171,6 +202,6 @@ html.start .rw-hud { display: none; }
 @keyframes fx-blink { 50% { opacity: .25; } }
 @keyframes fx-bob { from { transform: translateY(-6px) rotate(-5deg); } to { transform: translateY(6px) rotate(5deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after { animation: none !important; }
+  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle { animation: none !important; }
   .rw-bar i, .rw-flame { transition: none; }
 }

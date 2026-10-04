@@ -188,7 +188,7 @@ async function run(browserType, label, opts = {}) {
       await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"));
       const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
-      assert.equal(text, "Upload or type code to start.", `start page text: ${text}`);
+      assert.equal(text, "Type a code to start.", `start page text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
       const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
@@ -496,7 +496,7 @@ async function run(browserType, label, opts = {}) {
       assert.match(await page.locator("#ph1").textContent(), /Exactly one/);
       assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
       assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-x", "b: the x in its arrow's slot");
-      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Not quite|One more try/, "no verdict words");
+      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Wrong\. 1 try left|One more try/, "no verdict words");
       assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
       assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
       await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");

@@ -2,7 +2,7 @@
    The list: the open practice bank (window.stemBank, design/BANK.md), else an uploaded problems.json
    (window.stemOffline.codes()), shuffled by a seed kept in this browser (stable across reloads; the shuffle button draws a
    new one), so a topic can't be guessed from its position. Neither: no list (codes are the gate), so the nav stays hidden.
-   The list button's text is the bank code; for an upload, the file name (".json" dimmed, hidden on phones).
+   The list button says "Questions" (a bank code or file name means nothing to a student; design/COPY-CTA.md).
    Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
 import { shuffled, seed, newSeed, mastery, glue } from "./shuffle.mjs";
 const MAX = 60;
@@ -96,9 +96,9 @@ function init() {
     setKey = key;
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    const label = bank() ? bank().code : file.replace(/\.json$/i, "");
-    name.innerHTML = esc(label) + (file.length > label.length ? `<span class="ext">${esc(file.slice(label.length))}</span>` : "");
-    btn.setAttribute("aria-label", label ? `${label} questions list` : "Questions list");
+    name.textContent = "Questions";                                         // the bank code is jargon to a student (design/COPY-CTA.md)
+    btn.setAttribute("aria-label", "Question list");
+    btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;
     root.classList.toggle("qnav-on", on);
     if (!on) { close(false); return; }
@@ -121,7 +121,7 @@ function init() {
   function marks(rec) {
     if (!rec || (!rec.x && rec.done === "open")) return { html: "", gone: false, say: "" };
     const html = `<span class="mk" aria-hidden="true">${ico("i-x", "mk-x").repeat(rec.x || 0)}${rec.done === "correct" ? ico("i-ok", "mk-ok") : ""}</span>`;
-    const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " Out of tries." : " One wrong try, one left.";
+    const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " No tries left." : " 1 wrong, 1 try left.";
     return { html, gone: rec.done !== "open", say };
   }
 

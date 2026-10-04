@@ -260,7 +260,7 @@
     const el = build();
     if (waiting && waiting.code !== code) waiting.reject(new TypeError("offline"));
     const p = new Promise((resolve, reject) => { waiting = code ? { code, resolve, reject } : null; });
-    el.querySelector("#so-t").textContent = FILE ? "Offline copy" : "Server offline";
+    el.querySelector("#so-t").textContent = FILE ? "Open your file" : "Can't reach the site";
     el.querySelector("#so-d").innerHTML = code
       ? "Open <code>problems.json</code> (it has " + code + ") from your files."
       : "Open <code>problems.json</code> from your files.";
@@ -298,11 +298,11 @@
 
   async function read(list) {
     const { files, got, bad } = await ingest(list);
-    if (!files.length) { say("No .json files there.", "bad"); return; }
-    if (!got.length) { say((bad.length === 1 ? bad[0] + " is" : "Those files are") + " not a problems.json.", "bad"); return; }
+    if (!files.length) { say("No problem files there.", "bad"); return; }
+    if (!got.length) { say(bad.length === 1 ? bad[0] + " is the wrong file." : "Wrong files.", "bad"); return; }
     if (waiting) {
       const hit = local.get(waiting.code);
-      if (!hit) { say("Loaded " + got.length + ", but no " + waiting.code + " in them.", "bad"); return; }
+      if (!hit) { say(waiting.code + " is not in these files.", "bad"); return; }
       const w = waiting; waiting = null; close(false); w.resolve(hit);
       return;
     }
@@ -330,8 +330,8 @@
       upInput.onchange = async () => {
         const { files, got, bad } = await ingest(upInput.files);
         upInput.value = "";
-        if (!files.length) return resolve({ error: "No .json file there." });
-        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is not a problems.json." });
+        if (!files.length) return resolve({ error: "No problem file there." });
+        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is the wrong file." });
         const p = first(got);
         emit(p);
         resolve({ problem: p, name: names.get(p.code), count: got.length });

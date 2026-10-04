@@ -95,7 +95,7 @@ try {
     for (const k of ["fx-float", "fx-fly"]) assert.ok(c.some(n => n.split(" ").includes(k)), k + " in " + c.join(","));
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x, { timeout: 3000 });
-    assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP, level 1`));
+    assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP \\(points\\), level 1`));
     await quiet(page);
   });
 

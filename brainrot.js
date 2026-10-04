@@ -25,11 +25,11 @@
   const width = () => (desk() ? 320 : 176);
   function build() {
     el = document.createElement("div");
-    el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Brainrot corner"); el.hidden = true;
+    el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, start], i) => `<div class="vid">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make it small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide it for this session">${ico("i-x")}</button></div>`}<iframe src="${src(id, start)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, start], i) => `<div class="vid">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id, start)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     tab = document.createElement("button");
-    Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show the brainrot corner");
+    Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     el.append(duo, tab);                                     // both stay put: moving an iframe reloads it, so stashing only hides the duo
     document.body.append(el);
     el.addEventListener("click", e => {

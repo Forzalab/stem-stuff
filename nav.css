@@ -11,8 +11,6 @@
 .qnav .btn:disabled:active { transform: none; }
 /* list button label: bank code, or the upload's file name with ".json" dimmed; phones and touch drop ".json" (Tony, Sep 30) */
 #qlistName { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#qlistName .ext { color: var(--muted); }
-.dock-bottom #qlistName .ext { display: none; }
 #qlistBtn[aria-expanded="true"] { background: var(--raised); }
 
 /* two groups, both layouts: the bank side (list, shuffle) left, Prev/Next pushed to the right edge */

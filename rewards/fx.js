@@ -194,7 +194,7 @@
   const KIND = {
     levelup: { t: 'LEVEL UP', d: 1200 },
     win: { t: 'WIN!', d: 1200 },
-    bonus: { t: 'BONUS LEVEL', d: 1200 },
+    bonus: { t: 'BONUS!', d: 1200 },
     legend: { t: 'THE GOLDEN DUCK HAS NOTICED YOU.', s: '+50 XP', d: 2000 }
   };
 
