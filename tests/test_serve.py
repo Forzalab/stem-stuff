@@ -133,7 +133,7 @@ class Grade(unittest.TestCase):
         ev = serve.view(a8f, "sugar")                                            # easy: no prove mode, no fix boxes
         self.assertNotIn("fix", serve.public(ev))
         self.assertEqual(serve.grade(ev, "m4", {"choices": ["a", "c"]})["verdict"], "correct")
-        self.assertIn("fix", serve.public(serve.view(a8f, "diet")))           # hard keeps them
+        self.assertNotIn("fix", serve.public(serve.view(a8f, "diet")))        # no prove mode in diet either (Tony, Oct 3)
         self.assertEqual(serve.view(BANK["CALC1_X2P"], "sugar"), BANK["CALC1_X2P"])  # a plain mc is untouched
 
     def test_number_forms(self):                                                # hard fix boxes: how people type 1.07 x 10^14

@@ -136,7 +136,7 @@ try {
     await page.waitForSelector('#q .opt.right[data-id="a"]', { timeout: 4000 });
   });
 
-  await step("DIET_EZ12: the original questions, every one, no tip, original titles, fix boxes back, still no None row", async () => {
+  await step("DIET_EZ12: the original questions, every one, no tip, original titles, no fix boxes, no None row", async () => {
     await typeCode(page, "DIET_EZ12");
     await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
     await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 3, null, { timeout: 8000 });
@@ -152,7 +152,7 @@ try {
     assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
-    assert.ok(await page.$$eval("#q .fix", f => f.length) > 0, "no fix boxes in diet mode");
+    assert.equal(await page.$$eval("#q .fix", f => f.length), 0, "fix boxes in diet mode (prove mode is gone)");
   });
 
   await step("SUGAR_EZ12: sugar again; the prefixed form is never remembered", async () => {

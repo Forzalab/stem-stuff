@@ -32,7 +32,7 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   The text is read aloud at volume 0.35 (`speechSynthesis`, `speak.mjs`), muted per browser (`stem-voice=off`), stopped on a new question.
 
 ## Diet only (Tony's own)
-- Prove-mode fix boxes stay. They grade to significant figures: the key rounded to n figures, give or take 1 in the last
+- Prove mode (X + typed fix boxes) is gone in BOTH modes (Tony, Oct 3: "kill off the red x and the input mode, for diet too"). The sig-fig grading below stays for any typed answer that asks for it:
   (`sigfig`). n = `fix.sf`, else "N sig figs" in `fix.how`, else 4.
 - No tip, no card, no AI.
 

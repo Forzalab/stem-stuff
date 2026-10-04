@@ -230,8 +230,8 @@ def hidden(p, mode):
 
 def view(p, mode):
     """The problem as a mode serves and grades it. Both modes (Tony, Oct 3): "None of these" is gone; an mc that had it becomes
-    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Sugar also drops prove mode
-    (fix boxes) and shows its saccharine title, tip and formula card. The try count stays the authored list's. The layer's key,
+    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Prove mode (the X + typed fix
+    boxes) is gone in both: a false row is simply left blank. Sugar also shows its saccharine title, tip and formula card. The try count stays the authored list's. The layer's key,
     slip and narration never travel with the problem (/explain and /narrate read them from problems())."""
     sg = sugar(p)
     p = {k: v for k, v in p.items() if k not in SUGAR_KEYS[1:] and k != "saccharine"}
@@ -244,14 +244,13 @@ def view(p, mode):
     if p.get("type") != "mc":
         return p
     lk = locks(p)
-    if not lk and (mode == "diet" or "fix" not in p):
+    if not lk and "fix" not in p:
         return p
     q = dict(p, choices=[c for c in shown(p) if not c.get("lock")], tries=max_tries(p))
     if lk:
         q.update(pick="all", correct=sorted(rights(p) - lk), wrong=[w for w in p.get("wrong", []) if w.get("choice") not in lk])
         q.setdefault("miss", NONE_MISS)
-    if mode == "sugar":
-        q.pop("fix", None)
+    q.pop("fix", None)                                        # no prove mode in either mode (Tony, Oct 3: "kill off the red x and the input")
     return q
 
 

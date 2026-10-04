@@ -30,8 +30,7 @@ export function hidden(p, mode) {
   const lk = locks(p);
   return mode === "sugar" && lk.size > 0 && [...rightsOf(p)].every(id => lk.has(id));
 }
-/* both modes: no "None of these" (an mc that had it becomes tick-every-true-one; None as the key = the empty set); easy also drops
-   prove mode. tries = the authored list's count (2-choice mc = 1, else 2). Untouched problems come back as they are. */
+/* both modes: no "None of these" (an mc that had it becomes tick-every-true-one; None as the key = the empty set); prove mode (X + typed fix) is gone in both. tries = the authored list's count (2-choice mc = 1, else 2). Untouched problems come back as they are. */
 const LAYER = ["tip", "part", "key", "slip", "narration", "saccharine"];
 export function view(p, mode) {
   if (!p) return p;
@@ -40,7 +39,7 @@ export function view(p, mode) {
   if (mode === "sugar") { if (block && sg.title) p.title = sg.title; if (sg.tip) p.tip = sg.tip; }
   if (p.type !== "mc") return p;
   const lk = locks(p);
-  if (!lk.size && (mode === "diet" || !p.fix)) return p;
+  if (!lk.size && !p.fix) return p;
   const sh = shown(p), q = { ...p, choices: sh.filter(c => !c.lock), tries: sh.length === 2 ? 1 : 2 };
   if (lk.size) {
     q.pick = "all";
@@ -48,6 +47,6 @@ export function view(p, mode) {
     q.wrong = (p.wrong || []).filter(w => !lk.has(w.choice));
     if (q.miss == null) q.miss = NONE_MISS;
   }
-  if (mode === "sugar") delete q.fix;
+  delete q.fix;                                            // no prove mode in either mode (Tony, Oct 3)
   return q;
 }

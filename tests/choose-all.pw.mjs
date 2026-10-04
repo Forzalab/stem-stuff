@@ -133,76 +133,16 @@ try {
     });
     await c2.close();
 
-    /* prove mode (fix): every unlocked row ticked or X'd, every X with its typed fix */
+    /* prove mode (X + typed fix boxes) is gone in both modes (Tony, Oct 3): a prove-mode question is plain tick-the-true-ones */
     const c3 = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" }), p3 = await c3.newPage();
-    const P = "CSCI26_A8F", t3 = id => touch ? row(p3, id).tap() : row(p3, id).click();
-    const box = id => p3.locator(`#q .ch[data-id="${id}"] .fix`);
-    const marks = () => p3.$$eval("#q .opt", os => Object.fromEntries(os.map(o => [o.dataset.id, o.getAttribute("aria-checked") === "true" ? "on" : o.dataset.mark || ""])));
-    await step(`${name} prove: tap cycles blank, tick, X (box shows), blank; keys X / Backspace / Space`, async () => {
-      await p3.goto(`${BASE}/#${P}`); await opened(p3, P);
-      assert.equal(await p3.locator("#q .fix:not([hidden])").count(), 0);
-      await t3("a"); assert.equal((await marks()).a, "on");
-      await t3("a"); assert.equal((await marks()).a, "x"); assert.ok(await box("a").isVisible());
-      /* the how is shown whole: the placeholder when it fits the box, else a wrapping line right above the box (390px; it used to clip) */
-      const ph = await p3.getAttribute('#q .ch[data-id="a"] .fix input', "placeholder"), cap = p3.locator('#q .ch[data-id="a"] .fix-how');
-      if (ph) { assert.equal(ph, "whole number"); assert.ok(await cap.isHidden()); }
-      else { assert.ok(await cap.isVisible(), "caption"); assert.equal((await cap.textContent()).trim(), "whole number"); }
-      assert.ok(ph, `${name}: caption; a fix.how of 20 characters or less fits the box (SCHEMA.md), flow.pw.mjs covers the caption`);
-      await t3("a"); assert.equal((await marks()).a, ""); assert.ok(!(await box("a").isVisible()));
-      await row(p3, "b").focus();
-      await p3.keyboard.press("x"); assert.equal((await marks()).b, "x");
-      await p3.keyboard.press("Backspace"); assert.equal((await marks()).b, "");
-      await p3.keyboard.press(" "); assert.equal((await marks()).b, "on");
-      await p3.keyboard.press(" "); assert.equal((await marks()).b, "");
-    });
-    await step(`${name} prove: Check needs every row marked and every X filled; a wrong fix turns its box red`, async () => {
-      await t3("a"); await t3("c"); await t3("b"); await t3("b"); await t3("d"); await t3("d");
-      assert.deepEqual(await marks(), { a: "on", b: "x", c: "on", d: "x" });
-      assert.equal((await st(p3)).go, true, "empty fixes: Check off");
-      await box("b").locator("input").fill("20");
-      assert.equal((await st(p3)).go, true, "one fix still empty");
-      await box("d").locator("input").fill("16");
-      assert.equal((await st(p3)).go, false);
-      await check(p3);
-      const s = await st(p3);
-      assert.match(s.fb, /You kept the order/); assert.equal(s.finished, false);
-      assert.ok(await box("b").evaluate(e => e.classList.contains("bad"))); assert.ok(!(await box("d").evaluate(e => e.classList.contains("bad"))));
-      assert.deepEqual(await marks(), { a: "on", b: "x", c: "on", d: "x" });
-      const t = await p3.evaluate(() => window.__drill.state.tries.at(-1));
-      assert.deepEqual(t.f, { b: "20", d: "16" }); assert.equal(t.w, "b");
-      assert.deepEqual(Object.values(t.a.fix).sort(), ["16", "20"]);           // copy payload: fixes by letter
-    });
-    await step(`${name} prove: reload restores marks, texts and the red box; then the right fix is correct`, async () => {
-      await p3.reload(); await opened(p3, P); await p3.waitForTimeout(300);
-      assert.deepEqual(await marks(), { a: "on", b: "x", c: "on", d: "x" });
-      assert.equal(await box("b").locator("input").inputValue(), "20");
-      assert.ok(await box("b").evaluate(e => e.classList.contains("bad")));
-      await box("b").locator("input").fill("10");
-      assert.ok(!(await box("b").evaluate(e => e.classList.contains("bad"))), "typing clears the red");
-      await box("b").locator("input").press("Enter");                          // Enter in the last box = Check
-      await p3.waitForTimeout(400);
-      const s = await st(p3);
-      assert.deepEqual(await okRows(p3), ["a", "c"]); assert.deepEqual(s.right, ["a", "c"]);
-      assert.ok(await box("d").evaluate(e => e.classList.contains("ok")));
+    await step(`${name}: a prove-mode question has no X and no boxes; nothing ticked can be checked`, async () => {
+      await p3.goto(`${BASE}/#CSCI26_A8F`); await opened(p3, "CSCI26_A8F");
+      const r = row(p3, "a"); await (touch ? r.tap() : r.click()); await (touch ? r.tap() : r.click());
+      assert.equal(await r.getAttribute("aria-checked"), "false"); assert.equal(await r.getAttribute("data-mark"), null, "X mark");
+      assert.equal(await p3.locator("#q .fix").count(), 0);
+      assert.equal((await st(p3)).go, false, "Check off");
     });
     await c3.close();
-    const c4 = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" }), p4 = await c4.newPage();
-    await step(`${name} prove: a ticked false one is struck, X'd, and its box takes focus`, async () => {
-      await p4.goto(`${BASE}/#${P}`); await opened(p4, P);
-      for (const id of ["a", "b", "c", "d", "d"]) await (touch ? row(p4, id).tap() : row(p4, id).click());
-      await p4.fill('#q .ch[data-id="d"] .fix input', "16");
-      await check(p4);
-      const s = await st(p4);
-      assert.deepEqual(s.wrong, ["b"]); assert.match(s.fb, /Divide by what/);
-      assert.equal(await p4.evaluate(() => document.activeElement === document.querySelector('#q .ch[data-id="b"] .fix input')), true);
-      assert.equal(s.go, true, "struck row's fix is empty: Check off");
-      await p4.fill('#q .ch[data-id="b"] .fix input', "10");
-      assert.equal((await st(p4)).go, false);
-      await p4.reload(); await opened(p4, P); await p4.waitForTimeout(300);
-      const r = await st(p4);
-      assert.deepEqual(r.wrong, ["b"]); assert.ok(await p4.isVisible('#q .ch[data-id="b"] .fix'), "struck row keeps its box after reload");
-    });
-    await c4.close();
   }
 
   /* upload mode: gradeLocal + its saved signatures */
@@ -221,23 +161,7 @@ try {
     await row(page, "c").click(); await check(page);
     s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.deepEqual(await okRows(page), ["a", "c"]);
   });
-  await step("upload prove (hard): no None row; X the false rows with their fixes; graded", async () => {
-    const c5 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), page = await c5.newPage();   // fresh: the start page and its upload button
-    await page.goto(BASE + "/");
-    const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
-    await fc.setFiles({ name: "prove.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE2)) });
-    await opened(page, "CSCI26_U02"); await page.waitForTimeout(200);
-    const go = page.locator("#mcGo");
-    assert.deepEqual(await page.$$eval("#q .opt", os => os.map(o => o.dataset.id)), ["a", "b", "d"], "None row gone");
-    assert.ok(await go.isDisabled(), "prove mode: Check is off until every row is marked");
-    await row(page, "a").click();
-    for (const id of ["b", "d"]) { await row(page, id).click(); await row(page, id).click(); }   // tick, then X
-    for (const [id, v] of [["b", "9"], ["d", "16"]]) await page.locator(`#q .opt[data-id="${id}"]`).locator("xpath=..").locator(".fix input").fill(v);
-    assert.ok(await go.isEnabled(), "Check is on once every X has its value");
-    await check(page);
-    assert.deepEqual(await okRows(page), ["a"]);
-    await c5.close();
-  });
+
   await ctx.close();
 } finally { await browser.close(); srv.kill(); }
 if (fails) { console.log(`${fails} failing`); process.exit(1); }
