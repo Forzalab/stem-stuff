@@ -2,6 +2,7 @@
 // questions, drops fix boxes and shows the "what to do" tip; nothing ticked is a real answer; UNADMIN_ goes back. Starts its own
 // serve.py with a throwaway banks/ folder and tries.json:   node tests/easy.pw.mjs [port]
 import { createRequire } from "node:module";
+import { createServer } from "node:http";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -20,16 +21,32 @@ const NONE = row("e", "None of these", { lock: true });
 const P = {
   all: { code: "CALC1_E01", type: "mc", pick: "all", shuffle: false, tip: "Add the areas above the axis, subtract the ones below.",
     body: [{ type: "text", md: "Which are true?" }], choices: [row("a", "two"), row("b", "three"), row("c", "four"), NONE],
-    correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. b" }], miss: "QUACK. Missing one." },
+    correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. b" }], miss: "QUACK. Missing one.",
+    key: "Use: $W = \\Delta K$\nTick: a, c", slip: { b: "3 is odd." } },
   none: { code: "CALC1_E02", type: "mc", shuffle: false, body: [{ type: "text", md: "Pick the even prime above 2." }],
     choices: [row("a", "3"), row("b", "5"), row("c", "7"), NONE], correct: "e" },
   prove: { code: "CALC1_E03", type: "mc", pick: "all", shuffle: false, fix: { type: "num", how: "4 sig figs" },
     body: [{ type: "text", md: "Mark each row." }], choices: [row("a", "$2+2=4$"), row("b", "$3 \\cdot 3=6$"), row("c", "$1+1=2$")],
-    correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. times", fix: { answer: "9" } }], miss: "QUACK. Missing one." },
+    correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. times", fix: { answer: "9" } }], miss: "QUACK. Missing one.",
+    key: "Tick: a, c", slip: { b: "3 times 3 is 9." } },
 };
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove] }));
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+/* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
+let asked = 0;
+const stub = createServer((req, res) => {
+  asked++;
+  res.writeHead(200, { "Content-Type": "text/event-stream" });
+  const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
+  let i = 0;
+  const t = setInterval(() => {
+    if (i < parts.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i++] } }] })}\n\n`);
+    else { res.end("data: [DONE]\n\n"); clearInterval(t); }
+  }, 150);
+});
+await new Promise(r => stub.listen(0, "127.0.0.1", r));
+const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
+  OPENROUTER_BASE: `http://127.0.0.1:${stub.address().port}`, OPENROUTER_API_KEY: "sk-test" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
@@ -68,6 +85,32 @@ try {
     await page.waitForFunction(() => /Missing one/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
   });
 
+  await step("easy: the first wrong answer asks Cluck in the background; the chip opens the streamed solution", async () => {
+    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
+    assert.equal(asked, 1);
+    await page.click("#wish .wchip");
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 4000 });
+    const t = await page.textContent("#wish .wtext");
+    assert.match(t, /POOF! A wish is a wish\./); assert.match(t, /Egg-cellent/);
+    assert.ok(await page.$("#wish .wtext .katex"), "math rendered");
+    assert.ok(!/\*\*/.test(t));
+  });
+
+  await step("past 5 auto wishes an hour, nothing fires until Ask Cluck", async () => {
+    await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
+    await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
+    assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
+    await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
+    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForTimeout(400);
+    assert.equal(asked, 1, "fired on its own past the cap");
+    await page.click("#wish .wchip");
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 6000 })
+      .catch(async e => { throw new Error(e.message + " | wish: " + await page.innerHTML("#wish") + " | asked " + asked); });
+    assert.equal(asked, 2);
+    await page.evaluate(() => localStorage.removeItem("stem-wish"));
+  });
+
   await step("easy: prove-mode question has no fix boxes; a tick-only set is graded", async () => {
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$$eval("#q .fix", f => f.length), 0);
@@ -100,6 +143,7 @@ try {
 } finally {
   await browser.close();
   srv.kill();
+  stub.close();
 }
 console.log(failures ? `${failures} FAIL` : "all ok");
 process.exit(failures ? 1 : 0);

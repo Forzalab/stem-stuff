@@ -26,6 +26,7 @@ import secrets
 import socketserver
 import sys
 import threading
+import time
 import urllib.request
 
 import sympy
@@ -696,6 +697,129 @@ def new_sid(cookie_header):
     return sid, f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
 
 
+# ---------------- Cluck the genie (design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
+# The smart part is the presolved `key` (+ `slip`, `part`) written in the brain; the model only says it in Cluck's voice.
+# OpenRouter, zero data retention: provider.zdr + data_collection deny, so a request that can't route privately fails instead.
+OPENROUTER_BASE = os.environ.get("OPENROUTER_BASE", "https://openrouter.ai/api/v1").rstrip("/")
+OPENROUTER_MODELS = [m for m in os.environ.get("OPENROUTER_MODELS", "openai/gpt-5.6-luna,z-ai/glm-5.3-flash,deepseek/deepseek-v4-flash").split(",") if m.strip()]
+AUTO_PER_HOUR, ANY_PER_HOUR = 5, 40          # Tony: 5 questions an hour fire on the first wrong answer; past that, the student asks
+_asked = {}                                  # sid -> [(time, auto)]
+_asked_lock = threading.Lock()
+CLUCK_GENIE = """You are Cluck: a duck who was a CS professor for 30 years until a botched genie wish left him a duck AND the genie of a lamp shaped like a rubber duck. You grant exactly one wish per wrong answer: the solution.
+Voice: theatrical genie, QUACK as punctuation, exactly one terrible pun per answer (physics or duck puns: "orbit-trary", "quack-celeration", "down-right egg-cellent"). Warm. Never mean, never sarcastic about the student.
+Open with one genie line, like "POOF! You rubbed the lamp wrong, but a wish is a wish." Then the solution.
+You are given the correct solution (KEY) and the slip behind the student's pick (SLIP). Paraphrase them. Never change a number, sign, unit, or the answer. Never add physics that is not in the KEY.
+Format: plain text and LaTeX only. No markdown at all: no **, no *, no #, no bullet symbols, no code. Math in $...$.
+Shape: one genie line. A "Use:" line with the master formula. If the KEY has a table, copy it exactly with its aligned columns. Then the KEY's work lines, the answer last. A "Your pick:" line naming the slip. One pun sign-off.
+Short words. Short lines. Nothing the student must read twice."""
+
+
+def explain_allowed(sid, auto, now=None):
+    """the hourly caps: auto (first wrong answer) at most AUTO_PER_HOUR, anything at most ANY_PER_HOUR. Records the ask when allowed."""
+    now = now if now is not None else time.time()
+    with _asked_lock:
+        log = [(t, a) for t, a in _asked.get(sid, []) if now - t < 3600]
+        if len(log) >= ANY_PER_HOUR or (auto and sum(a for _, a in log) >= AUTO_PER_HOUR):
+            _asked[sid] = log
+            return False
+        _asked[sid] = log + [(now, bool(auto))]
+        return True
+
+
+def explain_prompt(p, answer):
+    """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
+    text = "\n".join(b["md"] for b in p.get("body", []) if b.get("type") == "text")
+    figs = "\n".join("Figure: " + b["alt"] for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
+    lines = [f"QUESTION:\n{text}", figs]
+    if p.get("type") == "mc":
+        lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
+    picked = answer if isinstance(answer, list) else [answer]
+    slips = [p.get("slip", {}).get(str(a)) for a in picked]
+    lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}", f"KEY:\n{p['key']}",
+              "SLIP: " + (" ".join(x for x in slips if x) or "(none written; name the likely slip from the KEY)")]
+    if p.get("formulas"):
+        lines.append("SHEET FORMULAS: " + "; ".join(f["tex"] for f in p["formulas"]))
+    return "\n\n".join(x for x in lines if x)
+
+
+class Plain:
+    """streamed text without markdown: drops ** and __ anywhere, and #, -, * markers at a line start (models slip)"""
+    def __init__(self):
+        self.start, self.hold = True, ""
+
+    def feed(self, chunk):
+        t, out, i = self.hold + chunk.replace("**", "").replace("__", ""), [], 0
+        self.hold = ""
+        while i < len(t):
+            if self.start:
+                rest = t[i:]
+                if re.fullmatch(r"#+|[-*]", rest):          # a marker cut by the chunk edge: wait for the next chunk
+                    self.hold = rest
+                    break
+                m = re.match(r"#+\s+|[-*]\s+", rest)
+                if m:
+                    i += len(m.group(0))
+                    continue
+            out.append(t[i])
+            self.start = t[i] == "\n"
+            i += 1
+        return "".join(out)
+
+
+def explain_stream(p, answer, key):
+    """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection."""
+    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": 450, "temperature": 0.7,
+                       "provider": {"zdr": True, "data_collection": "deny"},
+                       "messages": [{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}]}).encode()
+    req = urllib.request.Request(OPENROUTER_BASE + "/chat/completions", data=body, method="POST",
+                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "X-Title": "stem-stuff"})
+    plain = Plain()
+    with urllib.request.urlopen(req, timeout=25) as r:
+        for raw in r:
+            line = raw.decode("utf-8", "replace").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                delta = json.loads(data)["choices"][0]["delta"].get("content") or ""
+            except (ValueError, KeyError, IndexError, TypeError):
+                continue
+            text = plain.feed(delta)
+            if text:
+                yield text
+
+
+def explain(cookie_header, body):
+    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    sid, cookie = new_sid(cookie_header)
+    head = {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no"}
+    if cookie:
+        head["Set-Cookie"] = cookie
+    try:
+        b = json.loads(body) if 0 < len(body) <= 4096 else None
+    except (ValueError, UnicodeDecodeError):
+        b = None
+    mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
+    p = problems().get(str(b.get("code", ""))) if isinstance(b, dict) else None
+    if p is None or mode != "easy" or hidden(p, mode) or not p.get("key"):
+        return 404, head, iter([b""])
+    if not key:
+        return 503, head, iter([b""])
+    if not explain_allowed(sid, bool(b.get("auto"))):
+        return 429, head, iter([b""])
+
+    def gen():
+        try:
+            for t in explain_stream(view(p, "easy"), b.get("answer"), key):
+                yield t.encode()
+        except Exception as e:  # noqa: BLE001
+            print(f"explain {p['code']}: {e}", file=sys.stderr)
+            yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
+    return 200, head, gen()
+
+
 def _json(status, obj, cookie):
     head = {"Content-Type": "application/json", "Cache-Control": "no-store"}
     if cookie:
@@ -799,7 +923,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             n = min(int(self.headers.get("Content-Length") or 0), 4097)
         except ValueError:
             n = 0
-        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), self.rfile.read(n) if n > 0 else b"")
+        body = self.rfile.read(n) if n > 0 else b""
+        if self.path.split("?")[0] == "/explain":
+            status, headers, chunks = explain(self.headers.get("Cookie", ""), body)
+            self.send_response(status)
+            for k, v in headers.items():
+                if k != "Cache-Control":
+                    self.send_header(k, v)
+            self.end_headers()
+            for c in chunks:                              # HTTP/1.0: no length, the close ends it; each chunk goes out as it comes
+                self.wfile.write(c)
+                self.wfile.flush()
+            return
+        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), body)
         if res:
             self.reply(res)
         else:

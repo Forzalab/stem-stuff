@@ -22,7 +22,13 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
 - A question whose answer is None is hidden (bank payload, `p/CODE.json` 404, uploads left out of the list).
 - No prove mode: `fix` is dropped, rows are tick / blank only.
 - `tip`: one "what to do" line on top of a twisted question. Plain statements, never a question; plain text + `$..$`.
-- Coming: formula card from `part` (Phase 3), Cluck genie AI from `key` + `slip` (Phase 4).
+- Formula card from `part` (Phase 3; the server sends `formulas: [{id, group, tex}]` from `banks/formula-sheet.json`, which ship.sh copies with the banks).
+- Cluck the genie (Phase 4): `POST /explain {code, answer, auto}` streams a paraphrase of the presolved `key` + `slip` in Cluck's genie voice
+  (serve.py `CLUCK_GENIE`) from OpenRouter with zero data retention (`provider: {zdr: true, data_collection: "deny"}`), models from
+  `OPENROUTER_MODELS` (fallback list), key `OPENROUTER_API_KEY` (Vercel env). Plain text only: the `Plain` filter drops markdown.
+  The first wrong answer of a question fires it in the background (at most 5 questions an hour: localStorage `stem-wish` + the
+  server's per-browser count); past that, "Ask Cluck" (40 an hour in all). A question without a key, or no API key: the block stays hidden.
+  The text is read aloud at volume 0.35 (`speechSynthesis`, `speak.mjs`), muted per browser (`stem-voice=off`), stopped on a new question.
 
 ## Hard only (Tony's own)
 - Prove-mode fix boxes stay. They grade to significant figures: the key rounded to n figures, give or take 1 in the last

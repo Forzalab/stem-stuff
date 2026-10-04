@@ -499,3 +499,74 @@ class Banks(unittest.TestCase):
         self.assertIn("/banks/", serve.BLOCK_PREFIX)
         self.assertIsNone(serve.BANK_PATH.match("/b/../banks/BANK_AB12.json"))
         self.assertIsNone(serve.BANK_PATH.match("/b/bank_ab12.json"))
+
+
+class Explain(unittest.TestCase):
+    """Cluck the genie (design/EASY.md Phase 4): /explain relays a stubbed OpenRouter stream; ZDR, caps, easy only, no markdown."""
+    def setUp(self):
+        import http.server
+        import threading
+        seen = self.seen = []
+
+        class Stub(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen.append((self.headers.get("Authorization"), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.end_headers()
+                for piece in ["POOF! **Use:** $v$\n", "- step one\n", "Your pick: sign."]:
+                    self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'content': piece}}]})}\n\n".encode())
+                self.wfile.write(b"data: [DONE]\n\n")
+
+            def log_message(self, *a):
+                pass
+        self.srv = http.server.HTTPServer(("127.0.0.1", 0), Stub)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.old = serve.BANKS, serve.OPENROUTER_BASE, os.environ.get("OPENROUTER_API_KEY")
+        serve.BANKS = tempfile.mkdtemp(prefix="stem-x-")
+        serve.OPENROUTER_BASE = f"http://127.0.0.1:{self.srv.server_address[1]}"
+        os.environ["OPENROUTER_API_KEY"] = "sk-test"
+        p = dict(BANK["CALC1_X2P"], code="CALC1_XP1", key="Use: $W = \\Delta K$\nAnswer: b) 3", slip={"a": "Dropped the sign."})
+        with open(os.path.join(serve.BANKS, "BANK_XP12.json"), "w") as f:
+            json.dump({"v": 1, "problems": [p]}, f)
+        serve._asked.clear()
+
+    def tearDown(self):
+        self.srv.shutdown()
+        serve.BANKS, serve.OPENROUTER_BASE, key = self.old
+        if key is None:
+            os.environ.pop("OPENROUTER_API_KEY", None)
+        else:
+            os.environ["OPENROUTER_API_KEY"] = key
+
+    def ask(self, cookie="sid=" + "a" * 32, **body):
+        status, head, chunks = serve.explain(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", **body}).encode())
+        return status, b"".join(chunks).decode()
+
+    def test_streams_plain_text_with_zdr_and_the_key(self):
+        status, text = self.ask()
+        self.assertEqual(status, 200)
+        self.assertEqual(text, "POOF! Use: $v$\nstep one\nYour pick: sign.")          # no ** and no bullet
+        auth, req = self.seen[0]
+        self.assertEqual(auth, "Bearer sk-test")
+        self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})
+        self.assertEqual(req["models"], serve.OPENROUTER_MODELS)
+        self.assertTrue(req["stream"])
+        user = req["messages"][1]["content"]
+        self.assertIn("Answer: b) 3", user)
+        self.assertIn("Dropped the sign.", user)
+
+    def test_easy_only_key_needed_and_caps(self):
+        self.assertEqual(self.ask(cookie="stem-mode=hard")[0], 404)                   # hard mode: no genie
+        os.environ.pop("OPENROUTER_API_KEY")
+        self.assertEqual(self.ask()[0], 503)
+        os.environ["OPENROUTER_API_KEY"] = "sk-test"
+        sid = "sid=" + "b" * 32
+        for _ in range(serve.AUTO_PER_HOUR):
+            self.assertEqual(self.ask(cookie=sid, auto=True)[0], 200)
+        self.assertEqual(self.ask(cookie=sid, auto=True)[0], 429)                     # 6th auto in an hour: the student asks
+        self.assertEqual(self.ask(cookie=sid)[0], 200)                                # asking still works
+        for i in range(serve.ANY_PER_HOUR):
+            serve.explain_allowed("y", False, now=1000)
+        self.assertFalse(serve.explain_allowed("y", False, now=1000))
+        self.assertTrue(serve.explain_allowed("y", False, now=1000 + 3601))           # an hour later

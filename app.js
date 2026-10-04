@@ -4,6 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
+import { speakable } from "./speak.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -416,6 +417,7 @@ async function load(code) {
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
+  if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish and voice stop
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
@@ -983,7 +985,96 @@ function feedback(r, typed) {
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
   layoutFreeze();
+  if (r.verdict === "wrong") wishOnWrong();
 }
+
+/* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
+   The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
+   the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
+   aloud quietly when shown (speechSynthesis, mute kept per browser). A new question stops all of it. */
+const WISH_AUTO = 5;
+const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
+function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
+let wish = null;   // { code, text, started, done, open, failed, ctl }
+function wishEl() {
+  let el = $("#wish");
+  if (!el) { el = document.createElement("div"); el.id = "wish"; el.className = "wish"; el.hidden = true; $("#fb").after(el); }
+  return el;
+}
+function wishReset() {
+  if (wish && wish.ctl) wish.ctl.abort();
+  wish = null; voiceStop();
+  const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
+}
+function wishOnWrong() {
+  if (modeOf() !== "easy" || !S || (wish && wish.code === S.code)) return;
+  wish = { code: S.code, text: "", started: false, done: false, open: false, failed: 0 };
+  if (wishLog().length < WISH_AUTO) wishStart(true);
+  wishPaint();
+}
+async function wishStart(auto) {
+  const w = wish, t = S.tries.at(-1) || {};
+  w.started = true; w.ctl = new AbortController();
+  if (auto) wishLogAdd();
+  try {
+    const r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto }), signal: w.ctl.signal });
+    if (!r.ok || !r.body) { w.failed = r.status || 1; }
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) {
+        const { value, done } = await rd.read(); if (done) break;
+        w.text += dec.decode(value, { stream: true });
+        if (wish === w && w.open) wishText();
+      }
+    }
+  } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
+  w.done = true;
+  if (wish !== w) return;
+  if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
+  wishPaint();
+  if (w.open && w.text) voiceSay(w.text);
+}
+/* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
+const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
+  esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
+let wishRaf = 0;
+function wishText() {
+  if (wishRaf) return;
+  wishRaf = requestAnimationFrame(() => { wishRaf = 0; const x = $("#wish .wtext"); if (x && wish) x.innerHTML = wishHTML(wish.text) + (wish.done ? "" : '<span class="wcaret" aria-hidden="true"></span>'); });
+}
+function wishPaint() {
+  const el = wishEl(), w = wish;
+  if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
+  el.hidden = false;
+  const label = !w.started ? "Ask Cluck" : w.failed ? "The lamp flickered. Ask again" : w.done ? "Cluck has your wish" : "Cluck is granting your wish";
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
+    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
+    w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
+  if (w.open) wishText();
+  el.querySelector(".wchip").addEventListener("click", () => {
+    if (!w.started || w.failed) { w.failed = 0; w.text = ""; w.done = false; w.open = true; wishStart(false); wishPaint(); return; }
+    w.open = !w.open;
+    if (w.open && w.done) voiceSay(w.text); else voiceStop();
+    wishPaint();
+  });
+  el.querySelector(".wvoice")?.addEventListener("click", () => {
+    try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
+    if (voiceOn()) { if (w.done) voiceSay(w.text); } else voiceStop();
+    wishPaint();
+  });
+  if (w.done && w.open) say("Cluck's solution is open.");
+  layoutFreeze();
+}
+const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
+const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
+function voiceSay(t) {
+  if (!voiceOK() || !voiceOn()) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.35; u.rate = 1.05;   // Tony: not too loud, but audible
+  speechSynthesis.speak(u);
+}
+function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
 
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here

@@ -25,6 +25,10 @@
     {
       "source": "/check",
       "destination": "/api/index?path=/check"
+    },
+    {
+      "source": "/explain",
+      "destination": "/api/index?path=/explain"
     }
   ]
 }
