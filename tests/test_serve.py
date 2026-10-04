@@ -120,23 +120,23 @@ class Grade(unittest.TestCase):
     def test_modes(self):                                                       # design/EASY.md
         a7k, a8f = BANK["CSCI26_A7K"], BANK["CSCI26_A8F"]
         none_key = dict(a7k, code="CSCI26_N0N", correct=["e"], wrong=[w for w in a7k.get("wrong", []) if w.get("choice") != "e"])
-        self.assertEqual((serve.mode_of(""), serve.mode_of("sid=x; stem-mode=hard"), serve.mode_of("stem-mode=easy")), ("easy", "hard", "easy"))
-        for mode in ("easy", "hard"):                                           # None of these is gone in both
+        self.assertEqual([serve.mode_of(c) for c in ("", "sid=x; stem-mode=diet", "stem-mode=hard", "stem-mode=sugar")], ["sugar", "diet", "diet", "sugar"])
+        for mode in ("sugar", "diet"):                                           # None of these is gone in both
             v = serve.view(a7k, mode)
             self.assertNotIn("e", [c["id"] for c in v["choices"]], mode)
             self.assertEqual((v["pick"], v["tries"]), ("all", serve.max_tries(a7k)))
             self.assertNotIn("lock", str(serve.public(v, "m1")["choices"]))
-        self.assertTrue(serve.hidden(none_key, "easy"))                         # None as the key: hidden in easy
-        self.assertFalse(serve.hidden(none_key, "hard") or serve.hidden(a7k, "easy"))
-        hv = serve.view(none_key, "hard")                                       # hard: the empty set is the answer
+        self.assertTrue(serve.hidden(none_key, "sugar"))                         # None as the key: hidden in easy
+        self.assertFalse(serve.hidden(none_key, "diet") or serve.hidden(a7k, "sugar"))
+        hv = serve.view(none_key, "diet")                                       # hard: the empty set is the answer
         self.assertEqual(hv["correct"], [])
         self.assertEqual(serve.grade(hv, "m2", {"choices": []})["verdict"], "correct")
         self.assertEqual(serve.grade(hv, "m3", {"choices": ["a"]})["verdict"], "wrong")
-        ev = serve.view(a8f, "easy")                                            # easy: no prove mode, no fix boxes
+        ev = serve.view(a8f, "sugar")                                            # easy: no prove mode, no fix boxes
         self.assertNotIn("fix", serve.public(ev))
         self.assertEqual(serve.grade(ev, "m4", {"choices": ["a", "c"]})["verdict"], "correct")
-        self.assertIn("fix", serve.public(serve.view(a8f, "hard")))           # hard keeps them
-        self.assertIs(serve.view(BANK["CALC1_X2P"], "easy"), BANK["CALC1_X2P"])  # a plain mc is untouched
+        self.assertNotIn("fix", serve.public(serve.view(a8f, "diet")))        # no prove mode in diet either (Tony, Oct 3)
+        self.assertEqual(serve.view(BANK["CALC1_X2P"], "sugar"), BANK["CALC1_X2P"])  # a plain mc is untouched
 
     def test_number_forms(self):                                                # hard fix boxes: how people type 1.07 x 10^14
         u = {"type": "num", "answer": "1.07e14"}
@@ -437,6 +437,67 @@ class Banks(unittest.TestCase):
         with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
             json.dump(data, f)
 
+    def test_formula_card_and_keys_stay_server_side(self):                    # design/EASY.md
+        self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
+        p = dict(BANK["CALC1_X2P"], code="CALC1_FK1", part=["WE_THM", "NOPE"], key="Use: $W = \\Delta K$", slip={"a": "sign"}, tip="Add the areas.")
+        self.write("BANK_FK12", {"v": 1, "problems": [p]})
+        self.assertNotIn("formula-sheet", serve.banks())                       # the sheet is not a bank
+        easy = serve.public(serve.view(serve.problems()["CALC1_FK1"], "sugar"), "f1")
+        self.assertEqual(easy["formulas"], [{"id": "WE_THM", "group": "Work and Energy", "tex": "W = \\Delta K"}])   # unknown id skipped
+        self.assertEqual(easy["tip"], "Add the areas.")
+        hard = serve.public(serve.view(serve.problems()["CALC1_FK1"], "diet"), "f1")
+        self.assertFalse({"formulas", "tip"} & set(hard))
+        for out in (easy, hard, *serve.bank_payload("BANK_FK12", "f2", "sugar")["problems"]):
+            self.assertFalse({"key", "slip", "part", "correct", "wrong"} & set(out), out.keys())
+
+    def test_saccharine_block_and_narration(self):                             # schema v2: one block, diet untouched
+        self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
+        p = dict(BANK["CALC1_X2P"], code="CALC1_SB1", title="Original", saccharine={"title": "Practice Exam 2, Question 7: mass doubled",
+                 "tip": "Add the areas.", "part": ["WE_THM"], "key": "Answer: b) 3", "slip": {"a": "sign"}, "narration": "POOF. Three."})
+        self.write("BANK_SB12", {"v": 1, "problems": [p]})
+        raw = serve.problems()["CALC1_SB1"]
+        sw, dt = serve.public(serve.view(raw, "sugar"), "n1"), serve.public(serve.view(raw, "diet"), "n1")
+        self.assertEqual((sw["title"], sw["tip"], [f["id"] for f in sw["formulas"]]), ("Practice Exam 2, Question 7: mass doubled", "Add the areas.", ["WE_THM"]))
+        self.assertEqual(dt["title"], "Original")
+        self.assertFalse({"tip", "formulas", "saccharine"} & set(dt))
+        for out in (sw, dt):
+            self.assertNotIn("saccharine", json.dumps(out)); self.assertNotIn("Three", json.dumps(out))
+        self.assertEqual(serve.explain_prompt(raw, "a").count("Answer: b) 3"), 1)
+        st, _, data = serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CALC1_SB1"}).encode())
+        self.assertEqual((st, json.loads(data)["text"]), (200, "POOF. Three."))
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "stem-mode=diet", json.dumps({"code": "CALC1_SB1"}).encode())[2])["text"], "")
+        self.assertTrue(sw["wish"]); self.assertNotIn("wish", dt)
+
+    def test_sugar_hide_and_split(self):                                       # main's sugar v2: prune + one True/False per row
+        pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SP1", body=[{"type": "text", "md": "Q body"},
+                    {"type": "text", "md": "Tap a row to tick it. Leave false rows blank. Use $g = 9.80\\ \\text{m/s}^2$."}],
+                    saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c", "narration": "parent",
+                                "split": [{"sub": "CSCI26_SP1A", "stem": "True or false: row A.", "answer": "true", "slip": "A is true.", "narration": "A says"},
+                                          {"sub": "CSCI26_SP1B", "stem": "True or false: row B.", "answer": "false", "slip": "B is false.", "tip": "Look at B."}]})
+        gone = dict(BANK["CALC1_X2P"], code="CALC1_HD1", saccharine={"hide": True, "key": "k"})
+        self.write("BANK_SP12", {"v": 1, "problems": [gone, pick, BANK["CALC1_T6B"]]})
+        sugar_codes = [p["code"] for p in serve.bank_payload("BANK_SP12", "x1", "sugar")["problems"]]
+        diet_codes = [p["code"] for p in serve.bank_payload("BANK_SP12", "x1", "diet")["problems"]]
+        self.assertEqual(sugar_codes, ["CSCI26_SP1A", "CSCI26_SP1B", "CALC1_T6B"])                # hidden gone, parent replaced in place
+        self.assertEqual(diet_codes, ["CALC1_HD1", "CSCI26_SP1", "CALC1_T6B"])                    # diet: as authored
+        a = serve.public(serve.view(serve.lookup("CSCI26_SP1A", "sugar"), "sugar"), "x1")
+        self.assertEqual(([c["md"] for c in a["choices"]], a["title"], a.get("pick")), (["True", "False"], "Practice Exam 2, Question 3", None))
+        texts = [b["md"] for b in a["body"]]
+        self.assertEqual(texts[0], "Q body"); self.assertIn("True or false: row A.", texts[-1]); self.assertIn("Use $g", texts[-1])
+        self.assertFalse(any("Tap a row" in t for t in texts))
+        self.assertEqual(serve.max_tries(serve.lookup("CSCI26_SP1B", "sugar")), 1)
+        b = serve.lookup("CSCI26_SP1B", "sugar")
+        r = serve.grade(b, "x2", {"choice": "t"})
+        self.assertEqual((r["verdict"], r["hint"], r["triesLeft"]), ("wrong", "B is false.", 0))
+        self.assertEqual(serve.grade(b, "x3", {"choice": "f"})["verdict"], "correct")
+        st, _, data = serve.dispatch("POST", "/check", "", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())
+        self.assertEqual(json.loads(data)["verdict"], "correct")
+        self.assertEqual(serve.dispatch("POST", "/check", "stem-mode=diet", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())[0], 404)
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CSCI26_SP1A"}).encode())[2])["text"], "A says")
+        self.assertIn("B is false.", serve.explain_prompt(b, "t")); self.assertIn("Tick: a, c", serve.explain_prompt(b, "t"))
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet")[0], 200)
+
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")
         self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])
@@ -490,3 +551,74 @@ class Banks(unittest.TestCase):
         self.assertIn("/banks/", serve.BLOCK_PREFIX)
         self.assertIsNone(serve.BANK_PATH.match("/b/../banks/BANK_AB12.json"))
         self.assertIsNone(serve.BANK_PATH.match("/b/bank_ab12.json"))
+
+
+class Explain(unittest.TestCase):
+    """Cluck the genie (design/EASY.md Phase 4): /explain relays a stubbed OpenRouter stream; ZDR, caps, easy only, no markdown."""
+    def setUp(self):
+        import http.server
+        import threading
+        seen = self.seen = []
+
+        class Stub(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen.append((self.headers.get("Authorization"), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.end_headers()
+                for piece in ["POOF! **Use:** $v$\n", "- step one\n", "Your pick: sign."]:
+                    self.wfile.write(f"data: {json.dumps({'choices': [{'delta': {'content': piece}}]})}\n\n".encode())
+                self.wfile.write(b"data: [DONE]\n\n")
+
+            def log_message(self, *a):
+                pass
+        self.srv = http.server.HTTPServer(("127.0.0.1", 0), Stub)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.old = serve.BANKS, serve.OPENROUTER_BASE, os.environ.get("OPENROUTER_API_KEY")
+        serve.BANKS = tempfile.mkdtemp(prefix="stem-x-")
+        serve.OPENROUTER_BASE = f"http://127.0.0.1:{self.srv.server_address[1]}"
+        os.environ["OPENROUTER_API_KEY"] = "sk-test"
+        p = dict(BANK["CALC1_X2P"], code="CALC1_XP1", key="Use: $W = \\Delta K$\nAnswer: b) 3", slip={"a": "Dropped the sign."})
+        with open(os.path.join(serve.BANKS, "BANK_XP12.json"), "w") as f:
+            json.dump({"v": 1, "problems": [p]}, f)
+        serve._asked.clear()
+
+    def tearDown(self):
+        self.srv.shutdown()
+        serve.BANKS, serve.OPENROUTER_BASE, key = self.old
+        if key is None:
+            os.environ.pop("OPENROUTER_API_KEY", None)
+        else:
+            os.environ["OPENROUTER_API_KEY"] = key
+
+    def ask(self, cookie="sid=" + "a" * 32, **body):
+        status, head, chunks = serve.explain(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", **body}).encode())
+        return status, b"".join(chunks).decode()
+
+    def test_streams_plain_text_with_zdr_and_the_key(self):
+        status, text = self.ask()
+        self.assertEqual(status, 200)
+        self.assertEqual(text, "POOF! Use: $v$\nstep one\nYour pick: sign.")          # no ** and no bullet
+        auth, req = self.seen[0]
+        self.assertEqual(auth, "Bearer sk-test")
+        self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})
+        self.assertEqual(req["models"], serve.OPENROUTER_MODELS)
+        self.assertTrue(req["stream"])
+        user = req["messages"][1]["content"]
+        self.assertIn("Answer: b) 3", user)
+        self.assertIn("Dropped the sign.", user)
+
+    def test_easy_only_key_needed_and_caps(self):
+        self.assertEqual(self.ask(cookie="stem-mode=hard")[0], 404)                   # hard mode: no genie
+        os.environ.pop("OPENROUTER_API_KEY")
+        self.assertEqual(self.ask()[0], 503)
+        os.environ["OPENROUTER_API_KEY"] = "sk-test"
+        sid = "sid=" + "b" * 32
+        for _ in range(serve.AUTO_PER_HOUR):
+            self.assertEqual(self.ask(cookie=sid, auto=True)[0], 200)
+        self.assertEqual(self.ask(cookie=sid, auto=True)[0], 429)                     # 6th auto in an hour: the student asks
+        self.assertEqual(self.ask(cookie=sid)[0], 200)                                # asking still works
+        for i in range(serve.ANY_PER_HOUR):
+            serve.explain_allowed("y", False, now=1000)
+        self.assertFalse(serve.explain_allowed("y", False, now=1000))
+        self.assertTrue(serve.explain_allowed("y", False, now=1000 + 3601))           # an hour later

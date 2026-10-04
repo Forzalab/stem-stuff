@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brainrot corner mockup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<style>
+/* Easy mode brainrot corner (design/EASY.md Phase 3b, Tony's request): Subway Surfers + one TikTok while a question is open.
+   ?v=1..5. Players are placeholders (moving stripes) until Tony sends the 2 links: no embed in a mockup. Mock chrome is dashed. */
+body { padding: 0 !important; }
+.mbar { display: flex; gap: var(--s2); padding: var(--s2) var(--gut); border-bottom: 1px dashed var(--line); background: var(--field); color: var(--muted); font-size: var(--t-xs); }
+.mbar b { color: var(--ink); }
+.stage { position: relative; min-height: calc(100dvh - 34px); overflow: hidden; }
+.wrap { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) var(--s7); }
+.p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; font-size: var(--t-md); line-height: var(--lh); }
+.ch { display: flex; align-items: center; gap: var(--s3); min-height: 52px; margin-top: var(--s2); padding: var(--s2) var(--s3); border: var(--bw) solid var(--edge);
+  border-radius: 10px; background: var(--sheet); font-size: var(--t-md); }
+.ch b { width: 26px; height: 26px; border: var(--bw) solid var(--edge); border-radius: 4px; }
+/* the placeholder player */
+.vid { position: relative; overflow: hidden; border-radius: 10px; background: repeating-linear-gradient(115deg, var(--raised) 0 18px, var(--sheet) 18px 36px);
+  animation: run 1.2s linear infinite; background-size: 200% 100%; display: grid; place-items: end start; }
+.vid span { margin: var(--s2); padding: 2px var(--s2); border-radius: 6px; background: rgb(17 24 38 / .8); font-size: var(--t-xs); font-weight: 700; }
+@keyframes run { to { background-position: -72px 0; } }
+@media (prefers-reduced-motion: reduce) { .vid { animation: none; } }
+.ctl { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+.ctl i { width: 32px; height: 32px; border-radius: 8px; background: rgb(17 24 38 / .8); display: grid; place-items: center; font-style: normal; font-size: var(--t-sm); }
+.float { position: absolute; z-index: 30; box-shadow: var(--shadow-3); border-radius: 12px; }
+/* 1 PiP: one 16:9 card, top right, both players as tabs */
+.v1 { right: var(--s4); bottom: 88px; width: min(46vw, 300px); background: var(--sheet); padding: 6px; }
+.v1 .vid { aspect-ratio: 16 / 9; }
+.v1 .tabs { display: flex; gap: 4px; margin-top: 6px; } .v1 .tabs span { flex: 1; text-align: center; padding: 4px; border-radius: 6px; font-size: var(--t-xs); background: var(--paper); }
+.v1 .tabs .on { background: var(--raised); font-weight: 700; }
+/* 2 Split screen: a band under the question (phone) / a side column (desktop), the TikTok way */
+.v2 { margin-top: var(--s4); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.v2 .vid { aspect-ratio: 9 / 12; }
+@media (min-width: 720px) { .v2side { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: var(--s4); max-width: calc(var(--col) + 21rem); margin: 0 auto; padding: var(--s4) var(--gut); }
+  .v2side .wrap { padding: 0; } .v2side .v2 { margin: 0; grid-template-columns: 1fr; } }
+/* 3 Phone-shaped TikTok, docked on the edge, half peeking; a tap pulls it out */
+.v3 { right: -70px; top: 30%; width: 150px; aspect-ratio: 9 / 16; background: var(--field); padding: 5px; border-radius: 18px; }
+.v3 .vid { height: 100%; border-radius: 14px; }
+/* 4 Stacked duo: one tall pill, Subway Surfers on top, TikTok under */
+.v4 { left: var(--s4); bottom: 88px; width: 140px; background: var(--sheet); padding: 5px; display: grid; gap: 5px; }
+.v4 .a { aspect-ratio: 16 / 10; } .v4 .b { aspect-ratio: 9 / 13; }
+/* 5 Mini pill: collapsed by default; one tap opens v1 */
+.v5 { right: var(--s4); bottom: 88px; height: 48px; padding: 0 var(--s4) 0 6px; display: flex; align-items: center; gap: var(--s2); background: var(--raised); border-radius: 999px; font-weight: 700; font-size: var(--t-sm); }
+.v5 .vid { width: 36px; height: 36px; border-radius: 50%; }
+.bar { position: absolute; left: 0; right: 0; bottom: 0; height: 44px; border-top: 1px solid var(--line); background: var(--paper); display: grid; place-items: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="mbar"><b>Brainrot corner</b><span id="lab"></span></div>
+<div class="stage" id="stage"></div>
+<script>
+const v = +(new URLSearchParams(location.search).get("v") || 1), desk = innerWidth >= 720;
+document.getElementById("lab").textContent = `v${v} · ${desk ? "desktop" : "phone"} · placeholder players`;
+const q = `<div class="wrap"><div class="p">A cart rolls off a ramp. Which statements are true?</div>
+  ${["Its speed grows on the way down", "Gravity does negative work", "Its mechanical energy stays the same (no friction)"].map(t => `<div class="ch"><b></b>${t}</div>`).join("")}</div>`;
+const ctl = '<div class="ctl"><i>–</i><i>✕</i></div>';
+const P = {
+  1: `<div class="float v1"><div class="vid">${ctl}<span>Subway Surfers</span></div><div class="tabs"><span class="on">Subway</span><span>TikTok</span></div></div>`,
+  2: `<div class="v2"><div class="vid"><span>Subway Surfers</span></div><div class="vid"><span>TikTok</span></div></div>`,
+  3: `<div class="float v3"><div class="vid">${ctl}<span>TikTok</span></div></div>`,
+  4: `<div class="float v4"><div class="vid a"><span>Subway</span></div><div class="vid b">${ctl}<span>TikTok</span></div></div>`,
+  5: `<div class="float v5"><div class="vid"></div>Brainrot ▸</div>`,
+};
+const stage = document.getElementById("stage");
+stage.innerHTML = v === 2 ? (desk ? `<div class="v2side">${q}${P[2]}</div>` : q.replace(/<\/div>$/, P[2] + "</div>")) : q + P[v];
+stage.insertAdjacentHTML("beforeend", '<div class="bar">⌃</div>');
+</script>
+</body>
+</html>

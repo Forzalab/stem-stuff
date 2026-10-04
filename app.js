@@ -4,6 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
+import { speakable } from "./speak.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -315,15 +316,16 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
-  const mp = modePrefix(codeIn.value);                                    // ADMIN_<code> = hard mode, UNADMIN_<code> = easy (design/EASY.md)
+  const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
-  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "hard" ? "Hard mode on." : "Easy mode on."); });
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Diet mode on." : "Sugar mode on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
+window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
 window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c) && modeHidden(o.get(c), modeOf())); };   // nav.js: uploads
 /* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
@@ -402,7 +404,7 @@ async function load(code) {
   try {
     prob = await getProblem(code);
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
-      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is hard-mode only.`; return; }
+      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is diet-mode only.`; return; }
       prob = modeView(prob, modeOf());
     }
   }
@@ -416,6 +418,7 @@ async function load(code) {
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
+  if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish and voice stop
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
@@ -424,6 +427,7 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  window.stemBrainrot?.sync();
 }
 
 function render() {
@@ -465,7 +469,7 @@ function renderQuestion() {
   if (p.type === "mc") {
     const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
     const many = all(p);       // pick all: square check badge + the letter beside it, one Check button under the list (CHOOSE-ALL.md §4)
-    q.innerHTML = `${howLine(p)}<div class="choices${many ? " all" : ""}" ${many ? 'role="group" aria-labelledby="how"' : 'role="radiogroup" aria-label="Choices"'}>${list.map((c, i) => `
+    q.innerHTML = `${howLine(p)}<div class="choices${many ? " all" : ""}" ${many ? (howLine(p) ? 'role="group" aria-labelledby="how"' : 'role="group" aria-label="Choices"') : 'role="radiogroup" aria-label="Choices"'}>${list.map((c, i) => `
       <div class="ch" data-id="${esc(c.id)}">
         <button type="button" class="opt" role="${many ? "checkbox" : "radio"}" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}"${c.lock ? " data-lock" : ""}>
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
@@ -501,10 +505,24 @@ function renderQuestion() {
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
+  formulaCard();
+}
+/* sugar: the formula card, stepper look (design/FORMULA-CARD.md round 2, Tony's pick 5): the question's formula-sheet rows in the
+   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint. */
+function formulaCard() {
+  $("#fcard")?.remove();
+  const fs = S && S.prob.formulas;
+  if (!fs || !fs.length || modeOf() !== "sugar") return;
+  const sec = document.createElement("section");
+  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
+  sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
+    <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span><span class="g">${esc(f.group)}</span></li>`).join("")}</ol>`;
+  $("#q").after(sec);
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-const howLine = p => { const h = p.how || (all(p) ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
+const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -983,7 +1001,101 @@ function feedback(r, typed) {
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
   layoutFreeze();
+  if (r.verdict === "wrong") wishOnWrong();
+  window.stemBrainrot?.sync();
 }
+
+/* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
+   The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
+   the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
+   aloud quietly when shown (speechSynthesis, mute kept per browser). A new question stops all of it. */
+const WISH_AUTO = 5;
+const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
+function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
+let wish = null;   // { code, text, started, done, open, failed, ctl }
+function wishEl() {
+  let el = $("#wish");
+  if (!el) { el = document.createElement("div"); el.id = "wish"; el.className = "wish"; el.hidden = true; $("#fb").after(el); }
+  return el;
+}
+function wishReset() {
+  if (wish && wish.ctl) wish.ctl.abort();
+  wish = null; voiceStop();
+  const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
+}
+function wishOnWrong() {
+  if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
+  wish = { code: S.code, text: "", narration: "", started: false, done: false, open: false, failed: 0 };
+  const w = wish;                                                          // the voiceover is pre-written (saccharine.narration): free
+  fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
+    .then(r => r.ok ? r.json() : null).then(j => { if (j && j.text) w.narration = j.text; }).catch(() => {});
+  if (wishLog().length < WISH_AUTO) wishStart(true);
+  wishPaint();
+}
+async function wishStart(auto) {
+  const w = wish, t = S.tries.at(-1) || {};
+  w.started = true; w.ctl = new AbortController();
+  if (auto) wishLogAdd();
+  try {
+    const r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto }), signal: w.ctl.signal });
+    if (!r.ok || !r.body) { w.failed = r.status || 1; }
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) {
+        const { value, done } = await rd.read(); if (done) break;
+        w.text += dec.decode(value, { stream: true });
+        if (wish === w && w.open) wishText();
+      }
+    }
+  } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
+  w.done = true;
+  if (wish !== w) return;
+  if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
+  wishPaint();
+  if (w.open && w.text) voiceSay(w.narration || w.text);
+}
+/* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
+const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
+  esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
+let wishRaf = 0;
+function wishText() {
+  if (wishRaf) return;
+  wishRaf = requestAnimationFrame(() => { wishRaf = 0; const x = $("#wish .wtext"); if (x && wish) x.innerHTML = wishHTML(wish.text) + (wish.done ? "" : '<span class="wcaret" aria-hidden="true"></span>'); });
+}
+function wishPaint() {
+  const el = wishEl(), w = wish;
+  if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
+  el.hidden = false;
+  const label = !w.started ? "Ask Cluck" : w.failed ? "The lamp flickered. Ask again" : w.done ? "Cluck has your wish" : "Cluck is granting your wish";
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
+    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
+    w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
+  if (w.open) wishText();
+  el.querySelector(".wchip").addEventListener("click", () => {
+    if (!w.started || w.failed) { w.failed = 0; w.text = ""; w.done = false; w.open = true; wishStart(false); wishPaint(); return; }
+    w.open = !w.open;
+    if (w.open && w.done) voiceSay(w.narration || w.text); else voiceStop();
+    wishPaint();
+  });
+  el.querySelector(".wvoice")?.addEventListener("click", () => {
+    try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
+    if (voiceOn()) { if (w.done) voiceSay(w.narration || w.text); } else voiceStop();
+    wishPaint();
+  });
+  if (w.done && w.open) say("Cluck's solution is open.");
+  layoutFreeze();
+  window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
+}
+const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
+const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
+function voiceSay(t) {
+  if (!voiceOK() || !voiceOn()) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.35; u.rate = 1.05;   // Tony: not too loud, but audible
+  speechSynthesis.speak(u);
+}
+function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
 
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here
@@ -1497,6 +1609,7 @@ if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT()
 const fab = $("#padFab");
 let fabDrag = null, fabMoved = false, fabSeen = false;
 function fabSync() {
+  window.stemBrainrot?.sync();
   const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
   const show = root.classList.contains("pad-off") && !typing;
   root.classList.toggle("fab-on", show);

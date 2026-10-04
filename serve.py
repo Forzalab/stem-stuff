@@ -26,6 +26,7 @@ import secrets
 import socketserver
 import sys
 import threading
+import time
 import urllib.request
 
 import sympy
@@ -43,7 +44,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
@@ -100,6 +101,8 @@ def _bank_files():
     for n in names:
         if not n.endswith(".json"):
             continue
+        if n == SHEET_NAME:
+            continue
         if BANK_CODE.match(n[:-5]):
             out[n[:-5]] = os.path.join(BANKS, n)
         elif n not in _bank["skipped"]:
@@ -125,6 +128,39 @@ def _index():
             _bank.update(sig=sig, by_code=by_code, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
         return _bank
 
+
+
+SHEET_NAME = "formula-sheet.json"          # banks/formula-sheet.json: the exam's formula sheet (design/EASY.md), shipped with the banks
+_sheet = {"mtime": None, "rows": {}}
+
+
+def sheet():
+    """formula id -> {"id", "group", "tex"}, from banks/formula-sheet.json; re-read when it changes; {} without one."""
+    path = os.path.join(BANKS, SHEET_NAME)
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return {}
+    if _sheet["mtime"] != mtime:
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            _sheet["rows"] = {r["id"]: {"id": r["id"], "group": g["name"], "tex": r["tex"]} for g in data["groups"] for r in g["rows"]}
+        except Exception as e:  # noqa: BLE001
+            print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
+        _sheet["mtime"] = mtime
+    return _sheet["rows"]
+
+
+def formulas(code, part):
+    """sugar mode's formula card: the sheet rows `part` names, in that order; unknown ids skipped (stderr)."""
+    rows, out = sheet(), []
+    for i in part or []:
+        if i in rows:
+            out.append(rows[i])
+        else:
+            print(f"{code}: part {i} is not on the formula sheet", file=sys.stderr)
+    return out
 
 
 def problems():
@@ -162,14 +198,24 @@ def max_tries(p):
     return 1 if p.get("type") == "mc" and len(shown(p)) == 2 else MAX_TRIES
 
 
-# ---------------- modes (design/EASY.md): easy is the default; hard = the cookie stem-mode=hard (code box: ADMIN_<code>) ----------------
+# ---------------- modes (design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
+# Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet (cookies set before the rename still work).
+SUGAR_KEYS = ("title", "tip", "part", "key", "slip", "narration")
+
+
 def mode_of(cookie_header):
     jar = http.cookies.SimpleCookie()
     try:
         jar.load(cookie_header or "")
     except http.cookies.CookieError:
         pass
-    return "hard" if "stem-mode" in jar and jar["stem-mode"].value == "hard" else "easy"
+    return "diet" if "stem-mode" in jar and jar["stem-mode"].value in ("diet", "hard") else "sugar"
+
+
+def sugar(p):
+    """the problem's saccharine layer (schema: one "saccharine" block; flat tip/part/key/slip are read until the banks move)."""
+    s = p.get("saccharine")
+    return s if isinstance(s, dict) else {k: p[k] for k in SUGAR_KEYS if k in p and k != "title"}
 
 
 def locks(p):
@@ -177,28 +223,86 @@ def locks(p):
 
 
 def hidden(p, mode):
-    """easy mode leaves out a question whose answer is "None of these" (Tony, Oct 3)."""
+    """sugar mode leaves out a question whose answer is "None of these" (Tony, Oct 3), and every one the bank prunes
+    (saccharine.hide: main kept the easiest 25 of P2X's 100, all topics)."""
+    if mode != "sugar":
+        return False
     lk = locks(p)
-    return mode == "easy" and bool(lk) and rights(p) <= lk
+    sg = sugar(p)
+    return bool(sg.get("hide")) or (bool(lk) and rights(p) <= lk and not sg.get("split"))   # split rows answer for themselves
+
+
+# ---- sugar split (Tony, Oct 3: "sugar = no choose-all"): a choose-all becomes one True/False question per row, in its place ----
+INSTR = re.compile(r"^\s*(tap a row|mark every row)", re.I)       # the parent's how-to-tick paragraph: meaningless for one row
+G_LINE = re.compile(r"Use \$g\s*=[^$]*\$\.?")
+CODE_RE = re.compile(r"^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$")
+_subs = {"sig": None, "map": {}}
+
+
+def subs():
+    """sub code -> (parent, row) for every saccharine.split row; rebuilt when the banks change."""
+    idx = _index()
+    if _subs["sig"] != idx["sig"]:
+        _subs["map"] = {r["sub"]: (p, r) for p in idx["by_code"].values() for r in (sugar(p).get("split") or [])
+                        if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))}
+        _subs["sig"] = idx["sig"]
+    return _subs["map"]
+
+
+def sub_problem(parent, row):
+    """one row of a split choose-all as its own 2-choice question (1 try): the parent's figures and text, then the row's stem."""
+    sg, right = sugar(parent), "t" if str(row.get("answer")).lower() == "true" else "f"
+    body, g = [], None
+    for b in parent.get("body", []):
+        md = b.get("md") if b.get("type") == "text" else None
+        text = "\n".join(md) if isinstance(md, list) else md
+        if text is not None and INSTR.match(text):
+            m = G_LINE.search(text)
+            g = m.group(0) if m else g
+            continue
+        body.append(b)
+    body.append({"type": "text", "md": row.get("stem", "") + ("\n\n" + g if g else "")})
+    wrong = "f" if right == "t" else "t"
+    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"),
+             "slip": {wrong: row.get("slip")} if row.get("slip") else {}, "narration": row.get("narration")}
+    return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
+            "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
+            "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],
+            "saccharine": {k: v for k, v in layer.items() if v}}
+
+
+def lookup(code, mode):
+    """a problem by code; in sugar a split row's sub code too (its parent not pruned). None when there's no such thing."""
+    p = problems().get(code)
+    if p is not None:
+        return p
+    hit = subs().get(code) if mode == "sugar" else None
+    return sub_problem(*hit) if hit and not hidden(hit[0], mode) else None
 
 
 def view(p, mode):
     """The problem as a mode serves and grades it. Both modes (Tony, Oct 3): "None of these" is gone; an mc that had it becomes
-    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Easy also drops prove mode
-    (fix boxes). The try count stays the authored list's. A problem with neither is returned as is."""
-    if mode == "hard" and "tip" in p:                         # the "what to do" line on twisted questions: easy only
-        p = {k: v for k, v in p.items() if k != "tip"}
+    tick-every-true-one (pick all), and None as the key is the empty set (submit with nothing ticked). Prove mode (the X + typed fix
+    boxes) is gone in both: a false row is simply left blank. Sugar also shows its saccharine title, tip and formula card. The try count stays the authored list's. The layer's key,
+    slip and narration never travel with the problem (/explain and /narrate read them from problems())."""
+    sg = sugar(p)
+    p = {k: v for k, v in p.items() if k not in SUGAR_KEYS[1:] and k != "saccharine"}
+    if mode == "sugar":
+        p.update({k: v for k, v in (("title", sg.get("title")), ("tip", sg.get("tip"))) if v})
+        if sg.get("key"):
+            p["wish"] = True                                  # Cluck can answer this one (/explain); the key itself stays here
+        if sg.get("part"):
+            p["formulas"] = formulas(p["code"], sg["part"])
     if p.get("type") != "mc":
         return p
     lk = locks(p)
-    if not lk and (mode == "hard" or "fix" not in p):
+    if not lk and "fix" not in p:
         return p
     q = dict(p, choices=[c for c in shown(p) if not c.get("lock")], tries=max_tries(p))
     if lk:
         q.update(pick="all", correct=sorted(rights(p) - lk), wrong=[w for w in p.get("wrong", []) if w.get("choice") not in lk])
         q.setdefault("miss", NONE_MISS)
-    if mode == "easy":
-        q.pop("fix", None)
+    q.pop("fix", None)                                        # no prove mode in either mode (Tony, Oct 3: "kill off the red x and the input")
     return q
 
 
@@ -498,7 +602,7 @@ def mark(p, sid):
     return {"x": x, "done": done} if x or done != "open" else None
 
 
-def bank_payload(code, sid, mode="easy"):
+def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md)."""
     all_banks = banks()
@@ -509,7 +613,13 @@ def bank_payload(code, sid, mode="easy"):
     if code not in all_banks:
         return None
     by_code = problems()
-    ps = [view(by_code[c], mode) for c in all_banks[code] if c in by_code and not hidden(by_code[c], mode)]
+    ps = []
+    for c in all_banks[code]:
+        p = by_code.get(c)
+        if p is None or hidden(p, mode):
+            continue
+        rows = sugar(p).get("split") if mode == "sugar" else None
+        ps += [view(sub_problem(p, r), mode) for r in rows if isinstance(r, dict) and CODE_RE.match(str(r.get("sub", "")))] if rows else [view(p, mode)]
     marks = {p["code"]: m for p in ps for m in [mark(p, sid)] if m}
     with _tries_lock:
         _load_tries()
@@ -661,6 +771,131 @@ def new_sid(cookie_header):
     return sid, f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
 
 
+# ---------------- Cluck the genie (design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
+# The smart part is the presolved `key` (+ `slip`, `part`) written in the brain; the model only says it in Cluck's voice.
+# OpenRouter, zero data retention: provider.zdr + data_collection deny, so a request that can't route privately fails instead.
+OPENROUTER_BASE = os.environ.get("OPENROUTER_BASE", "https://openrouter.ai/api/v1").rstrip("/")
+OPENROUTER_MODELS = [m for m in os.environ.get("OPENROUTER_MODELS", "openai/gpt-5.6-luna,z-ai/glm-5.3-flash,deepseek/deepseek-v4-flash").split(",") if m.strip()]
+AUTO_PER_HOUR, ANY_PER_HOUR = 5, 40          # Tony: 5 questions an hour fire on the first wrong answer; past that, the student asks
+_asked = {}                                  # sid -> [(time, auto)]
+_asked_lock = threading.Lock()
+CLUCK_GENIE = """You are Cluck: a duck who was a CS professor for 30 years until a botched genie wish left him a duck AND the genie of a lamp shaped like a rubber duck. You grant exactly one wish per wrong answer: the solution.
+Voice: theatrical genie, QUACK as punctuation, exactly one terrible pun per answer (physics or duck puns: "orbit-trary", "quack-celeration", "down-right egg-cellent"). Warm. Never mean, never sarcastic about the student.
+Open with one genie line, like "POOF! You rubbed the lamp wrong, but a wish is a wish." Then the solution.
+You are given the correct solution (KEY) and the slip behind the student's pick (SLIP). Paraphrase them. Never change a number, sign, unit, or the answer. Never add physics that is not in the KEY.
+Format: plain text and LaTeX only. No markdown at all: no **, no *, no #, no bullet symbols, no code. Math in $...$.
+Shape: one genie line. A "Use:" line with the master formula. If the KEY has a table, copy it exactly with its aligned columns. Then the KEY's work lines, the answer last. A "Your pick:" line naming the slip. One pun sign-off.
+Short words. Short lines. Nothing the student must read twice.
+Audience: community college students in Fresno taking physics as a general requirement, mostly biology and computer science majors, many reading English as a second language. Plain everyday words; explain any physics word the first time."""
+
+
+def explain_allowed(sid, auto, now=None):
+    """the hourly caps: auto (first wrong answer) at most AUTO_PER_HOUR, anything at most ANY_PER_HOUR. Records the ask when allowed."""
+    now = now if now is not None else time.time()
+    with _asked_lock:
+        log = [(t, a) for t, a in _asked.get(sid, []) if now - t < 3600]
+        if len(log) >= ANY_PER_HOUR or (auto and sum(a for _, a in log) >= AUTO_PER_HOUR):
+            _asked[sid] = log
+            return False
+        _asked[sid] = log + [(now, bool(auto))]
+        return True
+
+
+def explain_prompt(p, answer):
+    """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
+    text = "\n".join(b["md"] for b in p.get("body", []) if b.get("type") == "text")
+    figs = "\n".join("Figure: " + b["alt"] for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
+    lines = [f"QUESTION:\n{text}", figs]
+    if p.get("type") == "mc":
+        lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
+    sg, picked = sugar(p), answer if isinstance(answer, list) else [answer]
+    slips = [(sg.get("slip") or {}).get(str(a)) for a in picked]
+    lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}", f"KEY:\n{sg['key']}",
+              "SLIP: " + (" ".join(x for x in slips if x) or "(none written; name the likely slip from the KEY)")]
+    fs = formulas(p.get("code"), sg.get("part"))
+    if fs:
+        lines.append("SHEET FORMULAS: " + "; ".join(f["tex"] for f in fs))
+    return "\n\n".join(x for x in lines if x)
+
+
+class Plain:
+    """streamed text without markdown: drops ** and __ anywhere, and #, -, * markers at a line start (models slip)"""
+    def __init__(self):
+        self.start, self.hold = True, ""
+
+    def feed(self, chunk):
+        t, out, i = self.hold + chunk.replace("**", "").replace("__", ""), [], 0
+        self.hold = ""
+        while i < len(t):
+            if self.start:
+                rest = t[i:]
+                if re.fullmatch(r"#+|[-*]", rest):          # a marker cut by the chunk edge: wait for the next chunk
+                    self.hold = rest
+                    break
+                m = re.match(r"#+\s+|[-*]\s+", rest)
+                if m:
+                    i += len(m.group(0))
+                    continue
+            out.append(t[i])
+            self.start = t[i] == "\n"
+            i += 1
+        return "".join(out)
+
+
+def explain_stream(p, answer, key):
+    """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection."""
+    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": 450, "temperature": 0.7,
+                       "provider": {"zdr": True, "data_collection": "deny"},
+                       "messages": [{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}]}).encode()
+    req = urllib.request.Request(OPENROUTER_BASE + "/chat/completions", data=body, method="POST",
+                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "X-Title": "stem-stuff"})
+    plain = Plain()
+    with urllib.request.urlopen(req, timeout=25) as r:
+        for raw in r:
+            line = raw.decode("utf-8", "replace").strip()
+            if not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            try:
+                delta = json.loads(data)["choices"][0]["delta"].get("content") or ""
+            except (ValueError, KeyError, IndexError, TypeError):
+                continue
+            text = plain.feed(delta)
+            if text:
+                yield text
+
+
+def explain(cookie_header, body):
+    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    sid, cookie = new_sid(cookie_header)
+    head = {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no"}
+    if cookie:
+        head["Set-Cookie"] = cookie
+    try:
+        b = json.loads(body) if 0 < len(body) <= 4096 else None
+    except (ValueError, UnicodeDecodeError):
+        b = None
+    mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
+    p = lookup(str(b.get("code", "")), mode) if isinstance(b, dict) else None
+    if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key"):
+        return 404, head, iter([b""])
+    if not key:
+        return 503, head, iter([b""])
+    if not explain_allowed(sid, bool(b.get("auto"))):
+        return 429, head, iter([b""])
+
+    def gen():
+        try:
+            for t in explain_stream(p, b.get("answer"), key):
+                yield t.encode()
+        except Exception as e:  # noqa: BLE001
+            print(f"explain {p['code']}: {e}", file=sys.stderr)
+            yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
+    return 200, head, gen()
+
+
 def _json(status, obj, cookie):
     head = {"Content-Type": "application/json", "Cache-Control": "no-store"}
     if cookie:
@@ -673,7 +908,7 @@ def dispatch(method, path, cookie_header="", body=b""):
     path is not an API path (a static file)."""
     path = path.split("?")[0]
     if method == "POST":
-        if path != "/check":
+        if path not in ("/check", "/narrate"):
             return None
         sid, cookie = new_sid(cookie_header)
         try:
@@ -682,7 +917,11 @@ def dispatch(method, path, cookie_header="", body=b""):
             b = None
         if not isinstance(b, dict):
             return _json(400, {"verdict": "invalid"}, cookie)
-        p, mode = problems().get(str(b.get("code", ""))), mode_of(cookie_header)
+        mode = mode_of(cookie_header)
+        p = lookup(str(b.get("code", "")), mode)
+        if path == "/narrate":                       # the pre-written voiceover (saccharine.narration): sugar mode only
+            text = sugar(p).get("narration") if p is not None and mode == "sugar" and not hidden(p, mode) else None
+            return _json(200, {"text": text or ""}, cookie)   # none written: empty, not an error
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
         return _json(200, grade(view(p, mode), sid, b), cookie)
@@ -696,13 +935,13 @@ def dispatch(method, path, cookie_header="", body=b""):
         if b is None and m.group(1) != "last":
             return _json(404, {"error": "not found"}, cookie)
         return _json(200, b, cookie)                 # no last bank: null, a normal answer (no red console line)
-    p = problems().get(m.group(1))
+    p = lookup(m.group(1), mode)
     if p is None:
         return _json(404, {"error": "not found"}, cookie)
     if m.re is STATE_PATH:
         return _json(200, state(view(p, mode), sid), cookie)
     if hidden(p, mode):
-        return _json(404, {"error": "not in easy mode"}, cookie)
+        return _json(404, {"error": "not in sugar mode"}, cookie)
     out = _json(200, public(view(p, mode), sid), cookie)
     seen(p["code"], sid)
     return out
@@ -764,7 +1003,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             n = min(int(self.headers.get("Content-Length") or 0), 4097)
         except ValueError:
             n = 0
-        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), self.rfile.read(n) if n > 0 else b"")
+        body = self.rfile.read(n) if n > 0 else b""
+        if self.path.split("?")[0] == "/explain":
+            status, headers, chunks = explain(self.headers.get("Cookie", ""), body)
+            self.send_response(status)
+            for k, v in headers.items():
+                if k != "Cache-Control":
+                    self.send_header(k, v)
+            self.end_headers()
+            for c in chunks:                              # HTTP/1.0: no length, the close ends it; each chunk goes out as it comes
+                self.wfile.write(c)
+                self.wfile.flush()
+            return
+        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), body)
         if res:
             self.reply(res)
         else:
