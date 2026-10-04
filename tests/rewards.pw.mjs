@@ -144,7 +144,7 @@ try {
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
     assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
-    assert.match(await d.textContent("#origHd"), /Original: Practice Exam 2, Question 7/);
+    assert.match(await d.textContent("#origHd"), /Original: Practice Exam 2, Q7/);
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
     await d.click("#origHd");
     assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");

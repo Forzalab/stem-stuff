@@ -1155,7 +1155,7 @@ function origRender() {
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
-  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Question ${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
+  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Q${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
     <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Worked solution</p><ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek at the last line</button>' : ""}
     <p class="orig-note" hidden>Peeked: this one pays 2 XP.</p></div>`;

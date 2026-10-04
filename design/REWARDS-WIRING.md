@@ -4,6 +4,22 @@ Build guide for wiring the sugar reward layer (`design/rewards/`: engine.js, fx.
 real app. Spec: brain `projects/calc/topics/sugar-rewards.md` (main owns the bank). Mock research: `design/REWARDS.md`.
 Line numbers are as of commit 0bfcae8.
 
+## As built (phase 2, Oct 4; Tony took every default: snack order A + skip, Quiz Pop dark, HUD in flow, Q2/Q3 full XP, T/F rows 6-8 XP p 0.15)
+
+| piece | where |
+|---|---|
+| snacks sugar only, diet byte-identical | serve.py `hidden` (diet: `sugar_only`), `lookup` (diet: None), `snacks_placed`; mode.mjs `hidden` |
+| snack view: `snack`, `before`, `original` | serve.py `view` + `PUBLIC`; mode.mjs `view` (uploads); SCHEMA.md |
+| main's v3 split rows (own 5 choices, 2 tries) | serve.py `sub_problem` (before: all 56 P2X rows showed as True/False) |
+| order: each snack right before its real; Next skips a snack while cruising | shuffle.mjs `glue` after `mastery`; nav.js `go` + `window.stemSkipSnack` |
+| engine | rewards/engine.js (`use(bank)`, per-bank `stem-rw:<key>`, `paid`, 3 s dwell, `skipSnack`, `origLevel`) |
+| FX + skin | rewards/fx.js, rewards/rewards.css (`.rw-`/`.fx-` only, `--rw-*` tokens), rewards/icons.js (tools/rw_icons.py) |
+| hook | app.js `record()` → `rewardTry` → `rewardGo` → `rewardShow`; multi: `rewardMulti`; HUD `rwSync` (`#rwHud` before `#qlist`) |
+| original panel | app.js `origRender` / `origOpen` / `origPlace`; app.css `.orig` (STYLE look). Desktop: in the pad column, the pad hidden while it is open (one header button instead of the planned two-button toggle); phone: folded card on top of `#freezeIn` |
+| tests | test_serve `test_sugar_only_snacks` + v3 rows; mode.test.mjs; shuffle.test `glue`; rewards.test.mjs; rewards.pw.mjs; style.test scope; offline.test precache; test_rewards_assets.py |
+
+Known, not fixed here: 13 P2X tips are over SCHEMA's 160 chars (main's content); `choose-all-spam.pw` prove steps fail on main too (prove mode is gone).
+
 ## 0. Urgent, whatever Tony answers (diet is not safe today)
 
 - The brain's BANK_P2X.json already holds the **34 snacks** (134 problems, every snack has `sugar_only: true`, `saccharine.snack: true`).
