@@ -318,6 +318,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
+.tip { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }   /* easy: the "what to do" line on a twisted question (design/EASY.md) */
 .how code { color: var(--ink); }
 /* multi: one row per part (design/mockups/multi-prompts.html). Phone: "a)" and its sub-question, its own box under the text (aligned to
    the text). From 40rem: marker, text and box on one line, box at a fixed 16rem. Each box holds its own arrow (hidden while the box is empty, like the code box's) and

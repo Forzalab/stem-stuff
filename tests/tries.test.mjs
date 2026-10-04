@@ -79,9 +79,10 @@ test("pick all: the set must match; any order", () => {
   assert.equal(maxTries(pickAll("T_a0")), 2);
   assert.equal(gradeLocal(pickAll("T_a1"), { choices: ["c", "a"] }).verdict, "correct");
 });
-test("pick all: empty, unknown, duplicate, not an array, locked + another are invalid (no try spent)", () => {
+test("pick all: unknown, duplicate, not an array, locked + another are invalid (no try spent); empty = none true, a real try", () => {
   const p = pickAll("T_a2");
-  for (const b of [{ choices: [] }, { choices: ["z"] }, { choices: ["a", "a"] }, { choices: "a" }, { choice: "a" }, { choices: ["e", "a"] }])
+  assert.equal(gradeLocal(pickAll("T_a2e"), { choices: [] }).error, "incomplete");   // design/EASY.md: nothing ticked is an answer
+  for (const b of [{ choices: ["z"] }, { choices: ["a", "a"] }, { choices: "a" }, { choice: "a" }, { choices: ["e", "a"] }])
     assert.deepEqual(gradeLocal(p, b), { verdict: "invalid", triesLeft: 2 }, JSON.stringify(b));
   assert.equal(gradeLocal(p, { choices: ["e"] }).struck, "e");                 // "none" alone is a real (wrong) answer
 });

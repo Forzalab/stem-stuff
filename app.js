@@ -3,6 +3,7 @@
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
+import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -140,7 +141,7 @@ async function net(url, init = {}) {
 const localState = new Map();
 async function check(code, answer) {
   const off = window.stemOffline;
-  if (off && off.has(code)) return gradeLocal(off.get(code), answer);
+  if (off && off.has(code)) return gradeLocal(modeView(off.get(code), modeOf()), answer);   // an upload: the same mode view the server uses
   try {
     const r = await net("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
                                      body: JSON.stringify({ code, ...answer }) });
@@ -149,17 +150,24 @@ async function check(code, answer) {
   return { verdict: "pending" };
 }
 /* mirror of serve.py grade(): keep the two in step */
-const maxTries = p => p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES;   // serve.py max_tries(): 2-choice mc = ONE try, else two
+const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
 const FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math.";   // serve.py FIX_NUDGE
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
   if (/^\s*(dne|does not exist)\s*$/i.test(t)) return "dne";
+  if (u.type === "num") t = numText(t);
   const v = u.var || "x", c = math.compile(t.replace(/ln\s*\(/gi, "log(").replace(/π/g, "pi").replace(/∞/g, "Infinity"));
   const at = x => { let r = c.evaluate({ [v]: x }); if (typeof r !== "number") r = math.number(r); if (Number.isNaN(r)) throw 0; return r; };
   return u.type === "expr" ? u.points.map(at) : at(undefined);
 }
+/* serve.py numtext(): 1.07x10^14, 1.07 X 10^14, 1.07×10^14, 1.07·10^14, 1.07 10^14 -> 1.07*10^14; 107 000 -> 107000 */
+const numText = t => String(t).trim().replace(/(\d)\s*(?:[x×·*]\s*)?10\s*\^/gi, "$1*10^").replace(/(?<=\d) (?=\d{3}(?!\d))/g, "");
+/* serve.py sigfig() / figures(): hard-mode fix boxes, the key rounded to n figures, then +-1 in the last */
+const figures = u => Number.isInteger(u.sf) && u.sf > 0 ? u.sf : +((String(u.how || "").match(/(\d+)\s*sig/i) || [])[1] || 4);
+const sigfig = (a, b, n) => typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
+  && (u => Math.abs(a - Math.round(b / u) * u) <= u * (1 + 1e-9))(10 ** (Math.floor(Math.log10(Math.abs(b))) - (n - 1)));
 const same = (a, b, tol) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
   : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
@@ -170,6 +178,7 @@ const sig4 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.len
 function unitOk(u, g) {
   if (u.type === "text") return [u.answer, ...(u.accept || [])].map(squash).includes(g);
   const a = u.answer === "dne" ? "dne" : unitSig(u, u.answer);
+  if (u.fixbox && !Array.isArray(g)) return same(g, a, u.tol ?? 1e-6) || sigfig(g, a, figures(u));
   return same(g, a, u.tol ?? 1e-6) || sig4(g, a);
 }
 function unitHit(u, t, g) {                               // re entries first, then match
@@ -190,7 +199,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     /* prove mode (key.fix): + fixes { id: text } for exactly the un-ticked, unlocked rows; a right set then grades each fix like a part */
     const ch = answer.choices, sh = shown(key), right = [].concat(key.correct), lk = sh.filter(c => c.lock).map(c => c.id), fx = answer.fixes;
     const need = key.fix && Array.isArray(ch) ? sh.filter(c => !c.lock && !ch.includes(c.id)).map(c => c.id) : [];
-    if (!Array.isArray(ch) || !ch.length || ch.some(x => !sh.some(c => c.id === x)) || new Set(ch).size !== ch.length
+    if (!Array.isArray(ch) || ch.some(x => !sh.some(c => c.id === x)) || new Set(ch).size !== ch.length
         || (ch.length > 1 && ch.some(x => lk.includes(x)))
         || (key.fix && (!fx || typeof fx !== "object" || Array.isArray(fx) || Object.keys(fx).length !== need.length
             || need.some(id => typeof fx[id] !== "string" || !fx[id].trim())))) return { verdict: "invalid", triesLeft: left() };
@@ -202,7 +211,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
       hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: key.miss };
       if (key.fix) sig = [sig, ...need.map(id => squash(fx[id]).slice(0, 200))];
     } else if (key.fix) {                                 // unreadable fix = invalid; else the first wrong fix in authored order
-      const us = need.map(id => { const e = w.find(x => x.choice === id); return e && e.fix ? { id, u: { ...key.fix, ...e.fix }, t: fx[id].slice(0, 200) } : null; }).filter(Boolean);
+      const us = need.map(id => { const e = w.find(x => x.choice === id); return e && e.fix ? { id, u: { ...key.fix, ...e.fix, fixbox: true }, t: fx[id].slice(0, 200) } : null; }).filter(Boolean);
       try { for (const x of us) x.g = unitSig(x.u, x.t); } catch { return { verdict: "invalid", triesLeft: left() }; }
       sig = [sig, ...us.map(x => x.g)];
       const bad = us.find(x => { try { return !unitOk(x.u, x.g); } catch { return true; } });
@@ -306,11 +315,16 @@ codePaste.addEventListener("click", async () => {
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
   sugHide();
+  const mp = modePrefix(codeIn.value);                                    // ADMIN_<code> = hard mode, UNADMIN_<code> = easy (design/EASY.md)
+  if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
   if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
   codeIn.blur();
-  if (n.prefix === "BANK") openBank(n.code); else load(n.code);
+  const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "hard" ? "Hard mode on." : "Easy mode on."); });
 });
+let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
+window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c) && modeHidden(o.get(c), modeOf())); };   // nav.js: uploads
 /* upload = offline.js reads ONE problems.json (every problem in it) into memory; that store also answers fetch("p/<CODE>.json").
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
 $("#upload").addEventListener("click", async () => {
@@ -364,7 +378,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   bankChanged();
   if (!go) return true;
   const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
-  if (S && S.code === to) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
+  if (S && S.code === to && !modeFlip) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
   return true;
 }
 /* ================= problem state ================= */
@@ -374,7 +388,7 @@ let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, 
    once; p/CODE.json still goes out in the background (the server's resume pointer for this browser). Else the network
    (offline.js answers it for an uploaded file). design/NAV.md */
 async function getProblem(code) {
-  const p = bank && bank.get.get(code);
+  const p = !modeFlip && bank && bank.get.get(code);                      // a mode flip: the bank in memory is the old mode's view
   if (p) { net(`p/${code}.json`).then(r => r.text()).catch(() => {}); return structuredClone(p); }   // a copy, like a fresh fetch
   const r = await net(`p/${code}.json`);
   if (r.ok) return r.json();
@@ -385,7 +399,13 @@ async function load(code) {
   if (!CODE_RE.test(code)) return;
   let prob;
   retryLoad.hidden = true;
-  try { prob = await getProblem(code); }
+  try {
+    prob = await getProblem(code);
+    if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
+      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is hard-mode only.`; return; }
+      prob = modeView(prob, modeOf());
+    }
+  }
   catch (e) {
     $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
@@ -413,6 +433,7 @@ function render() {
   $("#freeze").classList.remove("open");
   $("#pcode").textContent = code;
   const blocks = $("#blocks"); blocks.innerHTML = "";
+  if (prob.tip) { const t = document.createElement("p"); t.className = "tip"; t.innerHTML = md(prob.tip, true); blocks.append(t); }   // easy: what to do, one line (design/EASY.md)
   for (const b of prob.body) {
     if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); blocks.append(d); }
     else if (b.type === "graph") {
@@ -456,6 +477,7 @@ function renderQuestion() {
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
+    if (all(p)) syncTicks();                                               // nothing ticked can already be checked (prove mode: not yet)
     fitChoices();
   } else if (p.type === "multi") {
     /* one row per part: "a)", its sub-question (if it has one), its own box with its own arrow inside (the freeform pattern).
@@ -482,7 +504,7 @@ function renderQuestion() {
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-const howLine = p => { const h = p.how || (all(p) ? "Choose all that apply." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+const howLine = p => { const h = p.how || (all(p) ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -629,7 +651,7 @@ function tick(o, m = "on") {
 function syncTicks() {
   S.selected = ticked().map(x => x.dataset.id);
   const proved = !S.prob.fix || opts().every(o => o.hasAttribute("data-lock") || markOf(o) === "on" || (markOf(o) === "x" && fixOf(o).querySelector("input").value.trim()));
-  const go = $("#mcGo"); if (go) go.disabled = !S.selected.length || !proved || S.finished;
+  const go = $("#mcGo"); if (go) go.disabled = !proved || S.finished;      // nothing ticked = "none of them is true": a real answer
 }
 function strike(o) {                                        // a wrong choice: unticked, struck through, disabled (prove mode: X'd, its box live)
   if (!o) return;
@@ -663,7 +685,7 @@ async function submitMC() {
    edits the set); the struck row (if any) is unticked + disabled; a wrong fix turns its box red.
    Copy payload: a = the ticked choices' text, c / l = their ids / letters; prove mode: a = { tick, fix: { letter: text } } */
 async function submitAll() {
-  const on = ticked(), go = $("#mcGo"); if (!on.length || !go || go.disabled || S.finished || busy) return;
+  const on = ticked(), go = $("#mcGo"); if (!go || go.disabled || S.finished || busy) return;
   const mine = S, c = on.map(o => o.dataset.id), xs = S.prob.fix ? opts().filter(o => markOf(o) === "x" && fixOf(o)) : [];
   const f = Object.fromEntries(xs.map(o => [o.dataset.id, fixOf(o).querySelector("input").value.trim()]));
   busy = true;
@@ -829,7 +851,22 @@ function saveDone(r) {
   if (r.verdict === "wrong") u.hint = r.hint || null;                  // the hint for the student's own wrong answer
   if (typeof r.gen === "number") u.gen = r.gen;
   if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
-  st.donePut(S.code, wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice()));
+  const rec = wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice());
+  st.donePut(S.code, rec);
+  if (rec.done === "correct") doneExit(S);
+}
+/* all correct: nothing is left to type here, so after a beat to see the ticks the pad page and the keyboard step away and the
+   question row (Next) comes back into view (Tony, Oct 3). Out of tries keeps the pad: the student may want to find the mistake. */
+function doneExit(mine) {
+  setTimeout(() => {
+    if (S !== mine) return;                                                      // moved on already
+    const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur();
+    if (mtOpen) closeMT(false);
+    if (swapOn) setSwap(false);
+    root.classList.remove("dock-away", "bar-off");
+    if (root.classList.contains("qnav-on") && root.classList.contains("dock-bottom"))
+      scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, 900);
 }
 /* upload mode: gradeLocal picks up where it was */
 function seedLocal(code, rec, p) {
@@ -1513,8 +1550,10 @@ function fabEnd(e) {
   if (!d.moved) return;
   fabMoved = true;
   const dx = e ? e.clientX - d.x0 : 0, dy = e ? e.clientY - d.y0 : 0, b = fabBounds();
-  const lift = Math.max(0, innerHeight - root.clientHeight);                     // the URL bar's height while it is slid away (else 0)
-  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, d.r.top + dy - lift));
+  /* the drop, measured against the bar on screen (both rects are visual): no guess at how tall a slid-away URL bar is. Firefox for
+     Android moves fixed-bottom things with its bottom toolbar (bug 1880375), Chrome by resizing; innerHeight means different things */
+  const bar = dockRoom() ? dock.getBoundingClientRect().top : innerHeight, gap = bar - (d.r.bottom + dy);
+  const cx = d.r.left + d.r.width / 2 + dx, top = Math.min(b.max, Math.max(b.min, root.clientHeight - dockRoom() - gap - b.h));
   mtMem.fab = { side: cx < innerWidth / 2 ? "l" : "r", y: b.max > b.min ? (top - b.min) / (b.max - b.min) : 1 };
   mtMem.fabMoved = 1; mtSave();
   fabPlace();                                                                     // keep the drop spot: no step-off
