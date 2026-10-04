@@ -19,6 +19,7 @@ toast, 3-reel slots, LEVEL UP / BONUS / legend bursts). State: localStorage `ste
 ## Guardrails
 No money, no buying, no paid spins, no fake near misses, earned XP never taken away. Every spin needs a first-try correct
 answer held for 1 s+ (spec: 3 s in the app).
+Refs (Tony, Oct 3): nothing from Envato or Shutterstock refs (no trace, no copy, no look-alike). Every other ref he sent is OK to use.
 
 ## Next
 Wire into app.js `record()` (one funnel for every graded try), sugar only (`modeOf()`), snacks = `saccharine.snack` from main's bank.
