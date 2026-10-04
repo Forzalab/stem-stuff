@@ -384,7 +384,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }   /* still playing, out of sight */
 .rot .vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
 .rot.drag .vid { box-shadow: var(--shadow-4); }
-.rot .vid iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }   /* the whole duo drags */
+.rot .vid iframe { position: absolute; left: -18%; top: -18%; width: 136%; height: 136%; border: 0; pointer-events: none; }   /* the whole duo drags; the oversize crops YouTube's title strip and logo */
+.rot.parked { transform: translate(-300vw, 0) !important; pointer-events: none; }   /* warmed, out of sight */
 .rot .ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }
 .rot:hover .ctl, .rot.show .ctl, .rot:focus-within .ctl { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .rot:hover:not(.show) .ctl { opacity: 0; pointer-events: none; } }

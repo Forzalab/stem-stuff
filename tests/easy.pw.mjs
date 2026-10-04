@@ -77,6 +77,13 @@ try {
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
 
+  await step("sugar start page: the players warm up off screen (no question yet); no YouTube controls, no keyboard", async () => {
+    await page.waitForSelector("#rot.parked", { state: "attached", timeout: 6000 });
+    assert.equal(await page.$eval("#rot", e => e.inert && e.getAttribute("aria-hidden")), "true");
+    const s = await page.$eval("#rot iframe", f => f.src);
+    for (const k of ["controls=0", "disablekb=1", "fs=0", "mute=1", "autoplay=1", "playsinline=1"]) assert.ok(s.includes(k), k);
+  });
+
   await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
     await typeCode(page, "BANK_EZ12");
     await page.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
@@ -101,6 +108,22 @@ try {
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
+  });
+
+  await step("sugar: drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+    const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
+    const vw = await page.evaluate(() => [innerWidth, innerHeight]);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+    await page.mouse.move(60, vw[1] - 60, { steps: 8 }); await page.mouse.up();
+    await page.waitForTimeout(400);
+    const st = await page.$eval("#rot", e => ({ b: e.style.bottom, l: e.style.left, t: e.style.top, rect: e.getBoundingClientRect().toJSON() }));
+    assert.ok(st.b.endsWith("px") && st.t === "auto" && st.l.endsWith("px"), JSON.stringify(st));
+    assert.ok(st.rect.bottom > vw[1] / 2 && st.rect.left < vw[0] / 2, "not in the bottom left: " + JSON.stringify(st.rect));
+    assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
+    await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForTimeout(100);
+    assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
+    const code = await page.textContent("#pcode");                    // back to the step-off default for the steps below
+    await page.evaluate(() => { localStorage.removeItem("stem-rot"); localStorage.removeItem("stem-rot-pick"); }); await page.reload(); await opened(page, code);
   });
 
   await step("sugar: a split row is a True/False question, one try, its own slip", async () => {
@@ -168,7 +191,7 @@ try {
     assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
-    assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode");
+    assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$$eval("#q .fix", f => f.length), 0, "fix boxes in diet mode (prove mode is gone)");

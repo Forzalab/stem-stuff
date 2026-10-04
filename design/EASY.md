@@ -35,6 +35,10 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   The first wrong answer of a question fires it in the background (at most 5 questions an hour: localStorage `stem-wish` + the
   server's per-browser count); past that, "Ask Cluck" (40 an hour in all). A question without a key, or no API key: the block stays hidden.
   The text is read aloud at volume 0.35 (`speechSynthesis`, `speak.mjs`), muted per browser (`stem-voice=off`), stopped on a new question.
+- Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
+  corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
+  the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides
+  Firefox Android's sliding toolbar). Warmed off screen only on the start page or a question with a layer.
 
 ## Diet only (Tony's own)
 - Prove mode (X + typed fix boxes) is gone in BOTH modes (Tony, Oct 3: "kill off the red x and the input mode, for diet too"). The sig-fig grading below stays for any typed answer that asks for it:
