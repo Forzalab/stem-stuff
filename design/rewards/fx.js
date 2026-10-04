@@ -12,7 +12,7 @@
   const img = (n, cls) => `<img src="icons/${n}.svg" alt="" draggable="false"${cls ? ` class="${cls}"` : ''}>`;
   // animate a node, then remove it; resolves either way
   const run = (n, kf, o) => n.animate(kf, o).finished.catch(() => {}).then(() => n.remove());
-  const EASE = { pop: 'cubic-bezier(.34,1.56,.64,1)', out: 'cubic-bezier(.2,.8,.3,1)' };
+  const EASE = { pop: 'cubic-bezier(.16,1,.3,1)', out: 'cubic-bezier(.2,.8,.3,1)' };
   const popKF = (s, o = 0) => [{ transform: 'scale(1)', opacity: 1 }, { transform: `scale(${s})`, opacity: 1, offset: .4 }, { transform: 'scale(1)', opacity: o || 1 }];
   const enterKF = (from) => [{ transform: `scale(${from})`, opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }];
   const COLORS = ['#ff8a1f', '#ffd36b', '#d63fa8', '#fff3b0', '#ffb347'];
@@ -152,6 +152,7 @@
     const p = ov.el.appendChild(mk('div', 'fx-slots fx-t-' + T,
       `<div class="fx-slots-in"><div class="fx-bulbs">${'<i></i>'.repeat(11)}</div><div class="fx-reels"></div><div class="fx-slabel"></div></div>`));
     p.style.setProperty('--cell', CELL + 'px');
+    if (!calm) p.classList.add('fx-spin');            // marquee bulbs blink only while the reels move
     const lab = p.querySelector('.fx-slabel'), box = p.querySelector('.fx-reels');
     lab.textContent = label;
     const winCls = T === 'legend' ? 'fx-gold' : '';
@@ -166,8 +167,7 @@
       strip.classList.add('spin');
       setTimeout(() => strip.classList.remove('spin'), dur * .7);
       const a = strip.animate([
-        { transform: `translateY(${-(n - 1) * CELL}px)`, easing: 'cubic-bezier(.3,.2,.5,1)' },
-        { transform: `translateY(${16 - CELL}px)`, offset: .84, easing: 'ease-in-out' }, // overshoot = bounce settle
+        { transform: `translateY(${-(n - 1) * CELL}px)`, easing: 'cubic-bezier(.16,1,.3,1)' },
         { transform: `translateY(${-CELL}px)` }
       ], { duration: dur });
       return { strip, a };
@@ -176,6 +176,7 @@
     function land(hold) {
       if (landed) return;
       landed = true;
+      p.classList.remove('fx-spin');
       reels.forEach(r => { r.a && r.a.finish(); r.strip.classList.remove('spin'); });
       p.classList.add('win');
       if (!calm) {

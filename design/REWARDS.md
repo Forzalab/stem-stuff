@@ -23,3 +23,10 @@ Refs (Tony, Oct 3): nothing from Envato or Shutterstock refs (no trace, no copy,
 
 ## Next
 Wire into app.js `record()` (one funnel for every graded try), sugar only (`modeOf()`), snacks = `saccharine.snack` from main's bank.
+
+## Impeccable pass (Oct 3, `npx impeccable detect design/rewards/`: 14 → 0, exit 0)
+Fixed: bounce/overshoot easing → ease-out-expo (reels, card slide, pop); XP bar animates `transform: scaleX` (was `width`);
+contrast (violet chips #6a2fd8→#4b1aa8, CHECK #167f40→#0f5f2f); nested card flattened (one `.board`, solid gold border, dark base);
+every zero-offset colored glow → offset elevation shadow; page halo + grid lines → one vertical gradient; marquee bulbs blink only while reels spin.
+Waived inline (with reason): gradient text on the LEVEL UP title (Tony's ref + spec) and radial halos inside the burst overlay (1.2–2 s only).
+Advisory kept: burst speed lines (spec).

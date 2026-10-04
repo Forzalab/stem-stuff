@@ -120,7 +120,7 @@
     var st = state();
     countUp(st.xp, +gain || 0);
     ui.lvlN.textContent = st.level;
-    ui.bar.style.width = (100 * (st.xp - st.floor) / (st.next - st.floor)) + '%';
+    ui.bar.style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.to.innerHTML = '<b>' + st.toNext + ' XP</b> to LEVEL ' + (st.level + 1);
     if (shownLvl != null && st.level > shownLvl && !reduced()) {
       ui.lvl.classList.remove('rw-pulse'); void ui.lvl.offsetWidth; ui.lvl.classList.add('rw-pulse');
