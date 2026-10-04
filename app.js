@@ -427,6 +427,7 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  rwSync();
   window.stemBrainrot?.sync();
 }
 
@@ -817,7 +818,7 @@ async function submitPart(i) {
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
     else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN, partEls(i).box); }
-    if (mine.parts.every(x => x.shut)) settle();
+    if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
   } finally { busy = false; }
@@ -842,6 +843,7 @@ function record(a, r) {
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
+  rewardTry(a, r);
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------
@@ -1096,6 +1098,67 @@ function voiceSay(t) {
   speechSynthesis.speak(u);
 }
 function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
+
+/* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
+   Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
+   an FX node or a stem-rw key. record() is the one funnel: a first-try correct pays (XP, maybe a drop), a wrong one only halves the
+   streak, silently: no FX, no sound, no words (Cluck, the "one more try" toast and the voice own a wrong answer). State per bank. */
+const RW = () => window.Rewards || null, FXL = () => window.FX || {};
+const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack) && !!RW();
+const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
+const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
+window.stemSkipSnack = () => modeOf() === "sugar" && !!RW() && RW().on() && RW().skipSnack();   // nav.js: Next steps over a snack while cruising
+let rwHud = null;
+function rwSync() {
+  const on = rewardOn();
+  if (on) {
+    RW().use(rwKey());
+    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
+    else RW().render(0);
+  }
+  if (rwHud) rwHud.hidden = !on;
+}
+function rewardTry(a, r) {
+  if (!rewardOn() || (r.verdict !== "correct" && r.verdict !== "wrong")) return;
+  const p = S.prob, multi = p.type === "multi";
+  if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
+  const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
+  rewardGo(S, { correct: r.verdict === "correct", firstTry });
+}
+function rewardMulti(mine) {
+  if (!rewardOn() || S !== mine || !S.solved) return;
+  rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") });
+}
+function rewardGo(mine, o) {
+  const p = mine.prob;
+  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
+    dwellMs: Date.now() - mine.start });
+  if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
+  if (!res.xp) { RW().render(0); return; }                                       // wrong, or a second try: the numbers change, nothing moves
+  requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
+}
+async function rewardShow(mine, res) {
+  const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
+  const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
+  fx.pop && fx.pop(at);
+  fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");
+  const coin = $("#rwCoin"), cr = coin && rwHud && !rwHud.hidden ? coin.getBoundingClientRect() : null;
+  if (cr && cr.width && cr.bottom > 0 && cr.top < innerHeight) { if (fx.coinFly) fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); }
+  else if (fx.float) fx.float(at, `+${res.xp} XP`);                              // the HUD is scrolled away: the XP rises off the answer
+  setTimeout(() => RW().render(res.xp), 450);
+  say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
+  if (!res.drop && !res.burst && !res.streakNote) return;
+  await wait(600);
+  if (res.drop && fx.slots) await fx.slots(res.drop);
+  if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
+  if (res.burst && fx.burst) {
+    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` }
+      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS LEVEL", sub: res.sub || res.line };
+    await fx.burst(res.burst, opt);
+  }
+  const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
+  if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+}
 
 /* ---------- scratchpad + Copy ---------- */
 let mounted = null;      // the box mounted for the open problem; S is replaced on every load, so the old one is kept here

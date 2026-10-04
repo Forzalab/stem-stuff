@@ -108,3 +108,24 @@ test("§5 Keyboard: no new shortcuts (keydown only on the listed elements)", () 
   }
   assert.deepEqual(bad, [], "a new key handler is a new shortcut (STYLE.md §5 Keyboard)");
 });
+
+/* rewards/rewards.css: the sugar reward skin may look like a game, but only on its own nodes (design/REWARDS-WIRING.md §7) */
+test("rewards skin is scoped: every rule styles a .rw-* or .fx-* node, no :root, never the question UI", () => {
+  const css = read("rewards/rewards.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const sels = [], stack = [];
+  let buf = "";
+  for (const ch of css) {
+    if (ch === "{") { const pre = buf.trim(); if (!pre.startsWith("@") && !stack.some(x => /^@keyframes/.test(x))) sels.push(pre); stack.push(pre); buf = ""; }
+    else if (ch === "}") { stack.pop(); buf = ""; }
+    else if (ch === ";") buf = "";
+    else buf += ch;
+  }
+  assert.ok(sels.length > 40, "parsed the rules");
+  const bad = sels.flatMap(s => s.split(",").map(x => x.trim())).filter(x => {
+    const comp = x.split(/\s+|>|\+|~/).filter(Boolean), at = comp.findIndex(c => /\.(rw|fx)-/.test(c));
+    return /:root/.test(x) || /#q\b|\.opt\b|#toast|#fb\b|\.cluck|#wish/.test(x) || at < 0 || comp.slice(at + 1).some(c => /^[.#]/.test(c) && !/\.(rw|fx)-/.test(c));
+  });
+  assert.deepEqual(bad, [], "rewards.css styles only .rw-* / .fx-* nodes");
+  const tokens = [...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]).filter(t => !/^--(rw|fx)-/.test(t) && !["--p", "--fs", "--c", "--n", "--cell"].includes(t));
+  assert.deepEqual(tokens, [], "reward tokens are --rw-* / --fx-*: never an app token name");
+});

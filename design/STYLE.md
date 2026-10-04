@@ -258,6 +258,15 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 - The figure sits straight on the card: no frame, border, background or shadow of its own. Full column width; prose next to it stays 65ch.
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
 
+### Reward layer (sugar only: `.rw-*`, `.fx-*`)
+
+- The one place the app looks like a game (Tony, Oct 4: "quiz pop but dark mode"). Code: `rewards/rewards.css`, `rewards/engine.js`, `rewards/fx.js`; plan: [REWARDS-WIRING.md](REWARDS-WIRING.md).
+- Scope: the HUD row (`#rwHud`, in the top bar's flow, never fixed) and the FX layers (particles, slot reels, bursts, the drop banner). Its tokens are `--rw-*` on `.rw-skin`, never `:root`; it never styles the question, choices, feedback, Cluck or `#toast`. `tests/style.test.mjs` checks the scope.
+- Exceptions to this file, inside that scope only: violet and sun fills with solid bevels, colour icons (Fluent Emoji images, MIT), the Press Start 2P title on LEVEL UP / BONUS (OFL, vendored), radii 12/20/28/pill, its own shadow scale.
+- The drop banner is not a second toast: it shows only after a correct answer, hides `#toast` first, takes no taps (`pointer-events: none`) and is `aria-hidden` (app.js says the words once through `#sr`).
+- A wrong answer never gets an FX node, a sound or reward words. Reduced motion: no particles, no reels spinning, text-only bursts.
+- z ladder: stage 15, dock 20, brainrot 30, Scratchpad button 40, `#toast` 50, drop banner 55, update bar 60, splash 100, FX overlays 140, FX particles 150.
+
 ---
 
 ## 4. Iconography

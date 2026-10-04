@@ -2,7 +2,7 @@
  * shell (index.html, its css/js, KaTeX): cache-first, updated in the background; a changed file tells the page (update bar).
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
-const VERSION = "stem-v3";
+const VERSION = "stem-v4";
 const SHELL = VERSION + "-shell";
 const PROBS = VERSION + "-p";
 const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/KaTeX/"];
@@ -12,7 +12,8 @@ const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "
 const BASE = ["./", "index.html", "app.js", "app.css", "nav.js", "nav.css", "offline.js", "brainrot.js", "graph.js", "copy/payload.mjs", "shuffle.mjs", "suggest.mjs", "mode.mjs", "speak.mjs", "design/explain-box.css", "design/explain-box.js",
   "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
   "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2",
-  "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-mono-latin-700-normal.woff2", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
+  "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-mono-latin-700-normal.woff2", "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2",
+  "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.
 function route(url, method, scope) {

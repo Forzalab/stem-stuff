@@ -44,6 +44,11 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
 <script src="offline.js" defer></script>
 <script src="brainrot.js" defer></script>
+<!-- sugar rewards (design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
+<script src="rewards/icons.js" defer></script>
+<script src="vendor/confetti.browser.js" defer></script>
+<script src="rewards/engine.js" defer></script>
+<script src="rewards/fx.js" defer></script>
 </head>
 <body>
 <div id="splash" aria-hidden="true">
@@ -84,6 +89,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
 <link rel="stylesheet" href="design/explain-box.css">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="nav.css">
+<link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
+<link rel="stylesheet" href="rewards/rewards.css">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
