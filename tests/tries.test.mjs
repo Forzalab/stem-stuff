@@ -101,9 +101,9 @@ test("pick all: shown() keeps every correct id and the locked ones from a pool o
   assert.deepEqual(shown(p).map(c => c.id), ["a", "b", "c", "g", "h"]);
 });
 
-// typed numbers right to 4 significant figures (serve.py sig4): correctness only
-test("num: 4 significant figures count as right", () => {
-  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "wrong"], ["15.58", "wrong"]])
+// typed numbers right to 3 significant figures (serve.py sig3; Tony, Oct 3): correctness only
+test("num: 3 significant figures count as right", () => {
+  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "correct"], ["15.55", "correct"], ["15.5", "wrong"], ["15.65", "wrong"]])
     assert.equal(gradeLocal({ type: "num", code: `T_s4_${t}`, answer: "9*sqrt(3)" }, { answer: t }).verdict, v, t);
 });
 
@@ -118,7 +118,7 @@ test("prove: fixes must cover exactly the un-ticked unlocked rows (else invalid,
     assert.deepEqual(gradeLocal(p, { choices: ["a", "c"], ...(f !== undefined ? { fixes: f } : {}) }), { verdict: "invalid", triesLeft: 2 }, JSON.stringify(f));
   assert.equal(gradeLocal(p, { choices: ["a", "c"], fixes: { b: "2+", d: "1" } }).verdict, "invalid", "unreadable fix on a right set");
 });
-test("prove: wrong set strikes first; a wrong fix names its row; repeat is free; 4 sig figs count", () => {
+test("prove: wrong set strikes first; a wrong fix names its row; repeat is free; 3 sig figs count", () => {
   const p = prove("T_p2");
   let r = gradeLocal(p, { choices: ["a", "b", "c"], fixes: { d: "2+" } });     // set wrong: the fixes are not graded
   assert.deepEqual([r.verdict, r.struck, r.triesLeft], ["wrong", "b", 1]);

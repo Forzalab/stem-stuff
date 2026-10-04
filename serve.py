@@ -339,13 +339,14 @@ def same(a, b, tol):
     return abs(a - b) <= tol * max(1.0, abs(b))
 
 
-def sig4(a, b):
-    """Tony: typed numbers count when right to 4 significant figures (|a - b| <= half a unit in b's 4th figure)."""
+def sig3(a, b):
+    """Tony (Oct 3): typed numbers count when right to 3 significant figures (|a - b| <= half a unit in b's 3rd figure).
+    The prompt asks for at least 4, so early rounding can't push a right answer off."""
     if isinstance(a, tuple):
-        return isinstance(b, tuple) and len(a) == len(b) and all(sig4(x, y) for x, y in zip(a, b))
+        return isinstance(b, tuple) and len(a) == len(b) and all(sig3(x, y) for x, y in zip(a, b))
     if isinstance(a, str) or isinstance(b, str) or not (math.isfinite(a) and math.isfinite(b)) or b == 0:
         return False
-    return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 3) * (1 + 1e-9)
+    return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 2) * (1 + 1e-9)
 
 
 def sigfig(a, b, n):
@@ -357,11 +358,12 @@ def sigfig(a, b, n):
 
 
 def figures(u):
-    """how many significant figures a fix box asks for: fix.sf, else "N sig fig(s)" in its how text, else 4"""
+    """how many significant figures a fix box grades to: fix.sf, else "N sig fig(s)" in its how text, else 3.
+    Tony (Oct 3): grade to 3, the prompt asks for at least 4, so a "≥N" / "at least N" in the how text is the ask, not the grade."""
     if isinstance(u.get("sf"), int) and u["sf"] > 0:
         return u["sf"]
-    m = re.search(r"(\d+)\s*sig", str(u.get("how", "")), re.I)
-    return int(m.group(1)) if m else 4
+    m = re.search(r"(?<![≥>\d])(?<!at least )(\d+)\s*sig", str(u.get("how", "")), re.I)
+    return int(m.group(1)) if m else 3
 
 
 def unit_correct(u, sig):
@@ -371,7 +373,7 @@ def unit_correct(u, sig):
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
     if u.get("fixbox") and not isinstance(sig, tuple):
         return same(sig, ans, tol) or sigfig(sig, ans, figures(u))
-    return same(sig, ans, tol) or sig4(sig, ans)
+    return same(sig, ans, tol) or sig3(sig, ans)
 
 
 def unit_hit(u, text, sig):

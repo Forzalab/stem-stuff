@@ -29,7 +29,7 @@ if [ "${1:-}" != "--quick" ]; then
   for f in tests/*.pw.mjs; do
     name="$(basename "$f" .pw.mjs)"
     case "$name" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy) run "$name" node "$f" "$(free_port)" ;;
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
   done

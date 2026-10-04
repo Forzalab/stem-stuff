@@ -89,13 +89,15 @@ class Grade(unittest.TestCase):
         self.assertEqual(pub["pick"], "all")
         self.assertFalse({"correct", "wrong", "miss"} & set(pub))
 
-    def test_four_sig_figs(self):                                               # Tony: right to 4 significant figures counts
+    def test_three_sig_figs(self):                                              # Tony (Oct 3): right to 3 significant figures counts
         u = {"type": "num", "answer": "9*sqrt(3)"}
-        for text, ok in (("15.59", True), ("15.588", True), ("15.6", False), ("15.58", False), ("dne", False)):
+        for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", False), ("15.65", False), ("dne", False)):
             self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
         e = {"type": "expr", "answer": "x/3", "points": [1, 2, 3]}
         self.assertTrue(serve.unit_correct(e, serve.signature(e, "0.33334x")))   # per point value, not per coefficient
-        self.assertFalse(serve.unit_correct(e, serve.signature(e, "0.333x")))
+        self.assertTrue(serve.unit_correct(e, serve.signature(e, "0.3333x")))
+        self.assertFalse(serve.unit_correct(e, serve.signature(e, "0.33x")))
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "190*9.8*(tan(16*pi/180)+0.25)/(1-0.25*tan(16*pi/180))/190"}, 5.665))   # 6BR: 5.665 vs 5.666
         self.assertTrue(serve.unit_correct({"type": "num", "answer": "0"}, 0.0))       # zero: exact (tol) only
 
     def test_pick_all_fix(self):                                                # prove mode: X'd rows carry a graded fix
@@ -151,7 +153,9 @@ class Grade(unittest.TestCase):
         for t, ok in (("15.6", True), ("15.5", True), ("15.7", True), ("15.4", False)):
             self.assertEqual(serve.unit_correct(u3, serve.signature(u3, t)), ok, t)
         self.assertEqual(serve.figures({"sf": 2, "how": "4 sig figs"}), 2)
-        self.assertEqual(serve.figures({"how": "whole number"}), 4)
+        self.assertEqual(serve.figures({"how": "whole number"}), 3)                 # Tony, Oct 3: grade to 3 by default
+        for how in ("≥4 sigfigs, no unit", "at least 4 sig figs"):                  # the ask, not the grade
+            self.assertEqual(serve.figures({"how": how}), 3, how)
 
     def test_text(self):
         r = self.g("CSCI26_Q8C", "t1", answer="q -> p")

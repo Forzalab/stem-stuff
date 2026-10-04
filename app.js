@@ -33,7 +33,7 @@ function obToast(n, text, at) {
 /* the toast (design/STYLE.md §3 Toast): one look for the "one more try" note and the onboarding notes. Under its anchor with a caret
    at the verdict mark; above it (.up, caret on the bottom edge) when there is no room below or the anchor floats (the Scratchpad
    button); on MC it lies on the struck-out choice's text (a dead control, so no live choice is covered) with the caret pointing left
-   at the X badge. 2.5 s, paused while the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
+   at the X badge. 2 s (Tony, Oct 3), paused while the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
 let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
 function placeToast() {
   const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
@@ -65,7 +65,7 @@ function toast(text, at) {
   const t = $("#toast"); if (!t || !at) return;
   if (mtOpen && mtTile === "q" && $("#q").contains(at)) setTile("a", false);       // the note is about the answer: show it first
   t.textContent = text; toastAt = at; t.classList.add("on");
-  placeToast(); armToast(2500);
+  placeToast(); armToast(2000);
 }
 $("#toast")?.addEventListener("click", hideToast);
 $("#toast")?.addEventListener("pointerenter", holdToast);
@@ -165,21 +165,21 @@ function unitSig(u, t) {                                  // serve.py signature(
 /* serve.py numtext(): 1.07x10^14, 1.07 X 10^14, 1.07×10^14, 1.07·10^14, 1.07 10^14 -> 1.07*10^14; 107 000 -> 107000 */
 const numText = t => String(t).trim().replace(/(\d)\s*(?:[x×·*]\s*)?10\s*\^/gi, "$1*10^").replace(/(?<=\d) (?=\d{3}(?!\d))/g, "");
 /* serve.py sigfig() / figures(): hard-mode fix boxes, the key rounded to n figures, then +-1 in the last */
-const figures = u => Number.isInteger(u.sf) && u.sf > 0 ? u.sf : +((String(u.how || "").match(/(\d+)\s*sig/i) || [])[1] || 4);
+const figures = u => Number.isInteger(u.sf) && u.sf > 0 ? u.sf : +((String(u.how || "").match(/(?<![≥>\d])(?<!at least )(\d+)\s*sig/i) || [])[1] || 3);   // serve.py figures(): "≥4" is the ask, not the grade
 const sigfig = (a, b, n) => typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
   && (u => Math.abs(a - Math.round(b / u) * u) <= u * (1 + 1e-9))(10 ** (Math.floor(Math.log10(Math.abs(b))) - (n - 1)));
 const same = (a, b, tol) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
   : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
-/* right to 4 significant figures (serve.py sig4): correctness only, never wrong-entry matching or repeats */
-const sig4 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => sig4(x, b[i]))
+/* right to 3 significant figures (serve.py sig3; Tony, Oct 3: the prompt asks for 4+): correctness only, never wrong-entry matching or repeats */
+const sig3 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => sig3(x, b[i]))
   : typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
-    && Math.abs(a - b) <= 0.5 * 10 ** (Math.floor(Math.log10(Math.abs(b))) - 3) * (1 + 1e-9);
+    && Math.abs(a - b) <= 0.5 * 10 ** (Math.floor(Math.log10(Math.abs(b))) - 2) * (1 + 1e-9);
 function unitOk(u, g) {
   if (u.type === "text") return [u.answer, ...(u.accept || [])].map(squash).includes(g);
   const a = u.answer === "dne" ? "dne" : unitSig(u, u.answer);
   if (u.fixbox && !Array.isArray(g)) return same(g, a, u.tol ?? 1e-6) || sigfig(g, a, figures(u));
-  return same(g, a, u.tol ?? 1e-6) || sig4(g, a);
+  return same(g, a, u.tol ?? 1e-6) || sig3(g, a);
 }
 function unitHit(u, t, g) {                               // re entries first, then match
   const w = u.wrong || [];
