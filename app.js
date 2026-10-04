@@ -428,6 +428,7 @@ async function load(code) {
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
   rwSync();
+  origRender();
   window.stemBrainrot?.sync();
 }
 
@@ -458,7 +459,7 @@ function render() {
   layoutFreeze();
 }
 function drawFigures() {
-  document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
+  document.querySelectorAll("#blocks .fig, #orig .orig-body:not([hidden]) .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -1137,6 +1138,62 @@ function rewardGo(mine, o) {
   if (!res.xp) { RW().render(0); return; }                                       // wrong, or a second try: the numbers change, nothing moves
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
 }
+/* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
+   A snack (one constant swapped) shows its Practice Exam 2 original with the worked solution. Desktop (side by side): in the pad column,
+   in the scratchpad's place while it is open. Phone: a card on top of the problem, folded until tapped. Fading per original question:
+   level 1 (its first snack) the whole solution; 2 (a later snack) the last line behind "Peek"; 3 (after a first-try correct on one
+   of its snacks) folded. Peeking (the hidden line, or opening a level 3 original) before answering pays 2 XP and rolls no drop. */
+let origEl = null;
+function origRender() {
+  if (origEl) { origEl.remove(); origEl = null; }
+  $("#work").classList.remove("orig-on");
+  const p = S && S.prob, o = p && p.original;
+  if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
+  const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
+  if (live) R.origSeen(o.q, S.code);
+  S.orig = { lvl, open: sideMQ.matches && lvl < 3, peeked: false };
+  const el = origEl = document.createElement("section");
+  el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
+  const sol = Array.isArray(o.solution) ? o.solution : [];
+  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Question ${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
+    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Worked solution</p><ol class="orig-sol">${sol.map((l, i) =>
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek at the last line</button>' : ""}
+    <p class="orig-note" hidden>Peeked: this one pays 2 XP.</p></div>`;
+  const q = el.querySelector(".orig-q");
+  for (const b of o.body) {
+    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
+    else if (b.type === "graph") { const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt || "figure"); f._block = b; q.append(f); }
+  }
+  el.querySelector(".orig-hd").addEventListener("click", () => {
+    if (!S.orig.open && S.orig.lvl === 3) origPeeked();                        // folded away: looking again is a peek
+    origOpen(!S.orig.open);
+  });
+  el.querySelector(".orig-peek")?.addEventListener("click", e => {
+    el.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
+  });
+  origPlace();
+  origOpen(S.orig.open);
+}
+function origPeeked() {
+  if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
+  S.orig.peeked = S.rwPeek = true;
+  origEl.querySelector(".orig-note").hidden = false;
+  say("Peeked: this one pays 2 XP.");
+}
+function origOpen(open) {
+  if (!origEl) return;
+  S.orig.open = open;
+  origEl.querySelector(".orig-hd").setAttribute("aria-expanded", String(open));
+  origEl.querySelector(".orig-body").hidden = !open;
+  $("#work").classList.toggle("orig-on", open && sideMQ.matches);              // desktop: in the scratchpad's place while open
+  if (open) origEl.querySelectorAll(".orig-body .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
+  layoutFreeze();
+}
+function origPlace() {
+  if (!origEl) return;
+  if (sideMQ.matches) $("#work").prepend(origEl); else $("#freezeIn").prepend(origEl);
+  $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
+}
 async function rewardShow(mine, res) {
   const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
@@ -1664,7 +1721,7 @@ sash.addEventListener("keydown", e => {
   e.preventDefault();
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); layoutFreeze(); });
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); layoutFreeze(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
    follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped

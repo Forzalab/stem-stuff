@@ -136,6 +136,43 @@ try {
     await page.click("#qnext"); await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_R03", null, { timeout: 4000 });
   });
 
+  await step("the original beside a snack fades: whole solution, then the last line behind Peek (2 XP), then folded", async () => {
+    const dc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+    await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const d = await dc.newPage();
+    await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
+    assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
+    assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
+    assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
+    assert.match(await d.textContent("#origHd"), /Original: Practice Exam 2, Question 7/);
+    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
+    await d.click("#origHd");
+    assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");
+    await pick(d, "b"); await pick(d, "a");                                   // not a first-try correct: the original stays unsolved
+    await go(d, "CALC1_S02");
+    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
+    await d.click("#orig .orig-peek");
+    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
+    assert.equal(await d.isVisible("#orig .orig-note"), true);
+    const x0 = await xp(d);
+    await pick(d, "a");
+    await d.waitForFunction(x => window.Rewards.state().xp > x, x0, { timeout: 4000 });
+    assert.equal(await xp(d) - x0, 2, "a peeked snack pays 2");
+    await go(d, "CALC1_S01");
+    assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "level 3: folded after a first-try correct on Q7");
+    await dc.close();
+    const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+    await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const p = await pc.newPage();
+    await p.goto(BASE + "/#CALC1_S01"); await opened(p, "CALC1_S01");
+    assert.equal(await p.$eval("#orig", e => e.parentElement.id), "freezeIn", "phone: on top of the problem");
+    assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
+    await p.click("#origHd");
+    assert.equal(await p.isVisible("#orig .orig-sol"), true);
+    assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
+    await pc.close();
+  });
+
   await step("diet: no HUD node, no FX, no stem-rw key, no snack anywhere", async () => {
     await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw")) localStorage.removeItem(k); });
     await typeCode(page, "DIET_BANK_RW12");

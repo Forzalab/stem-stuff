@@ -397,6 +397,26 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
 /* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
+/* sugar: the original beside a snack (app.js origRender; design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
+   top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
+.orig { margin: 0 0 var(--s3); border-radius: 10px; background: var(--sheet); }
+.orig-hd {
+  display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--btn); padding: 0 var(--s4); border: 0; border-radius: 10px;
+  background: transparent; color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.3; text-align: left;
+}
+.orig-hd:hover { background: var(--raised); }
+.orig-hd .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.orig-hd span { flex: 1; min-width: 0; }
+.orig-hd[aria-expanded="true"] .orig-chev { transform: rotate(180deg); }
+.orig-body { padding: 0 var(--s4) var(--s4); }
+.orig-body .md { color: var(--ink); }
+.orig-h { margin: var(--s3) 0 var(--s1); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
+.orig-sol { margin: 0; padding-left: var(--s5); color: var(--ink); }
+.orig-sol li { margin: var(--s1) 0; }
+.orig-peek { margin-top: var(--s2); }
+.orig-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--t-sm); }
+#work.orig-on > #xb { display: none; }
+html.side #work > .orig { margin: 0; }
 .fcard { margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
 .fcard .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
 .fcard ol { list-style: none; margin: 0; padding: 0; }
