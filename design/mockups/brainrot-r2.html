@@ -226,9 +226,9 @@ if (v === 4) {
 }
 addEventListener("resize", () => place(pos && pos.y));
 if (P.get("ctl")) rot.classList.add("show");
+const start = collapsed;   // the start state, before any forced collapse
 label(); place(null);
-// fonts change the page's height: place again once they are in (from the start state, not a forced collapse)
-const start = collapsed;
+// fonts change the page's height: place again once they are in
 document.fonts.ready.then(() => { if (!drag) { collapsed = start; label(); place(null); } });
 </script>
 </body>
