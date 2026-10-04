@@ -1007,7 +1007,7 @@ function wishReset() {
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
 }
 function wishOnWrong() {
-  if (modeOf() !== "sugar" || !S || (wish && wish.code === S.code)) return;
+  if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
   wish = { code: S.code, text: "", narration: "", started: false, done: false, open: false, failed: 0 };
   const w = wish;                                                          // the voiceover is pre-written (saccharine.narration): free
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })

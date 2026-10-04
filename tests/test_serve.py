@@ -461,7 +461,8 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.explain_prompt(raw, "a").count("Answer: b) 3"), 1)
         st, _, data = serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CALC1_SB1"}).encode())
         self.assertEqual((st, json.loads(data)["text"]), (200, "POOF. Three."))
-        self.assertEqual(serve.dispatch("POST", "/narrate", "stem-mode=diet", json.dumps({"code": "CALC1_SB1"}).encode())[0], 404)
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "stem-mode=diet", json.dumps({"code": "CALC1_SB1"}).encode())[2])["text"], "")
+        self.assertTrue(sw["wish"]); self.assertNotIn("wish", dt)
 
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")

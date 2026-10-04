@@ -44,7 +44,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish")
 DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
 FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
 NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
@@ -237,6 +237,8 @@ def view(p, mode):
     p = {k: v for k, v in p.items() if k not in SUGAR_KEYS[1:] and k != "saccharine"}
     if mode == "sugar":
         p.update({k: v for k, v in (("title", sg.get("title")), ("tip", sg.get("tip"))) if v})
+        if sg.get("key"):
+            p["wish"] = True                                  # Cluck can answer this one (/explain); the key itself stays here
         if sg.get("part"):
             p["formulas"] = formulas(p["code"], sg["part"])
     if p.get("type") != "mc":
@@ -859,7 +861,7 @@ def dispatch(method, path, cookie_header="", body=b""):
         p, mode = problems().get(str(b.get("code", ""))), mode_of(cookie_header)
         if path == "/narrate":                       # the pre-written voiceover (saccharine.narration): sugar mode only
             text = sugar(p).get("narration") if p is not None and mode == "sugar" and not hidden(p, mode) else None
-            return _json(200 if text else 404, {"text": text or ""}, cookie)
+            return _json(200, {"text": text or ""}, cookie)   # none written: empty, not an error
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
         return _json(200, grade(view(p, mode), sid, b), cookie)
