@@ -60,13 +60,13 @@
       if (o.snack) s.snacks++; else s.real++;
       if (first) {
         s.streak++;
-        r.xp = o.snack ? ri(3, 5) : ri(9, 12);
+        r.xp = o.peeked ? 2 : o.snack ? ri(3, 5) : ri(9, 12);   // peeked at the worked twin: 2 XP, no roll (spec v2 1b)
         var p = Math.min(0.5, (o.snack ? 0.10 : 0.25) + 0.05 * s.streak);
-        if ((o.dwellMs || 0) >= 1000 && (s.dry >= 6 || Math.random() < p)) {
+        if (!o.peeked && (o.dwellMs || 0) >= 1000 && (s.dry >= 6 || Math.random() < p)) {
           var q = Math.random() * 100;
           r.drop = q < 80 ? 'common' : q < 97 ? 'rare' : 'legend';
           s.dry = 0;
-        } else s.dry++;
+        } else if (!o.peeked) s.dry++;                       // a peeked answer never feeds the pity timer
         if (r.drop === 'common') r.line = commonLine();
         else if (r.drop === 'rare') { r.line = 'BONUS LEVEL!'; r.sub = commonLine(); big = 'bonus'; }
         else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
