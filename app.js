@@ -12,6 +12,14 @@ if (location.protocol === "https:" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
   const va = document.createElement("script"); va.defer = true; va.src = "/_vercel/insights/script.js"; document.head.appendChild(va);
 }
+/* the blind-locale test (blind/locale.js): ?blind=ka|am|th swaps every UI word into a script Tony can't read, the question stays
+   English. Kept for the tab; ?blind=off ends it. Without the flag nothing loads. */
+try {
+  const q = new URLSearchParams(location.search).get("blind");
+  if (q === "off") sessionStorage.removeItem("stem-blind"); else if (q) sessionStorage.setItem("stem-blind", q);
+  const lang = sessionStorage.getItem("stem-blind");
+  if (lang && /^[a-z]{2}$/.test(lang)) { const b = document.createElement("script"); b.src = "blind/locale.js"; b.dataset.lang = lang; document.head.appendChild(b); }
+} catch { /* storage blocked: no blind test */ }
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
