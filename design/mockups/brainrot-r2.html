@@ -136,7 +136,7 @@ const SHUT = {
 }[v];   // v4 has none: collapsed = the mini size, still the duo
 
 let collapsed = P.get("state") === "collapsed" || (P.get("state") !== "expanded" && (innerHeight < 700 || RM));
-let right = false, pos = null;
+let right = (v === 2 && !desk) || (v === 5 && desk), pos = null;   // v2 phone: right edge; v5 desktop: the right gutter
 const label = () => { document.getElementById("lab").textContent = `v${v} · ${NAME[v]} · ${desk ? "desktop" : "phone"} · ${collapsed ? "collapsed" : "expanded"}`; };
 
 const topY = () => document.querySelector(".mbar").getBoundingClientRect().bottom + G;
@@ -165,7 +165,7 @@ function home(h) {
   if (desk && v === 2) return (innerHeight - h) / 2;                        // periphery: centred on the window's height
   if (desk && v === 5) return qbox.getBoundingClientRect().top;            // grid: top on the question box's top line
   if (!desk && v === 5) return chk.getBoundingClientRect().top;            // grid: top on the Check row, in the slot left of it
-  if (!desk && v === 2) return (innerHeight - h) / 2 + 80;                 // periphery: mid-edge, off the thumb's path
+  if (!desk && v === 2) return fab.getBoundingClientRect().top - G - h;    // periphery: small, right edge, stacked over the Scratchpad button
   return floorY(h);                                                        // corner, thumb zone, sizes: the bottom corner
 }
 function place(wantY) {
