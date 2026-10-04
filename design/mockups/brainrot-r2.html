@@ -124,7 +124,7 @@ let size = "l";                                                // v4: l (large) 
 const width = () => ({
   1: desk ? 320 : 176,
   2: desk ? Math.min(360, gutter() - 2 * 24) : 120,            // desktop: as wide as the empty gutter allows
-  3: desk ? 360 : 208,
+  3: desk ? 360 : 192,
   4: ({ l: desk ? 320 : 184, s: desk ? 200 : 120, m: desk ? 120 : 80 })[size],
   5: desk ? Math.min(320, gutter() - 2 * 24) : Math.min(208, chk.getBoundingClientRect().left - colL() - G),
 })[v];
@@ -227,6 +227,9 @@ if (v === 4) {
 addEventListener("resize", () => place(pos && pos.y));
 if (P.get("ctl")) rot.classList.add("show");
 label(); place(null);
+// fonts change the page's height: place again once they are in (from the start state, not a forced collapse)
+const start = collapsed;
+document.fonts.ready.then(() => { if (!drag) { collapsed = start; label(); place(null); } });
 </script>
 </body>
 </html>
