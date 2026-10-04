@@ -111,11 +111,11 @@ Stops guessing. Turn it on with a public `fix` on the problem: `"fix": { "type":
 
 ## 4c. Four significant figures (Tony, 10-02, every typed number)
 
-A typed number counts when it is right to 4 significant figures: |typed − answer| ≤ half a unit in the answer's 4th figure. It is checked on top of `tol`, never instead of it.
+A typed number counts when it is right to 3 significant figures: |typed − answer| ≤ half a unit in the answer's 3rd figure (Tony, Oct 3: 5.665 vs 5.666 must pass). The prompt asks for at least 4 significant figures, so early rounding can't push a right answer off. It is checked on top of `tol`, never instead of it.
 - Examples for $9\sqrt3 = 15.588…$: `15.59` ✓, `15.6` ✗.
 - It applies to `num`, to `expr` (per point value), to `multi` parts and to fixes.
 - It applies only to correctness, never to matching `wrong` entries or to repeat detection. An answer of 0 stays exact.
-- `serve.py sig4()`, mirrored in app.js.
+- `serve.py sig3()`, mirrored in app.js.
 
 ## 5. Open (Tony decides)
 

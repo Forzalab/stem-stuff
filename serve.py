@@ -286,13 +286,14 @@ def same(a, b, tol):
     return abs(a - b) <= tol * max(1.0, abs(b))
 
 
-def sig4(a, b):
-    """Tony: typed numbers count when right to 4 significant figures (|a - b| <= half a unit in b's 4th figure)."""
+def sig3(a, b):
+    """Tony (Oct 3): typed numbers count when right to 3 significant figures (|a - b| <= half a unit in b's 3rd figure).
+    The prompt asks for at least 4, so early rounding can't push a right answer off."""
     if isinstance(a, tuple):
-        return isinstance(b, tuple) and len(a) == len(b) and all(sig4(x, y) for x, y in zip(a, b))
+        return isinstance(b, tuple) and len(a) == len(b) and all(sig3(x, y) for x, y in zip(a, b))
     if isinstance(a, str) or isinstance(b, str) or not (math.isfinite(a) and math.isfinite(b)) or b == 0:
         return False
-    return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 3) * (1 + 1e-9)
+    return abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 2) * (1 + 1e-9)
 
 
 def unit_correct(u, sig):
@@ -300,7 +301,7 @@ def unit_correct(u, sig):
     if u["type"] == "text":
         return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
-    return same(sig, ans, tol) or sig4(sig, ans)
+    return same(sig, ans, tol) or sig3(sig, ans)
 
 
 def unit_hit(u, text, sig):

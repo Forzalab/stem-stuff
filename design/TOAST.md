@@ -2,7 +2,7 @@
 
 Mockup: `design/mockups/toast.html` (buttons 1 to 7 play each one; `?v=N` shows N held still, `&y=200` scrolls first). Shots: `design/shots/toast-N-390.png` and `toast-N-1920.png`. The 390 shots are scrolled 200px, the way the page sits while you write.
 
-Shared by all 7: text "One more try, so choose wisely. 😈" (no-break space before the emoji, so it never sits alone on a line). 18px+ bold (`--t-md`). `role="status" aria-live="polite"`. `position: fixed`, so nothing on the page moves. It hides itself after 2.5 s. Tap anywhere on it (52px+ tall) or press Esc to close it. In: 320 ms, 14px slide plus fade. With reduced motion it only fades (CSS animations, because app.css turns every transition off). Top and bottom toasts check for a live answer control (an open box or choice) underneath and move to the other edge if they find one. Bottom ones sit above the code-bar strip, the safe area and `--kb-bottom` (the iOS keyboard).
+Shared by all 7: text "One more try, so choose wisely. 😈" (no-break space before the emoji, so it never sits alone on a line). 18px+ bold (`--t-md`). `role="status" aria-live="polite"`. `position: fixed`, so nothing on the page moves. It hides itself after 2 s (Tony, Oct 3; was 2.5 s). Tap anywhere on it (52px+ tall) or press Esc to close it. In: 320 ms, 14px slide plus fade. With reduced motion it only fades (CSS animations, because app.css turns every transition off). Top and bottom toasts check for a live answer control (an open box or choice) underneath and move to the other edge if they find one. Bottom ones sit above the code-bar strip, the safe area and `--kb-bottom` (the iOS keyboard).
 
 | # | look | position | Refactoring UI rule | risk |
 |---|---|---|---|---|
@@ -36,7 +36,7 @@ Sources: [Impeccable repo](https://github.com/pbakaus/impeccable) (`reference/cr
 
 ### The five takes
 
-All five share these choices: `--sheet` surface, `--t-md` bold `--ink` text, `--shadow-3`, `i-imp` in `--mark` at 20px, 200ms ease-out with an 8px slide (fade only with reduced motion), `role="status"`, tap or Esc to close, 2.5 s timer that pauses on hover and while the tab is hidden. On MC every take lies exactly on the struck-out choice, with no caret.
+All five share these choices: `--sheet` surface, `--t-md` bold `--ink` text, `--shadow-3`, `i-imp` in `--mark` at 20px, 200ms ease-out with an 8px slide (fade only with reduced motion), `role="status"`, tap or Esc to close, 2 s timer that pauses on hover and while the tab is hidden. On MC every take lies exactly on the struck-out choice, with no caret.
 
 | take | look and attachment | 😈 becomes | tokens beyond the shared ones | STYLE.md audit | risk |
 |---|---|---|---|---|---|
@@ -50,7 +50,7 @@ All five share these choices: `--sheet` surface, `--t-md` bold `--ink` text, `--
 
 Notes:
 - STYLE.md issue #8 (toast timing 320ms in this doc, 200ms in the CSS) is settled for round 2 at 200ms. Round 1's 320ms, color emoji, pill radius, `--shadow-4` and variant 6's side stripe stay only as history; none of them carry into 5a to 5e.
-- In the mockup the multiple-choice card stands in for the next problem, 48px below (the app shows one problem at a time). In the app, what sits under a wrong box is the part hint, the next part, or the scratchpad. Each take covers that for at most 2.5 s.
+- In the mockup the multiple-choice card stands in for the next problem, 48px below (the app shows one problem at a time). In the app, what sits under a wrong box is the part hint, the next part, or the scratchpad. Each take covers that for at most 2 s.
 - The 20px imp is small at 1920. If Tony wants it bigger there, the STYLE.md fix is to put it on `--ico` (24px, grows on desktop) rather than adding a new size.
 
 ## Round 3: no yellow, the page's own type
@@ -65,7 +65,7 @@ Shared: text in the part prompt's style (400, `--t-md`, `--ink`, `--lh`), no bol
 | **5g card** | Exactly a problem card: `--sheet`, 10px, no ring, caret at the ✗ | Reads as one more card; can blend with the Cluck hint card under it |
 | **5h box tab** | Hangs from the wrong box, box-width, in the box's own 2px dashed `--bad` edge, open at the top, `--field` fill. The box grew a line. | Red twice (box + tab); small seam where the box's rounded corners meet the tab |
 
-The mock now shows the part hint as main renders it under a wrong part (verdict line "Not quite. One more try." + the Cluck card). Every take covers the top of that hint for 2.5 s. 5h covers the verdict line, which says the same words.
+The mock now shows the part hint as main renders it under a wrong part (verdict line "Not quite. One more try." + the Cluck card). Every take covers the top of that hint for 2 s. 5h covers the verdict line, which says the same words.
 
 > Superseded Oct 2 ~22:05: the shipped look is take 5f (paper, `--line` hairline, `--shadow-1`) with its caret on every toast (MC row and onboarding too). Rules: [STYLE.md](STYLE.md) §3 Toast. Everything below is history.
 
