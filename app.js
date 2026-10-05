@@ -312,7 +312,7 @@ document.addEventListener("paste", e => {
   const n = normalize((e.clipboardData && e.clipboardData.getData("text")) || "");
   if (!n) return;
   e.preventDefault();
-  putCode(n.code); $("#entryMsg").textContent = ""; codeIn.focus();
+  putCode(n.code); $("#entryMsg").textContent = ""; root.classList.add("entry-open"); codeIn.focus();   // a resting box (C2 / C7 / C8) comes out for it
 });
 codePaste.addEventListener("click", async () => {
   let n = null;

@@ -136,7 +136,7 @@ html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; ma
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
 .dock-bottom.dock-away .dock { display: none; }
 /* C8 (Tony, Oct 5 clutter pass): phones, a bank open: no code bar and no strip; it comes up with the list (app.js drill:qlist), or with a load error */
-.dock-bottom.qnav-on:not(.ql-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }
+.dock-bottom.qnav-on:not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }
 /* C7: desktop, a question opened without a bank: the code box rests as a label with the code; a tap opens the box (app.js codeChip) */
 #codeChip { display: none; }   /* an id: .btn-label (nav.css) would show it */
 html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }

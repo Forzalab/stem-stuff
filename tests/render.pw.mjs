@@ -232,6 +232,7 @@ async function run(browserType, label, opts = {}) {
       await open("CALC1_T6B");
       const clip = t => page.evaluate(x => navigator.clipboard.writeText(x), t);
       const code = page.locator("#code"), go = page.locator("#codeGo"), pasteBtn = page.locator("#codePaste");
+      if (vname === "desktop") await page.click("#codeChip");                                            // C7: a lone question keeps the box as a label
       if (vname !== "desktop") { await page.waitForSelector("#barTab", { state: "visible" }); await page.click("#barTab"); await page.waitForSelector("#code", { state: "visible", timeout: 3000 }); }   // touch: the bar rests as a strip while a problem is open
       // placeholder = open problem's code, in the hint color; box empty; paste button shown, arrow hidden
       assert.equal(await code.getAttribute("placeholder"), "CALC1_T6B"); assert.equal(await code.inputValue(), "");
@@ -264,7 +265,8 @@ async function run(browserType, label, opts = {}) {
         assert.equal(await page.locator("#scratch").inputValue(), txt);
         assert.equal(await code.inputValue(), "", "code box changed for ordinary text");
       }
-      await code.fill(""); await page.locator("#scratch").focus();
+      if (vname === "desktop") await page.click("#codeChip");                       // the scratchpad had focus: the box rests as its label (C7)
+      await code.fill(""); if (vname !== "desktop") await page.locator("#scratch").focus();   // desktop: leaving the box folds it to its label (C7)
       // the paste button reads the clipboard: code fills the box, arrow appears, press it to open
       await clip("physs2k"); await pasteBtn.click();
       await page.waitForFunction(() => document.querySelector("#code").value === "PHYS_S2K");
@@ -274,6 +276,7 @@ async function run(browserType, label, opts = {}) {
       await go.click();
       await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_S2K");
       if (vname !== "desktop") { assert.ok(await code.isHidden(), "bar back to its strip after opening"); await page.click("#barTab"); }
+      else { assert.ok(await code.isHidden(), "the box folds to its label after opening (C7)"); await page.click("#codeChip"); }
       assert.equal(await code.inputValue(), ""); assert.equal(await code.getAttribute("placeholder"), "PHYS_S2K");
       assert.ok(await pasteBtn.isVisible() && await go.isHidden());
       // not a code on the clipboard: nothing is filled, the box is focused for a manual paste
@@ -319,14 +322,16 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
       const shuf = page.locator("#qshuf");
       assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
-      for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      assert.ok(await shuf.isHidden(), "C15: Shuffle comes with the list");
+      await btn.click(); { const r = await shuf.boundingBox(); assert.ok(r && r.height >= 48 && r.width >= 48, "Shuffle under 48px"); } await btn.click();
       // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
       assert.equal((await btn.innerText()).trim(), "Questions", "list button label"); assert.equal(await btn.getAttribute("title"), "bank.json", "its title names the file");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
       const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
       // desktop: list + shuffle, then the entry box, then Prev/Next at the right (Tony, Sep 30)
-      if (vname === "desktop") assert.ok(Math.abs(g.list.top - g.entry.top) < 1 && g.list.right < g.shuf.left && g.shuf.right < g.entry.left && g.prev.left > g.entry.right, "desktop bar order: list, shuffle, entry, arrows");
+      if (vname === "desktop") assert.ok(await page.locator("#entry").isHidden() && await shuf.isHidden() && Math.abs(g.list.top - g.prev.top) < 1 && g.list.right < g.prev.left, "desktop bar: List, XP, Prev / Next; the box and Shuffle come with the list (C2 / C15, Tony Oct 5)");
       else assert.ok(g.nav.bottom <= g.main.top + 1 && g.nav.top < 80, `nav not the top bar: ${g.nav.top}`);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-closed-${viewport.width}.png` });
       // list: bare numbers + titles, current marked, focus on the current row
@@ -368,6 +373,7 @@ async function run(browserType, label, opts = {}) {
       await at(codes[0]);
       // shuffle button: a new order (list, numbers, Prev/Next follow it); the open problem stays open; the order survives a reload
       const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
+      if (await shuf.isHidden()) await btn.click();                                       // C15: Shuffle lives with the list
       await shuf.click();
       const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
       const codes2 = mastery(shuffled(file, seed2), () => null, codes[0]);   // nothing answered: the open problem leads (design/NAV.md "Mastery order")

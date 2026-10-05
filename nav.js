@@ -177,6 +177,7 @@ function init() {
   }
 
   btn.addEventListener("click", () => { if (panel.hidden) open(); else close(false); });
+  document.getElementById("entry")?.addEventListener("submit", () => close(false));   // a code typed in the list's box: you picked, the list goes
   btn.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); open(); } });
   prev.addEventListener("click", () => go(-1));
   next.addEventListener("click", () => go(1));
