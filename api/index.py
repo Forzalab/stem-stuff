@@ -16,9 +16,10 @@ def app(environ, start_response):
         n = int(environ.get("CONTENT_LENGTH") or 0)
     except ValueError:
         n = 0
-    body = environ["wsgi.input"].read(min(n, 4097)) if n > 0 else b""
-    if environ.get("REQUEST_METHOD") == "POST" and path.split("?")[0] == "/explain":   # Cluck's stream (design/EASY.md Phase 4)
-        status, headers, chunks = serve.explain(environ.get("HTTP_COOKIE", ""), body)
+    body = environ["wsgi.input"].read(min(n, serve.POST_MAX + 1)) if n > 0 else b""
+    stream = serve.STREAMS.get(path.split("?")[0]) if environ.get("REQUEST_METHOD") == "POST" else None
+    if stream:                                                 # Cluck's streams: /explain, /chat
+        status, headers, chunks = stream(environ.get("HTTP_COOKIE", ""), body)
         start_response(f"{status} {REASON.get(status, '')}", list(headers.items()))
         return chunks                                          # an iterable: the runtime sends it as it comes (or all at once)
     res = serve.dispatch(environ.get("REQUEST_METHOD", "GET"), path, environ.get("HTTP_COOKIE", ""), body)

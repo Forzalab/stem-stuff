@@ -75,7 +75,7 @@
         s.dry = 0;
       } else if (!o.peeked) s.dry++;
       if (r.drop === 'common') { r.line = commonLine(); big = 'win'; }
-      else if (r.drop === 'rare') { r.line = 'BONUS LEVEL!'; r.sub = commonLine(); big = 'bonus'; }
+      else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
       if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' in a row';
     }
@@ -149,9 +149,9 @@
     ui.streak.textContent = st.streak;
     ui.flame.style.setProperty('--fs', 1 + Math.min(st.streak, 10) * 0.04);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
-    ui.counts.innerHTML = 'real <b>' + st.real + '</b> · snacks <b>' + st.snacks + '</b>';
-    ui.el.setAttribute('aria-label', st.xp + ' XP, level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
-      ', streak ' + st.streak + ', ' + st.real + ' real solved, ' + st.snacks + ' snacks');
+    ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
+    ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
+      ', ' + st.streak + ' in a row, ' + st.real + ' exam and ' + st.snacks + ' easy solved');
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 

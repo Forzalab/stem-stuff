@@ -59,7 +59,7 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 | `--mark` | look here | Cluck's duck; figure highlight | a warning, a toast, a second series next to `--c2`, a full-surface fill |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange.
+There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange, with one scoped exception: `--ai` (tangerine) on Cluck's surfaces only (see "Cluck's surfaces" below; Tony, Oct 4). It is never a warning and never in a figure.
 
 Contrast floor: text 4.5:1 on its real background (check `--raised` too), control boundaries and icons 3:1.
 
@@ -257,6 +257,33 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 - The figure sits straight on the card: no frame, border, background or shadow of its own. Full column width; prose next to it stays 65ch.
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
+
+### Cluck's surfaces (`.ai-*`, sugar only)
+
+Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwise a NEW accent color? devise design language based on our style guidelines" (picked: warm tangerine). Everything Cluck says or shows: the explanation, the follow-up chat, the hint card's open solution. "AI = warm" across the app: the same family as the hint card and the Explain chip.
+
+**Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; compare: design/mockups/cluck-colors.html).** The sheet is a neutral near-black (`--ai-sheet` #10131a, text 16.1:1, muted 8.0:1), not a warm brown: KaTeX and the step callouts read best on a calm surface, and it sits next to the site's navy without a third hue. Orange is the one accent: active tab, step circles, send, "N left", the 1px seam, the student's bubble (solid `--ai` with `--ai-ink`, never white on orange: 2.9:1). Ref 1's ember light only glows at the sheet's top (`--ai-glow`), brighter while Cluck types. Cluck's replies sit in a 1px outlined card (16px radius); his first explanation stays unboxed.
+
+- Tokens on `.ai-skin`, never `:root` (scoped like `--rw-*`):
+  | token | value | use |
+  |---|---|---|
+  | `--ai` | #ff9a3c | the one accent: the speaker name, the send button fill, the turns-left count, focus of the input |
+  | `--ai-ink` | #2b1000 | text on `--ai` (8.4:1) |
+  | `--ai-sheet` | #2a1d14 | Cluck's box: its own warm dark surface (a designed colour, not a tint over navy, which reads muddy) |
+  | `--ai-field` | #1e140d | fields inside the box |
+  | `--ai-text` / `--ai-muted` | #fff1e3 / #d9bfa8 | text inside the box (14.8:1 / 9.3:1) |
+  | `--ai-rule` | #4a3526 | dividers inside the box |
+  | `--ai-tint` | `--ai` 14% over `--ai-sheet` | the math callout and the step circles (text 11.3:1) |
+  | `--ai-line` | `--ai` 45% over `--ai-sheet` | the box's and the callout's 1px edge (`--bw`) |
+  Contrast: `--ai` on `--sheet` 7.0:1, on `--ai-sheet` 7.7:1.
+- **Cluck's box is its own service on the site** (Tony, Oct 4: "cluck box should be also orange (think ... like a diff service on the same website). the button explanation + next should stay blue of our site"). `.ai-box` remaps the base tokens inside it (`--sheet`, `--field`, `--ink`, `--muted`, `--hint`, `--line`, `--edge`) to the `--ai-*` set, so buttons, fields and text follow without new rules. The student's bubble stays `--raised` (navy: the student is the site's side).
+- The site's own actions stay site blue everywhere, in or out of the box: "Explanation" (outline `--c1`) and "Next question" (`.btn-go`). Only Cluck's own controls are tangerine (send button, tabs, turns left).
+- One accent per surface. No glow, no gradient, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
+- Math: inline `$..$` stays in the sentence; a step's equations go in a **callout**: centred display math, one equation per line, `--ai-tint` fill, 1px `--ai-line` edge, 10px radius, `--s3`/`--s4` padding. Problem scenes in it stay pure ink (DESIGN-LANGUAGE.md §3).
+- Text: one renderer for Cluck's explanation AND the similar-steps card, so the two look like one family (Tony, Oct 4: "make the LOOK between AI box and the similar explanation section look unified").
+- Steps (Gemini steps widget, Tony, Oct 4: "for EACH STEP, format it similar to gemini's app design ... add a bit more text to increase legibility and top down approachability"; ref: brain `projects/calc/_files/ref-ui/gemini-steps-ref.jpg`): an intro sentence with the key words in bold, then numbered steps. Each step: a 28px circle (1px `--ai` edge, `--ai-tint` fill, `--ai` digit), a 2px dotted `--ai-line` connector down to the next circle, a bold title (`--t-md`), an italic mono subtitle (`--t-xs`, `--muted`), 1-3 short bullets, then that step's equations in one callout. After the last step, a 1px `--line` rule and the answer sentence ("So the answer is **B, 2.0 m/s**." plus, after a wrong pick, one line on why that pick was tempting). Short follow-up replies skip the steps: 1-3 plain lines, a callout only when they show math.
+- Chat: Cluck's messages left with the duck (`--mark`) and the name in `--ai`; as bubbles they are `.ai-box` with a 1px `--ai-line` edge; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a site-blue "Next question" button (`.btn-go`).
+- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution through the same steps renderer, in its own `.ai-box` panel with a 1px `--ai-line` edge. Never glued under the header.
 
 ### Reward layer (sugar only: `.rw-*`, `.fx-*`)
 

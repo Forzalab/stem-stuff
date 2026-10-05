@@ -80,7 +80,7 @@ $("#toast")?.addEventListener("click", hideToast);
 $("#toast")?.addEventListener("pointerenter", holdToast);
 $("#toast")?.addEventListener("pointerleave", goToast);
 document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
-addEventListener("keydown", e => { if (e.key === "Escape" && toastAt) hideToast(); });
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(); });   // Escape: the toast, then Cluck's sheet
 addEventListener("scroll", placeToast, { passive: true });
 addEventListener("resize", placeToast);
 const AGAIN = "One more try, so\u00A0choose\u00A0wisely.";   // no-break spaces keep "choose wisely." together
@@ -94,8 +94,8 @@ function vmark(box, id) {
   m.dataset.v = id; m.innerHTML = icon(id);
 }
 /* the words the screen reader hears (the page shows only the icon) */
-const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries."
-  : r.verdict === "wrong" ? "Not quite. One more try." : "";
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "No tries left."
+  : r.verdict === "wrong" ? "Wrong. 1 try left." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
@@ -161,7 +161,7 @@ async function check(code, answer) {
 /* mirror of serve.py grade(): keep the two in step */
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
-const FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math.";   // serve.py FIX_NUDGE
+const FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math.";   // serve.py FIX_NUDGE
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -241,7 +241,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
   if (!repeat) st.wrong.push(sig);
-  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Plug your answer back into the problem. Does it work?") };
+  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Put your answer back in. Does it work?") };
   if (hit && hit.error) out.error = hit.error;
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
@@ -327,10 +327,10 @@ $("#entry").addEventListener("submit", e => {
   const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
-  if (!n) { $("#entryMsg").textContent = "Codes look like CALC1_T6B. Banks: just P2X."; codeIn.focus(); return; }
+  if (!n) { $("#entryMsg").textContent = "Not a code. Try CALC1_T6B."; codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
-  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Diet mode on." : "Sugar mode on."); });
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Original questions on." : "Easy questions on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
 window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
@@ -377,12 +377,12 @@ async function openBank(code, { go = true, quiet = false } = {}) {
     if (r.ok) b = await r.json(); else r.text().catch(() => {});
   } catch (e) {
     if (!quiet) {
-      $("#entryMsg").textContent = timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
+      $("#entryMsg").textContent = timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
   }
-  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `No bank ${code}.`; return false; }
+  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `${code} not found.`; return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
   src(b.code);
   remembered(b.code);
@@ -413,12 +413,12 @@ async function load(code) {
   try {
     prob = await getProblem(code);
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
-      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `${code} is diet-mode only.`; return; }
+      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `Can't open ${code} here.`; return; }
       prob = modeView(prob, modeOf());
     }
   }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `No problem ${code}.` : timedOut(e) ? "timeout" : "Couldn't load that. Check your connection.";
+    $("#entryMsg").textContent = e.status === 404 ? `${code} not found.` : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -468,7 +468,7 @@ function render() {
   layoutFreeze();
 }
 function drawFigures() {
-  document.querySelectorAll("#blocks .fig, #orig .orig-body:not([hidden]) .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
+  document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -486,9 +486,9 @@ function renderQuestion() {
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
         </button>
-        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Submit ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
-        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "correct value")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Correct value for ${LETTERS[i]}" ${INPUT_ATTRS}
-          data-how="${esc(p.fix.how || "correct value")}" placeholder="${esc(p.fix.how || "correct value")}"></div>` : ""}
+        ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
+        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Type the right answer")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
+          data-how="${esc(p.fix.how || "Type the right answer")}" placeholder="${esc(p.fix.how || "Type the right answer")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -501,18 +501,18 @@ function renderQuestion() {
       const l = esc(u.label || LETTERS[i].toLowerCase());
       return `<div class="part${u.prompt ? "" : " nopr"}" data-i="${i}"><span class="mk" id="mk${i}" aria-hidden="true">${l})</span>${u.prompt ? `<div class="pr md" id="pr${i}">${md(u.prompt)}</div>` : ""}
         <div class="ff"><input class="ans" type="text" aria-labelledby="mk${i}${u.prompt ? ` pr${i}` : ""}" ${INPUT_ATTRS}>
-          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Submit ${l}" hidden>${icon("i-go")}</button></div>
+          <button type="button" class="btn btn-go send" id="go${i}" aria-label="Check ${l}" hidden>${icon("i-go")}</button></div>
         <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
     }).join("")}</div>`;
     wireParts();
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
-    const ph = p.type === "expr" ? "in terms of " + v : p.type === "num" ? "e.g. 9/2, sqrt(3), dne" : "";
+    const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Like 9/2, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
           ${INPUT_ATTRS} placeholder="${ph}">
-        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Submit answer" disabled>${icon("i-go")}</button>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check answer" disabled>${icon("i-go")}</button>
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
@@ -533,7 +533,7 @@ function formulaCard() {
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
-const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tick every true one. None true? Check with none ticked." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tap all true ones, then Check. None? Just tap Check." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -805,9 +805,9 @@ function partFeedback(i, r, typed) {
   const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
   if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
-  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>The server took too long. It didn't count.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   hint.innerHTML = h;
   row.classList.toggle("hinted", !!h);
@@ -839,7 +839,7 @@ function settle() {
   S.solved = right === n;
   finish();
   $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
-    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
+    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
 }
 
@@ -1002,11 +1002,11 @@ function feedback(r, typed) {
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
-  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. It didn't count.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Grading isn't live yet; Copy sends it to Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>timeout</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
-    h += `<p class="verdict lock">${icon("i-lock")}<span>Ask Tony about ${esc(S.code)}.</span></p>`;
+    h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
   fb.innerHTML = h;
   const again = $("#retry");
@@ -1034,12 +1034,13 @@ function wishReset() {
   if (wish && wish.ctl) wish.ctl.abort();
   wish = null; voiceStop();
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
+  clReset();
 }
 /* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
    else the live /explain stream. The voice reads that same string, once the typing ends. */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
-  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false };
+  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false };
   const w = wish;
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
     .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
@@ -1073,18 +1074,52 @@ async function wishStart(auto) {
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
 }
-/* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
-const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
-  esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
+/* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
+   follows until the next step or a "---" rule; "- " lines in a row make one short list (the ChatGPT break-up, Tony's ref); a line
+   that is only math ($$..$$ or $..$) is display math, and display lines in a row share one tinted callout, one equation per line; a table row
+   (2+ spaces between cells) in the mono face so its columns line up */
+const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
+const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
+const wishLine = l => esc(l).replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>") || "&nbsp;";
+const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;                                // "1. Find the momentum before — only one cart moves"
+function wishHTML(t) {
+  let out = "", step = null, eqs = [], li = [];
+  const put = h => { if (step === null) out += h; else step += h; };
+  const flush = () => {
+    if (eqs.length) put(`<div class="wl wmath${eqs.length === 1 && eqs[0].includes("boxed") ? " wans" : ""}">${eqs.join("")}</div>`);   // a lone boxed answer: no box around the box
+    if (li.length) put(`<ul class="wl wlist">${li.join("")}</ul>`);
+    eqs = []; li = [];
+  };
+  const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
+  for (const l of t.split("\n")) {
+    const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
+    if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
+      close();
+      const [title, sub] = s[2].split(/\s+[—–]\s+/);
+      step = `<div class="wl wstep"><span class="wnum" aria-hidden="true">${s[1]}</span><div class="wsbody"><div class="wstitle">${wishLine(title)}</div>${
+        sub ? `<div class="wssub">${wishLine(sub)}</div>` : ""}`;
+      continue;
+    }
+    if (/^\s*---+\s*$/.test(l)) { close(); out += '<hr class="wrule">'; continue; }   // the steps end: the answer comes after the rule
+    if (d) { if (li.length) flush(); eqs.push(`<div class="weq">${wishMath(esc(d[1]), true, esc(l))}</div>`); continue; }
+    if (b) { if (eqs.length) flush(); li.push(`<li>${wishLine(b[1])}</li>`); continue; }
+    flush();
+    put(!l.trim() ? '<div class="wl wgap"></div>' : `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`);   // a blank line: a short breath, not a full empty row
+  }
+  close();
+  return out;
+}
 /* the ChatGPT feel (Tony, Oct 4: "bit delay feels gud"): ~900 ms of a lone blinking caret (STYLE.md bans pulsing dots), then the text
    types out at ~35 chars/s word by word, a $..$ always whole, the caret riding the end. A tap on the box skips to the end; reduced motion =
    no typing (the wait stays). */
 const WISH_DOTS = 900, WISH_CPS = 35;
 const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
-function wishCut(t, n) {                                                  // n chars, moved to a word end; a half-open $..$ waits
+function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
+  if (done && n >= t.length) return n;                                    // the whole text: show it, even with a pair the model never closed
   if ((t.slice(0, n).match(/\$/g) || []).length % 2) { const e = t.indexOf("$", n); n = e < 0 ? Math.max(0, t.lastIndexOf("$", n - 1)) : e + 1; }
+  if (t.slice(0, n).split("**").length % 2 === 0) { const e = t.indexOf("**", n); n = e < 0 ? Math.max(0, t.lastIndexOf("**", n - 1)) : e + 2; }
   return n;
 }
 let wishRaf = 0;
@@ -1092,36 +1127,34 @@ function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); 
 function wishDraw() { cancelAnimationFrame(wishRaf); wishRaf = 0; wishFrame(performance.now()); }
 function wishFrame(now) {
   wishRaf = 0;
-  const x = $("#wish .wtext"), w = wish;
+  const x = $("#cluck .wtext"), w = wish;
   if (!x || !w || !w.open) return;
   if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
   const t = w.text;
-  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; if (!w.done || now < w.at) wishText(); return; }
+  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
-  w.shown = Math.max(w.shown, wishCut(t, w.pos));
+  w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
+  x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's solution is open."); }   // what the box shows is what is spoken
+  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); clAsk(); }   // what the box shows is what is spoken
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
   const el = wishEl(), w = wish;
   if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
   el.hidden = false;
-  const label = !w.started ? "Ask Cluck" : w.failed ? "The lamp flickered. Ask again" : w.done ? "Cluck has your wish" : "Cluck is granting your wish";
-  el.innerHTML = `<div class="wbar"><button type="button" class="wchip" aria-expanded="${w.open}">${icon("i-duck")}<span>${label}</span></button>${
-    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Mute" : "Sound"}</button>` : ""}</div>${
-    w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
-  if (w.open) { w.drawn = w.ended = undefined; wishDraw(); }
+  const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
+    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Turn voice off" : "Turn voice on"}</button>` : ""}</div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
-    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, open: true, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); wishPaint(); return; }
-    w.open = !w.open;
-    if (w.open) w.said = false; else { voiceStop(); w.tick = 0; }          // reopened: spoken again once the text is out
-    wishPaint();
+    w.tapped = true;                                                       // the ad wiggle stops for good on this question
+    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); }
+    else if (w.open) { clClose(); return; }
+    clOpen("explain", "#wish .wchip");
   });
-  el.querySelector(".wtext")?.addEventListener("click", () => { if (!w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });
   el.querySelector(".wvoice")?.addEventListener("click", () => {
     try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
     if (voiceOn()) { if (wishTyped(w)) voiceSay(w.text); } else voiceStop();
@@ -1129,6 +1162,130 @@ function wishPaint() {
   });
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
+}
+/* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
+   Two tabs: "Cluck explains" (the box text, then the follow-up chat, the ask field pinned at the bottom) and "Similar steps" (the
+   original's worked solution). Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
+   on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
+const CHAT_TURNS = 4;                                                       // serve.py CHAT_TURNS: the server keeps the same count
+let cl = null;   // { el, tab, open, from }
+function clEl() {
+  if (cl) return cl.el;
+  const el = document.createElement("aside");
+  el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Cluck");
+  const tab = (t, id, ico, name) => `<button type="button" role="tab" class="cl-tab" id="${id}" data-tab="${t}" aria-controls="${id}P">${icon(ico)}<span>${name}</span></button>`;
+  el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
+    <div class="cl-hd"><div class="cl-tabs" role="tablist">${tab("explain", "clTabE", "i-duck", "Cluck explains")}${tab("steps", "clTabS", "i-bulb", "Similar steps")}</div><button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button></div>
+    <div class="cl-bd"><div class="cl-pane" id="clTabEP" role="tabpanel" aria-labelledby="clTabE"><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div><div class="cl-pane" id="clTabSP" role="tabpanel" aria-labelledby="clTabS"></div></div>
+    <div class="cl-ft"></div>`;
+  cl = { el, tab: "explain", open: false, from: null };
+  el.querySelectorAll(".cl-tab").forEach(b => b.addEventListener("click", () => clTab(b.dataset.tab, true)));
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
+  el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
+  clPlace();
+  return el;
+}
+function clPlace() {                                                        // side by side: the notes column; phone: over the page
+  if (!cl) return;
+  const home = sideMQ.matches ? $("#work") : document.body;
+  if (cl.el.parentElement !== home) home.append(cl.el);
+  $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
+  document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
+}
+function clOpen(tab, from) {
+  clEl(); cl.open = true; cl.from = from; cl.el.hidden = false;
+  clPlace(); clAsk(true); clTab(tab, true);
+  layoutFreeze();
+  if (sideMQ.matches) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
+}
+function clClose() {
+  if (!cl || !cl.open) return;
+  cl.open = false; cl.el.hidden = true;
+  clTab(cl.tab, false); clPlace();
+  layoutFreeze();
+  if (cl.from) $(cl.from)?.focus();
+}
+function clTab(tab, focus) {
+  const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
+  if (!has[tab]) tab = has.explain ? "explain" : "steps";
+  cl.tab = tab;
+  for (const b of cl.el.querySelectorAll(".cl-tab")) { const on = b.dataset.tab === tab; b.hidden = !has[b.dataset.tab]; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; }
+  cl.el.querySelector("#clTabEP").hidden = tab !== "explain";
+  cl.el.querySelector("#clTabSP").hidden = tab !== "steps";
+  cl.el.querySelector(".cl-ft").hidden = tab !== "explain";
+  cl.el.querySelector(".cl-title").textContent = "Cluck";                  // the phone head bar: the tabs under it already name the page (Oct 5 review: "Cluck explains" twice)
+  const w = wish, was = !!(w && w.open);
+  if (w) w.open = cl.open && tab === "explain";
+  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: spoken again once the text is out
+  if (w && !w.open && was) { voiceStop(); w.tick = 0; }
+  if (S && S.orig) {
+    S.orig.open = cl.open && tab === "steps";
+    $("#origHd")?.setAttribute("aria-expanded", String(S.orig.open));
+    if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
+  }
+  if (w && was !== w.open) wishPaint();                                     // the chip's label + the voice button follow
+  if (focus) cl.el.querySelector(`.cl-tab[data-tab="${tab}"]`).focus();
+}
+function clReset() {                                                        // a new question: close, empty, a fresh ask field
+  if (!cl) return;
+  clClose();
+  cl.el.querySelector(".wtext").innerHTML = "";
+  cl.el.querySelector(".cl-thread").innerHTML = "";
+  cl.el.querySelector(".cl-ft").innerHTML = "";
+}
+/* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
+function clAsk(build) {
+  if (!cl) return;
+  const ft = cl.el.querySelector(".cl-ft"), w = wish;
+  cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
+  if (!w) { ft.innerHTML = ""; return; }
+  const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
+  if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>That's ${CHAT_TURNS} questions on this one. On to the next!</p></div>`; return; }
+  if (build || !ft.querySelector(".ask")) {
+    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><input type="text" maxlength="500" autocomplete="off" placeholder="Ask Cluck about a step"></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
+    ft.querySelector(".ask").addEventListener("submit", e => { e.preventDefault(); const i = e.currentTarget.querySelector("input"), m = i.value.trim(); if (m) { i.value = ""; clSend(m); } });
+  }
+  const ready = wishTyped(w) && !w.busy;
+  ft.querySelector(".left").textContent = `${left} left`;
+  ft.querySelector("input").disabled = !wishTyped(w);
+  ft.querySelector(".send").disabled = !ready;
+}
+async function clSend(msg) {
+  const w = wish, t = S.tries.at(-1) || {};
+  if (!w || w.busy || !wishTyped(w)) return;
+  const th = cl.el.querySelector(".cl-thread");
+  const me = document.createElement("div"); me.className = "bub me"; me.textContent = msg;
+  const re = document.createElement("div"); re.className = "wtext wreply"; re.innerHTML = WCARET;
+  th.append(me, re);
+  w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
+  re.scrollIntoView({ block: "nearest" });
+  w.ctl = w.ctl || new AbortController();
+  let text = "", err = "";
+  try {
+    const r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", signal: w.ctl.signal,
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+    if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
+    else if (!r.ok || !r.body) err = "fail";
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) {
+        const { value, done } = await rd.read(); if (done) break;
+        text += dec.decode(value, { stream: true });
+        if (wish === w) re.innerHTML = wishHTML(text) + WCARET;
+      }
+      if (!text.trim()) err = "fail";
+    }
+  } catch { if (w.ctl.signal.aborted) return; err = "fail"; }
+  if (wish !== w) return;
+  w.busy = false;
+  if (err) {
+    w.chat.pop();                                                          // not answered: it does not count
+    if (err === "limit") { w.out = true; re.remove(); }
+    else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
+  } else { w.chat.push({ role: "assistant", content: text }); re.innerHTML = wishHTML(text); say(speakable(text)); }
+  clAsk();
+  re.scrollIntoView({ block: "nearest" });
+  if (!w.out) cl.el.querySelector(".ask input")?.focus();
 }
 const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
 const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
@@ -1187,19 +1344,22 @@ function rewardGo(mine, o) {
 let origEl = null;
 function origRender() {
   if (origEl) { origEl.remove(); origEl = null; }
-  $("#work").classList.remove("orig-on");
+  if (cl) { if (cl.open && cl.tab === "steps") clClose(); cl.el.querySelector("#clTabSP").innerHTML = ""; }
   const p = S && S.prob, o = p && p.original;
   if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
   const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
   if (live) R.origSeen(o.q, S.code);
-  S.orig = { lvl, open: sideMQ.matches && lvl < 3, peeked: false };
+  S.orig = { lvl, open: false, peeked: false };
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
-  el.innerHTML = `<button type="button" class="orig-hd" id="origHd" aria-expanded="false" aria-controls="origBody">${icon("i-doc")}<span>Original: Practice Exam 2, Q${esc(o.q ?? "")}</span>${icon("i-down", "ico orig-chev")}</button>
-    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Worked solution</p><ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek at the last line</button>' : ""}
-    <p class="orig-note" hidden>Peeked: this one pays 2 XP.</p></div>`;
+  /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
+     topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
+     while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
+    <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(l, true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
+    <p class="orig-note" hidden>You peeked, so only 2 XP.</p><p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
   const q = el.querySelector(".orig-q");
   for (const b of o.body) {
     if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
@@ -1209,31 +1369,40 @@ function origRender() {
     if (!S.orig.open && S.orig.lvl === 3) origPeeked();                        // folded away: looking again is a peek
     origOpen(!S.orig.open);
   });
-  el.querySelector(".orig-peek")?.addEventListener("click", e => {
-    el.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
+  el.querySelector(".rw-free")?.addEventListener("click", () => el.querySelector(".orig-hd").click());   // the sticker sits on the card's corner
+  const body = el.querySelector(".orig-body");
+  body.querySelector(".orig-peek")?.addEventListener("click", e => {
+    body.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
   });
+  clEl().querySelector("#clTabSP").append(body);   // the solution reads in Cluck's sheet, "Similar steps" tab (so look it up via body, not el)
   origPlace();
-  origOpen(S.orig.open);
+  hintNudge(el.querySelector(".rw-hint"));
+}
+/* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
+const HINT_BULB = `<span class="rw-hint-coin" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><linearGradient id="hbA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient><linearGradient id="hbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient></defs><path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#hbA)"/><path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/><path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/><rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#hbB)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/></svg></span>`;
+function hintNudge(btn) {
+  let seen = false; try { seen = sessionStorage.getItem("stem-hint-nudged") === "1"; } catch { /* blocked: nudge once anyway */ }
+  if (!btn || seen || reduceMQ.matches || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver((es, io) => {
+    if (!es[0].isIntersecting) return; io.disconnect();
+    setTimeout(() => { btn.classList.add("rw-nudge"); try { sessionStorage.setItem("stem-hint-nudged", "1"); } catch { /* */ } }, 900);
+  }, { threshold: 0.9 }).observe(btn);
 }
 function origPeeked() {
   if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
   S.orig.peeked = S.rwPeek = true;
-  origEl.querySelector(".orig-note").hidden = false;
-  say("Peeked: this one pays 2 XP.");
+  $("#origBody .orig-note").hidden = false;
+  say("You peeked, so only 2 XP.");
 }
 function origOpen(open) {
   if (!origEl) return;
-  S.orig.open = open;
-  origEl.querySelector(".orig-hd").setAttribute("aria-expanded", String(open));
-  origEl.querySelector(".orig-body").hidden = !open;
-  $("#work").classList.toggle("orig-on", open && sideMQ.matches);              // desktop: in the scratchpad's place while open
-  if (open) origEl.querySelectorAll(".orig-body .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
-  layoutFreeze();
+  if (open) clOpen("steps", "#origHd"); else clClose();
 }
 function origPlace() {
   if (!origEl) return;
-  if (sideMQ.matches) $("#work").prepend(origEl); else $("#freezeIn").prepend(origEl);
-  $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
+  const rot = $("#rot.dock");                                                    // desktop: the docked videos stay first in the notes column
+  if (sideMQ.matches) { if (rot && rot.parentElement === $("#work")) rot.after(origEl); else $("#work").prepend(origEl); }
+  else $("#freezeIn").prepend(origEl);
 }
 /* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
    so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
@@ -1259,7 +1428,7 @@ async function rewardShow(mine, res) {
   if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
   if (res.burst && fx.burst) {
     const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
-      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS LEVEL", sub: res.sub || res.line };
+      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS!", sub: res.sub || res.line };
     await fx.burst(res.burst, opt);
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
@@ -1338,7 +1507,7 @@ async function copyPad(b, icon, clear) {
   if (ok && clear && box.el.value === text) { box.el.value = ""; box.el.dispatchEvent(new Event("input")); box.snapshot(); }
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Copy failed.");
+  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Didn't copy. Try again.");
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", icon); }, 1600);
 }
 $("#copy").addEventListener("click", () => copyPad($("#copy"), "#i-copy", false));
@@ -1368,7 +1537,7 @@ function barOpen(open) {
   root.classList.toggle("bar-open", open);
   if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
   barTab.setAttribute("aria-expanded", open);
-  barTab.setAttribute("aria-label", open ? "Hide the code bar" : "Show the code bar");
+  barTab.setAttribute("aria-label", open ? "Hide code box" : "Show code box");
 }
 /* tap toggles; a swipe (20px+) up opens, down closes. The tab never takes focus: the scratchpad keeps its caret and keyboard */
 function swipeTab(el, act) {
@@ -1472,7 +1641,7 @@ function toggleMore() {
   const open = !freeze.classList.contains("open");
   freeze.classList.toggle("open", open);
   more.setAttribute("aria-expanded", open);
-  more.setAttribute("aria-label", open ? "Freeze the problem again" : "Show the whole problem");
+  more.setAttribute("aria-label", open ? "Make question small" : "Show whole question");
   if (!open) freeze.scrollIntoView({ block: "nearest" });
   layoutFreeze();
 }
@@ -1509,7 +1678,7 @@ function applyPane() {
   root.classList.toggle("swap-problem", pane === "problem");
   root.classList.toggle("swap-scratch", pane === "scratch");
   swapBtn.dataset.pane = pane;
-  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show the scratchpad" : "Show the problem");
+  swapBtn.setAttribute("aria-label", pane === "problem" ? "Show notes" : "Show question");
   padPeekText();
   layoutSwap();                                                                   // scroll positions are left alone (a reset lost the field you typed in)
 }
@@ -1581,7 +1750,7 @@ const padPeek = $("#padPeek"), padPeekTx = $("#padPeekTx");
 function padPeekText() {
   const t = S && S.box ? S.box.el.value : "";
   const last = t.split("\n").map(x => x.trim()).filter(Boolean).pop();
-  padPeekTx.textContent = last || "Scratchpad";
+  padPeekTx.textContent = last || "Notes";
   padPeek.classList.toggle("empty", !last);
 }
 padPeek.hidden = false;                                                         // CSS shows it only in the PROBLEM pane
@@ -1624,13 +1793,15 @@ const near = (k, r) => ANCH[k].reduce((a, b) => Math.abs(b - r) < Math.abs(a - r
 const mtDef = k => k === "phone" ? 1 / 3 : 1 / 2;                                 // phone: a big pad
 function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number" ? near(k, r) : mtDef(k); }
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
-const anchorName = (k, r) => r === 0 ? (k === "desk" ? "problem strip" : "answer only") : "problem " + ANAME(r);
+const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
 let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
+  root.classList.toggle("no-pad", side && modeOf() === "sugar" && !!S.prob.wish);
+  root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)   // desktop sugar: no notes pad, the column is videos + hint card (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it")
   root.classList.toggle("mt", mtOpen);
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);
@@ -1642,17 +1813,17 @@ function applyMT() {
   root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
   sash.hidden = !on; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && r === 0 && dragR == null);
   mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
-  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show the answer" : "Show the question");
+  mtMode.setAttribute("aria-label", mtTile === "q" ? "Show answer" : "Show question");
   mtExp.hidden = side || !mtOpen;                                               // the collapse corner of the pad page only
   mtExp.querySelector("use").setAttribute("href", mtOpen ? "#i-collapse" : "#i-expand");
-  mtExp.setAttribute("aria-label", mtOpen ? "Close the scratchpad page" : "Open the scratchpad");
+  mtExp.setAttribute("aria-label", mtOpen ? "Close notes" : "Open notes");
   mtExp.title = mtExp.getAttribute("aria-label");
   /* a11y only (WAI-ARIA window splitter), never shown */
   sash.setAttribute("aria-orientation", side ? "vertical" : "horizontal");
   sash.setAttribute("aria-valuemin", "0"); sash.setAttribute("aria-valuemax", String(Math.round(Math.max(...ANCH[k]) * 100)));
   sash.setAttribute("aria-valuenow", String(Math.round(r * 100)));
   sash.setAttribute("aria-valuetext", anchorName(k, r));
-  sash.setAttribute("aria-label", `Problem size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
+  sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
   if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
   fabSync();
@@ -1707,7 +1878,7 @@ function openMT() {
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Switch question and answer view here.", mtMode), 400);
+  setTimeout(() => obToast(2, "Tap to switch question / answer.", mtMode), 400);
 }
 let mtSkipPop = false;
 function shutMT() {
@@ -1770,7 +1941,7 @@ sash.addEventListener("keydown", e => {
   e.preventDefault();
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); layoutFreeze(); });
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); clPlace(); layoutFreeze(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
    follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped
@@ -1786,8 +1957,8 @@ function fabSync() {
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
   if (!show) return;
   fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
-  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap Scratchpad to open your pad.", fab), 700); }
-  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag the button anywhere.", fab), 700);
+  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap here to write notes.", fab), 700); }
+  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move this button.", fab), 700);
 }
 function fabBounds() {
   const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;

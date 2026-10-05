@@ -116,7 +116,7 @@ try {
     await page.reload(); await opened(page, "CALC1_D08");
     const s2 = await qstate(page); assert.ok(s2.finished); assert.match(s2.fb, /1 of 2 right/);
     await openList(page); const r2 = await rows(page);
-    assert.equal(r2[7].x, 2); assert.equal(r2[7].gone, true); assert.match(r2[7].label, /Out of tries\.$/);
+    assert.equal(r2[7].x, 2); assert.equal(r2[7].gone, true); assert.match(r2[7].label, /No tries left\.$/);
     await page.click('#qlistBtn');
   });
 
@@ -130,10 +130,10 @@ try {
       assert.equal(r[i].line.includes("line-through"), gone, `row ${i + 1} line-through`);
       assert.equal(r[i].disabled, null, `row ${i + 1} not disabled`);
     });
-    assert.match(r[1].label, /One wrong try, one left\.$/);
-    assert.match(r[2].label, /Out of tries\.$/);
+    assert.match(r[1].label, /1 wrong, 1 try left\.$/);
+    assert.match(r[2].label, /No tries left\.$/);
     assert.match(r[3].label, /Correct\.$/);
-    assert.match(r[4].label, /Out of tries\.$/, "2-choice, 1 try: a single X is out");
+    assert.match(r[4].label, /No tries left\.$/, "2-choice, 1 try: a single X is out");
   };
   await step("upload: list marks, before reload", expectRows);
 

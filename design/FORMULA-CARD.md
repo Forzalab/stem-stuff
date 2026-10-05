@@ -30,6 +30,9 @@ the paper they get in the exam. Runner-up 5 if the group wants it even more pre-
 
 ## Round 2
 
+**Desktop sugar has no notes pad** (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it for me"): on a question with a layer the right column is the videos + the hint card only (app.js applyMT `html.no-pad`). Diet and plain questions keep the pad.  **Desktop / tablet (Oct 4, Tony picked "B: top of notes" from 2 mocks):** side by side, the brainrot duo docks as the first thing in the
+notes column, both players side by side, sticky; no drag; – folds it into a "Show video" bar. Phones keep the floating corner below.
+
 Tony picked formula card 5 ("Steps in order") and brainrot 4 ("Stacked duo"). Five refinements of each, built to STYLE.md: app.css
 tokens only, no `--mark`, borders `--bw` or 1px dividers, weights 400 and 700, sentence case, no emoji, sprite icons, a reduced-motion
 path for every animation.

@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <!-- interactive-widget: Chromium shrinks the layout viewport for the keyboard, so sticky just works there. Safari ignores it; app.js handles Safari (design/FREEZE.md). -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#151d2b">
+<meta name="theme-color" content="#08111f">
 <meta name="color-scheme" content="dark">
 <title>STEM drill</title>
 <!-- Loading splash (design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
      No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
 <style>
-html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
-#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #151d2b; transition: opacity .2s ease-out; }
+html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
+#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #08111f; transition: opacity .2s ease-out; }
 #splash.out { opacity: 0; pointer-events: none; }
 #splash svg { display: block; width: 64px; height: 64px; }
 #splash .sp-tile { fill: #1d2839; }   /* --sheet */
@@ -120,6 +120,8 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-6.5 6.5M10 20H4v-6M4 20l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M20 4l-6.5 6.5M13.5 5v5.5H19M4 20l6.5-6.5M10.5 19v-5.5H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <!-- Cluck the duck -->
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v1.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
   </defs>
 </svg>
@@ -128,21 +130,21 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <!-- the entry box: top of the column on desktop, fixed bottom-centre on phones (one thumb) -->
   <div class="dock" id="dock">
     <!-- phones, problem open: the bar rests as a short strip (up-chevron); tap or swipe up shows it over the page, tap or swipe down puts it away -->
-    <button type="button" class="bar-tab" id="barTab" aria-expanded="false" aria-controls="entry" aria-label="Show the code bar"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg></button>
+    <button type="button" class="bar-tab" id="barTab" aria-expanded="false" aria-controls="entry" aria-label="Show code box"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg></button>
     <!-- start page (html.start: no problem open): one line of title over the entry, both centred (app.css) -->
-    <h1 class="start-title" id="startTitle">Upload or type code to start.</h1>
+    <h1 class="start-title" id="startTitle">Type a code to start.</h1>
     <form class="entry" id="entry" autocomplete="off" novalidate>
-      <button type="button" class="btn" id="upload" aria-label="Open a problem file" title="Open a problem file">
+      <button type="button" class="btn" id="upload" aria-label="Open file" title="Open file">
         <svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>
       </button>
       <div class="code-box">
         <!-- no name: the browser's own form history stays out; app.js shows its own suggestions (suggest.mjs: banks first) -->
-        <input id="code" type="text" aria-label="Problem code" aria-describedby="entryMsg" placeholder="Problem code"
+        <input id="code" type="text" aria-label="Type code here" aria-describedby="entryMsg" placeholder="Type code here"
           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="codeSug" autocomplete="off"
           maxlength="24" spellcheck="false" autocapitalize="characters" autocorrect="off" enterkeyhint="go">
         <ul class="code-sug" id="codeSug" role="listbox" aria-label="Matching codes" hidden></ul>
         <button type="button" class="btn" id="codePaste" aria-label="Paste code" title="Paste code"><svg class="ico" aria-hidden="true"><use href="#i-paste"/></svg></button>
-        <button type="submit" class="btn btn-go" id="codeGo" aria-label="Open problem" hidden><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button>
+        <button type="submit" class="btn btn-go" id="codeGo" aria-label="Open question" hidden><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button>
       </div>
       <button type="button" class="btn" id="retryLoad" aria-label="Try again" title="Try again" hidden><svg class="ico" aria-hidden="true"><use href="#i-retry"/></svg></button>
     </form>
@@ -157,7 +159,7 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
     <button type="button" class="btn" id="qshuf" aria-label="Shuffle questions" title="Shuffle questions">
       <svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg>
     </button>
-    <button type="button" class="btn" id="qprev" aria-label="Previous question" title="Previous question">
+    <button type="button" class="btn" id="qprev" aria-label="Go back one" title="Go back one">
       <svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg>
     </button>
     <button type="button" class="btn" id="qnext" aria-label="Next question" title="Next question">
@@ -170,7 +172,7 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
 <main id="main">
   <div id="sentinel" aria-hidden="true"></div>
   <!-- Swap (design/SWAP.md): only while the phone keyboard is up. One icon toggle: document | pencil. -->
-  <button type="button" class="btn btn-tgl" id="swap" data-pane="problem" aria-label="Show the scratchpad" hidden>
+  <button type="button" class="btn btn-tgl" id="swap" data-pane="problem" aria-label="Show notes" hidden>
     <svg class="ico t-doc" aria-hidden="true"><use href="#i-doc"/></svg>
     <svg class="ico t-pen" aria-hidden="true"><use href="#i-pen"/></svg>
   </button>
@@ -178,7 +180,7 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
   <div class="stage" id="stage">
   <section class="freeze" id="freeze" aria-labelledby="pcode" hidden>
     <!-- desktop, pad wide: the problem stashed to a 52px strip with its code written down the side; tap = the problem back -->
-    <button type="button" class="pstrip" id="pstrip" aria-label="Show the problem" hidden><span id="pstripCode"></span></button>
+    <button type="button" class="pstrip" id="pstrip" aria-label="Show question" hidden><span id="pstripCode"></span></button>
     <!-- side by side: the question's label row, the twin of the pad's "Scratchpad" row, so both boxes start at the same height (Tony, Oct 3) -->
     <div class="xb-label q-label" aria-hidden="true"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span>Question</span></div>
     <div class="freeze-in" id="freezeIn">
@@ -190,39 +192,39 @@ html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
       <div class="fb" id="fb" aria-live="polite"></div>
     </div>
     <!-- grab handle on the strip's bottom edge (Tony: variant A): tap or drag down opens the whole problem, tap or drag up folds it -->
-    <button type="button" class="more" id="more" aria-expanded="false" aria-controls="freezeIn" aria-label="Show the whole problem" hidden></button>
+    <button type="button" class="more" id="more" aria-expanded="false" aria-controls="freezeIn" aria-label="Show whole question" hidden></button>
   </section>
 
   <!-- the one drag handle in the gap between the problem and the pad (M3 pane expansion): drag snaps to an anchor, a tap goes to the next -->
   <div class="sash" id="sash" role="separator" tabindex="0" aria-controls="freeze" hidden></div>
   <section class="work" id="work" hidden>
     <div class="xb" id="xb">
-      <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Scratchpad</span><span class="xb-save" id="xbSave" role="status"></span>
+      <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Notes</span><span class="xb-save" id="xbSave" role="status"></span>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
            Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
       <div class="xb-field" id="xbField">
-        <button type="button" class="btn xb-cut" id="cut" aria-label="Cut all: copy answer, scratchpad and history, then clear the scratchpad" title="Cut all">
+        <button type="button" class="btn xb-cut" id="cut" aria-label="Copy for Tony, then clear notes" title="Copy for Tony, then clear notes">
           <svg class="ico" aria-hidden="true"><use href="#i-cut"/></svg>
         </button>
-        <button type="button" class="btn xb-copy" id="copy" aria-label="Copy answer, scratchpad and history" title="Copy">
+        <button type="button" class="btn xb-copy" id="copy" aria-label="Copy my work for Tony" title="Copy my work for Tony">
           <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>
         </button>
         <!-- the pad page's tool row (round 3d, variant 3): the q | a switch at the left, collapse left of Cut. Both belong to the pad, so they
              live in its box, in thumb reach. q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
-        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show the answer" hidden>
+        <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show answer" hidden>
           <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>
         </button>
-        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Close the scratchpad page" title="Close the scratchpad page" hidden><svg class="ico" aria-hidden="true"><use href="#i-collapse"/></svg></button>
+        <button type="button" class="btn mt-exp" id="mtExp" aria-label="Close notes" title="Close notes" hidden><svg class="ico" aria-hidden="true"><use href="#i-collapse"/></svg></button>
       </div>
     </div>
   </section>
   </div>
   <!-- keyboard up, problem pane: a one-line glimpse of the pad just above the keyboard; a tap goes to the pad in the same tap -->
-  <div class="pad-peek" id="padPeek" role="button" aria-label="Go to the scratchpad" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="padPeekTx">Scratchpad</span></div>
+  <div class="pad-peek" id="padPeek" role="button" aria-label="Go to notes" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="padPeekTx">Notes</span></div>
 </main>
 <!-- phones: the pad is hidden; this floating button opens the pad page. Drag it: it snaps to a side edge (STYLE.md §3) -->
-<button type="button" class="pad-fab" id="padFab" aria-controls="work" aria-expanded="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Scratchpad</span></button>
+<button type="button" class="pad-fab" id="padFab" aria-controls="work" aria-expanded="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Open notes</span></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 </body>

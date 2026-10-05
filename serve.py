@@ -45,9 +45,9 @@ BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.j
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "before", "original")
-DEFAULT_NUDGE = "QUACK. Plug your answer back into the problem. Does it work?"
-FIX_NUDGE = "QUACK. Right call on which ones are false. One fix is off: redo that row's math."
-NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again."
+DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
+FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
+NONE_MISS = "QUACK. Some taps are wrong. Check each row again."
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -815,12 +815,15 @@ AUTO_PER_HOUR, ANY_PER_HOUR = 5, 40          # Tony: 5 questions an hour fire on
 _asked = {}                                  # sid -> [(time, auto)]
 _asked_lock = threading.Lock()
 CLUCK_GENIE = """You are Cluck: a duck who was a CS professor for 30 years until a botched genie wish left him a duck AND the genie of a lamp shaped like a rubber duck. You grant exactly one wish per wrong answer: the solution.
-Voice: theatrical genie, QUACK as punctuation, exactly one terrible pun per answer (physics or duck puns: "orbit-trary", "quack-celeration", "down-right egg-cellent"). Warm. Never mean, never sarcastic about the student.
-Open with one genie line, like "POOF! You rubbed the lamp wrong, but a wish is a wish." Then the solution.
+Voice: theatrical genie. QUACK as punctuation, two or three in the prose, never inside math or the answer sentence. Exactly one terrible pun (physics or duck: "orbit-trary", "quack-celeration", "down-right egg-cellent"). Warm. Never mean, never sarcastic about the student.
 You are given the correct solution (KEY) and the slip behind the student's pick (SLIP). Paraphrase them. Never change a number, sign, unit, or the answer. Never add physics that is not in the KEY.
-Format: plain text and LaTeX only. No markdown at all: no **, no *, no #, no bullet symbols, no code. Math in $...$.
-Shape: one genie line. A "Use:" line with the master formula. If the KEY has a table, copy it exactly with its aligned columns. Then the KEY's work lines, the answer last. A "Your pick:" line naming the slip. One pun sign-off.
-Short words. Short lines. Nothing the student must read twice.
+Write it like a good textbook page told by a duck: full short sentences that flow, and the math set apart so the eye can find it.
+Format: sentences, LaTeX, **bold**, "- " list lines, numbered step lines, and one --- line. Nothing else: no #, no * bullets, no code, no | pipe tables.
+Break it into 2 to 4 steps. Each step starts on its own line as "1. <short step title> — <subtitle of 2 to 5 words>", like "1. Find the momentum before — only one cart moves". Under it: one to three "- " lines in plain words (two or three parallel values, one per object, go here too), then the step's math.
+Bold only the given numbers when you first name them, and the final answer. Never bold a whole sentence.
+Math inside a sentence: $...$. A worked equation gets its own line as $$...$$, one equation per line, each line one move.
+Order: one genie line, like "POOF! You rubbed the lamp wrong, but a wish is a wish." One intro sentence with the key idea's words in **bold** (which formula fits and why). The steps, following the KEY's work (if the KEY has a table, copy it exactly with its aligned columns inside a step). A line with only ---. The final value alone on its own line as $$\boxed{...}$$ with its unit. The answer sentence: "So the answer is **<letter>, <value unit>**." A "Your pick:" sentence naming the slip, kindly. One pun sign-off.
+Short words. Short sentences. Nothing the student must read twice.
 Audience: community college students in Fresno taking physics as a general requirement, mostly biology and computer science majors, many reading English as a second language. Plain everyday words; explain any physics word the first time."""
 
 
@@ -854,20 +857,21 @@ def explain_prompt(p, answer):
 
 
 class Plain:
-    """streamed text without markdown: drops ** and __ anywhere, and #, -, * markers at a line start (models slip)"""
+    """streamed text, the markdown Cluck may use kept: **bold** (key numbers, the answer) and "- " list lines (2-3 parallel values);
+    __ goes anywhere, and # and * markers at a line start (headings break the flow; models slip)"""
     def __init__(self):
         self.start, self.hold = True, ""
 
     def feed(self, chunk):
-        t, out, i = self.hold + chunk.replace("**", "").replace("__", ""), [], 0
+        t, out, i = self.hold + chunk.replace("__", ""), [], 0
         self.hold = ""
         while i < len(t):
             if self.start:
                 rest = t[i:]
-                if re.fullmatch(r"#+|[-*]", rest):          # a marker cut by the chunk edge: wait for the next chunk
+                if re.fullmatch(r"#+|\*", rest):          # a marker cut by the chunk edge: wait for the next chunk
                     self.hold = rest
                     break
-                m = re.match(r"#+\s+|[-*]\s+", rest)
+                m = re.match(r"#+\s+|\*\s+", rest)
                 if m:
                     i += len(m.group(0))
                     continue
@@ -879,9 +883,13 @@ class Plain:
 
 def explain_stream(p, answer, key):
     """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection."""
-    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": 450, "temperature": 0.7,
-                       "provider": {"zdr": True, "data_collection": "deny"},
-                       "messages": [{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}]}).encode()
+    yield from _or_stream([{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}], key, 450)
+
+
+def _or_stream(messages, key, max_tokens):
+    """one OpenRouter chat call, streamed, ZDR only; yields the text with markdown stripped (Plain)."""
+    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": max_tokens, "temperature": 0.7,
+                       "provider": {"zdr": True, "data_collection": "deny"}, "messages": messages}).encode()
     req = urllib.request.Request(OPENROUTER_BASE + "/chat/completions", data=body, method="POST",
                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "X-Title": "stem-stuff"})
     plain = Plain()
@@ -902,33 +910,113 @@ def explain_stream(p, answer, key):
                 yield text
 
 
-def explain(cookie_header, body):
-    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+def _stream_head(cookie_header):
     sid, cookie = new_sid(cookie_header)
     head = {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no"}
     if cookie:
         head["Set-Cookie"] = cookie
+    return sid, head
+
+
+def _body(body, limit):
     try:
-        b = json.loads(body) if 0 < len(body) <= 4096 else None
+        return json.loads(body) if 0 < len(body) <= limit else None
     except (ValueError, UnicodeDecodeError):
-        b = None
-    mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
+        return None
+
+
+def _wish_problem(cookie_header, b):
+    """the problem Cluck may talk about: easy mode, shown, with a presolved key. None otherwise (a 404)."""
+    mode = mode_of(cookie_header)
     p = lookup(str(b.get("code", "")), mode) if isinstance(b, dict) else None
-    if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key"):
+    return None if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key") else p
+
+
+def _relay(p, chunks, what):
+    """the model's text as bytes; any failure (the prompt or the connection) ends with one line instead of a cut socket."""
+    try:
+        for t in chunks():
+            yield t.encode()
+    except Exception as e:  # noqa: BLE001
+        print(f"{what} {p['code']}: {e}", file=sys.stderr)
+        yield "\n(Cluck stopped early. Sorry!)".encode()
+
+
+def explain(cookie_header, body):
+    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    sid, head = _stream_head(cookie_header)
+    b = _body(body, 4096)
+    p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
+    if p is None:
         return 404, head, iter([b""])
     if not key:
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
+    return 200, head, _relay(p, lambda: explain_stream(p, b.get("answer"), key), "explain")
 
-    def gen():
-        try:
-            for t in explain_stream(p, b.get("answer"), key):
-                yield t.encode()
-        except Exception as e:  # noqa: BLE001
-            print(f"explain {p['code']}: {e}", file=sys.stderr)
-            yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
-    return 200, head, gen()
+
+# ---------------- Cluck chat (handoff 2026-10-04): follow-up questions under the genie box, CHAT_TURNS per problem per browser ----------------
+# history[0] is the box text (Cluck's own turn); then the student and Cluck take turns; the last one is the student's.
+# The cap lives twice: the history the browser sends, and _chats (one server process; Vercel instances do not share it).
+CHAT_TURNS, CHAT_MAX, CHAT_LINE = 4, 16384, 2000
+_chats = {}                                  # (sid, code) -> follow-ups answered
+CLUCK_CHAT = """You are Cluck: a duck who was a CS professor for 30 years until a botched genie wish left him a duck AND the genie of a rubber-duck lamp. You already granted the wish (your first turn: the solution). Now the student asks about it.
+The first user message holds the QUESTION, the KEY (the correct solution), and the SLIP behind their wrong pick.
+Voice: warm, theatrical genie. A QUACK or two as punctuation, never inside math. At most one pun. Never mean, never sarcastic.
+Answer in 1 to 4 short sentences that flow like a good tutor talking. No numbered steps and no --- line in a reply. Grade-6 words. Explain the step they ask about. Explain; do not quiz them back.
+A worked equation may take its own line as $$...$$, one move per line. Math inside a sentence: $...$.
+Bold only a key number or the answer, like **15.59 m**. "- " lines only for two or three parallel values. No #, no * bullets, no code, no | pipe tables.
+Never change or invent a number, sign, unit, or answer that is not in the KEY. Never add physics that is not in the KEY.
+Off-topic: steer back to this question in one line.
+Audience: community college students in Fresno taking physics as a general requirement, many reading English as a second language."""
+
+
+def chat_history(h):
+    """the turns as sent, or None when the shape is wrong: Cluck first, then turns that take turns, the student last."""
+    if not isinstance(h, list) or not 2 <= len(h) <= 2 * CHAT_TURNS + 2:      # one past the cap still parses: a 429, not a 400
+        return None
+    out = []
+    for i, t in enumerate(h):
+        role = "assistant" if i % 2 == 0 else "user"
+        if not isinstance(t, dict) or t.get("role") != role or not isinstance(t.get("content"), str):
+            return None
+        text = t["content"].strip()[:CHAT_LINE]
+        if not text:
+            return None
+        out.append({"role": role, "content": text})
+    return out if out[-1]["role"] == "user" else None
+
+
+def chat(cookie_header, body):
+    """POST /chat {code, answer, history}: (status, headers, iterator of bytes), like /explain. A 5th follow-up: 429 {"error": "limit"}."""
+    sid, head = _stream_head(cookie_header)
+    b = _body(body, CHAT_MAX)
+    p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
+    if p is None:
+        return 404, head, iter([b""])
+    history = chat_history(b.get("history"))
+    if history is None:
+        return 400, head, iter([b""])
+    if not key:
+        return 503, head, iter([b""])
+    turn, k = len(history) // 2, (sid, p["code"])
+    with _asked_lock:                        # check and count in one step: two tabs at once can't both take the last turn
+        over = turn > CHAT_TURNS or _chats.get(k, 0) >= CHAT_TURNS
+        if not over:
+            _chats[k] = _chats.get(k, 0) + 1
+    if over:
+        return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "limit"}'])
+    if not explain_allowed(sid, False):      # the hourly cap /explain has, shared
+        with _asked_lock:
+            _chats[k] -= 1
+        return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
+    context = lambda: [{"role": "system", "content": CLUCK_CHAT}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
+    return 200, head, _relay(p, lambda: _or_stream(context() + history, key, 250), "chat")
+
+
+STREAMS = {"/explain": explain, "/chat": chat}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
+POST_MAX = CHAT_MAX                              # the most any POST body may be; each path checks its own limit
 
 
 def _json(status, obj, cookie):
@@ -1035,12 +1123,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.moved(307)                               # 307 keeps POST + body
             return
         try:
-            n = min(int(self.headers.get("Content-Length") or 0), 4097)
+            n = min(int(self.headers.get("Content-Length") or 0), POST_MAX + 1)
         except ValueError:
             n = 0
         body = self.rfile.read(n) if n > 0 else b""
-        if self.path.split("?")[0] == "/explain":
-            status, headers, chunks = explain(self.headers.get("Cookie", ""), body)
+        stream = STREAMS.get(self.path.split("?")[0])
+        if stream:
+            status, headers, chunks = stream(self.headers.get("Cookie", ""), body)
             self.send_response(status)
             for k, v in headers.items():
                 if k != "Cache-Control":

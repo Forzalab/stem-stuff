@@ -101,7 +101,7 @@ try {
     assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
-    assert.match(await page.textContent("#how"), /None true\? Check with none ticked/);
+    assert.match(await page.textContent("#how"), /Tap all true ones, then Check\. None\? Just tap Check\./);
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
@@ -116,9 +116,20 @@ try {
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
+    const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("dock"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+    assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
+    assert.equal(await page.$eval("#xb", e => e.getClientRects().length), 0, "desktop sugar: no notes pad (Tony, Oct 4)");
+    await page.click("#rot .vid"); await page.click('#rot [data-act="min"]');
+    assert.equal(await page.isVisible("#rot .rtab"), true, "– folds it into the Show video bar");
+    await page.click("#rot .rtab"); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the bar brings it back");
   });
 
-  await step("sugar: drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+  await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body && !document.getElementById("rot").hidden, null, { timeout: 4000 })
+      .catch(async () => { await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body, null, { timeout: 3000 }); });
+    await page.waitForTimeout(300);
     const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
     const vw = await page.evaluate(() => [innerWidth, innerHeight]);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
@@ -130,7 +141,8 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
     await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForTimeout(100);
     assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
-    const code = await page.textContent("#pcode");                    // back to the step-off default for the steps below
+    const code = await page.textContent("#pcode");                    // back to desktop + the step-off default for the steps below
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.evaluate(() => { localStorage.removeItem("stem-rot"); localStorage.removeItem("stem-rot-pick"); }); await page.reload(); await opened(page, code);
   });
 
@@ -142,7 +154,7 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too
+    await page.waitForFunction(() => /Show Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too
     asked = 0;
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
@@ -155,16 +167,23 @@ try {
 
   await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed, then the voice reads the same string at 0.2", async () => {
     const said = () => page.evaluate(() => window.__said);
-    await page.waitForFunction(() => /Cluck has your wish/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
+    await page.waitForFunction(() => /Show Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
     assert.equal(asked, 0, "the pre-written text needs no /explain");
     await page.evaluate(() => { window.__said = []; });
+    const anim = () => page.$eval("#wish .wchip", c => getComputedStyle(c).animationName);
+    assert.equal(await anim(), "rw-wiggle", "the ad wiggle runs until the first tap (T4)");
+    await page.emulateMedia({ reducedMotion: "reduce" }); assert.equal(await anim(), "none", "no wiggle with reduced motion");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    assert.match(await page.textContent("#wish .wchip"), /Show Cluck's steps/);
     await page.click("#wish .wchip");
-    assert.ok(await page.$("#wish .wtext .wcaret") && !(await page.$("#wish .wtext .wl")), "the thinking caret comes first, alone");
+    assert.equal(await page.$eval("#wish .wchip", c => c.classList.contains("rw-wiggle")), false, "a tap stops the wiggle for good");
+    assert.match(await page.textContent("#wish .wchip"), /Hide Cluck's steps/);
+    assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone");
     assert.equal((await said()).length, 0, "spoken before the text is out");
-    await page.waitForFunction(() => document.querySelector("#wish .wtext .wl"), null, { timeout: 2000 });
-    const first = (await page.textContent("#wish .wtext")).trim();
+    await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 2000 });
+    const first = (await page.textContent("#cluck .wtext")).trim();
     assert.ok(first.length < P.all.saccharine.narration.length, "no typing: " + first);
-    await page.waitForFunction(t => document.querySelector("#wish .wtext")?.textContent.trim() === t && !document.querySelector("#wish .wcaret"),
+    await page.waitForFunction(t => document.querySelector("#cluck .wtext")?.textContent.trim() === t && !document.querySelector("#cluck .wcaret"),
       P.all.saccharine.narration, { timeout: 4000 });
     const s = await said();
     assert.equal(s.length, 1, JSON.stringify(s));
@@ -172,25 +191,48 @@ try {
     assert.ok(Math.abs(s[0].volume - 0.2) < 1e-6, "volume " + s[0].volume);
   });
 
-  await step("past 5 auto wishes an hour, nothing fires until Ask Cluck", async () => {
+  await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
-    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForTimeout(400);
     assert.equal(asked, 0, "fired on its own past the cap");
     await page.evaluate(() => { window.__said = []; });
     await page.click("#wish .wchip");
-    await page.click("#wish .wtext");                                       // a tap skips the wait + typing: the text shows as it streams
-    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#wish .wtext")?.textContent || ""), null, { timeout: 1500 })
-      .catch(async e => { throw new Error(e.message + " | wish: " + await page.innerHTML("#wish") + " | asked " + asked); });
+    await page.click("#cluck .wtext");                                       // a tap skips the wait + typing: the text shows as it streams
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 1500 })
+      .catch(async e => { throw new Error(e.message + " | wish: " + await page.innerHTML("#cluck") + " | asked " + asked); });
     assert.equal(asked, 1);
-    const t = await page.textContent("#wish .wtext");
-    assert.match(t, /POOF! A wish is a wish\./); assert.ok(await page.$("#wish .wtext .katex"), "math rendered"); assert.ok(!/\*\*/.test(t));
+    const t = await page.textContent("#cluck .wtext");
+    assert.match(t, /POOF! A wish is a wish\./); assert.ok(await page.$("#cluck .wtext .katex"), "math rendered"); assert.ok(!/\*\*/.test(t));
     await page.waitForFunction(() => window.__said.length === 1, null, { timeout: 2000 });
     assert.equal(await page.evaluate(() => window.__said[0].text), speakable(parts.join("")), "the voice reads the box text");
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
+  });
+
+  await step("Cluck's sheet: fills the notes column; 4 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
+    assert.equal(await page.$eval("#cluck", e => e.parentElement.id), "work", "desktop: the notes column");
+    assert.equal(await page.getAttribute("#clTabE", "aria-selected"), "true");
+    const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, r.height]; });
+    assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "full height, less the 16px top and bottom margins of the raised card");
+    assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
+    await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
+      .catch(() => { throw new Error("the ask field is not on screen when the sheet opens"); });
+    for (let n = 1; n <= 4; n++) {
+      const a0 = asked;
+      await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
+      await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
+      assert.equal(asked, a0 + 1, "one /chat call");
+      { const rr = await page.$$eval("#cluck .wreply", r => r.map(x => x.textContent)); assert.match(rr.at(-1), /Egg-cellent/); }
+      assert.equal((await page.$$eval("#cluck .bub.me", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");
+      if (n < 4) assert.equal(await page.textContent("#cluck .ask .left"), `${4 - n} left`);
+    }
+    assert.ok(!(await page.$("#cluck .ask")) && /4 questions/.test(await page.textContent("#cluck .done-row")), "4 asked: the field is done");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.isHidden("#cluck"), true);
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("wchip")), true, "focus goes back to the chip");
   });
 
   await step("easy: prove-mode question has no fix boxes; a tick-only set is graded", async () => {
@@ -214,6 +256,7 @@ try {
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
     assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
+    assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "diet keeps the notes pad on desktop");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$$eval("#q .fix", f => f.length), 0, "fix boxes in diet mode (prove mode is gone)");

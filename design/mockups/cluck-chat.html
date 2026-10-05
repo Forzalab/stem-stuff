@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark"><title>Cluck chat variants</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css"><link rel="stylesheet" href="../../rewards/rewards.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css"><script src="../../vendor/katex/katex.min.js"></script>
+<!--
+  Cluck's explanation + follow-up chat AND the "Similar solution steps" card, made to look like one family (Tony, Oct 4: "how can we
+  make the LOOK between AI box and the similar explanation section look unified? ... 3 variants, different for each").
+  All three use STYLE.md "Cluck's surfaces" (--ai tangerine on .ai-skin) and ONE renderer for both texts (say(): prose lines,
+  consecutive math-only lines grouped into one callout, last line = the answer; projects/calc/topics/ai-tutor-ux.md "take these").
+    ?v=1  One home: a side sheet over the notes column with two tabs, "Cluck explains" | "Similar steps". The hint card opens it.
+    ?v=2  One anatomy: both are a casino tangerine header + a gap + a tinted body panel (the hint card's look, given to Cluck).
+    ?v=3  One voice: both are Cluck speaking. The steps open as a Cluck bubble under the hint card, same bubble as the thread.
+  ?turns=0..4 prefills that many student turns (4 = locked). ?alt shows the second state (1: Steps tab, 2: sheet closed, 3: thread locked).
+  ?shot hides the switcher. Replies are canned (a stub for POST /chat). The question is made up: exam content never goes to GitHub.
+-->
+<style>
+/* impeccable-disable side-tab: the slot-kit bevel of the casino headers (.rw-hint*, .cx-hd). impeccable waiver: casino-themed (Tony, Oct 4) */
+/* ---------- Cluck's surfaces (STYLE.md): tokens on .ai-skin, never :root ---------- */
+.ai-skin {
+  --ai: #ff9a3c; --ai-ink: #2b1000;
+  --ai-sheet: #2a1d14; --ai-field: #1e140d; --ai-text: #fff1e3; --ai-muted: #d9bfa8; --ai-rule: #4a3526;
+  --ai-tint: color-mix(in srgb, var(--ai) 14%, var(--ai-sheet));
+  --ai-line: color-mix(in srgb, var(--ai) 45%, var(--ai-sheet));
+}
+/* Cluck's box = its own service on the site (Tony, Oct 4: "cluck box should be also orange (think ... like a diff service on the same
+   website). the button explanation + next should stay blue of our site"): a warm dark surface with its own ink, remapping the base
+   tokens inside the box so .btn, .ff and the text follow. Contrast: text 14.8, muted 9.3, --ai 7.7 on --ai-sheet; text on tint 11.3 */
+.ai-box { --sheet: var(--ai-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--ai-muted); --hint: var(--ai-muted);
+  --line: var(--ai-rule); --edge: var(--ai-line); background: var(--sheet); color: var(--ink); }
+/* the site's own actions stay blue, in or out of the box */
+.btn-c1 { width: auto; padding: 0 var(--s5); font-weight: 700; background: transparent; border-color: var(--c1); color: var(--c1); }
+.btn-c1:hover { background: var(--raised); }
+.btn-go.wide { width: auto; padding: 0 var(--s5); font-weight: 700; }
+/* one renderer, one look: prose, callout, answer line */
+.say p { margin: 0 0 var(--s2); }
+.say p:last-child { margin-bottom: 0; }
+.say b { font-weight: 700; }
+.callout { margin: var(--s3) 0; padding: var(--s3) var(--s4); display: grid; gap: var(--s2); justify-items: center; overflow-x: auto;
+  background: var(--ai-tint); border: var(--bw) solid var(--ai-line); border-radius: 10px; }
+.callout .katex { font-size: 1.1em; }
+/* the steps widget (Gemini ref, Tony Oct 4: "for EACH STEP, format it similar to gemini's app design"): intro sentence, then numbered
+   circles joined by a dotted line, bold title, italic mono subtitle, bullets, the step's equations in one callout; then the answer */
+.say .intro { margin-bottom: var(--s4); }
+.stw { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); }
+.st { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); column-gap: var(--s3); }
+.st:not(:last-child)::before { content: ""; position: absolute; left: calc(.875rem - 1px); top: calc(1.75rem + var(--s1)); bottom: calc(var(--s1) - var(--s4));
+  border-left: 2px dotted var(--ai-line); }
+.st-n { width: 1.75rem; height: 1.75rem; border-radius: 50%; display: grid; place-items: center; margin-top: 1px;
+  border: var(--bw) solid var(--ai); background: var(--ai-tint); color: var(--ai); font: 700 var(--t-xs)/1 inherit; font-variant-numeric: tabular-nums; padding-bottom: 3px; }
+.st h4 { margin: 0; font-size: var(--t-md); line-height: 1.35; }
+.st .sub { margin: 2px 0 var(--s2); font: italic var(--t-xs)/1.4 var(--mono); color: var(--muted); }
+.st ul { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--s1); list-style: disc; }
+.st li::marker { color: var(--muted); }
+.st .callout { margin: var(--s3) 0 0; }
+.say .ans { margin-top: var(--s4); padding-top: var(--s3); border-top: var(--bw) solid var(--line); }
+.ai-name { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); font: 700 var(--t-sm)/1.2 inherit; color: var(--ai); }
+.thread { display: flex; flex-direction: column; gap: var(--s4); }
+.msg { display: flex; gap: var(--s3); align-items: flex-start; }
+.msg > .ico { flex: none; width: 2rem; height: 2rem; color: var(--mark); margin-top: var(--s2); }
+.msg .col { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.bub { max-width: 100%; padding: var(--s3) var(--s4); border-radius: 12px; line-height: var(--lh); }
+/* big surfaces stay the neutral sheet with a warm edge; the warm tint is for the small callouts only (a big orange-on-navy tint reads muddy) */
+.bub.ai { border: var(--bw) solid var(--ai-line); border-top-left-radius: 4px; }
+.bub.me { align-self: flex-end; max-width: 85%; background: var(--raised); border-top-right-radius: 4px; }
+.ask { display: flex; gap: var(--s2); align-items: center; }
+.ask .ff { flex: 1; }
+.ask .ff input { font-family: inherit; }   /* talk, not an answer: the sans, not the answers' mono */
+.ask .ff:focus-within { border-color: var(--ai); box-shadow: inset 0 0 0 1px var(--ai); }
+.ask .send { width: var(--btn); height: var(--btn); border: 0; border-radius: 8px; display: grid; place-items: center; background: var(--ai); color: var(--ai-ink); }
+.ask .send:hover { filter: brightness(1.08); }
+.ask .send:disabled { opacity: .45; cursor: default; filter: none; }
+.left { flex: none; min-width: 4.5rem; text-align: right; font: 700 var(--t-xs)/1 inherit; color: var(--ai); }
+.done-row { display: flex; align-items: center; gap: var(--s3); }
+.done-row p { margin: 0; color: var(--muted); font-size: var(--t-sm); }
+
+/* ---------- page frame (a stand-in for the app's side-by-side layout) ---------- */
+body { padding: 0; }
+.mk-sw { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; padding: var(--s3) var(--gut); background: var(--field); }
+.mk-sw b { margin-right: var(--s3); font-size: var(--t-sm); color: var(--muted); }
+.mk-sw .btn { width: auto; padding: 0 var(--s4); font-weight: 700; font-size: var(--t-sm); }
+.mk-sw .btn[aria-pressed="true"] { border-color: var(--ai); color: var(--ai); }
+html.shot .mk-sw { display: none; }
+.app { display: grid; gap: var(--s5); padding: var(--s5) var(--gut) var(--s7); max-width: 96rem; margin: 0 auto; }
+@media (min-width: 900px) { .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.qcol { display: grid; gap: var(--s3); align-content: start; }
+.qbox { padding: var(--s4); border-radius: 10px; background: var(--qbox); }
+.qbox p { margin: 0; }
+.opts { display: grid; gap: var(--s2); }
+.opt .badge { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; border: var(--bw) solid var(--edge); font-weight: 700; font-size: var(--t-sm); }
+.notes { display: grid; gap: var(--s4); align-content: start; }
+.vids { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.vids div { aspect-ratio: 16 / 9; border-radius: 8px; background: linear-gradient(135deg, #2b3e5c, #1a2436); display: grid; place-items: center; color: var(--muted); font-size: var(--t-xs); }
+.res { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); border-radius: 10px; background: var(--sheet); }
+.res .verdict { flex: 1 1 12rem; }
+.res .sub { display: block; margin-top: 2px; color: var(--muted); font-weight: 400; font-size: var(--t-sm); }
+.hint { position: relative; }
+.rw-free { pointer-events: none; }
+
+/* ---------- V1 "One home": the side sheet with two tabs ---------- */
+.side { position: fixed; z-index: 40; top: 0; bottom: 0; right: max(0px, (100% - 96rem) / 2); width: calc((min(100%, 96rem) - var(--s5)) / 2);
+  flex-direction: column; border-left: var(--bw) solid var(--ai-line); box-shadow: var(--shadow-4); }
+@media (max-width: 899px) { .side { width: 100%; } }
+.sh-hd { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s2) var(--s2) var(--s4); }
+.sh-bd { flex: 1; overflow-y: auto; padding: var(--s4); }
+.sh-ft { padding: var(--s3) var(--s4) var(--s4); border-top: var(--bw) solid var(--line); }
+.tabs { flex: 1; display: flex; gap: var(--s1); padding: var(--s1); border-radius: 12px; background: var(--field); }
+.tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 700; font-size: var(--t-sm); }
+.tab .ico { width: 1.375rem; height: 1.375rem; }
+.tab[aria-selected="true"] { background: var(--ai); color: var(--ai-ink); }
+.tab:not([aria-selected="true"]):hover { color: var(--ink); background: var(--raised); }
+.side .lead { display: flex; align-items: center; gap: var(--s3); margin: 0 0 var(--s3); }
+.side .lead .rw-hint-coin { width: 40px; height: 40px; }
+.side .lead .rw-hint-coin svg { width: 26px; height: 26px; }
+.side .lead h3 { margin: 0; font-size: 1.125rem; }
+.side .lead p { margin: 0; color: var(--muted); font-size: var(--t-sm); }
+
+/* ---------- V2 "One anatomy": casino header + gap + tinted body, for both ---------- */
+.cx { gap: var(--s3); }
+.cx-hd { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 6px 10px 10px 8px; border-radius: var(--rw-r-m);
+  background: var(--rw-tang); color: var(--rw-tang-ink); box-shadow: inset 0 3px 0 #ffc48a, inset 0 -5px 0 var(--rw-tang-dk), 0 3px 0 var(--rw-rust); }
+.cx-hd h2 { flex: 1; margin: 0; font: 700 1.25rem/1.2 var(--rw-font); }
+.cx-hd .rw-hint-chev { border: 0; cursor: pointer; }
+.cx-hd .rw-hint-chev:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.duckcoin svg { width: 30px; height: 30px; color: #8a4b00; }
+.cx-bd { padding: var(--s4); border-radius: 14px; background: var(--sheet); border: var(--bw) solid var(--ai-line); }
+.cx-bd .thread { gap: var(--s3); }
+.cx-ft { padding: var(--s3); border-radius: 14px; border: var(--bw) solid var(--ai-line); }
+.scrim { position: fixed; inset: 0; z-index: 39; background: rgb(8 12 20 / .62); }
+.mid { position: fixed; z-index: 40; left: 50%; top: var(--s4); bottom: var(--s4); transform: translateX(-50%); width: min(48rem, calc(100% - 2 * var(--gut)));
+  grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--s3); }
+.mid .cx-bd { overflow-y: auto; }
+
+/* ---------- V3 "One voice": both are Cluck bubbles ---------- */
+.inl { gap: var(--s4); }
+.inl .ask-wrap { position: sticky; bottom: var(--s3); padding: var(--s3); border-radius: 12px; border: var(--bw) solid var(--ai-line); box-shadow: var(--shadow-3); }
+.hint .msg.steps { margin-top: var(--s3); }
+
+/* which variant shows what */
+.v1, .v2, .v3 { display: none !important; }
+html[data-v="1"] .v1, html[data-v="2"] .v2, html[data-v="3"] .v3 { display: block !important; }
+html[data-v="1"] .res.v1, html[data-v="2"] .res.v2, html[data-v="3"] .msg.v3 { display: flex !important; }
+html[data-v="1"] .side.v1 { display: flex !important; }
+html[data-v="2"] .mid.v2, html[data-v="2"] .cx.v2, html[data-v="3"] .inl.v3 { display: grid !important; }
+html[data-v] body.closed :is(.side, .mid, .scrim) { display: none !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .side { animation: slin .22s ease-out; } @keyframes slin { from { transform: translateX(24px); opacity: 0; } }
+}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M5.5 9.5L12 16l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="none" stroke="#6b2400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bulb-c" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<nav class="mk-sw" aria-label="Variant">
+  <b>Cluck chat</b>
+  <a class="btn" href="?v=1" data-v="1">1 One home</a>
+  <a class="btn" href="?v=2" data-v="2">2 One anatomy</a>
+  <a class="btn" href="?v=3" data-v="3">3 One voice</a>
+</nav>
+
+<main class="app">
+  <section class="qcol" aria-label="Question">
+    <div class="qbox"><p>A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</p></div>
+    <div class="opts">
+      <button class="opt" type="button"><span class="badge">A</span><span class="txt">1.0 m/s</span></button>
+      <button class="opt right" type="button"><span class="badge">B</span><span class="txt">2.0 m/s</span></button>
+      <button class="opt wrong" type="button"><span class="badge">C</span><span class="txt">3.0 m/s</span></button>
+      <button class="opt" type="button"><span class="badge">D</span><span class="txt">4.5 m/s</span></button>
+    </div>
+    <div class="res v1 v2">
+      <p class="verdict bad"><svg class="ico" aria-hidden="true"><use href="#i-bad"/></svg><span>Not quite<span class="sub">The answer is B, 2.0 m/s.</span></span></p>
+      <button class="btn btn-c1" type="button" data-open="explain">Explanation</button>
+      <button class="btn btn-go wide" type="button">Next question</button>
+    </div>
+    <div class="inl ai-skin v3">
+      <div class="thread" data-thread></div>
+      <div class="ask-wrap ai-box" data-foot></div>
+    </div>
+  </section>
+
+  <section class="notes" aria-label="Notes">
+    <div class="vids" aria-hidden="true"><div>video 1</div><div>video 2</div></div>
+    <div class="hint rw-skin ai-skin v1 v3">
+      <button class="rw-hint" type="button" aria-expanded="false" data-open="steps">
+        <span class="rw-hint-coin"><svg aria-hidden="true"><use href="#i-bulb"/></svg></span>
+        <span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span></span>
+        <span class="rw-hint-chev"><svg aria-hidden="true"><use href="#i-down"/></svg></span>
+      </button>
+      <span class="rw-skin rw-free" aria-hidden="true">FREE</span>
+      <div class="msg steps v3" data-steps-bubble></div>
+    </div>
+    <div class="cx rw-skin ai-skin v2">
+      <div class="cx-hd">
+        <span class="rw-hint-coin"><svg aria-hidden="true"><use href="#i-bulb"/></svg></span>
+        <h2>Similar solution steps</h2>
+        <button class="rw-hint-chev" type="button" aria-label="Hide the steps" aria-expanded="true"><svg aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-down"/></svg></button>
+      </div>
+      <div class="cx-bd ai-box"><div data-steps></div></div>
+    </div>
+  </section>
+</main>
+
+<aside class="side ai-skin ai-box rw-skin v1" aria-label="Cluck">
+  <header class="sh-hd">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" type="button" data-tab="explain"><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg>Cluck explains</button>
+      <button class="tab" role="tab" type="button" data-tab="steps"><svg class="ico" aria-hidden="true"><use href="#i-bulb-c"/></svg>Similar steps</button>
+    </div>
+    <button class="btn" type="button" aria-label="Close" data-close><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </header>
+  <div class="sh-bd">
+    <div class="thread" data-thread data-pane="explain"></div>
+    <div data-pane="steps">
+      <div class="lead"><span class="rw-hint-coin"><svg aria-hidden="true"><use href="#i-bulb"/></svg></span><div><h3>Similar solution steps</h3><p>Practice Exam 2, question 1</p></div></div>
+      <div data-steps></div>
+    </div>
+  </div>
+  <div class="sh-ft" data-foot></div>
+</aside>
+
+<div class="scrim v2" data-close></div>
+<aside class="mid rw-skin ai-skin v2" aria-label="Cluck explains">
+  <div class="cx-hd">
+    <span class="rw-hint-coin duckcoin"><svg aria-hidden="true"><use href="#i-duck"/></svg></span>
+    <h2>Cluck explains</h2>
+    <button class="rw-hint-chev" type="button" aria-label="Close" data-close><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="cx-bd ai-box"><div class="thread" data-thread></div></div>
+  <div class="cx-ft ai-box" data-foot></div>
+</aside>
+
+<script>
+const q = new URLSearchParams(location.search), V = ["1", "2", "3"].includes(q.get("v")) ? q.get("v") : "1";
+const ALT = q.has("alt");
+document.documentElement.dataset.v = V;
+if (q.has("shot")) document.documentElement.classList.add("shot");
+document.querySelectorAll(".mk-sw [data-v]").forEach(a => { a.setAttribute("aria-pressed", String(a.dataset.v === V)); a.href = "?v=" + a.dataset.v + (q.has("shot") ? "&shot" : ""); });
+const K = t => katex.renderToString(t, { throwOnError: false });
+
+/* one renderer for Cluck's text and the similar steps: a line that is only $..$ is display math, consecutive ones share one callout;
+   **x** = bold; the last line is the answer sentence */
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/\$(.+?)\$/g, (_, t) => K(t));
+const callout = eqs => `<div class="callout">${eqs.map(e => `<div>${K(e)}</div>`).join("")}</div>`;
+function say(m) {
+  if (!Array.isArray(m)) return `<div class="say"><p class="intro">${inline(m.intro)}</p><ol class="stw">${m.steps.map((st, i) =>
+    `<li class="st"><span class="st-n" aria-hidden="true">${i + 1}</span><div><h4>${inline(st.t)}</h4><p class="sub">${esc(st.s)}</p>`
+    + `<ul>${st.b.map(b => `<li>${inline(b)}</li>`).join("")}</ul>${st.m ? callout(st.m) : ""}</div></li>`).join("")}</ol><p class="ans">${inline(m.end)}</p></div>`;
+  const lines = m;
+  let out = "", eqs = [];
+  const flush = () => { if (eqs.length) out += callout(eqs); eqs = []; };
+  lines.forEach((l, i) => {
+    const m = l.match(/^\$(.+)\$$/);
+    if (m) { eqs.push(m[1]); return; }
+    flush(); out += `<p${i === lines.length - 1 && lines.length > 2 ? ' class="ans"' : ""}>${inline(l)}</p>`;
+  });
+  flush();
+  return `<div class="say">${out}</div>`;
+}
+const FIRST = { intro: "POOF. The carts **stick together**, so they leave as one cart. **Momentum before = momentum after.** Three steps.",
+  steps: [
+    { t: "Find the momentum before", s: "only one cart moves", b: ["The 2.0 kg cart moves at 3.0 m/s.", "The 1.0 kg cart is at rest, so it adds 0.", "Momentum = mass × speed:"],
+      m: ["p_{\\text{before}} = (2.0)(3.0) = 6.0\\ \\text{kg}\\cdot\\text{m/s}"] },
+    { t: "Add the masses after", s: "stuck carts move as one", b: ["After the hit, both carts share one speed $v$.", "So their masses add up:"],
+      m: ["m_{\\text{after}} = 2.0 + 1.0 = 3.0\\ \\text{kg}"] },
+    { t: "Set before = after, solve for $v$", s: "momentum stays the same", b: ["Nothing outside pushes the carts, so momentum does not change.", "Divide both sides by 3.0:"],
+      m: ["6.0 = (3.0)\\,v", "v = 2.0\\ \\text{m/s}"] }
+  ],
+  end: "So the answer is **B, 2.0 m/s**. You picked 3.0 m/s: that is the speed **before** the hit." };
+const STEPS = { intro: "Same idea, other numbers: a **4.0 kg** cart at **2.5 m/s** sticks to a **1.0 kg** cart at rest.",
+  steps: [
+    { t: "Momentum before", s: "only one cart moves", b: ["Mass × speed of the moving cart:"], m: ["p_{\\text{before}} = (4.0)(2.5) = 10\\ \\text{kg}\\cdot\\text{m/s}"] },
+    { t: "Mass after", s: "stuck carts move as one", b: ["Add both masses:"], m: ["m_{\\text{after}} = 4.0 + 1.0 = 5.0\\ \\text{kg}"] },
+    { t: "Before = after", s: "solve for v", b: ["Divide by the mass after:"], m: ["10 = (5.0)\\,v", "v = 2.0\\ \\text{m/s}"] }
+  ],
+  end: "So they move at **2.0 m/s**." };
+const ASKS = ["why is the mass 3 now?", "so 3.0 m/s was just the old speed?", "does this work if they bounce?", "ok what about 2 carts both moving"];
+const REPLIES = [
+  ["They stick, so they move as one cart.", "One cart of 2.0 kg + 1.0 kg = **3.0 kg**."],
+  ["Yes. 3.0 m/s is the speed **before**.", "More mass after, same momentum, so it slows down."],
+  ["Momentum still stays the same.", "But then you need both speeds after, so it takes one more rule. This question only has sticking."],
+  ["Add both momenta first. Keep the sign: left is minus.", "$m_1v_1 + m_2v_2 = (m_1 + m_2)\\,v$"]
+];
+const MAX = 4;
+let sent = false;
+let used = Math.min(MAX, Math.max(0, +(q.get("turns") ?? (V === "3" && ALT ? 4 : 1))));
+let tab = V === "1" && ALT ? "steps" : "explain";
+const duck = `<svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg>`;
+/* V2: Cluck's first message is plain text on the tinted body (the header already names him); V1, V3: a named bubble */
+/* V1: Gemini-like, Cluck's text sits on the sheet with no bubble; V2: the first message is plain on the tinted body (the header names
+   him), replies are bubbles; V3: every Cluck message is a bubble */
+const aiMsg = (m, name) => V === "2" && name ? say(m)
+  : `<div class="msg">${duck}<div class="col">${name && V !== "2" ? `<p class="ai-name">${name}</p>` : ""}${V === "1" ? say(m) : `<div class="bub ai ai-box">${say(m)}</div>`}</div></div>`;
+const meMsg = t => `<div class="bub me">${esc(t)}</div>`;
+function draw() {
+  const thread = [aiMsg(FIRST, "Cluck")];
+  for (let i = 0; i < used; i++) thread.push(meMsg(ASKS[i]), aiMsg(REPLIES[i]));
+  document.querySelectorAll("[data-thread]").forEach(t => { t.innerHTML = thread.join(""); });
+  document.querySelectorAll("[data-steps]").forEach(s => { s.innerHTML = say(STEPS); });
+  document.querySelector("[data-steps-bubble]").innerHTML = `${duck}<div class="col"><p class="ai-name">Cluck · similar solution steps</p><div class="bub ai ai-box">${say(STEPS)}</div></div>`;
+  const foot = used < MAX
+    ? `<form class="ask" data-ask><label class="ff"><span class="sr-only">Ask Cluck</span><input name="t" autocomplete="off" placeholder="Ask Cluck about a step"></label>`
+      + `<span class="left">${MAX - used} left</span><button class="send" type="submit" aria-label="Send"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></form>`
+    : `<div class="done-row"><p>That's 4 questions. On to the next one.</p><button class="btn btn-go wide" type="button">Next question</button></div>`;
+  document.querySelectorAll("[data-foot]").forEach(f => { f.innerHTML = foot; });
+  document.querySelectorAll("[data-ask]").forEach(f => f.addEventListener("submit", send));
+  setTab(tab);
+}
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+  document.querySelectorAll("[data-pane]").forEach(p => { p.hidden = p.dataset.pane !== t; });
+  document.querySelectorAll(".sh-bd").forEach(b => { b.scrollTop = t === "explain" && sent ? b.scrollHeight : 0; });   /* opens at the top; after a send, at the newest reply */
+  const hb = document.querySelector(".hint .rw-hint"); if (hb) hb.setAttribute("aria-expanded", String(V === "3" || (V === "1" && t === "steps")));
+}
+/* the stub stream: caret 900 ms, then type ~35 chars/s (same as the genie box today) */
+function send(e) {
+  e.preventDefault();
+  if (used >= MAX) return;
+  const t = e.target.t.value.trim() || ASKS[used];
+  ASKS[used] = t; const i = used++; sent = true;
+  setTab("explain");
+  document.querySelectorAll("[data-thread]").forEach(th => { th.insertAdjacentHTML("beforeend", meMsg(t) + `<div class="msg" data-typing>${duck}<div class="col"><div class="bub ai ai-box"><span class="wcaret"></span></div></div></div>`); });
+  document.querySelectorAll("[data-foot] .send").forEach(b => { b.disabled = true; });
+  setTimeout(() => {
+    const full = REPLIES[i].join(" ").replace(/\*\*/g, ""); let n = 0;
+    const tick = setInterval(() => {
+      n += 2;
+      document.querySelectorAll("[data-typing] .bub").forEach(b => { b.innerHTML = esc(full.slice(0, n)) + '<span class="wcaret"></span>'; });
+      if (n >= full.length) { clearInterval(tick); draw(); }
+    }, 57);
+  }, 900);
+}
+document.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]"), c = e.target.closest("[data-close]"), tb = e.target.closest("[data-tab]");
+  if (o) { document.body.classList.remove("closed"); setTab(o.dataset.open); }
+  if (c) document.body.classList.add("closed");
+  if (tb) setTab(tb.dataset.tab);
+});
+if (V === "2" && ALT) document.body.classList.add("closed");
+draw();
+</script>
+</body></html>

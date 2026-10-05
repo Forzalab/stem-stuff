@@ -139,7 +139,7 @@ async function run(browserType, label, opts = {}) {
         const tb = await page.locator("#toast.on").boundingBox(), fb = await page.locator("#ff").boundingBox();
         assert.ok(tb.y >= fb.y + fb.height && tb.y - (fb.y + fb.height) < 24, "toast under the wrong box");
         const st = await page.$eval("#toast", e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.fontWeight].join("|"); });
-        assert.equal(st, "rgb(21, 29, 43)|rgb(52, 68, 93)|400");
+        assert.equal(st, "rgb(8, 17, 31)|rgb(52, 68, 93)|400");
       }
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");
@@ -188,7 +188,7 @@ async function run(browserType, label, opts = {}) {
       await page.waitForFunction(() => !document.getElementById("splash") && document.documentElement.classList.contains("start"));
       const text = await page.evaluate(() => [...document.querySelectorAll("body *")].filter(e => e.checkVisibility && e.checkVisibility() && !e.closest("svg"))
         .map(e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("")).join("").trim());
-      assert.equal(text, "Upload or type code to start.", `start page text: ${text}`);
+      assert.equal(text, "Type a code to start.", `start page text: ${text}`);
       assert.equal(await page.locator(".so-dl:visible").count(), 0, "download shown on the empty page");
       const kids = await page.evaluate(() => [...document.querySelector("#entry").children].filter(e => !e.hidden).map(e => e.id || e.className));
       assert.deepEqual(kids, ["upload", "code-box"]);
@@ -288,7 +288,7 @@ async function run(browserType, label, opts = {}) {
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
-      assert.equal((await page.textContent("#qlistName")).trim(), "my-problems.json", "list button names the file");
+      assert.equal(await page.getAttribute("#qlistBtn", "title"), "my-problems.json", "the list button's title names the file (it says Questions)");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
       const f3n = "PHYS_QF3N";
       if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
@@ -318,7 +318,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
       for (const b of [btn, shuf, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
       // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
-      assert.equal((await btn.innerText()).trim(), vname === "desktop" ? "bank.json" : "bank", "list button label");
+      assert.equal((await btn.innerText()).trim(), "Questions", "list button label"); assert.equal(await btn.getAttribute("title"), "bank.json", "its title names the file");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
       const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
@@ -496,7 +496,7 @@ async function run(browserType, label, opts = {}) {
       assert.match(await page.locator("#ph1").textContent(), /Exactly one/);
       assert.equal(await page.locator("#q .part .ff").nth(1).evaluate(e => e.classList.contains("bad")), true, "b shows the bad state");
       assert.equal(await page.getAttribute("#q .part[data-i='1'] .vk", "data-v"), "i-x", "b: the x in its arrow's slot");
-      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Not quite|One more try/, "no verdict words");
+      assert.doesNotMatch(await page.locator("#ph1").textContent(), /Wrong\. 1 try left|One more try/, "no verdict words");
       assert.equal(await page.locator("#ph0").textContent(), "", "a is unaffected");
       assert.ok(await boxes.nth(0).isEnabled() && await page.locator("#q .part .ff").nth(0).evaluate(e => !e.classList.contains("bad")));
       await boxes.nth(1).fill("9"); assert.equal(await arrows(), 1); await page.click("#go1");

@@ -51,7 +51,7 @@ async function run(type, label, launchOpts) {
     ctx = await launch(); await pin(ctx); page = ctx.pages()[0] || await ctx.newPage();
     await page.goto(BASE + "/#CALC1_ZZ9");
     await opened(page, "CALC1_ZZ9");
-    assert.equal((await page.innerText("#qlistName")).trim(), "mine", "list button names the file");
+    assert.equal(await page.getAttribute("#qlistBtn", "title"), "mine.json", "the list button's title names the file (it says Questions)");
     assert.equal(await page.isHidden("#qnav"), false, "question nav back");
     await answer(page, "2");
     assert.equal(await verdict(page), "i-ok");
@@ -83,7 +83,7 @@ async function run(type, label, launchOpts) {
     await page.waitForSelector("#retry", { timeout: 12000 });
     const dt = Date.now() - t0;
     assert.ok(dt >= 7500 && dt < 10000, `timed out after ${dt} ms`);
-    assert.match(await page.textContent("#fb"), /^\s*timeout\s*$/);
+    assert.match(await page.textContent("#fb"), /^\s*Too slow\. Tap Try again\.\s*$/);
     assert.equal(await page.inputValue("#ans"), "7", "typed answer kept");
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), before, "a timeout is not a try: " + JSON.stringify(await page.evaluate(() => window.__drill.state.tries)));
     if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.waitForTimeout(100); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }
@@ -99,7 +99,7 @@ async function run(type, label, launchOpts) {
     await page.route("**/p/CALC1_A9R.json", r => { if (stall) return; r.continue(); });
     await page.goto(BASE + "/#CALC1_A9R");
     await page.waitForSelector("#retryLoad:not([hidden])", { timeout: 12000 });
-    assert.match(await page.textContent("#entryMsg"), /^\s*timeout\s*$/);
+    assert.match(await page.textContent("#entryMsg"), /^\s*Too slow\. Tap Try again\.\s*$/);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/reload-load-timeout-${label}-390.png` });
     stall = false;
     await page.click("#retryLoad");

@@ -95,7 +95,7 @@ try {
     for (const k of ["fx-float", "fx-fly"]) assert.ok(c.some(n => n.split(" ").includes(k)), k + " in " + c.join(","));
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x, { timeout: 3000 });
-    assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP, level 1`));
+    assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP \\(points\\), level 1`));
     await quiet(page);
   });
 
@@ -157,24 +157,42 @@ try {
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
+    await d.waitForSelector("#work > #rot.dock", { state: "attached", timeout: 4000 });
+    assert.equal(await d.$eval("#work", w => w.firstElementChild.id), "rot", "the docked videos stay above the original (D1)");
+    assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "closed until tapped: the sheet would cover the videos");
+    assert.equal(await d.isHidden("#xb"), true, "desktop sugar has no scratchpad (Tony, Oct 4)");
+    assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
+    assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
+    assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
+    assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
+    assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);
+    await d.click("#origHd");                                                 // Cluck's sheet, "Similar steps" tab, fills the notes column
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
-    assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
-    assert.match(await d.textContent("#origHd"), /Original: Practice Exam 2, Q7/);
-    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
+    assert.equal(await d.isVisible("#cluck .orig-sol"), true);
+    assert.equal(await d.$eval("#cluck", e => e.parentElement.id), "work");
+    assert.equal(await d.isHidden("#rot"), true, "the videos step aside while the sheet is open");
+    assert.equal(await d.getAttribute("#clTabS", "aria-selected"), "true");
+    assert.equal(await d.isHidden("#clTabE"), true, "no wish yet: one tab");
+    await d.keyboard.press("Escape");
+    assert.equal(await d.isHidden("#cluck"), true, "Escape closes it");
+    assert.equal(await d.evaluate(() => document.activeElement.id), "origHd", "focus goes back to its opener");
+    assert.equal(await d.isVisible("#rot"), true);
     await d.click("#origHd");
-    assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");
     await pick(d, "b"); await rig(d, [0.99]); await pick(d, "a");             // not a first-try correct: the original stays unsolved
     await go(d, "CALC1_S02");
-    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
-    await d.click("#orig .orig-peek");
-    assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
-    assert.equal(await d.isVisible("#orig .orig-note"), true);
+    assert.equal(await d.isHidden("#cluck"), true, "a new question closes the sheet");
+    assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
+    await d.click("#origHd");
+    await d.click("#cluck .orig-peek");
+    assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);
+    assert.equal(await d.isVisible("#cluck .orig-note"), true);
     const x0 = await xp(d);
     await pick(d, "a");
     await d.waitForFunction(x => window.Rewards.state().xp > x, x0, { timeout: 4000 });
     assert.equal(await xp(d) - x0, 2, "a peeked snack pays 2");
     await go(d, "CALC1_S01");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "level 3: folded after a first-try correct on Q7");
+    assert.equal(await d.$$eval("#orig .rw-free", f => f.length), 0, "no FREE at level 3: looking again before answering is a peek");
     await dc.close();
     const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
     await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
@@ -183,7 +201,13 @@ try {
     assert.equal(await p.$eval("#orig", e => e.parentElement.id), "freezeIn", "phone: on top of the problem");
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
     await p.click("#origHd");
-    assert.equal(await p.isVisible("#orig .orig-sol"), true);
+    assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "the tap opens it");
+    assert.equal(await p.isVisible("#cluck .cl-bar"), true, "phone: the orange head bar (Tony's image 1)");
+    assert.equal(await p.isHidden("#cluck .cl-x2"), true);
+    assert.deepEqual(await p.$eval("#cluck", e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width]; }), [0, 0, 390], "phone: full screen");
+    await p.click("#cluck .cl-bar .cl-x"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "the X closes it");
+    await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "a tap on the FREE sticker works the card too");
+    assert.equal(await p.isVisible("#cluck .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
     await pc.close();
   });

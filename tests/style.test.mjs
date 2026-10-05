@@ -39,7 +39,7 @@ test("§2.1 colours: tokens only (raw hex / rgb only in masks)", () => {
 
 const DOCK = /^0 -10px 24px -8px rgb\(0 0 0 \/ 0\.55\)$/;                      // STYLE.md §9 #7: becomes --shadow-up
 test("§2.7 shadows: tokens only, on the named layers", () => {
-  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--shadow-[134]\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
+  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--(shadow-[134]|ai-nm-(up|in|btn))\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
   const bad = ALL.filter(d => d.prop === "box-shadow" && !ok(d.value) && !DOCK.test(d.value));
   assert.deepEqual(bad.map(fmt), [], "shadows come from --shadow-1/3/4 (STYLE.md §2.7)");
 });
@@ -57,7 +57,7 @@ test("§2.6 borders: one weight (--bw), only a wrong answer is heavier (--bw-ala
   const ok = d => {
     const v = d.value.replace(/var\(--bw(-alarm)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
     const px = v.match(/\d*\.?\d+px/g) || [];
-    return px.every(p => p === "1px" || (p === "1.5px" && d.sel === "#toast"));                // 1px dividers; the toast is the listed exception
+    return px.every(p => p === "1px" || (p === "1.5px" && ["#toast", ".ask"].includes(d.sel)));   // 1px dividers; the toast and Cluck's ask rim (Tony's image 3) are the listed exceptions
   };
   const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
   assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers, the toast's 1.5px (STYLE.md §2.6)");

@@ -1,12 +1,12 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
   --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers (columns line up); not the code box */
-  --paper: #151d2b; --sheet: #1d2839; --field: #111826; --raised: #243149;
-  --qbox: #192232;   /* the question box: halfway between --paper and --sheet (Tony, Oct 3) */
+  --paper: #08111f; --sheet: #16243a; --field: #0a1322; --raised: #20304a;   /* Oct 5: darker, toward Tony's GPT ref (page #031125, cards #0f1d30, pills #15263b) */
+  --qbox: #0f1d30;   /* the question box: one clear step up from --paper (Tony, Oct 3; Oct 5: "undistinguished") */
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
-  --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(25 34 50 / 0.85);   /* figure fills and label knockouts sit on the question box */
+  --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(15 29 48 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
      --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
   --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
@@ -394,29 +394,36 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .ctl .ico, .rot .rtab .ico { width: 1.25rem; height: 1.25rem; }
 .rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
 .rot .rtab.r { border-radius: 10px 0 0 10px; }
+/* desktop / tablet side by side (brainrot.js home(); Tony, Oct 4 "B: top of notes"): its own slot at the top of the notes column */
+.rot.dock { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s5); touch-action: auto; cursor: auto; }
+.rot.dock .duo { width: 100%; grid-template-columns: 1fr 1fr; }
+.rot.dock.parked { display: none; transform: none !important; }
+.rot.dock .rtab { width: 100%; height: 36px; grid-auto-flow: column; justify-content: center; gap: var(--s2); border-radius: 10px; box-shadow: none;
+  background: var(--sheet); color: var(--muted); font: inherit; font-size: var(--t-sm); font-weight: 700; }
+.rot.dock .rtab:hover { background: var(--raised); color: var(--ink); }
 .rot.stashed .rtab { display: grid; }
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
+/* sugar = Cluck's world (Oct 5 review: "Do it in this order" and Cluck's hint line still looked like the plain site) */
+html.sugar :is(.fcard, #fb .cluck) { background: var(--ai-sheet); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-up); color: var(--ai-text); }
+html.sugar .fcard .n { background: var(--ai-tint); color: var(--ai); box-shadow: var(--ai-nm-in); }
+html.sugar :is(.fcard .g, .fcard .then) { color: var(--ai-muted); }
+html.sugar #wish .wvoice { background: var(--ai-sheet); color: var(--ai-text); border: 1px solid var(--ai-line); }
 /* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
 /* sugar: the original beside a snack (app.js origRender; design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
    top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
-.orig { margin: 0 0 var(--s3); border-radius: 10px; background: var(--sheet); }
-.orig-hd {
-  display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--btn); padding: 0 var(--s4); border: 0; border-radius: 10px;
-  background: transparent; color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.3; text-align: left;
-}
-.orig-hd:hover { background: var(--raised); }
-.orig-hd .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
-.orig-hd span { flex: 1; min-width: 0; }
-.orig-hd[aria-expanded="true"] .orig-chev { transform: rotate(180deg); }
-.orig-body { padding: 0 var(--s4) var(--s4); }
-.orig-body .md { color: var(--ink); }
-.orig-h { margin: var(--s3) 0 var(--s1); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
-.orig-sol { margin: 0; padding-left: var(--s5); color: var(--ink); }
-.orig-sol li { margin: var(--s1) 0; }
+.orig { position: relative; margin: var(--s2) 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
+.orig-body { font-size: var(--t-md); line-height: var(--lh); }               /* in Cluck's sheet ("Similar steps"): the steps look of Cluck's own text */
+.orig-body .md { color: var(--ai-text); }
+.orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-strong); font-weight: 700; }
+.orig-sol { list-style: none; margin: 0; padding: 0; counter-reset: os; color: var(--ai-text); }
+.orig-sol li { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--s3); margin-top: var(--s3); counter-increment: os; }
+.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--ai); color: var(--ai); font-size: var(--t-xs); font-weight: 700; }
+.orig-sol li:has(+ li:not([hidden]))::after { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
+.orig-sol li > * { min-width: 0; }
+.orig-sol li[hidden] { display: none; }
 .orig-peek { margin-top: var(--s2); }
 .orig-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--t-sm); }
-#work.orig-on > #xb { display: none; }
 html.side #work > .orig { margin: 0; }
 .fcard { margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
 .fcard .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
@@ -436,17 +443,111 @@ html.side #work > .orig { margin: 0; }
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
-.wchip { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s4) 0 var(--s3); border: var(--bw) solid var(--edge);
-  border-radius: 10px; background: var(--raised); color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: 700; cursor: pointer; }
-.wchip .ico { width: 1.25rem; height: 1.25rem; }
-.wchip:hover { border-color: var(--muted); }
-.wchip:focus-visible, .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.wvoice { min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); }
-.wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer; }   /* a tap skips the typing */
+.wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
+.wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.wvoice { width: auto; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); white-space: nowrap; }   /* "Turn voice off" on one line (.btn is 48px square) */
+/* ---------- Cluck's surfaces (design/STYLE.md): tokens on .ai-skin, never :root ----------
+   Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
+   calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
+   Contrast on --ai-sheet: text 15.5, muted 8.0, --ai 8.7; --ai-ink on --ai 8.4 */
+.ai-skin, html.sugar :is(.fcard, #fb .cluck, #wish) {
+  --ai: #ff9a3c; --ai-ink: #2b1000; --ai-edge: #eeb16a; --ai-soft: #ffb873;
+  --ai-sheet: #1b140e; --ai-field: #130e0a; --ai-text: #f3ece4; --ai-strong: #ffffff; --ai-muted: #c2ad9a; --ai-rule: #33261b;
+  --ai-tint: #140f0b; --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 140 50 / 0.3); --ai-hair: rgb(255 220 180 / 0.07);
+  /* soft UI (Tony, Oct 5: "neomorphism"): one light source top-left; raised = warm highlight + dark shade, inset = the reverse. Shadows never
+     carry meaning alone (WCAG 1.4.11): every control keeps a solid fill or a 1px edge */
+  --ai-nm-up: -5px -5px 12px rgb(255 170 90 / 0.05), 6px 6px 14px rgb(0 0 0 / 0.6);
+  --ai-nm-in: inset 4px 4px 10px rgb(0 0 0 / 0.6), inset -3px -3px 8px rgb(255 190 120 / 0.05);
+  --ai-nm-btn: -3px -3px 8px rgb(255 170 90 / 0.1), 4px 4px 10px rgb(0 0 0 / 0.6);
+}
+/* Cluck's box = its own service on the site: the base tokens remap inside it, so .btn, .ff and the text follow */
+.ai-box { --sheet: var(--ai-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--ai-muted); --hint: var(--ai-muted);
+  --line: var(--ai-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
+/* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
+.cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .6s ease-out;   /* ref 1's ember light, top only */
+  background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
+.cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
+.cl > * { position: relative; }
+.cl[hidden] { display: none; }
+html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
+html.side.no-pad #work.cl-on { top: 0; }
+html.side #work.cl-on > :not(.cl) { display: none; }                         /* it fills the notes column: the videos, hint card and pad step aside */
+html.side .cl { position: sticky; top: var(--s4); height: calc(100dvh - 2 * var(--s4)); border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
+html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
+html.cl-open body { overflow: hidden; }
+.cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
+.cl-bar:hover { background: var(--rw-tang); }
+.cl-bar:active { transform: none; }
+.cl-bar .rw-hint-coin .ico { width: 28px; height: 28px; color: var(--rw-tang-ink); }
+.cl-bar .cl-x { border: 0; cursor: pointer; }
+.cl-bar .cl-x .ico { width: 22px; height: 22px; }
+html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
+.cl-hd { flex: none; display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s2) var(--s2) var(--s4); }
+.cl-tabs { flex: 1; display: flex; gap: var(--s1); padding: var(--s1); border-radius: 10px; background: var(--ai-tint); box-shadow: var(--ai-nm-in); }   /* an inset well; the active tab is raised and filled */
+.cl-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 44px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ai-muted); font: inherit; font-weight: 700; font-size: var(--t-sm); cursor: pointer; }
+.cl-tab[hidden] { display: none; }
+.cl-tab .ico { width: 1.375rem; height: 1.375rem; }
+.cl-tab[aria-selected="true"] { background: var(--ai); color: var(--ai-ink); box-shadow: var(--ai-nm-btn); }
+.cl-tab:not([aria-selected="true"]):hover { color: var(--ai-strong); }
+.cl-x2 { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--ai-edge); cursor: pointer; }
+.cl-x2 .ico { width: 28px; height: 28px; }
+.cl-x2:hover { background: var(--ai-tint); }
+.cl-tab:focus-visible, .cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s3) var(--s5) var(--s4); }
+.cl-pane[hidden] { display: none; }
+.cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
+.cl-thread:empty { display: none; }
+.cl .bub.me { align-self: flex-end; max-width: 85%; padding: var(--s3) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai); color: var(--ai-ink); line-height: var(--lh); overflow-wrap: anywhere; }   /* ref 2: the student speaks in solid orange, dark ink (AA) */
+.cl .wtext.wreply { padding: var(--s3) var(--s4); border-radius: 16px; border: 1px solid var(--ai-hair); box-shadow: var(--ai-nm-up); }   /* raised card */   /* ref 2: Cluck's replies sit in a quiet outlined card */
+.cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
+.cl-ft[hidden] { display: none; }
+/* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */
+@property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s4); border-radius: 16px; border: 1.5px solid transparent;   /* the rim: a listed --bw exception, like the toast */
+  box-shadow: var(--ai-nm-in);
+  background: linear-gradient(var(--ai-field), var(--ai-field)) padding-box,
+    conic-gradient(from calc(270deg + var(--wang)), var(--ai-edge), var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, var(--ai-edge)) border-box; }
+.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 2.4s linear infinite; }
+@keyframes wspin { to { --wang: 360deg; } }
+.ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
+.ask .ff:focus-within { box-shadow: none; }
+.ask:focus-within { box-shadow: inset 0 0 0 1px var(--ai); }
+.ask .ff input { font-family: inherit; color: var(--ai-strong); }            /* talk, not an answer: the sans, not the answers' mono */
+.ask .ff input::placeholder { color: var(--ai-muted); }
+.ask .left { flex: none; font-size: var(--t-xs); font-weight: 700; color: var(--ai-soft); white-space: nowrap; }
+.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 10px; background: var(--ai); color: var(--ai-ink); cursor: pointer; box-shadow: var(--ai-nm-btn); }
+.ask .send .ico { width: 26px; height: 26px; }
+.ask .send:hover { filter: brightness(1.08); }
+.ask .send:disabled { opacity: .45; cursor: default; filter: none; }
+.cl .done-row p { margin: 0; color: var(--ai-muted); font-size: var(--t-sm); }
+/* Cluck's text, straight on the sheet (image 3: no box around it) */
+.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); cursor: pointer; }   /* a tap skips the typing */
+.wtext.wreply { cursor: auto; }
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
+.wtext b { font-weight: 700; color: var(--ai-strong); }
+.wtext .wmath { margin: var(--s2) 0; padding: var(--s3) var(--s4); border-radius: 8px; text-align: center; overflow-x: auto;   /* Mathy's callout: the work, set apart */
+  background: var(--ai-tint); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-in); }   /* an inset well: the math sits in the surface */
+.wtext .weq + .weq { margin-top: var(--s2); }
+.wtext .wmath.wans { background: none; border-color: transparent; padding: 0; }
+.wtext .wmath .katex-display { margin: 0; }   /* the callout spaces its lines (.weq + .weq); KaTeX's 1em on top of that leaves holes */
+.wtext .wgap { height: var(--s1); }   /* + the next line's s2 = s3, a step's gap */
+.wtext .wlist { margin: var(--s2) 0; padding-left: var(--s5); }
+.wtext .wlist li + li { margin-top: var(--s1); }
+.wtext .wl + .wl:not(.wgap, .wmath, .wlist, .wstep) { margin-top: var(--s2); }   /* sentences get a breath between them (not steps: this outranked .wstep) */
+.wtext > .wl:first-child { margin-top: 0; }
+.wtext .wsbody > :last-child, .wtext > .wl:last-child { margin-bottom: 0; }   /* a step's last list/callout margin stays inside the grid item and doubled the step gap */
+/* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
+.wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
+.wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--ai); color: var(--ai); font-size: var(--t-xs); font-weight: 700; }
+.wtext .wstitle { font-weight: 700; color: var(--ai-strong); }
+.wtext .wssub { font-family: var(--mono); font-style: italic; font-size: var(--t-xs); color: var(--ai-muted); }
+.wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--ai-rule); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .wcaret { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask { animation: none !important; } }
 
 /* ---------- scratchpad + copy ---------- */
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */
@@ -672,6 +773,7 @@ html.side .sash::before { position: sticky; display: block; top: 40vh; left: aut
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
+html.side.no-pad #xb { display: none; }   /* app.js applyMT: desktop sugar questions with a layer have no notes pad (diet keeps it) */
 .q-label { display: none; }
 html.side .freeze .q-label { display: flex; }                                       /* side by side only: the boxes start level */
 html.side.mt-r0 .freeze .q-label, html.mt .freeze .q-label { display: none; }   /* the pad page's .xb-label rule (display: contents) must not show it */
