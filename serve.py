@@ -879,9 +879,13 @@ class Plain:
 
 def explain_stream(p, answer, key):
     """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection."""
-    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": 450, "temperature": 0.7,
-                       "provider": {"zdr": True, "data_collection": "deny"},
-                       "messages": [{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}]}).encode()
+    yield from _or_stream([{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer)}], key, 450)
+
+
+def _or_stream(messages, key, max_tokens):
+    """one OpenRouter chat call, streamed, ZDR only; yields the text with markdown stripped (Plain)."""
+    body = json.dumps({"models": OPENROUTER_MODELS, "stream": True, "max_tokens": max_tokens, "temperature": 0.7,
+                       "provider": {"zdr": True, "data_collection": "deny"}, "messages": messages}).encode()
     req = urllib.request.Request(OPENROUTER_BASE + "/chat/completions", data=body, method="POST",
                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "X-Title": "stem-stuff"})
     plain = Plain()
@@ -902,33 +906,110 @@ def explain_stream(p, answer, key):
                 yield text
 
 
-def explain(cookie_header, body):
-    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+def _stream_head(cookie_header):
     sid, cookie = new_sid(cookie_header)
     head = {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Accel-Buffering": "no"}
     if cookie:
         head["Set-Cookie"] = cookie
+    return sid, head
+
+
+def _body(body, limit):
     try:
-        b = json.loads(body) if 0 < len(body) <= 4096 else None
+        return json.loads(body) if 0 < len(body) <= limit else None
     except (ValueError, UnicodeDecodeError):
-        b = None
-    mode, key = mode_of(cookie_header), os.environ.get("OPENROUTER_API_KEY", "")
+        return None
+
+
+def _wish_problem(cookie_header, b):
+    """the problem Cluck may talk about: easy mode, shown, with a presolved key. None otherwise (a 404)."""
+    mode = mode_of(cookie_header)
     p = lookup(str(b.get("code", "")), mode) if isinstance(b, dict) else None
-    if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key"):
+    return None if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key") else p
+
+
+def _relay(p, chunks, what):
+    """the model's text as bytes; any failure (the prompt or the connection) ends with one line instead of a cut socket."""
+    try:
+        for t in chunks():
+            yield t.encode()
+    except Exception as e:  # noqa: BLE001
+        print(f"{what} {p['code']}: {e}", file=sys.stderr)
+        yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
+
+
+def explain(cookie_header, body):
+    """POST /explain {code, answer, auto}: (status, headers, iterator of bytes). Easy mode only; needs the problem's key."""
+    sid, head = _stream_head(cookie_header)
+    b = _body(body, 4096)
+    p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
+    if p is None:
         return 404, head, iter([b""])
     if not key:
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
+    return 200, head, _relay(p, lambda: explain_stream(p, b.get("answer"), key), "explain")
 
-    def gen():
-        try:
-            for t in explain_stream(p, b.get("answer"), key):
-                yield t.encode()
-        except Exception as e:  # noqa: BLE001
-            print(f"explain {p['code']}: {e}", file=sys.stderr)
-            yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
-    return 200, head, gen()
+
+# ---------------- Cluck chat (handoff 2026-10-04): follow-up questions under the genie box, CHAT_TURNS per problem per browser ----------------
+# history[0] is the box text (Cluck's own turn); then the student and Cluck take turns; the last one is the student's.
+# The cap lives twice: the history the browser sends, and _chats (one server process; Vercel instances do not share it).
+CHAT_TURNS, CHAT_MAX, CHAT_LINE = 4, 16384, 2000
+_chats = {}                                  # (sid, code) -> follow-ups answered
+CLUCK_CHAT = """You are Cluck, a duck genie tutor. You already gave the student the solution (your first turn). The first user message holds the QUESTION, the KEY (the correct solution), and the SLIP behind their wrong pick.
+Answer their follow-up in 1 to 4 short plain lines. Grade-6 words. Explain the step they ask about. Explain; do not quiz them back.
+Never change or invent a number, sign, unit, or answer that is not in the KEY. Never add physics that is not in the KEY.
+Off-topic: steer back to this question in one line.
+Format: plain text, math in $...$. No markdown at all: no **, no *, no #, no bullet symbols, no code.
+Audience: community college students in Fresno taking physics as a general requirement, many reading English as a second language."""
+
+
+def chat_history(h):
+    """the turns as sent, or None when the shape is wrong: Cluck first, then turns that take turns, the student last."""
+    if not isinstance(h, list) or not 2 <= len(h) <= 2 * CHAT_TURNS + 2:      # one past the cap still parses: a 429, not a 400
+        return None
+    out = []
+    for i, t in enumerate(h):
+        role = "assistant" if i % 2 == 0 else "user"
+        if not isinstance(t, dict) or t.get("role") != role or not isinstance(t.get("content"), str):
+            return None
+        text = t["content"].strip()[:CHAT_LINE]
+        if not text:
+            return None
+        out.append({"role": role, "content": text})
+    return out if out[-1]["role"] == "user" else None
+
+
+def chat(cookie_header, body):
+    """POST /chat {code, answer, history}: (status, headers, iterator of bytes), like /explain. A 5th follow-up: 429 {"error": "limit"}."""
+    sid, head = _stream_head(cookie_header)
+    b = _body(body, CHAT_MAX)
+    p, key = _wish_problem(cookie_header, b), os.environ.get("OPENROUTER_API_KEY", "")
+    if p is None:
+        return 404, head, iter([b""])
+    history = chat_history(b.get("history"))
+    if history is None:
+        return 400, head, iter([b""])
+    if not key:
+        return 503, head, iter([b""])
+    turn, k = len(history) // 2, (sid, p["code"])
+    with _asked_lock:                        # check and count in one step: two tabs at once can't both take the last turn
+        over = turn > CHAT_TURNS or _chats.get(k, 0) >= CHAT_TURNS
+        if not over:
+            _chats[k] = _chats.get(k, 0) + 1
+    if over:
+        return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "limit"}'])
+    if not explain_allowed(sid, False):      # the hourly cap /explain has, shared
+        with _asked_lock:
+            _chats[k] -= 1
+        return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
+    context = lambda: [{"role": "system", "content": CLUCK_CHAT}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
+    return 200, head, _relay(p, lambda: _or_stream(context() + history, key, 250), "chat")
+
+
+STREAMS = {"/explain": explain, "/chat": chat}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
+POST_MAX = CHAT_MAX                              # the most any POST body may be; each path checks its own limit
 
 
 def _json(status, obj, cookie):
@@ -1035,12 +1116,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.moved(307)                               # 307 keeps POST + body
             return
         try:
-            n = min(int(self.headers.get("Content-Length") or 0), 4097)
+            n = min(int(self.headers.get("Content-Length") or 0), POST_MAX + 1)
         except ValueError:
             n = 0
         body = self.rfile.read(n) if n > 0 else b""
-        if self.path.split("?")[0] == "/explain":
-            status, headers, chunks = explain(self.headers.get("Cookie", ""), body)
+        stream = STREAMS.get(self.path.split("?")[0])
+        if stream:
+            status, headers, chunks = stream(self.headers.get("Cookie", ""), body)
             self.send_response(status)
             for k, v in headers.items():
                 if k != "Cache-Control":

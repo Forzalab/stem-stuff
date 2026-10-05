@@ -622,6 +622,7 @@ class Explain(unittest.TestCase):
         with open(os.path.join(serve.BANKS, "BANK_XP12.json"), "w") as f:
             json.dump({"v": 1, "problems": [p]}, f)
         serve._asked.clear()
+        serve._chats.clear()
 
     def tearDown(self):
         self.srv.shutdown()
@@ -662,3 +663,67 @@ class Explain(unittest.TestCase):
             serve.explain_allowed("y", False, now=1000)
         self.assertFalse(serve.explain_allowed("y", False, now=1000))
         self.assertTrue(serve.explain_allowed("y", False, now=1000 + 3601))           # an hour later
+
+    BOX = "POOF! Use: $W = \\Delta K$\nAnswer: b) 3"
+
+    def chat(self, n=1, cookie="sid=" + "c" * 32, **over):
+        h = [{"role": "assistant", "content": self.BOX}]
+        for i in range(n):
+            h += [{"role": "user", "content": f"why step {i}?"}] + ([{"role": "assistant", "content": "Because."}] if i < n - 1 else [])
+        status, head, chunks = serve.chat(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", "history": h, **over}).encode())
+        return status, head, b"".join(chunks).decode()
+
+    def test_chat_streams_with_the_box_as_cluck_turn(self):
+        status, head, text = self.chat(2)
+        self.assertEqual((status, text), (200, "POOF! Use: $v$\nstep one\nYour pick: sign."))
+        self.assertTrue(head["Content-Type"].startswith("text/plain"))
+        _, req = self.seen[0]
+        self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})
+        roles = [m["role"] for m in req["messages"]]
+        self.assertEqual(roles, ["system", "user", "assistant", "user", "assistant", "user"])
+        self.assertEqual(req["messages"][0]["content"], serve.CLUCK_CHAT)
+        self.assertIn("Answer: b) 3", req["messages"][1]["content"])                  # the KEY rides in the context turn
+        self.assertIn("Dropped the sign.", req["messages"][1]["content"])
+        self.assertEqual(req["messages"][2]["content"], self.BOX)
+        self.assertEqual(req["messages"][-1]["content"], "why step 1?")
+
+    def test_chat_four_turns_then_limit(self):
+        for n in range(1, serve.CHAT_TURNS + 1):
+            self.assertEqual(self.chat(n)[0], 200)
+        status, head, text = self.chat(serve.CHAT_TURNS + 1)                           # 5th follow-up in the history
+        self.assertEqual((status, json.loads(text)), (429, {"error": "limit"}))
+        self.assertEqual(head["Content-Type"], "application/json")
+        self.assertEqual(self.chat(1)[0], 429)                                          # a short history can't reset the count
+        self.assertEqual(self.chat(1, cookie="sid=" + "d" * 32)[0], 200)                # another browser: its own 4
+
+    def test_chat_gates(self):
+        self.assertEqual(self.chat(cookie="stem-mode=diet")[0], 404)                  # diet: no Cluck
+        self.assertEqual(self.chat(code="NOPE_X1")[0], 404)
+        self.assertEqual(self.chat(history=[])[0], 400)
+        self.assertEqual(self.chat(history=[{"role": "user", "content": "hi"}])[0], 400)                      # Cluck goes first
+        self.assertEqual(self.chat(history=[{"role": "assistant", "content": "x"}])[0], 400)                  # the student goes last
+        self.assertEqual(self.chat(history=[{"role": "assistant", "content": "x"}, {"role": "user", "content": " "}])[0], 400)
+        self.assertEqual(self.chat(history=[{"role": "assistant", "content": "x"}, {"role": "system", "content": "y"}])[0], 400)
+        os.environ.pop("OPENROUTER_API_KEY")
+        self.assertEqual(self.chat()[0], 503)
+        os.environ["OPENROUTER_API_KEY"] = "sk-test"
+        self.assertEqual(self.seen, [])                                                 # none of those reached the model
+
+    def test_a_broken_prompt_ends_in_one_line_not_a_cut_socket(self):
+        old = serve.explain_prompt
+        serve.explain_prompt = lambda p, a: 1 / 0
+        try:
+            self.assertIn("The lamp flickered", self.chat()[2])
+            self.assertIn("The lamp flickered", b"".join(serve.explain("sid=" + "f" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode())[2]).decode())
+        finally:
+            serve.explain_prompt = old
+
+    def test_chat_long_history_fits_and_lines_are_cut(self):
+        long = "x" * 5000
+        h = [{"role": "assistant", "content": self.BOX}, {"role": "user", "content": long}]
+        body = json.dumps({"code": "CALC1_XP1", "answer": "a", "history": h}).encode()
+        self.assertGreater(len(body), 4096)                                             # past /explain's limit, inside /chat's
+        status, _, chunks = serve.chat("sid=" + "e" * 32, body)
+        b"".join(chunks)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(self.seen[0][1]["messages"][-1]["content"]), serve.CHAT_LINE)
