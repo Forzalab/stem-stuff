@@ -7,7 +7,7 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP_DIRS = {".git", ".github", ".claude", ".vercel", "public", "api", "banks", "k", "log", "tests", "tools", "node_modules", "__pycache__"}
+SKIP_DIRS = {".git", ".github", ".claude", ".impeccable", ".vercel", "public", "api", "banks", "k", "log", "tests", "tools", "node_modules", "__pycache__"}
 SKIP_FILES = {"problems.json", "tries.json", "tries.json.tmp", "serve.py", "deploy.sh", "host.log", ".host.pid",
               "requirements.txt", "vercel.json", ".vercelignore", ".gitignore", "stem-stuff.html", "stem-stuff.html.tmp"}
 

@@ -45,7 +45,7 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
-const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
+const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."];   // $$ on lines of their own: what live models send
 let asked = 0;
 const stub = createServer((req, res) => {
   asked++;
@@ -109,23 +109,23 @@ try {
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: the formula card (stepper) in order of use; the brainrot corner with the 2 muted players", async () => {
+  await step("sugar: the formula card (stepper) in order of use; the brainrot corner: one muted player per category", async () => {
     assert.deepEqual(await page.$$eval("#fcard .st .n", n => n.map(x => x.textContent.trim())), ["1", "2"]);
     assert.equal(await page.$$eval("#fcard .then", t => t.length), 1);
     assert.match(await page.textContent("#fcard .st .g"), /Work and Energy/);
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
-    assert.equal(srcs.length, 2);
-    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): 2 of his 3 playlists, one video each
+    assert.equal(srcs.length, 3);
+    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): all 3 playlists, one video each
     assert.equal(cats.length, 3);
     const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
     for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
-    assert.notEqual(catOf(srcs[0]), catOf(srcs[1]), "two different playlists");
+    assert.equal(new Set(srcs.map(catOf)).size, 3, "one per playlist");
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
-      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 3 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
     assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "no original, no wrong pick yet: the scratchpad is the default (Tony, Oct 5)");
     const head = await page.evaluate(() => {                            // video-bar.html ?v=1 (Tony, Oct 5): "Cluck" level with "Question"
@@ -139,21 +139,18 @@ try {
     assert.deepEqual([head.tall, head.cap, head.ctl], [true, true, false], "9:16 frames, at most 40vh tall; no – / ✕ / tab when docked");
     assert.equal(head.box, "block", "a box of its own (the top bar's .dock class once unwrapped it: nav.css display: contents)");
     assert.equal(await page.textContent("#rot .rot-hd .xb-label"), "Explain", "the column label (Tony, Oct 5: explain-column.html D1)");
-    const b = "#rot .rot-grip", folded = () => page.$eval("#rot", e => e.classList.contains("stashed"));
-    assert.deepEqual([await page.getAttribute(b, "role"), await page.getAttribute(b, "aria-valuenow")], ["separator", "100"]);
-    assert.equal(await page.$$eval("#rot .rot-btn", e => e.length), 0, "no brainrots button: the grip shows the videos");
+    const b = "#rot .rot-link", folded = () => page.$eval("#rot", e => e.classList.contains("stashed"));
+    assert.deepEqual([await page.textContent(b), await page.getAttribute(b, "aria-expanded")], ["Hide curated brainrot", "true"]);
+    assert.equal(await page.$$eval("#rot .rot-btn, #rot .rot-grip", e => e.length), 0, "no button, no grip: one text link (Tony, Oct 5)");
+    { const [l, k] = await page.$$eval("#rot .rot-hd .xb-label, #rot .rot-link", es => es.map(e => e.getBoundingClientRect()).map(r => r.top + r.height / 2));
+      assert.ok(Math.abs(l - k) <= 2, `the link sits level with "Explain": ${l} vs ${k}`); }
     await page.click(b);
-    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-grip").getAttribute("aria-valuenow"), getComputedStyle(e.querySelector(".duo")).opacity]),
-      [true, "0", "0"], "a tap on the grip folds the players");
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), getComputedStyle(e.querySelector(".duo")).opacity]),
+      [true, "false", "0"], "the link folds the players");
+    assert.equal(await page.textContent(b), "Show curated brainrot");
     assert.equal(await page.isVisible("#rot .rot-hd .xb-label"), true, "the label row stays");
-    await page.focus(b); await page.keyboard.press("ArrowDown"); assert.equal(await folded(), false, "Down brings them back");
-    await page.keyboard.press("ArrowUp"); assert.equal(await folded(), true, "Up folds them");
-    { const g = await page.locator(b).boundingBox(), x = g.x + g.width / 2, y = g.y + g.height / 2;
-      await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + 60, { steps: 4 });
-      assert.ok(await page.$eval("#rot .duo", d => d.getBoundingClientRect().height > 30 && d.getBoundingClientRect().height < 80), "mid-drag: the players follow the finger");
-      await page.mouse.move(x, y + 600, { steps: 6 }); await page.mouse.up(); }
-    assert.equal(await folded(), false, "a drag down past half snaps them open");
-    assert.equal(await page.getAttribute(b, "aria-valuenow"), "100");
+    await page.click(b); assert.equal(await folded(), false, "and brings them back");
+    assert.deepEqual(await page.$eval("#rot .duo", d => [d.scrollWidth > d.clientWidth + 20, getComputedStyle(d).overflowX]), [true, "auto"], "3 videos in one box: the third scrolls in sideways");
   });
 
   await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
@@ -257,8 +254,8 @@ try {
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
     assert.equal(box[2], true, "the sheet fills the column under the videos");
-    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-grip").getAttribute("aria-valuenow"), e.querySelector(".rot-hd").getClientRects().length > 0]),
-      [true, "0", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
+      [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
     assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
     assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
@@ -284,6 +281,7 @@ try {
         assert.deepEqual(await page.$$eval("#cluck .msg .name", e => e.map(x => x.textContent)), ["Cluck", "You", "Cluck"], "Cluck and you, as chat users (C1)");
         const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
         assert.equal(await look("#cluck .wreply"), await look("#cluck .wtext:not(.wreply)"), "one speaker, one format: the reply has no card");
+        assert.deepEqual(await page.$eval("#cluck .wreply", r => [!!r.querySelector(".wmath .katex"), r.textContent.includes("$$")]), [true, false], "split $$ lines render as one display line");
       }
       assert.equal(asked, a0 + 1, "one /chat call");
       { const rr = await page.$$eval("#cluck .wreply", r => r.map(x => x.textContent)); assert.match(rr.at(-1), /Egg-cellent/); }

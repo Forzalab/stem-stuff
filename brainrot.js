@@ -11,8 +11,8 @@
    both players side by side, sticky, no drag, no corner math; – folds it into a "Show video" bar. Moving an iframe reloads it, so it is
    placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below).
    Docked, a label row heads the column, level with the question's "Question" label: a speech bubble + "Explain" (Tony, Oct 5, explain-column.html
-   D1). Under the players, a pull-down grip (the .sash pill): drag down = the players open with the finger, snap open past half; tap / Enter /
-   Space = toggle; Down / Up = open / fold (the – / ✕ overlays and the 36px "Show video" bar are gone there).
+   D1), and one quiet text link, "Show / Hide curated brainrot", that folds / unfolds the players (Tony, Oct 5: "no buttons, just a link";
+   the – / ✕ overlays and the 36px "Show video" bar are gone there). Docked, all 3 videos sit in one box that scrolls sideways.
    The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
    While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
    was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
@@ -26,7 +26,7 @@
   ];
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const VIDS = shuffle(CATS.slice()).slice(0, 2).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // 2 of the 3, one video each, new every load
+  const VIDS = shuffle(CATS.slice()).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // one video per category, new every load; the corner shows 2 (app.css)
   const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
@@ -61,7 +61,7 @@
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
-  let el = null, duo = null, tab = null, grip = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
@@ -71,19 +71,15 @@
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     const hd = document.createElement("div"); hd.className = "rot-hd";      // docked only (app.css): the column's label row
-    hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-chat")}<span>Explain</span></span>`;
-    grip = document.createElement("button");                // docked only (app.css): the players' pull-down handle
-    Object.assign(grip, { type: "button", className: "rot-grip" });
-    for (const [k, v] of [["role", "separator"], ["aria-orientation", "horizontal"], ["aria-label", "Videos"], ["aria-valuemin", "0"], ["aria-valuemax", "100"]]) grip.setAttribute(k, v);
-    el.append(hd, duo, grip, tab);                           // all stay put: moving an iframe reloads it, so stashing only hides the duo
+    hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-chat")}<span>Explain</span></span><button type="button" class="rot-link"></button>`;
+    link = hd.lastElementChild;
+    el.append(hd, duo, tab);                                 // all stay put: moving an iframe reloads it, so stashing only hides the duo
     home();
-    pull();
     el.addEventListener("click", e => {
-      if (gskip) return;                                     // the click a grip drag ends with
       const b = e.target.closest("[data-act]");
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
       autoFold = false;
@@ -112,44 +108,6 @@
     };
     el.addEventListener("pointerup", end);
     el.addEventListener("pointercancel", end);
-  }
-  /* the grip's drag: the duo's height follows the finger (0 → its full 9:16 height), then snaps; a plain tap falls through to the click */
-  let gd = null, gskip = false;
-  function pull() {
-    grip.addEventListener("pointerdown", e => {
-      if (e.button > 0) return;
-      gd = { id: e.pointerId, y0: e.clientY, moved: false };
-      try { grip.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
-    });
-    grip.addEventListener("pointermove", e => {
-      if (!gd || e.pointerId !== gd.id) return;
-      const dy = e.clientY - gd.y0;
-      if (!gd.moved) {
-        if (Math.abs(dy) < 6) return;
-        gd.moved = true; gd.h0 = stashed ? 0 : duo.offsetHeight;
-        el.classList.remove("stashed"); el.classList.add("pull");
-        duo.style.height = gd.h0 + "px"; gd.full = duo.scrollHeight;
-      }
-      const h = Math.min(gd.full, Math.max(0, gd.h0 + dy));
-      duo.style.height = h + "px"; grip.setAttribute("aria-valuenow", String(Math.round(h / gd.full * 100)));
-    });
-    const end = e => {
-      if (!gd || (e && e.pointerId !== gd.id)) return;
-      const d = gd; gd = null;
-      if (!d.moved) return;
-      gskip = true; setTimeout(() => { gskip = false; }, 0);
-      const open = parseFloat(duo.style.height) > d.full / 2;
-      el.classList.remove("pull"); duo.style.height = "";                    // snaps (no height animation: a layout transition)
-      autoFold = false; stashed = userMin = !open; place();
-    };
-    grip.addEventListener("pointerup", end);
-    grip.addEventListener("pointercancel", end);
-    grip.addEventListener("keydown", e => {
-      const act = { ArrowDown: "open", ArrowUp: "min" }[e.key];
-      if (!act) return;
-      e.preventDefault();
-      if (grip.dataset.act === act) grip.click();
-    });
   }
   /* the band it may use: under the top of the page, above the bottom bar. lift = the gap kept under it (from the window's bottom) */
   function band(h) {
@@ -189,7 +147,8 @@
     home();
     if (el.classList.contains("docked")) {
       el.classList.toggle("stashed", stashed);
-      grip.dataset.act = stashed ? "open" : "min"; grip.setAttribute("aria-valuenow", stashed ? "0" : "100");
+      link.dataset.act = stashed ? "open" : "min"; link.setAttribute("aria-expanded", String(!stashed));
+      link.textContent = (stashed ? "Show" : "Hide") + " curated brainrot";
       return;
     }
     el.classList.toggle("stashed", stashed);

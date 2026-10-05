@@ -1131,6 +1131,7 @@ function wishHTML(t) {
     eqs = []; li = [];
   };
   const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
+  t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
   for (const l of t.split("\n")) {
     const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
     if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
