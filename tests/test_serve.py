@@ -713,8 +713,8 @@ class Explain(unittest.TestCase):
         old = serve.explain_prompt
         serve.explain_prompt = lambda p, a: 1 / 0
         try:
-            self.assertIn("The lamp flickered", self.chat()[2])
-            self.assertIn("The lamp flickered", b"".join(serve.explain("sid=" + "f" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode())[2]).decode())
+            self.assertIn("Cluck stopped early", self.chat()[2])
+            self.assertIn("Cluck stopped early", b"".join(serve.explain("sid=" + "f" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode())[2]).decode())
         finally:
             serve.explain_prompt = old
 

@@ -939,7 +939,7 @@ def _relay(p, chunks, what):
             yield t.encode()
     except Exception as e:  # noqa: BLE001
         print(f"{what} {p['code']}: {e}", file=sys.stderr)
-        yield "\n(QUACK. The lamp flickered. Try again in a moment.)".encode()
+        yield "\n(Cluck stopped early. Sorry!)".encode()
 
 
 def explain(cookie_header, body):

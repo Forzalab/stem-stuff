@@ -442,11 +442,6 @@ html.side #work > .orig { margin: 0; }
 .wchip:hover { border-color: var(--muted); }
 .wchip:focus-visible, .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .wvoice { min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); }
-/* open: the orange chip sits ON the box's top rim, half over the edge (Tony: "it MUST attach with the orange casino CTA"); the voice
-   button rides the rim's right end. One piece: the CTA is the box's handle. */
-#wish:has(.wtext) .wbar { position: relative; z-index: 1; margin-bottom: calc(-1 * var(--btn) / 2); padding: 0 var(--s3); }
-#wish:has(.wtext) .wvoice { width: auto; white-space: nowrap; margin-left: auto; background: var(--ai-sheet); color: var(--ai-muted); border: 1px solid var(--ai-rule); }
-#wish:has(.wtext) .wtext { margin-top: 0; padding-top: calc(var(--btn) / 2 + var(--s3)); }   /* under the chip: a step's gap, not a hole */
 /* Cluck's box wears the V1 pick (brain ref-ui/cluck-box-pick-v1.png; Tony: "the coloring looks so rad"): a warm dark sheet, warm text,
    a tangerine callout, and a rim that runs tangerine → peach → pink → sky (the site's blue) and turns while Cluck thinks and types.
    Same names and values as STYLE.md "Cluck's surfaces" (--ai-*), scoped here until the .ai-skin lands. */
