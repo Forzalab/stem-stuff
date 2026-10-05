@@ -135,6 +135,12 @@ html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; ma
 }
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
 .dock-bottom.dock-away .dock { display: none; }
+/* C8 (Tony, Oct 5 clutter pass): phones, a bank open: no code bar and no strip; it comes up with the list (app.js drill:qlist), or with a load error */
+.dock-bottom.qnav-on:not(.ql-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }
+/* C7: desktop, a question opened without a bank: the code box rests as a label with the code; a tap opens the box (app.js codeChip) */
+#codeChip { display: none; }   /* an id: .btn-label (nav.css) would show it */
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) #codeChip { display: inline-flex; }
 .dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
 /* bar strip (phones, a problem open): 44px (the tap target) with an up-chevron. Revealed, the full bar lies OVER the page (--dock-h stays the strip's),
    so nothing under it moves or shrinks; its top edge holds the same tab, chevron down, to put it away. No problem open: the full bar. */

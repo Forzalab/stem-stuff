@@ -435,6 +435,7 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   rwSync();
   origRender();
   padRule();
@@ -1547,6 +1548,7 @@ const sideMQ = matchMedia("(min-width: 720px)");                       // multit
 /* the room the bottom bar takes from the page: its full height, or the strip's while it rests as a strip (revealed, it lies over the page) */
 const barTab = $("#barTab");
 function dockRoom(evenAway) {
+  if (!dock.getClientRects().length) return 0;                                  // hidden (a bank's list closed on a phone: app.css C8)
   if (!root.classList.contains("dock-bottom") || (!evenAway && root.classList.contains("dock-away"))) return 0;
   if (!root.classList.contains("bar-mini")) return dock.offsetHeight;
   if (!root.classList.contains("bar-open")) stripRoom = dock.offsetHeight || stripRoom;    // measured as a strip (incl. the safe-area inset); kept while revealed
@@ -1571,6 +1573,13 @@ function swipeTab(el, act) {
 new MutationObserver(() => { if ($("#entryMsg").textContent || !retryLoad.hidden) barOpen(true); }).observe(dock, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });   // a message or Retry: shown
 dock.addEventListener("focusin", e => { if (e.target !== barTab) barOpen(true); });   // keyboard / Tab into the code box: shown
 swipeTab(barTab, d => barOpen(d === "tap" ? !root.classList.contains("bar-open") : d === "up"));
+/* C7 (Tony, Oct 5 clutter pass): desktop, no bank: the label opens the code box; the box folds back once focus leaves it (a message keeps it) */
+$("#codeChip").addEventListener("click", () => { root.classList.add("entry-open"); const c = $("#code"); c.focus(); c.select(); });
+$("#entry").addEventListener("focusout", e => {
+  if (!e.currentTarget.contains(e.relatedTarget)) setTimeout(() => { if (!$("#entry").contains(document.activeElement) && S) root.classList.remove("entry-open"); }, 0);
+});
+/* C8: phones, a bank open: the code bar shows only with the list (app.css), up and ready to type */
+addEventListener("drill:qlist", e => { if (dockMQ.matches && root.classList.contains("bar-mini")) barOpen(e.detail.open); layoutDock(); });
 function layoutDock() {
   const bottom = dockMQ.matches, h = vv ? vv.height : innerHeight;
   if (innerWidth !== lastW) { lastW = innerWidth; tallest = 0; }        // orientation / window change
