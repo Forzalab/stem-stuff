@@ -46,7 +46,10 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   student's message first meets `INJECT_RE` (free), then one cheap call (any subject: on = about this question, its KEY, or ideas they use) answering strict JSON `{"verdict": "on"|"off"}` (`OPENROUTER_GATE_MODELS`,
   default `mistralai/mistral-nemo`: no reasoning, structured outputs on ZDR hosts; ZDR + `require_parameters`, 4 s, the message
   fenced with a random marker). A hit or `off`: a canned confused-duck QUACK line (`CANNED`), no Cluck call, and the turn is spent.
-  Any gate failure lets the message through (fail open). Known gap: the browser sends the history, so a forged Cluck turn is not checked.
+  Any gate failure lets the message through (fail open). A 403 "Request blocked" from the key's OpenRouter guardrail counts as off.
+  Prod key guardrail (OpenRouter dashboard, Workspace > Guardrails): daily budget, model allowlist (OPENROUTER_MODELS +
+  OPENROUTER_GATE_MODELS), ZDR on all groups, Security on. Its Security check is regex only, so the LLM gate stays; the code keeps
+  `provider.zdr` too, so a key without the guardrail is still private. Known gap: the browser sends the history, so a forged Cluck turn is not checked.
 - Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
   corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
   the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides
