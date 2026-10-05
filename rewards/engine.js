@@ -107,19 +107,32 @@
   }
   function origSolved(q) { if (!s || q == null) return; s = load(); (s.orig[q] = s.orig[q] || { codes: [], solved: false }).solved = true; save(); }
 
-  /* one row, in the page flow (app.js puts it in the top bar): XP coin, level + bar, streak flame, real / snack counts */
+  /* one strip in the page flow (app.js puts it in the top bar's gap; HUD B, Tony Oct 5): XP balance, level star + bar + words, streak
+     flame. One button over the strip opens "your progress" (a native popover: Escape and an outside tap close it, no key handler). */
   function mountHUD(el) {
     if (!el) return null;
     el.className = 'rw-hud rw-skin';
-    el.setAttribute('role', 'img');
-    el.innerHTML = '<span class="rw-pill rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin') + '</span><b class="rw-num">0</b></span>' +
-      '<span class="rw-pill rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
+    el.setAttribute('role', 'group');
+    el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin') + '</span><b class="rw-num">0</b></span>' +
+      '<span class="rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
       '<span class="rw-lvl-body"><span class="rw-bar"><i></i></span><span class="rw-to"></span></span></span>' +
       '<span class="rw-streak"><span class="rw-flame">' + img('fire') + '</span><b>0</b></span>' +
-      '<span class="rw-counts"></span>';
+      '<span class="rw-counts"></span>' +
+      '<button type="button" class="rw-tap" aria-label="Your progress" popovertarget="rwPop"></button>';
+    var pop = document.getElementById('rwPop');
+    if (!pop) {
+      pop = document.createElement('div'); pop.id = 'rwPop'; pop.className = 'rw-pop rw-skin'; pop.setAttribute('popover', '');
+      pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Your progress');
+      document.body.appendChild(pop);
+      pop.addEventListener('beforetoggle', function (e) {
+        if (e.newState !== 'open' || !ui) return;
+        var r = ui.el.getBoundingClientRect(), w = Math.min(320, innerWidth - 24);
+        pop.style.top = (r.bottom + 8) + 'px'; pop.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + 'px'; pop.style.width = w + 'px';
+      });
+    }
     var q = function (sel) { return el.querySelector(sel); };
     ui = { el: el, xp: q('.rw-num'), lvl: q('.rw-lvl'), lvlN: q('.rw-star b'), bar: q('.rw-bar i'), to: q('.rw-to'),
-      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts') };
+      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), pop: pop };
     ui.lvl.addEventListener('animationend', function () { ui.lvl.classList.remove('rw-pulse'); });
     shownLvl = null;
     render(0);
@@ -150,6 +163,12 @@
     ui.flame.style.setProperty('--fs', 1 + Math.min(st.streak, 10) * 0.04);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
+    ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
+      '<span class="rw-bar"><i></i></span><dl>' +
+      '<dt>Next level</dt><dd>' + st.toNext + ' XP to go</dd><dt>Points</dt><dd>' + st.xp + ' XP</dd>' +
+      '<dt>Streak</dt><dd>' + st.streak + ' right in a row</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
+      '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>';
+    ui.pop.querySelector('.rw-bar i').style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
       ', ' + st.streak + ' in a row, ' + st.real + ' exam and ' + st.snacks + ' easy solved');
   }

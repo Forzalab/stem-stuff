@@ -245,8 +245,8 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 }
 .opt:hover:not(:disabled) { border-color: var(--edge); }
 .opt .badge {
-  flex: none; width: 2rem; height: 2rem; display: grid; place-items: center; border-radius: 50%;
-  border: var(--bw) solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-sm);
+  flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
+  border: var(--bw) solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-md);
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
@@ -476,9 +476,10 @@ html.side #work > .orig { margin: 0; }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
-html.side.no-pad #work.cl-on { top: 0; }
-html.side #work.cl-on > :not(.cl) { display: none; }                         /* it fills the notes column: the videos, hint card and pad step aside */
-html.side .cl { position: sticky; top: var(--s4); height: calc(100dvh - 2 * var(--s4)); border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one */
+html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
+html.side #work.cl-on > #rot { flex: none; }
+html.side .cl { flex: 1; min-height: 0; border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
 html.cl-open body { overflow: hidden; }
 .cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
@@ -739,7 +740,7 @@ html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
 html.pad-off .freeze-in { max-height: none; overflow: visible; }
 html.pad-off .more { display: none; }
-html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); }   /* ONE reservation: dock bar + button, so the last control scrolls above both (no extra ::after on top) */
+html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + var(--s4)); }   /* the dock bar only: the Scratchpad button may sit over the last row; it drags away (Tony, Oct 5: "remove the bottom gap") */
 .pad-fab {
   position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
   display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);
@@ -765,9 +766,9 @@ html.mt .sash::before { width: 32px; height: 3px; margin: -1.5px 0 0 -16px; }   
 /* desktop: side by side, always (problem + answer left, pad right; never the pad under the problem) */
 html.side main {
   max-width: min(100%, calc(var(--col) * 1.7)); display: grid; align-items: start;
-  grid-template-columns: calc(var(--r, .5) * (100% - var(--s4))) var(--s4) minmax(0, 1fr);
+  grid-template-columns: calc(var(--r, .5) * (100% - var(--s6))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
 }
-html.side.mt-r0 main { grid-template-columns: 52px var(--s4) minmax(0, 1fr); }
+html.side.mt-r0 main { grid-template-columns: 52px var(--s6) minmax(0, 1fr); }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }

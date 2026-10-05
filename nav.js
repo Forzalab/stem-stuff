@@ -96,7 +96,7 @@ function init() {
     setKey = key;
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    name.textContent = "Questions";                                         // the bank code is jargon to a student (design/COPY-CTA.md)
+    name.textContent = bank() ? bank().code : "Questions";                 // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;

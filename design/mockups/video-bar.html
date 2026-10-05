@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Show video variants</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<!--
+  Tony, Oct 5: "show video button is tacked on lol ... propose 3 variants to remedy, unified to our site".
+  Now (brainrot.js .rot.dock .rtab): a 36 px full-width bar with a chevron, floating above Cluck's sheet, its own colour and height:
+  nothing else on the site is 36 px tall or chevron-led.
+  ?v=now  what ships
+  Tony, Oct 5 ~03:20: picked ?v=1, label "Curated brainrots", real svgs on both labels, the labels aligned.
+  ?v=1    Column header: the right column gets the same label row the question has ("Question" ↔ "Cluck"), the videos are one
+          bar-sized button at its right end (--btn, --sheet fill, icon + word), like the top bar's buttons.
+  ?v=2    Preview strip: the folded state shows what you get: two 16:9 thumbnails, dimmed, a play mark, "2 videos" — a card
+          with the question box's fill and radius, as tall as two text lines.
+  ?v=3    A tab: "Videos" joins Cluck's tabs. The right column is one sheet with three views; nothing sits above it.
+  No ?v: all four side by side. &clean hides the switcher.
+-->
+<style>
+:root { --paper: #08111f; --qbox: #0f1d30; --sheet: #16243a; --raised: #20304a; --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e;
+  --ai: #ff9a3c; --ai-bg: #17130f; --ai-tx: #ece6df; --ai-mu: #a99c8e; --ai-rule: #2c241c; --btn: 50px; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif; }
+svg.i { width: 22px; height: 22px; flex: none; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding: 16px; height: 100vh; }
+.grid > div { display: flex; flex-direction: column; min-width: 0; }
+.lbl { margin: 0 0 8px; font-weight: 700; font-size: 15px; color: var(--muted); } .lbl b { color: var(--ink); }
+.page { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; height: 100vh; padding: 16px 20px; }
+.qcol { display: flex; flex-direction: column; gap: 8px; }
+.qtxt { background: var(--qbox); border-radius: 8px; padding: 16px 24px; }
+.opt { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--qbox); }
+.col { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.hrow { display: flex; align-items: center; gap: 8px; min-height: var(--btn); font-size: 16px; font-weight: 700; color: var(--muted); }   /* = app.css .xb-label; one row height in both columns so the labels line up */
+.hrow svg.i { width: 20px; height: 20px; }
+.hrow .lab { display: flex; align-items: center; gap: 8px; }
+.hrow svg.i { --c2: #ffb86b; --paper: #08111f; }
+/* the sheet stand-in (variant R tabs), so each fix is judged next to Cluck */
+.sh { flex: 1; min-height: 0; border-radius: 12px; background: var(--ai-bg); border: 1px solid var(--ai-rule); color: var(--ai-tx); padding: 0 24px; overflow: hidden; }
+.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--ai-rule); margin: 8px 0 16px; }
+.tab { display: flex; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 15px; font-weight: 700; color: var(--ai-mu); }
+.tab.on { color: #fff; border-bottom-color: var(--ai); }
+.tab svg.i { width: 18px; height: 18px; }
+.ln { height: 12px; border-radius: 6px; background: #2a231c; margin: 0 0 12px; } .ln.s { width: 60%; } .ln.m { width: 85%; }
+
+/* now */
+.now-bar { display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; border-radius: 10px; background: var(--sheet); color: var(--muted); font-weight: 700; font-size: 15px; }
+.now-bar svg.i { width: 18px; height: 18px; }
+/* 1: the column header: same label style as "Question", a bar-sized button at the end */
+.v1 .hrow { justify-content: space-between; }
+.v1 .vbtn { display: inline-flex; align-items: center; gap: 8px; height: var(--btn); padding: 0 16px 0 12px; border-radius: 8px; background: var(--sheet); color: var(--ink); font-weight: 700; font-size: 16px; }
+.v1 .hrow .lab { display: flex; align-items: center; gap: 8px; }
+/* 2: preview strip: a card like the question box, two dim thumbnails + play marks, one line of words */
+.v2 .strip { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; background: var(--qbox); }
+.v2 .th { position: relative; width: 96px; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: linear-gradient(135deg, #2a3a55, #1a2436); }
+.v2 .th:nth-child(2) { background: linear-gradient(135deg, #3a2f45, #1f1a2b); }
+.v2 .th::after { content: ""; position: absolute; left: 50%; top: 50%; width: 0; height: 0; margin: -8px 0 0 -5px; border-left: 14px solid rgb(255 255 255 / .9); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+.v2 .strip p { margin: 0; flex: 1; min-width: 0; font-weight: 700; font-size: 16px; } .v2 .strip p span { display: block; font-weight: 400; font-size: 14px; color: var(--muted); }
+.v2 .open { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; color: var(--muted); }
+
+.sw { position: fixed; left: 12px; bottom: 12px; z-index: 20; display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #000c; font: 700 14px/1 system-ui; }
+.sw a { color: var(--muted); text-decoration: none; padding: 8px 12px; border-radius: 6px; } .sw a.on { background: var(--raised); color: var(--ink); }
+.clean .sw { display: none; }
+@media (max-width: 700px) { .page, .grid { grid-template-columns: 1fr; height: auto; } .sh { height: 420px; flex: none; } }
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+</svg>
+<div id="root"></div>
+<nav class="sw" id="sw"><a href="?">All</a><a href="?v=now">Now</a><a href="?v=1">1</a><a href="?v=2">2</a><a href="?v=3">3</a></nav>
+<script>
+const I = n => `<svg class="i"><use href="#${n}"/></svg>`;
+const lines = `<div class="ln m"></div><div class="ln"></div><div class="ln s"></div><div class="ln m"></div><div class="ln"></div><div class="ln s"></div>`;
+const tabs = (vid) => `<div class="tabs"><span class="tab on">${I("duck")}Cluck explains</span><span class="tab">${I("bulb")}Similar steps</span>${vid ? `<span class="tab">${I("play")}Curated brainrots</span>` : ""}</div>`;
+const V = {
+  now: ["Now · what ships", () => `<div class="col"><div class="now-bar">${I("chev")}Show video</div><div class="sh">${tabs()}${lines}</div></div>`],
+  1: ["1 · Column header", () => `<div class="col v1"><div class="hrow"><span class="lab">${I("duck")}Cluck</span><span class="vbtn">${I("play")}Curated brainrots</span></div><div class="sh">${tabs()}${lines}</div></div>`],
+  2: ["2 · Preview strip", () => `<div class="col v2"><div class="strip"><span class="th"></span><span class="th"></span><p>2 videos<span>Watch while you work</span></p><span class="open">${I("chev")}</span></div><div class="sh">${tabs()}${lines}</div></div>`],
+  3: ["3 · A tab in the sheet", () => `<div class="col"><div class="sh">${tabs(true)}${lines}</div></div>`],
+};
+const q = new URLSearchParams(location.search), v = V[q.get("v")] ? q.get("v") : null;
+if (q.has("clean")) document.documentElement.classList.add("clean");
+document.querySelector(v ? `#sw a[href="?v=${v}"]` : `#sw a[href="?"]`).classList.add("on");
+const qcol = `<div class="qcol"><div class="hrow"><span class="lab">${I("doc")}Question</span></div><div class="qtxt">A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</div>
+  <div class="opt">A · 1.0 m/s</div><div class="opt">B · 2.0 m/s</div><div class="opt">C · 3.0 m/s</div></div>`;
+document.getElementById("root").innerHTML = v ? `<div class="page">${qcol}${V[v][1]()}</div>`
+  : `<div class="grid">${["now", "1", "2", "3"].map(k => V[k]).map(([t, f]) => `<div><p class="lbl"><b>${t}</b></p>${f()}</div>`).join("")}</div>`;
+</script>
+</body></html>

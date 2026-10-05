@@ -255,32 +255,32 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const geo = () => page.evaluate(() => { const f = document.querySelector("#freeze").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), q = document.querySelector("#q").getBoundingClientRect();
     const m = document.querySelector("main"), cs = getComputedStyle(m), inner = m.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     return { fL: f.left, fR: f.right, fW: f.width, wL: w.left, wT: w.top, qB: q.bottom, inner, side: document.documentElement.classList.contains("side") }; });
-  await step("1440 side by side by default: problem + answer left, pad right, 16px gap", async () => {
+  await step("1440 side by side by default: problem + answer left, pad right, 32px gap (Tony, Oct 5)", async () => {
     const g = await geo();
     assert.ok(g.side, "html.side");
-    assert.ok(g.wL >= g.fR + 15.5 && g.wL <= g.fR + 16.5, `gap ${g.wL - g.fR}`);
-    assert.ok(Math.abs(g.fW - (g.inner - 16) / 2) < 2, `left is half (${g.fW} of ${g.inner})`);
+    assert.ok(g.wL >= g.fR + 31.5 && g.wL <= g.fR + 32.5, `gap ${g.wL - g.fR}`);
+    assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `left is half (${g.fW} of ${g.inner})`);
     assert.ok(await page.locator("#mtExp").isHidden(), "no expand on desktop");
     assert.equal(await page.getAttribute("#sash", "role"), "separator");
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/flow-desktop-1440.png` });
   });
   await step("1440 the divider: tap = next (1/2 -> 1/3 -> strip -> 2/3), double-click = 1/2, a drag snaps; never the pad under the problem", async () => {
     const tap = async () => { await page.locator("#sash").click(); await page.waitForTimeout(400); };
-    await tap(); let g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 16) / 3) < 2, `1/3 (${g.fW})`);
+    await tap(); let g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `1/3 (${g.fW})`);
     await tap(); assert.ok(await page.locator("#pstrip").isVisible(), "strip"); assert.equal(Math.round((await page.locator("#pstrip").boundingBox()).width), 52);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#pstrip span")).writingMode), "vertical-rl");
-    await tap(); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 16) * 2 / 3) < 2, `2/3 (${g.fW})`);
-    await page.locator("#sash").dblclick(); await page.waitForTimeout(400); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 16) / 2) < 2, `dblclick 1/2 (${g.fW})`);
+    await tap(); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) * 2 / 3) < 2, `2/3 (${g.fW})`);
+    await page.locator("#sash").dblclick(); await page.waitForTimeout(400); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `dblclick 1/2 (${g.fW})`);
     const s = await page.locator("#sash").boundingBox(), y = s.y + 200;
     await page.mouse.move(s.x + 8, y); await page.mouse.down();
     await page.mouse.move(s.x - 200, y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(400);
-    g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 16) / 3) < 2, `drag snapped to 1/3 (${g.fW})`);
+    g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `drag snapped to 1/3 (${g.fW})`);
     assert.ok(g.wL > g.fR, "pad right of the problem"); assert.ok(g.wT < g.qB, "pad not under the problem");
     assert.ok(await page.locator("#mtMode").isHidden(), "no q | a switch side by side (both are on screen)");
     await page.locator("#sash").click(); await page.waitForTimeout(400);
     assert.ok(await page.locator("#pstrip").isVisible(), "1/3 -> strip");
     await page.locator("#pstrip").click(); await page.waitForTimeout(400);
-    g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 16) / 3) < 2, `strip tap brings the problem back (${g.fW})`);
+    g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 3) < 2, `strip tap brings the problem back (${g.fW})`);
   });
   await step("1440 no keyboard shortcuts are shown or documented for the divider", async () => {
     const t = await page.evaluate(() => [...document.querySelectorAll("#sash, #mtMode, #pstrip")].map(e => (e.title || "") + (e.getAttribute("aria-keyshortcuts") || "")).join(""));
