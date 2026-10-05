@@ -283,6 +283,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); margin-top: var(--s2); }
 .chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
 .chk .cluck > .ico { margin-top: 0; }
+.chk .cluck .md { overflow-wrap: anywhere; }
 .q.closed .chk { display: none; }
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
