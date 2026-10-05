@@ -446,7 +446,7 @@ html.side #work > .orig { margin: 0; }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
-.fcard ol { list-style: none; margin: 0; padding: 0; display: grid; justify-items: center; }
+.fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
 .fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
 .fcard .f .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
