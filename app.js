@@ -1189,7 +1189,8 @@ function wishPaint() {
     if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
     return;
   }
-  el.hidden = sideMQ.matches && w.open;                                     // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
+  el.hidden = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
+    : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Similar solution steps" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
   const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
@@ -1261,7 +1262,7 @@ function clTab(tab, focus) {
   fold.querySelector(".cl-fold-n").textContent = n ? `${n} step${n > 1 ? "s" : ""}` : "";
   cl.el.querySelector("#clTabSP").hidden = !has.steps || !cl.fold;
   cl.el.querySelector(".cl-ft").hidden = !has.explain;
-  cl.el.querySelector(".cl-title").textContent = "Cluck";                  // the phone head bar
+  cl.el.querySelector(".cl-title").textContent = has.steps ? "Similar solution steps" : "Cluck";   // the phone head bar: the card's name when the card opened it
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: typed again from the top

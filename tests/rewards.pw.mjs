@@ -250,6 +250,16 @@ try {
     await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "a tap on the FREE sticker works the card too");
     assert.equal(await p.isVisible("#cluck .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
+    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps", "phone: the head bar says what the card said (TODO C)");
+    await p.click("#cluck .cl-bar .cl-x");
+    await p.route("**/narrate", r => r.fulfill({ json: { text: "QUACK. Pick a." } }));                 // the fixture has no narration
+    const told = p.waitForResponse(r => r.url().endsWith("/narrate"));
+    await pick(p, "b"); await told; await p.waitForTimeout(200);
+    assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
+    await p.click("#origHd");
+    await p.waitForFunction(() => /Pick a/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
+    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps");
+    assert.equal(await p.isVisible("#cluck .orig-sol"), true, "Cluck on top, the steps under him");
     await pc.close();
   });
 
