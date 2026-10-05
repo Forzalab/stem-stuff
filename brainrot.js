@@ -67,7 +67,10 @@
     const lift = (dock && root.classList.contains("dock-bottom") ? innerHeight - dock.getBoundingClientRect().top : 0) + G;
     return { top, floor: Math.max(top, innerHeight - lift - h), lift };
   }
-  const live = () => [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #padFab, #wish .wchip, #rwHud, #orig .orig-sol, #orig .orig-peek")].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
+  /* what it must not cover. Desktop also keeps off the code box, the nav, the problem itself (tip included), the exam's solution and the
+     notes: there it used to land top-left over the first three, and top-right over the solution's figure once scrolled (desktop audit, Oct 5: "test on desktop layout. thats what ppl use the most") */
+  const LIVE = "#q .opt, #q .ff, #q .send, #mcGo, #padFab, #wish .wchip, #rwHud, #orig .orig-sol, #orig .orig-peek", DESK = ", #entry, #qnav, #blocks, #orig, #xbField";
+  const live = () => [...document.querySelectorAll(LIVE + (desk() ? DESK : ""))].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
   const covers = (x, y, w, h) => live().some(c => x < c.right + 4 && x + w > c.left - 4 && y < c.bottom + 4 && y + h > c.top - 4);
   function spot(c, w, h) {
     const b = band(h), right = c[1] === "r";
