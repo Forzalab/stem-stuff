@@ -441,17 +441,24 @@ html.side #work > .orig { margin: 0; }
 .wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
 .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .wvoice { width: auto; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); white-space: nowrap; }   /* "Turn voice off" on one line (.btn is 48px square) */
-/* ---------- Cluck's surfaces (design/STYLE.md): tokens on .ai-skin, never :root. Values sampled from Tony's image 3 (Oct 5) ---------- */
+/* ---------- Cluck's surfaces (design/STYLE.md): tokens on .ai-skin, never :root ----------
+   Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
+   calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
+   Contrast on --ai-sheet: text 15.5, muted 8.0, --ai 8.7; --ai-ink on --ai 8.4 */
 .ai-skin {
-  --ai: #ff9a3c; --ai-ink: #2b1000; --ai-edge: #eeb16a; --ai-soft: #dfb279;
-  --ai-sheet: #17120d; --ai-field: #17120d; --ai-text: #f4e7d5; --ai-strong: #fff9f0; --ai-muted: #a79680; --ai-rule: #3a2b1d;
-  --ai-tint: color-mix(in srgb, var(--ai) 7%, var(--ai-sheet)); --ai-line: #6e5a40;
+  --ai: #ff9a3c; --ai-ink: #2b1000; --ai-edge: #eeb16a; --ai-soft: #ffb873;
+  --ai-sheet: #10131a; --ai-field: #0c0f15; --ai-text: #eceff4; --ai-strong: #ffffff; --ai-muted: #a2abba; --ai-rule: #242a36;
+  --ai-tint: #171c26; --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 140 50 / 0.3);
 }
 /* Cluck's box = its own service on the site: the base tokens remap inside it, so .btn, .ff and the text follow */
 .ai-box { --sheet: var(--ai-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--ai-muted); --hint: var(--ai-muted);
-  --line: var(--ai-rule); --edge: var(--ai-line); background: var(--sheet); color: var(--ink); }
+  --line: var(--ai-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
 /* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
-.cl { display: flex; flex-direction: column; min-height: 0; }
+.cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .6s ease-out;   /* ref 1's ember light, top only */
+  background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
+.cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
+.cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side #work.cl-on > :not(.cl) { display: none; }                         /* it fills the notes column: the videos, hint card and pad step aside */
 html.side .cl { position: sticky; top: 0; height: 100dvh; border-left: 1px solid var(--ai-edge); border-radius: 0 10px 10px 0; }   /* image 3's tangerine seam between the columns (1px, the divider weight) */
@@ -480,7 +487,8 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
 .cl-thread:empty { display: none; }
-.cl .bub.me { align-self: flex-end; max-width: 85%; padding: var(--s3) var(--s4); border-radius: 10px 4px 10px 10px; background: var(--raised); color: var(--ai-strong); line-height: var(--lh); overflow-wrap: anywhere; }
+.cl .bub.me { align-self: flex-end; max-width: 85%; padding: var(--s3) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai); color: var(--ai-ink); line-height: var(--lh); overflow-wrap: anywhere; }   /* ref 2: the student speaks in solid orange, dark ink (AA) */
+.cl .wtext.wreply { padding: var(--s3) var(--s4); border-radius: 16px; border: 1px solid var(--ai-rule); }   /* ref 2: Cluck's replies sit in a quiet outlined card */
 .cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
 .cl-ft[hidden] { display: none; }
 /* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */

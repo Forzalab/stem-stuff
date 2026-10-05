@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Cluck sheet colours</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<!--
+  Tony, Oct 5: "some color variants too (3 of them), including dark almost neutral bkg WITH orange as ref ... which color scheme goes best
+  with the whole website? ... they dont show latex so thats sth to consider". Refs: (A) ember glow on black, (B) Fin: neutral dark + solid
+  orange bubbles, (C) orange field with dark bubbles. H = the hybrid that ships. Same made-up content in all four, real KaTeX.
+-->
+<style>
+:root { --paper: #151d2b; --ink: #e7edf6; --muted: #a2b3cb; --c1: #7ab8ff; --c2: #ffb86b; --c3: #ff8fc8; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px 16px 48px; background: var(--paper); color: var(--ink); font: 400 16px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif; }
+.row { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); max-width: 1880px; margin: 0 auto; }
+.lbl { margin: 0 0 8px; font-weight: 700; font-size: 15px; color: var(--muted); }
+.lbl b { color: var(--ink); }
+/* ---------- one sheet, themed by tokens ---------- */
+.sh { --pad: 20px; position: relative; display: flex; flex-direction: column; height: 760px; overflow: hidden; border-radius: 14px;
+  background: var(--bg); color: var(--tx); border: 1px solid var(--seam); }
+.sh .hd { display: flex; gap: 6px; align-items: center; padding: 12px 10px 8px 14px; position: relative; z-index: 1; }
+.tabs { flex: 1; display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--tabs); }
+.tab { flex: 1; text-align: center; padding: 9px 0; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--mu); }
+.tab.on { background: var(--acc); color: var(--accink); }
+.x { width: 40px; text-align: center; color: var(--acc); font-size: 22px; }
+.bd { flex: 1; overflow: hidden; padding: 6px var(--pad) 12px; position: relative; z-index: 1; }
+.bd p { margin: 0 0 8px; }
+.bd b { color: var(--strong); }
+.name { display: flex; align-items: center; gap: 8px; color: var(--acc); font-weight: 700; font-size: 14px; margin: 0 0 6px; }
+.orb { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe0b0, #ff8a2a 45%, #8a2a00); flex: none; }
+.st { display: grid; grid-template-columns: 26px 1fr; gap: 0 10px; margin: 10px 0 0; }
+.n { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--acc); color: var(--acc); font: 700 12px/22px inherit; text-align: center; }
+.st h4 { margin: 0; font-size: 16px; color: var(--strong); }
+.st .sub { margin: 0 0 4px; font: italic 13px/1.4 "Atkinson Hyperlegible Mono", monospace; color: var(--mu); }
+.st ul { margin: 0; padding-left: 18px; }
+.call { margin: 8px 0 0; padding: 10px 12px; border-radius: 8px; text-align: center; background: var(--call); border: 1px solid var(--callline); }
+.call div + div { margin-top: 4px; }
+.rule { height: 1px; background: var(--rule); margin: 12px 0 10px; }
+.boxed { text-align: center; margin: 4px 0 8px; }
+.me { margin: 12px 0 10px auto; max-width: 78%; width: fit-content; padding: 9px 14px; border-radius: 16px 16px 4px 16px; background: var(--me); color: var(--meink); border: 1px solid var(--meline); }
+.rep { padding: 10px 14px; border-radius: 14px; background: var(--rep); border: 1px solid var(--repline); }
+.ft { padding: 10px 14px 14px; position: relative; z-index: 1; }
+.ask { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; border-radius: var(--askr); background: var(--field); border: 1px solid var(--fieldline); }
+.ask span:first-child { flex: 1; color: var(--mu); }
+.ask i { font-style: normal; font-weight: 700; font-size: 13px; color: var(--acc); }
+.ask .go { flex: none; width: 40px; height: 40px; border-radius: var(--gor); display: grid; place-items: center; background: var(--acc); color: var(--accink); font-weight: 700; }
+.katex { font-size: 1.05em; }
+/* (A) ember glow: near-black, orange light bleeding in from the edges (ref 1) */
+.A { --bg: #0a0705; --tx: #f3ece6; --strong: #fff; --mu: #a8988a; --acc: #f07a2a; --accink: #2b1000; --tabs: #1a120c; --seam: #3a1a08;
+  --call: #1a110b; --callline: #5a2e12; --rule: #2a1a10; --me: linear-gradient(180deg, #ff9a4a, #e0601a); --meink: #2b1000; --meline: transparent;
+  --rep: transparent; --repline: transparent; --field: #140e0a; --fieldline: #3a2414; --askr: 999px; --gor: 50%; }
+.A::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 60% at 50% -10%, rgb(240 110 30 / .55), transparent 60%), radial-gradient(80% 50% at 110% 100%, rgb(240 110 30 / .35), transparent 70%); }
+/* (B) neutral dark + solid orange (ref 2, Fin; Tony: "dark almost neutral bkg WITH orange") */
+.B { --bg: #0d1017; --tx: #e9ecf2; --strong: #fff; --mu: #9aa3b2; --acc: #ff8a2a; --accink: #1f0a00; --tabs: #161a23; --seam: #262c38;
+  --call: #151a24; --callline: #2c3444; --rule: #222834; --me: #ff6a1a; --meink: #1f0a00; --meline: transparent;
+  --rep: transparent; --repline: #2c3444; --field: #0d1017; --fieldline: #2c3444; --askr: 999px; --gor: 50%; }
+/* (C) orange field (ref 3): the sheet IS orange, Cluck speaks in dark bubbles */
+.C { --bg: linear-gradient(170deg, #b8401a, #e06a2a 55%, #d9531e); --tx: #fbe9df; --strong: #fff; --mu: #f3c9b3; --acc: #ffd2a8; --accink: #4a1500; --tabs: rgb(70 20 5 / .45); --seam: #7a2a10;
+  --call: #4e190a; --callline: #8a3a1a; --rule: rgb(255 220 200 / .25); --me: #ee6a2e; --meink: #fff4ec; --meline: #ffb08a;
+  --rep: #6a2410; --repline: transparent; --field: rgb(70 20 5 / .45); --fieldline: #ffb08a; --askr: 18px; --gor: 12px; }
+.C .bd > .say { padding: 12px 14px; border-radius: 14px; background: #6a2410; }
+/* (H) the hybrid: B's neutral base + A's ember light (only at the top, stronger while Cluck types) + our tangerine, dark ink on orange */
+.H { --bg: #10131a; --tx: #eceff4; --strong: #fff; --mu: #a2abba; --acc: #ff9a3c; --accink: #2b1000; --tabs: #181c25; --seam: #ff9a3c;
+  --call: #171c26; --callline: rgb(255 154 60 / .35); --rule: #242a36; --me: #ff9a3c; --meink: #2b1000; --meline: transparent;
+  --rep: transparent; --repline: #2a3140; --field: #0c0f15; --fieldline: transparent; --askr: 16px; --gor: 10px; border-left: 1px solid var(--seam); }
+.H::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; background: radial-gradient(90% 100% at 50% -30%, rgb(255 140 50 / .22), transparent 70%); }
+.H .ask { border: 1.5px solid transparent; background: linear-gradient(#0c0f15, #0c0f15) padding-box, conic-gradient(from 270deg, #eeb16a, var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, #eeb16a) border-box; }
+</style></head>
+<body>
+<div class="row" id="row"></div>
+<script>
+const K = t => katex.renderToString(t, { throwOnError: false, displayMode: false });
+const V = [["A", "A · Ember glow", "ref 1"], ["B", "B · Neutral dark + orange", "ref 2 (Fin)"], ["C", "C · Orange field", "ref 3"], ["H", "H · Hybrid (ships)", "B base + A light + our tangerine"]];
+const say = `<div class="say">
+  <p class="name"><span class="orb"></span>Cluck</p>
+  <p>POOF. No friction, so <b>all the work becomes kinetic energy</b>. Two steps.</p>
+  <div class="st"><span class="n">1</span><div><h4>Use the work-energy theorem</h4><p class="sub">work becomes speed</p>
+    <ul><li>The cart starts at rest, so $v_i = 0$.</li></ul>
+    <div class="call"><div>${K("W = \\Delta K = \\tfrac12 m v_f^2 - \\tfrac12 m v_i^2")}</div></div></div></div>
+  <div class="st"><span class="n">2</span><div><h4>Plug in and solve</h4><p class="sub">keep the ½</p>
+    <div class="call"><div>${K("36 = \\tfrac12 (2.0)\\, v_f^2")}</div><div>${K("v_f^2 = 36 \\;\\Rightarrow\\; v_f = 6.0\\ \\text{m/s}")}</div></div></div></div>
+  <div class="rule"></div>
+  <div class="boxed">${K("\\boxed{v_f = 6.0\\ \\text{m/s}}")}</div>
+  <p>So the answer is <b>B, 6.0 m/s</b>. Your pick forgot the ½.</p></div>`;
+document.getElementById("row").innerHTML = V.map(([k, t, r]) => `<div><p class="lbl"><b>${t}</b> · ${r}</p><div class="sh ${k}">
+  <div class="hd"><div class="tabs"><span class="tab on">Cluck explains</span><span class="tab">Similar steps</span></div><span class="x">×</span></div>
+  <div class="bd">${say.replace(/\$([^$]+)\$/g, (_, m) => K(m))}
+    <div class="me">why is it ½ m v²?</div>
+    <div class="rep"><p class="name"><span class="orb"></span>Cluck</p><p>Kinetic energy is ${K("\\tfrac12 m v^2")}. The ½ comes from adding up the push over the whole speed-up.</p></div></div>
+  <div class="ft"><div class="ask"><span>Ask Cluck about a step</span><i>3 left</i><span class="go">↑</span></div></div></div></div>`).join("");
+</script>
+</body></html>

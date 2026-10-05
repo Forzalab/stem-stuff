@@ -218,6 +218,8 @@ try {
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, r.height]; });
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900, "full height");
     assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
+    await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
+      .catch(() => { throw new Error("the ask field is not on screen when the sheet opens"); });
     for (let n = 1; n <= 4; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");

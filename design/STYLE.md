@@ -262,6 +262,8 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwise a NEW accent color? devise design language based on our style guidelines" (picked: warm tangerine). Everything Cluck says or shows: the explanation, the follow-up chat, the hint card's open solution. "AI = warm" across the app: the same family as the hint card and the Explain chip.
 
+**Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; compare: design/mockups/cluck-colors.html).** The sheet is a neutral near-black (`--ai-sheet` #10131a, text 16.1:1, muted 8.0:1), not a warm brown: KaTeX and the step callouts read best on a calm surface, and it sits next to the site's navy without a third hue. Orange is the one accent: active tab, step circles, send, "N left", the 1px seam, the student's bubble (solid `--ai` with `--ai-ink`, never white on orange: 2.9:1). Ref 1's ember light only glows at the sheet's top (`--ai-glow`), brighter while Cluck types. Cluck's replies sit in a 1px outlined card (16px radius); his first explanation stays unboxed.
+
 - Tokens on `.ai-skin`, never `:root` (scoped like `--rw-*`):
   | token | value | use |
   |---|---|---|

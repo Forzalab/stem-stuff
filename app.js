@@ -1196,6 +1196,7 @@ function clOpen(tab, from) {
   clEl(); cl.open = true; cl.from = from; cl.el.hidden = false;
   clPlace(); clAsk(true); clTab(tab, true);
   layoutFreeze();
+  if (sideMQ.matches) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
 }
 function clClose() {
   if (!cl || !cl.open) return;
