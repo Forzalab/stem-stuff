@@ -267,14 +267,15 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
   |---|---|---|
   | `--ai` | #ff9a3c | the one accent: the speaker name, the send button fill, the turns-left count, focus of the input |
   | `--ai-ink` | #2b1000 | text on `--ai` (8.4:1) |
-  | `--ai-tint` | `--ai` 10% over `--sheet` | Cluck's bubble and the math callout fill |
+  | `--ai-tint` | `--ai` 10% over `--sheet` | the math callout and the step circles only (small areas: a big warm tint over navy reads muddy) |
   | `--ai-line` | `--ai` 40% over `--sheet` | the callout's 1px edge (`--bw`) |
   Contrast: `--ai` on `--sheet` 7.0:1, `--ink` on `--ai-tint` 10.6:1 (AA large and body).
 - One accent per surface. No glow, no gradient, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
 - Math: inline `$..$` stays in the sentence; a step's equations go in a **callout**: centred display math, one equation per line, `--ai-tint` fill, 1px `--ai-line` edge, 10px radius, `--s3`/`--s4` padding. Problem scenes in it stay pure ink (DESIGN-LANGUAGE.md §3).
-- Text: short sentences, the key number in bold, the last line states the answer.
-- Chat: Cluck's bubbles left on `--ai-tint` with the duck (`--mark`) and the name in `--ai`; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a "Next question" button.
-- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution in its own `--ai-tint` panel with a 1px `--ai-line` edge and a "Steps" label. Never glued under the header.
+- Text: one renderer for Cluck's explanation AND the similar-steps card, so the two look like one family (Tony, Oct 4: "make the LOOK between AI box and the similar explanation section look unified").
+- Steps (Gemini steps widget, Tony, Oct 4: "for EACH STEP, format it similar to gemini's app design ... add a bit more text to increase legibility and top down approachability"; ref: brain `projects/calc/_files/ref-ui/gemini-steps-ref.jpg`): an intro sentence with the key words in bold, then numbered steps. Each step: a 28px circle (1px `--ai` edge, `--ai-tint` fill, `--ai` digit), a 2px dotted `--ai-line` connector down to the next circle, a bold title (`--t-md`), an italic mono subtitle (`--t-xs`, `--muted`), 1-3 short bullets, then that step's equations in one callout. After the last step, a 1px `--line` rule and the answer sentence ("So the answer is **B, 2.0 m/s**." plus, after a wrong pick, one line on why that pick was tempting). Short follow-up replies skip the steps: 1-3 plain lines, a callout only when they show math.
+- Chat: Cluck's messages left with the duck (`--mark`) and the name in `--ai`; as bubbles they sit on `--sheet` with a 1px `--ai-line` edge; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a "Next question" button.
+- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution through the same steps renderer, in its own `--sheet` panel with a 1px `--ai-line` edge. Never glued under the header.
 
 ### Reward layer (sugar only: `.rw-*`, `.fx-*`)
 
