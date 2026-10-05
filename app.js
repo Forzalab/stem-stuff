@@ -5,6 +5,7 @@ import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { speakable } from "./speak.mjs";
+import { changes, markNums } from "./chg.mjs";
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -99,7 +100,7 @@ const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
-  return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml" });
+  return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
 /* $$..$$ and $..$ are cut out before markdown so marked never sees TeX; "\$" is a literal dollar. */
 function md(text, inline = false) {
@@ -120,7 +121,7 @@ function md(text, inline = false) {
     html = esc(s).split(/\n{2,}/).map(p => inline ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
   }
   /* inline math keeps the punctuation that touches it on its line: "($v$)." never leaves "." or "(" alone on a line (.mx) */
-  return html.replace(/(\(?)KXMATH(\d+)Z([.,;:!?)]*)/g, (_, pre, i, post) => {
+  return html.replace(/\uE000/g, '<mark class="chg">').replace(/\uE001/g, "</mark>").replace(/(\(?)KXMATH(\d+)Z([.,;:!?)]*)/g, (_, pre, i, post) => {
     const m = math[+i];
     if (m.lit) return pre + "$" + post;
     const k = renderMath(m.t, m.d);
@@ -450,8 +451,14 @@ function render() {
   $("#pcode").textContent = code;
   const blocks = $("#blocks"); blocks.innerHTML = "";
   if (prob.tip) { const t = document.createElement("p"); t.className = "tip"; t.innerHTML = md(prob.tip, true); blocks.append(t); }   // easy: what to do, one line (design/EASY.md)
-  for (const b of prob.body) {
-    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); blocks.append(d); }
+  const C = snackChg();
+  if (C?.pairs.length) {
+    const c = document.createElement("p"); c.className = "chg-chip";
+    c.textContent = "Changed: " + C.pairs.map(x => `${x.from} → ${x.to}${x.unit ? (x.unit === "°" ? "" : " ") + x.unit : ""}`).join(" · ");
+    blocks.append(c);
+  }
+  for (const [i, b] of prob.body.entries()) {
+    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(C ? C.snack[i] : b.md); blocks.append(d); }
     else if (b.type === "graph") {
       const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt || "figure");
       f._block = b; blocks.append(f);
@@ -467,6 +474,12 @@ function render() {
   lastEdit = null; padPeekText();
   applyMT();
   layoutFreeze();
+}
+/* a snack in sugar: what it changed from its original (chg.mjs), once per problem; else null */
+function snackChg() {
+  const p = S && S.prob, o = p && p.original;
+  if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return null;
+  return p._chg ??= changes(p.body, o.body);
 }
 function drawFigures() {
   document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
@@ -1379,17 +1392,17 @@ function origRender() {
   S.orig = { lvl, open: false, peeked: false };
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
-  const sol = Array.isArray(o.solution) ? o.solution : [];
+  const sol = Array.isArray(o.solution) ? o.solution : [], C = snackChg();
   /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
      topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
      while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
   el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
     <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(l, true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(markNums(l, C.olds), true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
     <p class="orig-note" hidden>You peeked, so only 2 XP.</p><p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
   const q = el.querySelector(".orig-q");
-  for (const b of o.body) {
-    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
+  for (const [i, b] of o.body.entries()) {
+    if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(C.orig[i]); q.append(d); }
     else if (b.type === "graph") { const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt || "figure"); f._block = b; q.append(f); }
   }
   el.querySelector(".orig-hd").addEventListener("click", () => {

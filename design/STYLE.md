@@ -56,7 +56,7 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 |---|---|---|---|
 | `--ok` | right | check icon, right choice border and badge, right answer text, Copy done | decoration, "success" toasts for routine saves |
 | `--bad` | wrong | X icon, dashed border on a wrong answer, strike on a wrong choice, list X marks, the entry error line | hover, delete buttons, emphasis |
-| `--mark` | look here | Cluck's duck; figure highlight | a warning, a toast, a second series next to `--c2`, a full-surface fill |
+| `--mark` | look here | Cluck's duck; figure highlight; a snack's changed number (`.chg`, an underline only) | a warning, a toast, a second series next to `--c2`, a full-surface fill |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
 There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange, with one scoped exception: `--ai` (tangerine) on Cluck's surfaces only (see "Cluck's surfaces" below; Tony, Oct 4). It is never a warning and never in a figure.
