@@ -1009,11 +1009,17 @@ function feedback(r, typed) {
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   const quack = r.hint ? `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>` : "";
-  /* a short hint on a tick-all question with tries left sits in the empty room left of Check (Tony, Oct 5), else under the question */
+  /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
+     Phones: the Scratchpad button sits on that row, so under the question. */
   const chk = $("#q .chk"); chk?.querySelector(".cluck")?.remove();
-  const inRow = chk && r.hint && r.verdict === "wrong" && r.triesLeft > 0 && r.hint.replace(/[*_`$\\]/g, "").length <= 80;
-  fb.innerHTML = inRow ? h : h + quack;
-  if (inRow) chk.insertAdjacentHTML("afterbegin", quack);
+  let inRow = !!(chk && r.hint && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
+  fb.innerHTML = h;
+  if (inRow) {
+    chk.insertAdjacentHTML("afterbegin", quack);
+    const m = chk.querySelector(".cluck .md"), lh = parseFloat(getComputedStyle(m).lineHeight) || 24;
+    if (m.offsetHeight > 2 * lh + 2 || m.scrollWidth > m.clientWidth) { chk.querySelector(".cluck").remove(); inRow = false; }
+  }
+  if (!inRow) fb.insertAdjacentHTML("beforeend", quack);
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say((verdictWords(r) + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
@@ -1972,7 +1978,7 @@ function fabBounds() {
 function fabPlace({ avoid } = {}) {
   const m = mtMem.fab || {}, b = fabBounds();
   let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
-  fab.classList.toggle("left", m.side === "l");
+  fab.classList.toggle("left", m.side !== "r");          // default left: bottom right covers Check on phones (Tony, Oct 5)
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */

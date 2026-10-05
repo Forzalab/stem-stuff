@@ -103,10 +103,14 @@ try {
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
       assert.match(await page.textContent("#toast.on"), /One more try/); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
-      const [hint, go] = await page.evaluate(() => [document.querySelector("#q .chk .cluck"), document.querySelector("#mcGo")].map(e => e && (({ left, right, top, bottom }) => ({ left, right, top, bottom }))(e.getBoundingClientRect())));
-      assert.ok(hint && hint.right <= go.left && hint.top < go.bottom && hint.bottom > go.top, "a short hint sits left of Check, on its row (Tony, Oct 5) " + JSON.stringify([hint, go]));
-      assert.equal(await page.$("#fb .cluck"), null, "not twice");
-      assert.equal(await page.$eval("#q .chk .cluck", e => getComputedStyle(e).backgroundColor), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(", ")})`)), "the site's blue, not Cluck's orange");
+      const sel = touch ? "#fb .cluck" : "#q .chk .cluck";
+      if (touch) assert.equal(await page.$("#q .chk .cluck"), null, "phones: the Scratchpad button sits on Check's row, so the hint goes under the question");
+      else {
+        const [hint, go] = await page.evaluate(() => [document.querySelector("#q .chk .cluck"), document.querySelector("#mcGo")].map(e => e && (({ left, right, top, bottom }) => ({ left, right, top, bottom }))(e.getBoundingClientRect())));
+        assert.ok(hint && hint.right <= go.left && hint.top < go.bottom && hint.bottom > go.top, "a short hint sits left of Check, on its row (Tony, Oct 5) " + JSON.stringify([hint, go]));
+        assert.equal(await page.$("#fb .cluck"), null, "not twice");
+      }
+      assert.equal(await page.$eval(sel, e => getComputedStyle(e).backgroundColor), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(", ")})`)), "the site's blue, not Cluck's orange");
       const t = await page.evaluate(() => window.__drill.state.tries.at(-1));
       assert.deepEqual([[...t.c].sort(), t.v, t.s, t.a.length], [["a", "b", "d"], "wrong", "b", 3]);   // copy payload: ids + letters per try
       const ls = await page.$$eval("#q .opt", (os, c) => c.map(id => os.find(o => o.dataset.id === id).dataset.l), t.c);
@@ -167,6 +171,26 @@ try {
   });
 
   await ctx.close();
+
+  /* the hint beside Check: up to 2 lines, measured (Tony, Oct 5); longer goes under the question */
+  const said = n => `QUACK. ${"Count the even ones again, then look at what you ticked last. ".repeat(n).trim()}`;
+  for (const [n, where] of [[1, "row"], [8, "fb"]]) {
+    const c2 = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" }), p2 = await c2.newPage();
+    await step(`desktop hint ${where === "row" ? "of 2 lines sits beside Check" : "longer than 2 lines goes under the question"}`, async () => {
+      const f = structuredClone(FILE); f.problems[0].wrong[0].hint = said(n);
+      await p2.goto(BASE + "/");
+      const [fc] = await Promise.all([p2.waitForEvent("filechooser"), p2.click("#upload")]);
+      await fc.setFiles({ name: "all.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(f)) });
+      await opened(p2, "CSCI26_U01");
+      await row(p2, "a").click(); await row(p2, "b").click(); await check(p2);
+      await p2.waitForSelector(".cluck");
+      const g = await p2.evaluate(() => { const m = document.querySelector(".cluck .md"), lh = parseFloat(getComputedStyle(m).lineHeight);
+        return { row: !!document.querySelector("#q .chk .cluck"), fb: !!document.querySelector("#fb .cluck"), lines: Math.round(m.offsetHeight / lh), over: m.scrollWidth > m.clientWidth }; });
+      assert.equal(g.row, where === "row", JSON.stringify(g)); assert.equal(g.fb, where === "fb", JSON.stringify(g));
+      if (where === "row") { assert.equal(g.lines, 2, "the 2-line case: " + JSON.stringify(g)); assert.equal(g.over, false); }
+    });
+    await c2.close();
+  }
 } finally { await browser.close(); srv.kill(); }
 if (fails) { console.log(`${fails} failing`); process.exit(1); }
 console.log("all ok");
