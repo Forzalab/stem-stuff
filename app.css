@@ -418,7 +418,7 @@ html.sugar #wish .wvoice { background: var(--ai-sheet); color: var(--ai-text); b
 .orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-strong); font-weight: 700; }
 .orig-sol { list-style: none; margin: 0; padding: 0; counter-reset: os; color: var(--ai-text); }
 .orig-sol li { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--s3); margin-top: var(--s3); counter-increment: os; }
-.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--ai); color: var(--ai); font-size: var(--t-xs); font-weight: 700; }
+.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; }
 .orig-sol li:has(+ li:not([hidden]))::after { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
 .orig-sol li > * { min-width: 0; }
 .orig-sol li[hidden] { display: none; }
@@ -452,8 +452,10 @@ html.side #work > .orig { margin: 0; }
    Contrast on --ai-sheet: text 15.5, muted 8.0, --ai 8.7; --ai-ink on --ai 8.4 */
 .ai-skin, html.sugar :is(.fcard, #fb .cluck, #wish) {
   --ai: #ff9a3c; --ai-ink: #2b1000; --ai-edge: #eeb16a; --ai-soft: #ffb873;
-  --ai-sheet: #1b140e; --ai-field: #130e0a; --ai-text: #f3ece4; --ai-strong: #ffffff; --ai-muted: #c2ad9a; --ai-rule: #33261b;
-  --ai-tint: #140f0b; --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 140 50 / 0.3); --ai-hair: rgb(255 220 180 / 0.07);
+  --ai-sheet: #17130f; --ai-field: #130e0a; --ai-text: #ece6df; --ai-strong: #ffffff; --ai-muted: #a99c8e; --ai-rule: #2c241c;
+  --ai-tint: #221c16;   /* RM3 (Tony, Oct 5): a warm-neutral sheet; wells one tone up, no borders */
+  --ai-ct: #4a2a10; --ai-on-ct: #ffdcc0;   /* the container pair: step numbers, the boxed answer, the student's bubble, the LIVE chip (11.0:1) */
+  --ai-pill: #2b231d; --ai-send: #ffb77c; --ai-send-ink: #4b2800;   /* the ask pill; the round send (8.0:1) */ --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 140 50 / 0.3); --ai-hair: rgb(255 220 180 / 0.07);
   /* soft UI (Tony, Oct 5: "neomorphism"): one light source top-left; raised = warm highlight + dark shade, inset = the reverse. Shadows never
      carry meaning alone (WCAG 1.4.11): every control keeps a solid fill or a 1px edge */
   --ai-nm-up: -5px -5px 12px rgb(255 170 90 / 0.05), 6px 6px 14px rgb(0 0 0 / 0.6);
@@ -484,41 +486,49 @@ html.cl-open body { overflow: hidden; }
 .cl-bar .cl-x { border: 0; cursor: pointer; }
 .cl-bar .cl-x .ico { width: 22px; height: 22px; }
 html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
-.cl-hd { flex: none; display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s2) var(--s2) var(--s4); }
-.cl-tabs { flex: 1; display: flex; gap: var(--s1); padding: var(--s1); border-radius: 10px; background: var(--ai-tint); box-shadow: var(--ai-nm-in); }   /* an inset well; the active tab is raised and filled */
-.cl-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 44px; border: 0; border-radius: 8px;
+.cl-hd { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); padding: var(--s4) var(--s2) 0 var(--s5); }   /* RM3 (Tony, Oct 5): the title row, the tabs under it */
+.cl-ttl { flex: 1; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-md); font-weight: 700; color: var(--ai-strong); }
+.cl-ttl .ico { width: 28px; height: 28px; color: var(--ai); }
+html:not(.side) .cl-ttl { display: none; }                                   /* phone: the head bar already says "Cluck" */
+.cl-tabs { order: 3; flex: 1 0 100%; display: flex; gap: var(--s5); border-bottom: 1px solid var(--ai-rule); }   /* text tabs, one underline: no slab */
+.cl-tab { position: relative; display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0; border: 0;
   background: transparent; color: var(--ai-muted); font: inherit; font-weight: 700; font-size: var(--t-sm); cursor: pointer; }
 .cl-tab[hidden] { display: none; }
-.cl-tab .ico { width: 1.375rem; height: 1.375rem; }
-.cl-tab[aria-selected="true"] { background: var(--ai); color: var(--ai-ink); box-shadow: var(--ai-nm-btn); }
+.cl-tab[aria-selected="true"] { color: var(--ai-strong); }
+.cl-tab[aria-selected="true"]::after { content: ""; position: absolute; inset: auto 0 -1px; height: 2px; background: var(--ai); }   /* sits on the 1px rule */
 .cl-tab:not([aria-selected="true"]):hover { color: var(--ai-strong); }
+/* LIVE while Cluck writes or answers: the same state that turns the ask rim (Tony, Oct 5) */
+.cl-live { display: none; padding: 0 var(--s2); border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1.5; }
+.cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) { .cl-live { animation: wlive 1.6s ease-in-out infinite; } }
+@keyframes wlive { 50% { opacity: .6; } }
 .cl-x2 { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--ai-edge); cursor: pointer; }
 .cl-x2 .ico { width: 28px; height: 28px; }
 .cl-x2:hover { background: var(--ai-tint); }
 .cl-tab:focus-visible, .cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s3) var(--s5) var(--s4); }
+.cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
 .cl-thread:empty { display: none; }
-.cl .bub.me { align-self: flex-end; max-width: 85%; padding: var(--s3) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai); color: var(--ai-ink); line-height: var(--lh); overflow-wrap: anywhere; }   /* ref 2: the student speaks in solid orange, dark ink (AA) */
-.cl .wtext.wreply { padding: var(--s3) var(--s4); border-radius: 16px; border: 1px solid var(--ai-hair); box-shadow: var(--ai-nm-up); }   /* raised card */   /* ref 2: Cluck's replies sit in a quiet outlined card */
+.cl .bub.me { align-self: flex-end; max-width: min(85%, 40ch); padding: var(--s2) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai-ct); color: var(--ai-on-ct); line-height: var(--lh); overflow-wrap: anywhere; }   /* RM3: a tonal container */
+/* one speaker, one format (Tony, Oct 5): a reply sits on the sheet like the first answer, no card */
 .cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
 .cl-ft[hidden] { display: none; }
 /* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */
 @property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-.ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s4); border-radius: 16px; border: 1.5px solid transparent;   /* the rim: a listed --bw exception, like the toast */
-  box-shadow: var(--ai-nm-in);
-  background: linear-gradient(var(--ai-field), var(--ai-field)) padding-box,
+.ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s5); border-radius: calc(var(--btn) / 2 + var(--s2)); border: 1.5px solid transparent;   /* RM3: a tonal pill; the rim (a listed --bw exception, like the toast) shows only while Cluck types */
+  background: var(--ai-pill) padding-box; }
+.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 2.4s linear infinite;
+  background: linear-gradient(var(--ai-pill), var(--ai-pill)) padding-box,
     conic-gradient(from calc(270deg + var(--wang)), var(--ai-edge), var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, var(--ai-edge)) border-box; }
-.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 2.4s linear infinite; }
 @keyframes wspin { to { --wang: 360deg; } }
 .ask .ff { flex: 1; min-height: var(--btn); padding: 0; border: 0; background: none; box-shadow: none; }
 .ask .ff:focus-within { box-shadow: none; }
 .ask:focus-within { box-shadow: inset 0 0 0 1px var(--ai); }
 .ask .ff input { font-family: inherit; color: var(--ai-strong); }            /* talk, not an answer: the sans, not the answers' mono */
 .ask .ff input::placeholder { color: var(--ai-muted); }
-.ask .left { flex: none; font-size: var(--t-xs); font-weight: 700; color: var(--ai-soft); white-space: nowrap; }
-.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 10px; background: var(--ai); color: var(--ai-ink); cursor: pointer; box-shadow: var(--ai-nm-btn); }
+.ask .left { flex: none; font-size: var(--t-xs); font-weight: 700; color: var(--ai-on-ct); white-space: nowrap; }
+.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 50%; background: var(--ai-send); color: var(--ai-send-ink); cursor: pointer; }
 .ask .send .ico { width: 26px; height: 26px; }
 .ask .send:hover { filter: brightness(1.08); }
 .ask .send:disabled { opacity: .45; cursor: default; filter: none; }
@@ -526,12 +536,15 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
 .wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); cursor: pointer; }   /* a tap skips the typing */
 .wtext.wreply { cursor: auto; }
+.wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
 .wtext b { font-weight: 700; color: var(--ai-strong); }
 .wtext .wmath { margin: var(--s2) 0; padding: var(--s3) var(--s4); border-radius: 8px; text-align: center; overflow-x: auto;   /* Mathy's callout: the work, set apart */
-  background: var(--ai-tint); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-in); }   /* an inset well: the math sits in the surface */
+  background: var(--ai-tint); border: 1px solid transparent; }   /* RM3: a borderless well, one tone up */
 .wtext .weq + .weq { margin-top: var(--s2); }
 .wtext .wmath.wans { background: none; border-color: transparent; padding: 0; }
+.wtext .katex:has(.fbox) { display: inline-block; padding: 0 var(--s1); border-radius: 6px; background: var(--ai-ct); color: var(--ai-on-ct); }   /* the boxed answer (RM3): the container pair */
+.wtext .katex .fbox { border-color: transparent; }
 .wtext .wmath .katex-display { margin: 0; }   /* the callout spaces its lines (.weq + .weq); KaTeX's 1em on top of that leaves holes */
 .wtext .wgap { height: var(--s1); }   /* + the next line's s2 = s3, a step's gap */
 .wtext .wlist { margin: var(--s2) 0; padding-left: var(--s5); }
@@ -542,7 +555,7 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 /* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
 .wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
 .wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
-.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--ai); color: var(--ai); font-size: var(--t-xs); font-weight: 700; }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; }
 .wtext .wstitle { font-weight: 700; color: var(--ai-strong); }
 .wtext .wssub { font-family: var(--mono); font-style: italic; font-size: var(--t-xs); color: var(--ai-muted); }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--ai-rule); }

@@ -1180,9 +1180,9 @@ function clEl() {
   if (cl) return cl.el;
   const el = document.createElement("aside");
   el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Cluck");
-  const tab = (t, id, ico, name) => `<button type="button" role="tab" class="cl-tab" id="${id}" data-tab="${t}" aria-controls="${id}P">${icon(ico)}<span>${name}</span></button>`;
+  const tab = (t, id, name, x = "") => `<button type="button" role="tab" class="cl-tab" id="${id}" data-tab="${t}" aria-controls="${id}P"><span>${name}</span>${x}</button>`;
   el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
-    <div class="cl-hd"><div class="cl-tabs" role="tablist">${tab("explain", "clTabE", "i-duck", "Cluck explains")}${tab("steps", "clTabS", "i-bulb", "Similar steps")}</div><button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button></div>
+    <div class="cl-hd"><span class="cl-ttl">${icon("i-duck")}Cluck's steps</span><div class="cl-tabs" role="tablist">${tab("explain", "clTabE", "Cluck explains", '<span class="cl-live" aria-hidden="true">LIVE</span>')}${tab("steps", "clTabS", "Similar steps")}</div><button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button></div>
     <div class="cl-bd"><div class="cl-pane" id="clTabEP" role="tabpanel" aria-labelledby="clTabE"><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div><div class="cl-pane" id="clTabSP" role="tabpanel" aria-labelledby="clTabS"></div></div>
     <div class="cl-ft"></div>`;
   cl = { el, tab: "explain", open: false, from: null };
