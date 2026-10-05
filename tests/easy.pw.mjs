@@ -49,7 +49,7 @@ const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, 
 let asked = 0;
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
-  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: "ON" } }] })); return; }   // the gate
+  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   let i = 0;

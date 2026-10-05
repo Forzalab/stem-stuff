@@ -600,7 +600,7 @@ class Explain(unittest.TestCase):
         import threading
         self.seen, self.gates = [], []
         seen, gates, test = self.seen, self.gates, self
-        self.verdict = "ON"                                                             # what the gate model says; None: a 500
+        self.verdict = '{"verdict": "on"}'                                             # what the gate model says; None: a 500
 
         class Stub(http.server.BaseHTTPRequestHandler):
             def do_POST(self):
@@ -708,13 +708,15 @@ class Explain(unittest.TestCase):
         self.assertEqual(self.chat(1, cookie="sid=" + "d" * 32)[0], 200)                # another browser: its own 5
 
     def test_gate_off_gets_a_quack_and_spends_the_turn(self):
-        self.verdict = "OFF"
+        self.verdict = '{"verdict": "off"}'
         status, _, text = self.chat()
         self.assertEqual(status, 200)
         self.assertIn(text, serve.CANNED)
         self.assertEqual(self.seen, [])                                                 # Cluck never called
         g = self.gates[0]
-        self.assertEqual((g["provider"], g["models"], g["max_tokens"]), ({"zdr": True, "data_collection": "deny"}, serve.OPENROUTER_GATE_MODELS, 3))
+        self.assertEqual((g["provider"], g["models"]), ({"zdr": True, "data_collection": "deny", "require_parameters": True}, serve.OPENROUTER_GATE_MODELS))
+        self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.GATE_SCHEMA)
+        self.assertTrue(g["response_format"]["json_schema"]["strict"])
         self.assertIn("why step 0?", g["messages"][1]["content"])
         self.assertEqual(serve._chats[("c" * 32, "CALC1_XP1")], 1)
 
@@ -730,7 +732,7 @@ class Explain(unittest.TestCase):
     def test_gate_failure_fails_open(self):
         self.verdict = None                                                             # gate 500
         self.assertEqual(self.chat()[2], "POOF! **Use:** $v$\n- step one\nYour pick: sign.")
-        self.verdict = "maybe"                                                          # junk word: let it through
+        self.verdict = "OFF"                                                            # not JSON: let it through
         self.assertEqual(len(self.chat(cookie="sid=" + "9" * 32)[2]) > 0 and len(self.seen), 2)
 
     def test_chat_gates(self):
