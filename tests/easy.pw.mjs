@@ -90,6 +90,7 @@ try {
     assert.equal(await page.$eval("#rot", e => e.inert && e.getAttribute("aria-hidden")), "true");
     const s = await page.$eval("#rot iframe", f => f.src);
     for (const k of ["controls=0", "disablekb=1", "fs=0", "mute=1", "autoplay=1", "playsinline=1"]) assert.ok(s.includes(k), k);
+    assert.equal(await page.$$eval('link[rel="preconnect"]', ls => ls.filter(l => /youtube-nocookie/.test(l.href)).length), 1, "the warm-up adds the preconnect (index.html has none)");
   });
 
   await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
@@ -269,6 +270,29 @@ try {
     const saved = await page.evaluate(() => localStorage.getItem("stem-codes") || "");
     assert.ok(!/DIET|SUGAR/.test(saved), saved);
   });
+
+  /* a slow link (Tony, Oct 5: 128 kbps): no corner, no preconnect, not one request to YouTube, on a question with a layer */
+  async function noRot(url, init) {
+    const c = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+    await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    if (init) await c.addInitScript(init);
+    const yt = [];
+    c.on("request", r => { if (/youtube|ytimg/.test(r.url())) yt.push(r.url()); });
+    const p = await c.newPage();
+    await p.goto(BASE + url);
+    await typeCode(p, "BANK_EZ12");
+    await p.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await p.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(p, "CALC1_E01");
+    await p.waitForTimeout(3500);                                          // past warmUp's idle (3 s at most)
+    await p.evaluate(() => window.stemBrainrot.sync());
+    assert.equal(await p.$("#rot"), null, "no corner");
+    assert.equal(await p.$$eval('link[rel="preconnect"]', ls => ls.filter(l => /youtube|ytimg/.test(l.href)).length), 0, "no preconnect");
+    assert.deepEqual(yt, [], "a request went to YouTube");
+    await c.close();
+  }
+  await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
+  await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
+    noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));
 } finally {
   await browser.close();
   srv.kill();
