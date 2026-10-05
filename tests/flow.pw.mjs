@@ -231,13 +231,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);
     assert.equal(await toastText(), "", "shown again");
   });
-  await step("390 wrong MC answer: the note lies on the struck choice, its caret points at the X", async () => {
+  await step("390 wrong MC answer: no toast over the choices; try pips under the rows (Tony, Oct 5)", async () => {
     await page.locator('.opt[data-id="a"]').tap(); await page.locator('.ch[data-id="a"] .send').tap(); await page.waitForTimeout(500);
-    const g = await page.evaluate(() => { const t = document.querySelector("#toast"), b = document.querySelector('.opt[data-id="a"] .badge').getBoundingClientRect(), r = t.getBoundingClientRect(), c = getComputedStyle(t, "::before");
-      return { row: t.classList.contains("row"), caret: c.display !== "none" && c.content !== "none", left: r.left, badgeRight: b.right, txt: t.textContent.replace(/\u00a0/g, " ").trim() }; });
-    assert.ok(g.row && g.caret, `caret on the MC row (${JSON.stringify(g)})`);
-    assert.ok(g.left > g.badgeRight && g.left - g.badgeRight < 24, "right after the X badge");
-    assert.equal(g.txt, "One more try, so choose wisely.");
+    assert.equal(await toastText(), "");
+    assert.deepEqual(await page.$eval("#q .choices + .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1], "one used, one left");
   });
   await step("390 onboarding / toast: no page errors", async () => assert.deepEqual(errors, []));
   await ctx.close();

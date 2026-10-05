@@ -285,6 +285,11 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk .cluck > .ico { margin-top: 0; }
 .chk .cluck .md { overflow-wrap: anywhere; }
 .q.closed .chk { display: none; }
+/* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
+.pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
+.pips i { width: 10px; height: 10px; border-radius: 50%; border: var(--bw) solid var(--muted); }
+.pips i.used { background: var(--bad); border-color: var(--bad); }
+.choices + .pips, .ff + .pips { display: flex; justify-content: flex-end; margin-top: var(--s2); }   /* no Check beside them: right-aligned under the rows / the box */
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
    The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
@@ -398,13 +403,18 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
 .rot .rtab.r { border-radius: 10px 0 0 10px; }
 /* desktop / tablet side by side (brainrot.js home(); Tony, Oct 4 "B: top of notes"): its own slot at the top of the notes column */
-.rot.dock { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s5); touch-action: auto; cursor: auto; }
-.rot.dock .duo { width: 100%; grid-template-columns: 1fr 1fr; }
-.rot.dock.parked { display: none; transform: none !important; }
-.rot.dock .rtab { width: 100%; height: 36px; grid-auto-flow: column; justify-content: center; gap: var(--s2); border-radius: 10px; box-shadow: none;
-  background: var(--sheet); color: var(--muted); font: inherit; font-size: var(--t-sm); font-weight: 700; }
-.rot.dock .rtab:hover { background: var(--raised); color: var(--ink); }
+.rot.docked { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s5); touch-action: auto; cursor: auto; }   /* not .dock: that is the top bar's class (app.css padding, nav.css display: contents) */
+/* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
+   height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
+.rot.docked .duo { width: 100%; grid-template-columns: repeat(2, minmax(0, calc(40dvh * 9 / 16))); justify-content: center; }
+.rot.docked .vid { aspect-ratio: 9 / 16; }
+.rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
+.rot-hd { display: none; }
+.rot.docked .rot-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s2); }   /* labels level with "Question"; the button hangs lower (Tony, Oct 5) */
+.rot.docked.stashed .rot-hd { margin-bottom: 0; }
+.rot.docked.parked { display: none; transform: none !important; }
 .rot.stashed .rtab { display: grid; }
+.rot.docked .rtab, .rot.docked .ctl { display: none; }   /* docked, the header's button is the one toggle */
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
 /* sugar = Cluck's world (Oct 5 review: "Do it in this order" and Cluck's hint line still looked like the plain site) */

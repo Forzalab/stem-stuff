@@ -106,20 +106,24 @@ try {
     await quiet(page);
   });
 
-  await step("a wrong try: one small quiet +1, nothing else; the streak waits; the second-try correct pays 6 with the bells", async () => {
+  await step("a wrong try with a try left: the +1 is kept but nothing moves (C12, Tony Oct 5); the streak waits; the second-try correct pays 6 with the bells", async () => {
     await go(page, "CALC1_R02");
-    const x0 = await xp(page), s0 = await page.evaluate(() => window.Rewards.state().streak);
+    const x0 = await xp(page), s0 = await page.evaluate(() => window.Rewards.state().streak), shown = () => page.textContent("#rwHud .rw-num");
+    const n0 = await shown();
     await watchFx(page);
     await pick(page, "b");
     await page.waitForTimeout(1500);
-    assert.deepEqual(await page.evaluate(() => window.__fxc), ["fx-float fx-float-sm"], "a wrong try: only the small +1");
-    assert.equal(await xp(page), x0 + 1);
+    assert.deepEqual(await page.evaluate(() => window.__fxc), [], "a wrong try with a try left: no +1 float");
+    assert.equal(await xp(page), x0 + 1, "the +1 is kept");
+    assert.equal(await shown(), n0, "the HUD number waits until the question closes");
     assert.equal(await page.evaluate(() => window.Rewards.state().streak), s0, "the streak never halves");
     await rig(page, [0.99]);                                                    // no drop
     await pick(page, "a");
     await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
       .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
     assert.ok(await page.evaluate(() => window.__fx) > 1, "the bells on try 2");
+    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
+      .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
     await quiet(page);                                                          // 21 XP: the level-up burst
   });
@@ -164,14 +168,17 @@ try {
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
-    await d.waitForSelector("#work > #rot.dock", { state: "attached", timeout: 4000 });
+    await d.waitForSelector("#work > #rot.docked", { state: "attached", timeout: 4000 });
     assert.equal(await d.$eval("#work", w => w.firstElementChild.id), "rot", "the docked videos stay above the original (D1)");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true", "desktop: the free steps open by default (Tony, Oct 5)");
     assert.equal(await d.getAttribute("#clTabS", "aria-selected"), "true");
     assert.equal(await d.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     assert.equal(await d.isHidden("#xb"), true, "the steps are showing: no scratchpad");
-    { const [r, c] = await d.$$eval("#rot, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
-      assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the videos stay above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
+    { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
+      assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the label row stays above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the sheet is open: the players fold (Tony, Oct 5)");
+    await d.click("#rot .rot-btn");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the header button still brings them back");
     assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
@@ -181,6 +188,7 @@ try {
     assert.equal(await d.isHidden("#clTabE"), true, "no wish yet: one tab");
     await d.keyboard.press("Escape");
     assert.equal(await d.isHidden("#cluck"), true, "Escape closes it");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "asked for while open: still shown after");
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
     assert.equal(await d.isHidden("#xb"), true, "the hint card is there: still no scratchpad");
     await d.click("#origHd");                                                 // a tap opens it again, focus on its tab

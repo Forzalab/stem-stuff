@@ -160,6 +160,7 @@
     }
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
+    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
     ui.flame.style.setProperty('--fs', 1 + Math.min(st.streak, 10) * 0.04);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';

@@ -9,9 +9,24 @@
    app.js calls window.stemBrainrot.sync() after every question opens and on layout changes. Nothing loads until it first shows.
    Desktop / tablet side by side (html.side; Tony, Oct 4 picked "B: top of notes"): it docks as the first thing in the notes column,
    both players side by side, sticky, no drag, no corner math; – folds it into a "Show video" bar. Moving an iframe reloads it, so it is
-   placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below). */
+   placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below).
+   Docked, a label row heads the column (Tony, Oct 5, video-bar.html ?v=1): the duck + "Cluck", level with the question's "Question" label,
+   and one "Curated brainrots" button that folds / unfolds the players (the – / ✕ overlays and the 36px "Show video" bar are gone there).
+   The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
+   While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
+   was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
+   Curated brainrots (Tony, Oct 5): CATS = his 3 playlists (tools/brainrot_list.py writes it). Each page load picks 2 of the 3, one video each. */
 (() => {
-  const VIDS = [["vTfD20dbxho", "Subway Surfers gameplay, muted", 0], ["z84bmLDzIIk", "Parkour gameplay, muted", 0]];   // Tony's links [id, title, start s]
+  /* list:start (tools/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
+  const CATS = [
+    ["Parkour", [["z84bmLDzIIk", "Minecraft Parkour Gameplay No Copyright 4K (2 Hours)", 0], ["85z7jqGAGcc", "Minecraft Parkour Gameplay No Copyright (2 Hours)", 0], ["BXUA2FncVPI", "Minecraft Parkour Gameplay No Copyright 4K", 0], ["5ksFZIlktBY", "Minecraft Parkour Gameplay No Copyright 4K (1 HOUR)", 0], ["wxgSCIpoMQE", "Minecraft Parkour Gameplay No Copyright", 0], ["l9_9M1TetJQ", "Minecraft Parkour Gameplay No Copyright", 0], ["_A3po0HYwkY", "Minecraft Parkour Gameplay No Copyright (1 HOUR)", 0], ["u7kdVe8q5zs", "Minecraft Parkour Gameplay No Copyright", 0], ["0c4KWfPhgWA", "Minecraft Parkour Gameplay (No Copyright) 1 HOUR", 0], ["7mTTdWTw5p0", "Minecraft Parkour Gameplay NO COPYRIGHT", 0], ["952ILTHDgC4", "Minecraft Parkour Gameplay No Copyright (4K)", 0], ["YW7NV8J8oxI", "Minecraft Parkour Gameplay No Copyright (FREE TO USE)", 0], ["1DmWDZOdl6U", "Minecraft Parkour Gameplay NO COPYRIGHT", 0], ["r7QxFKBBTM8", "Minecraft Parkour Gameplay (NO COPYRIGHT)", 0], ["0vPT4tUFKWA", "Minecraft Parkour Gameplay (NO COPYRIGHT)", 0]]],
+    ["Brainrot", [["lWJBIrpLq84", "Down in Ohio | TikTok Compilation 🤣", 0], ["tzD9OxAHtzU", "skibidi toilet", 1], ["AnoTVNqLJ-Q", "skibidi toilet 2", 1], ["brGo1JgwtrM", "skibidi toilet 3", 1], ["UvFroPxa67s", "skibidi toilet 4", 1], ["9S8yAqINOYs", "skibidi toilet 5", 1], ["iQWY6j4aGc8", "skibidi toilet 6", 1], ["wVNMVGY56Os", "skibidi toilet 7", 1], ["ImL2oQ_FxfU", "skibidi toilet 8", 1], ["U_lrep5F8gE", "skibidi toilet 9", 1], ["OHj0icF52tQ", "skibidi toilet 10", 1], ["mA5ShB4EmCo", "CG5 - GRIMACE (Original Song)", 0], ["-9kU8hM_iIc", "Just got the grimace shake! #shorts", 1], ["-LpYxiy9MsM", "The GRIMACE SHAKE Got Our Kids!", 1]]],
+    ["Subway Surfers", [["ChBg4aowzX8", "Compilation PlayGame Subway Surfers On PC Non Stop 1 Hour HD", 0], ["L_fcrOyoWZ8", "Compilation PlayGame Subway Surfers / Subway Surf /2023/ On PC Non Stop 1 Hour HD", 0], ["AR24XK1WAb8", "Subway Surfers 1 Hour Compilation PlayGame Subway Surfers Subway Surf 2023 On PC Non Stop 1 Hour FHD", 0], ["178D8K_xa1Q", "Subway Surfers 1 Hour Compilation GamePlay Subway Surfers Subway Surf 2023 On PC Non Stop 1 Hour HD", 0], ["Xuv1wMsUz5c", "Compilation GAMEPLAY SUBWAY SURFERS 1 HOUR ON OMEN by HP Gaming Laptop 17", 0], ["p6zo3r6WxcU", "SUBWAY SURFERS GAMEPLAY 1 HOUR ON OMEN by HP Gaming Laptop 17", 0], ["0e0LFNaJupE", "Compilation Gameplay Subway Surfers - Subway Surf /2023/ Character FRANK On PC Non Stop 1 Hour FHD", 0], ["zqX0N4Pk1iI", "Compilation Gameplay Subway Surfers Subway Surf 2023 On PC Non Stop 1 Hour FHD", 0], ["GfQzoChf9Bw", "Compilation Gameplay Subway Surfers New Orleans 1 Hour Play On PC FHD", 0], ["NbgO7uM9pos", "Compilation PlayGame Subway Surfers UNLIMITED COINS Character KING On PC Non Stop HD", 0], ["Peg1INzz5_Q", "Compilation PlayGame Subway Surfers / Subway Surf /2023/ On PC FHD", 0], ["kaq9nTPPBzo", "There is Something Strange About Gameplay Subway Surfers / Subway Surf /2023/ Non Stop 1 Hour FHD", 0], ["G0cFZA-F2lk", "Compilation Gameplay Subway Surfers Subway Surf 2023 On PC Non Stop FHD", 0], ["6CPT08P-exM", "Compilation Gameplay Subway Surfers New Orleans /2023/ 1 Hour Character Tricky Play On PC HD", 0], ["DcVP5eNFCBY", "Compilation PlayGame Subway Surfers / Subway Surf /2023/ What Happen ?? Play On PC FHD", 0]]],
+  ];
+  // list:end
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const VIDS = shuffle(CATS.slice()).slice(0, 2).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // 2 of the 3, one video each, new every load
+  const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { /* blocked */ } return null; };
@@ -42,26 +57,32 @@
     return (slowV = m !== null ? m : store("stem-slow") === "1");
   }
   const off = () => !!sess("stem-rot-off") || slow();                   // ✕ for this session, or a slow link
-  const src = (id, start) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
-    + `&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1${start ? "&start=" + start : ""}`;
+  const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
+    + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
-  let el = null, duo = null, tab = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, tab = null, btn = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
+  let sheetOn = false, autoFold = false;                                 // Cluck's sheet open (desktop): the players fold until it shuts or the header asks (Tony, Oct 5)
   const width = () => (desk() ? 320 : 176);
   function build() {
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, start], i) => `<div class="vid">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id, start)}" title="${t}" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
-    el.append(duo, tab);                                     // both stay put: moving an iframe reloads it, so stashing only hides the duo
+    const hd = document.createElement("div"); hd.className = "rot-hd";      // docked only (app.css): the column's label row
+    hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-duck")}<span>Cluck</span></span>`
+      + `<button type="button" class="btn btn-label rot-btn">${ico("i-play")}<span>Curated brainrots</span></button>`;
+    btn = hd.lastElementChild;
+    el.append(hd, duo, tab);                                 // all stay put: moving an iframe reloads it, so stashing only hides the duo
     home();
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
+      autoFold = false;
       if (b.dataset.act === "min") { stashed = userMin = true; place(); }
       else if (b.dataset.act === "open") { stashed = userMin = false; if (!docked()) picked = true; place(true); }   // asked for: shown even if every corner is busy
       else if (b.dataset.act === "x") { sess("stem-rot-off", "1"); sync(); }
@@ -116,17 +137,17 @@
     const work = document.getElementById("work"), dock = docked() && !!work;
     if (dock && el.parentElement !== work) work.prepend(el);
     else if (!dock && el.parentElement !== document.body) document.body.append(el);
-    const was = el.classList.contains("dock");
-    el.classList.toggle("dock", dock);
-    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || RM.matches; }
+    const was = el.classList.contains("docked");
+    el.classList.toggle("docked", dock);
+    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || autoFold || RM.matches; }
     else if (was) stashed = userMin || innerHeight < 700 || RM.matches;   // back to the floating corner's own rule
   }
   function place(animate) {
     if (!el) return;
     home();
-    if (el.classList.contains("dock")) {
+    if (el.classList.contains("docked")) {
       el.classList.toggle("stashed", stashed);
-      tab.classList.remove("r"); tab.innerHTML = ico("i-next") + "<span>Show video</span>";
+      btn.dataset.act = stashed ? "open" : "min"; btn.setAttribute("aria-expanded", String(!stashed));
       return;
     }
     el.classList.toggle("stashed", stashed);
@@ -168,7 +189,13 @@
   }
   const idle = window.requestIdleCallback || (f => setTimeout(f, 1200));
   addEventListener("load", () => idle(warmUp, { timeout: 3000 }));
-  window.stemBrainrot = { sync, warmUp };
+  /* app.js clPlace(): the sheet only gets 177 px under the players at 1366x768, so it takes their room while open */
+  function sheet(open) {
+    if (open !== sheetOn) autoFold = open;
+    sheetOn = open;
+    if (on) place(false);
+  }
+  window.stemBrainrot = { sync, warmUp, sheet, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));
