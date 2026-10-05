@@ -1400,7 +1400,7 @@ function origOpen(open) {
 }
 function origPlace() {
   if (!origEl) return;
-  const rot = $("#rot.dock");                                                    // desktop: the docked videos stay first in the notes column
+  const rot = $("#rot.docked");                                                    // desktop: the docked videos stay first in the notes column
   if (sideMQ.matches) { if (rot && rot.parentElement === $("#work")) rot.after(origEl); else $("#work").prepend(origEl); }
   else $("#freezeIn").prepend(origEl);
 }

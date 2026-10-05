@@ -112,17 +112,36 @@ try {
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
     assert.equal(srcs.length, 2);
-    for (const [s, id] of [[srcs[0], "vTfD20dbxho"], [srcs[1], "z84bmLDzIIk"]]) { assert.ok(s.includes(id) && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
+    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): 2 of his 3 playlists, one video each
+    assert.equal(cats.length, 3);
+    const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
+    for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
+    assert.notEqual(catOf(srcs[0]), catOf(srcs[1]), "two different playlists");
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
-      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("dock"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
     assert.equal(await page.$eval("#xb", e => e.getClientRects().length), 0, "desktop sugar: no notes pad (Tony, Oct 4)");
-    await page.click("#rot .vid"); await page.click('#rot [data-act="min"]');
-    assert.equal(await page.isVisible("#rot .rtab"), true, "– folds it into the Show video bar");
-    await page.click("#rot .rtab"); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the bar brings it back");
+    const head = await page.evaluate(() => {                            // video-bar.html ?v=1 (Tony, Oct 5): "Cluck" level with "Question"
+      scrollTo(0, 0);                                                    // at rest: scrolled, both sticky columns clamp and hide an offset
+      const t = s => document.querySelector(s).getBoundingClientRect().top;
+      const v = [...document.querySelectorAll("#rot .vid")].map(x => x.getBoundingClientRect());
+      return { q: t("#freeze .q-label"), c: t("#rot .rot-hd .xb-label"), tall: v.every(r => Math.abs(r.height / r.width - 16 / 9) < 0.02), cap: v.every(r => r.height <= innerHeight * 0.4 + 1),
+        ctl: [...document.querySelectorAll("#rot .ctl, #rot .rtab")].some(e => e.getClientRects().length), box: getComputedStyle(document.getElementById("rot")).display };
+    });
+    assert.ok(Math.abs(head.q - head.c) <= 1, `labels level: Question ${head.q}, Cluck ${head.c}`);
+    assert.deepEqual([head.tall, head.cap, head.ctl], [true, true, false], "9:16 frames, at most 40vh tall; no – / ✕ / tab when docked");
+    assert.equal(head.box, "block", "a box of its own (the top bar's .dock class once unwrapped it: nav.css display: contents)");
+    const b = "#rot .rot-btn";
+    assert.equal(await page.textContent(b), "Curated brainrots");
+    assert.equal(await page.getAttribute(b, "aria-expanded"), "true");
+    await page.click(b);
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), getComputedStyle(e.querySelector(".duo")).opacity]),
+      [true, "false", "0"], "the button folds the players");
+    assert.equal(await page.isVisible("#rot .rot-hd .xb-label"), true, "the label row stays");
+    await page.click(b); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "and brings them back");
   });
 
   await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {

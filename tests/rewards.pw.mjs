@@ -157,7 +157,7 @@ try {
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
-    await d.waitForSelector("#work > #rot.dock", { state: "attached", timeout: 4000 });
+    await d.waitForSelector("#work > #rot.docked", { state: "attached", timeout: 4000 });
     assert.equal(await d.$eval("#work", w => w.firstElementChild.id), "rot", "the docked videos stay above the original (D1)");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "false", "closed until tapped: the sheet would cover the videos");
     assert.equal(await d.isHidden("#xb"), true, "desktop sugar has no scratchpad (Tony, Oct 4)");
