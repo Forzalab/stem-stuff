@@ -520,21 +520,34 @@ function renderQuestion() {
   formulaCard();
 }
 /* sugar: the formula card, stepper look (design/FORMULA-CARD.md round 2, Tony's pick 5): the question's formula-sheet rows in the
-   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint. */
+   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint.
+   Say it once (clutter wave 3, Tony Oct 5): one step = just the formula (C5); a group shows once, not again on the next step (C4) */
 function formulaCard() {
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
   const sec = document.createElement("section");
-  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
-  sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
-    <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span><span class="g">${esc(f.group)}</span></li>`).join("")}</ol>`;
+  sec.id = "fcard";
+  if (fs.length === 1) {
+    sec.className = "fcard one"; sec.setAttribute("aria-label", "Formula");
+    sec.innerHTML = `<span class="f">${renderMath(fs[0].tex, false)}</span>`;
+  } else {
+    sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
+    sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
+      <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span>${i && f.group === fs[i - 1].group ? "" : `<span class="g">${esc(f.group)}</span>`}</li>`).join("")}</ol>`;
+  }
   $("#q").after(sec);
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
-const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tap all true ones, then Check. None? Just tap Check." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
+   It shows on the first choose-all question of the visit only (clutter C6, Tony Oct 5); an authored how always shows */
+let howAt = null;
+const howLine = p => {
+  let h = p.how;
+  if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick every true one.";
+  return h ? `<p class="how" id="how">${md(h, true)}</p>` : "";
+};
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");

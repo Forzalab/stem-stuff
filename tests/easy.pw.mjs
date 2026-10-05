@@ -40,7 +40,7 @@ writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 1, groups: 
   rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }] }));
 P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Two rows." }, { type: "text", md: "Tap a row to tick it." }],
   choices: [row("a", "first"), row("b", "second")], correct: ["a"], miss: "QUACK. Missing one.",
-  saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", split: [
+  saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", part: ["WE_THM"], split: [
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
@@ -89,6 +89,7 @@ try {
   await page.goto(BASE + "/");
 
   await step("sugar start page: the players warm up off screen (no question yet); no YouTube controls, no keyboard", async () => {
+    assert.equal(await page.getAttribute("#code", "placeholder"), "e.g. CALC1_E01", "the start title says what to do; the box shows a code (clutter C16)");
     await page.waitForSelector("#rot.parked", { state: "attached", timeout: 6000 });
     assert.equal(await page.$eval("#rot", e => e.inert && e.getAttribute("aria-hidden")), "true");
     const s = await page.$eval("#rot iframe", f => f.src);
@@ -105,14 +106,15 @@ try {
     assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
-    assert.match(await page.textContent("#how"), /Tap all true ones, then Check\. None\? Just tap Check\./);
+    await page.reload(); await opened(page, "CALC1_E01");                 // the bank opens a random first question: E01 first this visit
+    assert.equal((await page.textContent("#how")).trim(), "Tick every true one.");   // short, first choose-all only (clutter C6)
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
   await step("sugar: the formula card (stepper) in order of use; the brainrot corner with the 2 muted players", async () => {
     assert.deepEqual(await page.$$eval("#fcard .st .n", n => n.map(x => x.textContent.trim())), ["1", "2"]);
     assert.equal(await page.$$eval("#fcard .then", t => t.length), 1);
-    assert.match(await page.textContent("#fcard .st .g"), /Work and Energy/);
+    assert.deepEqual(await page.$$eval("#fcard .g", g => g.map(x => x.textContent)), ["Work and Energy"], "a group shows once (clutter C4)");
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
     assert.equal(srcs.length, 2);
@@ -173,6 +175,8 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
     await page.evaluate(() => { window.__said = []; });
     assert.deepEqual(await rows(page), ["True", "False"]);
+    assert.deepEqual(await page.$eval("#fcard", f => ({ one: f.classList.contains("one"), hd: !!f.querySelector(".hd, .n, .g"), bg: getComputedStyle(f).backgroundColor, tex: !!f.querySelector(".f .katex") })),
+      { one: true, hd: false, bg: "rgba(0, 0, 0, 0)", tex: true }, "one step: just the formula (clutter C5)");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
@@ -225,6 +229,8 @@ try {
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
+    assert.equal(await page.$("#how"), null, "the tick line is for the first choose-all only (clutter C6)");
+    assert.equal(await page.$eval(".choices", g => g.getAttribute("aria-label")), "Choices");
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
     await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });

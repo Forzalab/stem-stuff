@@ -454,6 +454,9 @@ html.side #work > .orig { margin: 0; }
 .fcard .g { grid-column: 2; font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
 .fcard .then { position: relative; margin: var(--s1) 0 var(--s1) calc(2rem + var(--s3)); font-size: var(--t-xs); color: var(--muted); }
 .fcard .then::before { content: ""; position: absolute; left: calc(-1rem - var(--s3) - 0.5px); top: -0.25rem; bottom: -0.25rem; border-left: 1px solid var(--edge); }
+/* one step: just the formula, no frame (clutter C5, Tony Oct 5); display: block so a long one scrolls in place */
+.fcard.one, html.sugar .fcard.one { padding: 0; border: 0; background: none; box-shadow: none; color: inherit; }
+.fcard.one .f { display: block; }
 @media (min-width: 45rem) {
   .fcard ol { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); }
   .fcard .then { margin: 0; padding-top: 0.4rem; display: flex; align-items: center; gap: var(--s2); }
