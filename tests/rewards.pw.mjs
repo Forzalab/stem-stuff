@@ -157,9 +157,11 @@ try {
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
+    await d.waitForSelector("#work > #rot.dock", { state: "attached", timeout: 4000 });
+    assert.equal(await d.$eval("#work", w => w.firstElementChild.id), "rot", "the docked videos stay above the original (D1)");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
     assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
-    assert.match(await d.textContent("#origHd"), /Exam's solution/);   // T1 variant A: a button that says what you get
+    assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");

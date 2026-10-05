@@ -6,7 +6,10 @@
    control: a corner that would cover one is skipped, and if all would, it stashes. A drop is the user's choice (the Scratchpad FAB
    rule): the dropped corner stays, covered or not (Tony, Oct 3: "i cannot drag the thing down"). At rest it is anchored with CSS
    left/right + top/bottom, so a bottom corner rides Firefox Android's sliding toolbar; transform is only for the drag and the snap. Hidden while the pad page, the keyboard or the code bar is up.
-   app.js calls window.stemBrainrot.sync() after every question opens and on layout changes. Nothing loads until it first shows. */
+   app.js calls window.stemBrainrot.sync() after every question opens and on layout changes. Nothing loads until it first shows.
+   Desktop / tablet side by side (html.side; Tony, Oct 4 picked "B: top of notes"): it docks as the first thing in the notes column,
+   both players side by side, sticky, no drag, no corner math; – folds it into a "Show video" bar. Moving an iframe reloads it, so it is
+   placed once and only moves when the layout crosses the breakpoint. */
 (() => {
   const VIDS = [["vTfD20dbxho", "Subway Surfers gameplay, muted", 0], ["z84bmLDzIIk", "Parkour gameplay, muted", 0]];   // Tony's links [id, title, start s]
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
@@ -22,6 +25,8 @@
 
   let el = null, duo = null, tab = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
+  const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
+  let userMin = false;                                                   // the – button, the only way to fold it when docked
   const width = () => (desk() ? 320 : 176);
   function build() {
     el = document.createElement("div");
@@ -31,16 +36,16 @@
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     el.append(duo, tab);                                     // both stay put: moving an iframe reloads it, so stashing only hides the duo
-    document.body.append(el);
+    home();
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
-      if (b.dataset.act === "min") { stashed = true; place(); }
-      else if (b.dataset.act === "open") { stashed = false; picked = true; place(true); }   // asked for: shown even if every corner is busy
+      if (b.dataset.act === "min") { stashed = userMin = true; place(); }
+      else if (b.dataset.act === "open") { stashed = userMin = false; if (!docked()) picked = true; place(true); }   // asked for: shown even if every corner is busy
       else if (b.dataset.act === "x") { sess("stem-rot-off", "1"); sync(); }
     });
     el.addEventListener("pointerdown", e => {
-      if (e.button > 0 || stashed || e.target.closest("button")) return;
+      if (e.button > 0 || stashed || docked() || e.target.closest("button")) return;
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false };
       try { el.setPointerCapture(e.pointerId); } catch { /* synthetic */ }
     });
@@ -67,10 +72,7 @@
     const lift = (dock && root.classList.contains("dock-bottom") ? innerHeight - dock.getBoundingClientRect().top : 0) + G;
     return { top, floor: Math.max(top, innerHeight - lift - h), lift };
   }
-  /* what it must not cover. Desktop also keeps off the code box, the nav, the problem itself (tip included), the exam's solution and the
-     notes: there it used to land top-left over the first three, and top-right over the solution's figure once scrolled (desktop audit, Oct 5: "test on desktop layout. thats what ppl use the most") */
-  const LIVE = "#q .opt, #q .ff, #q .send, #mcGo, #padFab, #wish .wchip, #rwHud, #orig .orig-sol, #orig .orig-peek", DESK = ", #entry, #qnav, #blocks, #orig, #xbField";
-  const live = () => [...document.querySelectorAll(LIVE + (desk() ? DESK : ""))].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
+  const live = () => [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #padFab, #wish .wchip, #rwHud, #orig .orig-sol, #orig .orig-peek")].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());
   const covers = (x, y, w, h) => live().some(c => x < c.right + 4 && x + w > c.left - 4 && y < c.bottom + 4 && y + h > c.top - 4);
   function spot(c, w, h) {
     const b = band(h), right = c[1] === "r";
@@ -87,8 +89,24 @@
     el.style.transform = `translate(${was.left - now.left}px, ${was.top - now.top}px)`;
     requestAnimationFrame(() => requestAnimationFrame(() => { el.classList.add("snap"); el.style.transform = ""; }));
   }
+  /* its parent: the notes column when side by side, else the page (the floating corner). Only a layout change moves it */
+  function home() {
+    const work = document.getElementById("work"), dock = docked() && !!work;
+    if (dock && el.parentElement !== work) work.prepend(el);
+    else if (!dock && el.parentElement !== document.body) document.body.append(el);
+    const was = el.classList.contains("dock");
+    el.classList.toggle("dock", dock);
+    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || RM.matches; }
+    else if (was) stashed = userMin || innerHeight < 700 || RM.matches;   // back to the floating corner's own rule
+  }
   function place(animate) {
     if (!el) return;
+    home();
+    if (el.classList.contains("dock")) {
+      el.classList.toggle("stashed", stashed);
+      tab.classList.remove("r"); tab.innerHTML = ico("i-next") + "<span>Show video</span>";
+      return;
+    }
     el.classList.toggle("stashed", stashed);
     const b = band(96);
     if (stashed) {

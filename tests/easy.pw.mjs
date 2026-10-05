@@ -116,9 +116,19 @@ try {
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
+    const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("dock"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+    assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
+    await page.click("#rot .vid"); await page.click('#rot [data-act="min"]');
+    assert.equal(await page.isVisible("#rot .rtab"), true, "– folds it into the Show video bar");
+    await page.click("#rot .rtab"); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the bar brings it back");
   });
 
-  await step("sugar: drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+  await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body && !document.getElementById("rot").hidden, null, { timeout: 4000 })
+      .catch(async () => { await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body, null, { timeout: 3000 }); });
+    await page.waitForTimeout(300);
     const box = await page.$eval("#rot .duo", e => e.getBoundingClientRect().toJSON());
     const vw = await page.evaluate(() => [innerWidth, innerHeight]);
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
@@ -130,7 +140,8 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("stem-rot")), "bl");
     await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForTimeout(100);
     assert.equal(await page.$eval("#rot", e => e.style.bottom !== "auto" && e.style.left !== "auto"), true, "a re-sync moved the drop");
-    const code = await page.textContent("#pcode");                    // back to the step-off default for the steps below
+    const code = await page.textContent("#pcode");                    // back to desktop + the step-off default for the steps below
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.evaluate(() => { localStorage.removeItem("stem-rot"); localStorage.removeItem("stem-rot-pick"); }); await page.reload(); await opened(page, code);
   });
 

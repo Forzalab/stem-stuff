@@ -1200,7 +1200,7 @@ function origRender() {
   /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
      topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
      while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
-  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Exam's solution</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
     <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
     <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
@@ -1248,7 +1248,9 @@ function origOpen(open) {
 }
 function origPlace() {
   if (!origEl) return;
-  if (sideMQ.matches) $("#work").prepend(origEl); else $("#freezeIn").prepend(origEl);
+  const rot = $("#rot.dock");                                                    // desktop: the docked videos stay first in the notes column
+  if (sideMQ.matches) { if (rot && rot.parentElement === $("#work")) rot.after(origEl); else $("#work").prepend(origEl); }
+  else $("#freezeIn").prepend(origEl);
   $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
 }
 /* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
