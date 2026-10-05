@@ -718,6 +718,8 @@ class Explain(unittest.TestCase):
         self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.GATE_SCHEMA)
         self.assertTrue(g["response_format"]["json_schema"]["strict"])
         self.assertIn("why step 0?", g["messages"][1]["content"])
+        self.assertIn("Answer: b) 3", g["messages"][1]["content"])                     # the KEY: "related" is judged against it
+        self.assertNotIn("physics", serve.CLUCK_GATE)                                   # any subject (calc, psych banks too)
         self.assertEqual(serve._chats[("c" * 32, "CALC1_XP1")], 1)
 
     def test_injection_regex_skips_the_gate_call(self):
