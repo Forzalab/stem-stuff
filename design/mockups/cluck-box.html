@@ -11,6 +11,7 @@
   ?v=now  what ships (#61 + 586312a)
   ?v=R    Refactoring UI: hierarchy by weight and colour, accent spent on a few things (step numbers, the answer, send), quiet tabs
   ?v=S    Swiss / International: type-led, strict left grid, one tangerine rule, flat wells, no tab chrome
+  ?v=RM1|RM2|RM3  R × M mashups (Tony, Oct 5 ~03:10); &set=rm shows R + RM1-3 side by side
   ?v=M    Material 3 tonal: tone-stepped warm surfaces, container / on-container pairs (dark tangerine fill, light tangerine ink)
   No ?v: all four side by side. &clean hides the switcher. Every text / fill pair is AA (>= 4.5:1; large text >= 3:1).
 -->
@@ -26,12 +27,12 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.
 .qcol { display: flex; flex-direction: column; gap: 8px; }
 .qtxt { background: var(--qbox); border-radius: 8px; padding: 16px 24px; }
 .opt { display: flex; gap: 12px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--qbox); }
-.opt i { font-style: normal; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--edge); border-radius: 50%; font-size: 14px; font-weight: 700; color: var(--muted); }
+.opt i { font-style: normal; width: 36px; height: 36px; flex: none; display: grid; place-items: center; border: 1px solid var(--edge); border-radius: 50%; font-size: 18px; font-weight: 700; color: var(--muted); }
 .opt.ok { border-color: var(--ok); } .opt.ok i { background: var(--ok); color: #06210f; border-color: var(--ok); }
 .opt.bad { border: 2px dashed var(--bad); } .opt.bad span { text-decoration: line-through; color: var(--muted); }
 .fb { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 8px; background: var(--qbox); }
 .fb b { color: var(--bad); display: block; }
-.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 16px; height: 100vh; }
+.grid { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 16px; padding: 16px; height: 100vh; }
 .grid > div { display: flex; flex-direction: column; min-width: 0; }
 .lbl { margin: 0 0 8px; font-weight: 700; font-size: 15px; color: var(--muted); } .lbl b { color: var(--ink); }
 
@@ -120,6 +121,37 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.
 .M .ans b.big { color: #ffdcc0; }
 .M .ask { padding-left: 20px; }
 
+/* ---------- R × M mashups (Tony, Oct 5 ~03:10: "mashup R and M variants give me 3 more") ---------- */
+/* RM1: R's layout (title + underline tabs, borderless wells) on M's tonal warm surfaces. Numbers in M's container pair; send = M primary. */
+.RM1 { --bg: #1d1814; --tx: #ede0d6; --strong: #fff8f3; --mu: #d6c3b4; --acc: #ffb77c; --accink: #4b2800; --seam: #2b231d; --xc: #d6c3b4; --whoc: #ffdcc0;
+  --call: #2b231d; --callline: transparent; --rule: #3a3029; --me: #2a3a52; --meink: #eef3fa; --rep: #251f1a; --repline: transparent;
+  --field: #2b231d; --fieldline: #3a3029; --askr: 14px; --gor: 10px; --left: #ffdcc0; }
+.RM1 .n, .RM3 .n { background: #4a2a10; color: #ffdcc0; }
+.RM1 .ans b.big { display: inline-block; padding: 2px 10px; border-radius: 6px; background: #4a2a10; color: #ffdcc0; }
+/* RM2: M's pill tabs (dark tangerine container, light ink) under R's title row; R's neutral-warm sheet and borderless wells; orange only on send + the answer */
+.RM2 { --bg: #17130f; --tx: #ece6df; --strong: #fff; --mu: #a99c8e; --acc: #ff9a3c; --accink: #2b1000; --seam: #2c241c; --xc: #a99c8e; --whoc: #ece6df;
+  --call: #221c16; --callline: transparent; --rule: #2c241c; --me: #2a3a52; --meink: #eef3fa; --rep: #1f1a15; --repline: transparent;
+  --field: #120f0c; --fieldline: #3a3027; --askr: 14px; --gor: 10px; --left: #c9b9a7; }
+.RM2 .tabs { order: 3; flex-basis: 100%; margin-top: 8px; padding: 4px; border-radius: 999px; background: #221c16; }
+.RM2 .tab { flex: 1; min-height: 40px; border-radius: 999px; font-size: 15px; }
+.RM2 .tab.on { background: #4a2a10; color: #ffdcc0; }
+.RM2 .n { border: 1.5px solid #ffb77c; color: #ffdcc0; }
+.RM2 .ans b.big { color: var(--acc); }
+/* RM3: R everywhere, but the talk is M: the follow-up bubble is a tonal container, the ask field a tonal pill with a round send */
+.RM3 { --bg: #17130f; --tx: #ece6df; --strong: #fff; --mu: #a99c8e; --acc: #ffb77c; --accink: #4b2800; --seam: #2c241c; --xc: #a99c8e; --whoc: #ece6df;
+  --call: #221c16; --callline: transparent; --rule: #2c241c; --me: #4a2a10; --meink: #ffdcc0; --rep: #221c16; --repline: transparent;
+  --field: #2b231d; --fieldline: transparent; --askr: 28px; --gor: 50%; --left: #ffdcc0; }
+.RM3 .ask { padding-left: 20px; }
+.RM3 .ans b.big { display: inline-block; padding: 2px 10px; border-radius: 6px; background: #4a2a10; color: #ffdcc0; }
+/* the shared R header (title row + tabs under it) */
+.RM1 .hd, .RM2 .hd, .RM3 .hd { flex-wrap: wrap; padding: 16px 8px 0 24px; row-gap: 4px; }
+.RM1 .ttl, .RM2 .ttl, .RM3 .ttl { flex: 1; display: flex; align-items: center; gap: 10px; font-size: 21px; font-weight: 700; color: var(--strong); }
+.RM1 .ttl .duck, .RM2 .ttl .duck, .RM3 .ttl .duck { width: 28px; height: 28px; }
+.RM1 .tabs, .RM3 .tabs { order: 3; flex-basis: 100%; gap: 24px; margin-top: 8px; border-bottom: 1px solid var(--rule); }
+.RM1 .tab, .RM3 .tab { padding: 10px 0; border-bottom: 2px solid transparent; margin-bottom: -1px; font-size: 15px; }
+.RM1 .tab.on, .RM3 .tab.on { color: var(--strong); border-bottom-color: #ff9a3c; }
+.RM1 .bd, .RM2 .bd, .RM3 .bd { padding-top: 16px; }
+
 /* phone: one column, the sheet under the question */
 @media (max-width: 700px) {
   .page { grid-template-columns: 1fr; height: auto; padding: 16px; } .page .sh { height: 760px; flex: none; }
@@ -132,12 +164,13 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.
 </style></head>
 <body>
 <div id="root"></div>
-<nav class="sw" id="sw"><a href="?">All</a><a href="?v=now">Now</a><a href="?v=R">R</a><a href="?v=S">S</a><a href="?v=M">M</a></nav>
+<nav class="sw" id="sw"><a href="?">All</a><a href="?v=now">Now</a><a href="?v=R">R</a><a href="?v=S">S</a><a href="?v=M">M</a><a href="?v=RM1">RM1</a><a href="?v=RM2">RM2</a><a href="?v=RM3">RM3</a></nav>
 <script>
 const K = (t, d) => katex.renderToString(t, { throwOnError: false, displayMode: !!d });
 const DUCK = `<img class="duck" src="../../rewards/icons/duck_color.svg" alt="">`;
-const V = { now: "Now · what ships", R: "R · Refactoring UI", S: "S · Swiss / International", M: "M · Material 3 tonal" };
-const head = k => k === "R" ? `<div class="hd"><span class="ttl">${DUCK}Cluck's steps</span><span class="x" aria-hidden="true">×</span>
+const V = { now: "Now · what ships", R: "R · Refactoring UI", S: "S · Swiss / International", M: "M · Material 3 tonal",
+  RM1: "RM1 · R layout on M tones", RM2: "RM2 · M pill tabs under R's title", RM3: "RM3 · R, with M's talk (bubble + pill field)" };
+const head = k => /^R/.test(k) ? `<div class="hd"><span class="ttl">${DUCK}Cluck's steps</span><span class="x" aria-hidden="true">×</span>
     <div class="tabs"><span class="tab on">Cluck explains</span><span class="tab">Similar steps</span></div></div>`
   : k === "S" ? `<div class="hd"><span class="kick">Cluck</span><div class="tabs"><span class="tab on">Explains</span><span class="tab">Similar steps</span></div><span class="x" aria-hidden="true">×</span></div>`
   : `<div class="hd"><div class="tabs"><span class="tab on">Cluck explains</span><span class="tab">Similar steps</span></div><span class="x" aria-hidden="true">×</span></div>`;
@@ -163,6 +196,6 @@ document.getElementById("root").innerHTML = v
   ? `<div class="page"><div class="qcol"><div class="qtxt">A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</div>
       <div class="opt"><i>A</i><span>1.0 m/s</span></div><div class="opt ok"><i>B</i><span>2.0 m/s</span></div><div class="opt bad"><i>C</i><span>3.0 m/s</span></div><div class="opt"><i>D</i><span>4.5 m/s</span></div>
       <div class="fb"><div><b>Not quite</b>The answer is B, 2.0 m/s.</div></div></div>${sheet(v)}</div>`
-  : `<div class="grid">${Object.entries(V).map(([k, t]) => `<div><p class="lbl"><b>${t}</b></p>${sheet(k)}</div>`).join("")}</div>`;
+  : `<div class="grid" style="--n:${q.get("set") === "rm" ? 4 : 4}">${Object.entries(V).filter(([k]) => q.get("set") === "rm" ? ["R", "RM1", "RM2", "RM3"].includes(k) : !/^RM/.test(k)).map(([k, t]) => `<div><p class="lbl"><b>${t}</b></p>${sheet(k)}</div>`).join("")}</div>`;
 </script>
 </body></html>

@@ -9,6 +9,7 @@
   Now (brainrot.js .rot.dock .rtab): a 36 px full-width bar with a chevron, floating above Cluck's sheet, its own colour and height:
   nothing else on the site is 36 px tall or chevron-led.
   ?v=now  what ships
+  Tony, Oct 5 ~03:20: picked ?v=1, label "Curated brainrots", real svgs on both labels, the labels aligned.
   ?v=1    Column header: the right column gets the same label row the question has ("Question" ↔ "Cluck"), the videos are one
           bar-sized button at its right end (--btn, --sheet fill, icon + word), like the top bar's buttons.
   ?v=2    Preview strip: the folded state shows what you get: two 16:9 thumbnails, dimmed, a play mark, "2 videos" — a card
@@ -30,8 +31,10 @@ svg.i { width: 22px; height: 22px; flex: none; }
 .qtxt { background: var(--qbox); border-radius: 8px; padding: 16px 24px; }
 .opt { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--qbox); }
 .col { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.hrow { display: flex; align-items: center; gap: 8px; min-height: 28px; font-size: 15px; font-weight: 700; color: var(--muted); }
-.hrow svg.i { width: 18px; height: 18px; }
+.hrow { display: flex; align-items: center; gap: 8px; min-height: var(--btn); font-size: 16px; font-weight: 700; color: var(--muted); }   /* = app.css .xb-label; one row height in both columns so the labels line up */
+.hrow svg.i { width: 20px; height: 20px; }
+.hrow .lab { display: flex; align-items: center; gap: 8px; }
+.hrow svg.i { --c2: #ffb86b; --paper: #08111f; }
 /* the sheet stand-in (variant R tabs), so each fix is judged next to Cluck */
 .sh { flex: 1; min-height: 0; border-radius: 12px; background: var(--ai-bg); border: 1px solid var(--ai-rule); color: var(--ai-tx); padding: 0 24px; overflow: hidden; }
 .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--ai-rule); margin: 8px 0 16px; }
@@ -62,9 +65,10 @@ svg.i { width: 22px; height: 22px; flex: none; }
 </style></head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="play" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="duck" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="14" cy="10" r="1.5" fill="currentColor"/></symbol>
+  <symbol id="duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
 </svg>
 <div id="root"></div>
@@ -72,17 +76,17 @@ svg.i { width: 22px; height: 22px; flex: none; }
 <script>
 const I = n => `<svg class="i"><use href="#${n}"/></svg>`;
 const lines = `<div class="ln m"></div><div class="ln"></div><div class="ln s"></div><div class="ln m"></div><div class="ln"></div><div class="ln s"></div>`;
-const tabs = (vid) => `<div class="tabs"><span class="tab on">${I("duck")}Cluck explains</span><span class="tab">${I("bulb")}Similar steps</span>${vid ? `<span class="tab">${I("play")}Videos</span>` : ""}</div>`;
+const tabs = (vid) => `<div class="tabs"><span class="tab on">${I("duck")}Cluck explains</span><span class="tab">${I("bulb")}Similar steps</span>${vid ? `<span class="tab">${I("play")}Curated brainrots</span>` : ""}</div>`;
 const V = {
   now: ["Now · what ships", () => `<div class="col"><div class="now-bar">${I("chev")}Show video</div><div class="sh">${tabs()}${lines}</div></div>`],
-  1: ["1 · Column header", () => `<div class="col v1"><div class="hrow"><span class="lab">${I("duck")}Cluck</span><span class="vbtn">${I("play")}Videos</span></div><div class="sh">${tabs()}${lines}</div></div>`],
+  1: ["1 · Column header", () => `<div class="col v1"><div class="hrow"><span class="lab">${I("duck")}Cluck</span><span class="vbtn">${I("play")}Curated brainrots</span></div><div class="sh">${tabs()}${lines}</div></div>`],
   2: ["2 · Preview strip", () => `<div class="col v2"><div class="strip"><span class="th"></span><span class="th"></span><p>2 videos<span>Watch while you work</span></p><span class="open">${I("chev")}</span></div><div class="sh">${tabs()}${lines}</div></div>`],
   3: ["3 · A tab in the sheet", () => `<div class="col"><div class="sh">${tabs(true)}${lines}</div></div>`],
 };
 const q = new URLSearchParams(location.search), v = V[q.get("v")] ? q.get("v") : null;
 if (q.has("clean")) document.documentElement.classList.add("clean");
 document.querySelector(v ? `#sw a[href="?v=${v}"]` : `#sw a[href="?"]`).classList.add("on");
-const qcol = `<div class="qcol"><div class="hrow">Question</div><div class="qtxt">A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</div>
+const qcol = `<div class="qcol"><div class="hrow"><span class="lab">${I("doc")}Question</span></div><div class="qtxt">A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</div>
   <div class="opt">A · 1.0 m/s</div><div class="opt">B · 2.0 m/s</div><div class="opt">C · 3.0 m/s</div></div>`;
 document.getElementById("root").innerHTML = v ? `<div class="page">${qcol}${V[v][1]()}</div>`
   : `<div class="grid">${["now", "1", "2", "3"].map(k => V[k]).map(([t, f]) => `<div><p class="lbl"><b>${t}</b></p>${f()}</div>`).join("")}</div>`;
