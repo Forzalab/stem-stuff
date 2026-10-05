@@ -639,7 +639,7 @@ class Explain(unittest.TestCase):
     def test_streams_plain_text_with_zdr_and_the_key(self):
         status, text = self.ask()
         self.assertEqual(status, 200)
-        self.assertEqual(text, "POOF! **Use:** $v$\nstep one\nYour pick: sign.")      # bold stays, the bullet goes
+        self.assertEqual(text, "POOF! **Use:** $v$\n- step one\nYour pick: sign.")    # bold and "- " lists stay
         auth, req = self.seen[0]
         self.assertEqual(auth, "Bearer sk-test")
         self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})
@@ -675,7 +675,7 @@ class Explain(unittest.TestCase):
 
     def test_chat_streams_with_the_box_as_cluck_turn(self):
         status, head, text = self.chat(2)
-        self.assertEqual((status, text), (200, "POOF! **Use:** $v$\nstep one\nYour pick: sign."))
+        self.assertEqual((status, text), (200, "POOF! **Use:** $v$\n- step one\nYour pick: sign."))
         self.assertTrue(head["Content-Type"].startswith("text/plain"))
         _, req = self.seen[0]
         self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})

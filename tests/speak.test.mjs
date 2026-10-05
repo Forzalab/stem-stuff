@@ -14,4 +14,5 @@ test("lines become sentences; units spelled", () => {
   assert.equal(speakable("one\ntwo"), "one. two");
   assert.equal(speakable(""), "");
   assert.equal(speakable("So the speed is **20.9 m/s**.\n$$v = 20.9$$"), "So the speed is 20.9 meters per second. v equals 20.9");
+  assert.equal(speakable("Before:\n- Cart: $2(3) = 6$"), "Before: Cart: 2 3 equals 6");
 });

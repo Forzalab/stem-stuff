@@ -1073,18 +1073,23 @@ async function wishStart(auto) {
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
 }
-/* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; a line
+/* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "- " lines in a row make one short list (the ChatGPT break-up, Tony's ref); a line
    that is only math ($$..$$ or $..$) is display math, and display lines in a row share one tinted callout, one equation per line; a table row
    (2+ spaces between cells) in the mono face so its columns line up */
 const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
 const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
 const wishLine = l => esc(l).replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>") || "&nbsp;";
 function wishHTML(t) {
-  let out = "", eqs = [];
-  const flush = () => { if (eqs.length) out += `<div class="wl wmath">${eqs.join("")}</div>`; eqs = []; };
+  let out = "", eqs = [], li = [];
+  const flush = () => {
+    if (eqs.length) out += `<div class="wl wmath${eqs.length === 1 && eqs[0].includes("boxed") ? " wans" : ""}">${eqs.join("")}</div>`;   // a lone boxed answer: no box around the box
+    if (li.length) out += `<ul class="wl wlist">${li.join("")}</ul>`;
+    eqs = []; li = [];
+  };
   for (const l of t.split("\n")) {
-    const d = l.match(WDISP);
-    if (d) { eqs.push(`<div class="weq">${wishMath(esc(d[1]), true, esc(l))}</div>`); continue; }
+    const d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
+    if (d) { if (li.length) flush(); eqs.push(`<div class="weq">${wishMath(esc(d[1]), true, esc(l))}</div>`); continue; }
+    if (b) { if (eqs.length) flush(); li.push(`<li>${wishLine(b[1])}</li>`); continue; }
     flush();
     out += `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`;
   }
