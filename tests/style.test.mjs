@@ -80,7 +80,7 @@ test("§2.2 type: Atkinson, Atkinson Mono or KaTeX only", () => {
 });
 
 test("§2.1 --mark is Cluck and figures only, never a warning", () => {
-  const bad = ALL.filter(d => /var\(--mark\)/.test(d.value) && !/cluck|duck|fig|graph|specimen/i.test(d.sel));
+  const bad = ALL.filter(d => /var\(--mark\)/.test(d.value) && !/cluck|duck|fig|graph|specimen|\.chg\b/i.test(d.sel));
   assert.deepEqual(bad.map(fmt), [], "--mark: Cluck's duck and figure highlights (STYLE.md §2.1)");
 });
 

@@ -23,9 +23,9 @@ const ch = (...m) => m.map((md, i) => ({ id: "abcde"[i], md }));
 const real = (code, n) => ({ code, type: "mc", shuffle: false, body: [{ type: "text", md: `Real ${n}: pick a.` }], choices: ch("one", "two", "three", "four", "five"),
   correct: "a", wrong: [{ choice: "b", hint: "QUACK. Not b." }, { choice: "c", hint: "QUACK. Not c." }],
   saccharine: { title: `Practice Exam 2, Question ${n}`, key: "Use: a\nAnswer: a", slip: { b: "b slip" } } });
-const snack = (code, before, q, solution) => ({ ...real(code, 9), sugar_only: true, body: [{ type: "text", md: "Snack: pick a." }],
+const snack = (code, before, q, solution) => ({ ...real(code, 9), sugar_only: true, body: [{ type: "text", md: "Snack: $k = 4\\ \\text{N/m}$, pick a." }],
   saccharine: { title: `Practice Exam 2, Question ${q}: k changed`, key: "Use: a", snack: true, before,
-    original: { q, body: [{ type: "text", md: `The original question ${q}.` }], solution } } });
+    original: { q, body: [{ type: "text", md: "Snack: $k = 2\\ \\text{N/m}$, pick a." }], solution } } });
 const SOL = ["Use: $F = kx$", "$F = 2 \\cdot 3 = 6$ N", "Answer: 6 N"];
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_RW12.json"), JSON.stringify({ v: 1, problems: [
@@ -166,6 +166,21 @@ try {
     await page.click("#qnext"); await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_R03", null, { timeout: 4000 });
   });
 
+  await step("a snack marks what it changed: the chip, its number, and the original's number in the question and the steps (TODO A)", async () => {
+    const cc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+    await cc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const d = await cc.newPage();
+    await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");
+    assert.equal(await d.textContent("#blocks .chg-chip"), "Changed: 2 → 4 N/m");
+    assert.deepEqual(await d.$$eval("#blocks .md .chg", e => e.map(x => x.textContent)), ["4"], "the snack's own number, inside KaTeX");
+    assert.deepEqual(await d.$$eval("#cluck .orig-q .chg", e => e.map(x => x.textContent)), ["2"], "the original question: its number");
+    assert.deepEqual(await d.$$eval("#cluck .orig-sol .chg", e => e.map(x => x.textContent)), ["2"], "the steps: the same number, the same mark");
+    assert.notEqual(await d.$eval("#blocks .md .chg", e => getComputedStyle(e).textDecorationLine), "none", "an underline");
+    await d.goto(BASE + "/#CALC1_R01"); await opened(d, "CALC1_R01");
+    assert.equal(await d.$$eval("#blocks .chg-chip, #blocks .chg", e => e.length), 0, "a real question: no marks");
+    await cc.close();
+  });
+
   await step("the original beside a snack fades: whole solution, then the last line behind Peek (2 XP), then folded", async () => {
     const dc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
     await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
@@ -235,6 +250,16 @@ try {
     await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "a tap on the FREE sticker works the card too");
     assert.equal(await p.isVisible("#cluck .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
+    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps", "phone: the head bar says what the card said (TODO C)");
+    await p.click("#cluck .cl-bar .cl-x");
+    await p.route("**/narrate", r => r.fulfill({ json: { text: "QUACK. Pick a." } }));                 // the fixture has no narration
+    const told = p.waitForResponse(r => r.url().endsWith("/narrate"));
+    await pick(p, "b"); await told; await p.waitForTimeout(200);
+    assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
+    await p.click("#origHd");
+    await p.waitForFunction(() => /Pick a/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
+    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps");
+    assert.equal(await p.isVisible("#cluck .orig-sol"), true, "Cluck on top, the steps under him");
     await pc.close();
   });
 
