@@ -283,6 +283,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); margin-top: var(--s2); }
 .chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
 .chk .cluck > .ico { margin-top: 0; }
+.chk .cluck .md { overflow-wrap: anywhere; }
 .q.closed .chk { display: none; }
 /* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
 .pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
@@ -525,7 +526,7 @@ html:not(.side) .cl-ttl { display: none; }                                   /* 
 .cl-ft[hidden] { display: none; }
 /* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */
 @property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-.ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s5); border-radius: calc(var(--btn) / 2 + var(--s2)); border: 1.5px solid transparent;   /* RM3: a tonal pill; the rim (a listed --bw exception, like the toast) shows only while Cluck types */
+.ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s5); border-radius: 10px; border: 1.5px solid transparent;   /* square-ish like the code box (Tony, Oct 5: only the Cluck chip stays a pill); RM3 tonal fill; the rim (a listed --bw exception, like the toast) shows only while Cluck types */
   background: var(--ai-pill) padding-box; }
 .cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 2.4s linear infinite;
   background: linear-gradient(var(--ai-pill), var(--ai-pill)) padding-box,
@@ -537,7 +538,7 @@ html:not(.side) .cl-ttl { display: none; }                                   /* 
 .ask .ff input { font-family: inherit; color: var(--ai-strong); }            /* talk, not an answer: the sans, not the answers' mono */
 .ask .ff input::placeholder { color: var(--ai-muted); }
 .ask .left { flex: none; font-size: var(--t-xs); font-weight: 700; color: var(--ai-on-ct); white-space: nowrap; }
-.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 50%; background: var(--ai-send); color: var(--ai-send-ink); cursor: pointer; }
+.ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 8px; background: var(--ai-send); color: var(--ai-send-ink); cursor: pointer; }
 .ask .send .ico { width: 26px; height: 26px; }
 .ask .send:hover { filter: brightness(1.08); }
 .ask .send:disabled { opacity: .45; cursor: default; filter: none; }

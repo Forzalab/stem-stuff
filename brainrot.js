@@ -9,7 +9,7 @@
    app.js calls window.stemBrainrot.sync() after every question opens and on layout changes. Nothing loads until it first shows.
    Desktop / tablet side by side (html.side; Tony, Oct 4 picked "B: top of notes"): it docks as the first thing in the notes column,
    both players side by side, sticky, no drag, no corner math; – folds it into a "Show video" bar. Moving an iframe reloads it, so it is
-   placed once and only moves when the layout crosses the breakpoint.
+   placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below).
    Docked, a label row heads the column (Tony, Oct 5, video-bar.html ?v=1): the duck + "Cluck", level with the question's "Question" label,
    and one "Curated brainrots" button that folds / unfolds the players (the – / ✕ overlays and the 36px "Show video" bar are gone there).
    The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
@@ -35,6 +35,28 @@
   /* no controls, no keyboard, no fullscreen, no annotations, no end screen of other channels; the title strip YouTube still draws is
      cropped off by the box (app.css .rot .vid iframe). The video itself can't be cached (cross-origin stream, YouTube's terms): the
      player is warmed instead, built off screen once the page settles, so it is already buffering when a question opens. */
+  /* a slow link (Tony, Oct 5: 128 kbps 5G) gets no corner and no request to YouTube at all. ?slow=1|0 forces it (tests). Chrome says so
+     (navigator.connection); Firefox and Safari don't, so the biggest real download of this page is timed (> 4 KB, not from a cache).
+     A measurement is kept per device; with none this load (all from the service worker) the kept one holds, else fast. */
+  const KBPS = 1000;                                                     // under 1 Mbps a ~1 MB player takes 10 s+
+  function measure() {
+    const c = navigator.connection;
+    if (c) return !!c.saveData || /^(slow-2g|2g|3g)$/.test(c.effectiveType) || c.downlink < KBPS / 1000;
+    const big = [...performance.getEntriesByType("navigation"), ...performance.getEntriesByType("resource")]
+      .filter(e => e.name.startsWith(location.origin) && e.transferSize > 4096 && e.responseEnd > e.responseStart)
+      .sort((a, b) => b.transferSize - a.transferSize)[0];
+    return big ? big.transferSize * 8 / (big.responseEnd - big.responseStart) < KBPS : null;   // bits per ms = kbps
+  }
+  let slowV = null;
+  function slow() {
+    if (slowV !== null) return slowV;
+    const f = new URLSearchParams(location.search).get("slow");
+    if (f === "1" || f === "0") return (slowV = f === "1");
+    const m = measure();
+    if (m !== null) store("stem-slow", m ? "1" : "0");
+    return (slowV = m !== null ? m : store("stem-slow") === "1");
+  }
+  const off = () => !!sess("stem-rot-off") || slow();                   // ✕ for this session, or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
@@ -145,21 +167,24 @@
   }
   /* show it only where it belongs: a sugar question with its layer, no pad page / keyboard / open code bar, not hidden this session */
   function sync() {
-    const want = !!(window.stemBrainrotWanted && window.stemBrainrotWanted()) && !sess("stem-rot-off")
+    const want = !!(window.stemBrainrotWanted && window.stemBrainrotWanted()) && !off()
       && !root.classList.contains("mt") && !root.classList.contains("swap") && !root.classList.contains("bar-open")
       && !root.classList.contains("dock-away") && !document.querySelector("#q input:focus");
     if (want && !el) build();
     if (!el) return;
-    const warm = !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !sess("stem-rot-off");
+    const warm = !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !off();
     on = want;
     el.hidden = !want && !warm;                              // diet / hidden for the session: gone
     el.classList.toggle("parked", warm);                     // sugar, just not now (pad page, keyboard...): off screen, still buffering
     el.inert = warm; el.setAttribute("aria-hidden", String(warm));
     if (want) requestAnimationFrame(() => place(false));
   }
-  /* sugar: build the players off screen as soon as the page is idle, so the first question doesn't wait for YouTube */
+  /* sugar: build the players off screen as soon as the page is idle, so the first question doesn't wait for YouTube. The preconnects
+     live here (not in index.html), so a slow link never opens a connection to YouTube */
   function warmUp() {
-    if (el || !(window.stemBrainrotWarm && window.stemBrainrotWarm()) || sess("stem-rot-off")) return;
+    if (el || !(window.stemBrainrotWarm && window.stemBrainrotWarm()) || off()) return;
+    for (const href of ["https://www.youtube-nocookie.com", "https://i.ytimg.com", "https://www.youtube.com"])
+      document.head.append(Object.assign(document.createElement("link"), { rel: "preconnect", href }));
     build(); sync();
   }
   const idle = window.requestIdleCallback || (f => setTimeout(f, 1200));

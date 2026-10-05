@@ -55,6 +55,14 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await page.evaluate(() => scrollTo(0, 0)); await settle();
   });
 
+  await step(`${T} first visit: the button starts on the left, clear of Check at the bottom of the page (Tony, Oct 5)`, async () => {
+    await page.evaluate(() => scrollTo(0, 1e6)); await settle();
+    const g = await page.evaluate(() => { const r = e => e.getBoundingClientRect(), f = r(document.querySelector("#padFab")), c = r(document.querySelector("#mcGo"));
+      return { fl: f.left, overlap: c.right > f.left && c.left < f.right && c.bottom > f.top && c.top < f.bottom }; });
+    assert.ok(g.fl <= 24, `not on the left edge: ${g.fl}`); assert.equal(g.overlap, false, "covers Check");
+    await page.evaluate(() => scrollTo(0, 0)); await settle();
+  });
+
   await step(`${T} setup: the page scrolls and the button is shown`, async () => {
     assert.ok(await page.locator("#padFab").isVisible(), "button hidden");
     assert.ok(await range() > 600, `page too short to scroll: ${await range()}`);
