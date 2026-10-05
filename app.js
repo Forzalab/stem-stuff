@@ -1142,7 +1142,7 @@ function wishFrame(now) {
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); clAsk(); }   // what the box shows is what is spoken
+  if (!w.said) { w.said = true; if (!cl?.auto) voiceSay(t); say("Cluck's steps are open."); clAsk(); }   // what the box shows is what is spoken; an auto-open stays quiet (Tony, Oct 5: "mute sound")
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {

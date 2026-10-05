@@ -148,6 +148,7 @@ try {
 
   await step("sugar: a split row is a True/False question, one try, its own slip", async () => {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
+    await page.evaluate(() => { window.__said = []; });
     assert.deepEqual(await rows(page), ["True", "False"]);
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
@@ -157,6 +158,8 @@ try {
     await page.waitForFunction(() => /Hide Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too; desktop: the sheet opens by itself
     assert.equal(await page.getAttribute("#clTabE", "aria-selected"), "true");
     assert.equal(await page.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
+    await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
+    assert.equal(await page.evaluate(() => window.__said.length), 0, "an auto-open types the text but stays quiet (Tony, Oct 5)");
     assert.equal(await page.$eval("#xb", e => e.getClientRects().length), 0, "Cluck is showing: no scratchpad");
     asked = 0;
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
