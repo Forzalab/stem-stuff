@@ -159,7 +159,7 @@ try {
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
     assert.equal(await d.isHidden("#xb"), true, "in the scratchpad's place while open");
-    assert.match(await d.textContent("#origHd"), /See how the exam solved it/);   // T1 variant A: a button that says what you get
+    assert.match(await d.textContent("#origHd"), /Exam's solution/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
@@ -188,6 +188,8 @@ try {
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
     await p.click("#origHd");
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "the tap opens it");
+    await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "a tap on the FREE sticker works the card too");
+    await p.click("#origHd");
     assert.equal(await p.isVisible("#orig .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
     await pc.close();

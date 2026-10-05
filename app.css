@@ -394,13 +394,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .ctl .ico, .rot .rtab .ico { width: 1.25rem; height: 1.25rem; }
 .rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
 .rot .rtab.r { border-radius: 10px 0 0 10px; }
+@media (min-width: 720px) { .rot .rtab { width: 24px; } }        /* desktop: the stash tab fits the page gutter, off the answers' letters (desktop audit, Oct 5) */
 .rot.stashed .rtab { display: grid; }
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
 /* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
 /* sugar: the original beside a snack (app.js origRender; design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
    top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
-.orig { margin: 0 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
+.orig { position: relative; margin: var(--s2) 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
 .orig-body { padding: 0 var(--s4) var(--s4); }
 .orig-body .md { color: var(--ink); }
 .orig-h { margin: var(--s3) 0 var(--s1); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
@@ -430,7 +431,7 @@ html.side #work > .orig { margin: 0; }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
 .wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
 .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.wvoice { min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); }
+.wvoice { width: auto; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); white-space: nowrap; }   /* "Turn voice off" on one line (.btn is 48px square) */
 .wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer; }   /* a tap skips the typing */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }

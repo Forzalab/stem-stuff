@@ -1197,9 +1197,10 @@ function origRender() {
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
-  /* T1 (Tony, Oct 4, picked variant A "Free hint card"): it read as a topic bar, so it is now a filled casino button that says what you
-     get. FREE only while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
-  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">See how the exam solved it</span><span class="rw-hint-s">Same steps, new numbers${lvl < 3 ? ' <span class="rw-free">FREE</span>' : ""}</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>
+  /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
+     topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
+     while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Exam's solution</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
     <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
     <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
@@ -1212,6 +1213,7 @@ function origRender() {
     if (!S.orig.open && S.orig.lvl === 3) origPeeked();                        // folded away: looking again is a peek
     origOpen(!S.orig.open);
   });
+  el.querySelector(".rw-free")?.addEventListener("click", () => el.querySelector(".orig-hd").click());   // the sticker sits on the card's corner
   el.querySelector(".orig-peek")?.addEventListener("click", e => {
     el.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
   });
