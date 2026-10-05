@@ -10,7 +10,7 @@
   block) and a ~700 px empty run in the top bar between the code box and the HUD; 1440 a 40 px band; 1366 none.
   ?v=A  one gold-rimmed pill at the top bar's right end, height = --btn.
   ?v=B  a slot strip: balance window + level star + wide bar + flame. Tall windows (the band >= 64 px): it takes the band above the bar,
-        and the body offset shrinks by the same amount, so the question does not move. Short windows: it fills the bar's middle run.
+        Tony picked B (Oct 5) with "snug into the topbar gap": it always fills the bar's middle run (built: rewards/engine.js + rewards.css).
   ?v=C  a progress rail: this bank's question dots + "next up", in the band (tall) or the bar's middle run (short); coin + flame compact.
   Gold/tangerine family only; purple is kept for the LEVEL UP burst. Tap the HUD = the progress popover (counts in words).
   Same made-up state in all three: 214 XP, level 3, 36 XP to level 4, streak 5, exam 9, easy 4, bank of 12 at question 7 (a snack).
@@ -206,7 +206,7 @@ document.querySelector(`#sw a[href="?v=${v}"]`).classList.add("on");
 const fit = () => {
   const px = k => { const e = document.createElement("i"); e.style.cssText = `position:absolute;height:var(${k})`; document.body.append(e); const h = e.offsetHeight; e.remove(); return h; };
   const band = px("--band"), btn = px("--btn");
-  const tall = v !== "A" && innerWidth > 700 && band >= btn + 12;
+  const tall = v === "C" && innerWidth > 700 && band >= btn + 12;
   root.classList.toggle("tall", tall);
   (tall ? document.getElementById("band") : document.getElementById("slot")).innerHTML = V[v]();
   (tall ? document.getElementById("slot") : document.getElementById("band")).innerHTML = "";

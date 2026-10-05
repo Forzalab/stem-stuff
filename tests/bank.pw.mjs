@@ -42,7 +42,7 @@ async function typeCode(page, code) {
   if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
-const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button itself says "Questions")
+const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button says the bank code, or "Questions" for a file)
 const rowTexts = async page => { if (await page.isHidden("#qlist")) await page.click("#qlistBtn"); return page.$$eval("#qlist a", as => as.map(a => a.textContent.trim())); };
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -64,12 +64,13 @@ try {
       assert.ok(await page.isHidden("#qnav"));
     });
 
-    await step(`${vname}: type "bank ab12" -> first question, list button says Questions (title = the code), checklist icon`, async () => {
+    await step(`${vname}: type "bank ab12" -> first question, list button says the bank code (Tony, Oct 5), checklist icon`, async () => {
       await typeCode(page, "bank ab12");
       await opened(page, "CALC1_B01");
       assert.equal(await label(page), "BANK_AB12");
       assert.equal(await page.getAttribute("#qlistBtn", "aria-label"), "Question list");
-      assert.equal((await page.innerText("#qlistName")).trim(), "Questions");
+      assert.equal((await page.innerText("#qlistName")).trim(), "BANK_AB12");
+      assert.ok(await page.$("#qlistBtn svg.ico"), "the list icon stays");
       assert.deepEqual(await rowTexts(page), ["1Bank one: 1 + 1", "2Bank two: 1 + 2", "3Bank three: 2 + 2"]);
       const r = await page.locator("#qlistBtn").boundingBox();
       assert.ok(r.height >= 48, "list button under 48px");

@@ -19,58 +19,76 @@
   --rw-r-s: 12px; --rw-r-m: 20px; --rw-r-l: 28px; --rw-pill: 999px;
   --rw-font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
   --rw-pixel: "Press Start 2P", "Atkinson Hyperlegible Mono", monospace;
+  --rw-g-rim: #e0b432; --rw-g-rim-dk: #8a6400; --rw-g-body: #1b1407; --rw-g-well: #0d0903; --rw-g-ink: #fff4d0; --rw-g-soft: #e9d6a4;   /* HUD B */
   --rw-goldify: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);   /* tints the Fluent duck gold */
 }
 
-/* ---------- HUD: one row in the page flow (app.js mounts it in the top bar; never fixed) ---------- */
+/* ---------- HUD B: one gold-rimmed strip in the top bar's gap (Tony, Oct 5 pick; design/mockups/hud.html ?v=B) ----------
+   [balance window: coin + XP] [level star + bar + "N XP to level M"] [flame + streak]. Gold and tangerine only; purple is the LEVEL UP
+   burst's (rare = special). As tall as the bar's buttons. A narrow gap drops the words, then the bar. app.js mounts it; never fixed. */
 .rw-hud {
-  container-type: inline-size; display: flex; align-items: center; gap: 8px; min-width: 0; height: 40px;
-  font-family: var(--rw-font); font-weight: 700; color: #fff; user-select: none; -webkit-user-select: none;
+  container-type: inline-size; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--btn, 48px);
+  padding: 0 5px; border-radius: 14px; background: var(--rw-g-body); border: 2px solid var(--rw-g-rim);
+  font-family: var(--rw-font); font-weight: 700; color: var(--rw-g-ink); user-select: none; -webkit-user-select: none;
 }
-.qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 4; justify-self: stretch; justify-content: flex-end; margin: 4px 0; }
+.qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 4; justify-self: stretch; }
 /* no question list (a question opened by link): the HUD lines up with the content under it, not the window's edge */
-html:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { max-width: var(--col); margin: var(--s2, 8px) auto 0; padding: 0 var(--gut); box-sizing: border-box; }
-html.side:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { max-width: min(100%, calc(var(--col) * 1.7)); }
-.dock-bottom .rw-hud { max-width: 52rem; margin: 12px auto 0; padding: 0 var(--gut); box-sizing: content-box; }
+html:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { width: min(100% - 2 * var(--gut), var(--col) - 2 * var(--gut)); margin: var(--s2, 8px) auto 0; box-sizing: border-box; }
+html.side:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { width: min(100% - 2 * var(--gut), var(--col) * 1.7 - 2 * var(--gut)); }
+.dock-bottom .rw-hud { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: 12px auto 0; box-sizing: border-box; }
 html.start .rw-hud { display: none; }
-.rw-pill {
-  position: relative; display: flex; align-items: center; gap: 6px; height: 40px; min-width: 0; padding: 0 12px 0 4px;
-  border-radius: var(--rw-pill); background: var(--rw-v900);
-  box-shadow: inset 0 2px 0 var(--rw-v700), inset 0 -2px 0 var(--rw-v950);
+/* the one tap target: a clear button over the whole strip (Enter / Space for free); it opens #rwPop */
+.rw-tap { position: absolute; inset: -2px; margin: 0; padding: 0; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.rw-tap:focus-visible { outline: 2px solid var(--focus, #8fb0ff); outline-offset: 3px; }
+.rw-coin {
+  position: relative; flex: none; overflow: hidden; display: flex; align-items: center; gap: 8px; height: calc(100% - 12px); padding: 0 14px 0 6px;
+  border-radius: 10px; background: var(--rw-g-well); border: 1px solid var(--rw-g-rim-dk);
 }
-.rw-coin { flex: 0 0 auto; overflow: hidden; }
-/* impeccable waiver: casino-themed (Tony, Oct 4): one light sweep across the coin pill on each correct (FX.shine), transform only */
+/* impeccable waiver: casino-themed (Tony, Oct 4): one light sweep across the balance on each correct (FX.shine), transform only */
 .rw-coin.rw-shine::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none;
-  background: linear-gradient(105deg, transparent, rgb(255 255 255 / .55), transparent); transform: translateX(-120%); animation: rw-shine .6s ease-out; }
+  background: linear-gradient(105deg, transparent, rgb(255 255 255 / .45), transparent); transform: translateX(-120%); animation: rw-shine .6s ease-out; }
 @keyframes rw-shine { to { transform: translateX(300%); } }
-.rw-coin-ic { width: 30px; height: 30px; flex: none; filter: drop-shadow(0 2px 0 var(--rw-v950)); }
+.rw-coin-ic { width: 28px; height: 28px; flex: none; }
 .rw-coin-ic img, .rw-flame img { width: 100%; height: 100%; display: block; }
-.rw-num { font: 700 20px/1 var(--rw-font); color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 var(--rw-v950); }
-.rw-lvl { flex: 1 1 auto; max-width: 15rem; padding-left: 0; }
-.rw-star { position: relative; width: 40px; height: 40px; flex: none; margin: 0 -2px 0 -4px; display: grid; place-items: center; }
-.rw-star img { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 2px 0 var(--rw-v950)); }
-.rw-star b { position: relative; margin-top: 3px; font: 700 15px/1 var(--rw-font); color: #5a2a00; }
-.rw-lvl-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.rw-bar { display: block; height: 10px; border-radius: var(--rw-pill); overflow: hidden; background: var(--rw-v950); box-shadow: inset 0 2px 0 rgb(0 0 0 / .4); }
+.rw-num { font: 700 22px/1 var(--rw-font); color: var(--rw-sun); font-variant-numeric: tabular-nums; }
+.rw-lvl { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.rw-star { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
+.rw-star img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rw-star b { position: relative; margin-top: 3px; font: 700 16px/1 var(--rw-font); color: #4a2300; }
+.rw-lvl-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
+.rw-bar { flex: 1; min-width: 0; display: block; height: 14px; border-radius: var(--rw-pill); overflow: hidden; background: var(--rw-g-well); }
 .rw-bar i {
   display: block; height: 100%; width: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left;
-  background: var(--rw-sun); box-shadow: inset 0 -2px 0 var(--rw-sun-dk); transition: transform .5s cubic-bezier(.16, 1, .3, 1);
+  background: var(--rw-sun); transition: transform .5s cubic-bezier(.16, 1, .3, 1);
 }
-.rw-to { font: 700 12px/1 var(--rw-font); color: var(--rw-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rw-to { flex: none; font: 700 18px/1.1 var(--rw-font); color: var(--rw-g-soft); white-space: nowrap; }
 .rw-to b { color: var(--rw-sun); }
 .rw-lvl.rw-pulse { animation: rw-pulse .7s ease-out; }
 .rw-streak {
-  flex: none; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px 0 8px; border-radius: var(--rw-pill);
-  background: #4a2208; color: #ffc48a; font: 700 20px/1 var(--rw-font); box-shadow: inset 0 2px 0 #6b3510, inset 0 -2px 0 var(--rw-tang-ink);
+  flex: none; display: flex; align-items: center; gap: 6px; height: calc(100% - 12px); padding: 0 12px 0 8px; border-radius: 10px;
+  background: #2a1606; border: 1px solid #6b3510; color: #ffc48a; font: 700 22px/1 var(--rw-font);
 }
 .rw-flame { width: 26px; height: 26px; display: block; transform: scale(var(--fs, 1)); transform-origin: 50% 90%; transition: transform .3s; opacity: .6; filter: grayscale(.7); }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
-.rw-counts { display: none; flex: none;   /* "exam 0 · easy 0" read as noise (Oct 5 review); the screen reader still hears the counts */
-  font: 700 14px/1 var(--rw-font); color: var(--rw-soft); white-space: nowrap; }
-.rw-counts b { font-size: 17px; color: #fff; }
-@container (max-width: 230px) { .rw-to, .rw-streak { display: none; } }
-@container (max-width: 150px) { .rw-lvl { display: none; } }
+.rw-counts { display: none; }   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
+@container (max-width: 470px) { .rw-to { display: none; } }
+@container (max-width: 250px) { .rw-lvl-body { display: none; } .rw-lvl { flex: none; } }
+@container (max-width: 160px) { .rw-lvl { display: none; } }
 @keyframes rw-pulse { 30% { transform: scale(1.07); filter: brightness(1.25); } 100% { transform: none; filter: none; } }
+
+/* "your progress": the native popover under the strip (engine.js sets top / left / width on open) */
+.rw-pop {
+  position: fixed; inset: auto; margin: 0; box-sizing: border-box; padding: 16px; border-radius: 14px;
+  background: var(--rw-g-body); border: 2px solid var(--rw-g-rim); color: var(--rw-g-ink);
+  box-shadow: 0 16px 36px -8px rgb(0 0 0 / .6), 0 3px 6px rgb(0 0 0 / .25); font: 400 17px/1.4 var(--rw-font);
+}
+.rw-pop .rw-pop-h { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; }
+.rw-pop .rw-star { width: 36px; height: 36px; }
+.rw-pop .rw-star b { font-size: 15px; }
+.rw-pop .rw-bar { height: 12px; margin: 0 0 12px; }
+.rw-pop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+.rw-pop dt { color: var(--rw-g-soft); }
+.rw-pop dd { margin: 0; font-weight: 700; }
 
 /* ---------- the Cluck chip, "Explain my mistake" (T4; Tony, Oct 4: "ask ai button should shake like an ad button") ----------
    The slot / red-gold kit pill, redrawn as our own CSS (no pixels copied): dark outline, thick gold rim, red-orange body, light top

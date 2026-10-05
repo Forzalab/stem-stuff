@@ -81,6 +81,13 @@ try {
     assert.ok(hud.top >= top.top && hud.bottom <= top.bottom + 1, "in the top bar " + JSON.stringify([hud, top]));
     assert.ok(!overlap(hud, prev), "clear of Prev");
     assert.equal(await xp(page), 0);
+    await page.click("#rwHud .rw-tap");                                        // HUD B: one tap = "your progress", in words
+    await page.waitForSelector("#rwPop:popover-open", { timeout: 2000 });
+    assert.match(await page.textContent("#rwPop"), /Level 1.*Next level20 XP to go.*Exam questions0 solved.*Easy ones0 solved/);
+    const pop = (await rects(page, ["#rwPop"]))[0];
+    assert.ok(pop.top >= hud.bottom && pop.right <= 1280, "under the strip, on screen " + JSON.stringify(pop));
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#rwPop:not(:popover-open)", { state: "attached", timeout: 2000 });
   });
 
   await step("a first-try correct pays 12-16 XP with the bells (float, coins, coin-pill shine); #toast stays off", async () => {
