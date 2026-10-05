@@ -398,7 +398,7 @@ async function run(browserType, label, opts = {}) {
       const ta = page.locator("#scratch");
       // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
       const clear = () => page.evaluate(() => {
-        const t = document.querySelector("#scratch"), bs = ["#cut", "#copy"].map(q => document.querySelector(q)), cs = getComputedStyle(t);
+        const t = document.querySelector("#scratch"), bs = ["#copy"].map(q => document.querySelector(q)).filter(b => !b.hidden), cs = getComputedStyle(t);
         const m = document.createElement("div");
         for (const k of ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "lineHeight", "paddingTop", "paddingLeft", "paddingRight",
           "paddingBottom", "borderTopWidth", "borderLeftWidth", "borderRightWidth", "borderBottomWidth", "boxSizing", "whiteSpace", "overflowWrap", "wordBreak", "tabSize"]) m.style[k] = cs[k];
@@ -407,19 +407,17 @@ async function run(browserType, label, opts = {}) {
         const r = document.createRange(); r.selectNodeContents(m.firstChild);
         const mr = m.getBoundingClientRect(), tr = t.getBoundingClientRect(), rects = [...r.getClientRects()];
         let hits = 0, inside = true;
-        for (const b of bs) {   // neither Cut nor Copy may have a line box under it
+        for (const b of bs) {   // Copy (shown only with text, clutter C10) may not have a line box under it
           const br = b.getBoundingClientRect(), bx = br.left - tr.left, by = br.top - tr.top;
           hits += rects.filter(q => q.width && q.right - mr.left > bx && q.bottom - mr.top > by && q.top - mr.top < by + br.height).length;
           inside = inside && br.right <= tr.right && br.bottom <= tr.bottom && br.left >= tr.left;
         }
-        const [cut, copy] = bs.map(b => b.getBoundingClientRect());
         m.remove();
         // once the box is capped at the viewport bottom it scrolls: lines pass under the buttons, but the last one rests above them
-        return { hits: t.scrollHeight > t.clientHeight + 1 ? 0 : hits, free: t.classList.contains("xb-free"), inside, apart: cut.right <= copy.left };
+        return { hits: t.scrollHeight > t.clientHeight + 1 ? 0 : hits, free: t.classList.contains("xb-free"), inside, shown: bs.length > 0 };
       });
       let c = await clear();
-      assert.ok(c.inside && c.apart, "Cut and Copy not both inside the textarea box, side by side");
-      assert.equal(c.hits, 0, "placeholder under the button");
+      assert.ok(!c.shown, "Copy shows on an empty pad (clutter C10)");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
       const side = viewport.width >= 720;   // side by side: the pad fills its column (design/MULTITASK.md), it does not grow with the text
       await ta.focus();   // a tap on a phone opens the pad page (variant 9); the band is checked on the plain page, as before
@@ -428,6 +426,7 @@ async function run(browserType, label, opts = {}) {
       for (let i = 0; i < 40; i++) {
         await page.keyboard.type(i ? " slope" : "resolve mg along the slope then balance with kx and check units");
         c = await clear();
+        assert.ok(c.shown && c.inside, `Copy hidden or outside the box after ${i} words`);
         assert.equal(c.hits, 0, `text under the button after ${i} words`);
         if (c.free !== prev) { toggles++; prev = c.free; }
         const nh = await ta.evaluate(t => t.offsetHeight); if (nh !== h) { lines++; h = nh; }
@@ -579,33 +578,27 @@ async function run(browserType, label, opts = {}) {
         if (SHOTS) await page.screenshot({ path: `${SHOTS}/pad-short-390x520.png` });
         await page.setViewportSize({ width: 390, height: 844 });
         await page.waitForTimeout(250);
-        // both buttons are visible in the box's bottom-right corner
-        const vis = await page.evaluate(() => ["#cut", "#copy"].map(q => { const r = document.querySelector(q).getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; }));
-        assert.deepEqual(vis, [true, true]);
-        // failed copy: nothing is cleared
+        // Copy is visible in the box's bottom-right corner (the only button there: Cut all is gone, clutter C10)
+        const vis = await page.evaluate(() => { const r = document.querySelector("#copy").getBoundingClientRect(), t = document.querySelector("#scratch").getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 && r.bottom <= t.bottom && r.right <= t.right; });
+        assert.ok(vis, "Copy not in the box's corner");
+        assert.equal(await page.locator("#cut").count(), 0, "Cut all is back");
+        // failed copy: the X, the text stays
         await page.evaluate(() => { window.__w = navigator.clipboard.writeText; navigator.clipboard.writeText = () => Promise.reject(new Error("no")); window.__e = document.execCommand; document.execCommand = () => false; });
-        await page.locator("#cut").click();
-        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-x");
-        assert.ok((await ta.inputValue()).startsWith("line 1:"), "failed copy cleared the text");
+        await page.locator("#copy").click();
+        await page.waitForFunction(() => document.querySelector("#copy").querySelector("use").getAttribute("href") === "#i-x");
         await page.evaluate(() => { navigator.clipboard.writeText = window.__w; document.execCommand = window.__e; });
-        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-cut", null, { timeout: 4000 });
-        // Cut all: payload has the text, box empties, done feedback, history keeps the clear
-        await page.locator("#cut").click();
-        await page.waitForSelector("#cut.done");
-        assert.equal(await ta.inputValue(), "");
-        assert.equal(await page.evaluate(() => document.querySelector("#cut use").getAttribute("href")), "#i-ok");
-        const p1 = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
-        assert.ok(p1.explain.startsWith("line 1:") && p1.explain.includes("line 60:"), "payload lacks the scratchpad");
-        assert.ok(/^\d+px$/.test(await ta.evaluate(t => t.style.maxHeight)) && await ta.evaluate(t => t.offsetHeight) >= 4 * 28.8, "box collapsed below 4 rows");
-        await page.waitForFunction(() => document.querySelector("#cut").querySelector("use").getAttribute("href") === "#i-cut", null, { timeout: 4000 });
+        await page.waitForFunction(() => document.querySelector("#copy").querySelector("use").getAttribute("href") === "#i-copy", null, { timeout: 4000 });
+        // Copy: payload has the text, done feedback, the notes stay
         await page.locator("#copy").click();
         await page.waitForSelector("#copy.done");
-        const p2 = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
-        const { replay } = await import("../copy/payload.mjs");
-        const snaps = replay(p2).map(x => x.text);
-        assert.equal(p2.explain, ""); assert.ok(p2.hist.n >= 2, "history lost");
-        assert.ok(snaps.at(-2).includes("line 60:") && snaps.at(-1) === "", "the clear is not recorded as an edit");
-        if (SHOTS) { await ta.click(); await page.keyboard.type("after the cut"); await page.locator("#work").screenshot({ path: `${SHOTS}/pad-after-cut-390.png` }); }
+        assert.equal(await page.evaluate(() => document.querySelector("#copy use").getAttribute("href")), "#i-ok");
+        const p1 = JSON.parse(await page.evaluate(() => navigator.clipboard.readText()));
+        assert.ok(p1.explain.startsWith("line 1:") && p1.explain.includes("line 60:"), "payload lacks the scratchpad");
+        assert.ok((await ta.inputValue()).startsWith("line 1:"), "Copy cleared the notes");
+        // empty again: Copy hides
+        await ta.fill("");
+        await page.waitForFunction(() => document.querySelector("#copy").hidden);
+        if (SHOTS) { await ta.click(); await page.keyboard.type("after the copy"); await page.locator("#work").screenshot({ path: `${SHOTS}/pad-after-copy-390.png` }); }
       });
     }
 

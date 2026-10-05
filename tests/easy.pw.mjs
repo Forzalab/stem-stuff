@@ -44,6 +44,9 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
+/* clutter C14: every title shares "Term: ", so the list shows one header over the rows, in any shuffle */
+const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
+writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
 let asked = 0;
@@ -353,6 +356,29 @@ try {
     assert.deepEqual(yt, [], "a request went to YouTube");
     await c.close();
   }
+  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one header for a shared title prefix", async () => {
+    await typeCode(page, "CALC1_E01"); await opened(page, "CALC1_E01");
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).paddingTop), "0px", "C13: no top offset over a question");
+    const ff = await page.evaluate(() => getComputedStyle(document.querySelector("#scratch"), "::placeholder").fontFamily);
+    assert.match(ff, /^"?Atkinson Hyperlegible"?,/, `C9: placeholder font ${ff}`);
+    assert.equal(await page.getAttribute("#scratch", "placeholder"), "Paste GPT answer here, but me be sad...", "C9: the joke stays");
+    assert.equal(await page.locator("#cut").count(), 0, "C10: no Cut all");
+    assert.ok(await page.locator("#copy").isHidden(), "C10: Copy on an empty pad");
+    const type = v => page.evaluate(v => { const t = document.querySelector("#scratch"); t.value = v; t.dispatchEvent(new Event("input")); return document.querySelector("#copy").hidden; }, v);
+    assert.equal(await type("x"), false, "C10: Copy with text");   // the sugar page covers the pad (Cluck's column), so no fill()
+    assert.equal(await type(""), true, "C10: Copy after the pad is emptied");
+    await typeCode(page, "BANK_TRM");
+    await page.waitForFunction(() => /^CALC1_TR/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    if (await page.isHidden("#qlist")) await page.click("#qlistBtn");
+    const l = await page.evaluate(() => ({ heads: [...document.querySelectorAll("#qlist .qh")].map(h => h.textContent),
+      rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
+      w: document.querySelector("#qlist").getBoundingClientRect().width, hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+    assert.deepEqual(l.heads, ["Term"], "C14: one header");
+    assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
+    assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);
+    assert.ok(l.w <= 44 * 16 + 0.5, `C14: list ${l.w}px wide`);
+    await page.click("#qlistBtn");
+  });
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
   await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));

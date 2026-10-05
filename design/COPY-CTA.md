@@ -26,7 +26,7 @@ Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column
 | index.html:183 | label row over the question | Question | = (same) |  |
 | index.html:193 + app.js:1458 | aria (grab handle) | Show the whole problem / Freeze the problem again | Show whole question / Make question small · label: **More** / **Less** | "freeze" is jargon; handle has no word |
 | index.html:200 | label row over the pad | Scratchpad | Notes | grade-1 word; twin of "Question" |
-| index.html:205 | aria+title (cut icon in pad) | Cut all: copy answer, scratchpad and history, then clear the scratchpad / title: Cut all | Copy for Tony, then clear notes · label: **Cut** | says who gets it |
+| index.html:205 | aria+title (cut icon in pad) | Cut all: copy answer, scratchpad and history, then clear the scratchpad / title: Cut all | Copy for Tony, then clear notes · label: **Cut** | says who gets it. GONE (clutter C10, Oct 5: Copy only) |
 | index.html:208 | aria+title (copy icon in pad) | Copy answer, scratchpad and history / title: Copy | Copy my work for Tony · label: **Copy** | says who gets it |
 | index.html:213 + app.js:1628 | aria (q / a toggle) | Show the answer / Show the question (visible: q / a) | Show answer / Show question · label: **Answer** / **Question** (replaces q / a) | single letters unreadable |
 | index.html:216 + app.js:1631 | aria+title (collapse icon) | Close the scratchpad page / Open the scratchpad | Close notes / Open notes · label: **Close** | plain noun; icon needs word |
@@ -87,7 +87,7 @@ Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column
 | app.js:1245 | burst title, rare drop | BONUS LEVEL | BONUS! | no level is given |
 | app.js:1258 | placeholder (pad) | Paste GPT answer here, but me be sad... | KEEP (Tony) · alt: Write your work here | Tony's joke |
 | app.js:1293 | pad save status | saving / saved | = (same) |  |
-| app.js:1324 | sr, copy / cut | Copied and cleared. / Copied. | = (same) |  |
+| app.js:1324 | sr, copy / cut | Copied and cleared. / Copied. | = (same) | "Copied and cleared." gone with Cut (C10) |
 | app.js:1324 | sr, copy failed | Copy failed. | Didn't copy. Try again. | ends with action |
 | app.js:1638 | aria (sash, a11y only) | Problem size: {a}. Tap for {b} | Question size: {a}. Tap for {b} | one noun: question |
 | app.js:1610 | aria values (sash) | problem strip / answer only / problem one third / half / two thirds | question folded / answer only / question one third / half / two thirds | one noun: question |

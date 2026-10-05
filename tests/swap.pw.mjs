@@ -83,7 +83,7 @@ for (const [W, H] of SIZES) {
       // #more: the freeze chevron overlaps the faded edge of the strip on purpose (FREEZE.md; PR #7 reworks it). Not in Swap, where it is gone.
       if (a.el.id === "more" || c.el.id === "more") return true;
       const pair = (x, y) => (x.el.classList.contains("send") && y.el.classList.contains("opt") && x.el.parentElement === y.el.parentElement)
-        || (y.el.classList.contains("xb-cut") || y.el.classList.contains("xb-copy")) && x.el.id === "scratch";
+        || y.el.classList.contains("xb-copy") && x.el.id === "scratch";
       return pair(a, c) || pair(c, a);
     };
     const overlaps = [], small = [];
@@ -313,9 +313,9 @@ for (const [W, H] of SIZES) {
     await mustBeInside("#ans");
     await kbDown(); await page.evaluate(() => document.activeElement.blur());
     await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); await settle();
-    const g = await page.evaluate(() => ({ tile: document.querySelector("#freeze").getBoundingClientRect().top, cut: document.querySelector("#cut").getBoundingClientRect().bottom, vh: innerHeight }));
+    const g = await page.evaluate(() => ({ tile: document.querySelector("#freeze").getBoundingClientRect().top, row: document.querySelector("#mtExp").getBoundingClientRect().bottom, vh: innerHeight }));
     assert.ok(g.tile >= 47 - 0.5, `pad page under the notch: tile top ${g.tile}`);
-    assert.ok(g.cut <= g.vh - 34 + 0.5, `tool row under the home indicator: ${g.cut} > ${g.vh - 34}`);
+    assert.ok(g.row <= g.vh - 34 + 0.5, `tool row under the home indicator: ${g.row} > ${g.vh - 34}`);
     await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 0, bottom: 0, left: 0, right: 0 } });
     await page.click("#mtExp");
   });

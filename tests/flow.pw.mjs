@@ -136,17 +136,19 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   });
   await shot();   // 6: the plain page with the button
 
-  await step(`${T} the pad page: no header row; tool row in the pad (q | a left, collapse, Cut, Copy right); the tile hugs; Back closes`, async () => {
+  await step(`${T} the pad page: no header row; tool row in the pad (q | a left, collapse, Copy right); the tile hugs; Back closes`, async () => {
     const url = page.url();
     await openPad();
+    assert.ok(await page.locator("#copy").isHidden(), "Copy shows on an empty pad (clutter C10)");
+    await page.evaluate(() => { const t = document.querySelector("#scratch"); t.value = "x"; t.dispatchEvent(new Event("input")); });   // Copy comes with text
     assert.ok(await has("mt-q") && await has("mt-fit"), `q, hugging (${await cls()})`);
     assert.ok(await page.locator("#xbName").evaluate(e => !e.getClientRects().length || e.getBoundingClientRect().width <= 1), "header row label shown");
-    const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), f = r("#xbField"), m = r("#mtMode"), x = r("#mtExp"), c = r("#cut"), p = r("#copy"), t = r("#freeze"), pr = document.querySelector("#problem");
-      return { inside: [m, x, c, p].every(q => q.left >= f.left - 0.5 && q.right <= f.right + 0.5 && q.bottom <= f.bottom + 0.5 && q.top >= f.top), row: [m, x, c, p].map(q => Math.round(q.top)),
-        order: m.right < x.left && x.right < c.left && c.right < p.left, tileH: t.height, need: pr.scrollHeight, vh: innerHeight }; });
+    const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), f = r("#xbField"), m = r("#mtMode"), x = r("#mtExp"), p = r("#copy"), t = r("#freeze"), pr = document.querySelector("#problem");
+      return { inside: [m, x, p].every(q => q.left >= f.left - 0.5 && q.right <= f.right + 0.5 && q.bottom <= f.bottom + 0.5 && q.top >= f.top), row: [m, x, p].map(q => Math.round(q.top)),
+        order: m.right < x.left && x.right < p.left, tileH: t.height, need: pr.scrollHeight, vh: innerHeight }; });
     assert.ok(g.inside, "tool row not inside the pad's box");
     assert.ok(new Set(g.row).size === 1, `one row: ${g.row}`);
-    assert.ok(g.order, "order q | a, collapse, Cut, Copy");
+    assert.ok(g.order, "order q | a, collapse, Copy");
     const cap = (g.vh < 700 ? 1 / 3 : 0.45) * g.vh;
     assert.ok(g.tileH <= Math.min(g.need, cap) + 2, `tile ${g.tileH} > min(content ${g.need}, cap ${Math.round(cap)})`);
     await shot();   // 7: the pad page on q

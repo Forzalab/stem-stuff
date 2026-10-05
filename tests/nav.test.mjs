@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { titleOf, texText, clip } from "../nav.js";
+import { titleOf, texText, clip, head } from "../nav.js";
 
 const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
 
@@ -32,4 +32,10 @@ test("TeX to text", () => {
 });
 test("no body text: empty title (the list shows the code)", () => {
   assert.equal(titleOf({ body: [{ type: "graph", alt: "a plot" }] }), "");
+});
+test("title prefix for the list header (clutter C14)", () => {
+  assert.equal(head("Force graph 2: work"), "Force graph 2");
+  assert.equal(head("Pucks, reverse trade: v1"), "Pucks, reverse trade");
+  assert.equal(head("Skier tow power"), "");
+  assert.equal(head("ratio 3:1 here"), "");   // a colon needs the space
 });

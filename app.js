@@ -1482,12 +1482,15 @@ function mountBox() {
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
   ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbName");
   field.prepend(ta);
+  /* C10 (Tony, Oct 5): Copy shows only when the box has text. Listened before reserveCorner's, so the corner sees the button as it is */
+  const copyBtn = $("#copy"), syncCopy = () => { copyBtn.hidden = !ta.value; };
+  ta.addEventListener("input", syncCopy); ta.addEventListener("xb-cap", syncCopy); syncCopy();
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
     cap: () => swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
-  S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
+  S.corner = ExplainBox.reserveCorner(ta, copyBtn);
   mounted = { box: S.box, corner: S.corner };
-  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Cut / Copy
+  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Copy
      and of where the revealed code bar lies */
   ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
   autosave(ta);
@@ -1534,21 +1537,19 @@ async function copyText(text) {
   t.remove();
   return ok;
 }
-/* Copy, and Cut all (= Copy, then empty the box; only if the copy worked). Cut keeps the edit history and records the clear. */
-async function copyPad(b, icon, clear) {
+/* Copy: the notes, tries, hints and edit history as one payload; the notes stay (C10: Cut all is gone) */
+async function copyPad() {
   if (!S) return;
-  const box = S.box, text = box.el.value;
+  const b = $("#copy"), box = S.box;
   box.snapshot();
-  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: text, history: box.getHistory() }));
+  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: box.el.value, history: box.getHistory() }));
   const ok = await copyText(payload);
-  if (ok && clear && box.el.value === text) { box.el.value = ""; box.el.dispatchEvent(new Event("input")); box.snapshot(); }
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Didn't copy. Try again.");
-  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", icon); }, 1600);
+  say(ok ? "Copied." : "Didn't copy. Try again.");
+  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
-$("#copy").addEventListener("click", () => copyPad($("#copy"), "#i-copy", false));
-$("#cut").addEventListener("click", () => copyPad($("#cut"), "#i-cut", true));
+$("#copy").addEventListener("click", copyPad);
 
 /* ================= freeze layer (design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
