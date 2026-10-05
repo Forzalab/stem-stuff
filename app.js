@@ -1649,6 +1649,7 @@ function applyMT() {
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
+  root.classList.toggle("no-pad", side && modeOf() === "sugar" && !!S.prob.wish);   // desktop sugar: no notes pad, the column is videos + hint card (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it")
   root.classList.toggle("mt", mtOpen);
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);

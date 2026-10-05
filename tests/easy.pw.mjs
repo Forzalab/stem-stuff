@@ -119,6 +119,7 @@ try {
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
       return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("dock"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
+    assert.equal(await page.$eval("#xb", e => e.getClientRects().length), 0, "desktop sugar: no notes pad (Tony, Oct 4)");
     await page.click("#rot .vid"); await page.click('#rot [data-act="min"]');
     assert.equal(await page.isVisible("#rot .rtab"), true, "– folds it into the Show video bar");
     await page.click("#rot .rtab"); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the bar brings it back");
@@ -232,6 +233,7 @@ try {
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
     assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
+    assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "diet keeps the notes pad on desktop");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Original E01/);
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$$eval("#q .fix", f => f.length), 0, "fix boxes in diet mode (prove mode is gone)");

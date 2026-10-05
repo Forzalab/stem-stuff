@@ -167,7 +167,7 @@ try {
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 3);
     await d.click("#origHd");
-    assert.equal(await d.isVisible("#xb"), true, "folded: the scratchpad is back");
+    assert.equal(await d.isHidden("#xb"), true, "folded: still no scratchpad (desktop sugar has none; Tony, Oct 4)");
     await pick(d, "b"); await rig(d, [0.99]); await pick(d, "a");             // not a first-try correct: the original stays unsolved
     await go(d, "CALC1_S02");
     assert.equal(await d.$$eval("#orig .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
