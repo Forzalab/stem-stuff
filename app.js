@@ -1995,7 +1995,7 @@ function fabBounds() {
 function fabPlace({ avoid } = {}) {
   const m = mtMem.fab || {}, b = fabBounds();
   let top = b.min + (typeof m.y === "number" ? m.y : 1) * (b.max - b.min);
-  fab.classList.toggle("left", m.side !== "r");          // default left: bottom right covers Check on phones (Tony, Oct 5)
+  fab.classList.toggle("left", m.side === "l");          // default bottom right (Tony, Oct 5 ~09:5x; was left since #69); a drag keeps its side
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */

@@ -44,22 +44,22 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await page.evaluate(() => scrollTo(0, 0)); await settle();
   const start = await fabTop();
 
-  await step(`${T} bottom of the page: no dead gap above the bar, last control clear of the bar; the button may sit over it (it drags away: Tony, Oct 5)`, async () => {
+  await step(`${T} bottom of the page: no dead gap above the bar, last control clear of the bar and of the button (bottom right + room at the end: Tony, Oct 5 ~10:0x)`, async () => {
     await page.evaluate(() => scrollTo(0, 1e6)); await settle();
     const g = await page.evaluate(() => { const r = e => e.getBoundingClientRect(), d = r(document.querySelector("#dock")), f = r(document.querySelector("#padFab"));
       const c = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].filter(e => e.offsetParent).map(r).sort((a, b) => b.bottom - a.bottom)[0];
       return { cb: c.bottom, ct: c.top, cl: c.left, cr: c.right, dockTop: d.top, fabTop: f.top, fabBottom: f.bottom, fl: f.left, fr: f.right }; });
     assert.ok(g.dockTop - g.cb <= 90, `dead gap ${Math.round(g.dockTop - g.cb)}px between the last control and the bar (max 90)`);
     assert.ok(g.cb <= g.dockTop, `last control under the bar: bottom ${g.cb} vs bar top ${g.dockTop}`);
-    assert.ok(g.dockTop - g.cb <= 40, `no reserved room for the button: ${Math.round(g.dockTop - g.cb)}px between the last control and the bar (max 40)`);
+    assert.ok(g.cb <= g.fabTop || g.cr <= g.fl || g.cl >= g.fr, `last control under the button: ${g.cb} vs ${g.fabTop}`);
     await page.evaluate(() => scrollTo(0, 0)); await settle();
   });
 
-  await step(`${T} first visit: the button starts on the left, clear of Check at the bottom of the page (Tony, Oct 5)`, async () => {
+  await step(`${T} first visit: the button starts bottom right, clear of Check at the bottom of the page (Tony, Oct 5)`, async () => {
     await page.evaluate(() => scrollTo(0, 1e6)); await settle();
     const g = await page.evaluate(() => { const r = e => e.getBoundingClientRect(), f = r(document.querySelector("#padFab")), c = r(document.querySelector("#mcGo"));
-      return { fl: f.left, overlap: c.right > f.left && c.left < f.right && c.bottom > f.top && c.top < f.bottom }; });
-    assert.ok(g.fl <= 24, `not on the left edge: ${g.fl}`); assert.equal(g.overlap, false, "covers Check");
+      return { fr: innerWidth - f.right, overlap: c.right > f.left && c.left < f.right && c.bottom > f.top && c.top < f.bottom }; });
+    assert.ok(g.fr <= 24, `not on the right edge: ${g.fr}`); assert.equal(g.overlap, false, "covers Check");
     await page.evaluate(() => scrollTo(0, 0)); await settle();
   });
 
