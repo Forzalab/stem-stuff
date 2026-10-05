@@ -98,7 +98,7 @@ html.start .start-title {
 }
 html.start .entry {
   gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
-  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: calc(var(--btn) / 2 + var(--s1) + 2px);
+  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 10px;
   box-shadow: var(--shadow-1);
   transition: border-color .12s ease-out, box-shadow .2s ease-out;
 }
@@ -107,7 +107,7 @@ html.start .entry:focus-within { border-color: var(--focus); box-shadow: var(--s
 html.start .code-box, html.start .code-box:hover, html.start .code-box:focus-within { height: 100%; padding-left: var(--s2); background: none; border: 0; box-shadow: none; }
 html.start .code-box input { font-size: var(--t-md); }
 html.start .code-box input::placeholder { text-transform: none; font-weight: 400; }
-html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
+html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
 html.start .entry .btn:hover { background: var(--raised); color: var(--ink); }
 html.start .entry .btn:focus-visible { outline-offset: -3px; }
 html.start .code-box .btn-go { background: var(--c1); color: var(--field); }
@@ -486,7 +486,7 @@ html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; } 
 html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
-html.side .cl { flex: 1; min-height: 0; border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
+html.side .cl { flex: 1; min-height: 0; border: 1px solid var(--ai-line); border-radius: 10px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
 html.cl-open body { overflow: hidden; }
 .cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
@@ -520,7 +520,7 @@ html:not(.side) .cl-ttl { display: none; }                                   /* 
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
 .cl-thread:empty { display: none; }
-.cl .bub.me { align-self: flex-end; max-width: min(85%, 40ch); padding: var(--s2) var(--s4); border-radius: 16px 16px 4px 16px; background: var(--ai-ct); color: var(--ai-on-ct); line-height: var(--lh); overflow-wrap: anywhere; }   /* RM3: a tonal container */
+.cl .bub.me { align-self: flex-end; max-width: min(85%, 40ch); padding: var(--s2) var(--s4); border-radius: 10px 10px 4px 10px; background: var(--ai-ct); color: var(--ai-on-ct); line-height: var(--lh); overflow-wrap: anywhere; }   /* RM3: a tonal container */
 /* one speaker, one format (Tony, Oct 5): a reply sits on the sheet like the first answer, no card */
 .cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
 .cl-ft[hidden] { display: none; }
@@ -761,7 +761,7 @@ html.pad-off .more { display: none; }
 html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + var(--s4)); }   /* the dock bar only: the Scratchpad button may sit over the last row; it drags away (Tony, Oct 5: "remove the bottom gap") */
 .pad-fab {
   position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
-  display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px; background: var(--raised); color: var(--ink);
+  display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 10px; background: var(--raised); color: var(--ink);
   box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none;
   user-select: none; -webkit-user-select: none;
 }

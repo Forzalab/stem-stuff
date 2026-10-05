@@ -127,24 +127,24 @@ html.start .rw-hud { display: none; }
 /* impeccable waiver: casino-themed (Tony, Oct 4) */
 .rw-hint {
   position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 6px 10px 10px 8px; overflow: hidden;
-  text-align: left; color: var(--rw-tang-ink); border: 0; border-radius: var(--rw-r-m); background: var(--rw-tang); cursor: pointer;
+  text-align: left; color: var(--rw-tang-ink); border: 0; border-radius: 10px; background: var(--rw-tang); cursor: pointer;
   box-shadow: inset 0 3px 0 #ffc48a, inset 0 -5px 0 var(--rw-tang-dk), 0 3px 0 var(--rw-rust);
 }
 .rw-hint:hover { background: #ffa852; }
 .rw-hint:active { transform: translateY(2px); box-shadow: inset 0 3px 0 #ffc48a, inset 0 -3px 0 var(--rw-tang-dk), 0 1px 0 var(--rw-rust); }
 .rw-hint:focus-visible { outline: 2px solid #8fb0ff; outline-offset: 3px; }
-.rw-hint[aria-expanded="true"] { border-radius: var(--rw-r-m) var(--rw-r-m) 0 0; }
+.rw-hint[aria-expanded="true"] { border-radius: 10px 10px 0 0; }
 .rw-hint-coin { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--rw-sun);
   box-shadow: inset 0 3px 0 var(--rw-cream), inset 0 -4px 0 var(--rw-sun-dk); }
 .rw-hint-coin svg { width: 32px; height: 32px; display: block; }
 .rw-hint-tx { flex: 1; min-width: 0; }
 .rw-hint-t { font: 700 1.25rem/1.2 var(--rw-font); }
-.rw-hint-chev { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; background: var(--rw-tang-dk);
+.rw-hint-chev { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; color: #fff; background: var(--rw-tang-dk);
   box-shadow: inset 0 -3px 0 var(--rw-rust), inset 0 2px 0 #e07a2a; }
 .rw-hint-chev svg { width: 26px; height: 26px; transition: transform .2s ease-out; }
 .rw-hint[aria-expanded="true"] .rw-hint-chev svg { transform: rotate(180deg); }
 .rw-free {   /* the slot-kit sticker over the chevron corner: after the button in the DOM + z-index, so it sits on top and covers no words */
-  position: absolute; z-index: 3; top: -12px; right: 2px; padding: 3px 10px 4px; border-radius: var(--rw-pill); cursor: pointer;   /* a tap on it opens the card (app.js) */
+  position: absolute; z-index: 3; top: -12px; right: 2px; padding: 3px 10px 4px; border-radius: 6px; cursor: pointer;   /* a tap on it opens the card (app.js) */
   font: 700 0.875rem/1.1 var(--rw-font); letter-spacing: .04em; color: var(--rw-text); background: var(--rw-sun); border: 2px solid #fff;
   transform: rotate(-6deg); box-shadow: 0 2px 0 var(--rw-v950);
 }
