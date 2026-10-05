@@ -607,7 +607,7 @@ class Explain(unittest.TestCase):
                 req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 if not req.get("stream"):                                               # the gate: one non-streamed ON/OFF call
                     gates.append(req)
-                    self.send_response(500 if test.verdict is None else 200)
+                    self.send_response(500 if test.verdict is None else 403 if test.verdict.startswith("Request blocked") else 200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"choices": [{"message": {"content": test.verdict}}]}).encode())
@@ -736,6 +736,11 @@ class Explain(unittest.TestCase):
         self.assertEqual(self.chat()[2], "POOF! **Use:** $v$\n- step one\nYour pick: sign.")
         self.verdict = "OFF"                                                            # not JSON: let it through
         self.assertEqual(len(self.chat(cookie="sid=" + "9" * 32)[2]) > 0 and len(self.seen), 2)
+
+    def test_openrouter_guardrail_block_is_a_quack(self):
+        self.verdict = "Request blocked: prompt injection patterns detected"           # the key's own guardrail: a 403
+        self.assertIn(self.chat()[2], serve.CANNED)
+        self.assertEqual(self.seen, [])
 
     def test_chat_gates(self):
         self.assertEqual(self.chat(cookie="stem-mode=diet")[0], 404)                  # diet: no Cluck

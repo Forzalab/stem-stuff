@@ -27,6 +27,7 @@ import socketserver
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 
 import sympy
@@ -1017,6 +1018,10 @@ def gate(p, text, key):
     try:
         with urllib.request.urlopen(req, timeout=4) as r:
             verdict = json.loads(json.loads(r.read())["choices"][0]["message"]["content"])["verdict"]
+    except urllib.error.HTTPError as e:      # the key's OpenRouter guardrail (Security, content filters) blocked it: a 403 "Request blocked"
+        blocked = e.code == 403 and b"Request blocked" in e.read()
+        print(f"gate {p['code']}: {e}", file=sys.stderr)
+        return not blocked
     except Exception as e:  # noqa: BLE001
         print(f"gate {p['code']}: {e}", file=sys.stderr)
         return True
