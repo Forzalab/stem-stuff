@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>HUD variants</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<!--
+  Tony, Oct 5 (step 2, "plan order + HUD"): the sugar HUD redesign, 3 variants placed into the measured dead space.
+  Audit (shots 1366/1440/1920, page colour #08111f): 1920 has a 100 px empty band above the top bar (body padding-top, app.css desktop
+  block) and a ~700 px empty run in the top bar between the code box and the HUD; 1440 a 40 px band; 1366 none.
+  ?v=A  one gold-rimmed pill at the top bar's right end, height = --btn.
+  ?v=B  a slot strip: balance window + level star + wide bar + flame. Tall windows (the band >= 64 px): it takes the band above the bar,
+        Tony picked B (Oct 5) with "snug into the topbar gap": it always fills the bar's middle run (built: rewards/engine.js + rewards.css).
+  ?v=C  a progress rail: this bank's question dots + "next up", in the band (tall) or the bar's middle run (short); coin + flame compact.
+  Gold/tangerine family only; purple is kept for the LEVEL UP burst. Tap the HUD = the progress popover (counts in words).
+  Same made-up state in all three: 214 XP, level 3, 36 XP to level 4, streak 5, exam 9, easy 4, bank of 12 at question 7 (a snack).
+  Mock only: no engine.js. Tony picks, then mountHUD() + rewards.css.
+-->
+<style>
+:root {
+  --paper: #08111f; --sheet: #16243a; --qbox: #0f1d30; --raised: #20304a;
+  --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --ok: #5fd394; --bad: #ff7a7a;
+  --t-md: 1.125rem; --t-sm: 1rem; --t-xs: .875rem;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+  --gut: 1.25rem; --btn: 48px; --col: 52rem;
+  /* HUD family: gold + tangerine on a warm near-black (no purple at rest) */
+  --g-rim: #e0b432; --g-rim-dk: #8a6400; --g-sun: #ffe14d; --g-sun-dk: #c99a00; --g-tang: #ff9a3c;
+  --g-body: #1b1407; --g-well: #0d0903; --g-ink: #fff4d0; --g-soft: #e9d6a4; --g-star-ink: #4a2300;
+  --band: 0px;
+  color-scheme: dark;
+}
+@media (min-width: 700.02px) {
+  :root { --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: .9375rem; --btn: 50px; --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);
+    --band: clamp(0px, calc((100vh - 52rem) * 0.36), 12rem); }
+}
+@media (min-width: 700.02px) and (min-height: 56rem) { :root { --t-md: 1.25rem; --t-sm: 1.125rem; --btn: 52px; } }
+@media (min-width: 100rem) and (min-height: 56rem) { :root { --t-md: 1.375rem; --t-sm: 1.25rem; --t-xs: 1.0625rem; --btn: 56px; } }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.55 "Atkinson Hyperlegible", system-ui, sans-serif;
+  padding-top: var(--band); }
+img { display: block; }
+
+/* ---------- the page frame (a faithful stand-in for the sugar snack state: list on, Cluck's sheet open) ---------- */
+.frame { max-width: min(100%, calc(var(--col) * 1.7)); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
+.top { display: grid; grid-template-columns: auto auto auto 21rem minmax(0, 1fr) auto auto; column-gap: var(--s2); align-items: center; }
+.b { height: var(--btn); min-width: var(--btn); display: grid; place-items: center; padding: 0 var(--s3); border-radius: 8px;
+  background: var(--sheet); color: var(--ink); font: 700 var(--t-sm)/1 inherit; }
+.b svg { width: 24px; height: 24px; }
+.b.lst { display: flex; gap: 8px; }
+.code { height: var(--btn); display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s3);
+  border: 1px solid var(--edge); border-radius: 8px; background: var(--paper); font-weight: 700; font-size: var(--t-sm); color: var(--muted); letter-spacing: .02em; }
+.slot { min-width: 0; display: flex; justify-content: flex-end; align-items: center; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s5); }
+.lbl { font-size: var(--t-xs); font-weight: 700; color: var(--muted); margin: 0 0 var(--s2); }
+.qbox { background: var(--qbox); border-radius: 8px; padding: var(--s4) var(--s5); }
+.opt { display: flex; gap: var(--s3); align-items: center; margin-top: var(--s2); padding: var(--s2) var(--s3); border: 1px solid var(--line);
+  border-radius: 6px; background: var(--qbox); }
+.opt i { font-style: normal; width: 36px; height: 36px; flex: none; display: grid; place-items: center; border: 1px solid var(--edge); border-radius: 50%; font-size: var(--t-xs); font-weight: 700; color: var(--muted); }
+.sh { background: #1c1510; border: 1px solid #4a3220; border-radius: 12px; padding: var(--s3) var(--s4); min-height: 60vh; }
+.sh .tab { background: var(--g-tang); color: #2b1000; text-align: center; font-weight: 700; padding: 10px; border-radius: 8px; }
+.sh p { margin: var(--s4) 0 0; color: var(--ink); }
+
+/* ---------- shared HUD bits ---------- */
+.hud { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-weight: 700; color: var(--g-ink); user-select: none; cursor: pointer;
+  border: 0; padding: 0; background: none; font-size: inherit; text-align: left; }
+.hud:focus-visible { outline: 2px solid #8fb0ff; outline-offset: 3px; }
+.num { font-variant-numeric: tabular-nums; line-height: 1; }
+.star { position: relative; display: grid; place-items: center; flex: none; }
+.star img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.star b { position: relative; margin-top: 3px; color: var(--g-star-ink); line-height: 1; }
+.bar { display: block; border-radius: 999px; overflow: hidden; background: var(--g-well); }
+.bar i { display: block; height: 100%; width: var(--p); border-radius: inherit; background: var(--g-sun); }
+.flame { opacity: 1; }
+
+/* A: one gold-rimmed pill. [coin 214] | [star 3 + bar] | [flame 5] */
+.A { height: var(--btn); display: flex; align-items: center; gap: 0; padding: 0 6px; border-radius: 999px;
+  background: var(--g-body); border: 2px solid var(--g-rim); }
+.A .seg { display: flex; align-items: center; gap: 8px; padding: 0 12px; height: 100%; }
+.A .seg + .seg { border-left: 1px solid #4a3a14; }
+.A .coin { width: 30px; height: 30px; }
+.A .num { font-size: 22px; }
+.A .star { width: 36px; height: 36px; } .A .star b { font-size: 15px; }
+.A .bar { width: 120px; height: 10px; }
+.A .flame { width: 26px; height: 26px; }
+
+/* B: slot strip. Balance window + level + wide bar with words + flame. */
+.B { display: flex; align-items: center; gap: 14px; height: var(--btn); padding: 0 6px 0 6px; border-radius: 14px;
+  background: var(--g-body); border: 2px solid var(--g-rim); width: 100%; }
+.B .bal { display: flex; align-items: center; gap: 8px; height: calc(var(--btn) - 14px); padding: 0 14px 0 6px; border-radius: 10px; background: var(--g-well); border: 1px solid var(--g-rim-dk); }
+.B .bal img { width: 28px; height: 28px; }
+.B .bal .num { font-size: 22px; color: var(--g-sun); }
+.B .lvl { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.B .star { width: 40px; height: 40px; } .B .star b { font-size: 16px; }
+.B .track { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.B .bar { height: 12px; }
+.B .to { font-size: 16px; color: var(--g-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
+.B .to b { color: var(--g-sun); }
+.B .fl { display: flex; align-items: center; gap: 6px; padding: 0 12px; height: calc(var(--btn) - 14px); border-radius: 10px; background: #2a1606; border: 1px solid #6b3510; }
+.B .fl img { width: 26px; height: 26px; } .B .fl .num { font-size: 22px; color: #ffc48a; }
+.tall .B .track { flex-direction: row; align-items: center; gap: 14px; }
+.tall .B .bar { flex: 1; height: 14px; }
+.tall .B .to { flex: none; font-size: 19px; }
+/* tall window: the strip lives in the band; the body offset shrinks by its height + gap, so the bar and the question stay put */
+.vB.tall body { padding-top: max(0px, calc(var(--band) - var(--btn) - var(--s3))); }
+.vB.tall .bandrow { display: block; margin-bottom: var(--s3); }
+.bandrow { display: none; }
+
+/* C: progress rail. Dots for this bank, "next up", + compact coin and flame chips. Level lives in the popover. */
+.C { display: flex; align-items: center; gap: 14px; width: 100%; height: var(--btn); }
+.C .rail { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; height: 100%; padding: 0 14px; border-radius: 999px; background: var(--g-body); border: 1px solid #4a3a14; }
+.C .dots { display: flex; gap: 6px; flex: none; }
+.C .dots i { width: 12px; height: 12px; border-radius: 50%; background: #3a2e14; }
+.C .dots i.ok { background: var(--g-sun); }
+.C .dots i.miss { background: var(--g-tang); }
+.C .dots i.now { background: transparent; border: 2px solid var(--g-sun); width: 16px; height: 16px; margin: -2px 0; }
+.C .where { font-size: 15px; color: var(--g-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.C .where b { color: var(--g-ink); }
+.C .chip { flex: none; display: flex; align-items: center; gap: 6px; height: var(--btn); padding: 0 14px 0 8px; border-radius: 999px; background: var(--g-body); border: 2px solid var(--g-rim); }
+.C .chip img { width: 28px; height: 28px; } .C .chip .num { font-size: 22px; }
+.C .chip.f { border-color: #8a4a14; } .C .chip.f .num { color: #ffc48a; }
+.vC.tall body { padding-top: max(0px, calc(var(--band) - var(--btn) - var(--s3))); }
+.vC.tall .bandrow { display: block; margin-bottom: var(--s3); }
+
+/* ---------- the progress popover (tap the HUD) ---------- */
+.pop { position: absolute; z-index: 10; width: 300px; padding: var(--s4); border-radius: 14px; background: var(--g-body); border: 2px solid var(--g-rim);
+  box-shadow: 0 16px 36px -8px rgb(0 0 0 / .6), 0 3px 6px rgb(0 0 0 / .25); color: var(--g-ink); font-size: 17px; line-height: 1.4; }
+.pop[hidden] { display: none; }
+.pop h3 { margin: 0 0 var(--s2); display: flex; align-items: center; gap: 10px; font-size: 22px; }
+.pop h3 .star { width: 36px; height: 36px; } .pop h3 .star b { font-size: 15px; }
+.pop .bar { height: 12px; margin: 0 0 var(--s3); }
+.pop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+.pop dt { color: var(--g-soft); font-weight: 400; } .pop dd { margin: 0; font-weight: 700; }
+
+/* ---------- phone (390) ---------- */
+@media (max-width: 700px) {
+  .top { grid-template-columns: auto minmax(0, 1fr) auto auto; row-gap: var(--s2); }
+  .top .shuf, .top .up { display: none; }
+  .slot { grid-row: 2; grid-column: 1 / -1; justify-content: stretch; }
+  .slot > * { width: 100%; }
+  .cols { grid-template-columns: 1fr; }
+  .sh { min-height: 0; }
+  .A { justify-content: space-between; } .A .bar { width: auto; flex: 1; } .A .seg.l { flex: 1; }
+  .B .to { display: none; }
+  .C .where { display: none; } .C .dots i { width: 10px; height: 10px; } .C .rail { gap: 0; justify-content: center; }
+  .pop { left: var(--gut) !important; right: var(--gut); width: auto; }
+}
+
+/* ---------- variant switcher (not part of the design; hidden with ?clean) ---------- */
+.sw { position: fixed; left: 12px; bottom: 12px; z-index: 20; display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #000c; font: 700 14px/1 system-ui; }
+.sw a { color: var(--muted); text-decoration: none; padding: 8px 12px; border-radius: 6px; }
+.sw a.on { background: var(--raised); color: var(--ink); }
+.clean .sw { display: none; }
+</style></head>
+<body>
+<div class="frame">
+  <div class="bandrow" id="band"></div>
+  <header class="top">
+    <span class="b lst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h9A1.5 1.5 0 0 1 20 4.5v11a1.5 1.5 0 0 1-1.5 1.5H16M7.4 11.2a2.1 2.1 0 1 1 2.9 1.95c-.5.25-.8.65-.8 1.2v.4"/><rect x="3" y="6" width="13" height="15" rx="2"/><circle cx="9.5" cy="17.6" r=".95" fill="currentColor"/></svg>BANK_P2X</span>
+    <span class="b shuf" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></span>
+    <span class="b up" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V4M7 9l5-5 5 5M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg></span>
+    <span class="code">CALC1_S07</span>
+    <div class="slot" id="slot"></div>
+    <span class="b" aria-label="Go back one">&lsaquo;</span>
+    <span class="b" aria-label="Go forward one">&rsaquo;</span>
+  </header>
+  <div class="cols">
+    <div>
+      <p class="lbl">Question</p>
+      <div class="qbox">Snack: same spring, k doubled. Find the speed at x = 0.</div>
+      <div class="opt"><i>A</i>1.7 m/s</div><div class="opt"><i>B</i>2.1 m/s</div><div class="opt"><i>C</i>3.0 m/s</div><div class="opt"><i>D</i>0.9 m/s</div>
+    </div>
+    <div class="sh"><div class="tab">Similar steps</div><p>1 &nbsp;Use: ½kx² = ½mv²</p><p>2 &nbsp;v = x√(k/m)</p><p>3 &nbsp;Answer: 1.7 m/s</p></div>
+  </div>
+</div>
+<div class="pop" id="pop" role="dialog" aria-label="Your progress" hidden></div>
+<nav class="sw" id="sw"><a href="?v=A">A pill</a><a href="?v=B">B strip</a><a href="?v=C">C rail</a></nav>
+
+<script>
+const S = { xp: 214, lvl: 3, to: 36, need: 100, streak: 5, exam: 9, easy: 4, bank: ["ok","ok","miss","ok","ok","ok","now","","","","",""] };
+const I = n => `../../rewards/icons/${n}_color.svg`;
+const pct = Math.round(100 * (S.need - S.to) / S.need) + "%";
+const star = () => `<span class="star"><img src="${I("star")}" alt=""><b>${S.lvl}</b></span>`;
+const bar = () => `<span class="bar" style="--p:${pct}"><i></i></span>`;
+const label = `${S.xp} XP, level ${S.lvl}, ${S.to} XP to level ${S.lvl + 1}, ${S.streak} right in a row. Open your progress.`;
+const V = {
+  A: () => `<button class="hud A" aria-label="${label}">
+      <span class="seg"><img class="coin" src="${I("coin")}" alt=""><span class="num">${S.xp}</span></span>
+      <span class="seg l">${star()}${bar()}</span>
+      <span class="seg"><img class="flame" src="${I("fire")}" alt=""><span class="num">${S.streak}</span></span></button>`,
+  B: () => `<button class="hud B" aria-label="${label}">
+      <span class="bal"><img src="${I("coin")}" alt=""><span class="num">${S.xp}</span></span>
+      <span class="lvl">${star()}<span class="track">${bar()}<span class="to"><b>${S.to} XP</b> to level ${S.lvl + 1}</span></span></span>
+      <span class="fl"><img src="${I("fire")}" alt=""><span class="num">${S.streak}</span></span></button>`,
+  C: () => `<button class="hud C" aria-label="${label} Question 7 of 12.">
+      <span class="rail"><span class="dots">${S.bank.map(c => `<i class="${c}"></i>`).join("")}</span>
+        <span class="where"><b>Q7</b> of 12</span></span>
+      <span class="chip"><img src="${I("coin")}" alt=""><span class="num">${S.xp}</span></span>
+      <span class="chip f"><img src="${I("fire")}" alt=""><span class="num">${S.streak}</span></span></button>`,
+};
+const q = new URLSearchParams(location.search), v = V[q.get("v")] ? q.get("v") : "A";
+const root = document.documentElement;
+root.classList.add("v" + v); if (q.has("clean")) root.classList.add("clean");
+document.querySelector(`#sw a[href="?v=${v}"]`).classList.add("on");
+/* B and C take the band when it is tall enough for a --btn row (desktop only) */
+const fit = () => {
+  const px = k => { const e = document.createElement("i"); e.style.cssText = `position:absolute;height:var(${k})`; document.body.append(e); const h = e.offsetHeight; e.remove(); return h; };
+  const band = px("--band"), btn = px("--btn");
+  const tall = v === "C" && innerWidth > 700 && band >= btn + 12;
+  root.classList.toggle("tall", tall);
+  (tall ? document.getElementById("band") : document.getElementById("slot")).innerHTML = V[v]();
+  (tall ? document.getElementById("slot") : document.getElementById("band")).innerHTML = "";
+};
+fit(); addEventListener("resize", fit);
+const pop = document.getElementById("pop");
+pop.innerHTML = `<h3>${star()}Level ${S.lvl}</h3>${bar()}<dl>
+  <dt>Next level</dt><dd>${S.to} XP to go</dd><dt>Points</dt><dd>${S.xp} XP</dd><dt>Streak</dt><dd>${S.streak} right in a row</dd>
+  <dt>Exam questions</dt><dd>${S.exam} right</dd><dt>Easy ones</dt><dd>${S.easy} right</dd></dl>`;
+document.addEventListener("click", e => {
+  const h = e.target.closest(".hud");
+  if (!h) { if (!pop.contains(e.target)) pop.hidden = true; return; }
+  const r = h.getBoundingClientRect();
+  pop.style.top = (r.bottom + scrollY + 8) + "px"; pop.style.left = Math.max(12, r.right - 300) + "px";
+  pop.hidden = !pop.hidden;
+});
+addEventListener("keydown", e => { if (e.key === "Escape") pop.hidden = true; });
+if (q.has("pop")) document.querySelector(".hud").click();
+</script>
+</body></html>

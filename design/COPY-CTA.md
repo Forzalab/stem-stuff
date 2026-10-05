@@ -4,7 +4,7 @@ Rules: verb + object (+ what you get or what it costs). 5 words or fewer where p
 No metaphors (wish, lamp, granting, genie). No jargon (BANK_, diet/sugar, snacks, freeze, session, .json); explain XP once as "XP (points)".
 One noun per thing: **question** (never "problem"), **notes** (never "scratchpad / pad"), **steps** (Cluck's text), **Check** (every submit arrow).
 Icon-only buttons get a visible 1-word label (`label: **X**` below). This table doubles as the translation key list (Georgian test): one row = one key; `{n}` = interpolated value.
-Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column (plus the T4 chip, list button "Questions" with the bank / file in its title). **3b open** = the visible `label: **X**` words under icons and q / a → Answer / Question: layout work, ordered by what the blind-locale baseline shows.
+Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column (plus the T4 chip, list button "Questions" with the bank / file in its title). **Tony, Oct 5:** the list button shows the bank code (e.g. BANK_P2X) when a bank is open; "Questions" otherwise. **3b open** = the visible `label: **X**` words under icons and q / a → Answer / Question: layout work, ordered by what the blind-locale baseline shows.
 `=` = text unchanged. KEEP = Tony's own pick, untouched. Line numbers: working tree, Oct 4 (the lead is editing app.js; grep the old string if a line moved).
 
 | file:line | where | old | new | why (≤8 words) |
