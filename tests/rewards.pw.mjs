@@ -106,20 +106,24 @@ try {
     await quiet(page);
   });
 
-  await step("a wrong try: one small quiet +1, nothing else; the streak waits; the second-try correct pays 6 with the bells", async () => {
+  await step("a wrong try with a try left: the +1 is kept but nothing moves (C12, Tony Oct 5); the streak waits; the second-try correct pays 6 with the bells", async () => {
     await go(page, "CALC1_R02");
-    const x0 = await xp(page), s0 = await page.evaluate(() => window.Rewards.state().streak);
+    const x0 = await xp(page), s0 = await page.evaluate(() => window.Rewards.state().streak), shown = () => page.textContent("#rwHud .rw-num");
+    const n0 = await shown();
     await watchFx(page);
     await pick(page, "b");
     await page.waitForTimeout(1500);
-    assert.deepEqual(await page.evaluate(() => window.__fxc), ["fx-float fx-float-sm"], "a wrong try: only the small +1");
-    assert.equal(await xp(page), x0 + 1);
+    assert.deepEqual(await page.evaluate(() => window.__fxc), [], "a wrong try with a try left: no +1 float");
+    assert.equal(await xp(page), x0 + 1, "the +1 is kept");
+    assert.equal(await shown(), n0, "the HUD number waits until the question closes");
     assert.equal(await page.evaluate(() => window.Rewards.state().streak), s0, "the streak never halves");
     await rig(page, [0.99]);                                                    // no drop
     await pick(page, "a");
     await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
       .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
     assert.ok(await page.evaluate(() => window.__fx) > 1, "the bells on try 2");
+    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
+      .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
     await quiet(page);                                                          // 21 XP: the level-up burst
   });

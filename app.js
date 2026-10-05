@@ -83,7 +83,6 @@ document.addEventListener("visibilitychange", () => { document.hidden ? holdToas
 addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(); });   // Escape: the toast, then Cluck's sheet
 addEventListener("scroll", placeToast, { passive: true });
 addEventListener("resize", placeToast);
-const AGAIN = "One more try, so\u00A0choose\u00A0wisely.";   // no-break spaces keep "choose wisely." together
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -706,7 +705,7 @@ async function submitMC() {
     o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
-    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o);
+    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
   } else if (r.verdict === "pending") { o.classList.add("pend"); send.hidden = true; }
   else if (r.verdict === "locked") finish();
   feedback(r);
@@ -737,7 +736,7 @@ async function submitAll() {
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
-    if (r.triesLeft <= 0) finish(); else toast(AGAIN, o || $("#q .choices"));   // take 5f, as on single MC: on the struck row
+    if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
   } else if (r.verdict === "pending") for (const o of on) o.classList.add("pend");
   else if (r.verdict === "locked") finish();
   feedback(r, Object.values(f).join(", "));                 // invalid here = a fix that can't be read
@@ -777,7 +776,7 @@ async function submitFF() {
     if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
-    else if (r.verdict === "wrong") toast(AGAIN, $("#ff"));
+    else if (r.verdict === "wrong") pips(r, ...pipsAt());
     feedback(r, t);
   } finally { busy = false; }
 }
@@ -797,6 +796,7 @@ function wireParts() {
 function shutPart(i, ok) {
   const { box, inp, go } = partEls(i);
   S.parts[i].shut = true; S.parts[i].ok = ok;
+  if (box.nextElementSibling?.classList.contains("pips")) box.nextElementSibling.remove();
   box.classList.remove("bad"); box.classList.add("shut"); box.classList.toggle("ok", ok); box.classList.toggle("done", ok);
   for (const x of [inp, go]) { x.disabled = true; x.setAttribute("aria-disabled", "true"); }
   go.hidden = true;
@@ -828,7 +828,7 @@ async function submitPart(i) {
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
-    else { partFeedback(i, r, v); if (r.verdict === "wrong") toast(AGAIN, partEls(i).box); }
+    else { partFeedback(i, r, v); if (r.verdict === "wrong") pips(r, partEls(i).box, "afterend"); }
     if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
     layoutFreeze();
@@ -914,7 +914,7 @@ function paint(rec) {
       if (last && typeof last.a === "string") { inp.value = last.a; go.hidden = u.done !== "open"; }
       if (u.done !== "open") shutPart(i, u.done === "correct");
       if (u.done === "correct") partFeedback(i, { verdict: "correct" });
-      else if (u.x > 0) partFeedback(i, { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined });
+      else if (u.x > 0) { const r = { verdict: "wrong", triesLeft: Math.max(0, max - u.x), hint: u.hint || undefined }; partFeedback(i, r); if (u.done === "open") pips(r, partEls(i).box, "afterend"); }
     });
     if (S.parts.every(x => x.shut)) settle();
     return;
@@ -951,7 +951,7 @@ function paint(rec) {
   }
   if (u.done !== "open") finish();
   if (u.done === "correct") feedback({ verdict: "correct" });
-  else if (u.x > 0) feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined });
+  else if (u.x > 0) { feedback({ verdict: "wrong", triesLeft: S.triesLeft, hint: u.hint || undefined }); pips({ verdict: "wrong", triesLeft: S.triesLeft }, ...pipsAt()); }   // a reload keeps the dots
 }
 function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
@@ -989,8 +989,21 @@ async function syncServer(mine) {
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
+/* try pips (Tony, Oct 5: they replace the "One more try" toast, which covered a choice): after a wrong try with tries left, one dot
+   per try, used = filled red, left = hollow. Beside Check on a tick-all question, else under the rows / the answer box. The screen
+   reader already hears "Wrong. 1 try left." (verdictWords), so the dots are aria-hidden. A closed question drops them (finish, shutPart) */
+function pips(r, el, pos) {
+  if (!el) return;
+  const old = pos === "afterend" ? el.nextElementSibling : el.previousElementSibling;
+  if (old && old.classList.contains("pips")) old.remove();
+  const max = maxTries(S.prob), left = r.triesLeft;
+  if (r.verdict !== "wrong" || !(left > 0) || max < 2) return;
+  el.insertAdjacentHTML(pos, `<span class="pips" aria-hidden="true">${'<i class="used"></i>'.repeat(max - left)}${"<i></i>".repeat(left)}</span>`);
+}
+const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
 function finish() {
   S.finished = true;
+  document.querySelectorAll("#q .pips").forEach(x => x.remove());
   $("#q").classList.add("closed");
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
@@ -1319,7 +1332,7 @@ function rewardTry(a, r) {
   const p = S.prob, multi = p.type === "multi";
   if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
   const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
-  rewardGo(S, { correct: r.verdict === "correct", firstTry });
+  rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0 });
 }
 function rewardMulti(mine) {
   if (!rewardOn() || S !== mine || !S.solved) return;
@@ -1331,7 +1344,8 @@ function rewardGo(mine, o) {
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
   if (!res.xp) { RW().render(0); return; }                                       // a done code: the numbers change, nothing moves
-  if (res.tick) { rewardTick(res); return; }                                    // a wrong try: +1 for trying, tiny
+  if (res.tick) { if (o.open) mine.rwHeld = (mine.rwHeld || 0) + res.xp; else rewardTick(res, mine); return; }   // a wrong try: +1 for trying, tiny;
+  // with a try left it waits, unshown (Tony, Oct 5 clutter pass C12: nothing moves up there while the eye belongs on the hint)
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
 }
 /* ---------- the original beside a snack (spec 1b; design/REWARDS-WIRING.md §4) ----------
@@ -1405,10 +1419,10 @@ function origPlace() {
 }
 /* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
    so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
-function rewardTick(res) {
-  const coin = $("#rwCoin"), fx = FXL();
-  if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, "+1", "fx-float-sm");
-  RW().render(res.xp);
+function rewardTick(res, mine) {
+  const coin = $("#rwCoin"), fx = FXL(), n = res.xp + (mine.rwHeld || 0); mine.rwHeld = 0;
+  if (fx.float && coin && rwHud && !rwHud.hidden) fx.float(coin, `+${n}`, "fx-float-sm");
+  RW().render(n);
 }
 const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
 async function rewardShow(mine, res) {
@@ -1418,8 +1432,10 @@ async function rewardShow(mine, res) {
   fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
   fx.float && fx.float(at, `+${res.xp} XP`);
   const coin = $("#rwCoin");
+  rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
   if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
-  setTimeout(() => RW().render(res.xp), 450);
+  const held = mine.rwHeld || 0; mine.rwHeld = 0;
+  setTimeout(() => RW().render(res.xp + held), 450);                           // the +1s held back on earlier wrong tries count up with it
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
   if (!res.drop && !res.burst && !res.streakNote) return;
   await wait(600);

@@ -28,7 +28,7 @@
    burst's (rare = special). As tall as the bar's buttons. A narrow gap drops the words, then the bar. app.js mounts it; never fixed. */
 .rw-hud {
   container-type: inline-size; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--btn, 48px);
-  padding: 0 5px; border-radius: 14px; background: var(--rw-g-body); border: 2px solid var(--rw-g-rim);
+  padding: 0; border-radius: 14px;   /* no gold frame (Tony, Oct 5 clutter pass C1): it was the loudest thing on the page */
   font-family: var(--rw-font); font-weight: 700; color: var(--rw-g-ink); user-select: none; -webkit-user-select: none;
 }
 .qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 4; justify-self: stretch; }
@@ -56,7 +56,7 @@ html.start .rw-hud { display: none; }
 .rw-star img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .rw-star b { position: relative; margin-top: 3px; font: 700 16px/1 var(--rw-font); color: #4a2300; }
 .rw-lvl-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
-.rw-bar { flex: 1; min-width: 0; display: block; height: 14px; border-radius: var(--rw-pill); overflow: hidden; background: var(--rw-g-well); }
+.rw-bar { flex: 1; min-width: 0; display: block; height: 6px; border-radius: var(--rw-pill); overflow: hidden; background: var(--rw-g-well); }
 .rw-bar i {
   display: block; height: 100%; width: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left;
   background: var(--rw-sun); transition: transform .5s cubic-bezier(.16, 1, .3, 1);
@@ -70,7 +70,8 @@ html.start .rw-hud { display: none; }
 }
 .rw-flame { width: 26px; height: 26px; display: block; transform: scale(var(--fs, 1)); transform-origin: 50% 90%; transition: transform .3s; opacity: .6; filter: grayscale(.7); }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
-.rw-counts { display: none; }   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
+.rw-counts { display: none; }
+.rw-hud.rw-z-xp .rw-coin, .rw-hud.rw-z-st .rw-streak { display: none; }   /* C1: a 0 balance / 0 streak stays hidden until the first reward */   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
 @container (max-width: 470px) { .rw-to { display: none; } }
 @container (max-width: 250px) { .rw-lvl-body { display: none; } .rw-lvl { flex: none; } }
 @container (max-width: 160px) { .rw-lvl { display: none; } }

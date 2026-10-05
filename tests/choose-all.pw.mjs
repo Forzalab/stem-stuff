@@ -45,7 +45,7 @@ const st = page => page.evaluate(() => ({
   wrong: [...document.querySelectorAll("#q .opt.wrong")].map(o => o.dataset.id), right: [...document.querySelectorAll("#q .opt.right")].map(o => o.dataset.id).sort(),
   dis: [...document.querySelectorAll("#q .opt:disabled")].map(o => o.dataset.id).sort(), go: document.querySelector("#mcGo")?.disabled,
   fb: document.querySelector("#fb").textContent + (document.querySelector("#q .chk .cluck")?.textContent || ""), finished: window.__drill.state.finished, focus: document.activeElement?.dataset?.id || document.activeElement?.id }));
-/* graded: take 5f put no verdict words on the page (rows / boxes carry the icons, "One more try" is the toast), so wait for
+/* graded: take 5f put no verdict words on the page (rows / boxes carry the icons, try pips say a try is left), so wait for
    the feedback area (hint, lock or can't-read line) or a right row instead of "#fb .verdict" */
 async function check(page) {
   await page.click("#mcGo");
@@ -99,10 +99,12 @@ try {
     await step(`${name}: wrong set: first distractor (authored order) struck, other ticks stay; Enter = Check`, async () => {
       await tap(row(page, "d")); await tap(row(page, "a")); await tap(row(page, "b"));
       await row(page, "a").focus(); await page.keyboard.press("Enter");
-      await page.waitForSelector("#toast.on"); await page.waitForTimeout(150);
+      await page.waitForSelector("#q .chk .pips"); await page.waitForTimeout(150);
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
-      assert.match(await page.textContent("#toast.on"), /One more try/); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
+      assert.equal(await page.$("#toast.on"), null, "no toast over the choices (Tony, Oct 5)"); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
+      assert.deepEqual(await page.$eval("#q .chk .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1], "try pips: one used, one left");
+      assert.ok(await page.evaluate(() => document.querySelector("#q .chk .pips").getBoundingClientRect().right <= document.querySelector("#mcGo").getBoundingClientRect().left), "the pips sit beside Check");
       const [hint, go] = await page.evaluate(() => [document.querySelector("#q .chk .cluck"), document.querySelector("#mcGo")].map(e => e && (({ left, right, top, bottom }) => ({ left, right, top, bottom }))(e.getBoundingClientRect())));
       assert.ok(hint && hint.right <= go.left && hint.top < go.bottom && hint.bottom > go.top, "a short hint sits left of Check, on its row (Tony, Oct 5) " + JSON.stringify([hint, go]));
       assert.equal(await page.$("#fb .cluck"), null, "not twice");

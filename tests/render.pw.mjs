@@ -134,12 +134,11 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await page.locator("#ff.bad").count() === 1 && await go.isHidden(), "bad box, the x holds the arrow's slot");
       const vk = await page.locator("#ff .vk").boundingBox();
       assert.ok(Math.abs(vk.x - g.x) < 1 && Math.abs(vk.y - g.y) < 1, "the x is where the arrow was");
-      assert.equal(await page.locator("#toast.on").textContent(), "One more try, so\u00A0choose\u00A0wisely.");
-      {   // take 5f: hangs under the wrong box, page paper + --line hairline, no yellow
-        const tb = await page.locator("#toast.on").boundingBox(), fb = await page.locator("#ff").boundingBox();
-        assert.ok(tb.y >= fb.y + fb.height && tb.y - (fb.y + fb.height) < 24, "toast under the wrong box");
-        const st = await page.$eval("#toast", e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.fontWeight].join("|"); });
-        assert.equal(st, "rgb(8, 17, 31)|rgb(52, 68, 93)|400");
+      assert.equal(await page.locator("#toast.on").count(), 0, "no toast (Tony, Oct 5: try pips instead)");
+      {   // the pips: right under the wrong box, right-aligned, one used + one left
+        assert.deepEqual(await page.$eval("#ff + .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1]);
+        const pb = await page.locator("#ff + .pips").boundingBox(), fb = await page.locator("#ff").boundingBox();
+        assert.ok(pb.y >= fb.y + fb.height && pb.y - (fb.y + fb.height) < 24 && Math.abs(pb.x + pb.width - (fb.x + fb.width)) < 1, "pips under the box, right edge");
       }
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");

@@ -284,6 +284,11 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
 .chk .cluck > .ico { margin-top: 0; }
 .q.closed .chk { display: none; }
+/* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
+.pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
+.pips i { width: 10px; height: 10px; border-radius: 50%; border: var(--bw) solid var(--muted); }
+.pips i.used { background: var(--bad); border-color: var(--bad); }
+.choices + .pips, .ff + .pips { display: flex; justify-content: flex-end; margin-top: var(--s2); }   /* no Check beside them: right-aligned under the rows / the box */
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
    The selected pill holds the arrow flush at its right end, so it alone reserves the arrow's room (56px, as in the stacked list).
