@@ -409,14 +409,21 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .rtab { display: none; height: 96px; border-radius: 0 10px 10px 0; box-shadow: var(--shadow-3); }
 .rot .rtab.r { border-radius: 10px 0 0 10px; }
 /* desktop / tablet side by side (brainrot.js home(); Tony, Oct 4 "B: top of notes"): its own slot at the top of the notes column */
-.rot.docked { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s5); touch-action: auto; cursor: auto; }   /* not .dock: that is the top bar's class (app.css padding, nav.css display: contents) */
+.rot.docked { position: relative; z-index: 5; left: auto; margin: 0 0 var(--s1); touch-action: auto; cursor: auto; }   /* not .dock: that is the top bar's class (app.css padding, nav.css display: contents) */
 /* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
    height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
 .rot.docked .duo { width: 100%; grid-template-columns: repeat(2, minmax(0, calc(40dvh * 9 / 16))); justify-content: center; }
 .rot.docked .vid { aspect-ratio: 9 / 16; }
 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
 .rot-hd { display: none; }
-.rot.docked .rot-hd { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s2); }   /* labels level with "Question"; the button hangs lower (Tony, Oct 5) */
+/* the pull-down grip under the players (brainrot.js pull(); Tony, Oct 5: explain-column.html D1): the .sash pill, 44px tall to touch */
+.rot-grip { display: none; }
+.rot.docked .rot-grip { display: block; position: relative; width: 100%; height: 44px; margin-top: calc(-1 * var(--s1)); padding: 0; border: 0; background: none; cursor: row-resize; touch-action: none; outline: none; }
+.rot-grip::before { content: ""; position: absolute; left: 50%; top: 50%; width: 36px; height: 4px; margin: -2px 0 0 -18px; border-radius: 2px; background: var(--edge); }
+.rot-grip:hover::before, .rot.pull .rot-grip::before { background: var(--muted); }
+.rot-grip:focus-visible::before { outline: var(--ring) solid var(--focus); outline-offset: 3px; }
+.rot.pull .duo { overflow: hidden; }                                       /* its height follows the finger */
+.rot.docked .rot-hd { display: flex; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s2); }   /* labels level with "Question" */
 .rot.docked.stashed .rot-hd { margin-bottom: 0; }
 .rot.docked.parked { display: none; transform: none !important; }
 .rot.stashed .rtab { display: grid; }
@@ -493,7 +500,7 @@ html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; } 
 html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
-html.side .cl { flex: 1; min-height: 0; border: 1px solid var(--ai-line); border-radius: 10px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
+html.side .cl { flex: 1; min-height: 0; border-radius: 12px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
 html.cl-open body { overflow: hidden; }
 .cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
@@ -503,11 +510,32 @@ html.cl-open body { overflow: hidden; }
 .cl-bar .cl-x { border: 0; cursor: pointer; }
 .cl-bar .cl-x .ico { width: 22px; height: 22px; }
 html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
-/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is the one "Cluck"; LIVE sits over the text while Cluck types */
-.cl-live { display: none; margin: 0 0 var(--s2); padding: 0 var(--s2); border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1.5; }
-.cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: inline-block; }
-@media (prefers-reduced-motion: no-preference) { .cl-live { animation: wlive 1.6s ease-in-out infinite; } }
-@keyframes wlive { 50% { opacity: .6; } }
+/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain"; "Cluck is typing…" sits under the thread while he types */
+.cl-live { display: none; align-items: center; gap: var(--s2); margin: var(--s3) 0 0; color: var(--ai-muted); font-size: var(--t-xs); }
+.cl-live b { color: var(--ai-text); }
+.cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: flex; }
+.cl-live .dots { display: inline-flex; gap: 3px; }
+.cl-live .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ai-muted); }
+@media (prefers-reduced-motion: no-preference) {   /* Discord's wave (Tony, Oct 5); impeccable pulsing-dot waived in .impeccable/config.json */
+  .cl-live .dots i { animation: wdot 1.2s ease-in-out infinite; }
+  .cl-live .dots i:nth-child(2) { animation-delay: .15s; } .cl-live .dots i:nth-child(3) { animation-delay: .3s; }
+}
+@keyframes wdot { 0%, 60%, 100% { opacity: .4; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+/* the thread (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar left, name + tag + time, the text under; Cluck is a chat user */
+.cl .msg { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); margin: 0 calc(-1 * var(--s2)); padding: var(--s1) var(--s2); border-radius: 6px; }
+.cl .msg:hover { background: rgb(255 255 255 / 0.03); }
+.cl .msg > .av { grid-row: 1 / 3; margin-top: 2px; }
+.cl .msg > :not(.av) { grid-column: 2; min-width: 0; }
+.cl .av { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--ai-tint); color: var(--ai); }
+.cl .av .ico { width: 22px; height: 22px; }
+.cl .av.me { background: var(--raised); color: var(--ai-text); }
+.cl .av.me .ico { width: 18px; height: 18px; }
+.cl .who { display: flex; align-items: baseline; gap: var(--s2); margin-bottom: 2px; line-height: 1.3; }
+.cl .who .name { font-weight: 700; color: var(--ai); }
+.cl .msg.me .name { color: var(--ai-text); }
+.cl .who .tag { align-self: center; padding: 1px 5px; border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 0.6875rem; font-weight: 700; letter-spacing: .04em; line-height: 1.4; }
+.cl .who .time { color: var(--ai-muted); font-size: 0.8125rem; }
+.cl .msg.me .md { margin: 0; color: var(--ai-text); line-height: var(--lh); overflow-wrap: anywhere; }
 /* "See reference solution": the original's steps, folded under Cluck's text after a miss (Tony's wording) */
 .cl-fold { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s5); padding: 0; border: 0; border-top: 1px solid var(--ai-rule);
   background: none; color: var(--ai-strong); font: inherit; font-weight: 700; font-size: var(--t-sm); text-align: left; cursor: pointer; }
@@ -526,9 +554,8 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 .cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
 html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* room for the corner X: no title row to hold it (variant a) */
 .cl-pane[hidden] { display: none; }
-.cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
+.cl-thread { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s3); }
 .cl-thread:empty { display: none; }
-.cl .bub.me { align-self: flex-end; max-width: min(85%, 40ch); padding: var(--s2) var(--s4); border-radius: 10px 10px 4px 10px; background: var(--ai-ct); color: var(--ai-on-ct); line-height: var(--lh); overflow-wrap: anywhere; }   /* RM3: a tonal container */
 /* one speaker, one format (Tony, Oct 5): a reply sits on the sheet like the first answer, no card */
 .cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
 .cl-ft[hidden] { display: none; }
@@ -550,6 +577,13 @@ html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* roo
 .ask .send .ico { width: 26px; height: 26px; }
 .ask .send:hover { filter: brightness(1.08); }
 .ask .send:disabled { opacity: .45; cursor: default; filter: none; }
+/* the Dock chatbar (Tony, Oct 5: explain-column.html bar 2): a full-bleed band at the card's foot, Discord's input; a tonal send (9.97:1) */
+.cl-ft { padding: var(--s2) 0 0; }
+.cl-ft .ask { padding: var(--s2) var(--s2) var(--s2) var(--s4); border-radius: 0; }
+html.side .cl-ft .ask { border-radius: 0 0 12px 12px; }
+.cl-ft .ask .send { width: 44px; height: 44px; background: var(--ai-ct); color: var(--ai-on-ct); }
+.cl-ft .ask .send .ico { width: 22px; height: 22px; }
+.cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
 .cl .done-row p { margin: 0; color: var(--ai-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
 .wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); cursor: pointer; }   /* a tap skips the typing */

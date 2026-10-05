@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "design/mockups/explain-column.html"
+        ],
+        "createdAt": "2026-10-05T23:31:14.300Z",
+        "reason": "Discord-style typing wave, only while Cluck types; off under reduced motion (Tony, Oct 5)"
+      }
+    ]
+  }
+}

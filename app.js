@@ -1198,10 +1198,10 @@ let cl = null;   // { el, tab, open, from }
 function clEl() {
   if (cl) return cl.el;
   const el = document.createElement("aside");
-  el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Cluck");
+  el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Explain");
   el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
     <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
-    <div class="cl-bd"><div class="cl-pane" id="clTabEP"><span class="cl-live" aria-hidden="true">LIVE</span><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div>
+    <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-live" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span><span><b>Cluck</b> is typing…</span></p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
       <div class="cl-pane" id="clTabSP"></div></div>
     <div class="cl-ft"></div>`;
@@ -1261,9 +1261,16 @@ function clTab(tab, focus) {
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
   if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
 }
+/* the thread reads like a chat (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar, name, Cluck's TUTOR tag, the time */
+const clNow = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function clWho(me) {
+  return `<span class="av${me ? " me" : ""}" aria-hidden="true">${icon(me ? "i-me" : "i-duck")}</span><div class="who"><span class="name">${me ? "You" : "Cluck"}</span>`
+    + `${me ? "" : '<span class="tag">TUTOR</span>'}<span class="time">${clNow()}</span></div>`;
+}
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
   if (!cl) return;
   clClose();
+  cl.el.querySelector("#clTabEP .time").textContent = clNow();              // the first message's time: this question's
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
   cl.el.querySelector(".cl-ft").innerHTML = "";
@@ -1289,9 +1296,10 @@ async function clSend(msg) {
   const w = wish, t = S.tries.at(-1) || {};
   if (!w || w.busy || !wishTyped(w)) return;
   const th = cl.el.querySelector(".cl-thread");
-  const me = document.createElement("div"); me.className = "bub me"; me.textContent = msg;
-  const re = document.createElement("div"); re.className = "wtext wreply"; re.innerHTML = WCARET;
-  th.append(me, re);
+  const me = document.createElement("div"); me.className = "msg me"; me.innerHTML = clWho(true) + '<p class="md"></p>'; me.lastChild.textContent = msg;
+  const box = document.createElement("div"); box.className = "msg"; box.innerHTML = clWho(false) + `<div class="wtext wreply">${WCARET}</div>`;
+  const re = box.lastChild;
+  th.append(me, box);
   w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
   re.scrollIntoView({ block: "nearest" });
   w.ctl = w.ctl || new AbortController();
@@ -1315,7 +1323,7 @@ async function clSend(msg) {
   w.busy = false;
   if (err) {
     w.chat.pop();                                                          // not answered: it does not count
-    if (err === "limit") { w.out = true; re.remove(); }
+    if (err === "limit") { w.out = true; box.remove(); }
     else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
   } else { w.chat.push({ role: "assistant", content: text }); re.innerHTML = wishHTML(text); say(speakable(text)); }
   clAsk();
