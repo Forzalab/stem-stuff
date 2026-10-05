@@ -13,6 +13,8 @@
    Docked, a label row heads the column (Tony, Oct 5, video-bar.html ?v=1): the duck + "Cluck", level with the question's "Question" label,
    and one "Curated brainrots" button that folds / unfolds the players (the – / ✕ overlays and the 36px "Show video" bar are gone there).
    The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
+   While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
+   was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
    Curated brainrots (Tony, Oct 5): CATS = his 3 playlists (tools/brainrot_list.py writes it). Each page load picks 2 of the 3, one video each. */
 (() => {
   /* list:start (tools/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
@@ -40,6 +42,7 @@
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
+  let sheetOn = false, autoFold = false;                                 // Cluck's sheet open (desktop): the players fold until it shuts or the header asks (Tony, Oct 5)
   const width = () => (desk() ? 320 : 176);
   function build() {
     el = document.createElement("div");
@@ -57,6 +60,7 @@
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
+      autoFold = false;
       if (b.dataset.act === "min") { stashed = userMin = true; place(); }
       else if (b.dataset.act === "open") { stashed = userMin = false; if (!docked()) picked = true; place(true); }   // asked for: shown even if every corner is busy
       else if (b.dataset.act === "x") { sess("stem-rot-off", "1"); sync(); }
@@ -113,7 +117,7 @@
     else if (!dock && el.parentElement !== document.body) document.body.append(el);
     const was = el.classList.contains("docked");
     el.classList.toggle("docked", dock);
-    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || RM.matches; }
+    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || autoFold || RM.matches; }
     else if (was) stashed = userMin || innerHeight < 700 || RM.matches;   // back to the floating corner's own rule
   }
   function place(animate) {
@@ -160,7 +164,13 @@
   }
   const idle = window.requestIdleCallback || (f => setTimeout(f, 1200));
   addEventListener("load", () => idle(warmUp, { timeout: 3000 }));
-  window.stemBrainrot = { sync, warmUp, cats: CATS };
+  /* app.js clPlace(): the sheet only gets 177 px under the players at 1366x768, so it takes their room while open */
+  function sheet(open) {
+    if (open !== sheetOn) autoFold = open;
+    sheetOn = open;
+    if (on) place(false);
+  }
+  window.stemBrainrot = { sync, warmUp, sheet, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));

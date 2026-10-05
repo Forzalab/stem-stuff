@@ -241,6 +241,8 @@ try {
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
     assert.equal(box[2], true, "the sheet fills the column under the videos");
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
+      [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
     assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
     assert.equal(await page.textContent("#cluck .cl-ttl"), "Cluck's steps", "RM3: the title row");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
@@ -273,6 +275,7 @@ try {
     await page.keyboard.press("Escape");
     assert.equal(await page.isHidden("#cluck"), true);
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("wchip")), true, "focus goes back to the chip");
+    assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "the sheet is shut: the players come back");
   });
 
   await step("easy: prove-mode question has no fix boxes; a tick-only set is graded", async () => {

@@ -1195,6 +1195,7 @@ function clPlace() {                                                        // s
   const home = sideMQ.matches ? $("#work") : document.body;
   if (cl.el.parentElement !== home) home.append(cl.el);
   $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
+  window.stemBrainrot?.sheet(cl.open && sideMQ.matches);
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll

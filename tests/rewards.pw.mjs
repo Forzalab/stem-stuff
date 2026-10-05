@@ -170,8 +170,11 @@ try {
     assert.equal(await d.getAttribute("#clTabS", "aria-selected"), "true");
     assert.equal(await d.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     assert.equal(await d.isHidden("#xb"), true, "the steps are showing: no scratchpad");
-    { const [r, c] = await d.$$eval("#rot, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
-      assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the videos stay above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
+    { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
+      assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the label row stays above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the sheet is open: the players fold (Tony, Oct 5)");
+    await d.click("#rot .rot-btn");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the header button still brings them back");
     assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
@@ -181,6 +184,7 @@ try {
     assert.equal(await d.isHidden("#clTabE"), true, "no wish yet: one tab");
     await d.keyboard.press("Escape");
     assert.equal(await d.isHidden("#cluck"), true, "Escape closes it");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "asked for while open: still shown after");
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
     assert.equal(await d.isHidden("#xb"), true, "the hint card is there: still no scratchpad");
     await d.click("#origHd");                                                 // a tap opens it again, focus on its tab
