@@ -11,7 +11,15 @@
 <script src="../../vendor/katex/katex.min.js"></script>
 <style>
 /* Tony, Oct 5 ~12:0x: the formula box should be "***Use:***" then the formulas, centred, in the site's blue (not Cluck's amber).
-   ?v=1|2|3, &clean hides the switcher. Each variant: a one-formula card and a three-formula card under a question.
+   ?v=1|2|3, &clean hides the switcher.
+   Round 2 (Tony ~12:1x: "ordered card, BUT 3 more variants... NOT a textbox, more a textbook recap block"; refs: a Material outlined
+   field, a textbook definition box, a textbook spread). ?v=4|5|6 &c=blue|orange. Read off the refs:
+   - the Material field's notch: the label cut into the top border names the frame. Alone it reads as an INPUT (that ref is one), so
+     the recap versions drop every field cue (no caret, no field padding, no hover) and add a tint or a heavier rule.
+   - the textbook definition box: a flat tint, no outline, a heading in another style (bold italic) = "key result, read me".
+   - the spread's side boxes: small, colour-coded, next to what they explain.
+   4 notched outline · 5 tint + notched top rule · 6 tint + a tab straddling the top-left edge. All: bulb + "Key formulas",
+   formulas centred, a thin arrow between (Tony's v3 pick), role="note". */ Each variant: a one-formula card and a three-formula card under a question.
    app.css tokens only (STYLE.md §2): radii 6 / 8 / 10, 1px dividers, weights 400 / 700. The dashed strip is mock chrome. */
 body { padding: 0 !important; }
 .mbar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; padding: var(--s2) var(--gut); border-bottom: 1px dashed var(--line); background: var(--field); color: var(--muted); font-size: var(--t-xs); }
@@ -42,6 +50,26 @@ body { padding: 0 !important; }
 /* 2 · Label + well: the label sits on the page, the formulas in a recessed blue well (--field) with a 1px --line edge */
 .v2 .use ol { gap: var(--s2); margin-top: var(--s2); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
 
+/* round 2: the accent per colour, a 10% tint of it over the page */
+.c-blue { --acc: var(--c1); --tint: color-mix(in srgb, var(--c1) 10%, var(--paper)); }
+.c-orange { --acc: #ff9a3c; --tint: color-mix(in srgb, #ff9a3c 10%, var(--paper)); }
+.rc { position: relative; margin-top: var(--s5); }
+.rc .lab { display: inline-flex; align-items: center; gap: var(--s2); font-style: normal; font-size: var(--t-sm); font-weight: 700; color: var(--acc); }
+.rc .lab svg { width: 1.125rem; height: 1.125rem; flex: none; }
+.rc ol { margin-top: var(--s2); }
+.rc li.to { color: var(--acc); opacity: .7; font-size: var(--t-sm); line-height: 1; padding: var(--s1) 0; }
+.rc li.to svg { display: block; width: 16px; height: 16px; }
+/* the notch: the label sits on the top line, its own background breaks the line (Material's outlined field) */
+.rc .notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); padding: 0 var(--s2); background: var(--paper); }
+/* 4 · Notched outline: a 1px accent frame, no fill */
+.v4 .rc { padding: var(--s4) var(--s4) var(--s4); border: 1px solid var(--acc); border-radius: 10px; }
+/* 5 · Tint + notched top rule: ref 2's flat tint, one accent rule on top, the label notched into it */
+.v5 .rc { padding: var(--s4) var(--s4) var(--s4); border-top: 1px solid var(--acc); border-radius: 0 0 10px 10px; background: var(--tint); }
+.v5 .rc .notch { background: linear-gradient(var(--paper) 50%, var(--tint) 50%); }   /* page above the rule, tint below: the line breaks clean */
+/* 6 · Tint + tab: no outline, the label in a solid tab that straddles the top-left edge */
+.v6 .rc { padding: var(--s5) var(--s4) var(--s4); border-radius: 10px; background: var(--tint); }
+.v6 .rc .notch { left: var(--s4); padding: var(--s1) var(--s3); border-radius: 6px; background: var(--acc); }
+.v6 .rc .notch .lab { color: var(--field); }
 /* 3 · Ordered card: like 1, a thin arrow between formulas keeps the order without numbers; the label shares a row with the first formula's band */
 .v3 .use { padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
 .v3 .use ol { margin-top: var(--s2); }
@@ -50,20 +78,24 @@ body { padding: 0 !important; }
 </style>
 </head>
 <body>
-<nav class="mbar" id="mbar"><b>Formula box: "Use:"</b><a href="?v=1">1 · Card</a><a href="?v=2">2 · Label + well</a><a href="?v=3">3 · Ordered card</a></nav>
+<nav class="mbar" id="mbar"><b>Formula box</b><a href="?v=1">1 · Card</a><a href="?v=2">2 · Label + well</a><a href="?v=3">3 · Ordered card</a>
+  <a href="?v=4&c=blue">4 · Notch</a><a href="?v=5&c=blue">5 · Tint + notch</a><a href="?v=6&c=blue">6 · Tint + tab</a><a href="?v=4&c=orange">4 orange</a><a href="?v=5&c=orange">5 orange</a><a href="?v=6&c=orange">6 orange</a></nav>
 <div class="grid" id="grid"></div>
 <script>
-const q = new URLSearchParams(location.search), v = ["1", "2", "3"].includes(q.get("v")) ? q.get("v") : "1";
+const q = new URLSearchParams(location.search), v = ["1", "2", "3", "4", "5", "6"].includes(q.get("v")) ? q.get("v") : "1", c = q.get("c") === "orange" ? "orange" : "blue";
 if (q.has("clean")) document.documentElement.classList.add("clean");
-document.querySelector(`#mbar a[href="?v=${v}"]`).classList.add("on");
+document.querySelector(v > "3" ? `#mbar a[href="?v=${v}&c=${c}"]` : `#mbar a[href="?v=${v}"]`)?.classList.add("on");
+const BULB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v1.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const K = t => katex.renderToString(t, { throwOnError: false });
 const ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const box = fs => `<section class="use" aria-label="${fs.length > 1 ? "Formulas, in order" : "Formula"}"><p class="lab">Use:</p><ol>${
-  fs.map((f, i) => (i && v === "3" ? `<li class="to" aria-hidden="true">${ARROW}</li>` : "") + `<li>${K(f)}</li>`).join("")}</ol></section>`;
+const list = fs => `<ol>${fs.map((f, i) => (i && v >= "3" ? `<li class="to" aria-hidden="true">${ARROW}</li>` : "") + `<li>${K(f)}</li>`).join("")}</ol>`;
+const box = fs => v >= "4"
+  ? `<section class="use rc" role="note" aria-label="Key formulas${fs.length > 1 ? ", in order" : ""}"><span class="notch"><span class="lab">${BULB}Key formulas</span></span>${list(fs)}</section>`
+  : `<section class="use" aria-label="${fs.length > 1 ? "Formulas, in order" : "Formula"}"><p class="lab">Use:</p>${list(fs)}</section>`;
 const card = (title, text, fs) => `<div><span class="lbl">${title}</span><div class="qb"><p>${text}</p></div>
   <div class="rows">${["1.0 m/s", "2.0 m/s", "3.0 m/s"].map(t => `<div class="row"><span class="bx"></span>${t}</div>`).join("")}</div>
   <div class="chkr"><span class="go">→</span></div>${box(fs)}</div>`;
-document.getElementById("grid").className = "grid v" + v;
+document.getElementById("grid").className = "grid v" + v + " c-" + c;
 document.getElementById("grid").innerHTML =
   card("One formula", "A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?", ["m_1 v_1 = (m_1 + m_2)\\,v_f"]) +
   card("Three formulas, in order", "A 0.50 kg ball falls 2.0 m onto a spring and stops. How far does the spring compress?", ["K_i + U_i = K_f + U_f", "U_g = mgh", "U_s = \\tfrac12 k x^2"]);
