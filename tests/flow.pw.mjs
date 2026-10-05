@@ -139,8 +139,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   await step(`${T} the pad page: no header row; tool row in the pad (q | a left, collapse, Copy right); the tile hugs; Back closes`, async () => {
     const url = page.url();
     await openPad();
-    assert.ok(await page.locator("#copy").isHidden(), "Copy shows on an empty pad (clutter C10)");
-    await page.evaluate(() => { const t = document.querySelector("#scratch"); t.value = "x"; t.dispatchEvent(new Event("input")); });   // Copy comes with text
+    const copyOn = v => page.evaluate(v => { const t = document.querySelector("#scratch"); if (v !== null) { t.value = v; t.dispatchEvent(new Event("input")); } return { hidden: document.querySelector("#copy").hidden, has: !!t.value }; }, v);
+    const was = await page.evaluate(() => document.querySelector("#scratch").value);
+    assert.equal((await copyOn("")).hidden, true, "Copy shows on an empty pad (clutter C10)");
+    assert.equal((await copyOn(was || "x")).hidden, false, "Copy hidden with text");   // the pad's text back (earlier steps wrote in it)
     assert.ok(await has("mt-q") && await has("mt-fit"), `q, hugging (${await cls()})`);
     assert.ok(await page.locator("#xbName").evaluate(e => !e.getClientRects().length || e.getBoundingClientRect().width <= 1), "header row label shown");
     const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), f = r("#xbField"), m = r("#mtMode"), x = r("#mtExp"), p = r("#copy"), t = r("#freeze"), pr = document.querySelector("#problem");

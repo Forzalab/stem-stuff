@@ -414,10 +414,12 @@ async function run(browserType, label, opts = {}) {
         }
         m.remove();
         // once the box is capped at the viewport bottom it scrolls: lines pass under the buttons, but the last one rests above them
-        return { hits: t.scrollHeight > t.clientHeight + 1 ? 0 : hits, free: t.classList.contains("xb-free"), inside, shown: bs.length > 0 };
+        return { hits: t.scrollHeight > t.clientHeight + 1 ? 0 : hits, free: t.classList.contains("xb-free"), inside, shown: bs.length > 0, has: !!t.value };
       });
       let c = await clear();
-      assert.ok(!c.shown, "Copy shows on an empty pad (clutter C10)");
+      assert.equal(c.shown, c.has, "Copy shows exactly when the pad has text (clutter C10)");
+      assert.ok(c.inside, "Copy outside the textarea box");
+      assert.equal(c.hits, 0, "text under the button");
       // grow one long paragraph a word at a time; the reserved band must switch on exactly when needed, never flicker
       const side = viewport.width >= 720;   // side by side: the pad fills its column (design/MULTITASK.md), it does not grow with the text
       await ta.focus();   // a tap on a phone opens the pad page (variant 9); the band is checked on the plain page, as before
