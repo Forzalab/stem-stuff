@@ -267,15 +267,21 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
   |---|---|---|
   | `--ai` | #ff9a3c | the one accent: the speaker name, the send button fill, the turns-left count, focus of the input |
   | `--ai-ink` | #2b1000 | text on `--ai` (8.4:1) |
-  | `--ai-tint` | `--ai` 10% over `--sheet` | the math callout and the step circles only (small areas: a big warm tint over navy reads muddy) |
-  | `--ai-line` | `--ai` 40% over `--sheet` | the callout's 1px edge (`--bw`) |
-  Contrast: `--ai` on `--sheet` 7.0:1, `--ink` on `--ai-tint` 10.6:1 (AA large and body).
+  | `--ai-sheet` | #2a1d14 | Cluck's box: its own warm dark surface (a designed colour, not a tint over navy, which reads muddy) |
+  | `--ai-field` | #1e140d | fields inside the box |
+  | `--ai-text` / `--ai-muted` | #fff1e3 / #d9bfa8 | text inside the box (14.8:1 / 9.3:1) |
+  | `--ai-rule` | #4a3526 | dividers inside the box |
+  | `--ai-tint` | `--ai` 14% over `--ai-sheet` | the math callout and the step circles (text 11.3:1) |
+  | `--ai-line` | `--ai` 45% over `--ai-sheet` | the box's and the callout's 1px edge (`--bw`) |
+  Contrast: `--ai` on `--sheet` 7.0:1, on `--ai-sheet` 7.7:1.
+- **Cluck's box is its own service on the site** (Tony, Oct 4: "cluck box should be also orange (think ... like a diff service on the same website). the button explanation + next should stay blue of our site"). `.ai-box` remaps the base tokens inside it (`--sheet`, `--field`, `--ink`, `--muted`, `--hint`, `--line`, `--edge`) to the `--ai-*` set, so buttons, fields and text follow without new rules. The student's bubble stays `--raised` (navy: the student is the site's side).
+- The site's own actions stay site blue everywhere, in or out of the box: "Explanation" (outline `--c1`) and "Next question" (`.btn-go`). Only Cluck's own controls are tangerine (send button, tabs, turns left).
 - One accent per surface. No glow, no gradient, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
 - Math: inline `$..$` stays in the sentence; a step's equations go in a **callout**: centred display math, one equation per line, `--ai-tint` fill, 1px `--ai-line` edge, 10px radius, `--s3`/`--s4` padding. Problem scenes in it stay pure ink (DESIGN-LANGUAGE.md §3).
 - Text: one renderer for Cluck's explanation AND the similar-steps card, so the two look like one family (Tony, Oct 4: "make the LOOK between AI box and the similar explanation section look unified").
 - Steps (Gemini steps widget, Tony, Oct 4: "for EACH STEP, format it similar to gemini's app design ... add a bit more text to increase legibility and top down approachability"; ref: brain `projects/calc/_files/ref-ui/gemini-steps-ref.jpg`): an intro sentence with the key words in bold, then numbered steps. Each step: a 28px circle (1px `--ai` edge, `--ai-tint` fill, `--ai` digit), a 2px dotted `--ai-line` connector down to the next circle, a bold title (`--t-md`), an italic mono subtitle (`--t-xs`, `--muted`), 1-3 short bullets, then that step's equations in one callout. After the last step, a 1px `--line` rule and the answer sentence ("So the answer is **B, 2.0 m/s**." plus, after a wrong pick, one line on why that pick was tempting). Short follow-up replies skip the steps: 1-3 plain lines, a callout only when they show math.
-- Chat: Cluck's messages left with the duck (`--mark`) and the name in `--ai`; as bubbles they sit on `--sheet` with a 1px `--ai-line` edge; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a "Next question" button.
-- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution through the same steps renderer, in its own `--sheet` panel with a 1px `--ai-line` edge. Never glued under the header.
+- Chat: Cluck's messages left with the duck (`--mark`) and the name in `--ai`; as bubbles they are `.ai-box` with a 1px `--ai-line` edge; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a site-blue "Next question" button (`.btn-go`).
+- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution through the same steps renderer, in its own `.ai-box` panel with a 1px `--ai-line` edge. Never glued under the header.
 
 ### Reward layer (sugar only: `.rw-*`, `.fx-*`)
 

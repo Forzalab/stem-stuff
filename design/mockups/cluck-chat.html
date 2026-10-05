@@ -21,9 +21,19 @@
 /* ---------- Cluck's surfaces (STYLE.md): tokens on .ai-skin, never :root ---------- */
 .ai-skin {
   --ai: #ff9a3c; --ai-ink: #2b1000;
-  --ai-tint: color-mix(in srgb, var(--ai) 10%, var(--sheet));
-  --ai-line: color-mix(in srgb, var(--ai) 40%, var(--sheet));
+  --ai-sheet: #2a1d14; --ai-field: #1e140d; --ai-text: #fff1e3; --ai-muted: #d9bfa8; --ai-rule: #4a3526;
+  --ai-tint: color-mix(in srgb, var(--ai) 14%, var(--ai-sheet));
+  --ai-line: color-mix(in srgb, var(--ai) 45%, var(--ai-sheet));
 }
+/* Cluck's box = its own service on the site (Tony, Oct 4: "cluck box should be also orange (think ... like a diff service on the same
+   website). the button explanation + next should stay blue of our site"): a warm dark surface with its own ink, remapping the base
+   tokens inside the box so .btn, .ff and the text follow. Contrast: text 14.8, muted 9.3, --ai 7.7 on --ai-sheet; text on tint 11.3 */
+.ai-box { --sheet: var(--ai-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--ai-muted); --hint: var(--ai-muted);
+  --line: var(--ai-rule); --edge: var(--ai-line); background: var(--sheet); color: var(--ink); }
+/* the site's own actions stay blue, in or out of the box */
+.btn-c1 { width: auto; padding: 0 var(--s5); font-weight: 700; background: transparent; border-color: var(--c1); color: var(--c1); }
+.btn-c1:hover { background: var(--raised); }
+.btn-go.wide { width: auto; padding: 0 var(--s5); font-weight: 700; }
 /* one renderer, one look: prose, callout, answer line */
 .say p { margin: 0 0 var(--s2); }
 .say p:last-child { margin-bottom: 0; }
@@ -53,7 +63,7 @@
 .msg .col { min-width: 0; flex: 1; display: flex; flex-direction: column; }
 .bub { max-width: 100%; padding: var(--s3) var(--s4); border-radius: 12px; line-height: var(--lh); }
 /* big surfaces stay the neutral sheet with a warm edge; the warm tint is for the small callouts only (a big orange-on-navy tint reads muddy) */
-.bub.ai { background: var(--sheet); border: var(--bw) solid var(--ai-line); border-top-left-radius: 4px; }
+.bub.ai { border: var(--bw) solid var(--ai-line); border-top-left-radius: 4px; }
 .bub.me { align-self: flex-end; max-width: 85%; background: var(--raised); border-top-right-radius: 4px; }
 .ask { display: flex; gap: var(--s2); align-items: center; }
 .ask .ff { flex: 1; }
@@ -65,10 +75,6 @@
 .left { flex: none; min-width: 4.5rem; text-align: right; font: 700 var(--t-xs)/1 inherit; color: var(--ai); }
 .done-row { display: flex; align-items: center; gap: var(--s3); }
 .done-row p { margin: 0; color: var(--muted); font-size: var(--t-sm); }
-.btn-ai { width: auto; padding: 0 var(--s5); font-weight: 700; background: var(--ai); color: var(--ai-ink); }
-.btn-ai:hover { background: #ffad5e; }
-.btn-line { width: auto; padding: 0 var(--s5); font-weight: 700; background: transparent; border-color: var(--ai); color: var(--ai); }
-.btn-line:hover { background: var(--ai-tint); }
 
 /* ---------- page frame (a stand-in for the app's side-by-side layout) ---------- */
 body { padding: 0; }
@@ -96,7 +102,7 @@ html.shot .mk-sw { display: none; }
 
 /* ---------- V1 "One home": the side sheet with two tabs ---------- */
 .side { position: fixed; z-index: 40; top: 0; bottom: 0; right: max(0px, (100% - 96rem) / 2); width: calc((min(100%, 96rem) - var(--s5)) / 2);
-  flex-direction: column; background: var(--sheet); border-left: var(--bw) solid var(--line); box-shadow: var(--shadow-4); }
+  flex-direction: column; border-left: var(--bw) solid var(--ai-line); box-shadow: var(--shadow-4); }
 @media (max-width: 899px) { .side { width: 100%; } }
 .sh-hd { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s2) var(--s2) var(--s4); }
 .sh-bd { flex: 1; overflow-y: auto; padding: var(--s4); }
@@ -122,7 +128,7 @@ html.shot .mk-sw { display: none; }
 .duckcoin svg { width: 30px; height: 30px; color: #8a4b00; }
 .cx-bd { padding: var(--s4); border-radius: 14px; background: var(--sheet); border: var(--bw) solid var(--ai-line); }
 .cx-bd .thread { gap: var(--s3); }
-.cx-ft { padding: var(--s3); border-radius: 14px; background: var(--sheet); border: var(--bw) solid var(--line); }
+.cx-ft { padding: var(--s3); border-radius: 14px; border: var(--bw) solid var(--ai-line); }
 .scrim { position: fixed; inset: 0; z-index: 39; background: rgb(8 12 20 / .62); }
 .mid { position: fixed; z-index: 40; left: 50%; top: var(--s4); bottom: var(--s4); transform: translateX(-50%); width: min(48rem, calc(100% - 2 * var(--gut)));
   grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--s3); }
@@ -130,7 +136,7 @@ html.shot .mk-sw { display: none; }
 
 /* ---------- V3 "One voice": both are Cluck bubbles ---------- */
 .inl { gap: var(--s4); }
-.inl .ask-wrap { position: sticky; bottom: 0; padding: var(--s3) 0 var(--s4); background: linear-gradient(to bottom, transparent, var(--paper) var(--s3)); }
+.inl .ask-wrap { position: sticky; bottom: var(--s3); padding: var(--s3); border-radius: 12px; border: var(--bw) solid var(--ai-line); box-shadow: var(--shadow-3); }
 .hint .msg.steps { margin-top: var(--s3); }
 
 /* which variant shows what */
@@ -171,14 +177,14 @@ html[data-v] body.closed :is(.side, .mid, .scrim) { display: none !important; }
       <button class="opt wrong" type="button"><span class="badge">C</span><span class="txt">3.0 m/s</span></button>
       <button class="opt" type="button"><span class="badge">D</span><span class="txt">4.5 m/s</span></button>
     </div>
-    <div class="res ai-skin v1 v2">
+    <div class="res v1 v2">
       <p class="verdict bad"><svg class="ico" aria-hidden="true"><use href="#i-bad"/></svg><span>Not quite<span class="sub">The answer is B, 2.0 m/s.</span></span></p>
-      <button class="btn btn-line" type="button" data-open="explain">Explanation</button>
-      <button class="btn btn-ai" type="button">Next question</button>
+      <button class="btn btn-c1" type="button" data-open="explain">Explanation</button>
+      <button class="btn btn-go wide" type="button">Next question</button>
     </div>
     <div class="inl ai-skin v3">
       <div class="thread" data-thread></div>
-      <div class="ask-wrap" data-foot></div>
+      <div class="ask-wrap ai-box" data-foot></div>
     </div>
   </section>
 
@@ -199,13 +205,13 @@ html[data-v] body.closed :is(.side, .mid, .scrim) { display: none !important; }
         <h2>Similar solution steps</h2>
         <button class="rw-hint-chev" type="button" aria-label="Hide the steps" aria-expanded="true"><svg aria-hidden="true" style="transform:rotate(180deg)"><use href="#i-down"/></svg></button>
       </div>
-      <div class="cx-bd"><div data-steps></div></div>
+      <div class="cx-bd ai-box"><div data-steps></div></div>
     </div>
     <div class="pad">Scratchpad</div>
   </section>
 </main>
 
-<aside class="side ai-skin rw-skin v1" aria-label="Cluck">
+<aside class="side ai-skin ai-box rw-skin v1" aria-label="Cluck">
   <header class="sh-hd">
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" type="button" data-tab="explain"><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg>Cluck explains</button>
@@ -230,8 +236,8 @@ html[data-v] body.closed :is(.side, .mid, .scrim) { display: none !important; }
     <h2>Cluck explains</h2>
     <button class="rw-hint-chev" type="button" aria-label="Close" data-close><svg aria-hidden="true"><use href="#i-x"/></svg></button>
   </div>
-  <div class="cx-bd"><div class="thread" data-thread></div></div>
-  <div class="cx-ft" data-foot></div>
+  <div class="cx-bd ai-box"><div class="thread" data-thread></div></div>
+  <div class="cx-ft ai-box" data-foot></div>
 </aside>
 
 <script>
@@ -287,6 +293,7 @@ const REPLIES = [
   ["Add both momenta first. Keep the sign: left is minus.", "$m_1v_1 + m_2v_2 = (m_1 + m_2)\\,v$"]
 ];
 const MAX = 4;
+let sent = false;
 let used = Math.min(MAX, Math.max(0, +(q.get("turns") ?? (V === "3" && ALT ? 4 : 1))));
 let tab = V === "1" && ALT ? "steps" : "explain";
 const duck = `<svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg>`;
@@ -294,18 +301,18 @@ const duck = `<svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg>`;
 /* V1: Gemini-like, Cluck's text sits on the sheet with no bubble; V2: the first message is plain on the tinted body (the header names
    him), replies are bubbles; V3: every Cluck message is a bubble */
 const aiMsg = (m, name) => V === "2" && name ? say(m)
-  : `<div class="msg">${duck}<div class="col">${name && V !== "2" ? `<p class="ai-name">${name}</p>` : ""}${V === "1" ? say(m) : `<div class="bub ai">${say(m)}</div>`}</div></div>`;
+  : `<div class="msg">${duck}<div class="col">${name && V !== "2" ? `<p class="ai-name">${name}</p>` : ""}${V === "1" ? say(m) : `<div class="bub ai ai-box">${say(m)}</div>`}</div></div>`;
 const meMsg = t => `<div class="bub me">${esc(t)}</div>`;
 function draw() {
   const thread = [aiMsg(FIRST, "Cluck")];
   for (let i = 0; i < used; i++) thread.push(meMsg(ASKS[i]), aiMsg(REPLIES[i]));
   document.querySelectorAll("[data-thread]").forEach(t => { t.innerHTML = thread.join(""); });
   document.querySelectorAll("[data-steps]").forEach(s => { s.innerHTML = say(STEPS); });
-  document.querySelector("[data-steps-bubble]").innerHTML = `${duck}<div class="col"><p class="ai-name">Cluck · similar solution steps</p><div class="bub ai">${say(STEPS)}</div></div>`;
+  document.querySelector("[data-steps-bubble]").innerHTML = `${duck}<div class="col"><p class="ai-name">Cluck · similar solution steps</p><div class="bub ai ai-box">${say(STEPS)}</div></div>`;
   const foot = used < MAX
     ? `<form class="ask" data-ask><label class="ff"><span class="sr-only">Ask Cluck</span><input name="t" autocomplete="off" placeholder="Ask Cluck about a step"></label>`
       + `<span class="left">${MAX - used} left</span><button class="send" type="submit" aria-label="Send"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></form>`
-    : `<div class="done-row"><p>That's 4 questions. On to the next one.</p><button class="btn btn-ai" type="button">Next question</button></div>`;
+    : `<div class="done-row"><p>That's 4 questions. On to the next one.</p><button class="btn btn-go wide" type="button">Next question</button></div>`;
   document.querySelectorAll("[data-foot]").forEach(f => { f.innerHTML = foot; });
   document.querySelectorAll("[data-ask]").forEach(f => f.addEventListener("submit", send));
   setTab(tab);
@@ -314,7 +321,7 @@ function setTab(t) {
   tab = t;
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
   document.querySelectorAll("[data-pane]").forEach(p => { p.hidden = p.dataset.pane !== t; });
-  document.querySelectorAll(".sh-bd").forEach(b => { b.scrollTop = t === "explain" ? b.scrollHeight : 0; });
+  document.querySelectorAll(".sh-bd").forEach(b => { b.scrollTop = t === "explain" && sent ? b.scrollHeight : 0; });   /* opens at the top; after a send, at the newest reply */
   const hb = document.querySelector(".hint .rw-hint"); if (hb) hb.setAttribute("aria-expanded", String(V === "3" || (V === "1" && t === "steps")));
 }
 /* the stub stream: caret 900 ms, then type ~35 chars/s (same as the genie box today) */
@@ -322,9 +329,9 @@ function send(e) {
   e.preventDefault();
   if (used >= MAX) return;
   const t = e.target.t.value.trim() || ASKS[used];
-  ASKS[used] = t; const i = used++;
+  ASKS[used] = t; const i = used++; sent = true;
   setTab("explain");
-  document.querySelectorAll("[data-thread]").forEach(th => { th.insertAdjacentHTML("beforeend", meMsg(t) + `<div class="msg" data-typing>${duck}<div class="col"><div class="bub ai"><span class="wcaret"></span></div></div></div>`); });
+  document.querySelectorAll("[data-thread]").forEach(th => { th.insertAdjacentHTML("beforeend", meMsg(t) + `<div class="msg" data-typing>${duck}<div class="col"><div class="bub ai ai-box"><span class="wcaret"></span></div></div></div>`); });
   document.querySelectorAll("[data-foot] .send").forEach(b => { b.disabled = true; });
   setTimeout(() => {
     const full = REPLIES[i].join(" ").replace(/\*\*/g, ""); let n = 0;
