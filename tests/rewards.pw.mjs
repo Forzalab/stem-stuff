@@ -171,7 +171,8 @@ try {
     await d.waitForSelector("#work > #rot.docked", { state: "attached", timeout: 4000 });
     assert.equal(await d.$eval("#work", w => w.firstElementChild.id), "rot", "the docked videos stay above the original (D1)");
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true", "desktop: the free steps open by default (Tony, Oct 5)");
-    assert.equal(await d.getAttribute("#clTabS", "aria-selected"), "true");
+    assert.equal(await d.getAttribute("#clFold", "aria-expanded"), "true", "no explanation yet: the reference solution is open");
+    assert.equal(await d.textContent("#clFold .cl-fold-t"), "See reference solution", "Tony's wording (Oct 5)");
     assert.equal(await d.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     assert.equal(await d.isHidden("#xb"), true, "the steps are showing: no scratchpad");
     { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
@@ -185,22 +186,23 @@ try {
     assert.equal(await d.isVisible("#orig .rw-free"), false, "the hint card steps aside while the sheet is open");
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);
     assert.equal(await d.isVisible("#cluck .orig-sol"), true);
-    assert.equal(await d.isHidden("#clTabE"), true, "no wish yet: one tab");
+    assert.equal(await d.isHidden("#clTabEP"), true, "no wish yet: only the steps");
+    assert.equal(await d.$$eval("#cluck [role=tab]", e => e.length), 0, "no tabs");
     await d.keyboard.press("Escape");
     assert.equal(await d.isHidden("#cluck"), true, "Escape closes it");
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "asked for while open: still shown after");
     assert.equal(await d.isVisible("#orig .rw-free"), true, "FREE while opening it costs nothing");
     assert.equal(await d.isHidden("#xb"), true, "the hint card is there: still no scratchpad");
-    await d.click("#origHd");                                                 // a tap opens it again, focus on its tab
+    await d.click("#origHd");                                                 // a tap opens it again, focus on the fold
     assert.equal(await d.getAttribute("#origHd", "aria-expanded"), "true");
-    assert.equal(await d.evaluate(() => document.activeElement.id), "clTabS");
+    assert.equal(await d.evaluate(() => document.activeElement.id), "clFold");
     await d.keyboard.press("Escape");
     assert.equal(await d.evaluate(() => document.activeElement.id), "origHd", "focus goes back to its opener");
     assert.equal(await d.isVisible("#rot"), true);
     await d.click("#origHd");
     await pick(d, "b"); await rig(d, [0.99]); await pick(d, "a");             // not a first-try correct: the original stays unsolved
     await go(d, "CALC1_S02");
-    assert.equal(await d.getAttribute("#clTabS", "aria-selected"), "true", "a new question re-applies the default: open on the steps");
+    assert.equal(await d.getAttribute("#clFold", "aria-expanded"), "true", "a new question re-applies the default: open on the steps");
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
     await d.click("#cluck .orig-peek");
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);

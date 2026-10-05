@@ -175,7 +175,7 @@ try {
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
     await page.waitForFunction(() => /Hide Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too; desktop: the sheet opens by itself
-    assert.equal(await page.getAttribute("#clTabE", "aria-selected"), "true");
+    assert.equal(await page.isVisible("#cluck #clTabEP"), true, "Cluck's text shows");
     assert.equal(await page.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
     assert.equal(await page.evaluate(() => window.__said.length), 0, "an auto-open types the text but stays quiet (Tony, Oct 5)");
@@ -198,12 +198,15 @@ try {
     assert.equal(await anim(), "rw-wiggle", "the ad wiggle runs until the first tap (T4)");
     await page.emulateMedia({ reducedMotion: "reduce" }); assert.equal(await anim(), "none", "no wiggle with reduced motion");
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.click("#wish .wchip");                                        // the chip still toggles: closed, then open again from the top
-    assert.equal(await page.$eval("#wish .wchip", c => c.classList.contains("rw-wiggle")), false, "a tap stops the wiggle for good");
+    assert.equal(await page.isHidden("#wish"), true, "desktop, sheet open: no Show/Hide chip (Tony, Oct 5: variant a)");
+    await page.click("#cluck .cl-x2");                                       // closed: the chip is the way back, then open again from the top
     assert.match(await page.textContent("#wish .wchip"), /Show Cluck's steps/);
+    assert.equal(await page.isVisible("#wish .wchip"), true);
     await page.evaluate(() => { window.__said = []; });
     await page.click("#wish .wchip");
+    assert.equal(await page.$eval("#wish .wchip", c => c.classList.contains("rw-wiggle")), false, "a tap stops the wiggle for good");
     assert.match(await page.textContent("#wish .wchip"), /Hide Cluck's steps/);
+    assert.equal(await page.isHidden("#wish"), true, "open again: the chip steps aside");
     assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone");
     assert.equal((await said()).length, 0, "spoken before the text is out");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 2000 });
@@ -238,21 +241,21 @@ try {
 
   await step("Cluck's sheet: fills the notes column; 4 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
     assert.equal(await page.$eval("#cluck", e => e.parentElement.id), "work", "desktop: the notes column");
-    assert.equal(await page.getAttribute("#clTabE", "aria-selected"), "true");
+    assert.equal(await page.isVisible("#cluck #clTabEP"), true);
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
     assert.equal(box[2], true, "the sheet fills the column under the videos");
     assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
       [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
     assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
-    assert.equal(await page.textContent("#cluck .cl-ttl"), "Cluck's steps", "RM3: the title row");
+    assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
       const rgb = s => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number), L = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
       const cr = (a, b) => { const [x, y] = [L(a), L(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
       const cs = sel => getComputedStyle(document.querySelector(sel)), sheet = cs("#cluck").backgroundColor;
-      return { text: cr(cs("#cluck .wtext").color, sheet), muted: cr(cs("#clTabS").color, sheet), me: cr(getComputedStyle(document.querySelector("#cluck"), null).getPropertyValue("--ai-on-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`), getComputedStyle(document.querySelector("#cluck")).getPropertyValue("--ai-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`)),
+      return { text: cr(cs("#cluck .wtext").color, sheet), muted: cr(cs("#cluck .cl-fold-n").color, sheet), me: cr(getComputedStyle(document.querySelector("#cluck"), null).getPropertyValue("--ai-on-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`), getComputedStyle(document.querySelector("#cluck")).getPropertyValue("--ai-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`)),
         send: cr(cs("#cluck .send").color, cs("#cluck .send").backgroundColor), left: cr(cs("#cluck .ask .left").color, cs("#cluck .ask").backgroundColor),
-        live: cr(cs("#clTabE .cl-live").color, cs("#clTabE .cl-live").backgroundColor) };
+        live: cr(cs("#cluck .cl-live").color, cs("#cluck .cl-live").backgroundColor) };
     });
     for (const [k, v] of Object.entries(aa)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}:1 < 4.5`);
     await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
@@ -260,10 +263,10 @@ try {
     for (let n = 1; n <= 4; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
-      if (n === 1) assert.equal(await page.isVisible("#clTabE .cl-live"), true, "LIVE while Cluck answers");
+      if (n === 1) assert.equal(await page.isVisible("#cluck .cl-live"), true, "LIVE while Cluck answers");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
       if (n === 1) {
-        assert.equal(await page.isVisible("#clTabE .cl-live"), false, "LIVE off once typed");
+        assert.equal(await page.isVisible("#cluck .cl-live"), false, "LIVE off once typed");
         const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
         assert.equal(await look("#cluck .wreply"), await look("#cluck .wtext:not(.wreply)"), "one speaker, one format: the reply has no card");
       }

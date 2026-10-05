@@ -1175,7 +1175,7 @@ function wishPaint() {
     if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
     return;
   }
-  el.hidden = false;
+  el.hidden = sideMQ.matches && w.open;                                     // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
   const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
@@ -1188,8 +1188,9 @@ function wishPaint() {
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
 /* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
-   Two tabs: "Cluck explains" (the box text, then the follow-up chat, the ask field pinned at the bottom) and "Similar steps" (the
-   original's worked solution). Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
+   One scroll, no tabs (Tony, Oct 5: variant a of design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
+   text, then the follow-up chat, the ask field pinned at the bottom), and under it the original's worked solution in a fold, "See
+   reference solution" (Tony's wording). The fold is open when there is no explanation, closed after a miss. Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
    on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
 const CHAT_TURNS = 4;                                                       // serve.py CHAT_TURNS: the server keeps the same count
 let cl = null;   // { el, tab, open, from }
@@ -1197,13 +1198,17 @@ function clEl() {
   if (cl) return cl.el;
   const el = document.createElement("aside");
   el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Cluck");
-  const tab = (t, id, name, x = "") => `<button type="button" role="tab" class="cl-tab" id="${id}" data-tab="${t}" aria-controls="${id}P"><span>${name}</span>${x}</button>`;
   el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
-    <div class="cl-hd"><span class="cl-ttl">${icon("i-duck")}Cluck's steps</span><div class="cl-tabs" role="tablist">${tab("explain", "clTabE", "Cluck explains", '<span class="cl-live" aria-hidden="true">LIVE</span>')}${tab("steps", "clTabS", "Similar steps")}</div><button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button></div>
-    <div class="cl-bd"><div class="cl-pane" id="clTabEP" role="tabpanel" aria-labelledby="clTabE"><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div><div class="cl-pane" id="clTabSP" role="tabpanel" aria-labelledby="clTabS"></div></div>
+    <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
+    <div class="cl-bd"><div class="cl-pane" id="clTabEP"><span class="cl-live" aria-hidden="true">LIVE</span><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div>
+      <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
+      <div class="cl-pane" id="clTabSP"></div></div>
     <div class="cl-ft"></div>`;
-  cl = { el, tab: "explain", open: false, from: null };
-  el.querySelectorAll(".cl-tab").forEach(b => b.addEventListener("click", () => clTab(b.dataset.tab, true)));
+  cl = { el, tab: "explain", open: false, from: null, fold: false };
+  el.querySelector(".cl-fold").addEventListener("click", () => {
+    if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
+    cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
+  });
   el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
@@ -1218,7 +1223,7 @@ function clPlace() {                                                        // s
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
-  clEl(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false;
+  clEl(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
   if (sideMQ.matches && !auto) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
@@ -1235,22 +1240,25 @@ function clTab(tab, focus) {
   const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
   if (!has[tab]) tab = has.explain ? "explain" : "steps";
   cl.tab = tab;
-  for (const b of cl.el.querySelectorAll(".cl-tab")) { const on = b.dataset.tab === tab; b.hidden = !has[b.dataset.tab]; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; }
-  cl.el.querySelector("#clTabEP").hidden = tab !== "explain";
-  cl.el.querySelector("#clTabSP").hidden = tab !== "steps";
-  cl.el.querySelector(".cl-ft").hidden = tab !== "explain";
-  cl.el.querySelector(".cl-title").textContent = "Cluck";                  // the phone head bar: the tabs under it already name the page (Oct 5 review: "Cluck explains" twice)
+  if (!has.explain) cl.fold = true;                                         // nothing above it: the steps are the content
+  const fold = cl.el.querySelector(".cl-fold"), n = cl.el.querySelectorAll("#clTabSP .orig-sol li").length;
+  cl.el.querySelector("#clTabEP").hidden = !has.explain;
+  fold.hidden = !has.steps; fold.setAttribute("aria-expanded", String(cl.fold));
+  fold.querySelector(".cl-fold-n").textContent = n ? `${n} step${n > 1 ? "s" : ""}` : "";
+  cl.el.querySelector("#clTabSP").hidden = !has.steps || !cl.fold;
+  cl.el.querySelector(".cl-ft").hidden = !has.explain;
+  cl.el.querySelector(".cl-title").textContent = "Cluck";                  // the phone head bar
   const w = wish, was = !!(w && w.open);
-  if (w) w.open = cl.open && tab === "explain";
-  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: spoken again once the text is out
+  if (w) w.open = cl.open && has.explain;
+  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: typed again from the top
   if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
-    S.orig.open = cl.open && tab === "steps";
+    S.orig.open = cl.open && has.steps && cl.fold;
     $("#origHd")?.setAttribute("aria-expanded", String(S.orig.open));
     if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
-  if (focus) cl.el.querySelector(`.cl-tab[data-tab="${tab}"]`).focus();
+  if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
 }
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
   if (!cl) return;

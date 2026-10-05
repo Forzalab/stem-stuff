@@ -496,27 +496,28 @@ html.cl-open body { overflow: hidden; }
 .cl-bar .cl-x { border: 0; cursor: pointer; }
 .cl-bar .cl-x .ico { width: 22px; height: 22px; }
 html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
-.cl-hd { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); padding: var(--s4) var(--s2) 0 var(--s5); }   /* RM3 (Tony, Oct 5): the title row, the tabs under it */
-.cl-ttl { flex: 1; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-md); font-weight: 700; color: var(--ai-strong); }
-.cl-ttl .ico { width: 28px; height: 28px; color: var(--ai); }
-html:not(.side) .cl-ttl { display: none; }                                   /* phone: the head bar already says "Cluck" */
-.cl-tabs { order: 3; flex: 1 0 100%; display: flex; gap: var(--s5); border-bottom: 1px solid var(--ai-rule); }   /* text tabs, one underline: no slab */
-.cl-tab { position: relative; display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0; border: 0;
-  background: transparent; color: var(--ai-muted); font: inherit; font-weight: 700; font-size: var(--t-sm); cursor: pointer; }
-.cl-tab[hidden] { display: none; }
-.cl-tab[aria-selected="true"] { color: var(--ai-strong); }
-.cl-tab[aria-selected="true"]::after { content: ""; position: absolute; inset: auto 0 -1px; height: 2px; background: var(--ai); }   /* sits on the 1px rule */
-.cl-tab:not([aria-selected="true"]):hover { color: var(--ai-strong); }
-/* LIVE while Cluck writes or answers: the same state that turns the ask rim (Tony, Oct 5) */
-.cl-live { display: none; padding: 0 var(--s2); border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1.5; }
+/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is the one "Cluck"; LIVE sits over the text while Cluck types */
+.cl-live { display: none; margin: 0 0 var(--s2); padding: 0 var(--s2); border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1.5; }
 .cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: inline-block; }
 @media (prefers-reduced-motion: no-preference) { .cl-live { animation: wlive 1.6s ease-in-out infinite; } }
 @keyframes wlive { 50% { opacity: .6; } }
-.cl-x2 { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--ai-edge); cursor: pointer; }
+/* "See reference solution": the original's steps, folded under Cluck's text after a miss (Tony's wording) */
+.cl-fold { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s5); padding: 0; border: 0; border-top: 1px solid var(--ai-rule);
+  background: none; color: var(--ai-strong); font: inherit; font-weight: 700; font-size: var(--t-sm); text-align: left; cursor: pointer; }
+.cl-fold[hidden] { display: none; }
+#clTabEP[hidden] + .cl-fold { margin-top: 0; border-top: 0; }               /* no text above it: the fold is the sheet's first line */
+.cl-fold-t { flex: 1; }
+.cl-fold-n { color: var(--ai-muted); font-weight: 400; font-size: var(--t-xs); }
+.cl-fold .ico { width: 20px; height: 20px; color: var(--ai-muted); transition: transform .2s ease-out; }
+.cl-fold[aria-expanded="true"] .ico { transform: rotate(180deg); }
+.cl-fold:hover .cl-fold-t { text-decoration: underline; text-decoration-color: var(--ai); text-underline-offset: 4px; }
+.cl-fold:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-x2 { position: absolute; z-index: 2; top: var(--s2); right: var(--s2); flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--ai-edge); cursor: pointer; }
 .cl-x2 .ico { width: 28px; height: 28px; }
 .cl-x2:hover { background: var(--ai-tint); }
-.cl-tab:focus-visible, .cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
+html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* room for the corner X: no title row to hold it (variant a) */
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: var(--s4); margin-top: var(--s5); }
 .cl-thread:empty { display: none; }
