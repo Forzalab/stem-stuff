@@ -44,12 +44,12 @@ const st = page => page.evaluate(() => ({
   on: [...document.querySelectorAll("#q .opt")].filter(o => o.getAttribute("aria-checked") === "true").map(o => o.dataset.id).sort(),
   wrong: [...document.querySelectorAll("#q .opt.wrong")].map(o => o.dataset.id), right: [...document.querySelectorAll("#q .opt.right")].map(o => o.dataset.id).sort(),
   dis: [...document.querySelectorAll("#q .opt:disabled")].map(o => o.dataset.id).sort(), go: document.querySelector("#mcGo")?.disabled,
-  fb: document.querySelector("#fb").textContent, finished: window.__drill.state.finished, focus: document.activeElement?.dataset?.id || document.activeElement?.id }));
+  fb: document.querySelector("#fb").textContent + (document.querySelector("#q .chk .cluck")?.textContent || ""), finished: window.__drill.state.finished, focus: document.activeElement?.dataset?.id || document.activeElement?.id }));
 /* graded: take 5f put no verdict words on the page (rows / boxes carry the icons, "One more try" is the toast), so wait for
    the feedback area (hint, lock or can't-read line) or a right row instead of "#fb .verdict" */
 async function check(page) {
   await page.click("#mcGo");
-  await page.waitForFunction(() => document.querySelector("#fb").textContent.trim() || document.querySelector("#q .opt.right"), null, { timeout: 4000 });
+  await page.waitForFunction(() => document.querySelector("#fb").textContent.trim() || document.querySelector("#q .chk .cluck") || document.querySelector("#q .opt.right"), null, { timeout: 4000 });
   await page.waitForTimeout(150);
 }
 const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
@@ -103,6 +103,10 @@ try {
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
       assert.match(await page.textContent("#toast.on"), /One more try/); assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
+      const [hint, go] = await page.evaluate(() => [document.querySelector("#q .chk .cluck"), document.querySelector("#mcGo")].map(e => e && (({ left, right, top, bottom }) => ({ left, right, top, bottom }))(e.getBoundingClientRect())));
+      assert.ok(hint && hint.right <= go.left && hint.top < go.bottom && hint.bottom > go.top, "a short hint sits left of Check, on its row (Tony, Oct 5) " + JSON.stringify([hint, go]));
+      assert.equal(await page.$("#fb .cluck"), null, "not twice");
+      assert.equal(await page.$eval("#q .chk .cluck", e => getComputedStyle(e).backgroundColor), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--sheet").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16)).join(", ")})`)), "the site's blue, not Cluck's orange");
       const t = await page.evaluate(() => window.__drill.state.tries.at(-1));
       assert.deepEqual([[...t.c].sort(), t.v, t.s, t.a.length], [["a", "b", "d"], "wrong", "b", 3]);   // copy payload: ids + letters per try
       const ls = await page.$$eval("#q .opt", (os, c) => c.map(id => os.find(o => o.dataset.id === id).dataset.l), t.c);

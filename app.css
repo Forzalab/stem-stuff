@@ -280,7 +280,9 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
 .ch .fix { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); }
 .ch .fix[hidden] { display: none; }
-.chk { display: flex; justify-content: flex-end; margin-top: var(--s2); }
+.chk { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); margin-top: var(--s2); }
+.chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
+.chk .cluck > .ico { margin-top: 0; }
 .q.closed .chk { display: none; }
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
@@ -405,10 +407,9 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
 /* sugar = Cluck's world (Oct 5 review: "Do it in this order" and Cluck's hint line still looked like the plain site) */
-html.sugar :is(.fcard, #fb .cluck) { background: var(--ai-sheet); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-up); color: var(--ai-text); }
+html.sugar .fcard { background: var(--ai-sheet); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-up); color: var(--ai-text); }   /* the hint (.cluck) keeps the site's blue (Tony, Oct 5) */
 html.sugar .fcard .n { background: var(--ai-tint); color: var(--ai); box-shadow: var(--ai-nm-in); }
 html.sugar :is(.fcard .g, .fcard .then) { color: var(--ai-muted); }
-html.sugar #wish .wvoice { background: var(--ai-sheet); color: var(--ai-text); border: 1px solid var(--ai-line); }
 /* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
 /* sugar: the original beside a snack (app.js origRender; design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
    top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
@@ -444,8 +445,6 @@ html.side #work > .orig { margin: 0; }
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
 .wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
-.wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.wvoice { width: auto; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); white-space: nowrap; }   /* "Turn voice off" on one line (.btn is 48px square) */
 /* ---------- Cluck's surfaces (design/STYLE.md): tokens on .ai-skin, never :root ----------
    Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
    calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
