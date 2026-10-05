@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Cluck column</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<!--
+  Tony, Oct 5: the right column stacks three visual languages (the label row's site button, Cluck's warm sheet with its tangerine edge,
+  the tonal ask pill). Unify color, layout and margins; variants from different UX schools. Same state in every variant: a snack
+  question, you picked C, Cluck explains, the reference solution folded ("4 steps"), the ask field.
+  ?v=now  what ships: .rot-hd label row (duck + "Cluck", blue --sheet "Curated brainrots" .btn-label) over #cluck .cl
+          (#17130f, 1px tangerine 35% edge, 10px, ember glow, 24px + 60px right padding for the corner X).
+  ?v=R    Refactoring UI: one container, the label row is its header (duck + Cluck, quiet text button, X last). Spacing 8/12/16/24 only,
+          one accent (tangerine), depth from one shadow, no borders (spacing separates the fold).
+  ?v=S    Swiss (Muller-Brockmann): no container. Header and body share one left edge and a 28px baseline (18/28 text, every vertical
+          step a multiple of 14). Type-led header, one hairline rule, brainrots as a plain text link, the ask field is the only fill.
+  ?v=M    Material 3 tonal: surface card (16px) with a surface-container-high top bar, tonal button, round icon button X,
+          full-round search-style ask field (shape family: 16 + full).
+  Phone (<= 700px): the question stub hides; the column is the page (16px gutter).
+-->
+<script>
+  const V = (new URLSearchParams(location.search).get("v") || "now").replace(/^(r|s|m)$/, c => c.toUpperCase());
+  document.documentElement.className = "v-" + (["now", "R", "S", "M"].includes(V) ? V : "now");
+</script>
+<style>
+:root {
+  --paper: #08111f; --qbox: #0f1d30; --sheet: #16243a; --raised: #20304a; --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e;
+  --focus: #8fb0ff; --bad: #ff7a7a; --c2: #ffb86b;
+  --ai: #ff9a3c; --ai-edge: #eeb16a; --ai-sheet: #17130f; --ai-text: #ece6df; --ai-strong: #ffffff; --ai-muted: #a99c8e; --ai-rule: #2c241c;
+  --ai-tint: #221c16; --ai-ct: #4a2a10; --ai-on-ct: #ffdcc0; --ai-pill: #2b231d; --ai-send: #ffb77c; --ai-send-ink: #4b2800;
+  --ai-line: rgb(255 154 60 / 0.35); --ai-glow: rgb(255 140 50 / 0.3);
+  --ai-nm-up: -5px -5px 12px rgb(255 170 90 / 0.05), 6px 6px 14px rgb(0 0 0 / 0.6);
+  --shadow-3: 0 10px 24px -6px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 18px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+svg.i { width: 24px; height: 24px; flex: none; display: block; }
+p { margin: 0; }
+
+/* picker bar */
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 20px; background: #000; font: 700 14px/1.4 system-ui, sans-serif; color: var(--muted); }
+.pick nav { display: flex; gap: 4px; }
+.pick a { color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 6px; }
+.pick a.on { background: var(--raised); color: var(--ink); }
+.pick .why { font-weight: 400; }
+
+/* page: question stub left, the column right (1366: column 456px) */
+.page { display: grid; grid-template-columns: minmax(0, 1fr) 456px; gap: 32px; max-width: 1240px; margin: 0 auto; padding: 24px 20px 48px; align-items: start; }
+.q-lbl { display: flex; align-items: center; min-height: 48px; margin-bottom: 8px; color: var(--muted); font-size: 16px; font-weight: 700; }
+.qbox { background: var(--qbox); border-radius: 10px; padding: 24px; }
+.qbox ol { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+.qbox li { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 8px; background: var(--sheet); }
+.qbox li i { font-style: normal; font-weight: 700; color: var(--muted); width: 1.5em; }
+.qbox li.bad { box-shadow: inset 0 0 0 2px var(--bad); }
+
+/* ---------- the column: shared skeleton ---------- */
+.col { position: relative; }
+.hd { display: flex; align-items: center; gap: 8px; }
+.lab { display: flex; align-items: center; gap: 8px; margin-right: auto; font-size: 16px; font-weight: 700; }
+.lab .i { width: 20px; height: 20px; }
+.rot { display: inline-flex; align-items: center; gap: 8px; border: 0; white-space: nowrap; font-size: 16px; font-weight: 700; line-height: 1; }
+.x { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; background: none; flex: none; }
+.box { position: relative; }
+.tx { color: var(--ai-text); }
+.tx b { color: var(--ai-strong); }
+.fold { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: none; color: var(--ai-strong); font-size: 16px; font-weight: 700; text-align: left; }
+.fold .t { flex: 1; }
+.fold .n { color: var(--ai-muted); font-weight: 400; font-size: 14px; }
+.fold .i { width: 20px; height: 20px; color: var(--ai-muted); }
+.ask { display: flex; align-items: center; gap: 8px; }
+.ask input { flex: 1; min-width: 0; height: 48px; padding: 0; border: 0; background: none; color: var(--ai-strong); outline: none; }
+.ask input::placeholder { color: var(--ai-muted); opacity: 1; }
+.send { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; flex: none; }
+
+/* ---------- now: what ships ---------- */
+.v-now .hd { align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.v-now .lab { min-height: 48px; color: var(--muted); }
+.v-now .rot { height: 48px; padding: 0 16px 0 12px; border-radius: 8px; background: var(--sheet); color: var(--ink); }
+.v-now .rot:hover { background: var(--raised); }
+.v-now .x { position: absolute; z-index: 2; top: calc(48px + 8px + 8px); right: 8px; width: 44px; height: 44px; border-radius: 8px; color: var(--ai-edge); }
+.v-now .x .i { width: 28px; height: 28px; }
+.v-now .x:hover { background: var(--ai-tint); }
+.v-now .box { background: var(--ai-sheet); border: 1px solid var(--ai-line); border-radius: 10px; box-shadow: var(--ai-nm-up); }
+.v-now .box::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; border-radius: 10px 10px 0 0;
+  background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
+.v-now .bd, .v-now .ft { position: relative; }
+.v-now .bd { padding: 16px calc(44px + 16px) 0 24px; }
+.v-now .fold { margin-top: 24px; border-top: 1px solid var(--ai-rule); }
+.v-now .ft { padding: 8px 16px 16px; }
+.v-now .ask { padding: 8px 8px 8px 24px; border-radius: 10px; background: var(--ai-pill); }
+.v-now .send { border-radius: 8px; background: var(--ai-send); color: var(--ai-send-ink); }
+
+/* ---------- R: Refactoring UI. One container; spacing 8/12/16/24; one accent; one shadow; no borders ---------- */
+.v-R .col { background: var(--ai-sheet); border-radius: 12px; box-shadow: var(--shadow-3); }
+.v-R .hd { padding: 8px 8px 0 24px; }
+.v-R .lab { color: var(--ai-text); }
+.v-R .lab .i { color: var(--ai); }                       /* the one accent */
+.v-R .rot { height: 48px; padding: 0 12px; border-radius: 8px; background: none; color: var(--ai-muted); }
+.v-R .rot .i { width: 20px; height: 20px; }
+.v-R .rot:hover, .v-R .x:hover { background: var(--ai-tint); color: var(--ai-text); }
+.v-R .x { border-radius: 8px; color: var(--ai-muted); }
+.v-R .bd { padding: 8px 24px 0; }
+.v-R .fold { margin-top: 16px; }
+.v-R .ft { padding: 16px; }
+.v-R .ask { padding: 8px; border-radius: 8px; background: var(--ai-pill); }   /* placeholder lands on the body's 24px edge */
+.v-R .send { border-radius: 8px; background: var(--ai-send); color: var(--ai-send-ink); }
+
+/* ---------- S: Swiss. One left edge, 28px baseline (14px half), one hairline, the ask field the only fill ---------- */
+.v-S .tx { line-height: 28px; }
+.v-S .hd { min-height: 56px; border-bottom: 1px solid var(--ai); }         /* 2 lines; the one rule */
+.v-S .lab { color: var(--ai-strong); font-size: 18px; line-height: 28px; }
+.v-S .lab .i { color: var(--ai); }
+.v-S .rot { padding: 0; height: 48px; background: none; color: var(--ai-muted); font-weight: 400; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgb(169 156 142 / 0.5); }
+.v-S .rot .i { display: none; }
+.v-S .rot:hover { color: var(--ai-text); text-decoration-color: var(--ai); }
+.v-S .x { width: 44px; margin-right: -12px; color: var(--ai-muted); }      /* the glyph's ink sits on the right edge */
+.v-S .x:hover { color: var(--ai-text); }
+.v-S .bd { padding-top: 28px; }
+.v-S .fold { margin-top: 14px; min-height: 56px; }
+.v-S .ft { padding-top: 14px; }
+.v-S .ask { padding: 0 4px 0 16px; background: var(--ai-pill); }           /* square: no radius */
+.v-S .send { background: none; color: var(--ai-send); }
+
+/* ---------- M: Material 3 tonal. Surface card + surface-container-high bar; shape family 16 + full ---------- */
+.v-M .col { background: var(--ai-sheet); border-radius: 16px; overflow: hidden; }                   /* surface */
+.v-M .hd { min-height: 64px; padding: 0 8px 0 16px; background: var(--ai-pill); }                 /* surface-container-high */
+.v-M .lab { color: var(--ai-strong); font-size: 18px; }
+.v-M .lab .i { width: 24px; height: 24px; color: var(--ai); }
+.v-M .rot { height: 40px; padding: 0 16px 0 12px; border-radius: 999px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 14px; }   /* tonal button */
+.v-M .rot .i { width: 18px; height: 18px; }
+.v-M .rot:hover { filter: brightness(1.12); }
+.v-M .x { border-radius: 999px; color: var(--ai-muted); }                                          /* standard icon button */
+.v-M .x:hover { background: rgb(236 230 223 / 0.08); }
+.v-M .bd { padding: 16px 16px 0; }
+.v-M .fold { margin-top: 8px; min-height: 56px; }                                                  /* a list item, no divider */
+.v-M .ft { padding: 8px 16px 16px; }
+.v-M .ask { min-height: 56px; padding: 4px 4px 4px 20px; border-radius: 999px; background: #3a3029; }   /* surface-container-highest */
+.v-M .send { border-radius: 999px; background: var(--ai-send); color: var(--ai-send-ink); }
+
+/* phone: the column is the page */
+@media (max-width: 700px) {
+  .page { grid-template-columns: 1fr; padding: 16px 16px 32px; }
+  .qside { display: none; }
+  .v-now .rot { padding: 0 12px; }
+  .v-R .hd { padding-left: 16px; } .v-R .bd { padding: 8px 16px 0; } .v-R .ft { padding: 16px 8px 8px; }
+}
+@media (max-width: 380px) { .rot span { display: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+</defs></svg>
+
+<div class="pick">
+  <nav aria-label="Variant"><a href="?v=now">now</a><a href="?v=R">R</a><a href="?v=S">S</a><a href="?v=M">M</a></nav>
+  <span class="why" id="why"></span>
+</div>
+
+<main class="page">
+  <section class="qside" aria-label="Question">
+    <div class="q-lbl">Question</div>
+    <div class="qbox">
+      <p>A bag of trail mix lists 240 calories per &frac34; cup. How many calories are in one cup?</p>
+      <ol><li><i>A</i>160</li><li><i>B</i>300</li><li class="bad"><i>C</i>180</li><li><i>D</i>320</li></ol>
+    </div>
+  </section>
+
+  <aside class="col" aria-label="Cluck">
+    <div class="hd">
+      <span class="lab"><svg class="i"><use href="#i-duck"/></svg><span>Cluck</span></span>
+      <button type="button" class="rot"><svg class="i"><use href="#i-play"/></svg><span>Curated brainrots</span></button>
+      <button type="button" class="x" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="box">
+      <div class="bd">
+        <p class="tx">You multiplied 240 by &frac34;, which shrinks it. One cup is more than &frac34; cup, so the answer has to be bigger than 240. Divide instead: 240 &divide; &frac34; = <b>320</b>.</p>
+        <button type="button" class="fold" aria-expanded="false"><span class="t">See reference solution</span><span class="n">4 steps</span><svg class="i"><use href="#i-down"/></svg></button>
+      </div>
+      <form class="ft" onsubmit="return false"><div class="ask">
+        <label style="display:contents"><span hidden>Ask Cluck about a step</span><input type="text" placeholder="Ask Cluck about a step"></label>
+        <button type="submit" class="send" aria-label="Send"><svg class="i"><use href="#i-send"/></svg></button>
+      </div></form>
+    </div>
+  </aside>
+</main>
+
+<script>
+  const v = document.documentElement.className.slice(2);
+  const why = { now: "What ships: label row (site button) over Cluck's bordered warm sheet, corner X.",
+    R: "Refactoring UI: one card, header inside, spacing 8/12/16/24, one accent, one shadow, no borders.",
+    S: "Swiss: no card, one left edge, 28px baseline, one hairline, the ask field is the only fill.",
+    M: "Material 3: surface card, tonal top bar, tonal button, round icon button, shape 16 + full." };
+  document.getElementById("why").textContent = why[v];
+  for (const a of document.querySelectorAll(".pick a")) a.classList.toggle("on", a.getAttribute("href") === "?v=" + v);
+</script>
+</body></html>
