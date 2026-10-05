@@ -175,8 +175,8 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
     await page.evaluate(() => { window.__said = []; });
     assert.deepEqual(await rows(page), ["True", "False"]);
-    assert.deepEqual(await page.$eval("#fcard", f => ({ one: f.classList.contains("one"), hd: !!f.querySelector(".hd, .n, .g"), bg: getComputedStyle(f).backgroundColor, tex: !!f.querySelector(".f .katex") })),
-      { one: true, hd: false, bg: "rgba(0, 0, 0, 0)", tex: true }, "one step: just the formula (clutter C5)");
+    assert.deepEqual(await page.$eval("#fcard", f => ({ one: f.classList.contains("one"), hd: !!f.querySelector(".hd, .n, .g"), box: getComputedStyle(f).backgroundColor !== "rgba(0, 0, 0, 0)" && getComputedStyle(f).borderTopWidth === "1px", tex: !!f.querySelector(".f .katex") })),
+      { one: true, hd: false, box: true, tex: true }, "one step: the box with just the formula in it (clutter C5; Tony: the box stays)");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
