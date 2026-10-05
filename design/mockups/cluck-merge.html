@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Cluck merge</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<!--
+  Tony, Oct 5: merge "Similar steps" and "Ask Cluck / Cluck explains": "thats the main thing making the UI cluttering, but idk how".
+  Main's clutter pass (brain projects/calc/_files/clutter-oct5) left this to alt as A1 ("Cluck" x4+ in one view), A2 (a tab bar with
+  one tab), A3 (the orange chip). Same state in every variant: a snack (it has similar steps), you picked C, one try left.
+  ?v=now  what ships (main @49b1fdc): column label "Cluck" + sheet title "Cluck's steps" + tabs + QUACK hint + orange chip under it
+  ?v=a    One sheet, one scroll, no tabs: "Cluck" once (the column label IS the sheet's head). On a miss, the explanation sits on top,
+          the similar steps fold under it ("Same idea, other numbers"), the ask field closes it. The chip goes; the hint stays.
+  ?v=b    Keep the sheet with its tabs, but one way in: the QUACK hint row grows a quiet "Steps ›" link that opens/focuses the
+          sheet. No orange chip, no column label: the sheet's title row is the only "Cluck".
+  ?v=c    Steps become the explanation: Cluck's notes are written ON the similar steps (a note under the step you missed).
+          One list, no second text, no tabs.
+  &clean hides the switcher. Phone (<= 700px): the sheet is a card under the question (the real app opens it full screen).
+-->
+<style>
+:root { --paper: #08111f; --qbox: #0f1d30; --sheet: #16243a; --raised: #20304a; --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e;
+  --ok: #5fd394; --bad: #ff7a7a; --c1: #7ab8ff; --mark: #ffd84a;
+  --ai: #ff9a3c; --ai-sheet: #17130f; --ai-text: #ece6df; --ai-muted: #a99c8e; --ai-rule: #2c241c; --ai-tint: #221c16; --ai-ct: #4a2a10; --ai-on-ct: #ffdcc0;
+  --ai-pill: #2b231d; --ai-send: #ffb77c; --ai-send-ink: #4b2800; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif; }
+svg.i { width: 20px; height: 20px; flex: none; }
+.page { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; min-height: 100vh; padding: 16px 20px; }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lbl { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 50px; font-size: 16px; font-weight: 700; color: var(--muted); }
+.lbl .l { display: flex; align-items: center; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 16px 0 12px; border-radius: 8px; background: var(--sheet); color: var(--ink); font-weight: 700; font-size: 16px; }
+.qtxt { background: var(--qbox); border-radius: 8px; padding: 16px 24px; }
+.opt { display: flex; gap: 12px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--qbox); }
+.opt i { font-style: normal; width: 36px; height: 36px; flex: none; display: grid; place-items: center; border: 1px solid var(--edge); border-radius: 50%; font-size: 18px; font-weight: 700; color: var(--muted); }
+.opt.bad { border: 2px dashed var(--bad); color: var(--muted); } .opt.bad span { text-decoration: line-through; text-decoration-color: var(--bad); }
+.pips { display: flex; justify-content: flex-end; gap: 4px; } .pips b { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); } .pips b + b { background: none; border: 1px solid var(--muted); }
+.hint { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; background: var(--sheet); }
+.hint .duck { color: var(--mark); }
+.hint .go { margin-left: auto; color: var(--c1); font-weight: 700; font-size: 16px; white-space: nowrap; }
+.chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px 8px 8px; border-radius: 999px; background: #ff9a3c; color: #2b1000; font-weight: 700; font-size: 15px; box-shadow: 0 3px 0 #6b2400; border: 3px solid #ffd84a; }
+.chip .coin { width: 30px; height: 30px; border-radius: 50%; background: #ffe14d; display: grid; place-items: center; color: #5a2a00; }
+/* the sheet (RM3, as shipped in #67 + #70) */
+.sh { display: flex; flex-direction: column; flex: 1; min-height: 0; border-radius: 10px; background: var(--ai-sheet); color: var(--ai-text); border: 1px solid rgb(255 154 60 / .35); }
+.hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 16px 8px 0 24px; }
+.ttl { flex: 1; display: flex; align-items: center; gap: 8px; font-size: 19px; font-weight: 700; color: #fff; }
+.ttl svg.i { color: var(--ai); width: 26px; height: 26px; }
+.x { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ai-muted); font-size: 24px; }
+.tabs { order: 3; flex: 1 0 100%; display: flex; gap: 24px; border-bottom: 1px solid var(--ai-rule); }
+.tab { padding: 10px 0; font-size: 15px; font-weight: 700; color: var(--ai-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.on { color: #fff; border-bottom-color: var(--ai); }
+.live { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 12px; }
+.bd { flex: 1; padding: 16px 24px; }
+.bd > * { max-width: 58ch; }
+.bd p { margin: 0 0 8px; } .bd b { color: #fff; }
+.sec { margin: 20px 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ai-muted); }
+.st { display: grid; grid-template-columns: 28px 1fr; gap: 0 12px; margin: 10px 0 0; }
+.n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--ai-ct); color: var(--ai-on-ct); font: 700 14px/1 inherit; }
+.st h4 { margin: 0; font-size: 17px; color: #fff; } .st .sub { margin: 0 0 4px; font: italic 14px/1.4 "Atkinson Hyperlegible Mono", monospace; color: var(--ai-muted); }
+.well { margin: 8px 0 0; padding: 12px; border-radius: 8px; text-align: center; background: var(--ai-tint); }
+.note { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 16px; }
+.note b { color: #fff; }
+.fold { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 0; border-top: 1px solid var(--ai-rule); font-weight: 700; color: #fff; }
+.fold span { color: var(--ai-muted); font-weight: 400; font-size: 15px; }
+.ans { margin-top: 12px; } .ans .box { display: inline-block; padding: 0 6px; border-radius: 6px; background: var(--ai-ct); color: var(--ai-on-ct); }
+.ft { padding: 8px 16px 16px; }
+.ask { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 20px; border-radius: 10px; background: var(--ai-pill); }
+.ask span:first-child { flex: 1; color: var(--ai-muted); } .ask em { font-style: normal; font-size: 14px; font-weight: 700; color: var(--ai-on-ct); }
+.ask .send { width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center; background: var(--ai-send); color: var(--ai-send-ink); font-weight: 700; }
+.tally { position: fixed; right: 12px; bottom: 12px; z-index: 5; padding: 8px 12px; border-radius: 8px; background: #000c; font: 700 14px/1.4 system-ui; color: var(--ink); }
+.sw { position: fixed; left: 12px; bottom: 12px; z-index: 5; display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #000c; font: 700 14px/1 system-ui; }
+.sw a { color: var(--muted); text-decoration: none; padding: 8px 12px; border-radius: 6px; } .sw a.on { background: var(--raised); color: var(--ink); }
+.clean .sw, .clean .tally { display: none; }
+@media (max-width: 700px) { .page { grid-template-columns: 1fr; padding: 16px; } .lbl .btn { display: none; } .bd { padding: 12px 16px; } .hd { padding-left: 16px; } }
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6.5 3.5H14l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z M14 3.5V8h4.5M8.5 13h7M8.5 16.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+</svg>
+<div id="root"></div>
+<nav class="sw" id="sw"><a href="?v=now">Now</a><a href="?v=a">a · one scroll</a><a href="?v=b">b · one way in</a><a href="?v=c">c · notes on steps</a></nav>
+<div class="tally" id="tally"></div>
+<script>
+const K = (t, d) => katex.renderToString(t, { throwOnError: false, displayMode: !!d });
+const I = n => `<svg class="i"><use href="#${n}"/></svg>`;
+const q = new URLSearchParams(location.search), v = ["now", "a", "b", "c"].includes(q.get("v")) ? q.get("v") : "now";
+if (q.has("clean")) document.documentElement.classList.add("clean");
+document.querySelector(`#sw a[href="?v=${v}"]`).classList.add("on");
+const question = hintTail => `<div class="col">
+  <div class="lbl"><span class="l">${I("doc")}Question</span></div>
+  <div class="qtxt">A 3.0 kg cart rolls at 2.0 m/s and sticks to a 1.0 kg cart at rest. How fast do they move after?</div>
+  <div class="opt"><i>A</i><span>1.0 m/s</span></div><div class="opt"><i>B</i><span>1.5 m/s</span></div>
+  <div class="opt bad"><i>C</i><span>2.0 m/s</span></div><div class="opt"><i>D</i><span>6.0 m/s</span></div>
+  <div class="pips"><b></b><b></b></div>
+  <div class="hint"><span class="duck">${I("duck")}</span><span>QUACK. That's the speed before the hit.</span>${hintTail || ""}</div>
+  ${v === "now" ? `<span class="chip"><span class="coin">${I("duck")}</span>Hide Cluck's steps</span>` : ""}</div>`;
+const steps = (note) => `
+  <div class="st"><span class="n">1</span><div><h4>Momentum before</h4><p class="sub">only one cart moves</p><div class="well">${K("p = (2.0)(3.0) = 6.0\\ \\text{kg}\\cdot\\text{m/s}", 1)}</div></div></div>
+  <div class="st"><span class="n">2</span><div><h4>Masses after</h4><p class="sub">stuck carts move as one</p><div class="well">${K("m = 2.0 + 1.0 = 3.0\\ \\text{kg}", 1)}</div>${note || ""}</div></div>
+  <div class="st"><span class="n">3</span><div><h4>Before = after</h4><p class="sub">solve for v</p><div class="well">${K("v = 6.0 / 3.0 = 2.0\\ \\text{m/s}", 1)}</div></div></div>`;
+const explain = `<p>POOF. The carts <b>stick together</b>, so they leave as one cart. <b>Momentum before = momentum after.</b></p>
+  <div class="st"><span class="n">1</span><div><h4>Momentum before</h4><p class="sub">only the 3.0 kg cart moves</p><div class="well">${K("p = (3.0)(2.0) = 6.0", 1)}</div></div></div>
+  <div class="st"><span class="n">2</span><div><h4>Divide by the new mass</h4><p class="sub">4.0 kg now</p><div class="well">${K("v = 6.0 / 4.0 = 1.5\\ \\text{m/s}", 1)}</div></div></div>
+  <p class="ans">You picked 2.0 m/s: that is the speed <b>before</b> the hit.</p>`;
+const ask = `<div class="ft"><div class="ask"><span>Ask Cluck about a step</span><em>4 left</em><span class="send">↑</span></div></div>`;
+const vids = `<span class="btn">${I("play")}Curated brainrots</span>`;
+let right, tally;
+if (v === "now") {
+  right = `<div class="col"><div class="lbl"><span class="l">${I("duck")}Cluck</span>${vids}</div>
+    <div class="sh"><div class="hd"><span class="ttl">${I("duck")}Cluck's steps</span><span class="x">×</span>
+      <div class="tabs"><span class="tab on">Cluck explains<span class="live">LIVE</span></span><span class="tab">Similar steps</span></div></div>
+      <div class="bd">${explain}</div>${ask}</div></div>`;
+  tally = '"Cluck" on screen: 5 · Cluck controls: chip, 2 tabs, X, ask, send = 6';
+} else if (v === "a") {
+  right = `<div class="col"><div class="lbl"><span class="l">${I("duck")}Cluck</span>${vids}</div>
+    <div class="sh"><div class="bd">${explain}
+      <div class="fold">Same idea, other numbers <span>3 steps ›</span></div></div>${ask}</div></div>`;
+  tally = '"Cluck" on screen: 2 · Cluck controls: fold, ask, send = 3';
+} else if (v === "b") {
+  right = `<div class="col"><div class="lbl">&nbsp;${vids}</div>
+    <div class="sh"><div class="hd"><span class="ttl">${I("duck")}Cluck</span><span class="x">×</span>
+      <div class="tabs"><span class="tab on">Your mistake<span class="live">LIVE</span></span><span class="tab">Similar steps</span></div></div>
+      <div class="bd">${explain}</div>${ask}</div></div>`;
+  tally = '"Cluck" on screen: 2 · Cluck controls: hint link, 2 tabs, X, ask, send = 6 (but one way in)';
+} else {
+  right = `<div class="col"><div class="lbl"><span class="l">${I("duck")}Cluck</span>${vids}</div>
+    <div class="sh"><div class="bd"><p class="sec">Same idea, other numbers</p>${steps(`<div class="note"><b>Your pick, 2.0 m/s,</b> skips this step: after the hit the mass is 4.0 kg, not 3.0. Divide 6.0 by 4.0.</div>`)}
+      <p class="ans">This question: same three steps, your numbers. Step 2 is where it changes.</p></div>${ask}</div></div>`;
+  tally = '"Cluck" on screen: 2 · Cluck controls: ask, send = 2';
+}
+document.getElementById("root").innerHTML = `<div class="page">${question(v === "b" ? '<span class="go">Steps ›</span>' : "")}${right}</div>`;
+document.getElementById("tally").textContent = tally;
+</script>
+</body></html>
