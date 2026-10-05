@@ -519,23 +519,18 @@ function renderQuestion() {
   }
   formulaCard();
 }
-/* sugar: the formula card, stepper look (design/FORMULA-CARD.md round 2, Tony's pick 5): the question's formula-sheet rows in the
-   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint.
-   Say it once (clutter wave 3, Tony Oct 5): one step = just the formula (C5); a group shows once, not again on the next step (C4) */
+/* sugar: Key formulas (Tony, Oct 5, design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
+   they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
+const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function formulaCard() {
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
   const sec = document.createElement("section");
-  sec.id = "fcard";
-  if (fs.length === 1) {
-    sec.className = "fcard one"; sec.setAttribute("aria-label", "Formula");
-    sec.innerHTML = `<span class="f">${renderMath(fs[0].tex, false)}</span>`;
-  } else {
-    sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
-    sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
-      <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span>${i && f.group === fs[i - 1].group ? "" : `<span class="g">${esc(f.group)}</span>`}</li>`).join("")}</ol>`;
-  }
+  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
+  sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
+  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) =>
+    `${i ? `<li class="to" aria-hidden="true">${FC_ARROW}</li>` : ""}<li class="f">${renderMath(f.tex, false)}</li>`).join("")}</ol>`;
   $("#q").after(sec);
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';

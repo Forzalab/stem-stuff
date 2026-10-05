@@ -66,6 +66,9 @@ body { padding: 0 !important; }
 /* 5 · Tint + notched top rule: ref 2's flat tint, one accent rule on top, the label notched into it */
 .v5 .rc { padding: var(--s4) var(--s4) var(--s4); border-top: 1px solid var(--acc); border-radius: 0 0 10px 10px; background: var(--tint); }
 .v5 .rc .notch { background: linear-gradient(var(--paper) 50%, var(--tint) 50%); }   /* page above the rule, tint below: the line breaks clean */
+/* 7 · Tony's pick (Oct 5 ~12:3x, "hybrid of 4 and 5"): 4's full outline + 5's tint, the label notched into the top border. Built in app.css .fcard */
+.v7 .rc { padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--acc); border-radius: 10px; background: var(--tint); }
+.v7 .rc .notch { background: linear-gradient(var(--paper) 50%, var(--tint) 50%); }
 /* 6 · Tint + tab: no outline, the label in a solid tab that straddles the top-left edge */
 .v6 .rc { padding: var(--s5) var(--s4) var(--s4); border-radius: 10px; background: var(--tint); }
 .v6 .rc .notch { left: var(--s4); padding: var(--s1) var(--s3); border-radius: 6px; background: var(--acc); }
@@ -79,10 +82,10 @@ body { padding: 0 !important; }
 </head>
 <body>
 <nav class="mbar" id="mbar"><b>Formula box</b><a href="?v=1">1 · Card</a><a href="?v=2">2 · Label + well</a><a href="?v=3">3 · Ordered card</a>
-  <a href="?v=4&c=blue">4 · Notch</a><a href="?v=5&c=blue">5 · Tint + notch</a><a href="?v=6&c=blue">6 · Tint + tab</a><a href="?v=4&c=orange">4 orange</a><a href="?v=5&c=orange">5 orange</a><a href="?v=6&c=orange">6 orange</a></nav>
+  <a href="?v=4&c=blue">4 · Notch</a><a href="?v=5&c=blue">5 · Tint + notch</a><a href="?v=6&c=blue">6 · Tint + tab</a><a href="?v=7&c=blue">7 · Pick: 4 + 5</a><a href="?v=4&c=orange">4 orange</a><a href="?v=5&c=orange">5 orange</a><a href="?v=6&c=orange">6 orange</a></nav>
 <div class="grid" id="grid"></div>
 <script>
-const q = new URLSearchParams(location.search), v = ["1", "2", "3", "4", "5", "6"].includes(q.get("v")) ? q.get("v") : "1", c = q.get("c") === "orange" ? "orange" : "blue";
+const q = new URLSearchParams(location.search), v = ["1", "2", "3", "4", "5", "6", "7"].includes(q.get("v")) ? q.get("v") : "1", c = q.get("c") === "orange" ? "orange" : "blue";
 if (q.has("clean")) document.documentElement.classList.add("clean");
 document.querySelector(v > "3" ? `#mbar a[href="?v=${v}&c=${c}"]` : `#mbar a[href="?v=${v}"]`)?.classList.add("on");
 const BULB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v1.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';

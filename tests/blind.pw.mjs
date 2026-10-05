@@ -36,7 +36,7 @@ async function step(name, fn) {
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent.length > 0 && location.hash === "#" + c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
 /* every Latin run left in the UI: visible text outside the content, and the labels a screen reader or a hover shows */
 const leaks = page => page.evaluate(() => {
-  const KEEP = "#blocks, #q .opt .txt, #q .mparts .pr, .katex, .fig, #fb .cluck, #fb code, #cluck .wtext, .cl .bub.me, .orig-body, .fcard .f, .fcard .g, textarea, input, #padPeekTx, script, style, noscript, svg, .blind-keep";
+  const KEEP = "#blocks, #q .opt .txt, #q .mparts .pr, .katex, .fig, #fb .cluck, #fb code, #cluck .wtext, .cl .bub.me, .orig-body, .fcard .f, textarea, input, #padPeekTx, script, style, noscript, svg, .blind-keep";
   const out = [], w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const el = n.parentElement;

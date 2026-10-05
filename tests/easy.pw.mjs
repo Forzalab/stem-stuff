@@ -111,10 +111,13 @@ try {
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: the formula card (stepper) in order of use; the brainrot corner with the 2 muted players", async () => {
-    assert.deepEqual(await page.$$eval("#fcard .st .n", n => n.map(x => x.textContent.trim())), ["1", "2"]);
-    assert.equal(await page.$$eval("#fcard .then", t => t.length), 1);
-    assert.deepEqual(await page.$$eval("#fcard .g", g => g.map(x => x.textContent)), ["Work and Energy"], "a group shows once (clutter C4)");
+  await step("sugar: Key formulas, in order of use; the brainrot corner with the 2 muted players", async () => {
+    assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
+      return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
+        n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
+        frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
+        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
+      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(122, 184, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
     assert.equal(srcs.length, 2);
@@ -175,8 +178,12 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
     await page.evaluate(() => { window.__said = []; });
     assert.deepEqual(await rows(page), ["True", "False"]);
-    assert.deepEqual(await page.$eval("#fcard", f => ({ one: f.classList.contains("one"), hd: !!f.querySelector(".hd, .n, .g"), box: getComputedStyle(f).backgroundColor !== "rgba(0, 0, 0, 0)" && getComputedStyle(f).borderTopWidth === "1px", tex: !!f.querySelector(".f .katex") })),
-      { one: true, hd: false, box: true, tex: true }, "one step: the box with just the formula in it (clutter C5; Tony: the box stays)");
+    assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
+      return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
+        n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
+        frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
+        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),
+      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(122, 184, 255) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');

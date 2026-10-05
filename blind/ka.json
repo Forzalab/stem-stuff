@@ -55,7 +55,6 @@
   "Didn't load. Tap Try again.": "არ ჩაიტვირთა. შეეხე ღილაკს „კიდევ სცადე“.",
   "Didn't load. Tap to try again": "არ ჩაიტვირთა. შეეხე ხელახლა საცდელად",
   "Diet mode on.": "დიეტის რეჟიმი ჩართულია.",
-  "Do it in this order": "გააკეთე ამ რიგით",
   "Drag the button anywhere.": "გადაიტანე ღილაკი სადაც გინდა.",
   "Drag to move this button.": "ღილაკის გადასატანად გადაათრიე.",
   "Easy questions on.": "მარტივი კითხვები ჩართულია.",
@@ -63,7 +62,6 @@
   "Explain my mistake": "ამიხსენი ჩემი შეცდომა",
   "FREE": "უფასო",
   "File": "ფაილი",
-  "Formulas, in order": "ფორმულები რიგითობით",
   "Formula": "ფორმულა",
   "Freeze the problem again": "ისევ დააფიქსირე ამოცანა",
   "Go": "გადასვლა",
@@ -246,5 +244,7 @@
   "{n} left": "დარჩა {n}",
   "{right} of {n} right.": "{right} სწორია {n}-დან.",
   "{xp} XP (points), level {l}, {t} XP to level {l+1}, {s} in a row, {r} exam and {sn} easy solved": "{xp} ქულა, დონე {l}, {t} ქულა დონემდე {l+1}, {s} ზედიზედ, {r} გამოცდის და {sn} მარტივი ამოხსნილია",
-  "{xp} XP, level {l}, {t} XP to level {l+1}, streak {s}, {r} real solved, {sn} snacks": "{xp} ქულა, დონე {l}, {t} ქულა დონემდე {l+1}, სერია {s}, {r} ნამდვილი ამოხსნილი, {sn} ხემსი"
+  "{xp} XP, level {l}, {t} XP to level {l+1}, streak {s}, {r} real solved, {sn} snacks": "{xp} ქულა, დონე {l}, {t} ქულა დონემდე {l+1}, სერია {s}, {r} ნამდვილი ამოხსნილი, {sn} ხემსი",
+  "Key formulas": "საკვანძო ფორმულები",
+  "Key formulas, in order": "საკვანძო ფორმულები რიგითობით"
 }

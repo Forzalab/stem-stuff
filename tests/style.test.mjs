@@ -131,6 +131,6 @@ test("rewards skin is scoped: every rule styles a .rw-* or .fx-* node, no :root,
 });
 
 test("number badges: line-height 1, so the digit sits in the middle (Tony, Oct 5: the formula card's 1 rode ~2.5px high)", () => {
-  for (const sel of [".fcard .n", ".wtext .wnum", ".orig-sol li::before"])
+  for (const sel of [".wtext .wnum", ".orig-sol li::before"])
     assert.ok(ALL.some(d => d.sel === sel && d.prop === "line-height" && d.value === "1"), sel);
 });

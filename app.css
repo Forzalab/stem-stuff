@@ -423,11 +423,6 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .rot.docked .rtab, .rot.docked .ctl { display: none; }   /* docked, the header's button is the one toggle */
 .rot .ctl button:focus-visible, .rot .rtab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .rot.snap, .rot .ctl { transition: none; } }
-/* sugar = Cluck's world (Oct 5 review: "Do it in this order" and Cluck's hint line still looked like the plain site) */
-html.sugar .fcard { background: var(--ai-sheet); border: 1px solid var(--ai-line); box-shadow: var(--ai-nm-up); color: var(--ai-text); }   /* the hint (.cluck) keeps the site's blue (Tony, Oct 5) */
-html.sugar .fcard .n { background: var(--ai-tint); color: var(--ai); box-shadow: var(--ai-nm-in); }
-html.sugar :is(.fcard .g, .fcard .then) { color: var(--ai-muted); }
-/* the formula card, stepper (design/FORMULA-CARD.md round 2 pick 5): a rail of numbered squares on phones, a row on wide screens */
 /* sugar: the original beside a snack (app.js origRender; design/REWARDS-WIRING.md §4). A --sheet card like the formula card; on phones on
    top of the problem, folded; side by side in the pad column, in the scratchpad's place while open */
 .orig { position: relative; margin: var(--s2) 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
@@ -443,26 +438,19 @@ html.sugar :is(.fcard .g, .fcard .then) { color: var(--ai-muted); }
 .orig-peek { margin-top: var(--s2); }
 .orig-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--t-sm); }
 html.side #work > .orig { margin: 0; }
-.fcard { margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
-.fcard .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
-.fcard ol { list-style: none; margin: 0; padding: 0; }
-.fcard .st { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); align-items: baseline; }
-/* number badges: line-height 1, or the digit rides ~2.5px high (the inherited 1.55 line box centres, the ink doesn't; Tony, Oct 5) */
-.fcard .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); font-size: var(--t-sm); font-weight: 700; align-self: start; font-variant-numeric: tabular-nums; line-height: 1; }
-.fcard .f { align-self: center; min-width: 0; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
+/* Key formulas (Tony, Oct 5: a textbook recap block, "hybrid of 4 and 5", design/mockups/formula-use.html ?v=7): the site's blue, a 1px
+   --c1 frame on a 10% --c1 tint, the bulb + "Key formulas" notched into the top border (its background is the page above the line and the
+   tint below, so the line breaks clean), the formulas centred in order of use, a thin arrow between. Not a field: no hover, no caret */
+.fcard { --fc-tint: color-mix(in srgb, var(--c1) 10%, var(--paper));
+  position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--c1); border-radius: 10px; background: var(--fc-tint); }
+.fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
+.fc-notch .ico { width: 1.125rem; height: 1.125rem; }
+.fcard ol { list-style: none; margin: 0; padding: 0; display: grid; justify-items: center; }
+.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
 .fcard .f .katex { white-space: nowrap; }
-.fcard .g { grid-column: 2; font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
-.fcard .then { position: relative; margin: var(--s1) 0 var(--s1) calc(2rem + var(--s3)); font-size: var(--t-xs); color: var(--muted); }
-.fcard .then::before { content: ""; position: absolute; left: calc(-1rem - var(--s3) - 0.5px); top: -0.25rem; bottom: -0.25rem; border-left: 1px solid var(--edge); }
-/* one step: the box with just the formula in it, no header, no number (clutter C5; Tony Oct 5: "where box", the frame stays);
-   display: block so a long one scrolls in place */
-.fcard.one { padding: var(--s3) var(--s4); }
-.fcard.one .f { display: block; }
-@media (min-width: 45rem) {
-  .fcard ol { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); }
-  .fcard .then { margin: 0; padding-top: 0.4rem; display: flex; align-items: center; gap: var(--s2); }
-  .fcard .then::before, .fcard .then::after { content: ""; position: static; width: var(--s5); border-left: 0; border-top: 1px solid var(--edge); }
-}
+.fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
+.fcard .to svg { display: block; width: 16px; height: 16px; }
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
@@ -471,7 +459,7 @@ html.side #work > .orig { margin: 0; }
    Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; design/mockups/cluck-colors.html): ref 2's neutral dark base (math reads on a
    calm surface), ref 1's ember light only at the top, our tangerine as the one accent, dark ink on every orange fill (white on orange = 2.9:1).
    Contrast on --ai-sheet: text 15.5, muted 8.0, --ai 8.7; --ai-ink on --ai 8.4 */
-.ai-skin, html.sugar :is(.fcard, #fb .cluck, #wish) {
+.ai-skin, html.sugar :is(#fb .cluck, #wish) {
   --ai: #ff9a3c; --ai-ink: #2b1000; --ai-edge: #eeb16a; --ai-soft: #ffb873;
   --ai-sheet: #17130f; --ai-field: #130e0a; --ai-text: #ece6df; --ai-strong: #ffffff; --ai-muted: #a99c8e; --ai-rule: #2c241c;
   --ai-tint: #221c16;   /* RM3 (Tony, Oct 5): a warm-neutral sheet; wells one tone up, no borders */
