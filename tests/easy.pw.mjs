@@ -47,7 +47,9 @@ writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
 let asked = 0;
-const stub = createServer((req, res) => {
+const stub = createServer(async (req, res) => {
+  let body = ""; for await (const c of req) body += c;
+  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: "ON" } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   let i = 0;
@@ -243,7 +245,7 @@ try {
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
   });
 
-  await step("Cluck's sheet: fills the notes column; 4 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
+  await step("Cluck's sheet: fills the notes column; 5 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
     assert.equal(await page.$eval("#cluck", e => e.parentElement.id), "work", "desktop: the notes column");
     assert.equal(await page.isVisible("#cluck #clTabEP"), true);
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
@@ -251,7 +253,7 @@ try {
     assert.equal(box[2], true, "the sheet fills the column under the videos");
     assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
       [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
-    assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
+    assert.equal(await page.textContent("#cluck .ask .left"), "5 left");
     assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
       const rgb = s => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number), L = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
@@ -264,7 +266,7 @@ try {
     for (const [k, v] of Object.entries(aa)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}:1 < 4.5`);
     await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
       .catch(() => { throw new Error("the ask field is not on screen when the sheet opens"); });
-    for (let n = 1; n <= 4; n++) {
+    for (let n = 1; n <= 5; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
       if (n === 1) assert.equal(await page.isVisible("#cluck .cl-live"), true, "LIVE while Cluck answers");
@@ -277,9 +279,9 @@ try {
       assert.equal(asked, a0 + 1, "one /chat call");
       { const rr = await page.$$eval("#cluck .wreply", r => r.map(x => x.textContent)); assert.match(rr.at(-1), /Egg-cellent/); }
       assert.equal((await page.$$eval("#cluck .bub.me", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");
-      if (n < 4) assert.equal(await page.textContent("#cluck .ask .left"), `${4 - n} left`);
+      if (n < 5) assert.equal(await page.textContent("#cluck .ask .left"), `${5 - n} left`);
     }
-    assert.ok(!(await page.$("#cluck .ask")) && /4 questions/.test(await page.textContent("#cluck .done-row")), "4 asked: the field is done");
+    assert.ok(!(await page.$("#cluck .ask")) && /5 questions/.test(await page.textContent("#cluck .done-row")), "5 asked: the field is done");
     await page.keyboard.press("Escape");
     assert.equal(await page.isHidden("#cluck"), true);
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("wchip")), true, "focus goes back to the chip");

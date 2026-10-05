@@ -42,6 +42,10 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   ~35 chars/s word by word (`$..$` whole), caret at the end; a tap on the box skips; reduced motion = the wait, then the whole text.
   Once the typing ends, the box text (and only it) is read aloud at volume 0.2 (`speechSynthesis`, `speak.mjs`; Tony: "smaller voice"),
   muted per browser (`stem-voice=off`), stopped on a new question.
+- Cluck chat (`POST /chat`): 5 follow-ups per question per browser (`CHAT_TURNS`, serve.py + app.js). The gate (Tony, Oct 5): the
+  student's message first meets `INJECT_RE` (free), then one cheap ON/OFF call (`OPENROUTER_GATE_MODELS`, ZDR, 4 s, the message fenced
+  with a random marker). A hit or a clear OFF: a canned confused-duck QUACK line (`CANNED`), no Cluck call, and the turn is spent.
+  Any gate failure lets the message through (fail open). Known gap: the browser sends the history, so a forged Cluck turn is not checked.
 - Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
   corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
   the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides
