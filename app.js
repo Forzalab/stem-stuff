@@ -1213,7 +1213,7 @@ function clTab(tab, focus) {
   cl.el.querySelector("#clTabEP").hidden = tab !== "explain";
   cl.el.querySelector("#clTabSP").hidden = tab !== "steps";
   cl.el.querySelector(".cl-ft").hidden = tab !== "explain";
-  cl.el.querySelector(".cl-title").textContent = tab === "explain" ? "Cluck explains" : "Similar solution steps";
+  cl.el.querySelector(".cl-title").textContent = "Cluck";                  // the phone head bar: the tabs under it already name the page (Oct 5 review: "Cluck explains" twice)
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && tab === "explain";
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: spoken again once the text is out
@@ -1357,9 +1357,9 @@ function origRender() {
      topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
      while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
   el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
-    <div class="orig-body" id="origBody"><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
+    <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(l, true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
-    <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
+    <p class="orig-note" hidden>You peeked, so only 2 XP.</p><p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
   const q = el.querySelector(".orig-q");
   for (const b of o.body) {
     if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(b.md); q.append(d); }
@@ -1800,7 +1800,8 @@ function applyMT() {
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
-  root.classList.toggle("no-pad", side && modeOf() === "sugar" && !!S.prob.wish);   // desktop sugar: no notes pad, the column is videos + hint card (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it")
+  root.classList.toggle("no-pad", side && modeOf() === "sugar" && !!S.prob.wish);
+  root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)   // desktop sugar: no notes pad, the column is videos + hint card (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it")
   root.classList.toggle("mt", mtOpen);
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);

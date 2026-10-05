@@ -30,6 +30,8 @@
 }
 /* side by side: the bar spans the same width as the two columns under it, so its ends sit on the content's edges (Tony, Oct 3) */
 html.side.qnav-on:not(.dock-bottom):not(.start) .top, html.side.dock-bottom .qnav { max-width: min(100%, calc(var(--col) * 1.7)); }
+html.side:not(.qnav-on):not(.dock-bottom):not(.start) .dock { max-width: min(100%, calc(var(--col) * 1.7)); }   /* opened by link: the code box starts on the content's left edge */
+html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem; }
 .qnav-on:not(.dock-bottom):not(.start) .dock { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) .qnav { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) #qlistBtn { grid-row: 1; grid-column: 1; }

@@ -28,6 +28,9 @@
   font-family: var(--rw-font); font-weight: 700; color: #fff; user-select: none; -webkit-user-select: none;
 }
 .qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 4; justify-self: stretch; justify-content: flex-end; margin: 4px 0; }
+/* no question list (a question opened by link): the HUD lines up with the content under it, not the window's edge */
+html:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { max-width: var(--col); margin: var(--s2, 8px) auto 0; padding: 0 var(--gut); box-sizing: border-box; }
+html.side:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { max-width: min(100%, calc(var(--col) * 1.7)); }
 .dock-bottom .rw-hud { max-width: 52rem; margin: 12px auto 0; padding: 0 var(--gut); box-sizing: content-box; }
 html.start .rw-hud { display: none; }
 .rw-pill {
@@ -62,9 +65,9 @@ html.start .rw-hud { display: none; }
 }
 .rw-flame { width: 26px; height: 26px; display: block; transform: scale(var(--fs, 1)); transform-origin: 50% 90%; transition: transform .3s; opacity: .6; filter: grayscale(.7); }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
-.rw-counts { flex: none; font: 700 14px/1 var(--rw-font); color: var(--rw-soft); white-space: nowrap; }
+.rw-counts { display: none; flex: none;   /* "exam 0 · easy 0" read as noise (Oct 5 review); the screen reader still hears the counts */
+  font: 700 14px/1 var(--rw-font); color: var(--rw-soft); white-space: nowrap; }
 .rw-counts b { font-size: 17px; color: #fff; }
-@container (max-width: 400px) { .rw-counts { display: none; } }
 @container (max-width: 230px) { .rw-to, .rw-streak { display: none; } }
 @container (max-width: 150px) { .rw-lvl { display: none; } }
 @keyframes rw-pulse { 30% { transform: scale(1.07); filter: brightness(1.25); } 100% { transform: none; filter: none; } }
@@ -75,9 +78,9 @@ html.start .rw-hud { display: none; }
    swings, ±6°, every 6 s. Transform only; none with reduced motion. app.js keeps .wchip on it as the hook. */
 /* impeccable waiver: casino-themed (Tony, Oct 4) */
 .rw-chip {
-  --rw-wc-out: #3d0d00; --rw-wc-rim-hi: #fff2a8; --rw-wc-rim: #ffc21a; --rw-wc-rim-lo: #b86a00; --rw-wc-hi: #ff7a3d; --rw-wc-mid: #d8361f; --rw-wc-lo: #9e1a12; --rw-wc-base: #5a1200;
+  --rw-wc-out: #4a1a00; --rw-wc-rim-hi: #fff2a8; --rw-wc-rim: #ffc21a; --rw-wc-rim-lo: #b86a00; --rw-wc-hi: #ffc07a; --rw-wc-mid: #ff9a3c; --rw-wc-lo: #e0701c; --rw-wc-base: #6b2400;   /* Oct 5 review: tangerine like the hint card + Cluck, was red */
   position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 20px 6px 4px;
-  font: 700 var(--t-sm, 1rem)/1.15 var(--rw-font); color: #fff; text-shadow: 0 2px 0 var(--rw-wc-base); text-align: left;
+  font: 700 var(--t-sm, 1rem)/1.15 var(--rw-font); color: var(--rw-tang-ink); text-shadow: 0 1px 0 rgb(255 230 190 / .55);   /* dark ink on orange: AA (white was 2.6:1) */ text-align: left;
   border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer;
   background: linear-gradient(180deg, var(--rw-wc-hi), var(--rw-wc-mid) 55%, var(--rw-wc-lo)) padding-box,
               linear-gradient(180deg, var(--rw-wc-rim-hi), var(--rw-wc-rim) 45%, var(--rw-wc-rim-lo)) border-box;
@@ -91,8 +94,8 @@ html.start .rw-hud { display: none; }
 .rw-chip:active { transform: translateY(2px); box-shadow: 0 0 0 2px var(--rw-wc-out), inset 0 3px 0 rgb(255 255 255 / .35), inset 0 -3px 0 rgb(90 18 0 / .55), 0 2px 0 var(--rw-wc-out); }
 .rw-chip:focus-visible { outline: 2px solid #8fb0ff; outline-offset: 5px; }
 .rw-coin2 { position: relative; flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #b58cff, #6b2fd8 55%, #3a118a); box-shadow: 0 0 0 3px var(--rw-wc-rim), 0 0 0 5px var(--rw-wc-out), inset 0 -3px 0 rgb(20 0 60 / .5); }
-.rw-coin2 svg { width: 24px; height: 24px; color: #fff; }
+  background: radial-gradient(circle at 35% 30%, #fff6c2, #ffd23f 55%, #c99a00); box-shadow: 0 0 0 3px var(--rw-wc-rim), 0 0 0 5px var(--rw-wc-out), inset 0 -3px 0 rgb(107 36 0 / .45); }   /* a gold duck coin, like the hint card's bulb coin */
+.rw-coin2 svg { width: 24px; height: 24px; color: #6b2400; }
 .rw-chip.rw-wiggle { animation: rw-wiggle 6s ease-in-out 1.2s infinite; }
 @keyframes rw-wiggle {
   0%, 8.4%, 100% { transform: rotate(0); }

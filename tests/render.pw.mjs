@@ -139,7 +139,7 @@ async function run(browserType, label, opts = {}) {
         const tb = await page.locator("#toast.on").boundingBox(), fb = await page.locator("#ff").boundingBox();
         assert.ok(tb.y >= fb.y + fb.height && tb.y - (fb.y + fb.height) < 24, "toast under the wrong box");
         const st = await page.$eval("#toast", e => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopColor, c.fontWeight].join("|"); });
-        assert.equal(st, "rgb(21, 29, 43)|rgb(52, 68, 93)|400");
+        assert.equal(st, "rgb(8, 17, 31)|rgb(52, 68, 93)|400");
       }
       const iw = (await inp.boundingBox()).width;
       await inp.fill("12");

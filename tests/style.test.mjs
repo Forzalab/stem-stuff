@@ -39,7 +39,7 @@ test("§2.1 colours: tokens only (raw hex / rgb only in masks)", () => {
 
 const DOCK = /^0 -10px 24px -8px rgb\(0 0 0 \/ 0\.55\)$/;                      // STYLE.md §9 #7: becomes --shadow-up
 test("§2.7 shadows: tokens only, on the named layers", () => {
-  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--shadow-[134]\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
+  const ok = v => v === "none" || v.split(/,(?![^(]*\))/).map(s => s.trim()).every(p => /^var\(--(shadow-[134]|ai-nm-(up|in|btn))\)$/.test(p) || /^inset 0 0 0 \d+px var\(--[a-z0-9-]+\)$/.test(p));
   const bad = ALL.filter(d => d.prop === "box-shadow" && !ok(d.value) && !DOCK.test(d.value));
   assert.deepEqual(bad.map(fmt), [], "shadows come from --shadow-1/3/4 (STYLE.md §2.7)");
 });

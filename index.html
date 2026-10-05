@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <!-- interactive-widget: Chromium shrinks the layout viewport for the keyboard, so sticky just works there. Safari ignores it; app.js handles Safari (design/FREEZE.md). -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#151d2b">
+<meta name="theme-color" content="#08111f">
 <meta name="color-scheme" content="dark">
 <title>STEM drill</title>
 <!-- Loading splash (design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
      No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
 <style>
-html { background: #151d2b; color: #e7edf6; }   /* --paper, --ink */
-#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #151d2b; transition: opacity .2s ease-out; }
+html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
+#splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #08111f; transition: opacity .2s ease-out; }
 #splash.out { opacity: 0; pointer-events: none; }
 #splash svg { display: block; width: 64px; height: 64px; }
 #splash .sp-tile { fill: #1d2839; }   /* --sheet */
