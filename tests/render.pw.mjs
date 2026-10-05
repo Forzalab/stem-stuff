@@ -7,6 +7,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { shuffled, mastery } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
+/* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
+async function showCode(page) {
+  for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
+}
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
@@ -282,7 +286,7 @@ async function run(browserType, label, opts = {}) {
       // a bank with codes the server doesn't have: the upload is the only source
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_Q");   // insert, not swap: a swap made codes collide
-      if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
+      await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
@@ -290,7 +294,7 @@ async function run(browserType, label, opts = {}) {
       assert.equal(await page.getAttribute("#qlistBtn", "title"), "my-problems.json", "the list button's title names the file (it says Questions)");
       assert.ok(await page.locator("#freeze .katex").count() > 0);
       const f3n = "PHYS_QF3N";
-      if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
+      await showCode(page);
       await page.fill("#code", f3n); await page.press("#code", "Enter");
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, f3n);
       assert.ok(await page.locator("#freeze .fig svg").count() > 0, "figure from the uploaded file");
@@ -305,7 +309,7 @@ async function run(browserType, label, opts = {}) {
       const file = bank.problems.map(p => p.code), codes = shuffled(file, "pin"), n = codes.length;   // the page's order (seed pinned above)
       assert.notDeepEqual(codes, file, "shuffle kept file order");
       bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
-      if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");   // the bar rests as a strip while a problem is open
+      await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const at = c => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, c, { timeout: 8000 });
@@ -373,7 +377,7 @@ async function run(browserType, label, opts = {}) {
       const k = codes2.indexOf(codes[0]);
       if (k < n - 1) { await next.click(); await at(codes2[k + 1]); await prev.click(); await at(codes[0]); }
       // a server problem after the upload: list stays, nothing marked, arrows off
-      if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
+      await showCode(page);
       await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
       assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
       assert.equal(await page.locator("#qlist [aria-current]").count(), 0);

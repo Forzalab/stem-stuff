@@ -57,7 +57,11 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   if (!phone) {
     await step(`${W} (f) desktop: the bar stays at the top, whole`, async () => {
       assert.ok(!/bar-mini/.test(await cls(page)));
-      assert.ok(await page.isVisible("#code"));
+      assert.ok(await page.isVisible("#codeChip") && !(await page.isVisible("#code")), "C7 (Tony, Oct 5): a lone question: the code rests as a label");
+      await page.click("#codeChip"); assert.ok(await page.isVisible("#code"), "the label opens the box");
+      assert.equal(await page.evaluate(() => document.activeElement.id), "code", "focus in the box");
+      await page.evaluate(() => document.activeElement.blur()); await page.waitForTimeout(50);
+      assert.ok(await page.isVisible("#codeChip") && !(await page.isVisible("#code")), "focus gone: the label again");
       assert.ok(!(await page.isVisible("#barTab")));
     });
   } else {
