@@ -9,7 +9,6 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { speakable } from "../speak.mjs";
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
@@ -187,10 +186,10 @@ try {
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {
     await page.click("#mcGo");
-    await page.waitForFunction(() => /Missing one/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
+    await page.waitForFunction(() => /Missing one/.test(document.querySelector("#q .chk .cluck")?.textContent || ""), null, { timeout: 4000 });   // short: left of Check (Tony, Oct 5)
   });
 
-  await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed, then the voice reads the same string at 0.2", async () => {
+  await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed; no voice (Tony, Oct 5)", async () => {
     const said = () => page.evaluate(() => window.__said);
     await page.waitForFunction(() => /Hide Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // desktop: open by itself
     assert.equal(asked, 0, "the pre-written text needs no /explain");
@@ -211,10 +210,8 @@ try {
     assert.ok(first.length < P.all.saccharine.narration.length, "no typing: " + first);
     await page.waitForFunction(t => document.querySelector("#cluck .wtext")?.textContent.trim() === t && !document.querySelector("#cluck .wcaret"),
       P.all.saccharine.narration, { timeout: 4000 });
-    const s = await said();
-    assert.equal(s.length, 1, JSON.stringify(s));
-    assert.equal(s[0].text, speakable(P.all.saccharine.narration));
-    assert.ok(Math.abs(s[0].volume - 0.2) < 1e-6, "volume " + s[0].volume);
+    assert.deepEqual(await said(), [], "no voice: the voice is gone (Tony, Oct 5)");
+    assert.equal(await page.$("#wish .wvoice"), null, "no voice button");
   });
 
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
@@ -233,8 +230,8 @@ try {
     assert.equal(asked, 1);
     const t = await page.textContent("#cluck .wtext");
     assert.match(t, /POOF! A wish is a wish\./); assert.ok(await page.$("#cluck .wtext .katex"), "math rendered"); assert.ok(!/\*\*/.test(t));
-    await page.waitForFunction(() => window.__said.length === 1, null, { timeout: 2000 });
-    assert.equal(await page.evaluate(() => window.__said[0].text), speakable(parts.join("")), "the voice reads the box text");
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.__said.length), 0, "no voice (Tony, Oct 5)");
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
   });
 

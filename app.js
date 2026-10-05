@@ -427,7 +427,7 @@ async function load(code) {
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
-  if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish and voice stop
+  if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
@@ -1008,11 +1008,15 @@ function feedback(r, typed) {
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
-  if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
-  fb.innerHTML = h;
+  const quack = r.hint ? `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>` : "";
+  /* a short hint on a tick-all question with tries left sits in the empty room left of Check (Tony, Oct 5), else under the question */
+  const chk = $("#q .chk"); chk?.querySelector(".cluck")?.remove();
+  const inRow = chk && r.hint && r.verdict === "wrong" && r.triesLeft > 0 && r.hint.replace(/[*_`$\\]/g, "").length <= 80;
+  fb.innerHTML = inRow ? h : h + quack;
+  if (inRow) chk.insertAdjacentHTML("afterbegin", quack);
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
-  say((verdictWords(r) + " " + fb.textContent).replace(/\s+/g, " ").trim());
+  say((verdictWords(r) + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   if (r.verdict === "wrong") wishOnWrong();
   window.stemBrainrot?.sync();
@@ -1021,7 +1025,7 @@ function feedback(r, typed) {
 /* ---------- Cluck the genie (design/EASY.md Phase 4): easy mode, after a wrong answer ----------
    The first wrong answer of a question asks /explain in the background (at most WISH_AUTO questions an hour in this browser), so
    the solution is ready when the student looks. Past the cap nothing fires: "Ask Cluck" does it. The text is plain + $LaTeX$, read
-   aloud quietly when shown (speechSynthesis, mute kept per browser). A new question stops all of it. */
+   shown, never spoken (Tony, Oct 5: the voice is gone). A new question stops all of it. */
 const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
@@ -1033,12 +1037,12 @@ function wishEl() {
 }
 function wishReset() {
   if (wish && wish.ctl) wish.ctl.abort();
-  wish = null; voiceStop();
+  wish = null;
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
   clReset();
 }
 /* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
-   else the live /explain stream. The voice reads that same string, once the typing ends. */
+   else the live /explain stream. */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
   wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false };
@@ -1142,7 +1146,7 @@ function wishFrame(now) {
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; if (!cl?.auto) voiceSay(t); say("Cluck's steps are open."); clAsk(); }   // what the box shows is what is spoken; an auto-open stays quiet (Tony, Oct 5: "mute sound")
+  if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
@@ -1154,18 +1158,12 @@ function wishPaint() {
   }
   el.hidden = false;
   const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
-  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
-    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Turn voice off" : "Turn voice on"}</button>` : ""}</div>`;
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); }
     else if (w.open) { clClose(); return; }
     clOpen("explain", "#wish .wchip");
-  });
-  el.querySelector(".wvoice")?.addEventListener("click", () => {
-    try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
-    if (voiceOn()) { if (wishTyped(w)) voiceSay(w.text); } else voiceStop();
-    wishPaint();
   });
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
@@ -1225,13 +1223,13 @@ function clTab(tab, focus) {
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && tab === "explain";
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: spoken again once the text is out
-  if (w && !w.open && was) { voiceStop(); w.tick = 0; }
+  if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
     S.orig.open = cl.open && tab === "steps";
     $("#origHd")?.setAttribute("aria-expanded", String(S.orig.open));
     if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
   }
-  if (w && was !== w.open) wishPaint();                                     // the chip's label + the voice button follow
+  if (w && was !== w.open) wishPaint();                                     // the chip's label follows
   if (focus) cl.el.querySelector(`.cl-tab[data-tab="${tab}"]`).focus();
 }
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
@@ -1295,20 +1293,11 @@ async function clSend(msg) {
   re.scrollIntoView({ block: "nearest" });
   if (!w.out) cl.el.querySelector(".ask input")?.focus();
 }
-const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
-const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
-function voiceSay(t) {
-  if (!voiceOK() || !voiceOn()) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(speakable(t)); u.volume = 0.2; u.rate = 1.05;    // Tony, Oct 4: smaller voice
-  speechSynthesis.speak(u);
-}
-function voiceStop() { if (voiceOK()) speechSynthesis.cancel(); }
 
 /* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
    Sugar only, and only on questions with a saccharine layer (the brainrot corner's gate): diet and plain questions never get a HUD node,
    an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
-   quiet +1 (a small "+1" by the coin, no sound, no words: Cluck, the "one more try" toast and the voice own a wrong answer). State per bank. */
+   quiet +1 (a small "+1" by the coin, no sound, no words: Cluck and the "one more try" toast own a wrong answer). State per bank. */
 const RW = () => window.Rewards || null, FXL = () => window.FX || {};
 const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack) && !!RW();
 const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
@@ -1434,7 +1423,6 @@ async function rewardShow(mine, res) {
   if (!res.drop && !res.burst && !res.streakNote) return;
   await wait(600);
   if (res.drop && fx.slots) await fx.slots(res.drop);
-  if (res.drop === "legend" && voiceOK() && voiceOn() && !speechSynthesis.speaking) voiceSay(res.line);   // the golden duck speaks (mute kept)
   if (res.burst && fx.burst) {
     const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
       : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS!", sub: res.sub || res.line };
