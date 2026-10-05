@@ -226,12 +226,28 @@ try {
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
     assert.equal(box[2], true, "the sheet fills the column under the videos");
     assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
+    assert.equal(await page.textContent("#cluck .cl-ttl"), "Cluck's steps", "RM3: the title row");
+    const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
+      const rgb = s => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number), L = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
+      const cr = (a, b) => { const [x, y] = [L(a), L(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+      const cs = sel => getComputedStyle(document.querySelector(sel)), sheet = cs("#cluck").backgroundColor;
+      return { text: cr(cs("#cluck .wtext").color, sheet), muted: cr(cs("#clTabS").color, sheet), me: cr(getComputedStyle(document.querySelector("#cluck"), null).getPropertyValue("--ai-on-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`), getComputedStyle(document.querySelector("#cluck")).getPropertyValue("--ai-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`)),
+        send: cr(cs("#cluck .send").color, cs("#cluck .send").backgroundColor), left: cr(cs("#cluck .ask .left").color, cs("#cluck .ask").backgroundColor),
+        live: cr(cs("#clTabE .cl-live").color, cs("#clTabE .cl-live").backgroundColor) };
+    });
+    for (const [k, v] of Object.entries(aa)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}:1 < 4.5`);
     await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
       .catch(() => { throw new Error("the ask field is not on screen when the sheet opens"); });
     for (let n = 1; n <= 4; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
+      if (n === 1) assert.equal(await page.isVisible("#clTabE .cl-live"), true, "LIVE while Cluck answers");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
+      if (n === 1) {
+        assert.equal(await page.isVisible("#clTabE .cl-live"), false, "LIVE off once typed");
+        const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
+        assert.equal(await look("#cluck .wreply"), await look("#cluck .wtext:not(.wreply)"), "one speaker, one format: the reply has no card");
+      }
       assert.equal(asked, a0 + 1, "one /chat call");
       { const rr = await page.$$eval("#cluck .wreply", r => r.map(x => x.textContent)); assert.match(rr.at(-1), /Egg-cellent/); }
       assert.equal((await page.$$eval("#cluck .bub.me", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");

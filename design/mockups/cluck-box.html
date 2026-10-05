@@ -139,9 +139,10 @@ body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.
 .RM2 .ans b.big { color: var(--acc); }
 /* RM3: R everywhere, but the talk is M: the follow-up bubble is a tonal container, the ask field a tonal pill with a round send */
 .RM3 { --bg: #17130f; --tx: #ece6df; --strong: #fff; --mu: #a99c8e; --acc: #ffb77c; --accink: #4b2800; --seam: #2c241c; --xc: #a99c8e; --whoc: #ece6df;
-  --call: #221c16; --callline: transparent; --rule: #2c241c; --me: #4a2a10; --meink: #ffdcc0; --rep: #221c16; --repline: transparent;
+  --call: #221c16; --callline: transparent; --rule: #2c241c; --me: #4a2a10; --meink: #ffdcc0; --rep: transparent; --repline: transparent;
   --field: #2b231d; --fieldline: transparent; --askr: 28px; --gor: 50%; --left: #ffdcc0; }
 .RM3 .ask { padding-left: 20px; }
+.RM3 .rep { padding: 0; }   /* one speaker, one format (Tony, Oct 5): the reply sits on the sheet like the first answer */
 .RM3 .ans b.big { display: inline-block; padding: 2px 10px; border-radius: 6px; background: #4a2a10; color: #ffdcc0; }
 /* the shared R header (title row + tabs under it) */
 .RM1 .hd, .RM2 .hd, .RM3 .hd { flex-wrap: wrap; padding: 16px 8px 0 24px; row-gap: 4px; }

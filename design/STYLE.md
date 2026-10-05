@@ -264,6 +264,8 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 
 **Hybrid H (Tony, Oct 5: "dark almost neutral bkg WITH orange"; compare: design/mockups/cluck-colors.html).** The sheet is a neutral near-black (`--ai-sheet` #10131a, text 16.1:1, muted 8.0:1), not a warm brown: KaTeX and the step callouts read best on a calm surface, and it sits next to the site's navy without a third hue. Orange is the one accent: active tab, step circles, send, "N left", the 1px seam, the student's bubble (solid `--ai` with `--ai-ink`, never white on orange: 2.9:1). Ref 1's ember light only glows at the sheet's top (`--ai-glow`), brighter while Cluck types. Cluck's replies sit in a 1px outlined card (16px radius); his first explanation stays unboxed.
 
+**RM3 (Tony, Oct 5 ~03:35, supersedes the box look above; mock: design/mockups/cluck-box.html ?v=RM3).** Title row (duck + "Cluck's steps", X), text tabs under it with one 2px `--ai` underline (no slab). Sheet `--ai-sheet` #17130f, wells `--ai-tint` one tone up, no borders. The container pair `--ai-ct` / `--ai-on-ct` (#4a2a10 / #ffdcc0) for step numbers, the boxed answer, the student's bubble and the LIVE chip (on "Cluck explains" while Cluck types or answers; no pulse with reduced motion). The ask field is a tonal pill (`--ai-pill`), round send `--ai-send` / `--ai-send-ink`; the turning rim shows only while Cluck types. One speaker, one format: replies sit on the sheet like the first answer, no card. Text capped at 58ch.
+
 - Tokens on `.ai-skin`, never `:root` (scoped like `--rw-*`):
   | token | value | use |
   |---|---|---|
