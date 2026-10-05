@@ -59,7 +59,7 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 | `--mark` | look here | Cluck's duck; figure highlight | a warning, a toast, a second series next to `--c2`, a full-surface fill |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange.
+There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange, with one scoped exception: `--ai` (tangerine) on Cluck's surfaces only (see "Cluck's surfaces" below; Tony, Oct 4). It is never a warning and never in a figure.
 
 Contrast floor: text 4.5:1 on its real background (check `--raised` too), control boundaries and icons 3:1.
 
@@ -257,6 +257,24 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 - The figure sits straight on the card: no frame, border, background or shadow of its own. Full column width; prose next to it stays 65ch.
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
+
+### Cluck's surfaces (`.ai-*`, sugar only)
+
+Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwise a NEW accent color? devise design language based on our style guidelines" (picked: warm tangerine). Everything Cluck says or shows: the explanation, the follow-up chat, the hint card's open solution. "AI = warm" across the app: the same family as the hint card and the Explain chip.
+
+- Tokens on `.ai-skin`, never `:root` (scoped like `--rw-*`):
+  | token | value | use |
+  |---|---|---|
+  | `--ai` | #ff9a3c | the one accent: the speaker name, the send button fill, the turns-left count, focus of the input |
+  | `--ai-ink` | #2b1000 | text on `--ai` (8.4:1) |
+  | `--ai-tint` | `--ai` 10% over `--sheet` | Cluck's bubble and the math callout fill |
+  | `--ai-line` | `--ai` 40% over `--sheet` | the callout's 1px edge (`--bw`) |
+  Contrast: `--ai` on `--sheet` 7.0:1, `--ink` on `--ai-tint` 10.6:1 (AA large and body).
+- One accent per surface. No glow, no gradient, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
+- Math: inline `$..$` stays in the sentence; a step's equations go in a **callout**: centred display math, one equation per line, `--ai-tint` fill, 1px `--ai-line` edge, 10px radius, `--s3`/`--s4` padding. Problem scenes in it stay pure ink (DESIGN-LANGUAGE.md §3).
+- Text: short sentences, the key number in bold, the last line states the answer.
+- Chat: Cluck's bubbles left on `--ai-tint` with the duck (`--mark`) and the name in `--ai`; the student's right on `--raised`; the input is a `.ff`-style field with a solid `--ai` send button (`--ai-ink` icon) and "N left" in `--ai` beside it. 4 student turns per question, then the field is replaced by a "Next question" button.
+- The hint card's open solution: the header keeps its full radius, `--s3` gap, then the solution in its own `--ai-tint` panel with a 1px `--ai-line` edge and a "Steps" label. Never glued under the header.
 
 ### Reward layer (sugar only: `.rw-*`, `.fx-*`)
 

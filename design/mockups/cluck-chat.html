@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark"><title>Cluck chat variants</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css"><link rel="stylesheet" href="../../rewards/rewards.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css"><script src="../../vendor/katex/katex.min.js"></script>
+<!--
+  Cluck's explanation + follow-up chat, 3 layouts (Tony, Oct 4: "DESKTOP AND TABLET FOCUSED ... WITH a text chatbox to continue
+  chatting with it, limit 4 turns per question ... prefilled text as the original genie text. 3 UI variants"; Mathy ref for flow).
+  All three use STYLE.md "Cluck's surfaces" (--ai tangerine on .ai-skin). They differ in layout only.
+    ?v=1  Side sheet: result card under the answers; "Explanation" slides a sheet over the notes column.
+    ?v=2  Centre sheet: a sheet rises over a dim page (closest to the ref).
+    ?v=3  Inline thread: no overlay; Cluck's bubbles under the answers, the casino chip opens it.
+  ?turns=0..4 prefills that many student turns (4 = locked). ?shot hides the switcher.
+  Replies are canned (a stub stream). The question is made up: exam content never goes to GitHub.
+-->
+<style>
+/* impeccable-disable side-tab: the slot-kit bevel of the hint card header (.rw-hint*, rewards/rewards.css). impeccable waiver: casino-themed (Tony, Oct 4) */
+/* ---------- Cluck's surfaces (STYLE.md): tokens on .ai-skin, never :root ---------- */
+.ai-skin {
+  --ai: #ff9a3c; --ai-ink: #2b1000;
+  --ai-tint: color-mix(in srgb, var(--ai) 10%, var(--sheet));
+  --ai-line: color-mix(in srgb, var(--ai) 40%, var(--sheet));
+}
+.ai-name { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s1); font: 700 var(--t-sm)/1.2 inherit; color: var(--ai); }
+.ai-name .ico { width: 1.75rem; height: 1.75rem; color: var(--mark); }
+.ai-say p { margin: 0 0 var(--s2); }
+.ai-say p:last-child { margin-bottom: 0; }
+.ai-say b { font-weight: 700; }
+.ai-math { margin: var(--s3) 0; padding: var(--s3) var(--s4); display: grid; gap: var(--s2); justify-items: center;
+  background: var(--ai-tint); border: var(--bw) solid var(--ai-line); border-radius: 10px; }
+.ai-math .katex { font-size: 1.1em; }
+.bub { max-width: 92%; padding: var(--s3) var(--s4); border-radius: 12px; line-height: var(--lh); }
+.bub.ai { background: var(--ai-tint); border-top-left-radius: 4px; }
+.bub.ai .ai-math { background: var(--sheet); }   /* inside a tinted bubble the callout flips to the sheet, edge stays */
+.bub.me { align-self: flex-end; background: var(--raised); border-top-right-radius: 4px; }
+.thread { display: flex; flex-direction: column; gap: var(--s3); }
+.msg { display: flex; gap: var(--s3); align-items: flex-start; }
+.msg > .ico { flex: none; width: 2rem; height: 2rem; color: var(--mark); margin-top: 2px; }
+.msg .col { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.ask { display: flex; gap: var(--s2); align-items: center; }
+.ask .ff { flex: 1; }
+.ask .ff input { font-family: inherit; }   /* talk, not an answer: the sans, not the answers' mono */
+.ask .ff:focus-within { border-color: var(--ai); box-shadow: inset 0 0 0 1px var(--ai); }
+.ask .send { width: var(--btn); height: var(--btn); border: 0; border-radius: 8px; display: grid; place-items: center; background: var(--ai); color: var(--ai-ink); }
+.ask .send:hover { filter: brightness(1.08); }
+.ask .send:disabled { opacity: .45; cursor: default; filter: none; }
+.left { flex: none; min-width: 4.5rem; text-align: right; font: 700 var(--t-xs)/1 inherit; color: var(--ai); }
+.done-row { display: flex; align-items: center; gap: var(--s3); }
+.done-row p { margin: 0; color: var(--muted); font-size: var(--t-sm); }
+.btn-ai { width: auto; padding: 0 var(--s5); font-weight: 700; background: var(--ai); color: var(--ai-ink); }
+.btn-ai:hover { background: #ffad5e; }
+.btn-line { width: auto; padding: 0 var(--s5); font-weight: 700; background: transparent; border-color: var(--ai); color: var(--ai); }
+.btn-line:hover { background: var(--ai-tint); }
+.wcaret { margin-left: 2px; }
+
+/* ---------- the hint card, seam fixed: gap + its own Steps panel ---------- */
+.orig2 { margin: 0 0 var(--s4); }
+.orig2 .rw-hint[aria-expanded="true"] { border-radius: var(--rw-r-m); }   /* keeps its full radius: it is a button, not a lid */
+.steps { margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); background: var(--ai-tint); border: var(--bw) solid var(--ai-line); border-radius: 12px; }
+.steps h4 { margin: 0 0 var(--s2); font: 700 var(--t-xs)/1.2 inherit; letter-spacing: .06em; text-transform: uppercase; color: var(--ai); }
+.steps ol { margin: 0; padding-left: 1.25rem; display: grid; gap: var(--s2); }
+
+/* ---------- page frame (a stand-in for the app's side-by-side layout) ---------- */
+body { padding: 0; }
+.mk-sw { display: flex; gap: var(--s2); align-items: center; padding: var(--s3) var(--gut); background: var(--field); }
+.mk-sw b { margin-right: var(--s3); font-size: var(--t-sm); color: var(--muted); }
+.mk-sw .btn { width: auto; padding: 0 var(--s4); font-weight: 700; font-size: var(--t-sm); }
+.mk-sw .btn[aria-pressed="true"] { border-color: var(--ai); color: var(--ai); }
+html.shot .mk-sw { display: none; }
+.app { display: grid; gap: var(--s5); padding: var(--s5) var(--gut) var(--s7); max-width: 96rem; margin: 0 auto; }
+@media (min-width: 900px) { .app { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.qcol { display: grid; gap: var(--s3); align-content: start; }
+.qbox { padding: var(--s4); border-radius: 10px; background: var(--qbox); }
+.qbox p { margin: 0; }
+.opts { display: grid; gap: var(--s2); }
+.opt .badge { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; border: var(--bw) solid var(--edge); font-weight: 700; font-size: var(--t-sm); }
+.notes { position: relative; display: grid; gap: var(--s4); align-content: start; min-height: 36rem; }
+.vids { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.vids div { aspect-ratio: 16 / 9; border-radius: 8px; background: linear-gradient(135deg, #2b3e5c, #1a2436); display: grid; place-items: center; color: var(--muted); font-size: var(--t-xs); }
+.pad { min-height: 10rem; border-radius: 10px; border: var(--bw) dashed var(--line); display: grid; place-items: center; color: var(--hint); font-size: var(--t-sm); }
+
+/* result card (V1, V2): the ref's "Correct / Explanation / Next" */
+.res { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); border-radius: 10px; background: var(--sheet); }
+.res .verdict { flex: 1 1 12rem; }
+.res .sub { display: block; margin-top: 2px; color: var(--muted); font-weight: 400; font-size: var(--t-sm); }
+
+/* V1 side sheet: covers the notes column, full height of the viewport */
+.side { position: fixed; z-index: 40; top: 0; bottom: 0; right: max(0px, (100% - 96rem) / 2); width: calc((min(100%, 96rem) - var(--s5)) / 2);   /* exactly the notes column + its gutter */ display: flex; flex-direction: column;
+  background: var(--sheet); border-left: var(--bw) solid var(--line); box-shadow: var(--shadow-4); }
+@media (max-width: 899px) { .side { width: 100%; } }
+.sh-hd { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s3) var(--s3) var(--s4); border-bottom: var(--bw) solid var(--line); }
+.sh-hd h2 { flex: 1; margin: 0; font-size: 1.25rem; }
+.sh-bd { flex: 1; overflow-y: auto; padding: var(--s4); }
+.sh-ft { padding: var(--s3) var(--s4) var(--s4); border-top: var(--bw) solid var(--line); }
+
+/* V2 centre sheet: the ref's sheet, on a dim page */
+.scrim { position: fixed; inset: 0; z-index: 39; background: rgb(8 12 20 / .62); }
+.mid { position: fixed; z-index: 40; left: 50%; bottom: 0; transform: translateX(-50%); width: min(48rem, calc(100% - 2 * var(--gut)));
+  max-height: calc(100dvh - var(--s6)); display: flex; flex-direction: column; background: var(--sheet); border-radius: 20px 20px 0 0; box-shadow: var(--shadow-4); }
+.mid .grab { width: 40px; height: 4px; margin: var(--s2) auto 0; border-radius: 2px; background: var(--edge); }
+.mid .sh-hd { border-bottom: 0; padding-top: var(--s2); }
+.mid .sh-bd { padding: 0 var(--s5) var(--s4); }
+.mid .sh-ft { padding: var(--s3) var(--s5) var(--s5); }
+
+/* V3 inline thread: in the question column, under the answers */
+.inl { padding: var(--s4); border-radius: 12px; background: var(--sheet); display: grid; gap: var(--s4); }
+.inl [data-foot] { position: sticky; bottom: 0; margin: 0 calc(-1 * var(--s4)) calc(-1 * var(--s4)); padding: var(--s3) var(--s4) var(--s4); background: var(--sheet); border-radius: 0 0 12px 12px; border-top: var(--bw) solid var(--line); }   /* the field stays in reach while the thread grows */
+html[data-v="3"] .res { display: none; }
+html:not([data-v="3"]) .inl, html[data-v="3"] .side, html[data-v="3"] .mid, html[data-v="3"] .scrim,
+html[data-v="1"] .mid, html[data-v="1"] .scrim, html[data-v="2"] .side { display: none; }
+.closed .side, .closed .mid, .closed .scrim { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .side { animation: slin .22s ease-out; } @keyframes slin { from { transform: translateX(24px); opacity: 0; } }
+  .mid { animation: upin .24s ease-out; } @keyframes upin { from { transform: translate(-50%, 24px); opacity: 0; } }
+}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M5.5 9.5L12 16l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" fill="none" stroke="#6b2400" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<nav class="mk-sw" aria-label="Variant">
+  <b>Cluck chat</b>
+  <a class="btn" href="?v=1" data-v="1">1 Side sheet</a>
+  <a class="btn" href="?v=2" data-v="2">2 Centre sheet</a>
+  <a class="btn" href="?v=3" data-v="3">3 Inline thread</a>
+</nav>
+
+<main class="app">
+  <section class="qcol" aria-label="Question">
+    <div class="qbox"><p>A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?</p></div>
+    <div class="opts">
+      <button class="opt" type="button"><span class="badge">A</span><span class="txt">1.0 m/s</span></button>
+      <button class="opt right" type="button"><span class="badge">B</span><span class="txt">2.0 m/s</span></button>
+      <button class="opt wrong" type="button"><span class="badge">C</span><span class="txt">3.0 m/s</span></button>
+      <button class="opt" type="button"><span class="badge">D</span><span class="txt">4.5 m/s</span></button>
+    </div>
+    <div class="res ai-skin">
+      <p class="verdict bad"><svg class="ico" aria-hidden="true"><use href="#i-bad"/></svg><span>Not quite<span class="sub">The answer is B, 2.0 m/s.</span></span></p>
+      <button class="btn btn-line" type="button" data-open>Explanation</button>
+      <button class="btn btn-ai" type="button">Next question</button>
+    </div>
+    <div class="inl ai-skin" aria-label="Cluck explains">
+      <div class="thread" data-thread></div>
+      <div data-foot></div>
+    </div>
+  </section>
+
+  <section class="notes" aria-label="Notes">
+    <div class="vids" aria-hidden="true"><div>video 1</div><div>video 2</div></div>
+    <div class="orig2 rw-skin ai-skin">
+      <button class="rw-hint" type="button" aria-expanded="true">
+        <span class="rw-hint-coin"><svg aria-hidden="true"><use href="#i-bulb"/></svg></span>
+        <span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span></span>
+        <span class="rw-hint-chev"><svg aria-hidden="true"><use href="#i-down"/></svg></span>
+      </button>
+      <div class="steps">
+        <h4>Steps</h4>
+        <ol>
+          <li>Use: <span data-k="p = mv"></span></li>
+          <li>Before: <span data-k="(4.0)(2.5) = 10\ \text{kg}\cdot\text{m/s}"></span></li>
+          <li>After: <span data-k="10 = (4.0 + 1.0)\,v"></span></li>
+          <li>Answer: <b>2.0 m/s</b></li>
+        </ol>
+      </div>
+    </div>
+    <div class="pad">Scratchpad</div>
+  </section>
+</main>
+
+<div class="scrim" data-close></div>
+<aside class="side ai-skin" aria-label="Cluck explains">
+  <header class="sh-hd"><h2>Cluck explains</h2><button class="btn" type="button" aria-label="Close" data-close><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+  <div class="sh-bd"><div class="thread" data-thread></div></div>
+  <div class="sh-ft" data-foot></div>
+</aside>
+<aside class="mid ai-skin" aria-label="Cluck explains">
+  <div class="grab" aria-hidden="true"></div>
+  <header class="sh-hd"><h2>Explanation</h2><button class="btn" type="button" aria-label="Close" data-close><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></header>
+  <div class="sh-bd"><div class="thread" data-thread></div></div>
+  <div class="sh-ft" data-foot></div>
+</aside>
+
+<script>
+const q = new URLSearchParams(location.search), V = ["1", "2", "3"].includes(q.get("v")) ? q.get("v") : "1";
+document.documentElement.dataset.v = V;
+if (q.has("shot")) document.documentElement.classList.add("shot");
+document.querySelectorAll(".mk-sw [data-v]").forEach(a => { a.setAttribute("aria-pressed", String(a.dataset.v === V)); a.href = "?v=" + a.dataset.v + (q.has("shot") ? "&shot" : ""); });
+const K = t => katex.renderToString(t, { throwOnError: false });
+document.querySelectorAll("[data-k]").forEach(e => { e.innerHTML = K(e.dataset.k); });
+
+/* the genie's box text = turn 1 (Tony's pick); then canned replies stand in for POST /chat */
+const FIRST = { text: "POOF. Momentum stays the same when carts stick. Before, only the 2.0 kg cart moves. After, both move together, so the mass is <b>3.0 kg</b>.",
+  math: ["p_{\\text{before}} = p_{\\text{after}}", "(2.0)(3.0) = (2.0 + 1.0)\\,v", "v = 2.0\\ \\text{m/s}"], end: "So the answer is <b>2.0 m/s</b>." };
+const ASKS = ["why is the mass 3 now?", "so 3.0 m/s was just the old speed?", "does this work if they bounce?", "ok what about 2 carts both moving"];
+const REPLIES = [
+  { text: "They stick. So they move as one cart. One cart of 2.0 kg + 1.0 kg = <b>3.0 kg</b>." },
+  { text: "Yes. 3.0 m/s is the speed <b>before</b>. More mass after, same momentum, so it slows down." },
+  { text: "Momentum still stays the same. But you need both speeds after, so it takes one more rule. This question only has sticking." },
+  { text: "Add both momenta first. Keep the sign: left is minus.", math: ["m_1v_1 + m_2v_2 = (m_1 + m_2)\\,v"] }
+];
+const MAX = 4;
+let used = Math.min(MAX, Math.max(0, +(q.get("turns") ?? 1)));
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const say = m => `<div class="ai-say"><p>${m.text}</p>${m.math ? `<div class="ai-math">${m.math.map(K).map(h => `<div>${h}</div>`).join("")}</div>` : ""}${m.end ? `<p>${m.end}</p>` : ""}</div>`;
+const aiMsg = (m, first) => V === "3" || !first
+  ? `<div class="msg"><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg><div class="col">${first ? `<p class="ai-name">Cluck</p>` : ""}<div class="bub ai">${say(m)}</div></div></div>`
+  : `<div class="msg"><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg><div class="col"><p class="ai-name">Cluck</p>${say(m)}</div></div>`;
+const meMsg = t => `<div class="bub me">${esc(t)}</div>`;
+function draw() {
+  const thread = [aiMsg(FIRST, true)];
+  for (let i = 0; i < used; i++) thread.push(meMsg(ASKS[i]), aiMsg(REPLIES[i]));
+  document.querySelectorAll("[data-thread]").forEach(t => { t.innerHTML = thread.join(""); });
+  const foot = used < MAX
+    ? `<form class="ask" data-ask><label class="ff"><span class="sr-only">Ask Cluck</span><input name="t" autocomplete="off" placeholder="Ask about this step"></label>`
+      + `<span class="left">${MAX - used} left</span><button class="send" type="submit" aria-label="Send"><svg class="ico" aria-hidden="true"><use href="#i-go"/></svg></button></form>`
+    : `<div class="done-row"><p>That's 4 questions. On to the next one.</p><button class="btn btn-ai" type="button">Next question</button></div>`;
+  document.querySelectorAll("[data-foot]").forEach(f => { f.innerHTML = foot; });
+  document.querySelectorAll("[data-ask]").forEach(f => f.addEventListener("submit", send));
+  document.querySelectorAll(".sh-bd").forEach(b => { b.scrollTop = b.scrollHeight; });
+}
+/* the stub stream: caret 900 ms, then type ~35 chars/s (same as the genie box today) */
+function send(e) {
+  e.preventDefault();
+  const t = e.target.t.value.trim() || ASKS[used];
+  if (used >= MAX) return;
+  ASKS[used] = t; const i = used++;
+  document.querySelectorAll("[data-thread]").forEach(th => { th.insertAdjacentHTML("beforeend", meMsg(t) + `<div class="msg" data-typing><svg class="ico" aria-hidden="true"><use href="#i-duck"/></svg><div class="col"><div class="bub ai"><span class="wcaret"></span></div></div></div>`); });
+  document.querySelectorAll("[data-foot] .send").forEach(b => { b.disabled = true; });
+  setTimeout(() => {
+    const full = REPLIES[i].text.replace(/<[^>]+>/g, ""); let n = 0;
+    const tick = setInterval(() => {
+      n += 2;
+      document.querySelectorAll("[data-typing] .bub").forEach(b => { b.innerHTML = esc(full.slice(0, n)) + '<span class="wcaret"></span>'; });
+      if (n >= full.length) { clearInterval(tick); draw(); }
+    }, 57);
+  }, 900);
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("[data-open]")) document.body.classList.remove("closed");
+  if (e.target.closest("[data-close]")) document.body.classList.add("closed");
+});
+if (q.has("closed")) document.body.classList.add("closed");
+draw();
+</script>
+</body></html>
