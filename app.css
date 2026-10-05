@@ -438,11 +438,40 @@ html.side #work > .orig { margin: 0; }
 .wchip { cursor: pointer; }                                                 /* the Cluck chip: its casino skin is .rw-chip in rewards/rewards.css (T4) */
 .wvoice:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .wvoice { width: auto; min-height: 44px; padding: 0 var(--s3); font-size: var(--t-sm); white-space: nowrap; }   /* "Turn voice off" on one line (.btn is 48px square) */
-.wtext { margin-top: var(--s2); padding: var(--s3) var(--s4); border-radius: 8px; background: var(--sheet); font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer; }   /* a tap skips the typing */
+/* Cluck's box wears the V1 pick (brain ref-ui/cluck-box-pick-v1.png; Tony: "the coloring looks so rad"): a warm dark sheet, warm text,
+   a tangerine callout, and a rim that runs tangerine → peach → pink → sky (the site's blue) and turns while Cluck thinks and types.
+   Same names and values as STYLE.md "Cluck's surfaces" (--ai-*), scoped here until the .ai-skin lands. */
+@property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+#wish { --ai: #ff9a3c; --ai-sheet: #2a1d14; --ai-text: #fff1e3; --ai-muted: #d9bfa8; --ai-rule: #4a3526; }
+.wtext { margin-top: var(--s2); padding: var(--s4) var(--s5); border-radius: 8px; font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; cursor: pointer;   /* a tap skips the typing */
+  color: var(--ai-text); border: 1.5px solid transparent;   /* the rim reads as V1's: a listed --bw exception, like the toast */
+  background: linear-gradient(var(--ai-sheet), var(--ai-sheet)) padding-box,
+    conic-gradient(from var(--wang), var(--ai), var(--c2), var(--c3), var(--c1), var(--ai)) border-box; }
+.wtext.wrun { animation: wspin 2.4s linear infinite; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ai) 45%, transparent)); }   /* thinking + typing */
+@keyframes wspin { to { --wang: 360deg; } }
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
+.wtext b { font-weight: 700; color: var(--ink); }
+.wtext .wmath { margin: var(--s2) 0; padding: var(--s3) var(--s4); border-radius: 8px; text-align: center; overflow-x: auto;   /* Mathy's callout: the work, set apart */
+  background: color-mix(in srgb, var(--ai) 6%, var(--ai-sheet)); border: 1px solid color-mix(in srgb, var(--ai) 45%, var(--ai-rule)); }
+.wtext .weq + .weq { margin-top: var(--s2); }
+.wtext .wmath.wans { background: none; border-color: transparent; padding: 0; }
+.wtext .wmath .katex-display { margin: 0; }   /* the callout spaces its lines (.weq + .weq); KaTeX's 1em on top of that leaves holes */
+.wtext .wgap { height: var(--s1); }   /* + the next line's s2 = s3, a step's gap */
+.wtext .wlist { margin: var(--s2) 0; padding-left: var(--s5); }
+.wtext .wlist li + li { margin-top: var(--s1); }
+.wtext .wl + .wl:not(.wgap, .wmath, .wlist, .wstep) { margin-top: var(--s2); }   /* sentences get a breath between them (not steps: this outranked .wstep) */
+.wtext > .wl:first-child { margin-top: 0; }
+.wtext .wsbody > :last-child, .wtext > .wl:last-child { margin-bottom: 0; }   /* a step's last list/callout margin stays inside the grid item and doubled the step gap */
+/* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
+.wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
+.wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--ai); color: var(--ai); font-size: var(--t-xs); font-weight: 700; }
+.wtext .wstitle { font-weight: 700; color: var(--ink); }
+.wtext .wssub { font-family: var(--mono); font-style: italic; font-size: var(--t-xs); color: var(--ai-muted); }
+.wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--ai-rule); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .wcaret { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .wcaret, .wtext.wrun { animation: none; } }
 
 /* ---------- scratchpad + copy ---------- */
 /* 16px from the question to the scratchpad (12 freeze padding + 4); tab height + gap + 8px when the pull-tab hangs below the layer */

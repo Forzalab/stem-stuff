@@ -69,6 +69,17 @@ class Wsgi(unittest.TestCase):
         self.assertEqual(call("POST", "/check", b"not json")[0], 400)
         self.assertEqual(call("GET", "/b/last.json", cookie="sid=" + "b" * 32)[2], None)
 
+    def test_chat_routes_to_its_stream_with_a_big_body(self):
+        got, old = {}, serve.STREAMS["/chat"]
+        serve.STREAMS["/chat"] = lambda c, b: (got.update(n=len(b)) or (200, {"Content-Type": "text/plain"}, iter([b"{}"])))
+        try:
+            status = call("POST", "/chat", b"x" * 9000)[0]
+        finally:
+            serve.STREAMS["/chat"] = old
+        self.assertEqual((status, got["n"]), (200, 9000))
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            self.assertIn({"source": "/chat", "destination": "/api/index?path=/chat"}, json.load(f)["rewrites"])
+
 
 class Kv(unittest.TestCase):
     def setUp(self):

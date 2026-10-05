@@ -33,6 +33,10 @@
     {
       "source": "/explain",
       "destination": "/api/index?path=/explain"
+    },
+    {
+      "source": "/chat",
+      "destination": "/api/index?path=/chat"
     }
   ]
 }

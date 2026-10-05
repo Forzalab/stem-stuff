@@ -20,7 +20,7 @@ function math(t) {
 }
 
 export function speakable(text) {
-  let s = String(text || "").replace(/\$\$?([^$]+)\$\$?/g, (_, m) => " " + math(m) + " ");
+  let s = String(text || "").replace(/\*\*/g, "").replace(/^\s*- /gm, "").replace(/^\s*---+\s*$/gm, "").replace(/\$\$?([^$]+)\$\$?/g, (_, m) => " " + math(m) + " ");   // **bold** is for the eye only
   for (const [re, w] of UNITS) s = s.replace(re, w);
   return s.replace(/[ \t]{2,}/g, " ").replace(/([.!?:])? *\n */g, (_, p) => (p || ".") + " ").trim();
 }

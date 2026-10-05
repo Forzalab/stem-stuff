@@ -1073,18 +1073,52 @@ async function wishStart(auto) {
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
 }
-/* text: one line per line, $..$ as math, a table row (2+ spaces between cells) in the mono face so its columns line up */
-const wishHTML = t => t.split("\n").map(l => `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${
-  esc(l).replace(/\$([^$]+)\$/g, (m, x) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), false); } catch { return m; } }) || "&nbsp;"}</div>`).join("");
+/* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
+   follows until the next step or a "---" rule; "- " lines in a row make one short list (the ChatGPT break-up, Tony's ref); a line
+   that is only math ($$..$$ or $..$) is display math, and display lines in a row share one tinted callout, one equation per line; a table row
+   (2+ spaces between cells) in the mono face so its columns line up */
+const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
+const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
+const wishLine = l => esc(l).replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>") || "&nbsp;";
+const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;                                // "1. Find the momentum before — only one cart moves"
+function wishHTML(t) {
+  let out = "", step = null, eqs = [], li = [];
+  const put = h => { if (step === null) out += h; else step += h; };
+  const flush = () => {
+    if (eqs.length) put(`<div class="wl wmath${eqs.length === 1 && eqs[0].includes("boxed") ? " wans" : ""}">${eqs.join("")}</div>`);   // a lone boxed answer: no box around the box
+    if (li.length) put(`<ul class="wl wlist">${li.join("")}</ul>`);
+    eqs = []; li = [];
+  };
+  const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
+  for (const l of t.split("\n")) {
+    const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
+    if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
+      close();
+      const [title, sub] = s[2].split(/\s+[—–]\s+/);
+      step = `<div class="wl wstep"><span class="wnum" aria-hidden="true">${s[1]}</span><div class="wsbody"><div class="wstitle">${wishLine(title)}</div>${
+        sub ? `<div class="wssub">${wishLine(sub)}</div>` : ""}`;
+      continue;
+    }
+    if (/^\s*---+\s*$/.test(l)) { close(); out += '<hr class="wrule">'; continue; }   // the steps end: the answer comes after the rule
+    if (d) { if (li.length) flush(); eqs.push(`<div class="weq">${wishMath(esc(d[1]), true, esc(l))}</div>`); continue; }
+    if (b) { if (eqs.length) flush(); li.push(`<li>${wishLine(b[1])}</li>`); continue; }
+    flush();
+    put(!l.trim() ? '<div class="wl wgap"></div>' : `<div class="${/\S {2,}\S/.test(l) ? "wl tbl" : "wl"}">${wishLine(l)}</div>`);   // a blank line: a short breath, not a full empty row
+  }
+  close();
+  return out;
+}
 /* the ChatGPT feel (Tony, Oct 4: "bit delay feels gud"): ~900 ms of a lone blinking caret (STYLE.md bans pulsing dots), then the text
    types out at ~35 chars/s word by word, a $..$ always whole, the caret riding the end. A tap on the box skips to the end; reduced motion =
    no typing (the wait stays). */
 const WISH_DOTS = 900, WISH_CPS = 35;
 const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
-function wishCut(t, n) {                                                  // n chars, moved to a word end; a half-open $..$ waits
+function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
+  if (done && n >= t.length) return n;                                    // the whole text: show it, even with a pair the model never closed
   if ((t.slice(0, n).match(/\$/g) || []).length % 2) { const e = t.indexOf("$", n); n = e < 0 ? Math.max(0, t.lastIndexOf("$", n - 1)) : e + 1; }
+  if (t.slice(0, n).split("**").length % 2 === 0) { const e = t.indexOf("**", n); n = e < 0 ? Math.max(0, t.lastIndexOf("**", n - 1)) : e + 2; }
   return n;
 }
 let wishRaf = 0;
@@ -1096,12 +1130,13 @@ function wishFrame(now) {
   if (!x || !w || !w.open) return;
   if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
   const t = w.text;
-  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; if (!w.done || now < w.at) wishText(); return; }
+  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
-  w.shown = Math.max(w.shown, wishCut(t, w.pos));
+  w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
+  x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
   if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); }   // what the box shows is what is spoken
 }
