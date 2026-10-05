@@ -135,6 +135,12 @@ html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; ma
 }
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
 .dock-bottom.dock-away .dock { display: none; }
+/* C8 (Tony, Oct 5 clutter pass): phones, a bank open: no code bar and no strip; it comes up with the list (app.js drill:qlist), or with a load error */
+.dock-bottom.qnav-on:not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }
+/* C7: desktop, a question opened without a bank: the code box rests as a label with the code; a tap opens the box (app.js codeChip) */
+#codeChip { display: none; }   /* an id: .btn-label (nav.css) would show it */
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }
+html:not(.qnav-on):not(.dock-bottom):not(.start):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) #codeChip { display: inline-flex; }
 .dock-bottom main { padding-bottom: calc(var(--dock-h, 88px) + var(--s5)); }
 /* bar strip (phones, a problem open): 44px (the tap target) with an up-chevron. Revealed, the full bar lies OVER the page (--dock-h stays the strip's),
    so nothing under it moves or shrinks; its top edge holds the same tab, chevron down, to put it away. No problem open: the full bar. */
@@ -430,7 +436,7 @@ html.sugar :is(.fcard .g, .fcard .then) { color: var(--ai-muted); }
 .orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-strong); font-weight: 700; }
 .orig-sol { list-style: none; margin: 0; padding: 0; counter-reset: os; color: var(--ai-text); }
 .orig-sol li { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--s3); margin-top: var(--s3); counter-increment: os; }
-.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; }
+.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1; }
 .orig-sol li:has(+ li:not([hidden]))::after { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
 .orig-sol li > * { min-width: 0; }
 .orig-sol li[hidden] { display: none; }
@@ -441,7 +447,8 @@ html.side #work > .orig { margin: 0; }
 .fcard .hd { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
 .fcard ol { list-style: none; margin: 0; padding: 0; }
 .fcard .st { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); align-items: baseline; }
-.fcard .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); font-size: var(--t-sm); font-weight: 700; align-self: start; font-variant-numeric: tabular-nums; }
+/* number badges: line-height 1, or the digit rides ~2.5px high (the inherited 1.55 line box centres, the ink doesn't; Tony, Oct 5) */
+.fcard .n { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: var(--raised); font-size: var(--t-sm); font-weight: 700; align-self: start; font-variant-numeric: tabular-nums; line-height: 1; }
 .fcard .f { align-self: center; min-width: 0; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
 .fcard .f .katex { white-space: nowrap; }
 .fcard .g { grid-column: 2; font-size: var(--t-xs); color: var(--muted); line-height: 1.4; }
@@ -565,7 +572,7 @@ html:not(.side) .cl-ttl { display: none; }                                   /* 
 /* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
 .wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
 .wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--ai); }
-.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--ai-on-ct); font-size: var(--t-xs); font-weight: 700; line-height: 1; }
 .wtext .wstitle { font-weight: 700; color: var(--ai-strong); }
 .wtext .wssub { font-family: var(--mono); font-style: italic; font-size: var(--t-xs); color: var(--ai-muted); }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--ai-rule); }
@@ -758,7 +765,8 @@ html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
 html.pad-off .freeze-in { max-height: none; overflow: visible; }
 html.pad-off .more { display: none; }
-html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + var(--s4)); }   /* the dock bar only: the Scratchpad button may sit over the last row; it drags away (Tony, Oct 5: "remove the bottom gap") */
+html.fab-on main { padding-bottom: calc(var(--dock-h, 0px) + var(--s4)); }   /* the dock bar only: on the left the Scratchpad button may sit over the last row; it drags away (Tony, Oct 5: "remove the bottom gap") */
+html.fab-on:has(#padFab:not(.left)) main { padding-bottom: calc(var(--dock-h, 0px) + 56px + var(--s4)); }   /* bottom right (Tony, Oct 5 ~10:0x): room at the page end so Check scrolls clear of it */
 .pad-fab {
   position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
   display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 10px; background: var(--raised); color: var(--ink);

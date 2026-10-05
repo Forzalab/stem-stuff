@@ -10,6 +10,10 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
+/* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
+async function showCode(page) {
+  for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
+}
 let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
@@ -39,7 +43,7 @@ async function step(name, fn) {
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout: 8000 });
 async function typeCode(page, code) {
-  if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
+  await showCode(page);
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
 const label = page => page.getAttribute("#qlistBtn", "title");   // which bank or file is live (the button says the bank code, or "Questions" for a file)
@@ -104,7 +108,7 @@ try {
     });
 
     await step(`${vname}: upload wins over the bank, and stays after a reload`, async () => {
-      if (await page.isVisible("#barTab") && !(await page.isVisible("#upload"))) await page.click("#barTab");
+      await showCode(page);
       const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
       await opened(page, "CALC1_U01");

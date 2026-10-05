@@ -9,6 +9,10 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
+/* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
+async function showCode(page) {
+  for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
+}
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
@@ -37,7 +41,7 @@ async function step(name, fn) {
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
 const go = async (page, code) => { await page.evaluate(c => { location.hash = c; }, code); await opened(page, code); };
 async function typeCode(page, code) {
-  if (await page.isVisible("#barTab") && !(await page.isVisible("#code"))) await page.click("#barTab");
+  await showCode(page);
   await page.fill("#code", code); await page.press("#code", "Enter");
 }
 async function pick(page, id) {

@@ -146,6 +146,7 @@ function init() {
     if (!panel.hidden) return;
     panel.hidden = false;
     btn.setAttribute("aria-expanded", "true");
+    shown(true);
     const a = list.querySelector("[aria-current]") || rows()[0];
     if (!a) return;
     panel.scrollTop = Math.max(0, a.offsetTop - (panel.clientHeight - a.offsetHeight) / 2);
@@ -155,8 +156,12 @@ function init() {
     if (panel.hidden) return;
     panel.hidden = true;
     btn.setAttribute("aria-expanded", "false");
+    shown(false);
     if (back) btn.focus();
   }
+  /* the code box and Shuffle come with the list (Tony, Oct 5 clutter pass C2 / C15): html.ql-open shows them (nav.css, app.css);
+     app.js puts the phone's code bar up while it is open (drill:qlist) */
+  function shown(on) { document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } })); }
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
   function go(d) {
     const i = codes.indexOf(cur);
@@ -172,6 +177,7 @@ function init() {
   }
 
   btn.addEventListener("click", () => { if (panel.hidden) open(); else close(false); });
+  document.getElementById("entry")?.addEventListener("submit", () => close(false));   // a code typed in the list's box: you picked, the list goes
   btn.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); open(); } });
   prev.addEventListener("click", () => go(-1));
   next.addEventListener("click", () => go(1));

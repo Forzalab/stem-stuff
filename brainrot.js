@@ -112,7 +112,7 @@
   /* the band it may use: under the top of the page, above the bottom bar. lift = the gap kept under it (from the window's bottom) */
   function band(h) {
     const dock = document.getElementById("dock"), top = G + 8;
-    const lift = (dock && root.classList.contains("dock-bottom") ? innerHeight - dock.getBoundingClientRect().top : 0) + G;
+    const lift = (dock && dock.getClientRects().length && root.classList.contains("dock-bottom") ? innerHeight - dock.getBoundingClientRect().top : 0) + G;   // a hidden bar (a bank on a phone, app.css C8) takes no room
     return { top, floor: Math.max(top, innerHeight - lift - h), lift };
   }
   const live = () => [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #padFab, #wish .wchip, #rwHud, #orig .orig-sol, #orig .orig-peek")].filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect());

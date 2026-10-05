@@ -129,3 +129,8 @@ test("rewards skin is scoped: every rule styles a .rw-* or .fx-* node, no :root,
   const tokens = [...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]).filter(t => !/^--(rw|fx)-/.test(t) && !["--p", "--fs", "--c", "--n", "--cell"].includes(t));
   assert.deepEqual(tokens, [], "reward tokens are --rw-* / --fx-*: never an app token name");
 });
+
+test("number badges: line-height 1, so the digit sits in the middle (Tony, Oct 5: the formula card's 1 rode ~2.5px high)", () => {
+  for (const sel of [".fcard .n", ".wtext .wnum", ".orig-sol li::before"])
+    assert.ok(ALL.some(d => d.sel === sel && d.prop === "line-height" && d.value === "1"), sel);
+});
