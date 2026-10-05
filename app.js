@@ -438,6 +438,7 @@ async function load(code) {
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
   rwSync();
   origRender();
+  padRule();
   window.stemBrainrot?.sync();
 }
 
@@ -1045,10 +1046,12 @@ function wishOnWrong() {
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
     .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       if (wish !== w) return;
+      const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
       if (j && j.text) { w.text = j.text; w.done = true; }
-      else if (wishLog().length < WISH_AUTO) { wishStart(true); return; }
-      else w.started = false;                                              // past the cap: "Ask Cluck" does it
+      else if (wishLog().length < WISH_AUTO) { wishStart(true); auto(); return; }
+      else w.started = false;                                              // past the cap: "Ask Cluck" does it (no auto-open)
       wishPaint();
+      if (w.started) auto();
     });
   wishPaint();
 }
@@ -1144,7 +1147,11 @@ function wishFrame(now) {
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
   const el = wishEl(), w = wish;
-  if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
+  if (!w || [404, 503].includes(w.failed)) {
+    el.hidden = true;
+    if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
+    return;
+  }
   el.hidden = false;
   const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
@@ -1192,18 +1199,19 @@ function clPlace() {                                                        // s
   $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
-function clOpen(tab, from) {
-  clEl(); cl.open = true; cl.from = from; cl.el.hidden = false;
-  clPlace(); clAsk(true); clTab(tab, true);
+function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
+  clEl(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false;
+  clPlace(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
-  if (sideMQ.matches) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
+  if (sideMQ.matches && !auto) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
 }
 function clClose() {
   if (!cl || !cl.open) return;
+  const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
   cl.open = false; cl.el.hidden = true;
-  clTab(cl.tab, false); clPlace();
+  clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
-  if (cl.from) $(cl.from)?.focus();
+  if (cl.from && back) $(cl.from)?.focus();
 }
 function clTab(tab, focus) {
   const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
@@ -1377,6 +1385,7 @@ function origRender() {
   clEl().querySelector("#clTabSP").append(body);   // the solution reads in Cluck's sheet, "Similar steps" tab (so look it up via body, not el)
   origPlace();
   hintNudge(el.querySelector(".rw-hint"));
+  if (sideMQ.matches && lvl < 3) clOpen("steps", "#origHd", true);           // desktop: the free steps open by default (Tony, Oct 5); folded (lvl 3) stays a peek
 }
 /* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
 const HINT_BULB = `<span class="rw-hint-coin" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><linearGradient id="hbA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient><linearGradient id="hbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient></defs><path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#hbA)"/><path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/><path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/><rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#hbB)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/></svg></span>`;
@@ -1795,13 +1804,18 @@ function mtRatio(k = mtKind()) { const r = mtMem[k]; return typeof r === "number
 const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); return i > 0 ? a[i - 1] : a[a.length - 1]; };   // 1/2 -> 1/3 -> sliver/strip -> top -> 1/2
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
 let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
+/* desktop sugar: the notes pad steps aside while Cluck has something to show (the hint card, or the sheet open); else the pad is the default
+   (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad. */
+function padRule() {
+  root.classList.toggle("no-pad", sideMQ.matches && !!S && modeOf() === "sugar" && (!!origEl || !!(cl && cl.open)));
+}
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
-  root.classList.toggle("no-pad", side && modeOf() === "sugar" && !!S.prob.wish);
-  root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)   // desktop sugar: no notes pad, the column is videos + hint card (Tony, Oct 4: "desktop saccharine mode... NO SCRATCHPAD. diet keep it")
+  padRule();
+  root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)
   root.classList.toggle("mt", mtOpen);
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);

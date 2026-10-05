@@ -471,9 +471,10 @@ html.side #work > .orig { margin: 0; }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
-html.side.no-pad #work.cl-on { top: 0; }
-html.side #work.cl-on > :not(.cl) { display: none; }                         /* it fills the notes column: the videos, hint card and pad step aside */
-html.side .cl { position: sticky; top: var(--s4); height: calc(100dvh - 2 * var(--s4)); border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one */
+html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
+html.side #work.cl-on > #rot { flex: none; }
+html.side .cl { flex: 1; min-height: 0; border: 1px solid var(--ai-line); border-radius: 16px; box-shadow: var(--ai-nm-up); }   /* a raised soft-UI card; its 1px warm edge replaces the seam line (Oct 5 review: "stray line") */   /* image 3's tangerine seam between the columns (1px, the divider weight) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
 html.cl-open body { overflow: hidden; }
 .cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
