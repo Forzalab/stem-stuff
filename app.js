@@ -1208,7 +1208,7 @@ function wishPaint() {
    text, then the follow-up chat, the ask field pinned at the bottom), and under it the original's worked solution in a fold, "See
    reference solution" (Tony's wording). The fold is open when there is no explanation, closed after a miss. Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
    on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
-const CHAT_TURNS = 4;                                                       // serve.py CHAT_TURNS: the server keeps the same count
+const CHAT_TURNS = 5;                                                       // serve.py CHAT_TURNS: the server keeps the same count
 let cl = null;   // { el, tab, open, from }
 function clEl() {
   if (cl) return cl.el;
