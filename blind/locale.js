@@ -11,7 +11,7 @@
   var SCRIPT = { ka: [0x10D0, 33], am: [0x1200, 26 * 8, 8], th: [0x0E01, 46] };
   var S = SCRIPT[lang] || SCRIPT.ka;
   /* content: stays English (the question, its answers, figure, math, the bank's hints, Cluck's text, the original's body, typed text) */
-  var KEEP = '#blocks, #q .opt .txt, #q .mparts .pr, .katex, .fig, #fb .cluck, #fb code, #wish .wtext, .orig-body, .fcard .f, .fcard .g,' +
+  var KEEP = '#blocks, #q .opt .txt, #q .mparts .pr, .katex, .fig, #fb .cluck, #fb code, #cluck .wtext, .cl .bub.me, .orig-body, .fcard .f, .fcard .g,' +
     ' textarea, input, #padPeekTx, script, style, noscript, svg, .blind-keep';
   var ATTRS = ['aria-label', 'title', 'placeholder', 'aria-valuetext'];
   var dict = {}, tpl = [], done = new WeakMap(), misses = {};

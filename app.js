@@ -80,7 +80,7 @@ $("#toast")?.addEventListener("click", hideToast);
 $("#toast")?.addEventListener("pointerenter", holdToast);
 $("#toast")?.addEventListener("pointerleave", goToast);
 document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
-addEventListener("keydown", e => { if (e.key === "Escape" && toastAt) hideToast(); });
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(); });   // Escape: the toast, then Cluck's sheet
 addEventListener("scroll", placeToast, { passive: true });
 addEventListener("resize", placeToast);
 const AGAIN = "One more try, so\u00A0choose\u00A0wisely.";   // no-break spaces keep "choose wisely." together
@@ -468,7 +468,7 @@ function render() {
   layoutFreeze();
 }
 function drawFigures() {
-  document.querySelectorAll("#blocks .fig, #orig .orig-body:not([hidden]) .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
+  document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
@@ -1034,12 +1034,13 @@ function wishReset() {
   if (wish && wish.ctl) wish.ctl.abort();
   wish = null; voiceStop();
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
+  clReset();
 }
 /* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
    else the live /explain stream. The voice reads that same string, once the typing ends. */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
-  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false };
+  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false };
   const w = wish;
   fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
     .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
@@ -1126,7 +1127,7 @@ function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); 
 function wishDraw() { cancelAnimationFrame(wishRaf); wishRaf = 0; wishFrame(performance.now()); }
 function wishFrame(now) {
   wishRaf = 0;
-  const x = $("#wish .wtext"), w = wish;
+  const x = $("#cluck .wtext"), w = wish;
   if (!x || !w || !w.open) return;
   if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
   const t = w.text;
@@ -1138,7 +1139,7 @@ function wishFrame(now) {
   if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
-  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); }   // what the box shows is what is spoken
+  if (!w.said) { w.said = true; voiceSay(t); say("Cluck's steps are open."); clAsk(); }   // what the box shows is what is spoken
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
 function wishPaint() {
@@ -1146,18 +1147,14 @@ function wishPaint() {
   if (!w || [404, 503].includes(w.failed)) { el.hidden = true; return; }
   el.hidden = false;
   const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
-  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
-    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Turn voice off" : "Turn voice on"}</button>` : ""}</div>${
-    w.open ? '<div class="wtext" aria-live="off"></div>' : ""}`;
-  if (w.open) { w.drawn = w.ended = undefined; wishDraw(); }
+  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button>${
+    w.open && voiceOK() ? `<button type="button" class="btn wvoice" aria-pressed="${!voiceOn()}">${voiceOn() ? "Turn voice off" : "Turn voice on"}</button>` : ""}</div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
-    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, open: true, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); wishPaint(); return; }
-    w.open = !w.open;
-    if (w.open) w.said = false; else { voiceStop(); w.tick = 0; }          // reopened: spoken again once the text is out
-    wishPaint();
+    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); }
+    else if (w.open) { clClose(); return; }
+    clOpen("explain", "#wish .wchip");
   });
-  el.querySelector(".wtext")?.addEventListener("click", () => { if (!w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });
   el.querySelector(".wvoice")?.addEventListener("click", () => {
     try { localStorage.setItem("stem-voice", voiceOn() ? "off" : "on"); } catch { /* blocked */ }
     if (voiceOn()) { if (wishTyped(w)) voiceSay(w.text); } else voiceStop();
@@ -1165,6 +1162,129 @@ function wishPaint() {
   });
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
+}
+/* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
+   Two tabs: "Cluck explains" (the box text, then the follow-up chat, the ask field pinned at the bottom) and "Similar steps" (the
+   original's worked solution). Side by side it fills the notes column (the videos, hint card and pad step aside while it is open);
+   on a phone it covers the screen under the orange head bar (Tony's image 1). The X or Escape closes it; focus goes back to its opener. */
+const CHAT_TURNS = 4;                                                       // serve.py CHAT_TURNS: the server keeps the same count
+let cl = null;   // { el, tab, open, from }
+function clEl() {
+  if (cl) return cl.el;
+  const el = document.createElement("aside");
+  el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Cluck");
+  const tab = (t, id, ico, name) => `<button type="button" role="tab" class="cl-tab" id="${id}" data-tab="${t}" aria-controls="${id}P">${icon(ico)}<span>${name}</span></button>`;
+  el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
+    <div class="cl-hd"><div class="cl-tabs" role="tablist">${tab("explain", "clTabE", "i-duck", "Cluck explains")}${tab("steps", "clTabS", "i-bulb", "Similar steps")}</div><button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button></div>
+    <div class="cl-bd"><div class="cl-pane" id="clTabEP" role="tabpanel" aria-labelledby="clTabE"><div class="wtext" aria-live="off"></div><div class="cl-thread" aria-live="polite"></div></div><div class="cl-pane" id="clTabSP" role="tabpanel" aria-labelledby="clTabS"></div></div>
+    <div class="cl-ft"></div>`;
+  cl = { el, tab: "explain", open: false, from: null };
+  el.querySelectorAll(".cl-tab").forEach(b => b.addEventListener("click", () => clTab(b.dataset.tab, true)));
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
+  el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
+  clPlace();
+  return el;
+}
+function clPlace() {                                                        // side by side: the notes column; phone: over the page
+  if (!cl) return;
+  const home = sideMQ.matches ? $("#work") : document.body;
+  if (cl.el.parentElement !== home) home.append(cl.el);
+  $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
+  document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
+}
+function clOpen(tab, from) {
+  clEl(); cl.open = true; cl.from = from; cl.el.hidden = false;
+  clPlace(); clAsk(true); clTab(tab, true);
+  layoutFreeze();
+}
+function clClose() {
+  if (!cl || !cl.open) return;
+  cl.open = false; cl.el.hidden = true;
+  clTab(cl.tab, false); clPlace();
+  layoutFreeze();
+  if (cl.from) $(cl.from)?.focus();
+}
+function clTab(tab, focus) {
+  const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
+  if (!has[tab]) tab = has.explain ? "explain" : "steps";
+  cl.tab = tab;
+  for (const b of cl.el.querySelectorAll(".cl-tab")) { const on = b.dataset.tab === tab; b.hidden = !has[b.dataset.tab]; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; }
+  cl.el.querySelector("#clTabEP").hidden = tab !== "explain";
+  cl.el.querySelector("#clTabSP").hidden = tab !== "steps";
+  cl.el.querySelector(".cl-ft").hidden = tab !== "explain";
+  cl.el.querySelector(".cl-title").textContent = tab === "explain" ? "Cluck explains" : "Similar solution steps";
+  const w = wish, was = !!(w && w.open);
+  if (w) w.open = cl.open && tab === "explain";
+  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: spoken again once the text is out
+  if (w && !w.open && was) { voiceStop(); w.tick = 0; }
+  if (S && S.orig) {
+    S.orig.open = cl.open && tab === "steps";
+    $("#origHd")?.setAttribute("aria-expanded", String(S.orig.open));
+    if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
+  }
+  if (w && was !== w.open) wishPaint();                                     // the chip's label + the voice button follow
+  if (focus) cl.el.querySelector(`.cl-tab[data-tab="${tab}"]`).focus();
+}
+function clReset() {                                                        // a new question: close, empty, a fresh ask field
+  if (!cl) return;
+  clClose();
+  cl.el.querySelector(".wtext").innerHTML = "";
+  cl.el.querySelector(".cl-thread").innerHTML = "";
+  cl.el.querySelector(".cl-ft").innerHTML = "";
+}
+/* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
+function clAsk(build) {
+  if (!cl) return;
+  const ft = cl.el.querySelector(".cl-ft"), w = wish;
+  cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
+  if (!w) { ft.innerHTML = ""; return; }
+  const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
+  if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>That's ${CHAT_TURNS} questions on this one. On to the next!</p></div>`; return; }
+  if (build || !ft.querySelector(".ask")) {
+    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><input type="text" maxlength="500" autocomplete="off" placeholder="Ask Cluck about a step"></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
+    ft.querySelector(".ask").addEventListener("submit", e => { e.preventDefault(); const i = e.currentTarget.querySelector("input"), m = i.value.trim(); if (m) { i.value = ""; clSend(m); } });
+  }
+  const ready = wishTyped(w) && !w.busy;
+  ft.querySelector(".left").textContent = `${left} left`;
+  ft.querySelector("input").disabled = !wishTyped(w);
+  ft.querySelector(".send").disabled = !ready;
+}
+async function clSend(msg) {
+  const w = wish, t = S.tries.at(-1) || {};
+  if (!w || w.busy || !wishTyped(w)) return;
+  const th = cl.el.querySelector(".cl-thread");
+  const me = document.createElement("div"); me.className = "bub me"; me.textContent = msg;
+  const re = document.createElement("div"); re.className = "wtext wreply"; re.innerHTML = WCARET;
+  th.append(me, re);
+  w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
+  re.scrollIntoView({ block: "nearest" });
+  w.ctl = w.ctl || new AbortController();
+  let text = "", err = "";
+  try {
+    const r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", signal: w.ctl.signal,
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+    if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
+    else if (!r.ok || !r.body) err = "fail";
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) {
+        const { value, done } = await rd.read(); if (done) break;
+        text += dec.decode(value, { stream: true });
+        if (wish === w) re.innerHTML = wishHTML(text) + WCARET;
+      }
+      if (!text.trim()) err = "fail";
+    }
+  } catch { if (w.ctl.signal.aborted) return; err = "fail"; }
+  if (wish !== w) return;
+  w.busy = false;
+  if (err) {
+    w.chat.pop();                                                          // not answered: it does not count
+    if (err === "limit") { w.out = true; re.remove(); }
+    else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
+  } else { w.chat.push({ role: "assistant", content: text }); re.innerHTML = wishHTML(text); say(speakable(text)); }
+  clAsk();
+  re.scrollIntoView({ block: "nearest" });
+  if (!w.out) cl.el.querySelector(".ask input")?.focus();
 }
 const voiceOK = () => "speechSynthesis" in window && typeof SpeechSynthesisUtterance === "function";
 const voiceOn = () => { try { return localStorage.getItem("stem-voice") !== "off"; } catch { return true; } };
@@ -1223,21 +1343,21 @@ function rewardGo(mine, o) {
 let origEl = null;
 function origRender() {
   if (origEl) { origEl.remove(); origEl = null; }
-  $("#work").classList.remove("orig-on");
+  if (cl) { if (cl.open && cl.tab === "steps") clClose(); cl.el.querySelector("#clTabSP").innerHTML = ""; }
   const p = S && S.prob, o = p && p.original;
   if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
   const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
   if (live) R.origSeen(o.q, S.code);
-  S.orig = { lvl, open: sideMQ.matches && lvl < 3, peeked: false };
+  S.orig = { lvl, open: false, peeked: false };
   const el = origEl = document.createElement("section");
   el.id = "orig"; el.className = "orig"; el.setAttribute("aria-labelledby", "origHd");
   const sol = Array.isArray(o.solution) ? o.solution : [];
   /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
      topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
      while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
-  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="origBody">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
-    <div class="orig-body" id="origBody" hidden><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}>${md(l, true)}</li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
+    <div class="orig-body" id="origBody"><div class="orig-q"></div>${sol.length ? `<p class="orig-h">Steps to solve it</p><ol class="orig-sol">${sol.map((l, i) =>
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(l, true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
     <p class="orig-note" hidden>You peeked, so only 2 XP.</p></div>`;
   const q = el.querySelector(".orig-q");
   for (const b of o.body) {
@@ -1249,11 +1369,12 @@ function origRender() {
     origOpen(!S.orig.open);
   });
   el.querySelector(".rw-free")?.addEventListener("click", () => el.querySelector(".orig-hd").click());   // the sticker sits on the card's corner
-  el.querySelector(".orig-peek")?.addEventListener("click", e => {
-    el.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
+  const body = el.querySelector(".orig-body");
+  body.querySelector(".orig-peek")?.addEventListener("click", e => {
+    body.querySelector(".orig-sol li[hidden]")?.removeAttribute("hidden"); e.currentTarget.remove(); origPeeked();
   });
+  clEl().querySelector("#clTabSP").append(body);   // the solution reads in Cluck's sheet, "Similar steps" tab (so look it up via body, not el)
   origPlace();
-  origOpen(S.orig.open);
   hintNudge(el.querySelector(".rw-hint"));
 }
 /* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
@@ -1269,24 +1390,18 @@ function hintNudge(btn) {
 function origPeeked() {
   if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
   S.orig.peeked = S.rwPeek = true;
-  origEl.querySelector(".orig-note").hidden = false;
+  $("#origBody .orig-note").hidden = false;
   say("You peeked, so only 2 XP.");
 }
 function origOpen(open) {
   if (!origEl) return;
-  S.orig.open = open;
-  origEl.querySelector(".orig-hd").setAttribute("aria-expanded", String(open));
-  origEl.querySelector(".orig-body").hidden = !open;
-  $("#work").classList.toggle("orig-on", open && sideMQ.matches);              // desktop: in the scratchpad's place while open
-  if (open) origEl.querySelectorAll(".orig-body .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
-  layoutFreeze();
+  if (open) clOpen("steps", "#origHd"); else clClose();
 }
 function origPlace() {
   if (!origEl) return;
   const rot = $("#rot.dock");                                                    // desktop: the docked videos stay first in the notes column
   if (sideMQ.matches) { if (rot && rot.parentElement === $("#work")) rot.after(origEl); else $("#work").prepend(origEl); }
   else $("#freezeIn").prepend(origEl);
-  $("#work").classList.toggle("orig-on", !!S.orig.open && sideMQ.matches);
 }
 /* a wrong try's +1 (Tony, Oct 4: participation trophy): a small quiet "+1" by the HUD coin, the count ticks; no sparks, no sound, no words,
    so a right answer still feels much bigger (design/REWARDS.md: a loss dressed up as a win) */
@@ -1824,7 +1939,7 @@ sash.addEventListener("keydown", e => {
   e.preventDefault();
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); layoutFreeze(); });
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); clPlace(); layoutFreeze(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
    follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped
