@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live scenes: mock</title>
+<link rel="icon" href="data:,">
+<!-- Live physics scenes, plan Step 1 (brain topics/cluck-visual-plan.md). Two original Exam-2-style questions, drag + sliders.
+     ?num=shapes|given|reveal  how many numbers the figure shows; ?at=question|explain  where the live figure sits.
+     Tony solves both, picks, copies the result code back to Claude. Reuses graph.js (scene / cartesian / bars marks). -->
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../../app.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css"><script src="../../vendor/katex/katex.min.js"></script>
+<script src="../../vendor/math.min.js"></script><script src="../../graph.js"></script>
+<style>
+  body { padding: var(--s4) var(--gut) var(--s7); }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: var(--t-md); margin: 0 0 var(--s2); }
+  .how { margin: 0 0 var(--s4); }
+  .modes { display: grid; gap: var(--s2); margin: 0 0 var(--s5); }
+  .seg { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+  .seg > span { color: var(--muted); font-size: var(--t-sm); min-width: 6.5rem; }
+  .seg button, .pick button, .choice, .act { font: inherit; font-size: var(--t-sm); color: var(--ink); background: var(--raised); border: var(--bw) solid var(--edge);
+    border-radius: 8px; padding: var(--s2) var(--s3); min-height: 44px; cursor: pointer; }
+  .seg button[aria-pressed="true"], .pick button[aria-pressed="true"] { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, .live svg:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+  .card { background: var(--qbox); border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-1); }
+  .card h2 { font-size: var(--t-sm); color: var(--muted); margin: 0 0 var(--s2); letter-spacing: .04em; }
+  .q p { margin: 0 0 var(--s3); }
+  .choices { display: grid; gap: var(--s2); margin: var(--s3) 0; }
+  .choice { text-align: left; background: var(--field); }
+  .choice[aria-pressed="true"] { border-color: var(--c1); }
+  .choice.ok { border: var(--bw-alarm) solid var(--ok); }
+  .choice.no { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); }
+  .verdict { min-height: 1.5em; font-size: var(--t-sm); margin: 0; }
+  .verdict.ok { color: var(--ok); } .verdict.no { color: var(--bad); }
+  .knobs { display: grid; gap: var(--s2); margin: var(--s2) 0 0; }
+  .knob { display: grid; grid-template-columns: 7.5rem 1fr 5.5rem; align-items: center; gap: var(--s3); font-size: var(--t-sm); }
+  .knob label { color: var(--muted); }
+  .knob output { font-variant-numeric: tabular-nums; text-align: right; }
+  .knob input { width: 100%; accent-color: var(--c1); min-height: 32px; }
+  .readout { font-size: var(--t-sm); color: var(--muted); margin: var(--s2) 0 0; font-variant-numeric: tabular-nums; min-height: 1.4em; }
+  .readout b { color: var(--ink); }
+  .live svg { touch-action: none; cursor: grab; }
+  .live.drag svg { cursor: grabbing; }
+  .hintline { font-size: var(--t-xs); color: var(--hint); margin: var(--s1) 0 0; }
+  .explain { border-left: 3px solid var(--c2); }
+  .explain .who { font-weight: 700; color: var(--c2); font-size: var(--t-sm); }
+  .explain .say { margin: var(--s1) 0 var(--s2); }
+  .act { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
+  .act[disabled] { opacity: .45; cursor: default; }
+  .pick { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0 var(--s3); }
+  textarea { width: 100%; font: inherit; font-size: var(--t-sm); color: var(--ink); background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; padding: var(--s2) var(--s3); }
+  #code { font-family: var(--mono); min-height: 5.5rem; }
+  .row { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; margin: var(--s2) 0; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  @media (max-width: 30rem) { .knob { grid-template-columns: 1fr 4.5rem; } .knob input { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Live scenes: test drive</h1>
+  <p class="how">Answer both questions. Drag the dots / the block, or use the sliders. Flip the switches any time. Then pick what you liked and copy the code back to Claude.</p>
+
+  <div class="modes">
+    <div class="seg" role="group" aria-label="Numbers on the figure"><span>Numbers</span>
+      <button type="button" data-num="shapes">Shapes only</button><button type="button" data-num="given">Given values</button><button type="button" data-num="reveal">Reveal after answer</button></div>
+    <div class="seg" role="group" aria-label="Where the live figure sits"><span>Live figure</span>
+      <button type="button" data-at="question">In the question</button><button type="button" data-at="explain">In Explain (after answer)</button></div>
+  </div>
+
+  <section id="qA"></section>
+  <section id="qB"></section>
+
+  <section class="card" aria-labelledby="resH">
+    <h2 id="resH">YOUR PICK</h2>
+    <p class="q" style="margin:0">Numbers on the figure:</p>
+    <div class="pick" data-key="pick" role="group" aria-label="Numbers pick"><button type="button" data-v="shapes">Shapes only</button><button type="button" data-v="given">Given values</button><button type="button" data-v="reveal">Reveal after answer</button></div>
+    <p class="q" style="margin:0">Live figure in:</p>
+    <div class="pick" data-key="where" role="group" aria-label="Placement pick"><button type="button" data-v="question">Question</button><button type="button" data-v="explain">Explain</button><button type="button" data-v="both">Both</button></div>
+    <p class="q" style="margin:0">Did dragging help you see it?</p>
+    <div class="pick" data-key="use" role="group" aria-label="Usefulness"><button type="button" data-v="1">1 meh</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5 yes</button></div>
+    <label for="note" class="q" style="display:block;margin:0 0 var(--s1)">Anything else (optional)</label>
+    <textarea id="note" rows="2" maxlength="300"></textarea>
+    <div class="row"><button type="button" class="act" id="copy">Copy result code</button><span id="copied" class="readout" role="status"></span></div>
+    <label for="code" class="sr-only">Result code</label>
+    <textarea id="code" readonly></textarea>
+  </section>
+</main>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const qs = new URLSearchParams(location.search);
+const S = { num: ["shapes", "given", "reveal"].includes(qs.get("num")) ? qs.get("num") : "given",
+            at: ["question", "explain"].includes(qs.get("at")) ? qs.get("at") : "question",
+            pick: "", where: "", use: "", t0: Date.now() };
+const r2 = v => Math.round(v * 100) / 100, fmt = (v, d = 2) => (+v.toFixed(d)).toString().replace("-", "−");
+
+/* drag: px -> world from the renderer's own map (graph.js el._X, linear on both axes) */
+function inv(el) {
+  const X = el._X, o = X([0, 0]), e = X([1, 1]);
+  return (px, py) => [(px - o[0]) / (e[0] - o[0]), (py - o[1]) / (e[1] - o[1])];
+}
+function draw(el, block) { if (!el.clientWidth) return; el._g = null; Graph.render(el, block); }   // 0 wide (mid-resize): skip, the next paint draws it
+
+/* ---------- one question card: text, choices, the figure(s), knobs ---------- */
+function question(Q) {
+  const root = $("#" + Q.id);
+  root.innerHTML = `<div class="card q"><h2>${Q.title}</h2>${Q.text}<div class="fig qfig"></div><div class="qknobs"></div><p class="readout qread"></p>
+    <div class="choices" role="group" aria-label="Choices">${Q.choices.map(c => `<button type="button" class="choice" data-id="${c[0]}">${c[0]}) ${c[1]}</button>`).join("")}</div>
+    <div class="row"><button type="button" class="act check" disabled>Check</button><button type="button" class="choice reset" style="background:var(--raised)">Reset figure</button></div>
+    <p class="verdict" role="status"></p></div>
+    <div class="card explain" hidden><div class="who">Cluck <span class="readout">· Explain</span></div><p class="say">${Q.cluck}</p><div class="fig efig"></div><div class="eknobs"></div><p class="readout eread"></p>
+    <p class="hintline">verify b4 use lol</p></div>`;
+  const st = { pick: "", answered: false, ok: false, secs: 0, drags: 0, moves: 0, num: "", at: "", p: { ...Q.p } };
+  Q.st = st;
+  const katexIn = el => el.querySelectorAll(".tex").forEach(x => { x.innerHTML = Graph.tex(x.textContent); });
+  katexIn(root);
+  root.querySelectorAll(".choices .choice").forEach(b => b.addEventListener("click", () => {
+    if (st.answered) return;
+    st.pick = b.dataset.id;
+    root.querySelectorAll(".choices .choice").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    $(".check", root).disabled = false;
+  }));
+  $(".check", root).addEventListener("click", () => {
+    if (st.answered || !st.pick) return;
+    st.answered = true; st.ok = st.pick === Q.right; st.secs = Math.round((Date.now() - S.t0) / 1000); st.num = S.num; st.at = S.at;
+    root.querySelectorAll(".choices .choice").forEach(x => { if (x.dataset.id === Q.right) x.classList.add("ok"); else if (x.dataset.id === st.pick) x.classList.add("no"); });
+    const v = $(".verdict", root); v.className = "verdict " + (st.ok ? "ok" : "no"); v.textContent = st.ok ? "Right." : `Not quite. Answer: ${Q.right}.`;
+    $(".check", root).disabled = true;
+    $(".explain", root).hidden = false;
+    paint(Q); code();
+  });
+  $(".reset", root).addEventListener("click", () => { st.p = { ...Q.p }; paint(Q); });
+  for (const sel of [".qfig", ".efig"]) hookDrag(Q, $(sel, root));
+}
+
+function knobsHTML(Q) {
+  return Q.knobs.map(k => `<div class="knob"><label for="${Q.id}-${k.k}">${k.label}</label><input type="range" id="${Q.id}-${k.k}" data-k="${k.k}" min="${k.min}" max="${typeof k.max === "function" ? r2(k.max(Q.st.p)) : k.max}" step="${k.step}" value="${Q.st.p[k.k]}"><output></output></div>`).join("");
+}
+function paint(Q) {
+  const root = $("#" + Q.id), st = Q.st, liveAt = S.at === "explain" && st.answered ? "e" : S.at === "question" ? "q" : null;
+  const showNums = S.num === "given" || (S.num === "reveal");
+  const reveal = S.num === "reveal" && st.answered;
+  for (const w of ["q", "e"]) {
+    const fig = $(`.${w}fig`, root), kn = $(`.${w}knobs`, root), rd = $(`.${w}read`, root), live = liveAt === w;
+    if (w === "e" && !st.answered) continue;
+    fig.classList.toggle("live", live);
+    fig.tabIndex = live ? 0 : -1;
+    fig.setAttribute("aria-label", live ? Q.dragLabel : "");
+    const p = live ? st.p : Q.p;
+    const blocks = Q.build(p, { nums: showNums, reveal: reveal && live });
+    draw(fig, blocks[0]);
+    if (blocks[1]) { let b = fig.nextElementSibling; if (!b || !b.classList.contains("bars")) { b = document.createElement("div"); b.className = "fig bars"; fig.after(b); } draw(b, blocks[1]); }
+    if (live) {
+      if (!kn.firstChild || kn.dataset.for !== w) {
+        kn.innerHTML = `<div class="knobs">${knobsHTML(Q)}</div>`; kn.dataset.for = w;
+        kn.querySelectorAll("input").forEach(i => i.addEventListener("input", () => { st.p[i.dataset.k] = +i.value; st.moves++; paint(Q); }));
+      }
+      kn.querySelectorAll("input").forEach(i => { const k = Q.knobs.find(x => x.k === i.dataset.k); if (typeof k.max === "function") i.max = r2(k.max(st.p)); i.value = st.p[i.dataset.k]; i.nextElementSibling.textContent = k.show(st.p); i.setAttribute("aria-valuetext", k.show(st.p)); });
+      rd.innerHTML = Q.readout(st.p, { nums: showNums, reveal });
+    } else { kn.innerHTML = ""; kn.dataset.for = ""; rd.innerHTML = ""; }
+  }
+}
+
+function hookDrag(Q, fig) {
+  let grab = null;
+  fig.addEventListener("pointerdown", e => {
+    if (!fig.classList.contains("live") || !fig._X) return;
+    const r = fig.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    grab = Q.grab(Q.st.p, fig._X, px, py);
+    if (grab == null) return;
+    fig.setPointerCapture(e.pointerId); fig.classList.add("drag"); Q.st.drags++; e.preventDefault();
+  });
+  fig.addEventListener("pointermove", e => {
+    if (grab == null) return;
+    const r = fig.getBoundingClientRect(), w = inv(fig)(e.clientX - r.left, e.clientY - r.top);
+    Q.move(Q.st.p, grab, w);
+    requestAnimationFrame(() => paint(Q));
+  });
+  const end = () => { grab = null; fig.classList.remove("drag"); };
+  fig.addEventListener("pointerup", end); fig.addEventListener("pointercancel", end);
+  fig.addEventListener("keydown", e => {                                  // arrows nudge the first knob's target (a11y path; the sliders do the rest)
+    const d = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+    if (!d || !fig.classList.contains("live")) return;
+    Q.nudge(Q.st.p, d); Q.st.moves++; e.preventDefault(); paint(Q);
+  });
+}
+
+/* ---------- Q A: work from a force–position graph (primitive ①, signed area) ---------- */
+const QA = {
+  id: "qA", title: "QUESTION 1 · WORK FROM A GRAPH",
+  text: `<p>A cart moves along the x-axis. The net force on it, <span class="tex">$F(x)$</span>, is the graph: it rises from <span class="tex">$0$</span> to <span class="tex">$6.0\\ \\text{N}$</span> over the first <span class="tex">$2.0\\ \\text{m}$</span>, stays at <span class="tex">$6.0\\ \\text{N}$</span> until <span class="tex">$x = 4.0\\ \\text{m}$</span>, then falls in a straight line to <span class="tex">$-2.0\\ \\text{N}$</span> at <span class="tex">$x = 6.0\\ \\text{m}$</span>.</p><p>How much work does the force do from <span class="tex">$x = 0$</span> to <span class="tex">$x = 6.0\\ \\text{m}$</span>?</p>`,
+  choices: [["a", "22 J"], ["b", "23 J"], ["c", "16 J"], ["d", "36 J"]], right: "a",
+  cluck: "(waddles to the board) Work is the area under F, and area under the axis counts NEGATIVE. Drag the last dot below zero and watch the pink chunk eat the total. QUACK.",
+  dragLabel: "Force graph. Drag a dot up or down, or use the arrow keys and sliders.",
+  p: { a: 6, b: 6, c: -2 }, focus: "c",
+  knobs: [{ k: "a", label: "F at 2 m", min: -3, max: 7.5, step: 0.5, show: p => fmt(p.a, 1) + " N" },
+          { k: "b", label: "F at 4 m", min: -3, max: 7.5, step: 0.5, show: p => fmt(p.b, 1) + " N" },
+          { k: "c", label: "F at 6 m", min: -3, max: 7.5, step: 0.5, show: p => fmt(p.c, 1) + " N" }],
+  pts: p => [[0, 0], [2, p.a], [4, p.b], [6, p.c]],
+  work: p => 2 * p.a + 2 * p.b + p.c,                                    // trapezoids: (0+a) + (a+b) + (b+c), widths 2 m
+  build(p, o) {
+    const P = this.pts(p), marks = [];
+    for (let i = 0; i < 3; i++) {                                          // signed area, split where F crosses zero
+      const [x1, y1] = P[i], [x2, y2] = P[i + 1];
+      const piece = (pts, y) => { if (Math.abs(y) > 1e-9) marks.push({ mark: "poly", pts, fill: true, color: y > 0 ? "c1" : "c3" }); };
+      if (y1 * y2 < 0) { const xz = x1 + (x2 - x1) * y1 / (y1 - y2); piece([[x1, 0], [x1, y1], [xz, 0]], y1); piece([[xz, 0], [x2, y2], [x2, 0]], y2); }
+      else piece([[x1, 0], [x1, y1], [x2, y2], [x2, 0]], y1 || y2);
+    }
+    for (let i = 0; i < 3; i++) marks.push({ mark: "seg", from: P[i], to: P[i + 1], color: "ink" });
+    P.slice(1).forEach(q => marks.push({ mark: "point", at: q, color: "mark" }));
+    if (o.nums) P.slice(1).forEach(q => marks.push({ mark: "text", at: q, text: `$${fmt(q[1], 1)}$`, anchor: q[1] >= 0 ? "n" : "s" }));
+    if (o.reveal) marks.push({ mark: "text", at: [3, -3.2], text: `$W = ${fmt(this.work(p), 1)}\\ \\text{J}$`, color: "mark" });
+    return [{ type: "graph", kind: "cartesian", alt: "Force versus position", x: { min: 0, max: 6.5, step: 1, label: "$x$ (m)" }, y: { min: -4, max: 8, step: 2, label: "$F$ (N)" }, marks }];
+  },
+  readout(p, o) {
+    if (o.reveal) return `Work so far: <b>${fmt(this.work(p), 1)} J</b> (blue adds, pink subtracts)`;
+    return "Blue area adds work. Pink area takes it away.";
+  },
+  grab(p, X, px, py) {                                                     // the nearest dot within 32 px
+    let best = null, bd = 32;
+    ["a", "b", "c"].forEach((k, i) => { const q = X([2 * (i + 1), p[k]]), d = Math.hypot(q[0] - px, q[1] - py); if (d < bd) { bd = d; best = k; } });
+    return best;
+  },
+  move(p, k, w) { p[k] = Math.max(-3, Math.min(7.5, Math.round(w[1] * 2) / 2)); },
+  nudge(p, d) { p.c = Math.max(-3, Math.min(7.5, p.c + d * 0.5)); }
+};
+
+/* ---------- Q B: block down an incline into a spring (primitive ②, energy bars) ---------- */
+const M = 2.0, G = 9.8, L0 = 0.8, BW = 0.4, BH = 0.3;
+const QB = {
+  id: "qB", title: "QUESTION 2 · RAMP INTO A SPRING",
+  text: `<p>A <span class="tex">$2.0\\ \\text{kg}$</span> block starts from rest on a frictionless ramp tilted <span class="tex">$30^\\circ$</span>. It slides <span class="tex">$1.5\\ \\text{m}$</span> along the ramp and then hits a spring (<span class="tex">$k = 400\\ \\text{N/m}$</span>) fixed at the bottom, parallel to the ramp.</p><p>How far does the spring compress before the block stops for a moment? Use <span class="tex">$g = 9.8\\ \\text{m/s}^2$</span>.</p>`,
+  choices: [["a", "0.30 m"], ["b", "0.27 m"], ["c", "0.38 m"], ["d", "0.19 m"]], right: "a",
+  cluck: "(flaps) The block keeps dropping WHILE it squeezes the spring. Drag it all the way down: orange (height) keeps shrinking past the first touch. QUACK QUACK.",
+  dragLabel: "Ramp scene. Drag the block along the ramp, or use the arrow keys and sliders.",
+  p: { th: 30, k: 400, s: 0 }, d: 1.5,
+  xmax(p) { const f = M * G * Math.sin(p.th * Math.PI / 180); return (f + Math.sqrt(f * f + 2 * p.k * f * this.d)) / p.k; },
+  knobs: [{ k: "s", label: "Block slid", min: 0, max: p => QB.d + QB.xmax(p), step: 0.01, show: p => fmt(p.s) + " m" },
+          { k: "th", label: "Ramp angle", min: 15, max: 45, step: 1, show: p => p.th + "°" },
+          { k: "k", label: "Spring k", min: 100, max: 800, step: 50, show: p => p.k + " N/m" }],
+  energy(p) {
+    const f = M * G * Math.sin(p.th * Math.PI / 180), xm = this.xmax(p), s = Math.min(p.s, this.d + xm), c = Math.max(0, s - this.d);
+    const Us = 0.5 * p.k * c * c, Ug = f * (this.d + xm - s), E = f * (this.d + xm);
+    return { K: Math.max(0, E - Ug - Us), Ug, Us, E, c, xm };
+  },
+  build(p, o) {
+    const t = p.th * Math.PI / 180, u = [Math.cos(t), Math.sin(t)], n = [-Math.sin(t), Math.cos(t)];
+    const at = (a, h) => [a * u[0] + h * n[0], a * u[1] + h * n[1]];
+    const xm = this.xmax(p), s = Math.min(p.s, this.d + xm), f0 = L0 + this.d, face = f0 - s, comp = Math.max(0, s - this.d);
+    const springEnd = Math.min(L0, face), len = f0 + BW + 0.35, e = this.energy(p);
+    const marks = [
+      { mark: "incline", at: [0, 0], base: len * Math.cos(t), angle: p.th, ...(o.nums ? { label: `$${p.th}^\\circ$` } : {}) },
+      { mark: "seg", from: [0, 0], to: at(0, 0.45), color: "ink" },
+      { mark: "spring", from: at(0, BH / 2), to: at(springEnd, BH / 2), coils: 8, width: 0.16 },
+      { mark: "body", at: at(f0 + BW / 2, BH / 2), shape: "box", w: BW, h: BH, angle: p.th, color: "muted" },
+      { mark: "body", at: at(face + BW / 2, BH / 2), shape: "box", w: BW, h: BH, angle: p.th, fill: true }
+    ];
+    if (o.nums) marks.push({ mark: "text", at: at(L0 + this.d / 2, -0.12), text: "$1.5\\ \\text{m}$", anchor: "se" },
+                           { mark: "text", at: at(L0 / 2, BH + 0.25), text: "$k = 400\\ \\text{N/m}$", anchor: "nw" });
+    if (o.reveal && comp > 0.005) marks.push({ mark: "text", at: at(face, -0.15), text: `$x = ${fmt(comp)}\\ \\text{m}$`, anchor: "se", color: "mark" });
+    const bars = { type: "graph", kind: "bars", alt: "Energy now", unit: "J", min: 0, max: Math.ceil(e.E * 1.15),
+      groups: [{ label: "energy now", bars: [{ label: "$K$", value: e.K, color: "c1" }, { label: "$U_g$", value: e.Ug, color: "c2" }, { label: "$U_s$", value: e.Us, color: "c3" }] }] };
+    return [{ type: "graph", kind: "scene", alt: "Block on a ramp above a spring", marks }, bars];
+  },
+  readout(p, o) {
+    const e = this.energy(p);
+    if (o.reveal) return `K <b>${fmt(e.K, 1)}</b> J · U<sub>g</sub> <b>${fmt(e.Ug, 1)}</b> J · U<sub>s</sub> <b>${fmt(e.Us, 1)}</b> J · total <b>${fmt(e.E, 1)}</b> J · squeeze <b>${fmt(e.c)}</b> m`;
+    return e.c > 0 ? "Touching the spring: the green bar grows." : "Sliding: orange turns into blue.";
+  },
+  grab(p, X, px, py) {
+    const t = p.th * Math.PI / 180, a = L0 + this.d - Math.min(p.s, this.d + this.xmax(p)) + BW / 2;
+    const q = X([a * Math.cos(t) - (BH / 2) * Math.sin(t), a * Math.sin(t) + (BH / 2) * Math.cos(t)]);
+    return Math.hypot(q[0] - px, q[1] - py) < 48 ? "s" : null;
+  },
+  move(p, k, w) {
+    const t = p.th * Math.PI / 180, along = w[0] * Math.cos(t) + w[1] * Math.sin(t) - BW / 2;
+    p.s = Math.max(0, Math.min(this.d + this.xmax(p), L0 + this.d - along));
+  },
+  nudge(p, d) { p.s = Math.max(0, Math.min(this.d + this.xmax(p), p.s - d * 0.05)); }
+};
+
+/* ---------- switches, picks, the result code ---------- */
+function syncSeg() {
+  document.querySelectorAll("[data-num]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.num === S.num)));
+  document.querySelectorAll("[data-at]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.at === S.at)));
+  const u = new URL(location); u.searchParams.set("num", S.num); u.searchParams.set("at", S.at); history.replaceState(null, "", u);
+}
+document.querySelectorAll("[data-num]").forEach(b => b.addEventListener("click", () => { S.num = b.dataset.num; syncSeg(); [QA, QB].forEach(paint); code(); }));
+document.querySelectorAll("[data-at]").forEach(b => b.addEventListener("click", () => { S.at = b.dataset.at; syncSeg(); [QA, QB].forEach(paint); code(); }));
+document.querySelectorAll(".pick").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  S[g.dataset.key] = b.dataset.v; g.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); code();
+})));
+$("#note").addEventListener("input", code);
+function part(Q) {
+  const s = Q.st;
+  return s.answered ? `${s.pick}${s.ok ? "+" : "-"},${s.secs}s,${s.drags}d,${s.moves}m,${s.num}/${s.at}` : `none,${s.drags}d,${s.moves}m`;
+}
+function code() {
+  const note = $("#note").value.replace(/[;\n]+/g, " ").trim();
+  $("#code").value = `LS1;A=${part(QA)};B=${part(QB)};pick=${S.pick || "?"};where=${S.where || "?"};use=${S.use || "?"};w=${innerWidth};note=${note}`;
+}
+$("#copy").addEventListener("click", async () => {
+  code();
+  try { await navigator.clipboard.writeText($("#code").value); $("#copied").textContent = "Copied. Paste it to Claude."; }
+  catch { $("#code").select(); $("#copied").textContent = "Select-all is on: copy it by hand."; }
+});
+
+let rz = 0;
+addEventListener("resize", () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(() => [QA, QB].forEach(paint)); });
+syncSeg();
+[QA, QB].forEach(Q => { question(Q); paint(Q); });
+code();
+</script>
+</body>
+</html>

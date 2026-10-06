@@ -295,6 +295,7 @@
       const W = el.clientWidth, labels = [];
       const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html }) };
       const { svg, H } = build(W, pad, k);
+      el._X = k.X;                                                     // world -> px, for live figures (drag)
       el.style.height = H + "px";
       el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false">${svg}</svg>`;
       const grow = { l: 0, r: 0, t: 0, b: 0 };
