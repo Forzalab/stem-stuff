@@ -29,6 +29,7 @@ if (!SURVEY) {
       "Kinetic energy is conserved; the collision is elastic, and $K_f = K_i = \\tfrac12 m_1 v_0^2$.", "Momentum along $x$: $m_1v_0 = m_1v_1\\cos30^\\circ + m_2v_2\\cos60^\\circ$."]),
     mc("CALC1_KW3", ["$T = 2\\pi(R+h)\\sqrt{\\dfrac{R+h}{GM_E}}$, about $7.32\\ \\text{h}$.", "$a = \\dfrac{GM_E}{(R_E+h)^2} = 0.6125\\ \\text{m/s}^2$;",
       "Escape speed ratio $\\left(1+\\dfrac{h}{R}\\right)^{-1/2}$!", "Power: $P = mgv\\sin\\theta = 71 \\times 9.80 \\times 2.7 \\times \\sin 26^\\circ$ watts."]),
+    mc("CALC1_KW4", ["$\\frac{1}{2}$", "$\\dfrac{1}{2}$", "$\\dfrac{1}{\\sqrt{2}} \\approx 0.707$", "$\\frac{1}{\\sqrt{2}} \\approx 0.707$"]),   // owner, Oct 6: \frac rows were tiny
   ];
   writeFileSync(join(BANKS, "BANK_KW1.json"), JSON.stringify({ v: 1, problems: P }));
 }
@@ -85,7 +86,13 @@ try {
       for (const k of Object.keys(tot)) tot[k] += m[k];
       where.push(...m.where.map(x => `${code} ${x}`));
     }
-    const n = tot.orphan + tot.broken + tot.overflow + tot.split;   // shrunk / scrolled are the fixes at work, not faults
+    if (!SURVEY) {   // one size per kind of number: a choice's \frac sets like \dfrac (app.js md(.., big)), never the tiny text-style one
+      await page.goto(`${BASE}/#CALC1_KW4`);
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_KW4" && document.querySelector("#q .opt"), null, { timeout: 8000 });
+      const h = await page.$$eval("#q .opt", os => os.map(o => parseFloat(getComputedStyle([...o.querySelectorAll(".mfrac .mord")].find(e => !e.children.length)).fontSize)));
+      if (new Set(h).size !== 1) { tot.size = 1; where.push(`CALC1_KW4 the numerator "1" differs in size from row to row (px): ${h}`); }
+    }
+    const n = tot.orphan + tot.broken + tot.overflow + tot.split + (tot.size || 0);   // shrunk / scrolled are the fixes at work, not faults
     bad += n;
     console.log(`${n ? "FAIL" : "ok  "} ${width}px: ${codes.length} problems, orphan ${tot.orphan}, broken ${tot.broken}, overflow ${tot.overflow}, split ${tot.split} (shrunk ${tot.shrunk}, scrolls ${tot.scrolled})`);
     for (const x of where.slice(0, 12)) console.log("       ", x);
