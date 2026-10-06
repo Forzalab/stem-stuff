@@ -4,6 +4,17 @@
   },
   "buildCommand": "python3 tools/build_public.py",
   "outputDirectory": "public",
+  "headers": [
+    {
+      "source": "/(sw\\.js|version\\.json)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ],
   "functions": {
     "api/index.py": {
       "includeFiles": "{serve.py,problems.json,skills.json,banks/**}"

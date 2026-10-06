@@ -26,6 +26,15 @@
 }
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--freeze-h, 0px) + var(--s4)); }
+/* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
+   nothing, like the docked videos' row. Safari has no scrollbar-color: the -webkit- bar there, same look */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar { display: none; }
+body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+@supports not (scrollbar-color: red blue) {
+  body ::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+  body ::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--edge); }
+}
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
   background: var(--paper); color: var(--ink);
@@ -499,10 +508,10 @@ html.side #work > .orig { margin: 0; }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
-html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one */
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one; as tall as its content, at most the window (Tony, Oct 6: no empty bottom) */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
-html.side .cl { flex: 1; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
+html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: 0; }
 html.cl-open body { overflow: hidden; }
 .cl-bar { flex: none; margin: var(--s2); cursor: default; }                  /* phone only: Tony's image 1 head bar (the hint card's casino skin) */
@@ -915,3 +924,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   touch-action: manipulation; animation: toast-in .2s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }
+/* which deploy this is (offline.js showVer: the PR, tools/version.sh). Quiet chrome: smallest type, the lowest text colour (--hint, 5.7:1 on --paper), never in the way */
+#ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
+  color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
+#ver::after { content: attr(data-v); }
+.dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */

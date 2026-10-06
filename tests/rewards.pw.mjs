@@ -196,9 +196,12 @@ try {
     assert.equal(await d.isHidden("#xb"), true, "the steps are showing: no scratchpad");
     { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
       assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the label row stays above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
-    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the sheet is open: the players fold (Tony, Oct 5)");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the sheet is open: the players stay, shown by default (Tony, Oct 6)");
+    assert.ok(await d.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.src))), "muted autoplay");
     await d.click("#rot .rot-link");
-    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the link still brings them back");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the link hides them");
+    await d.click("#rot .rot-link");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the link brings them back");
     assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
@@ -308,6 +311,22 @@ try {
     await pick(p3, "a");
     await p3.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
     assert.equal(await p3.$$eval(".fx-sp, .fx-fly, .fx-ring", e => e.length), 0);
+    await rm.close();
+  });
+
+  await step("reduced motion: the players still show, muted and playing, and the link hides / shows them (Tony, Oct 6: it was a dead click)", async () => {
+    const rm = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
+    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const p4 = await rm.newPage();
+    await p4.goto(BASE + "/#CALC1_S01"); await opened(p4, "CALC1_S01");
+    await p4.waitForSelector("#work > #rot.docked:not([hidden])", { timeout: 4000 });
+    const st = () => p4.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").textContent]);
+    assert.deepEqual(await st(), [false, "Hide curated brainrot"], "shown by default");
+    assert.ok(await p4.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.src))), "muted autoplay");
+    await p4.click("#rot .rot-link");
+    assert.deepEqual(await st(), [true, "Show curated brainrot"], "hidden");
+    await p4.click("#rot .rot-link");
+    assert.deepEqual(await st(), [false, "Hide curated brainrot"], "Show works");
     await rm.close();
   });
 } finally {

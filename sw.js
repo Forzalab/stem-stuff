@@ -1,10 +1,13 @@
 /* stem-stuff service worker. See OFFLINE.md.
- * shell (index.html, its css/js, KaTeX): cache-first, updated in the background; a changed file tells the page (update bar).
+ * shell (index.html, its css/js, KaTeX): cache-first. Each deploy stamps VERSION (tools/build_public.py), so a deploy = a new
+ * sw.js: it precaches the whole new shell, takes over and drops the old shell cache in one go; offline.js reloads the page
+ * (design/DEPLOY.md, Oct 6: the page used to climb one deploy per reload). Unstamped (serve.py, dev): updated in the
+ * background, a changed file tells the page (update bar).
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
-const VERSION = "stem-v4";
+const VERSION = "stem-v4";                                     // tools/build_public.py: "stem-<PR>-<sha>" per deploy
 const SHELL = VERSION + "-shell";
-const PROBS = VERSION + "-p";
+const PROBS = "stem-v4-p";                                      // fixed (v4's name): problems saved for offline survive every deploy
 const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/KaTeX/"];
 const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "Fraktur-Bold", "Fraktur-Regular", "Main-Bold",
   "Main-BoldItalic", "Main-Italic", "Main-Regular", "Math-BoldItalic", "Math-Italic", "SansSerif-Bold", "SansSerif-Italic",
@@ -58,7 +61,7 @@ async function precache() {
 self.addEventListener("install", e => { e.waitUntil(precache().then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys()
-    .then(ks => Promise.all(ks.filter(k => !k.startsWith(VERSION + "-")).map(k => caches.delete(k))))
+    .then(ks => Promise.all(ks.filter(k => k !== SHELL && k !== PROBS).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -70,8 +73,8 @@ const keyOf = req => {
 };
 const good = r => r && (r.ok || r.type === "opaque");
 
-// The shell is served from cache, so the page you see can be one deploy behind. When the background refresh brings a
-// different file, tell every open page: it shows "New version ready. Tap to update." (offline.js).
+// Same sw.js, different file (dev: serve.py edits): the background refresh stores it, then tells every open page, which
+// shows "New version ready. Tap to update." (offline.js). Stored first, so the tap never reloads into the old copy.
 async function differs(a, b) {
   const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
   if (x.byteLength !== y.byteLength) return true;
@@ -108,8 +111,9 @@ self.addEventListener("fetch", e => {
     const old = hit && new URL(key).origin === location.origin ? hit.clone() : null;   // CDN files are pinned by version
     const fresh = fetch(req).then(async r => {
       if (!good(r)) return r;
-      if (old && await differs(old, r.clone())) newVersion();
+      const changed = !!old && await differs(old, r.clone());
       await c.put(key, r.clone());
+      if (changed) newVersion();
       return r;
     });
     if (hit) { e.waitUntil(fresh.catch(() => {})); return hit; }

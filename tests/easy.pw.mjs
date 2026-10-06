@@ -270,10 +270,10 @@ try {
     assert.equal(await page.$eval("#cluck", e => e.parentElement.id), "work", "desktop: the notes column");
     assert.equal(await page.isVisible("#cluck #clTabEP"), true);
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
-    assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
+    assert.equal(box[0], true, "as wide as the column: no dead space"); assert.ok(box[1] <= 900 - 32, `the column: as tall as its content, at most the window less the 16px margins (Tony, Oct 6): ${box[1]}`);
     assert.equal(box[2], true, "the sheet fills the column under the videos");
     assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
-      [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
+      [false, "true", true], "the sheet is open: the players stay, shown by default; the label row stays (Tony, Oct 6)");
     assert.equal(await page.textContent("#cluck .ask .left"), "5 left");
     assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
@@ -384,11 +384,15 @@ try {
     if (await page.isHidden("#qlist")) await page.click("#qlistBtn");
     const l = await page.evaluate(() => ({ heads: [...document.querySelectorAll("#qlist .qh")].map(h => h.textContent),
       rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
-      w: document.querySelector("#qlist").getBoundingClientRect().width, hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+      w: document.querySelector("#qlist").getBoundingClientRect().width, bar: ["#qlistBtn", "#qnext"].map(s => document.querySelector(s).getBoundingClientRect()).map(r => [r.left, r.right]),
+      list: (r => [r.left, r.right])(document.querySelector("#qlist").getBoundingClientRect()), cols: getComputedStyle(document.querySelector("#qlist ol")).gridTemplateColumns.split(" ").length,
+      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)), hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
     assert.deepEqual(l.heads, ["Term"], "C14: one header");
     assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
     assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);
-    assert.ok(l.w <= 44 * 16 + 0.5, `C14: list ${l.w}px wide`);
+    assert.ok(Math.abs(l.list[0] - l.bar[0][0]) < 1 && Math.abs(l.list[1] - l.bar[1][1]) < 1, `the list spans the bar, no gap at its right (Tony, Oct 6): ${JSON.stringify([l.list, l.bar])}`);
+    assert.ok(l.cols >= 2, `C14 kept: wide, the rows go in columns (${l.cols}), never one ${l.w}px row`);
+    assert.equal(new Set(l.tops).size, 1, `the list open, the bar stays one row (Tony, Oct 6): tops ${l.tops}`);
     await page.click("#qlistBtn");
   });
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));

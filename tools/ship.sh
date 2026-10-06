@@ -115,14 +115,16 @@ W="$(mktemp -d)"; LOG="$(mktemp)"   # the log stays outside the upload
 git -C "$ROOT" fetch -q origin main
 # This script runs from your checkout but deploys origin/main. A checkout that was never pulled runs an old ship.sh (Oct 3:
 # the phone's pre-brain copy shipped live with only BANK_PSY6). Stop instead.
-if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py; then
+if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py tools/version.sh; then
   warn "this ship.sh is not origin/main's: run  git -C \"$ROOT\" pull --ff-only  then ship again"; exit 1
 fi
 git -C "$ROOT" worktree add -q --detach "$W" origin/main
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
 done
-echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) as $MODE"
+VJSON="$(bash "$ROOT/tools/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (design/DEPLOY.md)
+VPR="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["pr"])' <<<"$VJSON")"
+echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"
 echo "$SUMMARY"
 
 ARGS=(--yes --scope forzalabs-projects)
@@ -152,10 +154,11 @@ check() {   # check <what> <want> <path> [curl args...]: <want> = a status code,
 }
 echo "smoke:"
 check "page loads"                 200 /
+check "version is this deploy"     "$(git -C "$W" rev-parse --short HEAD)" /version.json
 check "a problem loads"            200 /p/PHYS_F3N.json
 check "answers stay hidden"        404 /problems.json
 check "banks stay hidden"          404 /banks/BANK_P2X.json
 check "grading works"              '"correct"' /check -X POST -H 'Content-Type: application/json' -d '{"code":"PHYS_F3N","answer":"3.2"}'
 if [ "$bad" -ne 0 ]; then echo "SMOKE RED: $URL" >&2; exit 1; fi
 echo "smoke green"
-if [ "$MODE" = live ]; then echo "live site: https://stem-stuff.vercel.app"; fi
+if [ "$MODE" = live ]; then echo "live site: https://stem-stuff.vercel.app ($VPR; check: tools/version.sh)"; fi
