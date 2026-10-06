@@ -116,3 +116,16 @@ To make sure the trace is correct, have the LLM write the BFS as a short JS func
 4. **Later: grow by need only.** Add symbols as topics arrive (E&M: `charge, fieldLine, resistor, battery`; CS: `stackFrame, treeNode, dfaState`). Add a Python Tutor-style `frames` op for recursion. Load JSXGraph on demand only if a geometry topic really needs constrained building, and switch to Mermaid only for large state diagrams where automatic layout saves time.
 
 Sources: [A2UI/ADK](https://adk.dev/integrations/a2ui/) · [CrewAI A2UI](https://docs.crewai.com/v1.15.2/en/learn/a2ui.md) · [CopilotKit A2UI](https://docs.copilotkit.ai/strands/generative-ui/a2ui) · [json-render](https://www.skills.sh/vercel-labs/json-render/react) · [OpenGenerativeUI](https://docs.copilotkit.ai/mastra/generative-ui/open-generative-ui) · [tracers.js](https://github.com/algorithm-visualizer/tracers.js) · [Animated Vega-Lite](https://vis.mit.edu/pubs/animated-vega-lite) · [JSXGraph](https://jsxgraph.uni-bayreuth.de/wp/download/) · [Lottie sizes](https://ics.media/en/entry/240625/) · [Cytoscape size](https://depscope.dev/pkg/npm/cytoscape) · [Penrose](https://penrose.cs.cmu.edu/docs/ref/substance/overview) · [Feynman/Penrose LLM](https://arxiv.org/html/2603.12597) · [PhysicsSolutionAgent](https://arxiv.org/pdf/2601.13453) · [OmniLottie](https://hackernoon.com/omnilottie-solves-ai-animations-hardest-problem) · [TPA-Net](https://arxiv.org/pdf/2211.13887) · [Python Tutor](https://pythontutor.com/llms.txt)
+
+## 5. Kits: progressive disclosure for the authoring LLM (Tony, Oct 5 ~21:5x PT)
+
+Idea from OpenGenerativeUI (brain `_files/ref/open-generative-ui/`): its visuals come from `SKILL.md` files with a `name` + one-line `description` up front; the agent sees the short list and loads a full body (257–962 lines) only when it needs it, the same progressive disclosure Claude skills use. We copy the pattern, not the files.
+
+Named **kits** here, so they never clash with `skills.json` (the students' algebra skills).
+
+1. **Sort at creation.** Each question gets a `subject` from a closed list when the bank is made (bank `profile.subject` + an optional per-question override): `physics.mechanics`, `physics.em`, `discrete`, `cs`.
+2. **The LLM first sees only:** the core contract (the 10 concepts in §3, short) + the kit index (one line per kit). Kits for the question's subject load automatically; others load only if the LLM names them.
+3. **A kit body** = the approved components for that area (which `symbols`, `marks`, `trace` ops, handle constraints), 2–3 full example specs, a "common errors" list, and the invariants the gate must test (energy conserved, ΣP = 1, BFS visits each node once).
+4. **The gate enforces it.** A spec may use only components listed in the kits it loaded. Anything else fails validation, so "approved components only" is checked by machine, not trusted.
+5. **Layout (proposal):** `author/kits/<name>/KIT.md` (frontmatter: `name`, `description`, `subjects`, `components`) + `examples/*.json`. First kits: `mechanics`, `energy-bars`, `graph-search` (BFS/DFS), `sorting`, `logic-gates`, `probability`.
+6. **Growth:** a new topic = a new kit (E&M: charges, field lines, circuits). The core never changes for it.
