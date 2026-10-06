@@ -480,7 +480,10 @@ function render() {
   $("#freeze").classList.remove("open");
   $("#pcode").textContent = code;
   const blocks = $("#blocks"); blocks.innerHTML = "";
-  if (prob.tip) { const t = document.createElement("p"); t.className = "tip"; t.innerHTML = md(prob.tip, true); blocks.append(t); }   // easy: what to do, one line (design/EASY.md)
+  /* the card's bold lead is the question's title, the one the list shows ("Practice Exam 2, Question 13"), not the tip (owner, Oct 6:
+     the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
+  const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
+  if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.textContent = lead; blocks.append(t); }
   const C = snackChg();
   if (C?.pairs.length) {
     const c = document.createElement("p"); c.className = "chg-chip";

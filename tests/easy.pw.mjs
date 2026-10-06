@@ -102,13 +102,15 @@ try {
     assert.equal(await page.$$eval('link[rel="preconnect"]', ls => ls.filter(l => /youtube-nocookie/.test(l.href)).length), 1, "the warm-up adds the preconnect (index.html has none)");
   });
 
-  await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
+  await step("easy (default): None-is-the-answer hidden, no None row, the title on top (not the tip), empty Check live", async () => {
     await typeCode(page, "BANK_EZ12");
     await page.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E03", "CALC1_E04A", "CALC1_E04B"]);   // the choose-all E04 split into rows
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.deepEqual(await rows(page), ["two", "three", "four"]);
-    assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
+    assert.equal((await page.textContent("#blocks .ptitle")).trim(), P.all.saccharine.title, "the card's lead is the list's title");   // owner, Oct 6
+    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "the tip is not shown");
+    assert.ok(!(await page.textContent("#blocks")).includes(P.all.saccharine.tip), "the tip text is on the card");
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
     await page.reload(); await opened(page, "CALC1_E01");                 // the bank opens a random first question: E01 first this visit
@@ -331,7 +333,7 @@ try {
     await page.click("#mcGo");                                               // None was the key: nothing ticked is right
     await page.waitForSelector("#q.closed", { timeout: 4000 });
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
-    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
+    assert.equal(await page.$$eval("#blocks :is(.tip, .ptitle)", t => t.length), 0, "tip or title lead in diet mode");
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
     assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
