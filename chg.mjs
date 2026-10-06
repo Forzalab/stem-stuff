@@ -1,7 +1,9 @@
 /* chg.mjs: what a snack changed from its original (TODO A, Tony Oct 5: "highlight the changed constant").
    A token diff (LCS) of the snack's text blocks against the original's. Marked: every changed number, and the words of a short swap
    ("first" -> "second", <= 3 tokens a side). In plain text a mark is .. (app.js md() turns it into <mark class="chg">);
-   inside $..$ it is \htmlClass{chg}{..} (numbers only, never inside \text{}). Pure, no DOM. */
+   inside $..$ it is \htmlClass{chg}{..} (numbers only, never inside \text{}); a bare exponent or index (m/s^2) gets braces,
+   ^{\htmlClass{chg}{2}}, since TeX takes no command with arguments as a bare ^ / _ argument (a red KaTeX error, Oct 6); like TeX,
+   only its first digit is the script. Pure, no DOM. */
 
 const TOK = /\d+(?:\.\d+)?|\\[A-Za-z]+|[A-Za-z]+|\S/g;
 const isNum = t => /^\d/.test(t), isWord = t => /^[A-Za-z]/.test(t);
@@ -44,7 +46,7 @@ function unitAfter(s, end) {
 }
 function wrap(s, ks) {
   for (const k of [...ks].sort((x, y) => y.at - x.at))
-    s = s.slice(0, k.at) + (k.math ? `\\htmlClass{chg}{${k.t}}` : `${k.t}`) + s.slice(k.end);
+    s = s.slice(0, k.at) + (!k.math ? `${k.t}` : /[\^_]\s*$/.test(s.slice(0, k.at)) ? `{\\htmlClass{chg}{${k.t[0]}}}${k.t.slice(1)}` : `\\htmlClass{chg}{${k.t}}`) + s.slice(k.end);
   return s;
 }
 const marked = (blocks, toks, hit) => blocks.map((b, i) => b.type === "text" ? wrap(src(b), toks.filter(k => k.blk === i && hit.has(k))) : null);

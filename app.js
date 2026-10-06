@@ -103,7 +103,9 @@ function renderMath(src, display) {
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
 /* $$..$$ and $..$ are cut out before markdown so marked never sees TeX; "\$" is a literal dollar. */
-function md(text, inline = false) {
+/* big: a choice row. Its inline math sets in display style, so $\frac12$ and $\dfrac12$ look the same in every row (a lone 1/2 is never
+   the tiny text-style one); nested parts (a fraction in an exponent) still shrink the TeX way. */
+function md(text, inline = false, big = false) {
   const src = Array.isArray(text) ? text.join("\n") : String(text);
   const math = [];
   const tok = i => `KXMATH${i}Z`;
@@ -124,7 +126,7 @@ function md(text, inline = false) {
   return html.replace(/\uE000/g, '<mark class="chg">').replace(/\uE001/g, "</mark>").replace(/(\(?)KXMATH(\d+)Z([.,;:!?)]*)/g, (_, pre, i, post) => {
     const m = math[+i];
     if (m.lit) return pre + "$" + post;
-    const k = renderMath(m.t, m.d);
+    const k = renderMath(big && !m.d ? "\\displaystyle " + m.t : m.t, m.d);
     return (pre || post) && !m.d ? `<span class="mx">${pre}${k}${post}</span>` : pre + k + post;
   });
 }
@@ -478,7 +480,10 @@ function render() {
   $("#freeze").classList.remove("open");
   $("#pcode").textContent = code;
   const blocks = $("#blocks"); blocks.innerHTML = "";
-  if (prob.tip) { const t = document.createElement("p"); t.className = "tip"; t.innerHTML = md(prob.tip, true); blocks.append(t); }   // easy: what to do, one line (design/EASY.md)
+  /* the card's bold lead is the question's title, the one the list shows ("Practice Exam 2, Question 13"), not the tip (owner, Oct 6:
+     the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
+  const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
+  if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.textContent = lead; blocks.append(t); }
   const C = snackChg();
   if (C?.pairs.length) {
     const c = document.createElement("p"); c.className = "chg-chip";
@@ -526,7 +531,7 @@ function renderQuestion() {
       <div class="ch" data-id="${esc(c.id)}">
         <button type="button" class="opt" role="${many ? "checkbox" : "radio"}" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${esc(c.id)}" data-l="${LETTERS[i]}"${c.lock ? " data-lock" : ""}>
           ${many ? `<span class="badge" aria-hidden="true">${icon("i-ok")}</span><span class="lt" aria-hidden="true">${LETTERS[i]}</span>`
-            : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true)}</span>
+            : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
         ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
         ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Type the right answer")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}

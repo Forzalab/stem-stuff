@@ -340,7 +340,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
-.tip { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }   /* easy: the "what to do" line on a twisted question (design/EASY.md) */
+.ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.
    The same mark sits on the original's numbers in "See reference solution", so the eye links the pair. */
 mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2px var(--mark); text-underline-offset: 0.2em; text-decoration-skip-ink: none; }

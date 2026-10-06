@@ -44,7 +44,7 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
-/* clutter C14: every title shares "Term: ", so the list shows one header over the rows, in any shuffle */
+/* every title shares "Term: ": the list still shows one row per question, number + whole title, no shared-prefix header (owner, Oct 6) */
 const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
 writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
@@ -102,13 +102,15 @@ try {
     assert.equal(await page.$$eval('link[rel="preconnect"]', ls => ls.filter(l => /youtube-nocookie/.test(l.href)).length), 1, "the warm-up adds the preconnect (index.html has none)");
   });
 
-  await step("easy (default): None-is-the-answer hidden, no None row, the tip on top, empty Check live", async () => {
+  await step("easy (default): None-is-the-answer hidden, no None row, the title on top (not the tip), empty Check live", async () => {
     await typeCode(page, "BANK_EZ12");
     await page.waitForFunction(() => /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     assert.deepEqual(await listCodes(page), ["CALC1_E01", "CALC1_E03", "CALC1_E04A", "CALC1_E04B"]);   // the choose-all E04 split into rows
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.deepEqual(await rows(page), ["two", "three", "four"]);
-    assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
+    assert.equal((await page.textContent("#blocks .ptitle")).trim(), P.all.saccharine.title, "the card's lead is the list's title");   // owner, Oct 6
+    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "the tip is not shown");
+    assert.ok(!(await page.textContent("#blocks")).includes(P.all.saccharine.tip), "the tip text is on the card");
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
     await page.reload(); await opened(page, "CALC1_E01");                 // the bank opens a random first question: E01 first this visit
@@ -333,7 +335,7 @@ try {
     await page.click("#mcGo");                                               // None was the key: nothing ticked is right
     await page.waitForSelector("#q.closed", { timeout: 4000 });
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
-    assert.equal(await page.$$eval("#blocks .tip", t => t.length), 0, "tip in diet mode");
+    assert.equal(await page.$$eval("#blocks :is(.tip, .ptitle)", t => t.length), 0, "tip or title lead in diet mode");
     assert.equal(await page.$$eval("#how", h => h.length), 0, "the sugar how line in diet mode");
     assert.equal(await page.$$eval("#fcard", f => f.length), 0, "formula card in diet mode");
     assert.ok(await page.$eval("#rot", e => e.hidden).catch(() => true), "brainrot in diet mode (not even parked)");
@@ -370,7 +372,7 @@ try {
     assert.deepEqual(yt, [], "a request went to YouTube");
     await c.close();
   }
-  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one header for a shared title prefix", async () => {
+  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one row per question: number + its whole title, no shared-prefix header", async () => {
     await typeCode(page, "CALC1_E01"); await opened(page, "CALC1_E01");
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).paddingTop), "0px", "C13: no top offset over a question");
     const ff = await page.evaluate(() => getComputedStyle(document.querySelector("#scratch"), "::placeholder").fontFamily);
@@ -384,11 +386,11 @@ try {
     await typeCode(page, "BANK_TRM");
     await page.waitForFunction(() => /^CALC1_TR/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     if (await page.isHidden("#qlist")) await page.click("#qlistBtn");
-    const l = await page.evaluate(() => ({ heads: [...document.querySelectorAll("#qlist .qh")].map(h => h.textContent),
+    const l = await page.evaluate(() => ({ lis: [...document.querySelectorAll("#qlist li")].map(li => [li.children.length, li.querySelectorAll(".qn").length, li.querySelectorAll(".qt").length]),
       rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
       w: document.querySelector("#qlist").getBoundingClientRect().width, bar: ["#qlistBtn", "#qnext"].map(s => document.querySelector(s).getBoundingClientRect()).map(r => [r.left, r.right]),
       list: (r => [r.left, r.right])(document.querySelector("#qlist").getBoundingClientRect()), cols: getComputedStyle(document.querySelector("#qlist ol")).gridTemplateColumns.split(" ").length,
-      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)), hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)) }));
     const one = await page.$$eval("#qlist .qt", ts => ts.map(t => ({ ws: getComputedStyle(t).whiteSpace, h: Math.round(t.getBoundingClientRect().height) })));
     assert.ok(one.every(x => x.ws === "nowrap") && new Set(one.map(x => x.h)).size === 1, `wide list: one line per row, rows line up (variant A): ${JSON.stringify(one)}`);
     assert.ok(await page.$$eval("#qlist a", as => as.every(a => a.title && a.title.length > 0)), "the full title is the tooltip");
@@ -403,9 +405,9 @@ try {
     await page.mouse.click(5, 880); await page.waitForTimeout(150);
     assert.equal(await page.isHidden("#qlist"), true, "an outside tap closes the list");
     await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
-    assert.deepEqual(l.heads, ["Term"], "C14: one header");
-    assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
-    assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);
+    assert.ok(l.lis.length === 3 && l.lis.every(x => x.join() === "1,1,1"), `every row = a link with one number + one label, no header rows (owner, Oct 6): ${JSON.stringify(l.lis)}`);
+    assert.deepEqual(l.rows, ["Term: one", "Term: three", "Term: two"], "each row shows its whole title");
+    assert.ok(l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `the link's label is the full title: ${l.labels}`);
     assert.ok(Math.abs(l.list[0] - l.bar[0][0]) < 1 && Math.abs(l.list[1] - l.bar[1][1]) < 1, `the list spans the bar, no gap at its right (Tony, Oct 6): ${JSON.stringify([l.list, l.bar])}`);
     assert.ok(l.cols >= 2, `C14 kept: wide, the rows go in columns (${l.cols}), never one ${l.w}px row`);
     assert.equal(new Set(l.tops).size, 1, `the list open, the bar stays one row (Tony, Oct 6): tops ${l.tops}`);
@@ -432,6 +434,33 @@ try {
     assert.ok(m.notes <= 800, `notes box capped (${m.notes}px)`);
     assert.ok(m.handle <= 256, `divider handle near the top (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
+  });
+
+  /* bug 5 (owner, Oct 6, zoomed out): bar + question + explain/Cluck form one block, centred: the gap left of the whole block
+     equals the gap right of it, Cluck open and closed, up to a 4K window (the owner's zoomed-out run) */
+  for (const [w, h] of [[1366, 768], [1920, 1080], [2560, 1440], [3840, 2160]]) await step(`centred at ${w}: the bar + both panes, Cluck open and closed`, async () => {
+    const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const zp = await z.newPage();
+    await zp.goto(BASE + "/#BANK_EZ12");
+    await zp.waitForFunction(() => !document.querySelector("#qnav").hidden && /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await zp.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(zp, "CALC1_E01");
+    const gaps = () => zp.evaluate(() => {
+      const rs = ["#qlistBtn", "#qnext", "#freeze", "#work", "#cluck"].map(s => document.querySelector(s)).filter(e => e && e.getClientRects().length).map(e => e.getBoundingClientRect());
+      const L = Math.min(...rs.map(r => r.left)), R = Math.max(...rs.map(r => r.right));
+      return { l: Math.round(L), r: Math.round(document.documentElement.clientWidth - R), cl: !!document.querySelector("#cluck")?.getClientRects().length };
+    });
+    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try, the sheet opens by itself
+    await zp.waitForFunction(() => document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 6000 });
+    const open = await gaps();
+    await zp.click("#cluck .cl-x2");
+    await zp.waitForFunction(() => !document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 3000 });
+    const shut = await gaps();
+    await z.close();
+    assert.ok(open.cl, "Cluck did not open");
+    assert.ok(Math.abs(open.l - open.r) <= 2, `Cluck open: left gap ${open.l}, right gap ${open.r}`);
+    assert.ok(Math.abs(shut.l - shut.r) <= 2, `Cluck closed: left gap ${shut.l}, right gap ${shut.r}`);
   });
 } finally {
   await browser.close();

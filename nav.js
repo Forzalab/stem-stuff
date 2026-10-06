@@ -64,8 +64,6 @@ export function titleOf(p) {
   }
   return sentences(plain(para.join(" ")));
 }
-/* the part before the first ": " of a title ("Force graph 2: work" -> "Force graph 2"), or "" */
-export function head(t) { const i = t.indexOf(": "); return i > 0 ? t.slice(0, i) : ""; }
 /* too long: end at the last full sentence that fits, else cut at a word */
 function sentences(s, n = MAX) {
   if (s.length <= n) return s;
@@ -120,14 +118,12 @@ function init() {
     if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
-    /* C14 (Tony, Oct 5): neighbours that share a title prefix ("Force graph 2: work", "Force graph 2: power") sit under one header,
-       each row shows the rest. The header is for the eye; the link's label keeps the full title */
-    const ts = codes.map(c => titleOf(o.get(c)) || c), hs = ts.map(head);
+    /* one row = its number + one label, the whole title (owner, Oct 6: the C14 shared-prefix header read as a row of its own and ran
+       into the next row, "Practice Exam 2, Question 13" over "26 true or false rows") */
     list.innerHTML = codes.map((c, k) => {
-      const t = ts[k], h = hs[k], m = marks(mark(c)), grouped = h && (hs[k - 1] === h || hs[k + 1] === h);
-      return (grouped && hs[k - 1] !== h ? `<li class="qh" aria-hidden="true">${esc(h)}</li>` : "") +
-        `<li><a href="#${esc(c)}" title="${esc(t)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
-        `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(grouped ? t.slice(h.length + 2) : t)}</span>${m.html}</a></li>`;
+      const t = titleOf(o.get(c)) || c, m = marks(mark(c));
+      return `<li><a href="#${esc(c)}" title="${esc(t)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
+        `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(t)}</span>${m.html}</a></li>`;
     }).join("");
   }
 
