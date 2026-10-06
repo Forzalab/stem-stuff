@@ -1,0 +1,42 @@
+{
+  "v": 1,
+  "about": "Algebra skills a question needs (SCHEMA.md 'Skills'). A question lists ids in saccharine.skills; Cluck and the live visuals target them in plain words, no calculus. Audience: gen-ed students, many shaky on algebra.",
+  "families": {
+    "signs": "Negative numbers and direction",
+    "ratio": "Ratios, proportions and scaling",
+    "equations": "Equations: rearranging and solving",
+    "shapes": "Areas, triangles and trig",
+    "graphs": "Reading graphs",
+    "units": "Units, powers of ten and roots",
+    "vectors": "Vectors and components"
+  },
+  "skills": [
+    {"id": "sign_direction", "family": "signs", "idea": "A minus sign means 'the other way': -3 m/s is 3 m/s going left.", "slip": "Drops the sign, or treats negative as 'smaller' instead of 'opposite'.", "visual": "An arrow that flips the moment the value crosses zero."},
+    {"id": "signed_sum", "family": "signs", "idea": "Adding a negative takes away: 6 + (-2) = 4.", "slip": "Adds sizes and ignores signs (6 + 2 = 8).", "visual": "Energy coins: a blue chunk drops coins in, a pink chunk takes coins out."},
+    {"id": "negative_work", "family": "signs", "idea": "A push against the motion takes energy away, so its work is negative; area below the axis on an F-x graph counts as minus.", "slip": "Adds the area under the axis as positive (23 J instead of 22 J).", "visual": "A t-mark crosses the pink chunk: the cart's speed meter drops and coins leave."},
+    {"id": "sign_subtract", "family": "signs", "idea": "A change is final minus initial; going down gives a negative change.", "slip": "Subtracts in the wrong order, so the sign flips.", "visual": "Two dots on a number line with an arrow from start to end."},
+    {"id": "proportional", "family": "ratio", "idea": "If y = kx, doubling x doubles y.", "slip": "Adds instead of multiplies when one thing grows.", "visual": "Two bars: drag one to double, the other doubles with it."},
+    {"id": "inverse_proportional", "family": "ratio", "idea": "If y = k/x, doubling x halves y.", "slip": "Expects both to grow together.", "visual": "A rectangle of fixed area: stretch the width, the height shrinks."},
+    {"id": "square_scaling", "family": "ratio", "idea": "With a square (v^2, r^2), doubling the input makes 4 times the output.", "slip": "Expects 2 times (KE at double speed, gravity at half distance).", "visual": "A square grid: double the side, count 4 copies."},
+    {"id": "ratio_setup", "family": "ratio", "idea": "Compare two cases by dividing their formulas so the shared parts cancel.", "slip": "Plugs numbers into each case and loses the pattern.", "visual": "Two formula cards stacked; shared letters fade out."},
+    {"id": "rearrange", "family": "equations", "idea": "Get the unknown alone by doing the same thing to both sides.", "slip": "Moves a term across and forgets to flip + to - or x to /.", "visual": "A balance scale that stays level as both pans change."},
+    {"id": "substitute", "family": "equations", "idea": "Put one result into the next formula, with its units.", "slip": "Uses a number from the wrong step or drops its unit.", "visual": "Lego: one block's output snaps into the next block's slot."},
+    {"id": "two_equations", "family": "equations", "idea": "Two unknowns need two equations (momentum and energy, two force directions).", "slip": "Tries to solve one equation for two unknowns.", "visual": "Two lines on a graph; the answer is where they cross."},
+    {"id": "solve_quadratic", "family": "equations", "idea": "ax^2 + bx + c = 0 has the formula x = (-b + sqrt(b^2 - 4ac)) / 2a; pick the root that makes sense.", "slip": "Drops the bx term or picks the negative root.", "visual": "A parabola crossing zero; the physical root lights up."},
+    {"id": "shape_area", "family": "shapes", "idea": "Rectangle b*h, triangle (1/2)*b*h, trapezoid (1/2)*(a+b)*h.", "slip": "Forgets the 1/2 for a triangle.", "visual": "Lego labels: each chunk shows '[shape] - [formula]'."},
+    {"id": "decompose", "family": "shapes", "idea": "Split a hard shape (or sum) into simple pieces and add them up.", "slip": "Tries one formula for the whole odd shape.", "visual": "Pieces pop apart, get labelled, then snap back with a total."},
+    {"id": "right_triangle", "family": "shapes", "idea": "In a right triangle, a^2 + b^2 = c^2.", "slip": "Adds the legs instead of their squares.", "visual": "Squares on each side; the two small areas fill the big one."},
+    {"id": "trig_part", "family": "shapes", "idea": "The side across from an angle is hyp*sin(angle); the side next to it is hyp*cos(angle).", "slip": "Swaps sin and cos.", "visual": "Drag the angle: the opposite leg grows, the next-to leg shrinks."},
+    {"id": "degree_mode", "family": "shapes", "idea": "The calculator must be in degrees for angles in degrees.", "slip": "sin(30) in radians gives -0.988.", "visual": "A tiny calculator badge showing DEG beside the angle."},
+    {"id": "read_graph", "family": "graphs", "idea": "Read a value off a graph: go across to the point, then over to the axis, with units.", "slip": "Reads the wrong axis or misses the unit.", "visual": "A crosshair snaps to the point with both readouts."},
+    {"id": "slope", "family": "graphs", "idea": "Slope = rise / run; on an x-t graph it is the velocity.", "slip": "Reads the height instead of the steepness.", "visual": "A staircase under the line: rise and run labelled."},
+    {"id": "graph_area", "family": "graphs", "idea": "Area under a graph = height times width, added up (F-x gives work, v-t gives distance).", "slip": "Multiplies the end values only.", "visual": "Strips fill as the t-mark sweeps; a running total grows."},
+    {"id": "units_convert", "family": "units", "idea": "Convert to SI first: cm to m, g to kg, km/h to m/s.", "slip": "Uses 320 cm as 320.", "visual": "A unit chain: 320 cm x (1 m / 100 cm) with cancelling units."},
+    {"id": "units_check", "family": "units", "idea": "Units multiply like numbers: N*m = J, and the answer's unit must match the question.", "slip": "Answers in the wrong unit and does not notice.", "visual": "Unit blocks stack into J; a mismatch flashes."},
+    {"id": "sci_notation", "family": "units", "idea": "6.6e7 means 6.6 x 10^7; multiply the fronts, add the powers.", "slip": "Types 6.6^7 or loses a power of ten.", "visual": "A power-of-ten ruler that shifts as you multiply."},
+    {"id": "square_root", "family": "units", "idea": "To undo a square, take the square root; only the positive root is a speed.", "slip": "Halves instead of rooting (v^2 = 16 gives 8).", "visual": "A square of area 16 shows its side 4."},
+    {"id": "vector_add", "family": "vectors", "idea": "Vectors add tip to tail; sizes add only when they point the same way.", "slip": "Adds 3 N and 4 N at a right angle to get 7 N.", "visual": "Drag the angle between two arrows; the sum arrow shrinks from 7 to 5 to 1."},
+    {"id": "components", "family": "vectors", "idea": "Split a slanted vector into x and y parts and handle each line on its own.", "slip": "Uses the full force along both axes.", "visual": "A slanted arrow casts shadows on both axes."},
+    {"id": "conserved_total", "family": "vectors", "idea": "When nothing outside pushes, the total before equals the total after (momentum, energy).", "slip": "Compares one object only, not the whole system.", "visual": "Before and after bars; the total bar stays the same height."}
+  ]
+}

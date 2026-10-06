@@ -6,7 +6,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.py": {
-      "includeFiles": "{serve.py,problems.json,banks/**}"
+      "includeFiles": "{serve.py,problems.json,skills.json,banks/**}"
     }
   },
   "rewrites": [

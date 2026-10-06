@@ -279,6 +279,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
   "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}}},
   "$defs": {
     "num": {"type": ["number", "string"], "minLength": 1, "description": "Number, or math.js constant expression like \"pi/3\""},
+    "skills": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,31}$"}, "description": "server only: the algebra skills this question needs, ids from skills.json (SCHEMA.md 'Skills'); a split row's list replaces its parent's"},
     "pt": {"type": "array", "prefixItems": [{"$ref": "#/$defs/num"}, {"$ref": "#/$defs/num"}], "items": false, "minItems": 2},
     "range": {"$ref": "#/$defs/pt"},
     "expr": {"type": "string", "minLength": 1, "description": "math.js expression in x (fn/shade/tangent) or t (param)"},
@@ -387,6 +388,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
             "part": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"}, "description": "formula-sheet.json row ids, in order of use: the formula card"},
             "key": {"type": "string", "minLength": 3, "description": "server only: the full presolved solution, plain text + LaTeX; Cluck paraphrases it"},
             "slip": {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}, "description": "server only: choice id -> the slip that gives it"},
+            "skills": {"$ref": "#/$defs/skills"},
             "note": {"type": "object", "additionalProperties": {"type": "object"}, "description": "server only: choice id -> the hidden NOTE for that wrong pick, written with the key (design/CLUCK-NOTE.md \"Cache\"); a single wrong pick with one skips the live NOTE call"},
             "narration": {"type": "string", "minLength": 3, "maxLength": 700, "description": "the voiceover after a wrong answer: plain spoken words, no $ or LaTeX, numbers and units spelled as said, <= 90 words"},
             "hide": {"type": "boolean", "description": "true: left out of sugar (sugar v2 prune)"},
@@ -397,6 +399,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
                 "answer": {"type": ["string", "boolean"], "description": "\"true\" / \"false\" (True/False row) or the right choice id"},
                 "slip": {"oneOf": [{"type": "string", "minLength": 3}, {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}}], "description": "the wrong pick's slip (True/False), or choice id -> slip"},
                 "note": {"type": "object", "additionalProperties": {"type": "object"}, "description": "choice id -> the NOTE for that wrong pick (as saccharine.note)"},
+                "skills": {"$ref": "#/$defs/skills"},
                 "tip": {"type": "string", "minLength": 3, "maxLength": 200},
                 "narration": {"type": "string", "minLength": 3, "maxLength": 700}}}},
             "snack": {"type": "boolean", "description": "a very easy twin of a Practice Exam question (design/REWARDS-WIRING.md); goes with top-level sugar_only"},
@@ -745,6 +748,37 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
         }
       ]
     }
+  }
+}
+```
+
+## Skills (skills.json): the algebra a question needs
+
+Many students in these gen-ed courses are shaky on algebra (Tony, Oct 5). Each question can list the algebra skills it needs in `saccharine.skills` (1 to 6 ids, most important first). The ids come from `skills.json`, the one catalog. A catalog entry has an `id`, a `family`, the `idea` in plain words (no calculus), the usual `slip`, and the `visual` move that teaches it. Cluck's prompt gets the ideas, so he explains the skill along with the physics. The live figures (brain `topics/cluck-visual-plan.md`) target the same ids.
+
+Rules:
+- List only skills a student must use on THIS question, not every skill in the chapter.
+- A missing skill goes into `skills.json` first. Tests fail on an unknown id.
+- `skills` is server only (inside `saccharine`), like `key` and `slip`.
+
+<!-- schema: skills -->
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "skills.json: the algebra skill catalog",
+  "type": "object",
+  "required": ["v", "families", "skills"],
+  "additionalProperties": false,
+  "properties": {
+    "v": {"const": 1},
+    "about": {"type": "string"},
+    "families": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "minLength": 3}, "propertyNames": {"pattern": "^[a-z][a-z0-9_]{1,15}$"}},
+    "skills": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "family", "idea", "slip", "visual"], "additionalProperties": false, "properties": {
+      "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,31}$"},
+      "family": {"type": "string"},
+      "idea": {"type": "string", "minLength": 10, "maxLength": 240, "description": "plain words, no calculus"},
+      "slip": {"type": "string", "minLength": 10, "maxLength": 200, "description": "the usual mistake"},
+      "visual": {"type": "string", "minLength": 10, "maxLength": 200, "description": "the visual move that teaches it"}}}}
   }
 }
 ```
