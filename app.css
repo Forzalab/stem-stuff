@@ -844,6 +844,12 @@ html.side main {
   grid-template-columns: calc(var(--r, .5) * (100% - var(--s6))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
 }
 html.side.mt-r0 main { grid-template-columns: 52px var(--s6) minmax(0, 1fr); }
+/* the bar + the page sit snug in the middle of the window, up-down too (Tony, Oct 6 sketch: "snug in the center"). Auto margins
+   split the spare height above the bar and below the page; a page taller than the window gets none, so it starts at the top as
+   before. Every other body child is fixed or absolute. width: 100%: an auto cross margin would shrink the item to its content */
+html.side:not(.start) body { display: flex; flex-direction: column; }
+html.side:not(.start):not(.dock-bottom) body > .top { width: 100%; margin-top: auto; }   /* beats nav.css .qnav-on:not(.dock-bottom):not(.start) .top { margin: 0 auto } */
+html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
