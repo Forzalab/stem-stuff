@@ -76,6 +76,7 @@ try {
   });
 
   await step("blind: a wrong answer (verdict, toast, Cluck chip) and the snack's original stay Latin-free; content stays English", async () => {
+    await page.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "POOF. Six over three is two." }));   // Cluck's live stream, stubbed (no key here)
     await pick(page, "a");
     await page.waitForSelector("#wish:not([hidden]) .wchip", { timeout: 6000 });
     await page.waitForTimeout(400);

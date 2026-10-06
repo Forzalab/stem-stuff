@@ -215,10 +215,14 @@ try {
     await page.waitForFunction(() => /Missing one/.test(document.querySelector("#q .chk .cluck")?.textContent || ""), null, { timeout: 4000 });   // short: left of Check (Tony, Oct 5)
   });
 
-  await step("easy: a pre-written narration is the box text (no /explain); a lone caret, then typed; no voice (Tony, Oct 5)", async () => {
+  await step("easy: an item with a narration still streams /explain (the narration is never the box text); a lone caret, then typed; reopening goes on where it was; no voice", async () => {
     const said = () => page.evaluate(() => window.__said);
     await page.waitForFunction(() => /Hide Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // desktop: open by itself
-    assert.equal(asked, 0, "the pre-written text needs no /explain");
+    assert.equal(asked, 1, "the first wrong answer asks /explain, narration or not");
+    assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
+    await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 3000 });
+    const first = (await page.textContent("#cluck .wtext")).trim();
+    assert.ok(!/Egg-cellent/.test(first), "no typing: " + first);
     const anim = () => page.$eval("#wish .wchip", c => getComputedStyle(c).animationName);
     assert.equal(await anim(), "rw-wiggle", "the ad wiggle runs until the first tap (T4)");
     await page.emulateMedia({ reducedMotion: "reduce" }); assert.equal(await anim(), "none", "no wiggle with reduced motion");
@@ -232,15 +236,13 @@ try {
     assert.equal(await page.$eval("#wish .wchip", c => c.classList.contains("rw-wiggle")), false, "a tap stops the wiggle for good");
     assert.match(await page.textContent("#wish .wchip"), /Hide Cluck's steps/);
     assert.equal(await page.isHidden("#wish"), true, "open again: the chip steps aside");
-    assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone");
     assert.equal((await said()).length, 0, "spoken before the text is out");
-    await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 2000 });
-    const first = (await page.textContent("#cluck .wtext")).trim();
-    assert.ok(first.length < P.all.saccharine.narration.length, "no typing: " + first);
-    await page.waitForFunction(t => document.querySelector("#cluck .wtext")?.textContent.trim() === t && !document.querySelector("#cluck .wcaret"),
-      P.all.saccharine.narration, { timeout: 4000 });
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
+    assert.ok(!(await page.textContent("#cluck .wtext")).includes(P.all.saccharine.narration), "the narration is not the box text");
+    assert.equal(asked, 1, "one stream: reopening reuses it");
     assert.deepEqual(await said(), [], "no voice: the voice is gone (Tony, Oct 5)");
     assert.equal(await page.$("#wish .wvoice"), null, "no voice button");
+    asked = 0;
   });
 
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
