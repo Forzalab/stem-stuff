@@ -46,7 +46,7 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
 - The hidden NOTE (design/CLUCK-NOTE.md; Tony, Oct 5: "must be json"): before Cluck speaks, on `/explain` and `/chat`, one non-streamed call
   reads the student and answers strict JSON (`NOTE_SCHEMA`: on_topic, field, concept, asked, need, assumed, real, reproduces, gap, evidence,
   confidence). `OPENROUTER_NOTE_MODELS`, default `deepseek/deepseek-v4.1-flash` with thinking off; ZDR + `require_parameters`, temperature 0,
-  6 s, the message fenced with a random marker. It never reaches the browser: Cluck's context turn gets it, and sentence 2 names the
+  6 s, the message wrapped in an XML tag with a random suffix (`<student_3fa9c1>`; spotlighting: a tag the student cannot guess, they cannot close). Cluck's chat call gets every student turn wrapped the same way. It never reaches the browser: Cluck's context turn gets it, and sentence 2 names the
   student's assumption (high: plainly; medium: "Looks like…"; low / no_signal: no claim). The server caps confidence at medium when the
   pick has no written SLIP. On `/chat` it is also the gate: `INJECT_RE` first (free), then `on_topic: false` or a 403 "Request blocked"
   from the key's OpenRouter guardrail → a canned confused-duck QUACK line (`CANNED`), no Cluck call, and the turn is spent. Any NOTE
