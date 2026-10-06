@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live scene mock</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<link rel="stylesheet" href="../../app.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<script src="../../vendor/math.min.js"></script>
+<script src="../../graph.js"></script>
+<!-- Live scenes (Tony, Oct 5): drag the figure or use the sliders. Plan: brain topics/cluck-visual-plan.md.
+     ?q=fx|spring        which question (both are original, Exam 2 style; no Inan text)
+     ?num=shapes|given|reveal   what numbers show while you drag: none / the given values / everything after "See reference solution"
+     ?at=both|question|explain  where the scene is live (the other place keeps a static figure) -->
+<style>
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-size: var(--t-md); line-height: var(--lh); }
+  .ls-bar { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); padding: var(--s3) var(--gut); border-bottom: var(--bw) solid var(--line); font-size: var(--t-xs); color: var(--muted); }
+  .ls-bar b { color: var(--ink); font-weight: 600; }
+  .ls-bar a { color: var(--c1); margin-left: var(--s1); }
+  .ls-bar a[aria-current] { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .ls-wrap { display: grid; gap: var(--s5); padding: var(--s5) var(--gut); max-width: 84rem; margin: 0 auto; }
+  @media (min-width: 900px) { .ls-wrap { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; } }
+  .ls-card { background: var(--qbox); border-radius: 12px; padding: var(--s5); }
+  .ls-card.ai { background: var(--ai-tint); color: var(--ai-text); --knock: rgb(34 28 22 / 0.85); --body: var(--ai-tint); --ramp: var(--ai-tint); }
+  .ls-lab { font-size: var(--t-xs); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 var(--s3); }
+  .ls-card.ai .ls-lab { color: var(--ai-muted); }
+  .ls-stem { margin: 0 0 var(--s3); }
+  .ls-opts { display: grid; gap: var(--s2); margin: var(--s4) 0; padding: 0; list-style: none; }
+  .ls-opts label { display: flex; gap: var(--s3); align-items: center; min-height: var(--btn); padding: 0 var(--s4); border: var(--bw) solid var(--line); border-radius: 10px; cursor: pointer; }
+  .ls-opts input { accent-color: var(--c1); width: 18px; height: 18px; }
+  .ls-opts label:has(input:checked) { border-color: var(--c1); }
+  .ls-btn { min-height: var(--btn); padding: 0 var(--s5); border-radius: 10px; border: 0; background: var(--c1); color: #04101f; font: inherit; font-weight: 600; cursor: pointer; }
+  .ls-btn.ghost { background: transparent; color: var(--c1); border: var(--bw) solid var(--line); min-height: 40px; padding: 0 var(--s4); font-size: var(--t-sm); }
+  .ls-card.ai .ls-btn.ghost { color: var(--ai-soft); border-color: var(--ai-rule); }
+  .ls-fb { margin: var(--s3) 0 0; font-weight: 600; }
+  .ls-fb.ok { color: var(--ok); } .ls-fb.bad { color: var(--bad); }
+  .ls-msg { display: grid; grid-template-columns: 32px 1fr; gap: 0 var(--s3); margin-bottom: var(--s4); }
+  .ls-av { width: 32px; height: 32px; border-radius: 50%; background: var(--ai-ct); display: grid; place-items: center; color: var(--ai); font-weight: 700; }
+  .ls-who { display: flex; gap: var(--s2); align-items: center; min-height: 32px; }
+  .ls-who b { color: var(--ai); } .ls-who small { font-size: 11px; padding: 1px 5px; border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); }
+  .ls-msg p { grid-column: 2; margin: 0; }
+  /* the live widget */
+  .live { margin: var(--s3) 0; }
+  .live .lv-stage { position: relative; margin: var(--s2) 0; }
+  .live .fig { margin: 0; touch-action: none; }
+  .live .layer { position: absolute; inset: 0; pointer-events: none; }
+  .live .layer .hdl { pointer-events: auto; }
+  .live-tag { display: flex; gap: var(--s3); align-items: center; min-height: 28px; font-size: var(--t-xs); color: var(--muted); }
+  .live-tag .wi { color: var(--mark); font-weight: 600; }
+  .live-tag .ls-btn.ghost { min-height: 32px; margin-left: auto; }
+  .hdl { position: absolute; z-index: 2; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; cursor: grab; touch-action: none;
+         display: grid; place-items: center; outline: none; }
+  .hdl::after { content: ""; width: 16px; height: 16px; border-radius: 50%; background: var(--mark); box-shadow: 0 0 0 3px rgb(255 216 74 / 0.25); }
+  .hdl:focus-visible::after { box-shadow: 0 0 0 var(--ring) var(--focus); }
+  .hdl.dragging { cursor: grabbing; }
+  .knobs { display: grid; gap: var(--s2) var(--s4); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: var(--s2); }
+  .knobs label { display: grid; gap: 2px; font-size: var(--t-xs); color: var(--muted); }
+  .knobs input { width: 100%; accent-color: var(--mark); min-height: 28px; }
+  .readout { margin-top: var(--s3); font-size: var(--t-sm); color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.5em; }
+  .readout b { color: var(--ink); font-weight: 600; }
+  .ls-card.ai .readout b { color: var(--ai-strong); }
+  .ls-note { font-size: var(--t-xs); color: var(--hint); margin: var(--s4) 0 0; }
+</style>
+</head>
+<body>
+<nav class="ls-bar" id="bar"></nav>
+<main class="ls-wrap">
+  <section class="ls-card" aria-labelledby="qlab">
+    <p class="ls-lab" id="qlab">Question</p>
+    <div id="q"></div>
+  </section>
+  <section class="ls-card ai ai-skin" id="ex" hidden aria-labelledby="exlab">
+    <p class="ls-lab" id="exlab">Explain</p>
+    <div id="exBody"></div>
+  </section>
+</main>
+<script>
+"use strict";
+const U = new URLSearchParams(location.search);
+const Q = U.get("q") === "spring" ? "spring" : "fx";
+const NUM = ["shapes", "given", "reveal"].includes(U.get("num")) ? U.get("num") : "shapes";
+const AT = ["both", "question", "explain"].includes(U.get("at")) ? U.get("at") : "both";
+const deg = Math.PI / 180, f1 = v => (Math.round(v * 10) / 10).toFixed(1), f2 = v => v.toPrecision(2);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), snap = (v, st) => Math.round(v / st) * st;
+
+/* ---------- templates: params -> graph blocks (only marks graph.js already draws) ---------- */
+const T = {
+  fx: {
+    p: { h1: 4, h2: -3, m: 1.5, v0: 4 },
+    knobs: [{ k: "h1", min: 0, max: 6, step: 0.5, label: "F at B", unit: "N" }, { k: "h2", min: -5, max: 0, step: 0.5, label: "F at D", unit: "N" }],
+    physics(p) { const Wp = 4 * p.h1, Wn = 1.5 * p.h2, W = Wp + Wn, K = 0.5 * p.m * p.v0 ** 2 + W; return { Wp, Wn, W, v: K > 0 ? Math.sqrt(2 * K / p.m) : 0 }; },
+    pts: p => [[0, p.h1], [3, p.h1], [5, 0], [6.5, p.h2], [8, 0]],
+    blocks(p, ghost) {
+      const P = this.pts(p), marks = [
+        { mark: "poly", pts: [[0, 0], P[0], P[1], P[2]], fill: true, color: "c1" },
+        { mark: "poly", pts: [P[2], P[3], P[4]], fill: true, color: "c3" }];
+      if (ghost) { const G = this.pts(ghost); for (let i = 0; i < 4; i++) marks.push({ mark: "seg", from: G[i], to: G[i + 1], dash: true, color: "muted" }); }
+      for (let i = 0; i < 4; i++) marks.push({ mark: "seg", from: P[i], to: P[i + 1], color: "c2" });
+      "ABCDE".split("").forEach((n, i) => marks.push({ mark: "point", at: P[i], label: n, anchor: i === 3 ? "s" : "n" }));
+      return [{ type: "graph", kind: "cartesian", alt: "Force against position: flat, then down to zero, then a dip below the axis and back to zero.",
+        x: { min: 0, max: 8, step: 1, label: "$x$ (m)" }, y: { min: -5, max: 6, step: 1, label: "$F_x$ (N)" }, grid: true, axes: true, marks }];
+    },
+    handles: p => [{ k: "h1", at: [3, p.h1], label: "F at B" }, { k: "h2", at: [6.5, p.h2], label: "F at D" }],
+    dragTo(h, w, p) { return { [h.k]: w[1] }; },
+    given: p => `<b>F at B</b> ${f1(p.h1)} N · <b>F at D</b> ${f1(p.h2)} N · <b>m</b> ${p.m} kg · <b>v at A</b> ${p.v0} m/s`,
+    reveal(p) { const r = this.physics(p); return `<b>W A→C</b> +${f1(r.Wp)} J · <b>W C→E</b> ${f1(r.Wn)} J · <b>W net</b> ${f1(r.W)} J · <b>v at E</b> ${f2(r.v)} m/s`; },
+    stem: `A 1.5 kg cart rolls along a frictionless track. The net force on it varies with position as shown. The cart moves at 4.0 m/s at Point A. Find its speed (in m/s) at Point E.`,
+    opts: ["6.1", "5.6", "3.9", "7.9", "6.6"], key: "5.6",
+    cluck: {
+      "6.1": "QUACK. You banked the area above the axis and walked out the door. Drag D up to the axis. Then back down. Which way does the cart's KE go while F points backward?",
+      "3.9": "QUACK. The cart had a life before Point A. Where did its 4.0 m/s go in your energy ledger?",
+      "7.9": "QUACK QUACK. You added two speeds. Speeds don't add. Energies do. Drag B and watch what grows: the area, or a speed?",
+      "6.6": "QUACK. Area below the axis counted as plus. Drag D down. Does the cart get pushed forward or held back there?",
+      "5.6": "QUACK. Right. Now drag D deeper. Find the dip that leaves the cart at exactly 4.0 m/s at E."
+    }
+  },
+  spring: {
+    p: { th: 35, k: 400, d: 0.6, m: 2, s: 0 },
+    knobs: [{ k: "s", min: 0, max: 1, step: 0.01, label: "Where the block is (start → lowest)", unit: "" },
+            { k: "th", min: 20, max: 45, step: 1, label: "Ramp angle θ", unit: "°" },
+            { k: "k", min: 200, max: 800, step: 20, label: "Spring constant k", unit: "N/m" },
+            { k: "d", min: 0.2, max: 1.0, step: 0.05, label: "Gap d", unit: "m" }],
+    givenKeys: ["th", "k", "d"],
+    physics(p) {
+      const F = p.m * 9.8 * Math.sin(p.th * deg), x = (F + Math.sqrt(F * F + 2 * p.k * F * p.d)) / p.k, tot = F * (p.d + x);
+      const D = p.s * (p.d + x), c = Math.max(0, D - p.d), Ug = F * (p.d + x - D), Us = 0.5 * p.k * c * c;
+      return { x, tot, D, c, Ug, Us, K: Math.max(0, tot - Ug - Us) };
+    },
+    S: 2.4, base: 6, stop: 0.3, L0: 1.7, bw: 0.8, bh: 0.6,
+    geo(p) {
+      const t = p.th * deg, u = [Math.cos(t), Math.sin(t)], n = [-Math.sin(t), Math.cos(t)], r = this.physics(p);
+      const free = this.stop + this.L0, f0 = free + p.d * this.S, f = f0 - r.D * this.S;
+      const at = (a, b) => [a * u[0] + b * n[0], a * u[1] + b * n[1]];
+      return { t, u, n, r, free, f0, f, at };
+    },
+    blocks(p, ghost) {
+      const g = this.geo(p), { at } = g, mid = this.bh / 2, marks = [
+        { mark: "incline", at: [0, 0], base: this.base, angle: p.th, label: "$\\theta$" },
+        { mark: "surface", from: at(this.stop, 0), to: at(this.stop, 0.9), side: "left" },
+        { mark: "spring", from: at(this.stop, mid), to: at(Math.min(this.stop + this.L0, g.f), mid), coils: 8, width: 0.25, label: "$k$", anchor: "nw" },
+        { mark: "body", shape: "box", at: at(g.f + this.bw / 2, mid), w: this.bw, h: this.bh, angle: p.th, color: "c2", fill: true }];
+      if (p.s < 0.02) marks.push({ mark: "arrow", from: at(g.free, mid + 0.75), to: at(g.f0, mid + 0.75), both: true, label: "$d$", anchor: "nw" });
+      else marks.push({ mark: "body", shape: "box", at: at(g.f0 + this.bw / 2, mid), w: this.bw, h: this.bh, angle: p.th, color: "muted" });
+      const r = g.r, top = Math.max(20, Math.ceil(r.tot * 1.15 / 10) * 10);
+      return [{ type: "graph", kind: "scene", alt: "Block on a frictionless ramp, a gap d above the free end of a spring fixed at the bottom.",
+                frame: [-0.6, -0.5, this.base + 0.4, this.base * Math.tan(45 * deg) + 0.3], marks },
+              { type: "graph", kind: "bars", alt: "Energy now: kinetic, gravitational, spring, and the total.", unit: "J", min: 0, max: top,
+                groups: [{ label: "energy now", bars: [{ label: "$K$", value: r.K, color: "c1" }, { label: "$U_g$", value: r.Ug, color: "c2" },
+                                                        { label: "$U_s$", value: r.Us, color: "c3" }, { label: "total", value: r.tot, color: "ink" }] }] }];
+    },
+    handles(p) { const g = this.geo(p); return [{ k: "s", at: g.at(g.f + this.bw / 2, this.bh / 2), label: "Block position" }]; },
+    dragTo(h, w, p) { const g = this.geo(p), along = w[0] * g.u[0] + w[1] * g.u[1] - this.bw / 2; return { s: (g.f0 - along) / ((p.d + g.r.x) * this.S) }; },
+    given: p => `<b>θ</b> ${p.th}° · <b>k</b> ${p.k} N/m · <b>d</b> ${f2(p.d)} m · <b>m</b> ${p.m} kg`,
+    reveal(p) { const r = this.physics(p); return `<b>x</b> ${(r.x * 100).toPrecision(2)} cm · <b>K</b> ${f1(r.K)} J · <b>U<sub>g</sub></b> ${f1(r.Ug)} J · <b>U<sub>s</sub></b> ${f1(r.Us)} J · <b>total</b> ${f1(r.tot)} J`; },
+    stem: `A 2.0 kg block starts from rest on a frictionless ramp tilted 35°. It slides a distance d = 0.60 m before it meets a spring (k = 400 N/m) that lies along the ramp. Find the largest compression of the spring (in cm).`,
+    opts: ["18", "2.8", "21", "14", "26"], key: "21",
+    cluck: {
+      "18": "QUACK. Gravity kept pulling during the squeeze. Drag the block into the spring. Does the orange U<sub>g</sub> bar stop shrinking when the spring starts?",
+      "2.8": "QUACK QUACK. That is where the spring force matches gravity. Drag the block there. Is it stopped, or still moving?",
+      "14": "QUACK. kx² in an energy slot. Spring energy is ½kx². Watch the pink bar grow as you drag.",
+      "26": "QUACK. Cosine pulled the block down the ramp. Drag θ toward 45°. Which part of mg points along the slope?",
+      "21": "QUACK. Right. Now drag the block halfway into the spring. Find where the blue K bar peaks."
+    }
+  }
+};
+
+/* ---------- the live widget: one graph block per element, handles over the figure, a slider row ---------- */
+function liveScene(host, tpl, orig, { what_if = false } = {}) {
+  const p = structuredClone(orig), wrap = document.createElement("div");
+  wrap.className = "live"; host.append(wrap);
+  const tag = document.createElement("div"); tag.className = "live-tag";
+  tag.innerHTML = `<span>Drag the dots, or use the sliders.</span><span class="wi" hidden>What-if: not the question's numbers</span><button class="ls-btn ghost" type="button" hidden>Reset</button>`;
+  /* graph.js rewrites a figure's innerHTML on every render, so the handles live in a sibling layer and are made once */
+  const figs = tpl.blocks(p).map(() => { const st = document.createElement("div"), f = document.createElement("div"); st.className = "lv-stage"; f.className = "fig"; f.setAttribute("role", "img"); st.append(f); wrap.append(st); return f; });
+  const layer = document.createElement("div"); layer.className = "layer"; figs[0].parentNode.append(layer);
+  const hdls = {};
+  wrap.prepend(tag);
+  const knobs = document.createElement("div"); knobs.className = "knobs"; wrap.append(knobs);
+  const out = document.createElement("div"); out.className = "readout"; out.setAttribute("aria-live", "polite"); wrap.append(out);
+  const inputs = {};
+  const shows = k => NUM !== "shapes" && (!tpl.givenKeys || tpl.givenKeys.includes(k));
+  for (const kn of tpl.knobs) {
+    const l = document.createElement("label"), i = document.createElement("input");
+    Object.assign(i, { type: "range", min: kn.min, max: kn.max, step: kn.step, value: p[kn.k] });
+    i.addEventListener("input", () => set({ [kn.k]: +i.value }));
+    l.append(document.createElement("span"), i); knobs.append(l); inputs[kn.k] = { i, kn, txt: l.firstChild };
+  }
+  let raf = 0, revealed = false;
+  const changed = () => what_if && tpl.knobs.some(kn => kn.k !== "s" && Math.abs(p[kn.k] - orig[kn.k]) > 1e-9);
+  function draw() {
+    raf = 0;
+    tpl.blocks(p, changed() ? orig : null).forEach((b, i) => { figs[i]._g = null; figs[i].setAttribute("aria-label", b.alt); Graph.render(figs[i], b); });
+    const k = figs[0]._k;
+    for (const h of tpl.handles(p)) {
+      const kn = inputs[h.k].kn, d = hdls[h.k] ||= makeHandle(h, kn), [x, y] = k.X(h.at);
+      d.setAttribute("aria-valuenow", p[h.k]); if (!shows(h.k)) d.setAttribute("aria-valuetext", "moved");
+      d.style.left = x + "px"; d.style.top = y + "px";
+    }
+    for (const key in inputs) { const { i, kn, txt } = inputs[key]; i.value = p[key];
+      txt.textContent = kn.label + (shows(key) && kn.unit !== "" ? `: ${+(+p[key]).toFixed(2)} ${kn.unit}` : ""); }
+    out.innerHTML = NUM === "shapes" ? "" : tpl.given(p) + (NUM === "reveal" && revealed ? "<br>" + tpl.reveal(p) : "");
+    tag.querySelector(".wi").hidden = tag.querySelector("button").hidden = !changed();
+  }
+  function makeHandle(h, kn) {
+    const d = document.createElement("div");
+    d.className = "hdl"; d.tabIndex = 0; d.setAttribute("role", "slider"); d.setAttribute("aria-label", h.label);
+    d.setAttribute("aria-valuemin", kn.min); d.setAttribute("aria-valuemax", kn.max);
+    d.addEventListener("pointerdown", e => { d.setPointerCapture(e.pointerId); d.classList.add("dragging"); e.preventDefault(); });
+    d.addEventListener("pointermove", e => { if (!d.hasPointerCapture(e.pointerId)) return; const r = figs[0].getBoundingClientRect(), w = screenToWorld(figs[0]._k)([e.clientX - r.left, e.clientY - r.top]); set(tpl.dragTo(h, w, p)); });
+    d.addEventListener("pointerup", () => d.classList.remove("dragging"));
+    d.addEventListener("keydown", e => { const st = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key]; if (!st) return; e.preventDefault(); set({ [h.k]: p[h.k] + st * kn.step }); });
+    layer.append(d); return d;
+  }
+  function set(patch) {
+    for (const k in patch) { const kn = inputs[k].kn; p[k] = clamp(snap(patch[k], kn.step), kn.min, kn.max); }
+    if (!raf) raf = requestAnimationFrame(draw);
+  }
+  tag.querySelector("button").addEventListener("click", () => set(structuredClone(orig)));
+  new ResizeObserver(() => { if (!raf) raf = requestAnimationFrame(draw); }).observe(wrap);
+  draw();
+  return { reveal() { revealed = true; draw(); } };
+}
+/* graph.js maps world -> pixels with an axis-aligned affine map; invert it from two probe points */
+function screenToWorld(k) {
+  const a = k.X([0, 0]), b = k.X([1, 1]);
+  return ([px, py]) => [(px - a[0]) / (b[0] - a[0]), (py - a[1]) / (b[1] - a[1])];
+}
+function staticScene(host, tpl) {
+  tpl.blocks(tpl.p).forEach(b => { const f = document.createElement("div"); f.className = "fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", b.alt); host.append(f); Graph.render(f, b); });
+}
+
+/* ---------- page ---------- */
+const tpl = T[Q];
+function link(key, val, cur) { const u = new URLSearchParams(location.search); u.set(key, val); return `<a href="?${u}"${val === cur ? ' aria-current="true"' : ""}>${val}</a>`; }
+document.getElementById("bar").innerHTML =
+  `<span><b>Question</b>${["fx", "spring"].map(v => link("q", v, Q)).join("")}</span>` +
+  `<span><b>Numbers</b>${["shapes", "given", "reveal"].map(v => link("num", v, NUM)).join("")}</span>` +
+  `<span><b>Live in</b>${["both", "question", "explain"].map(v => link("at", v, AT)).join("")}</span>`;
+
+const q = document.getElementById("q");
+q.innerHTML = `<p class="ls-stem">${tpl.stem}</p><div id="qfig"></div>
+  <ul class="ls-opts">${tpl.opts.map((o, i) => `<li><label><input type="radio" name="o" value="${o}"> (${"ABCDE"[i]}) ${o}</label></li>`).join("")}</ul>
+  <button class="ls-btn" id="check" type="button">Check</button><p class="ls-fb" id="fb" role="status"></p>`;
+if (AT !== "explain") liveScene(document.getElementById("qfig"), tpl, tpl.p, { what_if: true }); else staticScene(document.getElementById("qfig"), tpl);
+
+let exLive = null;
+document.getElementById("check").addEventListener("click", () => {
+  const pick = q.querySelector("input:checked")?.value, fb = document.getElementById("fb");
+  if (!pick) { fb.textContent = "Pick one first."; fb.className = "ls-fb"; return; }
+  fb.textContent = pick === tpl.key ? "Correct." : "Not quite."; fb.className = "ls-fb " + (pick === tpl.key ? "ok" : "bad");
+  const ex = document.getElementById("ex"), body = document.getElementById("exBody"); ex.hidden = false;
+  body.innerHTML = `<div class="ls-msg"><span class="ls-av" aria-hidden="true">C</span><div class="ls-who"><b>Cluck</b><small>TUTOR</small></div><p>${tpl.cluck[pick]}</p></div><div id="exfig"></div>` +
+    (NUM === "reveal" ? `<button class="ls-btn ghost" id="ref" type="button">See reference solution</button>` : "") +
+    `<p class="ls-note">Numbers mode: ${NUM}. ${NUM === "shapes" ? "Bars, arrows and areas move. No values." : NUM === "given" ? "Given values update as you drag. The unknown never shows." : "Given values now; the unknown and the energies after the reference solution opens."}</p>`;
+  exLive = null;
+  if (AT !== "question") exLive = liveScene(document.getElementById("exfig"), tpl, tpl.p); else staticScene(document.getElementById("exfig"), tpl);
+  document.getElementById("ref")?.addEventListener("click", e => { exLive?.reveal(); e.target.remove(); });
+});
+</script>
+</body>
+</html>

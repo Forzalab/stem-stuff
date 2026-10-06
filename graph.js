@@ -293,7 +293,7 @@
     const pad = { l: PAD, r: PAD, t: PAD, b: PAD };
     for (let pass = 0; pass < 3; pass++) {
       const W = el.clientWidth, labels = [];
-      const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html }) };
+      const k = el._k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html }) };
       const { svg, H } = build(W, pad, k);
       el.style.height = H + "px";
       el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false">${svg}</svg>`;
@@ -325,7 +325,8 @@
   function scene(g) {
     const marks = g.marks;
     return (W, pad, k) => {
-      const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
+      /* a live scene passes a fixed `frame` [x0, y0, x1, y1], so dragging never rescales the picture */
+      const pts = g.frame ? [g.frame.slice(0, 2), g.frame.slice(2)] : marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
       const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
       /* scenes are capped (320px tall, 560px wide) and centred, so a diagram never outweighs the text on desktop */
