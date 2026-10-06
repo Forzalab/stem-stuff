@@ -40,10 +40,13 @@ writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 1, groups: 
   rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }] }));
 P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Two rows." }, { type: "text", md: "Tap a row to tick it." }],
   choices: [row("a", "first"), row("b", "second")], correct: ["a"], miss: "QUACK. Missing one.",
-  saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", split: [
+  saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", part: ["WE_THM"], split: [
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
+/* clutter C14: every title shares "Term: ", so the list shows one header over the rows, in any shuffle */
+const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
+writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
 let asked = 0;
@@ -89,6 +92,7 @@ try {
   await page.goto(BASE + "/");
 
   await step("sugar start page: the players warm up off screen (no question yet); no YouTube controls, no keyboard", async () => {
+    assert.equal(await page.getAttribute("#code", "placeholder"), "e.g. CALC1_E01", "the start title says what to do; the box shows a code (clutter C16)");
     await page.waitForSelector("#rot.parked", { state: "attached", timeout: 6000 });
     assert.equal(await page.$eval("#rot", e => e.inert && e.getAttribute("aria-hidden")), "true");
     const s = await page.$eval("#rot iframe", f => f.src);
@@ -105,14 +109,18 @@ try {
     assert.equal((await page.textContent("#blocks .tip")).trim(), P.all.saccharine.tip);
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
-    assert.match(await page.textContent("#how"), /Tap all true ones, then Check\. None\? Just tap Check\./);
+    await page.reload(); await opened(page, "CALC1_E01");                 // the bank opens a random first question: E01 first this visit
+    assert.equal((await page.textContent("#how")).trim(), "Tick every true one.");   // short, first choose-all only (clutter C6)
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: the formula card (stepper) in order of use; the brainrot corner with the 2 muted players", async () => {
-    assert.deepEqual(await page.$$eval("#fcard .st .n", n => n.map(x => x.textContent.trim())), ["1", "2"]);
-    assert.equal(await page.$$eval("#fcard .then", t => t.length), 1);
-    assert.match(await page.textContent("#fcard .st .g"), /Work and Energy/);
+  await step("sugar: Key formulas, in order of use; the brainrot corner with the 2 muted players", async () => {
+    assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
+      return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
+        n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
+        frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
+        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
+      { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(122, 184, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
     assert.equal(srcs.length, 2);
@@ -173,6 +181,12 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E04B"; }); await opened(page, "CALC1_E04B");
     await page.evaluate(() => { window.__said = []; });
     assert.deepEqual(await rows(page), ["True", "False"]);
+    assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
+      return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
+        n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
+        frame: cs.borderTopColor + " " + cs.borderTopWidth, tinted: cs.backgroundColor !== getComputedStyle(document.body).backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)",
+        tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),
+      { role: "note", label: "Key formulas", notch: "Key formulas", onBorder: true, n: 1, arrows: 0, centred: true, frame: "rgb(122, 184, 255) 1px", tinted: true, tex: true, old: false }, "one formula: the same box, no arrow");
     assert.match(await page.textContent("#blocks"), /True or false: second\./);
     assert.ok(!/Tap a row/.test(await page.textContent("#blocks")), "the parent's tick instructions");
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
@@ -225,6 +239,8 @@ try {
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
+    assert.equal(await page.$("#how"), null, "the tick line is for the first choose-all only (clutter C6)");
+    assert.equal(await page.$eval(".choices", g => g.getAttribute("aria-label")), "Choices");
     assert.equal(await page.isHidden("#wish"), true, "the wish block left with the old question");
     await page.click('.opt[data-id="b"]'); await page.click("#mcGo");                       // wrong
     await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
@@ -340,6 +356,29 @@ try {
     assert.deepEqual(yt, [], "a request went to YouTube");
     await c.close();
   }
+  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one header for a shared title prefix", async () => {
+    await typeCode(page, "CALC1_E01"); await opened(page, "CALC1_E01");
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).paddingTop), "0px", "C13: no top offset over a question");
+    const ff = await page.evaluate(() => getComputedStyle(document.querySelector("#scratch"), "::placeholder").fontFamily);
+    assert.match(ff, /^"?Atkinson Hyperlegible"?,/, `C9: placeholder font ${ff}`);
+    assert.equal(await page.getAttribute("#scratch", "placeholder"), "Paste GPT answer here, but me be sad...", "C9: the joke stays");
+    assert.equal(await page.locator("#cut").count(), 0, "C10: no Cut all");
+    assert.ok(await page.locator("#copy").isHidden(), "C10: Copy on an empty pad");
+    const type = v => page.evaluate(v => { const t = document.querySelector("#scratch"); t.value = v; t.dispatchEvent(new Event("input")); return document.querySelector("#copy").hidden; }, v);
+    assert.equal(await type("x"), false, "C10: Copy with text");   // the sugar page covers the pad (Cluck's column), so no fill()
+    assert.equal(await type(""), true, "C10: Copy after the pad is emptied");
+    await typeCode(page, "BANK_TRM");
+    await page.waitForFunction(() => /^CALC1_TR/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    if (await page.isHidden("#qlist")) await page.click("#qlistBtn");
+    const l = await page.evaluate(() => ({ heads: [...document.querySelectorAll("#qlist .qh")].map(h => h.textContent),
+      rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
+      w: document.querySelector("#qlist").getBoundingClientRect().width, hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+    assert.deepEqual(l.heads, ["Term"], "C14: one header");
+    assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
+    assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);
+    assert.ok(l.w <= 44 * 16 + 0.5, `C14: list ${l.w}px wide`);
+    await page.click("#qlistBtn");
+  });
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
   await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));

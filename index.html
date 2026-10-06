@@ -98,7 +98,6 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
     <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-paste" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="8.5" y="2.5" width="7" height="4" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 12h7M8.5 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="12.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.6 7.5L20 18M8.6 16.5L20 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -136,7 +135,7 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
       </button>
       <div class="code-box">
         <!-- no name: the browser's own form history stays out; app.js shows its own suggestions (suggest.mjs: banks first) -->
-        <input id="code" type="text" aria-label="Type code here" aria-describedby="entryMsg" placeholder="Type code here"
+        <input id="code" type="text" aria-label="Type code here" aria-describedby="entryMsg" placeholder="e.g. CALC1_E01"
           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="codeSug" autocomplete="off"
           maxlength="24" spellcheck="false" autocapitalize="characters" autocorrect="off" enterkeyhint="go">
         <ul class="code-sug" id="codeSug" role="listbox" aria-label="Matching codes" hidden></ul>
@@ -200,15 +199,12 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
       <div class="xb-label" id="xbLabel"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span id="xbName">Notes</span><span class="xb-save" id="xbSave" role="status"></span>
       </div>   <!-- not a <label>: tapping it must not refocus the box (it kept the keyboard up) -->
       <!-- the textarea (#scratch) is (re)created per problem, before the button, so edit history starts fresh.
-           Copy sits inside the box's bottom-right corner; ExplainBox.reserveCorner keeps text out from under it. -->
+           Copy sits inside the box's bottom-right corner, shown only when the box has text (C10); ExplainBox.reserveCorner keeps text out from under it. -->
       <div class="xb-field" id="xbField">
-        <button type="button" class="btn xb-cut" id="cut" aria-label="Copy for Tony, then clear notes" title="Copy for Tony, then clear notes">
-          <svg class="ico" aria-hidden="true"><use href="#i-cut"/></svg>
-        </button>
-        <button type="button" class="btn xb-copy" id="copy" aria-label="Copy my work for Tony" title="Copy my work for Tony">
+        <button type="button" class="btn xb-copy" id="copy" aria-label="Copy my work for Tony" title="Copy my work for Tony" hidden>
           <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>
         </button>
-        <!-- the pad page's tool row (round 3d, variant 3): the q | a switch at the left, collapse left of Cut. Both belong to the pad, so they
+        <!-- the pad page's tool row (round 3d, variant 3): the q | a switch at the left, collapse left of Copy. Both belong to the pad, so they
              live in its box, in thumb reach. q = the problem in the tile, a = the answer (KaTeX math italic letters, STYLE.md §2.2) -->
         <button type="button" class="btn btn-tgl mt-mode" id="mtMode" data-pane="problem" aria-label="Show answer" hidden>
           <span class="qa-l t-doc" aria-hidden="true">q</span><span class="qa-l t-pen" aria-hidden="true">a</span>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formula box: Use</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../../app.css">
+<link rel="stylesheet" href="../../vendor/katex/katex.min.css">
+<script src="../../vendor/katex/katex.min.js"></script>
+<style>
+/* Tony, Oct 5 ~12:0x: the formula box should be "***Use:***" then the formulas, centred, in the site's blue (not Cluck's amber).
+   ?v=1|2|3, &clean hides the switcher.
+   Round 2 (Tony ~12:1x: "ordered card, BUT 3 more variants... NOT a textbox, more a textbook recap block"; refs: a Material outlined
+   field, a textbook definition box, a textbook spread). ?v=4|5|6 &c=blue|orange. Read off the refs:
+   - the Material field's notch: the label cut into the top border names the frame. Alone it reads as an INPUT (that ref is one), so
+     the recap versions drop every field cue (no caret, no field padding, no hover) and add a tint or a heavier rule.
+   - the textbook definition box: a flat tint, no outline, a heading in another style (bold italic) = "key result, read me".
+   - the spread's side boxes: small, colour-coded, next to what they explain.
+   4 notched outline · 5 tint + notched top rule · 6 tint + a tab straddling the top-left edge. All: bulb + "Key formulas",
+   formulas centred, a thin arrow between (Tony's v3 pick), role="note". */ Each variant: a one-formula card and a three-formula card under a question.
+   app.css tokens only (STYLE.md §2): radii 6 / 8 / 10, 1px dividers, weights 400 / 700. The dashed strip is mock chrome. */
+body { padding: 0 !important; }
+.mbar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; padding: var(--s2) var(--gut); border-bottom: 1px dashed var(--line); background: var(--field); color: var(--muted); font-size: var(--t-xs); }
+.mbar a { color: var(--muted); padding: var(--s1) var(--s3); border-radius: 6px; text-decoration: none; } .mbar a.on { background: var(--raised); color: var(--ink); }
+.clean .mbar { display: none; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s6); max-width: calc(var(--col) * 1.7); margin: 0 auto; padding: var(--s5) var(--gut) var(--s7); }
+@media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.lbl { position: static; display: block; margin: 0 0 var(--s2); background: none; color: var(--muted); font-size: var(--t-xs); font-weight: 700; }
+.qb { padding: var(--s4) var(--s5); border-radius: 10px; background: var(--qbox); line-height: var(--lh); }
+.qb p { margin: 0; }
+.rows { display: grid; gap: var(--s2); margin-top: var(--s3); }
+.row { display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s3); border: var(--bw) solid var(--line); border-radius: 8px; background: var(--sheet); }
+.row .bx { width: 22px; height: 22px; border: var(--bw) solid var(--edge); border-radius: 4px; }
+.chkr { display: flex; justify-content: flex-end; margin-top: var(--s2); }
+.go { display: grid; place-items: center; width: var(--btn); height: var(--btn); border-radius: 8px; background: var(--c1); color: var(--field); font-size: 22px; font-weight: 700; }
+
+/* the formula box: "Use:" + the formulas, centred, one per line, in the order they get used */
+.use { margin-top: var(--s3); }
+.use .lab { margin: 0; font-size: var(--t-sm); font-weight: 700; font-style: italic; color: var(--ink); line-height: 1.4; }
+.use ol { list-style: none; margin: 0; padding: 0; display: grid; justify-items: center; }
+.use li { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }
+.use li .katex { white-space: nowrap; }
+
+/* 1 · Card: the site's surface (--sheet), the label top-left, the formulas centred under it */
+.v1 .use { padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
+.v1 .use ol { gap: var(--s2); margin-top: var(--s2); }
+
+/* 2 · Label + well: the label sits on the page, the formulas in a recessed blue well (--field) with a 1px --line edge */
+.v2 .use ol { gap: var(--s2); margin-top: var(--s2); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+
+/* round 2: the accent per colour, a 10% tint of it over the page */
+.c-blue { --acc: var(--c1); --tint: color-mix(in srgb, var(--c1) 10%, var(--paper)); }
+.c-orange { --acc: #ff9a3c; --tint: color-mix(in srgb, #ff9a3c 10%, var(--paper)); }
+.rc { position: relative; margin-top: var(--s5); }
+.rc .lab { display: inline-flex; align-items: center; gap: var(--s2); font-style: normal; font-size: var(--t-sm); font-weight: 700; color: var(--acc); }
+.rc .lab svg { width: 1.125rem; height: 1.125rem; flex: none; }
+.rc ol { margin-top: var(--s2); }
+.rc li.to { color: var(--acc); opacity: .7; font-size: var(--t-sm); line-height: 1; padding: var(--s1) 0; }
+.rc li.to svg { display: block; width: 16px; height: 16px; }
+/* the notch: the label sits on the top line, its own background breaks the line (Material's outlined field) */
+.rc .notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); padding: 0 var(--s2); background: var(--paper); }
+/* 4 · Notched outline: a 1px accent frame, no fill */
+.v4 .rc { padding: var(--s4) var(--s4) var(--s4); border: 1px solid var(--acc); border-radius: 10px; }
+/* 5 · Tint + notched top rule: ref 2's flat tint, one accent rule on top, the label notched into it */
+.v5 .rc { padding: var(--s4) var(--s4) var(--s4); border-top: 1px solid var(--acc); border-radius: 0 0 10px 10px; background: var(--tint); }
+.v5 .rc .notch { background: linear-gradient(var(--paper) 50%, var(--tint) 50%); }   /* page above the rule, tint below: the line breaks clean */
+/* 7 · Tony's pick (Oct 5 ~12:3x, "hybrid of 4 and 5"): 4's full outline + 5's tint, the label notched into the top border. Built in app.css .fcard */
+.v7 .rc { padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--acc); border-radius: 10px; background: var(--tint); }
+.v7 .rc .notch { background: linear-gradient(var(--paper) 50%, var(--tint) 50%); }
+/* 6 · Tint + tab: no outline, the label in a solid tab that straddles the top-left edge */
+.v6 .rc { padding: var(--s5) var(--s4) var(--s4); border-radius: 10px; background: var(--tint); }
+.v6 .rc .notch { left: var(--s4); padding: var(--s1) var(--s3); border-radius: 6px; background: var(--acc); }
+.v6 .rc .notch .lab { color: var(--field); }
+/* 3 · Ordered card: like 1, a thin arrow between formulas keeps the order without numbers; the label shares a row with the first formula's band */
+.v3 .use { padding: var(--s3) var(--s4) var(--s4); border-radius: 10px; background: var(--sheet); }
+.v3 .use ol { margin-top: var(--s2); }
+.v3 .use li.to { color: var(--edge); font-size: var(--t-sm); line-height: 1; padding: var(--s1) 0; }
+.v3 .use li.to svg { display: block; width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<nav class="mbar" id="mbar"><b>Formula box</b><a href="?v=1">1 · Card</a><a href="?v=2">2 · Label + well</a><a href="?v=3">3 · Ordered card</a>
+  <a href="?v=4&c=blue">4 · Notch</a><a href="?v=5&c=blue">5 · Tint + notch</a><a href="?v=6&c=blue">6 · Tint + tab</a><a href="?v=7&c=blue">7 · Pick: 4 + 5</a><a href="?v=4&c=orange">4 orange</a><a href="?v=5&c=orange">5 orange</a><a href="?v=6&c=orange">6 orange</a></nav>
+<div class="grid" id="grid"></div>
+<script>
+const q = new URLSearchParams(location.search), v = ["1", "2", "3", "4", "5", "6", "7"].includes(q.get("v")) ? q.get("v") : "1", c = q.get("c") === "orange" ? "orange" : "blue";
+if (q.has("clean")) document.documentElement.classList.add("clean");
+document.querySelector(v > "3" ? `#mbar a[href="?v=${v}&c=${c}"]` : `#mbar a[href="?v=${v}"]`)?.classList.add("on");
+const BULB = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 17.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v1.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const K = t => katex.renderToString(t, { throwOnError: false });
+const ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const list = fs => `<ol>${fs.map((f, i) => (i && v >= "3" ? `<li class="to" aria-hidden="true">${ARROW}</li>` : "") + `<li>${K(f)}</li>`).join("")}</ol>`;
+const box = fs => v >= "4"
+  ? `<section class="use rc" role="note" aria-label="Key formulas${fs.length > 1 ? ", in order" : ""}"><span class="notch"><span class="lab">${BULB}Key formulas</span></span>${list(fs)}</section>`
+  : `<section class="use" aria-label="${fs.length > 1 ? "Formulas, in order" : "Formula"}"><p class="lab">Use:</p>${list(fs)}</section>`;
+const card = (title, text, fs) => `<div><span class="lbl">${title}</span><div class="qb"><p>${text}</p></div>
+  <div class="rows">${["1.0 m/s", "2.0 m/s", "3.0 m/s"].map(t => `<div class="row"><span class="bx"></span>${t}</div>`).join("")}</div>
+  <div class="chkr"><span class="go">→</span></div>${box(fs)}</div>`;
+document.getElementById("grid").className = "grid v" + v + " c-" + c;
+document.getElementById("grid").innerHTML =
+  card("One formula", "A 2.0 kg cart rolls at 3.0 m/s. It hits a 1.0 kg cart at rest and they stick together. How fast do they move after?", ["m_1 v_1 = (m_1 + m_2)\\,v_f"]) +
+  card("Three formulas, in order", "A 0.50 kg ball falls 2.0 m onto a spring and stops. How far does the spring compress?", ["K_i + U_i = K_f + U_f", "U_g = mgh", "U_s = \\tfrac12 k x^2"]);
+</script>
+</body>
+</html>
