@@ -45,6 +45,39 @@ class BuildPublic(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.out, f)), f)
 
 
+class Stamp(unittest.TestCase):
+    """version.json (tools/ship.sh) → a sw.js of its own per deploy + the badge's meta; none → both stay "dev" (design/DEPLOY.md)"""
+    def dir(self, version=None):
+        d = tempfile.mkdtemp(prefix="stem-stamp-")
+        for f in ("sw.js", "index.html"):
+            with open(os.path.join(ROOT, f)) as a, open(os.path.join(d, f), "w") as b:
+                b.write(a.read())
+        if version is not None:
+            with open(os.path.join(d, "version.json"), "w") as f:
+                f.write(version)
+        return d
+
+    def read(self, d, f):
+        with open(os.path.join(d, f)) as h:
+            return h.read()
+
+    def test_stamped(self):
+        d = self.dir('{"pr":"#83+1","sha":"abc1234","built":"2026-10-06T17:00:00Z"}')
+        self.assertEqual(build_public.stamp(d), "#83+1")
+        self.assertIn('const VERSION = "stem-83+1-abc1234";', self.read(d, "sw.js"))
+        self.assertIn('<meta name="stem-build" content="#83+1" data-sha="abc1234" data-built="2026-10-06T17:00:00Z">', self.read(d, "index.html"))
+
+    def test_unstamped_stays_dev(self):
+        d = self.dir()
+        self.assertIsNone(build_public.stamp(d))
+        self.assertIn('<meta name="stem-build" content="dev">', self.read(d, "index.html"))
+
+    def test_no_markup_from_version_json(self):
+        d = self.dir('{"pr":"\\"><script>x</script>","sha":"a b","built":"1"}')
+        build_public.stamp(d)
+        self.assertNotIn("<script>x", self.read(d, "index.html"))
+
+
 class Wsgi(unittest.TestCase):
     def test_problem_has_no_answer_and_sets_cookie(self):
         status, head, p = call("GET", "/p/PHYS_F3N.json")

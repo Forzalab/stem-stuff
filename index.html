@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#08111f">
 <meta name="color-scheme" content="dark">
+<meta name="stem-build" content="dev"><!-- tools/build_public.py stamps the deploy's PR here (tools/version.sh); the corner badge #ver shows it -->
 <title>STEM drill</title>
 <!-- Loading splash (design/SPLASH.md): markup, this CSS and the script after it are inline so it paints before any file loads.
      No text. Colors are the app.css dark tokens (--paper --sheet --c1 --ink), copied here because app.css is not loaded yet. -->
@@ -228,5 +229,6 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
 <button type="button" class="pad-fab" id="padFab" aria-controls="work" aria-expanded="false" hidden><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Open notes</span></button>
 <div id="toast" role="status" aria-live="polite"></div>
 <p class="sr-only" id="sr" aria-live="polite"></p>
+<small id="ver" aria-hidden="true"></small>
 </body>
 </html>

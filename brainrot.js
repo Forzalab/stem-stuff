@@ -58,14 +58,15 @@
     return (slowV = m !== null ? m : store("stem-slow") === "1");
   }
   const off = () => !!sess("stem-rot-off") || slow();                   // ✕ for this session, or a slow link
-  const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
+  const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
-  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
-  let sheetOn = false, autoFold = false;                                 // Cluck's sheet open (desktop): the players fold until it shuts or the header asks (Tony, Oct 5)
+  /* shown by default, muted, playing; only you fold it (Tony, Oct 6: "must mute autoplay and shown by default, u can hide later").
+     Gone: the fold while Cluck's sheet is open (Oct 5) and the fold under reduced motion, which made "Show" a dead click */
   const width = () => (desk() ? 320 : 176);
   function build() {
     el = document.createElement("div");
@@ -82,7 +83,6 @@
     el.addEventListener("click", e => {
       const b = e.target.closest("[data-act]");
       if (!b) { el.classList.add("show"); clearTimeout(showT); showT = setTimeout(() => el.classList.remove("show"), 3000); return; }
-      autoFold = false;
       if (b.dataset.act === "min") { stashed = userMin = true; place(); }
       else if (b.dataset.act === "open") { stashed = userMin = false; if (!docked()) picked = true; place(true); }   // asked for: shown even if every corner is busy
       else if (b.dataset.act === "x") { sess("stem-rot-off", "1"); sync(); }
@@ -139,8 +139,8 @@
     else if (!dock && el.parentElement !== document.body) document.body.append(el);
     const was = el.classList.contains("docked");
     el.classList.toggle("docked", dock);
-    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin || autoFold || RM.matches; }
-    else if (was) stashed = userMin || innerHeight < 700 || RM.matches;   // back to the floating corner's own rule
+    if (dock) { Object.assign(el.style, { left: "", right: "", top: "", bottom: "", transform: "" }); stashed = userMin; }
+    else if (was) stashed = userMin || innerHeight < 700;   // back to the floating corner's own rule (a short window: it would cover the page)
   }
   function place(animate) {
     if (!el) return;
@@ -190,12 +190,8 @@
   }
   const idle = window.requestIdleCallback || (f => setTimeout(f, 1200));
   addEventListener("load", () => idle(warmUp, { timeout: 3000 }));
-  /* app.js clPlace(): the sheet only gets 177 px under the players at 1366x768, so it takes their room while open */
-  function sheet(open) {
-    if (open !== sheetOn) autoFold = open;
-    sheetOn = open;
-    if (on) place(false);
-  }
+  /* app.js clPlace(): Cluck's sheet opened or shut; the players stay, the sheet takes the room under them (app.css #work.cl-on) */
+  function sheet() { if (on) place(false); }
   window.stemBrainrot = { sync, warmUp, sheet, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
   document.addEventListener("focusin", () => setTimeout(sync, 0));

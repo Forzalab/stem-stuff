@@ -114,12 +114,29 @@
   api.ready = Promise.all([restore().catch(() => false), doneLoaded]).then(([r]) => r);
   addEventListener("pageshow", e => { if (e.persisted && !local.size) api.ready = restore().catch(() => false); });
 
-  if (CAN_SW) navigator.serviceWorker.register("sw.js").catch(() => { api.mode = "online"; });
+  /* updateViaCache none: the browser always asks the server for sw.js. Each deploy has its own sw.js (tools/build_public.py
+     stamps VERSION), so a deploy = a new worker that installs the whole new shell, then takes over this page. */
+  const reg = CAN_SW ? navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => { api.mode = "online"; }) : null;
 
-  /* New version: sw.js says a shell file changed (or a new sw.js took over this page). One bar that stays until you tap
-     it, because the page you see is one deploy behind until it reloads. Tap = reload. */
+  /* corner badge: which deploy this page runs (the PR, tools/version.sh). Quiet chrome, bottom right (app.css #ver) */
+  const showVer = () => {
+    const m = document.querySelector('meta[name="stem-build"]'), v = document.getElementById("ver");
+    if (!m || !v) return;
+    v.dataset.v = m.content;                            // drawn by CSS (#ver::after): not page text, never in a copy or a text check
+    v.title = [m.content, m.dataset.sha, m.dataset.built].filter(Boolean).join(" · ");
+  };
+  if (document.readyState === "loading") addEventListener("DOMContentLoaded", showVer, { once: true }); else showVer();
+
+  /* New version (Tony, Oct 6: "auto unless busy"): a new sw.js took over this page → reload by itself if you haven't typed or
+     tapped since the page loaded or since you came back to the tab; else the bar, so a reload never eats an answer. The bar
+     also comes when serve.py (dev, no stamp) changes a shell file under the same sw.js. */
   if (CAN_SW) {
     const had = !!navigator.serviceWorker.controller;   // the first install also changes controller: not an update
+    let busy = false;
+    for (const t of ["pointerdown", "keydown"]) addEventListener(t, () => { busy = true; }, { capture: true, passive: true });
+    const check = () => { if (reg) reg.then(r => r && r.update()).catch(() => {}); };
+    addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { busy = false; check(); } });
+    setInterval(() => { if (document.visibilityState === "visible") check(); }, 15 * 60 * 1000);
     const bar = () => {
       if (document.getElementById("updateBar")) return;
       const b = document.createElement("button");
@@ -130,7 +147,7 @@
     };
     const show = () => document.body ? bar() : addEventListener("DOMContentLoaded", bar, { once: true });
     navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "stem-update") show(); });
-    navigator.serviceWorker.addEventListener("controllerchange", () => { if (had) show(); });
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!had) return; if (busy) show(); else location.reload(); });
     navigator.serviceWorker.startMessages();
   }
 

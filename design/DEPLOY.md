@@ -31,6 +31,27 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 - `--no-brain` / `SHIP_NO_BRAIN=1` skips the brain. `--print-banks` prints the chosen file per bank and stops (no worktree, no Vercel).
 - Banks still never go to GitHub: ship.sh only copies them into the temp worktree that is uploaded to Vercel.
 
+## Versions and instant updates (Oct 6)
+- Bug (Tony, Oct 6): open pages climbed one deploy per reload (v1 → v2 → v3) instead of jumping to the latest. Cause: sw.js serves the
+  shell cache-first and refreshed it in the background, so a reload showed what the reload before it fetched; `VERSION` was hand-bumped,
+  so sw.js never changed between deploys and no new worker ever installed; the "new version" message fired before the new file was stored.
+- Version = the newest merged PR on main's first-parent line (`#83`; `#83+1` = one commit on main after it). One source: `tools/version.sh`.
+- `tools/ship.sh` runs `tools/version.sh --stamp <worktree>` → `version.json` (pr, sha, built) is uploaded. `tools/build_public.py stamp()`
+  writes it into `public/sw.js` (`VERSION = "stem-<PR>-<sha>"`) and the `stem-build` meta of `public/index.html`. No version.json
+  (serve.py, a local build) = `dev`. A deploy without the sw.js slot fails the build: an unstamped deploy would never reach open pages.
+- So every deploy is a new sw.js: the browser installs it (`updateViaCache: "none"`, `Cache-Control: no-cache` on sw.js + version.json in
+  vercel.json), it precaches the whole new shell (`no-store`), skips waiting, drops the old shell cache and takes over: one atomic swap,
+  never a mix of two deploys. The problems cache keeps its fixed name (`stem-v4-p`), so problems saved for offline survive deploys.
+- offline.js (Tony picked "auto unless busy"): on takeover the page reloads by itself if nothing was typed or tapped since it loaded or
+  since the tab came back; else the "New version ready" bar, so a reload never eats an answer. It also asks for a new sw.js when the tab
+  comes back and every 15 min while visible.
+- Pages still on the old (pre-stamp) offline.js get the bar once on the first stamped deploy; after that, automatic.
+- Badge: `#ver`, bottom right, the PR (`--hint`, `--t-xs`, no pointer events; tooltip = PR · sha · built). Drawn by CSS (`::after`), so it is
+  never page text.
+- `tools/version.sh` (no args): live (`/version.json`) vs origin/main → `live = latest` (exit 0) or `live is behind main (#82 -> #83):
+  tools/ship.sh live` (exit 1); 2 = no version.json / error. `--pr [REV]` prints a version. Tests: tests/test_version.py, tests/test_vercel.py
+  (Stamp), tests/update.pw.mjs (idle → auto reload, busy → bar).
+
 ## Accepted costs
 - Bank or `problems.json` change = redeploy (no hot reload).
 - sympy cold start: the first check after idle is ~1–2 s slower.

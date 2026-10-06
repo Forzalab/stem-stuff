@@ -169,7 +169,7 @@ It sits top centre under the safe area (below `#updateBar` when that is up), not
 | Fluent Emoji SVG ×8 (88 KB) | `design/rewards/icons/` | `rewards/icons/` + `LICENSE-fluentui-emoji.txt` | MIT | the offline bundle: see below |
 | Lilita One / Press Start 2P / Nunito | Google Fonts (v2.html:10) | vendor or drop (Q2) | OFL | the app has no CDN; sw.js caches only same-origin + KaTeX (sw.js:8) |
 
-- `sw.js`: add every new file to `BASE` (sw.js:12) and bump `VERSION` stem-v3 → stem-v4 (sw.js:5). `route()` already treats `.svg/.js/.css/.woff2` as shell (sw.js:30).
+- `sw.js`: add every new file to `BASE` (sw.js:12). (Was: bump `VERSION` by hand. Since Oct 6 each deploy stamps it, design/DEPLOY.md.) `route()` already treats `.svg/.js/.css/.woff2` as shell (sw.js:30).
 - `index.html`: `<script src="vendor/confetti.min.js" defer>`, `rewards/engine.js`, `rewards/fx.js` (defer, after brainrot.js), `<link rel=stylesheet href="rewards/rewards.css">` after nav.css.
   The splash's font wait (index.html, `fonts()`) stays Atkinson only; reward fonts are `font-display: swap`.
 - `tools/build_public.py` copies the whole tree except SKIP_DIRS (build_public.py:12), so `rewards/` and `vendor/` ship with no change.
