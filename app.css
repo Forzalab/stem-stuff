@@ -425,9 +425,9 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
    height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
 /* docked: all 3 in one box that scrolls sideways (Tony, Oct 5), two in view, a visible thin bar */
-.rot.docked .duo { display: flex; width: 100%; padding: var(--s2); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory;
+.rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory;
   scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
-.rot.docked .vid { flex: none; width: min(calc(40dvh * 9 / 16), calc((100% - var(--s2)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; }
+.rot.docked .vid { flex: none; width: min(calc(40dvh * 9 / 16), calc((100% - var(--s5)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card */
 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
 .rot-hd { display: none; }
 /* the label row's one control (Tony, Oct 5): a quiet text link, level with "Explain"; 44px tall to touch */
@@ -849,8 +849,8 @@ html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; positi
 html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
-html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: 60vh; cursor: col-resize; }
-html.side .sash::before { position: sticky; display: block; top: 40vh; left: auto; width: 4px; height: 36px; margin: 0 auto; }
+html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: min(60vh, 48rem); cursor: col-resize; }
+html.side .sash::before { position: sticky; display: block; top: min(40vh, 16rem);   /* zoomed far out, the handle stays by the content (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 36px; margin: 0 auto; }
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
@@ -858,7 +858,7 @@ html.side.no-pad #xb { display: none; }   /* app.js applyMT: desktop sugar quest
 .q-label { display: none; }
 html.side .freeze .q-label { display: flex; }                                       /* side by side only: the boxes start level */
 html.side.mt-r0 .freeze .q-label, html.mt .freeze .q-label { display: none; }   /* the pad page's .xb-label rule (display: contents) must not show it */
-html.side #scratch { min-height: var(--pad-max, 60vh); }
+html.side #scratch { min-height: min(var(--pad-max, 60vh), 48rem); }   /* fills to the window bottom, but never a 3000-px box when zoomed far out */
 html.side.mt-r0 .freeze-in { display: none; }
 html.side .pstrip {
   display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
