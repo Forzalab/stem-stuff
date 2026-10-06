@@ -66,7 +66,7 @@
 
   /* ---------- done questions: IndexedDB stem-stuff / done, key = bank + code (design/DONE.md) ----------
      Upload: "u:<hash of that problem's JSON>:<CODE>" (same file again keeps it, an edited problem starts fresh).
-     Server: "s:<CODE>" (IndexedDB is per origin already). The record never holds the answer or the right choice. */
+     Server: "s:<CODE>" (IndexedDB is per origin already), "r:<CODE>" inside a redo round. The record never holds the answer or the right choice. */
   const done = new Map();
   const hash = str => {                                   // cyrb53: crypto.subtle needs https, the live site is http
     let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
@@ -78,7 +78,7 @@
   const keys = new Map();                                 // code -> upload key (the problem object never changes once read)
   function doneKey(code) {
     const p = local.get(code);
-    if (!p) return "s:" + code;
+    if (!p) return (window.stemRedo && window.stemRedo.has(code) ? "r:" : "s:") + code;   // "r:": a redo round (app.js stemRedo)
     if (!keys.has(code) || keys.get(code).p !== p) keys.set(code, { p, k: `u:${hash(JSON.stringify(p))}:${code}` });
     return keys.get(code).k;
   }

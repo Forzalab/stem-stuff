@@ -227,6 +227,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 - Nav: list button (`.btn-label`: checklist icon + bank code), shuffle, then Prev / Next pushed to the right edge. Arrows are icon-only.
 - List: in the flow under the bar (it covers nothing), a `--sheet` card, 10px radius, rows of at least `--btn`, number in `--muted` bold tabular, title in `--ink`. Current row: `--raised` + `--c1` number. Done marks (`i-ok`, `i-x`, 20px) at the right edge. Out-of-tries or right: title struck through and dimmed, still a link.
 - Don't: counters ("3 / 12"), headings on the list, side stripes on the current row.
+- Redo misses (`#qredo`, Oct 6): `.btn-label` with `i-redo` (a loop around an X), shown with the list like Shuffle; icon only on phones. In a round (`html.redo-on`) it reads "Exit redo" with the `--raised` "on" fill, the list button says "Redo" / "Redo done", and progress is the list's own ticks (no counter). Look A of `try/redo-variants.html`; B to E are Tony's alternatives, all inside this file's rules.
 
 ### Scratchpad (`.xb`)
 

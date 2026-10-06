@@ -102,6 +102,7 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-wait" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4.5H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 10l4 4M14 10l-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="i-retry" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
@@ -157,6 +158,10 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
     </button>
     <button type="button" class="btn" id="qshuf" aria-label="Shuffle questions" title="Shuffle questions">
       <svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg>
+    </button>
+    <!-- Redo my misses (cram week, Oct 6): a round of only the questions this browser missed, graded fresh; a bank only -->
+    <button type="button" class="btn btn-label" id="qredo" title="Replay only the questions you missed" hidden>
+      <svg class="ico" aria-hidden="true"><use href="#i-redo"/></svg><span id="qredoTx">Redo misses</span>
     </button>
     <button type="button" class="btn" id="qprev" aria-label="Go back one" title="Go back one">
       <svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg>

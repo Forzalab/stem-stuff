@@ -152,8 +152,9 @@ async function check(code, answer) {
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(modeView(off.get(code), modeOf()), answer);   // an upload: the same mode view the server uses
   try {
+    const rd = window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {};   // a redo round grades in its own namespace
     const r = await net("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
-                                     body: JSON.stringify({ code, ...answer }) });
+                                     body: JSON.stringify({ code, ...answer, ...rd }) });
     if (r.ok) return await r.json();
   } catch (e) { if (timedOut(e)) return { verdict: "timeout" }; /* else offline */ }
   return { verdict: "pending" };
@@ -366,6 +367,32 @@ window.stemBank = {
   mark: c => (bank && bank.marks[c]) || null
 };
 const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
+/* "Redo my misses" (cram week, Oct 6): a round replays only the questions this browser missed (nav.js picks them), graded fresh in
+   their own server namespace (serve.py grade() round) and kept in their own done records (offline.js "r:"); the real history and
+   marks stay as they were. sessionStorage: one round per tab, and it ends when the bank changes. */
+const REDO = "stem-redo";
+window.stemRedo = {
+  get() {
+    let r = null;
+    try { r = JSON.parse(sessionStorage.getItem(REDO)); } catch { /* blocked or broken */ }
+    return r && bank && r.bank === bank.code && Array.isArray(r.codes) && Number.isInteger(r.n) ? r : null;
+  },
+  has(code) { const r = this.get(); return !!r && r.codes.includes(code); },
+  start(codes) {
+    if (!bank || !codes.length) return false;
+    const r = { bank: bank.code, n: Math.floor(Date.now() / 1000), codes };
+    try { sessionStorage.setItem(REDO, JSON.stringify(r)); } catch { return false; }
+    for (const c of codes) doneStore()?.doneDrop(c);                    // an older round's "r:" records
+    bankChanged();
+    load(window.stemOrder ? window.stemOrder(codes)[0] : codes[0]);
+    return true;
+  },
+  exit() {
+    try { sessionStorage.removeItem(REDO); } catch { /* blocked */ }
+    bankChanged();
+    if (S) load(S.code);                                                 // the real record comes back
+  }
+};
 function leaveBank() { src("file"); if (bank) { bank = null; bankChanged(); } }
 /* code: BANK_XXX, or "last" (the server's pointer for this browser). go: open a question (at, else the first).
    quiet (boot): no message, no retry; a bank that is gone just leaves the page as it is. */
@@ -388,7 +415,8 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   remembered(b.code);
   bankChanged();
   if (!go) return true;
-  const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
+  const rd = window.stemRedo.get();                                       // a reload inside a redo round stays in it
+  const to = bank.codes.includes(b.at) && (!rd || rd.codes.includes(b.at)) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
   if (S && S.code === to && !modeFlip) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
   return true;
 }
@@ -984,7 +1012,7 @@ function repaint(rec) {
 /* server mode: the server is the source of truth for tries, the record is a display cache. Per unit:
    server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
 async function syncServer(mine) {
-  const st = doneStore(); if (!st || !mine || off()) return;
+  const st = doneStore(); if (!st || !mine || off() || window.stemRedo.has(mine.code)) return;   // /state is the real history, not the round
   let s;
   try { const r = await net(`state/${mine.code}`, { credentials: "same-origin" }); if (!r.ok) { r.text().catch(() => {}); return; } s = await r.json(); }   // drain a 404 so the request completes
   catch { return; }                                            // unreachable or slow: the cache stands
@@ -1376,6 +1404,7 @@ function rwSync() {
 }
 function rewardTry(a, r) {
   if (!rewardOn() || (r.verdict !== "correct" && r.verdict !== "wrong")) return;
+  if (r.verdict === "wrong" && window.stemRedo.has(S.code)) return;              // a redo round: no +1 farming on old misses
   const p = S.prob, multi = p.type === "multi";
   if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
   const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
@@ -1390,7 +1419,9 @@ function rewardGo(mine, o) {
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
-  if (!res.xp) { RW().render(0); return; }                                       // a done code: the numbers change, nothing moves
+  const back = o.correct && window.stemRedo.has(mine.code);                      // a past miss, now right
+  if (!res.xp) { RW().render(0); if (back) comeback(); return; }                 // a done code: the numbers change, nothing moves
+  if (back) mine.rwBack = true;
   if (res.tick) { if (o.open) mine.rwHeld = (mine.rwHeld || 0) + res.xp; else rewardTick(res, mine); return; }   // a wrong try: +1 for trying, tiny;
   // with a try left it waits, unshown (Tony, Oct 5 clutter pass C12: nothing moves up there while the eye belongs on the hint)
   requestAnimationFrame(() => rewardShow(mine, res));                           // after finish() / feedback(): the right mark is on the page
@@ -1484,7 +1515,7 @@ async function rewardShow(mine, res) {
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   setTimeout(() => RW().render(res.xp + held), 450);                           // the +1s held back on earlier wrong tries count up with it
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) return;
+  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); return; }
   await wait(600);
   if (res.drop && fx.slots) await fx.slots(res.drop);
   if (res.burst && fx.burst) {
@@ -1494,6 +1525,13 @@ async function rewardShow(mine, res) {
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
   if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+  else if (mine.rwBack) comeback();
+}
+/* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
+function comeback() {
+  const fx = FXL();
+  if (fx.toast) { hideToast(); fx.toast("Comeback!", "Missed it before. Got it now."); }
+  say("Comeback. Missed it before, got it now.");
 }
 
 /* ---------- scratchpad + Copy ---------- */

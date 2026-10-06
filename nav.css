@@ -50,6 +50,18 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qnav-on.ql-open:not(.dock-bottom):not(.start) .entry-msg { grid-row: 3; }
 .qnav-on.ql-open:not(.dock-bottom):not(.start) .qlist { grid-row: 4; }
 .dock-bottom.qnav-on:not(.ql-open) #qshuf { display: none; }   /* phones: Shuffle shows with the list */
+/* Redo my misses (cram week, Oct 6): comes with the list like Shuffle; inside a round "Exit redo" stays on the bar */
+.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.redo-on) #qredo { display: none; }
+.qnav-on.redo-on:not(.dock-bottom):not(.start):not(.ql-open) #qredo { grid-row: 1; grid-column: 4; justify-self: end; }
+.qnav-on.redo-on:not(.dock-bottom):not(.start):not(.ql-open) .top > .rw-hud { grid-column: 2 / 4; }
+.qnav-on.ql-open:not(.dock-bottom):not(.start) #qredo { grid-row: 2; grid-column: 5 / 7; justify-self: end; margin-top: var(--s3); }
+.dock-bottom.qnav-on:not(.ql-open):not(.redo-on) #qredo { display: none; }
+.dock-bottom:not(.redo-on) #qredo { width: var(--btn); padding: 0; justify-content: center; }   /* phones: icon only until a round, or the bar overflows */
+.dock-bottom:not(.redo-on) #qredoTx { display: none; }
+.redo-on #qshuf { display: none; }   /* a round has its own order */
+/* its look: variant A "Quiet toggle" of try/redo-variants.html (STYLE.md: no new hue, one filled control, no counters): in a round
+   the button is "on" like an open list; the list button says "Redo" and the list's own ticks show progress */
+.redo-on #qredo { background: var(--raised); }
 
 /* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
 .qlist {

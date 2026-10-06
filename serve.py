@@ -692,8 +692,16 @@ def grade(p, sid, body):
     idx = body.get("part")
     if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}    # the old whole-set body {parts: [...]} lands here too
+    rnd = body.get("round")                  # "Redo my misses": a round grades in its own namespace, history untouched
+    if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31):
+        return {"verdict": "invalid", "triesLeft": max_tries(p)}
     with _tries_lock:
         _load_tries()
+        if rnd is not None:
+            sid = f"{sid}:r{rnd}"
+            old = sid.rsplit(":r", 1)[0] + ":r"
+            for k in [k for k in _tries if k[0].startswith(old) and k[0] != sid]:   # one round per browser: KV stays small
+                del _tries[k]
         key = (sid, p["code"], idx) if multi else (sid, p["code"])
         out = _grade(p, _entry(key), body, multi, idx)
         out["gen"] = _tries[key]["gen"]
