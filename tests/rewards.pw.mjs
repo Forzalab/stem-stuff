@@ -125,7 +125,7 @@ try {
     await pick(page, "a");
     await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
       .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
-    assert.ok(await page.evaluate(() => window.__fx) > 1, "the bells on try 2");
+    assert.ok(await page.waitForFunction(() => window.__fx > 1, null, { timeout: 2000 }).then(() => true, () => false), "the bells on try 2");   // the FX nodes land a frame after the XP (a race, red once in a full run)
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
       .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
