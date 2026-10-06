@@ -44,7 +44,7 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
-/* clutter C14: every title shares "Term: ", so the list shows one header over the rows, in any shuffle */
+/* every title shares "Term: ": the list still shows one row per question, number + whole title, no shared-prefix header (owner, Oct 6) */
 const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
 writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
@@ -368,7 +368,7 @@ try {
     assert.deepEqual(yt, [], "a request went to YouTube");
     await c.close();
   }
-  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one header for a shared title prefix", async () => {
+  await step("clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one row per question: number + its whole title, no shared-prefix header", async () => {
     await typeCode(page, "CALC1_E01"); await opened(page, "CALC1_E01");
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).paddingTop), "0px", "C13: no top offset over a question");
     const ff = await page.evaluate(() => getComputedStyle(document.querySelector("#scratch"), "::placeholder").fontFamily);
@@ -382,11 +382,11 @@ try {
     await typeCode(page, "BANK_TRM");
     await page.waitForFunction(() => /^CALC1_TR/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
     if (await page.isHidden("#qlist")) await page.click("#qlistBtn");
-    const l = await page.evaluate(() => ({ heads: [...document.querySelectorAll("#qlist .qh")].map(h => h.textContent),
+    const l = await page.evaluate(() => ({ lis: [...document.querySelectorAll("#qlist li")].map(li => [li.children.length, li.querySelectorAll(".qn").length, li.querySelectorAll(".qt").length]),
       rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
       w: document.querySelector("#qlist").getBoundingClientRect().width, bar: ["#qlistBtn", "#qnext"].map(s => document.querySelector(s).getBoundingClientRect()).map(r => [r.left, r.right]),
       list: (r => [r.left, r.right])(document.querySelector("#qlist").getBoundingClientRect()), cols: getComputedStyle(document.querySelector("#qlist ol")).gridTemplateColumns.split(" ").length,
-      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)), hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)) }));
     const one = await page.$$eval("#qlist .qt", ts => ts.map(t => ({ ws: getComputedStyle(t).whiteSpace, h: Math.round(t.getBoundingClientRect().height) })));
     assert.ok(one.every(x => x.ws === "nowrap") && new Set(one.map(x => x.h)).size === 1, `wide list: one line per row, rows line up (variant A): ${JSON.stringify(one)}`);
     assert.ok(await page.$$eval("#qlist a", as => as.every(a => a.title && a.title.length > 0)), "the full title is the tooltip");
@@ -401,9 +401,9 @@ try {
     await page.mouse.click(5, 880); await page.waitForTimeout(150);
     assert.equal(await page.isHidden("#qlist"), true, "an outside tap closes the list");
     await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
-    assert.deepEqual(l.heads, ["Term"], "C14: one header");
-    assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
-    assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);
+    assert.ok(l.lis.length === 3 && l.lis.every(x => x.join() === "1,1,1"), `every row = a link with one number + one label, no header rows (owner, Oct 6): ${JSON.stringify(l.lis)}`);
+    assert.deepEqual(l.rows, ["Term: one", "Term: three", "Term: two"], "each row shows its whole title");
+    assert.ok(l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `the link's label is the full title: ${l.labels}`);
     assert.ok(Math.abs(l.list[0] - l.bar[0][0]) < 1 && Math.abs(l.list[1] - l.bar[1][1]) < 1, `the list spans the bar, no gap at its right (Tony, Oct 6): ${JSON.stringify([l.list, l.bar])}`);
     assert.ok(l.cols >= 2, `C14 kept: wide, the rows go in columns (${l.cols}), never one ${l.w}px row`);
     assert.equal(new Set(l.tops).size, 1, `the list open, the bar stays one row (Tony, Oct 6): tops ${l.tops}`);
