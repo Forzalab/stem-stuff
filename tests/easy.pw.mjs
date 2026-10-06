@@ -296,6 +296,7 @@ try {
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
       if (n === 1) {
         assert.equal(await page.isVisible("#cluck .cl-live"), false, "the typing line leaves once typed");
+        assert.equal((await page.textContent("#cluck .cl-verify:visible")).trim(), "verify b4 use lol", "the grey line under Cluck's text (Tony, Oct 5)");
         assert.deepEqual(await page.$$eval("#cluck .msg .name", e => e.map(x => x.textContent)), ["Cluck", "You", "Cluck"], "Cluck and you, as chat users (C1)");
         const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
         assert.equal(await look("#cluck .wreply"), await look("#cluck .wtext:not(.wreply)"), "one speaker, one format: the reply has no card");

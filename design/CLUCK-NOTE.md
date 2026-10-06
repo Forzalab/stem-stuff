@@ -98,6 +98,13 @@ The server, not the model, has the last word on how sure Cluck sounds (the model
 - The unexplained pick (1.5 m/s, no slip gives it) still got a made-up move with `reproduces: true` (6.0 / 2.0 is 3.0, not 1.5). Hence the server cap above.
 - 0.8-2.1 s per call, one 7.3 s outlier.
 
+## Cache, scratchpad, order (Oct 5 queue, brain topics/cluck-next-queue.md)
+
+- **Cache.** `saccharine.note` = choice id -> a full NOTE (every schema field but `on_topic`), written with the key at bank time. A single wrong pick with one skips the live call: 0 s, no made-up move. A chat message, a pick-all, or a pick without one still calls live.
+- **Scratchpad.** The browser sends the last 1500 chars of `#scratch`. Only the NOTE call reads it, inside the same random `<student_...>` tag; an `INJECT_RE` hit drops it (the wish still runs). Cluck never sees the raw pad.
+- **Order.** Static first (system, QUESTION, KEY, SLIP), the NOTE last: on `/chat` it follows the newest student turn, after its closing tag. The prompt cache keeps the head.
+- **Timeout.** 3 s, then Cluck answers without a NOTE.
+
 ## Logging (optional)
 
 The server may print `{code, gap, field, confidence}` (no free text, no ids) to the log. Counting them per question shows which misconception each question catches most.
