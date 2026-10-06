@@ -532,22 +532,30 @@ function renderQuestion() {
   }
   formulaCard();
 }
-/* sugar: the formula card, stepper look (design/FORMULA-CARD.md round 2, Tony's pick 5): the question's formula-sheet rows in the
-   order they get used, numbered, "then" between them, the sheet group under each. Under the answer, before the hint. */
+/* sugar: Key formulas (Tony, Oct 5, design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
+   they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
+const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function formulaCard() {
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
   const sec = document.createElement("section");
-  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("aria-label", "Formulas, in order");
-  sec.innerHTML = `<p class="hd">Do it in this order</p><ol>${fs.map((f, i) => `${i ? '<li class="then" aria-hidden="true"><span>then</span></li>' : ""}<li class="st">
-    <span class="n">${i + 1}</span><span class="f">${renderMath(f.tex, false)}</span><span class="g">${esc(f.group)}</span></li>`).join("")}</ol>`;
+  sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
+  sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
+  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) =>
+    `${i ? `<li class="to" aria-hidden="true">${FC_ARROW}</li>` : ""}<li class="f">${renderMath(f.tex, false)}</li>`).join("")}</ol>`;
   $("#q").after(sec);
 }
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
-/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3) */
-const howLine = p => { const h = p.how || (all(p) && modeOf() === "sugar" ? "Tap all true ones, then Check. None? Just tap Check." : ""); return h ? `<p class="how" id="how">${md(h, true)}</p>` : ""; };
+/* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
+   It shows on the first choose-all question of the visit only (clutter C6, Tony Oct 5); an authored how always shows */
+let howAt = null;
+const howLine = p => {
+  let h = p.how;
+  if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick every true one.";
+  return h ? `<p class="how" id="how">${md(h, true)}</p>` : "";
+};
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
 /* shuffle for problems from an uploaded file (the server shuffles its own): seeded by a random id kept in this browser */
 const localSeed = () => seed("stem-seed", "stem");
@@ -1497,12 +1505,15 @@ function mountBox() {
   ta.setAttribute("autocapitalize", "sentences"); ta.setAttribute("autocomplete", "off");
   ta.id = "scratch"; ta.setAttribute("aria-labelledby", "xbName");
   field.prepend(ta);
+  /* C10 (Tony, Oct 5): Copy shows only when the box has text. Listened before reserveCorner's, so the corner sees the button as it is */
+  const copyBtn = $("#copy"), syncCopy = () => { copyBtn.hidden = !ta.value; };
+  ta.addEventListener("input", syncCopy); ta.addEventListener("xb-cap", syncCopy); syncCopy();
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
     cap: () => swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
-  S.corner = ExplainBox.reserveCorner(ta, [$("#cut"), $("#copy")]);
+  S.corner = ExplainBox.reserveCorner(ta, copyBtn);
   mounted = { box: S.box, corner: S.corner };
-  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Cut / Copy
+  /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Copy
      and of where the revealed code bar lies */
   ta.addEventListener("input", () => { if (ta.selectionEnd === ta.value.length && ta.scrollHeight > ta.clientHeight) ta.scrollTop = ta.scrollHeight; });
   autosave(ta);
@@ -1549,21 +1560,19 @@ async function copyText(text) {
   t.remove();
   return ok;
 }
-/* Copy, and Cut all (= Copy, then empty the box; only if the copy worked). Cut keeps the edit history and records the clear. */
-async function copyPad(b, icon, clear) {
+/* Copy: the notes, tries, hints and edit history as one payload; the notes stay (C10: Cut all is gone) */
+async function copyPad() {
   if (!S) return;
-  const box = S.box, text = box.el.value;
+  const b = $("#copy"), box = S.box;
   box.snapshot();
-  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: text, history: box.getHistory() }));
+  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: box.el.value, history: box.getHistory() }));
   const ok = await copyText(payload);
-  if (ok && clear && box.el.value === text) { box.el.value = ""; box.el.dispatchEvent(new Event("input")); box.snapshot(); }
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? (clear ? "Copied and cleared." : "Copied.") : "Didn't copy. Try again.");
-  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", icon); }, 1600);
+  say(ok ? "Copied." : "Didn't copy. Try again.");
+  setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
-$("#copy").addEventListener("click", () => copyPad($("#copy"), "#i-copy", false));
-$("#cut").addEventListener("click", () => copyPad($("#cut"), "#i-cut", true));
+$("#copy").addEventListener("click", copyPad);
 
 /* ================= freeze layer (design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip

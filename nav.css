@@ -40,7 +40,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qnav-on:not(.dock-bottom):not(.start) #qprev { grid-row: 1; grid-column: 5; }
 .qnav-on:not(.dock-bottom):not(.start) #qnext { grid-row: 1; grid-column: 6; }
 .qnav-on:not(.dock-bottom):not(.start) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
-.qnav-on:not(.dock-bottom):not(.start) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); }
+.qnav-on:not(.dock-bottom):not(.start) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); justify-self: start; width: min(100%, 44rem); }   /* C14: titles are short, the list was 1800px wide */
 /* C2 / C15 (Tony, Oct 5 clutter pass): with a bank open the row is List · XP · Prev / Next. The code box (Upload, Paste) and Shuffle
    come with the list, on a row of their own above it. A load error (message or Retry) brings the box back on its own */
 .qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) :is(.entry, #qshuf) { display: none; }
@@ -64,6 +64,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 }
 .qlist a:hover { background: var(--raised); }
 .qlist a:focus-visible { outline-offset: -3px; }
+.qlist .qh { padding: var(--s3) var(--s3) var(--s1); color: var(--muted); font-size: var(--t-sm); font-weight: 700; line-height: 1.35; }   /* C14: shared title prefix */
 .qlist .qn { flex: none; min-width: 2ch; text-align: right; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
 .qlist .qt { min-width: 0; overflow-wrap: anywhere; }
 .qlist a[aria-current] { background: var(--raised); }
