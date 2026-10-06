@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tries left: test drive</title>
+<link rel="icon" href="data:,">
+<!-- Tries-left counter + coin flash test drive (Oct 6). The real question screen look: app.css / nav.css / rewards.css, the app's icon
+     sprite (fetched from index.html), the real choice markup (.choices .ch .opt .badge .txt .send) and the real HUD strip markup
+     (rewards/engine.js mountHUD: .rw-hud .rw-coin .rw-num ...). One hardcoded 5-choice physics MC; the app gives it 2 tries
+     (app.js MAX_TRIES = 2; a 2-choice True/False row gets 1). XP as rewards/engine.js: first-try correct 12-16 (here 14), second-try
+     correct 6, a wrong try a quiet +1.
+     Variants: ?v=A|B|C|D (counter next to the "Question" label), ?f=pulse|chip (coin flash), ?rm=1 (force reduced motion), ?dots=1
+     (also show today's dots under the choices). Serve over http (the sprite fetch): python3 serve.py, then /try/tries.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css"><script src="../vendor/katex/katex.min.js"></script>
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../nav.css">
+<link rel="stylesheet" href="../rewards/rewards.css">
+<script src="../rewards/icons.js"></script>
+<style>
+  body { padding: var(--s4) var(--gut) var(--s7); overflow-x: hidden; }
+  .wrap { max-width: 72rem; margin: 0 auto; }
+  h1 { font-size: var(--t-md); margin: 0 0 var(--s2); }
+  .lead { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); max-width: 60ch; }
+  .lead a { color: var(--c1); }
+  .seg { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); }
+  .seg > span { color: var(--muted); font-size: var(--t-sm); min-width: 6.5rem; }
+  .seg button, .act { font: inherit; font-size: var(--t-sm); color: #fff; background: var(--sheet); border: var(--bw) solid var(--edge);
+    border-radius: 8px; padding: var(--s2) var(--s3); min-height: 44px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
+  .act { background: var(--sheet); }
+  .why { margin: 0 0 var(--s4); padding: var(--s2) var(--s3); border-left: 0; background: var(--sheet); border-radius: 8px; font-size: var(--t-xs); color: var(--muted); max-width: 64ch; }
+  .why b { color: var(--ink); }
+
+  /* ---------- the app frame: top bar + question column (+ notes column from 720px, as html.side) ---------- */
+  .app { border: var(--bw) solid var(--line); border-radius: 12px; background: var(--paper); padding: var(--s4) var(--gut) var(--s5); }
+  @media (max-width: 26rem) { body { padding-left: 0; padding-right: 0; } h1, .lead, .seg, .why, .note { margin-left: var(--gut); margin-right: var(--gut); } .app { border-radius: 0; border-left: 0; border-right: 0; } }
+  .tbar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: 0 0 var(--s5); }
+  .tbar .rw-hud { flex: 1 1 100%; order: 2; }
+  .tbar .push { margin-left: auto; }
+  @media (min-width: 720px) { .tbar { flex-wrap: nowrap; } .tbar .rw-hud { flex: 1 1 auto; order: 0; } .tbar .push { margin-left: 0; } }
+  .cols { display: grid; gap: var(--s5); }
+  @media (min-width: 720px) { .cols { grid-template-columns: minmax(0, 1fr) var(--s6) minmax(0, 1fr); gap: 0; } .cols > .notes { grid-column: 3; } }
+  .qrow { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); min-height: 1.75rem; }
+  .notes .xb-label { margin: 0 0 var(--s2); min-height: 1.75rem; }
+  .pad { min-height: 16rem; border-radius: 10px; background: var(--field); border: var(--bw) solid var(--line); padding: var(--s3); color: var(--hint); font: var(--t-sm)/1.5 var(--mono); }
+  @media (max-width: 719px) { .notes { display: none; } }
+  .note { margin-top: var(--s3); margin-bottom: 0; font-size: var(--t-xs); color: var(--hint); max-width: 64ch; }
+  .note b { color: var(--muted); }
+
+  /* ---------- the counter (one element, four looks) ---------- */
+  .ctr { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); font-weight: 700; line-height: 1; color: var(--muted); white-space: nowrap; }
+  .ctr .w { font-weight: 700; }
+  /* A: a small pill "2 tries left" */
+  .ctr[data-v="A"] .w { padding: 4px 10px; border-radius: 999px; background: var(--sheet); color: #fff; border: var(--bw) solid var(--edge); }
+  .ctr[data-v="A"][data-left="1"] .w { color: var(--mark); border-color: var(--mark); }
+  .ctr[data-v="A"][data-left="0"] .w { color: var(--bad); border-color: var(--bad); background: none; }
+  .ctr[data-v="A"].done .w { color: var(--ok); border-color: var(--ok); background: none; }
+  /* B: pips that empty as you miss (full = a try you still have) */
+  .ctr .pp { display: inline-flex; gap: 5px; }
+  .ctr[data-v="B"] .pp i { width: 12px; height: 12px; border-radius: 50%; background: var(--c1); border: var(--bw) solid var(--c1); }
+  .ctr[data-v="B"] .pp i.sp { background: none; border-color: var(--edge); }
+  .ctr[data-v="B"].done .pp i:not(.sp) { background: var(--ok); border-color: var(--ok); }
+  /* C: "Try 1 of 2" words */
+  .ctr[data-v="C"] .w { color: var(--muted); font-weight: 400; }
+  .ctr[data-v="C"] .w b { color: var(--ink); }
+  .ctr[data-v="C"][data-left="1"] .w b { color: var(--mark); }
+  .ctr[data-v="C"][data-left="0"] .w, .ctr[data-v="C"][data-left="0"] .w b { color: var(--bad); }
+  .ctr[data-v="C"].done .w, .ctr[data-v="C"].done .w b { color: var(--ok); }
+  /* D: try tokens that crack on a miss (a short shake, the halves part, a dashed red ring: the struck choice's own language) */
+  .ctr[data-v="D"] .pp { gap: 6px; }
+  .ctr[data-v="D"] .pp i { position: relative; width: 16px; height: 16px; }
+  .ctr[data-v="D"] .pp i::before, .ctr[data-v="D"] .pp i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c1); }
+  .ctr[data-v="D"] .pp i::before { clip-path: polygon(0 0, 58% 0, 42% 50%, 60% 100%, 0 100%); }
+  .ctr[data-v="D"] .pp i::after { clip-path: polygon(58% 0, 100% 0, 100% 100%, 60% 100%, 42% 50%); }
+  .ctr[data-v="D"] .pp i.sp::before, .ctr[data-v="D"] .pp i.sp::after { background: none; border: var(--bw-alarm) dashed var(--bad); }
+  .ctr[data-v="D"] .pp i.sp::before { transform: translate(-2px, 1px) rotate(-10deg); }
+  .ctr[data-v="D"] .pp i.sp::after { transform: translate(2px, -1px) rotate(10deg); }
+  .ctr[data-v="D"] .pp i.crack { animation: crack .42s ease-out; }
+  .ctr[data-v="D"] .pp i.crack::before { animation: half-l .42s cubic-bezier(.16, 1, .3, 1) both; }
+  .ctr[data-v="D"] .pp i.crack::after { animation: half-r .42s cubic-bezier(.16, 1, .3, 1) both; }
+  @keyframes half-l { 0%, 30% { transform: none; } }
+  @keyframes half-r { 0%, 30% { transform: none; } }
+  .ctr[data-v="D"].done .pp i:not(.sp)::before, .ctr[data-v="D"].done .pp i:not(.sp)::after { background: var(--ok); }
+  .ctr[data-v="D"] .w { color: var(--mark); }
+  .ctr[data-v="D"][data-left="0"] .w { color: var(--bad); }
+  .ctr[data-v="D"].done .w { color: var(--ok); }
+  @keyframes crack { 0%, 100% { transform: none; } 20% { transform: translateX(-3px) rotate(-8deg); } 45% { transform: translateX(3px) rotate(6deg); } 70% { transform: translateX(-2px); } }
+  .rm .ctr *, .rm .ctr *::before, .rm .ctr *::after, .rm .rw-hud, .rm .rw-hud * { animation: none !important; transition: none !important; }   /* ?rm=1 = the OS setting (rewards.css only reads the OS) */
+  .nodots .pips { display: none !important; }
+
+  /* ---------- coin flash (rewards.css tokens; the floating chip rides the FX particle layer, z 150) ---------- */
+  .rw-coin { transition: box-shadow .2s ease-out, border-color .2s ease-out; }
+  .rw-coin.cf-pulse { border-color: var(--rw-sun); box-shadow: 0 0 0 2px var(--rw-sun); animation: cf-pulse .7s cubic-bezier(.16, 1, .3, 1); }
+  .rw-coin.cf-pulse .rw-num { color: #fff; }
+  @keyframes cf-pulse { 0% { transform: scale(1); } 30% { transform: scale(1.14); } 100% { transform: scale(1); } }
+  .cf-tag { position: fixed; z-index: 150; pointer-events: none; padding: 2px 8px; border-radius: 999px; background: var(--rw-sun); color: var(--rw-text);
+    font: 700 15px/1.2 var(--rw-font); box-shadow: 0 2px 0 var(--rw-sun-dk); white-space: nowrap; }
+  .cf-chip { position: fixed; z-index: 150; pointer-events: none; padding: 6px 14px; border-radius: 999px; border: 3px solid #fff; background: var(--rw-sun);
+    color: var(--rw-text); font: 700 20px/1 var(--rw-font); box-shadow: 0 3px 0 var(--rw-v950), var(--rw-sh3); white-space: nowrap; }
+  /* reduced motion: no movement at all. The pill turns sun yellow and says "+N" for 2 s, then shows the new total */
+  .rw-coin.cf-static { background: var(--rw-sun); border-color: #fff; box-shadow: 0 0 0 2px var(--rw-sun-dk); transition: none; }
+  .rw-coin.cf-static .rw-num { color: var(--rw-text); }
+  .rw-coin.cf-static .rw-coin-ic { visibility: hidden; width: 0; }
+  .rw-coin.cf-static .rw-num::after { content: " XP"; font-size: 15px; }
+  .rw-coin.cf-quiet .rw-num { color: var(--rw-cream); }
+</style>
+</head>
+<body>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<div class="wrap">
+  <h1>Tries left + coin flash: test drive</h1>
+  <p class="lead">Tap a choice, then its arrow (as in the app). A wrong one spends a try; the right one pays XP and flashes the coin in the top bar. The answer is C. <a href="./">All try pages</a></p>
+  <div class="seg" role="group" aria-label="Counter look"><span>Tries counter</span>
+    <button type="button" data-v="A">A pill</button><button type="button" data-v="B">B pips</button><button type="button" data-v="C">C words</button><button type="button" data-v="D">D crack</button></div>
+  <div class="seg" role="group" aria-label="Coin flash"><span>Coin flash</span>
+    <button type="button" data-f="pulse">Pulse + count-up</button><button type="button" data-f="chip">+N chip flies in</button></div>
+  <div class="seg" role="group" aria-label="Motion"><span>Motion</span>
+    <button type="button" data-rm="0">Full</button><button type="button" data-rm="1">Reduced</button></div>
+  <div class="seg" role="group" aria-label="Today's dots"><span>Today's dots</span>
+    <button type="button" data-dots="0">Off</button><button type="button" data-dots="1">On</button>
+    <button type="button" class="act" id="reset">Reset question</button></div>
+  <p class="why" id="why"></p>
+
+  <div class="app" id="app">
+    <div class="tbar">
+      <button type="button" class="btn btn-label" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span>Physics 1 · 3/12</span></button>
+      <button type="button" class="btn" aria-label="Shuffle questions" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg></button>
+      <div class="rw-hud rw-skin" id="rwHud" role="group" aria-label="Your progress">
+        <span class="rw-coin" id="rwCoin"><span class="rw-coin-ic" id="coinIc"></span><b class="rw-num" id="xp">31</b></span>
+        <span class="rw-lvl"><span class="rw-star" id="starIc"><b id="lvl">2</b></span>
+          <span class="rw-lvl-body"><span class="rw-bar"><i id="bar"></i></span><span class="rw-to" id="to"></span></span></span>
+        <span class="rw-streak"><span class="rw-flame rw-lit" id="fireIc"></span><b>3</b></span>
+      </div>
+      <button type="button" class="btn push" aria-label="Go back one" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg></button>
+      <button type="button" class="btn" aria-label="Next question" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></button>
+    </div>
+    <div class="cols">
+      <div class="qcol">
+        <div class="xb-label qrow" id="qrow"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span>Question</span><span class="ctr" id="ctr" aria-hidden="true"></span></div>
+        <article class="p"><div class="blocks md" id="blocks"><p>A block starts from rest at the top of a frictionless ramp tilted at $30^\circ$ and slides $4.0\ \text{m}$ along it. Take $g = 9.8\ \text{m/s}^2$. How fast is it going at the bottom?</p></div></article>
+        <div class="q" id="q"></div>
+        <p class="sr-only" id="say" aria-live="polite"></p>
+      </div>
+      <div class="notes"><div class="xb-label"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span>Notes</span></div><div class="pad">Your work here</div></div>
+    </div>
+  </div>
+  <p class="note" id="phone"></p>
+</div>
+<script src="../rewards/fx.js"></script>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const qs = new URLSearchParams(location.search);
+const sysRM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MAX = 2;                                   // app.js MAX_TRIES (a 2-choice True/False row would get 1: maxTries)
+const XP0 = 31, XP_FIRST = 14, XP_SECOND = 6, XP_WRONG = 1;   // rewards/engine.js: first try 12-16, second try 6, a wrong try +1
+const LV = [0, 20, 50, 90];                      // levels cost 20, 30, 40 ...
+const CHOICES = [
+  { id: "a", md: "$3.1\\ \\text{m/s}$" }, { id: "b", md: "$4.4\\ \\text{m/s}$" }, { id: "c", md: "$6.3\\ \\text{m/s}$", ok: true },
+  { id: "d", md: "$8.9\\ \\text{m/s}$" }, { id: "e", md: "$39\\ \\text{m/s}$" }];
+const V = {
+  A: { why: "<b>A pill.</b> A small pill beside the label: \"2 tries left\", then \"1 try left\" in yellow, \"No tries left\" in red; \"Solved\" in green.",
+       phone: "On a phone (no \"Question\" label): the pill sits right-aligned just above the choices, from the first look, where today's dots appear after a miss." },
+  B: { why: "<b>B pips.</b> One dot per try you still have; a miss empties one (filled blue to hollow). The opposite of today's dots, which fill red as you miss.",
+       phone: "On a phone: the same pips right-aligned above the choices (or they replace today's dots under the choices and show from the start)." },
+  C: { why: "<b>C words.</b> \"Try 1 of 2\", then \"Try 2 of 2 · last one\" with the number in yellow, then \"Out of tries\". Plain words, no new shape.",
+       phone: "On a phone: one muted line \"Try 1 of 2\" right-aligned above the choices; the problem box is untouched." },
+  D: { why: "<b>D crack.</b> Try tokens. A miss shakes the token and cracks it in two with a dashed red ring (the struck choice's own look); the last one says \"last try\". Reduced motion: the cracked token appears, no shake.",
+       phone: "On a phone: the tokens sit right-aligned above the choices; the crack plays there, beside the struck choice." } };
+const S = { v: /^[ABCD]$/.test(qs.get("v")) ? qs.get("v") : "A", f: qs.get("f") === "chip" ? "chip" : "pulse",
+  rm: qs.get("rm") === "1" || (qs.get("rm") !== "0" && sysRM), dots: qs.get("dots") === "1",
+  left: MAX, wrong: 0, done: false, selected: null, xp: XP0, flashes: 0 };
+
+/* ---------- KaTeX like the other try pages: $...$ inline ---------- */
+const md = t => String(t).split("$").map((s, i) => i % 2 ? katex.renderToString(s, { throwOnError: false }) : s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))).join("");
+$("#blocks p").innerHTML = md($("#blocks p").textContent);
+const icon = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+const img = n => `<img src="${(window.RW_ICONS || {})[n] || ""}" alt="" draggable="false">`;
+$("#coinIc").innerHTML = img("coin"); $("#starIc").insertAdjacentHTML("afterbegin", img("star")); $("#fireIc").innerHTML = img("fire");
+
+/* ---------- the HUD numbers (engine.js render, simplified) ---------- */
+function hud(xp = S.xp) {
+  let l = 1; while (l < LV.length - 1 && xp >= LV[l]) l++;
+  const lo = LV[l - 1], hi = LV[l];
+  $("#xp").textContent = xp; $("#lvl").textContent = l;
+  $("#bar").style.setProperty("--p", ((xp - lo) / (hi - lo)).toFixed(3));
+  $("#to").innerHTML = `<b>${hi - xp} XP</b> to level ${l + 1}`;
+  $("#rwHud").setAttribute("aria-label", `Your progress: ${xp} XP, level ${l}`);
+}
+
+/* ---------- the question (app.js renderQuestion, MC branch) ---------- */
+const LETTERS = "ABCDE";
+function render() {
+  $("#q").classList.remove("closed");
+  $("#q").innerHTML = `<div class="choices" role="radiogroup" aria-label="Choices">${CHOICES.map((c, i) => `
+    <div class="ch" data-id="${c.id}">
+      <button type="button" class="opt" role="radio" aria-checked="false" tabindex="${i ? -1 : 0}" data-id="${c.id}" data-l="${LETTERS[i]}">
+        <span class="badge" aria-hidden="true">${LETTERS[i]}</span><span class="txt">${md(c.md)}</span></button>
+      <button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>
+    </div>`).join("")}</div>`;
+  $("#q").querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
+}
+const opts = () => [...document.querySelectorAll("#q .opt")];
+function select(o) {
+  S.selected = o ? o.dataset.id : null;
+  for (const x of opts()) { x.setAttribute("aria-checked", x === o); x.parentElement.querySelector(".send").hidden = x !== o; }
+}
+$("#q").addEventListener("click", e => {
+  if (S.done) return;
+  if (e.target.closest(".send")) { check(); return; }
+  const o = e.target.closest(".opt"); if (!o || o.disabled) return;
+  select(o.getAttribute("aria-checked") === "true" ? null : o);
+});
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest(".opt[aria-checked='true']")) { e.preventDefault(); check(); } });
+function check() {
+  const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.done) return;
+  const c = CHOICES.find(x => x.id === S.selected);
+  if (c.ok) {
+    o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok");
+    const n = S.wrong ? XP_SECOND : XP_FIRST;
+    finish(true);
+    say(`Correct. Plus ${n} XP.`);
+    flash(n);
+  } else {
+    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
+    select(null);
+    S.wrong++; S.left = MAX - S.wrong;
+    const next = opts().find(x => !x.disabled); if (next) next.focus();
+    counter(true);
+    quiet(XP_WRONG);
+    if (S.left <= 0) { finish(false); say("Wrong. No tries left."); }
+    else { pips(); say(`Wrong. ${S.left} ${S.left === 1 ? "try" : "tries"} left.`); }
+  }
+}
+function finish(ok) {
+  S.done = true; S.ok = ok;
+  document.querySelectorAll("#q .pips").forEach(x => x.remove());
+  $("#q").classList.add("closed");
+  document.querySelectorAll("#q .opt, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
+  document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
+  counter();
+}
+/* today's dots (app.js pips): after a wrong try with tries left, under the rows; used = filled red, left = hollow */
+function pips() {
+  document.querySelectorAll("#q .pips").forEach(x => x.remove());
+  if (S.left > 0 && S.wrong > 0) $("#q .choices").insertAdjacentHTML("afterend", `<span class="pips" aria-hidden="true">${'<i class="used"></i>'.repeat(S.wrong)}${"<i></i>".repeat(S.left)}</span>`);
+}
+const say = t => { $("#say").textContent = ""; setTimeout(() => { $("#say").textContent = t; }, 30); };
+
+/* ---------- the counter ---------- */
+function counter(missed) {
+  const el = $("#ctr"), v = S.v, L = S.left, done = S.done && S.ok;
+  el.dataset.v = v; el.dataset.left = L; el.classList.toggle("done", !!done);
+  const toks = () => `<span class="pp">${Array.from({ length: MAX }, (_, i) => `<i class="${i >= L ? "sp" : ""}"></i>`).join("")}</span>`;
+  let h = "";
+  if (v === "A") h = `<span class="w">${done ? "Solved" : L === 0 ? "No tries left" : L === 1 ? "1 try left" : `${L} tries left`}</span>`;
+  else if (v === "B") h = toks();
+  else if (v === "C") h = `<span class="w">${done ? `Solved on try ${S.wrong + 1}` : L === 0 ? "Out of tries" : `Try <b>${S.wrong + 1}</b> of ${MAX}${L === 1 && MAX > 1 ? " · last one" : ""}`}</span>`;
+  else h = toks() + `<span class="w">${done ? "" : L === 0 ? "out" : L === 1 && MAX > 1 ? "last try" : ""}</span>`;
+  el.innerHTML = h;
+  el.title = done ? "Solved" : `${L} of ${MAX} tries left`;
+  if (missed && v === "D" && !S.rm) {                // the token just spent: shake, then the halves part (CSS keyframes)
+    const t = el.querySelectorAll(".pp i")[L]; if (t) { t.classList.add("crack"); setTimeout(() => t.classList.remove("crack"), 500); }   // it is spent at once (.sp); the crack only animates
+  }
+}
+
+/* ---------- coin flash ---------- */
+let timers = [];
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+function clearFlash() {
+  timers.forEach(clearTimeout); timers = [];
+  document.querySelectorAll(".cf-tag, .cf-chip").forEach(x => x.remove());
+  $("#rwCoin").classList.remove("cf-pulse", "cf-static", "cf-quiet");
+  $("#rwCoin").dataset.flash = "";
+}
+function countUp(from, to, ms) {
+  const t0 = performance.now(), el = $("#xp");
+  const step = now => { const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); else hud(to); };
+  requestAnimationFrame(step);
+}
+function flash(n) {
+  clearFlash();
+  const coin = $("#rwCoin"), from = S.xp; S.xp += n; S.flashes++;
+  coin.dataset.flash = S.rm ? "static" : S.f;
+  if (S.rm) {                                         // no motion: a colour change and words that stay, then the new total
+    coin.classList.add("cf-static"); $("#xp").textContent = `+${n}`;
+    later(() => { coin.classList.remove("cf-static"); hud(); coin.dataset.flash = "done"; }, 2000);
+    return;
+  }
+  const r = coin.getBoundingClientRect();
+  if (S.f === "pulse") {                              // the pill rings sun yellow, pops, the number counts up; a "+N" tag on its corner
+    coin.classList.add("cf-pulse");
+    const t = document.body.appendChild(Object.assign(document.createElement("span"), { className: "cf-tag rw-skin", textContent: `+${n}` }));
+    t.setAttribute("aria-hidden", "true");
+    t.style.left = `${Math.min(r.right - 10, innerWidth - 60)}px`; t.style.top = `${r.top - 12}px`;
+    t.animate([{ transform: "scale(.4)", opacity: 0 }, { transform: "scale(1.15)", opacity: 1, offset: .3 }, { transform: "scale(1)", opacity: 1, offset: .75 }, { transform: "translateY(-6px)", opacity: 0 }], { duration: 1500, easing: "ease-out", fill: "forwards" });
+    countUp(from, S.xp, 700);
+    later(() => coin.classList.remove("cf-pulse"), 1200);
+    later(() => { t.remove(); coin.dataset.flash = "done"; }, 1600);
+  } else {                                            // a "+N XP" sticker chip rises off the right choice and lands in the pill, then it counts up
+    const at = $("#q .opt.right") || $("#q"), a = at.getBoundingClientRect();
+    const c = document.body.appendChild(Object.assign(document.createElement("span"), { className: "cf-chip rw-skin", textContent: `+${n} XP` }));
+    c.setAttribute("aria-hidden", "true");
+    const w = c.offsetWidth, h = c.offsetHeight;
+    const x0 = Math.min(a.left + a.width / 2, innerWidth - w / 2 - 8) - w / 2, y0 = a.top + a.height / 2 - h / 2;
+    const x1 = r.left + r.width / 2 - w / 2, y1 = r.top + r.height / 2 - h / 2;
+    c.style.left = `${x0}px`; c.style.top = `${y0}px`;
+    c.animate([{ transform: "translate(0,0) scale(.6)", opacity: 0 }, { transform: "translate(0,-24px) scale(1.1)", opacity: 1, offset: .25 },
+      { transform: "translate(0,-24px) scale(1)", opacity: 1, offset: .45 }, { transform: `translate(${x1 - x0}px,${y1 - y0}px) scale(.5)`, opacity: .9 }],
+      { duration: 1000, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" });
+    later(() => { c.remove(); coin.classList.add("cf-pulse"); countUp(from, S.xp, 600); }, 1000);
+    later(() => { coin.classList.remove("cf-pulse"); coin.dataset.flash = "done"; }, 2100);
+  }
+}
+/* a wrong try's +1 (engine.js): small cream, no sparks; reduced motion: the number just turns cream for a moment */
+function quiet(n) {
+  S.xp += n;
+  const coin = $("#rwCoin");
+  if (S.rm) { hud(); coin.classList.add("cf-quiet"); later(() => coin.classList.remove("cf-quiet"), 2000); return; }
+  if (window.FX && FX.float) {                         // FX.float is skipped by the OS setting only; ?rm=1 is handled above
+    FX.float(coin, `+${n}`, "fx-float-sm");
+  }
+  hud();
+}
+
+/* ---------- controls ---------- */
+function paint() {
+  document.querySelectorAll("[data-v]").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === S.v));
+  document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === S.f));
+  document.querySelectorAll("[data-rm]").forEach(b => b.setAttribute("aria-pressed", (b.dataset.rm === "1") === S.rm));
+  document.querySelectorAll("[data-dots]").forEach(b => b.setAttribute("aria-pressed", (b.dataset.dots === "1") === S.dots));
+  document.documentElement.classList.toggle("rm", S.rm);
+  document.documentElement.classList.toggle("nodots", !S.dots);
+  $("#why").innerHTML = V[S.v].why + ` <span>Coin flash: <b>${S.f === "chip" ? "+N chip flies in" : "pulse + count-up"}</b>${S.rm ? " (reduced motion: the pill turns yellow and says +N for 2 s, then the new total)" : ""}.</span>`;
+  $("#phone").innerHTML = `<b>Phone:</b> in the app the "Question" label shows only side by side (720px and up). This demo shows it at every width. ${V[S.v].phone}`;
+  counter();
+  const u = new URL(location.href);
+  u.searchParams.set("v", S.v); u.searchParams.set("f", S.f); u.searchParams.set("rm", S.rm ? "1" : "0");
+  if (S.dots) u.searchParams.set("dots", "1"); else u.searchParams.delete("dots");
+  history.replaceState(null, "", u);
+}
+function reset() {
+  clearFlash();
+  Object.assign(S, { left: MAX, wrong: 0, done: false, ok: false, selected: null, xp: XP0 });
+  render(); hud(); paint();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".seg button"); if (!b) return;
+  if (b.dataset.v) S.v = b.dataset.v;
+  else if (b.dataset.f) S.f = b.dataset.f;
+  else if (b.dataset.rm) S.rm = b.dataset.rm === "1";
+  else if (b.dataset.dots) { S.dots = b.dataset.dots === "1"; }
+  else if (b.id === "reset") { reset(); return; }
+  paint();
+});
+fetch("../index.html").then(r => r.text()).then(t => {                // the app's own icon sprite
+  const s = new DOMParser().parseFromString(t, "text/html").querySelector("svg symbol#i-list")?.closest("svg");
+  if (s) $("#sprite").append(document.importNode(s, true));
+}).catch(() => {});
+reset();
+window.__tr = { S, reset, MAX, XP0, XP_FIRST, XP_SECOND };
+</script>
+</body>
+</html>

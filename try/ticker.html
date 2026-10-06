@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work ticker: test drive</title>
+<link rel="icon" href="data:,">
+<!-- Work ticker test drive (Oct 6, v2: plain text ticker). Part 1: Q1 from try/live-scene.html (the F–x work graph). The area is cut
+     into pillars (1 m grid columns, split where F crosses zero; under the axis = negative). Drag the line t: a running readout
+     "W = 12.0 J" (the signed sum up to t) and, right beside it, a plain text ticker like a stock quote: green "▲ +1.5 +4.5" while a
+     positive streak lasts, a red "▼ −0.5" run after a sign flip. A run fades out ~1.5 s after its last entry. At the end: "W = 22 J"
+     with the chips +G / −R that stay. ?rm=1 (or the system's reduced motion): no fade, the ticker shows the current streak sum.
+     Part 2: a Cluck follow-up rendered from a JSON "blocks" reply (the proposed reply schema; renderer = one function per block type).
+     Serve over http: python3 serve.py, then /try/ticker.html  (?rm=1 forces reduced motion). Reuses graph.js + app.css. -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css"><script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/math.min.js"></script><script src="../graph.js"></script>
+<style>
+  body { padding: var(--s4) var(--gut) var(--s7); overflow-x: hidden; }
+  main { max-width: 52rem; margin: 0 auto; }
+  h1 { font-size: calc(var(--t-md) * 1.25); margin: 0 0 var(--s2); }
+  .how { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); max-width: 65ch; }
+  .seg { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s4); }
+  .seg > span { color: var(--muted); font-size: var(--t-sm); min-width: 4.5rem; }
+  .seg button, .pick button, .act, .ask-b { font: inherit; font-size: var(--t-sm); color: #fff; background: var(--sheet); border: var(--bw) solid var(--edge);
+    border-radius: 8px; padding: var(--s2) var(--s3); min-height: 44px; cursor: pointer; }
+  .seg button[aria-pressed="true"], .pick button[aria-pressed="true"] { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
+  button:focus-visible, textarea:focus-visible, .live:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+  .card { background: var(--qbox); border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-1); }
+  .card h2 { font-size: var(--t-sm); color: var(--muted); margin: 0 0 var(--s2); letter-spacing: .04em; }
+  .q p { margin: 0 0 var(--s3); max-width: 65ch; }
+  .cluck { margin: 0 0 var(--s3); font-size: var(--t-sm); max-width: 65ch; }
+  .cluck b { color: var(--c2); }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+  .live { touch-action: none; cursor: ew-resize; border-radius: 8px; user-select: none; -webkit-user-select: none; }
+  .live.drag { cursor: grabbing; }
+  .hintline { font-size: var(--t-xs); color: var(--hint); margin: var(--s1) 0 0; max-width: 65ch; }
+
+  /* ---------- the ticker: one line of plain text, W + a stock-quote run beside it ---------- */
+  .tape { min-width: 0; display: flex; flex-wrap: nowrap; align-items: baseline; column-gap: var(--s3); row-gap: var(--s1); min-height: 2.5rem;
+    font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .big { font-size: var(--t-md); font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .tk { flex: 0 1 auto; min-width: 0; overflow: hidden; display: inline-flex; justify-content: flex-end; align-items: baseline; column-gap: var(--s3); font-size: var(--t-sm); font-weight: 700; }   /* too long for a phone: the oldest text slides off the left edge, the newest stays by W */
+  .run { white-space: nowrap; transition: opacity .4s ease-out; }
+  .run.up { color: var(--ok); } .run.dn { color: var(--bad); }
+  .run.out { opacity: 0; }
+  .tape.rev { flex-wrap: wrap; }
+  .tape.rev .tk { display: none; }
+  .total { display: none; min-width: 0; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+  .tape.rev .total { display: inline-flex; }
+  .chips { display: inline-flex; flex-wrap: wrap; gap: var(--s2); }
+  .chip { display: inline-flex; align-items: center; padding: 0 var(--s2); border-radius: 6px; font-weight: 700; font-size: var(--t-sm); border: var(--bw) solid; }
+  .chip.up { color: var(--ok); border-color: var(--ok); background: rgb(95 211 148 / .1); }
+  .chip.dn { color: var(--bad); border-color: var(--bad); background: rgb(255 122 122 / .1); }
+  .gr { font-size: var(--t-xs); color: var(--muted); }
+  .tape.rm .run { transition: none; }
+  @media (prefers-reduced-motion: reduce) { .run { transition: none !important; } }
+
+  /* ---------- follow-up chat (Cluck's sheet look: app.css .ai-skin / .ai-box / .wtext) ---------- */
+  .fu { border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-3); }
+  .fu h2 { font-size: var(--t-sm); color: var(--ai-muted); margin: 0 0 var(--s3); letter-spacing: .04em; }
+  .asks { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; margin: 0 0 var(--s3); }
+  .ask-b { background: var(--ai-pill); color: var(--ai-text); border-color: var(--ai-line); text-align: left; }
+  .ask-b[aria-pressed="true"] { background: var(--ai-ct); color: var(--ai-on-ct); border-color: var(--ai-edge); }
+  .ask-b.small { font-size: var(--t-xs); color: var(--ai-muted); }
+  .thread { display: flex; flex-direction: column; gap: var(--s4); }
+  .thread:empty::before { content: "Tap a question above."; color: var(--ai-muted); font-size: var(--t-sm); }
+  .msg { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); }
+  .msg > .av { grid-row: 1 / 3; }
+  .msg > :not(.av) { grid-column: 2; min-width: 0; }
+  .av { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--ai-tint); color: var(--ai); font-weight: 700; font-size: var(--t-xs); }
+  .msg.me .av { background: var(--raised); color: var(--ai-text); }
+  .who { display: flex; align-items: center; gap: var(--s2); min-height: 2rem; line-height: 1.3; }
+  .who .name { font-weight: 700; color: var(--ai); }
+  .msg.me .who .name { color: var(--ai-text); }
+  .who .tag { padding: 1px 5px; border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 0.6875rem; font-weight: 700; letter-spacing: .04em; line-height: 1.4; }
+  .bubble { margin: 0; padding: var(--s2) var(--s3); border-radius: 10px; background: var(--ai-ct); color: var(--ai-on-ct); width: fit-content; max-width: 100%; }
+  .wtext.wreply { cursor: auto; font-size: var(--t-sm); }
+  .wtext .blk { margin-top: var(--s2); }
+  .wtext .blk:first-child { margin-top: 0; }
+  .wtext .blk.in { animation: blkin .35s ease-out both; }
+  @keyframes blkin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .wtext .wmath .note { display: block; margin-top: var(--s2); font-size: var(--t-xs); color: var(--ai-muted); }
+  .wtext .wans { text-align: left; }
+  .wtext .say { margin-top: var(--s1); }
+  .patch { display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--ai-line);
+    background: var(--ai-tint); color: var(--ai-text); font: inherit; font-size: var(--t-xs); cursor: pointer; }
+  .patch b { color: var(--mark); }
+  .cmp-l { font-size: var(--t-xs); color: var(--ai-muted); margin: 0 0 var(--s1); letter-spacing: .04em; }
+  .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+  .cmp > div { background: var(--ai-tint); border-radius: 8px; padding: var(--s2) var(--s3); min-width: 0; overflow-wrap: anywhere; }
+  .plain { white-space: pre-wrap; color: var(--ai-text); }
+  details.json { margin-top: var(--s2); font-size: var(--t-xs); color: var(--ai-muted); }
+  details.json summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+  details.json pre { margin: var(--s1) 0 0; padding: var(--s2); background: var(--ai-field); border-radius: 6px; overflow-x: auto; max-width: 100%; font-size: 0.75rem; }
+  .fu .hintline { color: var(--ai-muted); }
+
+  /* ---------- picks + result code (live-scene's pattern) ---------- */
+  .pick { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0 var(--s3); }
+  .act { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
+  textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-sm); color: var(--ink); background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; padding: var(--s2) var(--s3); }
+  #code { font-family: var(--mono); min-height: 4.5rem; }
+  .row { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; margin: var(--s2) 0; }
+  .readout { font-size: var(--t-sm); color: var(--muted); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Work ticker: test drive</h1>
+  <p class="how">Drag the yellow line <i>t</i> across the graph (or tap anywhere on it, or use the arrow keys). Then try the follow-up questions under it.</p>
+  <div class="seg" role="group" aria-label="Motion"><span>Motion</span>
+    <button type="button" data-rm="0">Text ticker</button><button type="button" data-rm="1">Reduced motion</button></div>
+
+  <section class="card q" id="q1" aria-labelledby="q1h">
+    <h2 id="q1h">QUESTION 1 · WORK FROM A GRAPH</h2>
+    <p>A cart moves along the x-axis. The net force on it, <span class="tex">$F(x)$</span>, rises from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{N}$</span> over the first <span class="tex">$2.0\ \text{m}$</span>, stays at <span class="tex">$6.0\ \text{N}$</span> until <span class="tex">$x = 4.0\ \text{m}$</span>, then falls in a straight line to <span class="tex">$-2.0\ \text{N}$</span> at <span class="tex">$x = 6.0\ \text{m}$</span>. How much work does it do from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{m}$</span>?</p>
+    <p class="cluck"><b>Cluck:</b> (waddles along the axis) Every pillar is a chunk of work. Above the line it pays you, under it it bills you. QUACK.</p>
+    <div class="stage">
+      <div class="tape" id="tape" aria-hidden="true"><span class="big" id="bigW">W = 0.0 J</span><span class="tk" id="tk"></span>
+        <span class="total" id="total"><span class="chips" id="chips"></span><span class="gr" id="gr"></span></span></div>
+      <div class="fig live" id="fig" tabindex="0" role="slider" aria-label="Line t on the force graph. Drag it, tap the graph, or use the arrow keys." aria-valuemin="0" aria-valuemax="6"></div>
+    </div>
+    <p class="sr-only" id="say" aria-live="polite"></p>
+  </section>
+
+  <section class="fu ai-skin ai-box" id="fu" aria-labelledby="fuh">
+    <h2 id="fuh">FOLLOW-UP · ASK CLUCK</h2>
+    <div class="asks" role="group" aria-label="Sample follow-ups">
+      <button type="button" class="ask-b" data-ex="a">why is the pink part negative?</button>
+      <button type="button" class="ask-b" data-ex="b">so what's the total?</button>
+      <button type="button" class="ask-b small" data-ex="f">fallback demo</button>
+    </div>
+    <div class="thread" id="thread" aria-live="polite"></div>
+    <p class="hintline">Mock replies, no AI call. Each reply is JSON blocks; open "reply JSON" to see it. Tap a question again to replay it.</p>
+  </section>
+
+  <section class="card" aria-labelledby="resH">
+    <h2 id="resH">YOUR PICK</h2>
+    <p class="q" style="margin:0">Did the ticker help you see W = gains − losses?</p>
+    <div class="pick" data-key="tk" role="group" aria-label="Ticker usefulness"><button type="button" data-v="1">1 meh</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5 yes</button></div>
+    <p class="q" style="margin:0">Reduced motion version:</p>
+    <div class="pick" data-key="rmv" role="group" aria-label="Reduced motion pick"><button type="button" data-v="worse">Worse</button><button type="button" data-v="same">Same</button><button type="button" data-v="better">Better</button></div>
+    <p class="q" style="margin:0">Follow-up replies (blocks):</p>
+    <div class="pick" data-key="fu" role="group" aria-label="Follow-up pick"><button type="button" data-v="less">Too much</button><button type="button" data-v="ok">Right</button><button type="button" data-v="more">Want more</button></div>
+    <label for="note" class="q" style="display:block;margin:0 0 var(--s1)">Anything else (optional)</label>
+    <textarea id="note" rows="2" maxlength="300"></textarea>
+    <div class="row"><button type="button" class="act" id="copy">Copy result code</button><span id="copied" class="readout" role="status"></span></div>
+    <label for="code" class="sr-only">Result code</label>
+    <textarea id="code" readonly></textarea>
+  </section>
+</main>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const qs = new URLSearchParams(location.search);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (v, d = 1) => (+Math.abs(v).toFixed(d)).toString();       // magnitude; the sign is printed separately (− is U+2212)
+const sgn = v => (v < 0 ? "−" : "+");
+const sysRM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const S = { rm: qs.get("rm") === "1" || (qs.get("rm") !== "0" && sysRM), t: 0, entered: 0, revealed: false, hi: [],
+  tk: "", rmv: "", fu: "", cross: 0, drags: 0, reveals: 0, asked: [], t0: Date.now() };
+
+/* ---------- Q1's force graph (try/live-scene.html QA, default dots) and its pillars ---------- */
+const PTS = [[0, 0], [2, 6], [4, 6], [6, -2]], XMAX = 6;
+function F(x) {
+  for (let i = 0; i < PTS.length - 1; i++) { const [x1, y1] = PTS[i], [x2, y2] = PTS[i + 1]; if (x <= x2 + 1e-12) return y1 + (y2 - y1) * (x - x1) / (x2 - x1); }
+  return PTS[PTS.length - 1][1];
+}
+/* pillar edges: every 1 m grid line + every vertex + every zero crossing; area by the trapezoid rule (exact: F is linear inside) */
+const PIL = (() => {
+  const xs = new Set([0, 1, 2, 3, 4, 5, 6, ...PTS.map(p => p[0])]);
+  for (let i = 0; i < PTS.length - 1; i++) { const [x1, y1] = PTS[i], [x2, y2] = PTS[i + 1]; if (y1 * y2 < 0) xs.add(x1 + (x2 - x1) * y1 / (y1 - y2)); }
+  const e = [...xs].filter(x => x >= 0 && x <= XMAX).sort((a, b) => a - b), out = [];
+  for (let i = 0; i < e.length - 1; i++) {
+    const x1 = e[i], x2 = e[i + 1], a = (F(x1) + F(x2)) / 2 * (x2 - x1);
+    if (Math.abs(a) > 1e-9) out.push({ id: "p" + (out.length + 1), x1, x2, a: Math.round(a * 100) / 100, s: a > 0 ? 1 : -1 });
+  }
+  return out;
+})();
+const G = PIL.filter(p => p.s > 0).reduce((s, p) => s + p.a, 0), R = -PIL.filter(p => p.s < 0).reduce((s, p) => s + p.a, 0), W = G - R;
+const PINK = PIL.find(p => p.s < 0).id;
+const sumTo = n => PIL.slice(0, n).reduce((s, p) => s + p.a, 0);
+
+/* ---------- the figure: graph.js cartesian, redrawn each move (like live-scene) ---------- */
+const fig = $("#fig");
+function block() {
+  const marks = [];
+  PIL.forEach((p, i) => {
+    const pts = [[p.x1, 0], [p.x1, F(p.x1)], [p.x2, F(p.x2)], [p.x2, 0]], on = i < S.entered;
+    marks.push({ mark: "poly", pts, fill: on, dash: !on, color: p.s > 0 ? "c1" : "c3" });
+  });
+  for (let i = 0; i < PTS.length - 1; i++) marks.push({ mark: "seg", from: PTS[i], to: PTS[i + 1], color: "ink" });
+  for (const id of S.hi) { const p = PIL.find(q => q.id === id); if (p) marks.push({ mark: "poly", pts: [[p.x1, 0], [p.x1, F(p.x1)], [p.x2, F(p.x2)], [p.x2, 0]], color: "mark" }); }
+  marks.push({ mark: "vline", x: S.t, color: "mark", label: "$t$", anchor: "n" });
+  marks.push({ mark: "point", at: [S.t, 0], color: "mark" });
+  return { type: "graph", kind: "cartesian", alt: "Force versus position, area split into pillars", x: { min: 0, max: 6.5, step: 1, label: "$x$ (m)" }, y: { min: -4, max: 8, step: 2, label: "$F$ (N)" }, marks };
+}
+function paint() {
+  if (fig.clientWidth) { fig._g = null; Graph.render(fig, block()); }
+  fig.setAttribute("aria-valuenow", S.t.toFixed(2));
+  fig.setAttribute("aria-valuetext", `t = ${S.t.toFixed(1)} m, ${S.entered} of ${PIL.length} pillars, work so far ${sgn(sumTo(S.entered)).replace("+", "")}${fmt(sumTo(S.entered))} J`);
+}
+const inv = () => { const X = fig._X, o = X([0, 0]), e = X([1, 1]); return px => (px - o[0]) / (e[0] - o[0]); };
+
+/* ---------- the ticker: W readout + plain text runs beside it ---------- */
+const tape = $("#tape"), tk = $("#tk"), bigW = $("#bigW");
+const log = [];                                                        // every flash, for the test + the result code
+const FADE = 1500;                                                     // a run fades this long after its last entry
+let revTok = 0, lastSign = 0, run = null;
+const arrow = s => (s > 0 ? "▲" : "▼");
+function readout() { if (!S.revealed) bigW.textContent = `W = ${sumTo(S.entered) < -1e-9 ? "−" : ""}${Math.abs(sumTo(S.entered)).toFixed(1)} J`; }
+function fadeLater(r) {
+  clearTimeout(r._t);
+  r._t = setTimeout(() => { r.classList.add("out"); setTimeout(() => { r.remove(); if (run === r) run = null; }, 450); }, FADE);
+}
+function flash(p, dir) {                                               // dir +1: t entered p; −1: t left p backwards (the opposite entry)
+  const v = p.a * dir, s = v > 0 ? 1 : -1;
+  S.cross++;
+  log.push({ id: p.id, v, s, t: Date.now() });
+  $("#say").textContent = `${s > 0 ? "up" : "down"} ${fmt(v)} joules`;
+  if (S.rm) return;
+  if (!run || !run.isConnected || run.classList.contains("out") || +run.dataset.sign !== s) {   // a sign flip (or a cold start): a new run
+    if (run && run.isConnected) [...run.querySelectorAll(".e")].slice(0, -2).forEach(x => { x.previousSibling?.nodeType === 3 && x.previousSibling.remove(); x.remove(); });   // the old run keeps its last 2: the flip stays in view on a phone
+    run = document.createElement("span");
+    run.className = `run ${s > 0 ? "up" : "dn"}`; run.dataset.sign = s;
+    run.innerHTML = `<span class="ar">${arrow(s)}</span> `;
+    tk.append(run);
+    [...tk.children].slice(0, -2).forEach(x => x.remove());           // at most the old run + the new one
+  }
+  run.insertAdjacentHTML("beforeend", `${run.querySelector(".e") ? " " : ""}<span class="e" data-pid="${p.id}">${sgn(v)}${fmt(v)}</span>`);
+  [...run.querySelectorAll(".e")].slice(0, -4).forEach(x => x.remove());   // the last 4 of a long streak
+  fadeLater(run);                                                      // the colour stays on while the streak lasts
+}
+function rmPaint() {                                                   // reduced motion: the current streak's sum, no fade
+  if (!S.rm) return;
+  tk.innerHTML = "";
+  const n = S.entered, segs = [];
+  PIL.slice(0, n).forEach(p => { const l = segs[segs.length - 1]; if (l && l.s === p.s) l.v += p.a; else segs.push({ s: p.s, v: p.a }); });
+  const cur = segs.pop();
+  if (cur) tk.innerHTML = `<span class="run ${cur.s > 0 ? "up" : "dn"}" data-sign="${cur.s}"><span class="ar">${arrow(cur.s)}</span> <span class="e">${sgn(cur.v)}${fmt(cur.v)}</span></span>`;
+}
+function reveal(on) {
+  if (on === S.revealed) return;
+  S.revealed = on; revTok++;
+  if (!on) { tape.classList.remove("rev"); readout(); return; }
+  S.reveals++;
+  tape.classList.add("rev"); tk.innerHTML = ""; run = null;
+  $("#chips").innerHTML = `<span class="chip up" id="chipG">+${fmt(G)} J</span><span class="chip dn" id="chipR">−${fmt(R)} J</span>`;
+  $("#gr").textContent = `W = ${fmt(G)} − ${fmt(R)}`;
+  bigW.textContent = `W = ${fmt(W)} J`;
+}
+function setT(t) {
+  t = Math.max(0, Math.min(XMAX, t));
+  if (XMAX - t < 0.04) t = XMAX;                                       // the last few px snap to the end
+  S.t = t;
+  const n = PIL.filter(p => p.x1 < t - 1e-9).length;                   // a pillar counts once t is inside it
+  if (n < S.entered && S.revealed) reveal(false);
+  for (let i = S.entered; i < n; i++) flash(PIL[i], 1);
+  for (let i = S.entered - 1; i >= n; i--) flash(PIL[i], -1);
+  S.entered = n;
+  readout();
+  rmPaint();
+  reveal(t >= XMAX);
+  paint();
+  code();
+}
+
+/* drag: the whole figure is the target (tap = jump there, then drag); arrows / Home / End too */
+let grab = false, tween = 0;
+fig.addEventListener("pointerdown", e => {
+  if (!fig._X) return;
+  cancelAnimationFrame(tween);
+  grab = true; S.drags++;
+  fig.setPointerCapture(e.pointerId); fig.classList.add("drag"); e.preventDefault();
+  setT(inv()(e.clientX - fig.getBoundingClientRect().left));
+});
+fig.addEventListener("pointermove", e => { if (grab) setT(inv()(e.clientX - fig.getBoundingClientRect().left)); });
+const end = () => { grab = false; fig.classList.remove("drag"); };
+fig.addEventListener("pointerup", end); fig.addEventListener("pointercancel", end);
+fig.addEventListener("keydown", e => {
+  const k = { ArrowRight: 0.5, ArrowUp: 0.5, ArrowLeft: -0.5, ArrowDown: -0.5 }[e.key];
+  if (k) { setT(Math.round((S.t + k) * 2) / 2); e.preventDefault(); }
+  else if (e.key === "Home") { setT(0); e.preventDefault(); }
+  else if (e.key === "End") { setT(XMAX); e.preventDefault(); }
+});
+function glide(to) {                                                   // scenePatch moves t: a short glide (flashes play), instant under rm
+  cancelAnimationFrame(tween);
+  if (S.rm) return setT(to);
+  const from = S.t, t0 = performance.now(), dur = Math.min(900, 150 * Math.abs(to - from) + 200);
+  const step = now => { const k = Math.min(1, (now - t0) / dur); setT(from + (to - from) * (1 - Math.pow(1 - k, 2))); if (k < 1) tween = requestAnimationFrame(step); };
+  tween = requestAnimationFrame(step);
+}
+
+/* ---------- PART 2: Cluck's reply = { v: 1, blocks: [...] }; one render function per block type ---------- */
+function md(s) {                                                       // a line: $..$ math, **bold**
+  return String(s).split("$").map((t, i) => i % 2 ? katex.renderToString(t, { throwOnError: false })
+    : esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")).join("");
+}
+const tex = (t, display) => katex.renderToString(String(t), { throwOnError: false, displayMode: display });
+const isStr = v => typeof v === "string" && v.length > 0;
+const R_ = {                                                           // each: (block, ctx) -> html string; throw / return null = invalid
+  text: b => isStr(b.md) && `<div class="wl">${md(b.md)}</div>`,
+  steps: b => Array.isArray(b.items) && b.items.length && b.items.length <= 3 && b.items.every(it => isStr(it.title)) &&
+    b.items.map((it, i) => `<div class="wl wstep"><span class="wnum" aria-hidden="true">${i + 1}</span><div class="wsbody"><div class="wstitle">${md(it.title)}</div>${
+      isStr(it.sub) ? `<div class="wssub">${md(it.sub)}</div>` : ""}${(Array.isArray(it.lines) ? it.lines : []).map(l => `<div class="wl">${md(l)}</div>`).join("")}</div></div>`).join(""),
+  math: b => isStr(b.tex) && `<div class="wl wmath">${tex(b.tex, true)}${isStr(b.note) ? `<span class="note">${md(b.note)}</span>` : ""}</div>`,
+  answer: b => isStr(b.tex) && `<div class="wl wmath wans">${tex(`\\boxed{${b.tex}}`, false)}</div>${isStr(b.say) ? `<div class="wl say">${md(b.say)}</div>` : ""}`,
+  scenePatch: (b, ctx) => {
+    if (b.ref !== "q1" || ctx.scenes++ >= 1) return null;              // budget: one scene change per reply
+    const hl = (Array.isArray(b.highlight) ? b.highlight : []).filter(id => PIL.some(p => p.id === id));
+    const t = b.set && typeof b.set.t === "number" ? Math.max(0, Math.min(XMAX, b.set.t)) : null;
+    ctx.after.push(() => applyPatch(hl, t));
+    const what = hl.length ? hl.map(id => PIL.find(p => p.id === id)).map(p => `pillar ${p.id} (${sgn(p.a)}${fmt(p.a)} J)`).join(", ") : "the graph";
+    return `<button type="button" class="patch" data-hl="${esc(hl.join(","))}" data-t="${t ?? ""}"><b>↑</b> Showing ${esc(what)} on the graph</button>`;
+  },
+  compare: b => isStr(b.left) && isStr(b.right) &&
+    `${isStr(b.label) ? `<div class="cmp-l">${md(b.label)}</div>` : ""}<div class="cmp"><div>${md(b.left)}</div><div>${md(b.right)}</div></div>`
+};
+const plain = b => { const t = b && typeof b === "object" ? (b.text ?? b.md ?? b.say ?? b.tex ?? "") : (typeof b === "string" ? b : ""); return t === "" ? "" : `<div class="wl plain">${esc(t)}</div>`; };
+function renderBlock(b, ctx) {                                         // never throws: unknown / invalid -> its text as plain text
+  try {
+    const fn = b && typeof b === "object" && Object.prototype.hasOwnProperty.call(R_, b.type) ? R_[b.type] : null;
+    const h = fn ? fn(b, ctx) : null;
+    if (typeof h === "string" && h) return { html: h, ok: true };
+  } catch (e) { /* fall through */ }
+  return { html: plain(b), ok: false };
+}
+function renderReply(reply, ctx) {
+  const blocks = reply && Array.isArray(reply.blocks) ? reply.blocks : [reply];
+  return blocks.map(b => { const r = renderBlock(b, ctx); return { ...r, type: b && b.type }; });
+}
+function applyPatch(hl, t) {
+  S.hi = hl;
+  $("#q1").scrollIntoView({ block: "start", behavior: S.rm ? "auto" : "smooth" });
+  if (t != null) glide(t); else paint();
+}
+
+const EX = {
+  a: { ask: "why is the pink part negative?", reply: { v: 1, blocks: [
+    { type: "text", md: "Under the axis $F$ points **backwards** ($F < 0$) while the cart still moves forward ($dx > 0$). Force against the motion takes energy out." },
+    { type: "scenePatch", ref: "q1", set: { t: 6 }, highlight: [PINK] },
+    { type: "math", tex: "W_{\\text{pink}} = \\tfrac12 (0.5)(-2.0) = -0.5\\ \\text{J}", note: "a triangle: ½ × base 0.5 m × height −2.0 N, and the height is negative" }
+  ] } },
+  b: { ask: "so what's the total?", reply: { v: 1, blocks: [
+    { type: "steps", items: [
+      { title: "Add the blue pillars", sub: "everything above the axis", lines: [`$1.5 + 4.5 + 6 + 6 + 4 + 0.5 = ${fmt(G)}\\ \\text{J}$`] },
+      { title: "Take off the pink one", sub: "below the axis counts negative", lines: [`$-${fmt(R)}\\ \\text{J}$`] },
+      { title: "Net work", sub: "W = gains − losses", lines: [`$${fmt(G)} - ${fmt(R)} = ${fmt(W)}\\ \\text{J}$`] }
+    ] },
+    { type: "answer", tex: `W = ${fmt(W)}\\ \\text{J}`, say: "That's choice **a**. QUACK." }
+  ] } },
+  f: { ask: "show it as a 3D chart?", reply: { v: 1, blocks: [
+    { type: "compare", label: "same graph, two signs", left: `Above the axis: $+${fmt(G)}\\ \\text{J}$`, right: `Below the axis: $-${fmt(R)}\\ \\text{J}$` },
+    { type: "chart3d", text: "(I can't draw 3D charts yet, so here's my plain text instead. QUACK.)", data: [[0, 0, 1]] }
+  ] } }
+};
+function play(k) {
+  const ex = EX[k], th = $("#thread");
+  th.querySelector(`[data-x="${k}"]`)?.remove();
+  document.querySelectorAll(".ask-b").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ex === k)));
+  const ctx = { scenes: 0, after: [] }, out = renderReply(ex.reply, ctx);
+  const wrap = document.createElement("div");
+  wrap.className = "x"; wrap.dataset.x = k;
+  wrap.innerHTML = `<div class="msg me"><span class="av" aria-hidden="true">Y</span><div class="who"><span class="name">You</span></div><p class="bubble">${esc(ex.ask)}</p></div>
+    <div class="msg cl-msg" style="margin-top:var(--s3)"><span class="av" aria-hidden="true">C</span><div class="who"><span class="name">Cluck</span><span class="tag">AI</span></div>
+    <div class="wtext wreply">${out.map((r, i) => `<div class="blk${S.rm ? "" : " in"}" data-type="${esc(r.type ?? "")}" data-ok="${r.ok}" style="animation-delay:${i * 0.25}s">${r.html}</div>`).join("")}</div>
+    <details class="json"><summary>reply JSON${k === "f" ? " (block 2 is invalid on purpose)" : ""}</summary><pre>${esc(JSON.stringify(ex.reply, null, 2))}</pre></details></div>`;
+  th.append(wrap);
+  wrap.querySelectorAll(".patch").forEach(b => b.addEventListener("click", () => applyPatch(b.dataset.hl ? b.dataset.hl.split(",") : [], b.dataset.t === "" ? null : +b.dataset.t)));
+  if (!S.asked.includes(k)) S.asked.push(k);
+  const run = () => ctx.after.forEach(f => f());
+  if (ctx.after.length) S.rm ? run() : setTimeout(run, 600);           // let the reply land, then the scene changes
+  else wrap.scrollIntoView({ block: "nearest", behavior: S.rm ? "auto" : "smooth" });
+  code();
+}
+document.querySelectorAll(".ask-b").forEach(b => b.addEventListener("click", () => play(b.dataset.ex)));
+
+/* ---------- switches, picks, the result code (live-scene's pattern) ---------- */
+function syncSeg() {
+  document.querySelectorAll("[data-rm]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.rm === (S.rm ? "1" : "0"))));
+  tape.classList.toggle("rm", S.rm);
+  const u = new URL(location); u.searchParams.set("rm", S.rm ? "1" : "0"); history.replaceState(null, "", u);
+}
+document.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => {
+  S.rm = b.dataset.rm === "1"; tk.innerHTML = ""; run = null; syncSeg(); rmPaint();
+  const r = S.revealed; S.revealed = false; if (r) reveal(true); code();
+}));
+document.querySelectorAll(".pick").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  S[g.dataset.key] = b.dataset.v; g.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); code();
+})));
+$("#note").addEventListener("input", code);
+function code() {
+  const note = $("#note").value.replace(/[;\n]+/g, " ").trim();
+  $("#code").value = `TK1;rm=${S.rm ? 1 : 0};drags=${S.drags};flashes=${S.cross};reveals=${S.reveals};asked=${S.asked.join(",") || "-"};secs=${Math.round((Date.now() - S.t0) / 1000)};tk=${S.tk || "?"};rmv=${S.rmv || "?"};fu=${S.fu || "?"};w=${innerWidth};note=${note}`;
+}
+$("#copy").addEventListener("click", async () => {
+  code();
+  try { await navigator.clipboard.writeText($("#code").value); $("#copied").textContent = "Copied. Paste it to Claude."; }
+  catch { $("#code").select(); $("#copied").textContent = "Select-all is on: copy it by hand."; }
+});
+
+let rz = 0;
+addEventListener("resize", () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(paint); });
+document.querySelectorAll("#q1 .tex").forEach(x => { x.innerHTML = Graph.tex(x.textContent); });
+syncSeg(); rmPaint(); paint(); code();
+window.__tk = { S, PIL, G, R, W, log, setT, play, renderReply };       // for tests/ticker.pw.mjs
+</script>
+</body>
+</html>
