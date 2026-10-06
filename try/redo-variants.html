@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redo Button Variants</title>
+<!-- Redo my misses: 5 icon + colour variants for Tony to pick (Oct 6). Mockup only, the app's dark tokens copied from app.css.
+     Red = wrong, green = right, orange = Cluck: a redo hue stays clear of all three. -->
+<style>
+:root {
+  --paper: #08111f; --sheet: #16243a; --raised: #20304a; --qbox: #0f1d30;
+  --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --ok: #5fd394; --bad: #ff7a7a; --ai: #ff9a3c;
+  --s2: .5rem; --s3: .75rem; --s4: 1rem; --s5: 1.5rem;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; padding: 16px; }
+h1 { font-size: 1.4rem; margin: 0 0 4px; }
+p.lead { color: var(--muted); margin: 0 0 var(--s5); }
+.v { background: var(--qbox); border-radius: 14px; padding: var(--s4); margin-bottom: var(--s5); border-left: 6px solid var(--h); }
+.v h2 { margin: 0; font-size: 1.15rem; display: flex; gap: 10px; align-items: center; }
+.v h2 .sw { width: 18px; height: 18px; border-radius: 50%; background: var(--h); }
+.v .why { color: var(--muted); font-size: .9rem; margin: 2px 0 var(--s3); }
+.lab { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: var(--s3) 0 6px; }
+.row { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
+.row.phone { flex-wrap: nowrap; }
+.phone { width: 358px; max-width: 100%; }
+.grow { margin-left: auto; }
+.btn { height: 48px; min-width: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); flex: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; font: 700 .95rem/1 inherit; white-space: nowrap; }
+.btn.ic { padding: 0; width: 48px; }
+.btn svg { width: 24px; height: 24px; flex: none; }
+.btn.dim { opacity: .45; }
+/* the redo button, idle: the hue on the icon + a hue edge, so it never reads as a plain reload */
+.redo { color: var(--ink); border-color: color-mix(in srgb, var(--h) 70%, transparent); }
+.redo svg { color: var(--h); }
+/* inside a round: the bar gets a hue strip, the list button a hue tint, Exit is filled */
+.round { position: relative; padding-top: 10px; }
+.round::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; border-radius: 4px; background: var(--strip, var(--h)); }
+.round .lst { background: color-mix(in srgb, var(--h) 22%, var(--sheet)); border-color: color-mix(in srgb, var(--h) 60%, transparent); }
+.round .exit { background: var(--fill, var(--h)); border-color: transparent; color: var(--on); }
+.round .exit svg { color: var(--on); }
+.toast { display: inline-flex; gap: 10px; align-items: center; padding: 10px 16px; border-radius: 12px; background: var(--sheet);
+  border: 1px solid color-mix(in srgb, var(--h) 60%, transparent); box-shadow: 0 10px 24px -6px rgb(0 0 0 / .55); }
+.toast svg { width: 28px; height: 28px; color: var(--h); }
+.toast b { display: block; } .toast span { color: var(--muted); font-size: .9rem; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 0 var(--s5); }
+@media (min-width: 900px) { .grid { grid-template-columns: auto 1fr; } }
+.grid > div { min-width: 0; }
+@media (max-width: 420px) { body { padding: 10px; } .v { padding: 10px; } .phone { zoom: .86; } }   /* the 358px phone bar, scaled into a card on a real phone */
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.5M12 15.2v.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <!-- 1: a loop around an X: "the X ones, again" -->
+  <symbol id="r-loopx" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4.5H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 10l4 4M14 10l-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <!-- 2: stacked cards, the front one pulled back -->
+  <symbol id="r-cards" viewBox="0 0 24 24"><rect x="8" y="3.5" width="12" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 7v11.5A2.5 2.5 0 0 0 7.5 21H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 9.5h-5M11.5 9.5l2-2M11.5 9.5l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <!-- 3: a target: aim at what you missed -->
+  <symbol id="r-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></symbol>
+  <!-- 4: a U-turn arrow over a flag: back to the flagged ones -->
+  <symbol id="r-uturn" viewBox="0 0 24 24"><path d="M6 20V5M6 5h9l-2 3 2 3H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 20v-5a3 3 0 0 0-6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 13l2 2 2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <!-- 5: two swords crossed in a circle arrow: a rematch -->
+  <symbol id="r-rematch" viewBox="0 0 24 24"><path d="M5 5l9 9M19 5l-9 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12.5 15.5l3 3M11.5 15.5l-3 3M16 17l2 2M8 17l-2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+
+<h1>Redo misses: 5 looks</h1>
+<p class="lead">Each one: a new icon + one hue. Idle = hue icon and edge. In a round = hue strip on the bar, tinted list button, filled Exit. Red, green and Cluck orange are taken.</p>
+<div id="out"></div>
+
+<script>
+const V = [
+  { n: "1. Violet loop", h: "#b69cff", on: "#1c1038", icon: "r-loopx", why: "A loop around an X: 'the X ones, again'. Violet reads as study mode." },
+  { n: "2. Teal cards", h: "#4fd1c5", on: "#03211e", icon: "r-cards", why: "Stacked cards pulled back: a review deck. Teal = calm, clear of ok-green." },
+  { n: "3. Gold target", h: "#ffd84a", on: "#2b2200", icon: "r-target", why: "A target: aim at the misses. Gold ties to the XP coin and the Comeback toast." },
+  { n: "4. Pink flag", h: "#ff8fc8", on: "#3a0b25", icon: "r-uturn", why: "U-turn to the flagged ones. Pink is loud, away from error red." },
+  { n: "5. Rematch gradient", h: "#8f7bff", on: "#ffffff", icon: "r-rematch", why: "Game feel: a rematch. A violet-to-pink strip and fill, for sugar mode.",
+    strip: "linear-gradient(90deg,#6d5cff,#ff6fb5)", fill: "linear-gradient(90deg,#6d5cff,#d25cff)" }
+];
+const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
+const bar = (v, round, phone) => `<div class="row ${round ? "round" : ""} ${phone ? "phone" : ""}">
+  <span class="btn lst">${ico("i-list")}${round ? "Redo 1/4" : "BANK_P2X"}</span>
+  ${round ? `<span class="btn exit">${ico(v.icon)}Exit redo</span>`
+          : phone ? `<span class="btn ic redo">${ico(v.icon)}</span>` : `<span class="btn redo">${ico(v.icon)}Redo misses</span>`}
+  <span class="btn ic dim grow">${ico("i-prev")}</span><span class="btn ic">${ico("i-next")}</span></div>`;
+document.getElementById("out").innerHTML = V.map(v => `<section class="v" style="--h:${v.h};--on:${v.on};${v.strip ? `--strip:${v.strip};--fill:${v.fill};` : ""}">
+  <h2><span class="sw"></span>${v.n}</h2><p class="why">${v.why}</p>
+  <div class="grid"><div><div class="lab">Phone, idle (list open)</div>${bar(v, false, true)}
+  <div class="lab">Phone, in a round</div>${bar(v, true, true)}</div>
+  <div><div class="lab">Desktop, idle</div>${bar(v, false, false)}
+  <div class="lab">Comeback toast</div><div class="toast">${ico(v.icon)}<div><b>Comeback!</b><span>Missed it before. Got it now.</span></div></div></div></div>
+</section>`).join("");
+</script>
+</body>
+</html>

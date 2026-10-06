@@ -192,6 +192,40 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CSCI26_M5V", "m3", part=0, answer="1")["triesLeft"], 1)          # another browser starts fresh
         self.assertEqual(self.g("CSCI26_M5V", "m3", part=1, answer="1")["triesLeft"], 1)          # and part a's tries are not part b's
 
+    def test_redo_round_regrades_fresh(self):                                  # "Redo my misses": own namespace per round
+        p = BANK["CALC1_T6B"]
+        self.g("CALC1_T6B", "rd1", answer="4")
+        self.g("CALC1_T6B", "rd1", answer="dne")
+        self.assertEqual(self.g("CALC1_T6B", "rd1", answer="12")["verdict"], "locked")
+        before = (serve.state(p, "rd1"), serve.mark(p, "rd1"))
+        r = self.g("CALC1_T6B", "rd1", answer="4", round=1)
+        self.assertEqual((r["verdict"], r["triesLeft"]), ("wrong", 1))
+        self.assertEqual(self.g("CALC1_T6B", "rd1", answer="12", round=1)["verdict"], "correct")
+        self.assertEqual(self.g("CALC1_T6B", "rd1", answer="12", round=1)["verdict"], "locked")
+        self.assertEqual((serve.state(p, "rd1"), serve.mark(p, "rd1")), before)                 # history untouched
+        self.assertEqual(self.g("CALC1_T6B", "rd1", answer="12", round=2)["verdict"], "correct")  # a new round starts fresh
+
+    def test_redo_round_bad_values(self):
+        for bad in (True, "1", 0, -1, 1.0, 2 ** 31, [1]):
+            self.assertEqual(self.g("CALC1_T6B", "rd2", answer="12", round=bad)["verdict"], "invalid", bad)
+        self.assertNotIn(("rd2", "CALC1_T6B"), serve._tries)
+
+    def test_redo_round_multi(self):
+        self.g("CSCI26_M5V", "rd3", part=0, answer="17")
+        self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="17", round=5)["triesLeft"], 1)   # not a repeat in the round
+        self.assertEqual(self.g("CSCI26_M5V", "rd3", part=0, answer="14", round=5)["verdict"], "correct")
+        self.assertEqual(serve.state(BANK["CSCI26_M5V"], "rd3")["parts"][0], {"wrong": 1, "done": False,
+                                                                             "gen": serve._tries[("rd3", "CSCI26_M5V", 0)]["gen"]})
+
+    def test_redo_round_purges_older_rounds_only(self):
+        self.g("CALC1_T6B", "rd4", answer="4")
+        self.g("CALC1_T6B", "rd4", answer="4", round=1)
+        self.g("CALC1_X2P", "rd4", choice="a", round=1)
+        self.g("CALC1_T6B", "rd4x", answer="4", round=1)                       # another browser's round stays
+        self.g("CALC1_T6B", "rd4", answer="4", round=2)
+        keys = {k for k in serve._tries if k[0].startswith("rd4")}
+        self.assertEqual(keys, {("rd4", "CALC1_T6B"), ("rd4:r2", "CALC1_T6B"), ("rd4x:r1", "CALC1_T6B")})
+
     def test_multi_hint_is_the_parts_own(self):
         self.assertEqual(self.g("CSCI26_M5V", "m4", part=0, answer="14.5")["hint"], BANK["CSCI26_M5V"]["nudge"])
         self.assertIn("overlap twice", self.g("CSCI26_M5V", "m4", part=0, answer="17")["hint"])
@@ -339,6 +373,18 @@ class Http(unittest.TestCase):
         self.assertIsNone(r2.headers["Set-Cookie"])
         self.assertEqual(json.load(r2)["triesLeft"], 1)   # same wrong value again: a repeat
 
+    def test_check_redo_round_after_lockout(self):
+        def post(body, cookie=None):
+            r = urllib.request.urlopen(urllib.request.Request(
+                self.base + "check", data=json.dumps({"code": "CALC1_T6B", **body}).encode(), method="POST",
+                headers={"Content-Type": "application/json", **({"Cookie": cookie} if cookie else {})}))
+            return r.headers["Set-Cookie"], json.load(r)
+        set_cookie, _ = post({"answer": "12"})
+        cookie = set_cookie.split(";")[0]
+        self.assertEqual(post({"answer": "12"}, cookie)[1]["verdict"], "locked")
+        self.assertEqual(post({"answer": "12", "round": 7}, cookie)[1]["verdict"], "correct")
+        self.assertEqual(post({"answer": "12", "round": "7"}, cookie)[1]["verdict"], "invalid")
+
     def get(self, path, cookie):
         return json.load(urllib.request.urlopen(urllib.request.Request(self.base + path, headers={"Cookie": cookie})))
 
@@ -381,6 +427,15 @@ class Persist(unittest.TestCase):
         self.assertEqual(serve.grade(p, "r1", {"answer": "6"})["verdict"], "wrong")
         self.restart()
         self.assertEqual(serve.grade(p, "r1", {"answer": "9"})["verdict"], "locked")
+
+    def test_redo_round_survives_restart(self):
+        p = BANK["CALC1_T6B"]
+        self.assertEqual(serve.grade(p, "r5", {"answer": "5", "round": 3})["verdict"], "wrong")
+        with open(serve.TRIES) as f:
+            self.assertIn("r5:r3 CALC1_T6B", json.load(f)["tries"])
+        self.restart()
+        self.assertTrue(serve.grade(p, "r5", {"answer": "5", "round": 3}).get("repeat"))
+        self.assertEqual(serve.state(p, "r5")["wrong"], 0)
 
     def test_multi_part_round_trip(self):
         p = next(q for q in BANK.values() if q["type"] == "multi")        # per-part entries: "sid CODE i"

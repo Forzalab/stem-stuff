@@ -81,12 +81,14 @@ function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
+  const redoBtn = $("#qredo"), redoTx = $("#qredoTx");
+  const redo = () => window.stemRedo && bank() ? window.stemRedo.get() : null;   // a "Redo my misses" round (app.js)
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
-  let codes = [], cur = null, setKey = "";
+  let codes = [], cur = null, setKey = "", doneSaid = false;
   function mark(c) {                                                 // this browser's record first, else the bank's server mark
     const s = window.stemOffline, rec = s && s.doneGet ? s.doneGet(c) : null, b = bank();
-    return rec || (b ? b.mark(c) : null);
+    return rec || (b && !(window.stemRedo && window.stemRedo.has(c)) ? b.mark(c) : null);   // a redo round starts blank
   }
 
   /* resort: compute the order again (a graded try, a bank, a shuffle). Opening a problem keeps the order as it is, so Prev / Next walk
@@ -98,7 +100,16 @@ function init() {
     setKey = key;
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    name.textContent = bank() ? bank().code : "Questions";                 // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
+    const r = redo(), ok = r ? codes.filter(c => (mark(c) || {}).done === "correct").length : 0;
+    const shut = r ? codes.filter(c => mark(c) && mark(c).done !== "open").length : 0;
+    name.textContent = r ? `Redo ${shut === codes.length ? "done " : ""}${ok}/${codes.length}` : bank() ? bank().code : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
+    redoBtn.hidden = !bank();
+    const miss = r ? 0 : codes.filter(c => ((mark(c) || {}).x || 0) > 0).length;
+    redoTx.textContent = r ? "Exit redo" : miss ? `Redo misses (${miss})` : "Redo misses";
+    redoBtn.setAttribute("aria-label", r ? "Exit redo" : "Redo missed questions");   // phones show the icon only
+    root.classList.toggle("redo-on", !!r);
+    if (r && on && shut === codes.length && !doneSaid) { doneSaid = true; say(`Redo done. ${ok} of ${codes.length} cleared.`); }
+    if (!r || shut < codes.length) doneSaid = false;
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;
@@ -137,7 +148,10 @@ function init() {
   /* sugar snacks ride right before their real (glue, design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
   const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
   const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
-  const order = all => glue(mastery(shuffled(all, seed(ORDER, "")), mark, cur), beforeOf);
+  const order = all => {
+    const r = redo();                                                // a redo round: only its codes, its own shuffle, no snack glue
+    return r ? shuffled(all.filter(c => r.codes.includes(c)), "redo" + r.n) : glue(mastery(shuffled(all, seed(ORDER, "")), mark, cur), beforeOf);
+  };
   window.stemOrder = all => order(all);
   shuf.addEventListener("click", () => {
     newSeed(ORDER);
@@ -145,6 +159,20 @@ function init() {
     panel.scrollTop = 0;
     const i = codes.indexOf(cur);
     say(`Shuffled. This is ${i + 1} of ${codes.length}.`);
+  });
+
+  /* Redo my misses: the questions with a wrong try (a miss, even one fixed on try 2), read before the round starts */
+  let redoT = 0;
+  redoBtn.addEventListener("click", () => {
+    if (redo()) { window.stemRedo.exit(); say("Back to all questions."); return; }
+    const missed = codes.filter(c => ((mark(c) || {}).x || 0) > 0);
+    if (!missed.length) {
+      redoTx.textContent = "No misses yet"; clearTimeout(redoT);
+      redoT = setTimeout(() => { if (!redo()) redoTx.textContent = "Redo misses"; }, 1600);
+      say("No misses yet."); return;
+    }
+    close(false);
+    if (window.stemRedo.start(missed)) say(`Redo: ${missed.length} missed question${missed.length > 1 ? "s" : ""}, shuffled.`);
   });
 
   const rows = () => [...list.querySelectorAll("a")];
@@ -173,7 +201,7 @@ function init() {
     const i = codes.indexOf(cur);
     let k = i + d;
     /* Next steps over a snack while the student is cruising (last 10 first tries > 90% right: the rewards decide, app.js) */
-    while (d > 0 && codes[k + 1] && snack(codes[k]) && window.stemSkipSnack && window.stemSkipSnack()) k++;
+    while (d > 0 && !redo() && codes[k + 1] && snack(codes[k]) && window.stemSkipSnack && window.stemSkipSnack()) k++;
     const c = codes[k];
     if (i < 0 || !c) return;
     d = k - i;
