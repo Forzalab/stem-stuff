@@ -11,7 +11,10 @@
      positive streak lasts, a red "▼ −0.5" run after a sign flip. A run fades out ~1.5 s after its last entry. At the end: "W = 22 J"
      with the chips +G / −R that stay. ?rm=1 (or the system's reduced motion): no fade, the ticker shows the current streak sum.
      Part 2: a Cluck follow-up rendered from a JSON "blocks" reply (the proposed reply schema; renderer = one function per block type).
-     Serve over http: python3 serve.py, then /try/ticker.html  (?rm=1 forces reduced motion). Reuses graph.js + app.css. -->
+     Serve over http: python3 serve.py, then /try/ticker.html  (?rm=1 forces reduced motion). Reuses graph.js + app.css.
+     v3 (Oct 6, Tony's TK1 notes): ?v=a|b|c (the "Look" switch) = three combos of (1) a QUEUE ticker (new entries slide in, the
+     oldest slides out), (2) W in the body font as a badge, (3) a gains / losses table at the end. All in-system: STYLE.md tokens,
+     --ok / --bad only for the sign (no new hue), chips like the reveal chips, 8px controls / 10px surfaces. ?v=0 = v2 above. -->
 <link rel="stylesheet" href="../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../app.css">
 <link rel="stylesheet" href="../vendor/katex/katex.min.css"><script src="../vendor/katex/katex.min.js"></script>
 <script src="../vendor/math.min.js"></script><script src="../graph.js"></script>
@@ -55,6 +58,64 @@
   .gr { font-size: var(--t-xs); color: var(--muted); }
   .tape.rm .run { transition: none; }
   @media (prefers-reduced-motion: reduce) { .run { transition: none !important; } }
+
+  /* ---------- v3 looks (?v=a|b|c): queue ticker + W badge + gains/losses table ---------- */
+  .tape[data-v]:not([data-v="0"]) { font-family: inherit; }
+  .tape[data-v]:not([data-v="0"]) .tk, .tape[data-v]:not([data-v="0"]) .total { display: none !important; }
+  .wb { display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--s3); border-radius: 8px; background: var(--raised);
+    color: var(--ink); font-weight: 700; font-size: var(--t-md); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tape[data-v]:not([data-v="0"]) .big { display: none; }
+  .tape[data-v="0"] .wb, .tape:not([data-v]) .wb, .tape[data-v="0"] .qq, .tape:not([data-v]) .qq { display: none; }
+  .qq { display: flex; align-items: center; min-width: 0; overflow: hidden; font-variant-numeric: tabular-nums; font-weight: 700; font-size: var(--t-sm); }
+  .qi { flex: none; display: inline-flex; align-items: center; white-space: nowrap; max-width: 6rem; overflow: hidden;
+    transition: max-width .3s ease-out, opacity .3s ease-out, margin .3s ease-out; }
+  .qi.up { color: var(--ok); } .qi.dn { color: var(--bad); }
+  .qi.in { animation: qin .25s ease-out both; }
+  .qi.gone { max-width: 0; opacity: 0; margin: 0 !important; padding-left: 0; padding-right: 0; border-width: 0; }
+  @keyframes qin { from { opacity: 0; transform: translateX(.75rem); } to { opacity: 1; transform: none; } }
+  .tape.rm .qi, .tape.rm .qi.in { transition: none; animation: none; }
+  @media (prefers-reduced-motion: reduce) { .qi, .qi.in { transition: none !important; animation: none !important; } }
+  /* A, tape: a strip like a stock quote board; entries are plain coloured text */
+  .tape[data-v="a"] .qq { flex: 1 1 auto; justify-content: flex-end; gap: var(--s3); min-height: 36px; padding: 0 var(--s3); border-radius: 8px; background: var(--field); }
+  /* B, chips: the entries are the reveal chips themselves, at most 3 */
+  .tape[data-v="b"] .qq { gap: var(--s2); }
+  .tape[data-v="b"] .qi { min-height: 28px; padding: 0 var(--s2); border-radius: 6px; border: var(--bw) solid; }
+  .tape[data-v="b"] .qi.up { border-color: var(--ok); background: rgb(95 211 148 / .1); } .tape[data-v="b"] .qi.dn { border-color: var(--bad); background: rgb(255 122 122 / .1); }
+  .tape[data-v="b"] .wb { background: transparent; border: var(--bw) solid var(--edge); min-height: 28px; font-size: var(--t-sm); padding: 0 var(--s2); border-radius: 6px; }
+  /* C, ledger: W on top, the last 3 entries as a short column under it, newest first, older ones fainter */
+  .tape[data-v="c"] { flex-direction: column; align-items: flex-start; row-gap: var(--s2); min-height: 0; }
+  .tape[data-v="c"] .qq { flex-direction: column-reverse; align-items: flex-start; gap: 2px; min-height: calc(3 * 1.5em); }
+  .tape[data-v="c"] .qi { max-width: none; max-height: 1.5em; line-height: 1.5; transition: max-height .3s ease-out, opacity .3s ease-out; }
+  .tape[data-v="c"] .qi.gone { max-height: 0; }
+  .tape[data-v="c"] .qi:nth-last-child(2) { opacity: .7; } .tape[data-v="c"] .qi:nth-last-child(3) { opacity: .45; }
+  .tape[data-v="c"] .qi .x { color: var(--muted); font-weight: 400; margin-left: var(--s2); font-size: var(--t-xs); }
+  /* the gains / losses table, under the figure once t reaches the end */
+  .gl { display: none; margin: var(--s3) 0 0; font-variant-numeric: tabular-nums; font-size: var(--t-sm); }
+  .gl.on { display: block; }
+  .gl table { border-collapse: collapse; width: 100%; }
+  .gl th, .gl td { padding: var(--s1) var(--s2); text-align: right; white-space: nowrap; }
+  .gl th { color: var(--muted); font-weight: 700; font-size: var(--t-xs); text-align: left; }
+  .gl .up { color: var(--ok); font-weight: 700; } .gl .dn { color: var(--bad); font-weight: 700; }
+  .gl .sum { border-top: var(--bw) solid var(--line); }
+  .gl .w { color: var(--ink); font-weight: 700; }
+  .gl .scroll { overflow-x: auto; }
+  .gl.ga { display: none; } .gl.ga.on { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: var(--s3); row-gap: var(--s1); align-items: baseline; }
+  .gl.ga .lab { color: var(--muted); font-weight: 700; font-size: var(--t-xs); }
+  .gl.ga .vals { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+  .gl.ga .tot { text-align: right; }
+  .gl.ga .wrow { grid-column: 1 / -1; border-top: var(--bw) solid var(--line); padding-top: var(--s1); display: flex; justify-content: space-between; }
+  .gl.gb.on { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+  .gl.gb .col { background: var(--field); border-radius: 8px; padding: var(--s2) var(--s3); }
+  .gl.gb .col h3 { margin: 0 0 var(--s1); font-size: var(--t-xs); color: var(--muted); }
+  .gl.gb .li { display: flex; justify-content: space-between; gap: var(--s2); }
+  .gl.gb .li .x { color: var(--muted); font-weight: 400; }
+  .gl.gb .ft { display: flex; justify-content: space-between; border-top: var(--bw) solid var(--line); margin-top: var(--s1); padding-top: var(--s1); }
+  .gl.gb .wrow { grid-column: 1 / -1; text-align: right; }
+
+  .shots figure { margin: 0 0 var(--s4); }
+  .shots figcaption { font-size: var(--t-sm); font-weight: 700; color: var(--muted); margin: 0 0 var(--s2); }
+  .shots .row3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr)); gap: var(--s2); }
+  .shots img { display: block; width: 100%; height: 9rem; object-fit: cover; object-position: top; border-radius: 8px; background: var(--field); }
 
   /* ---------- follow-up chat (Cluck's sheet look: app.css .ai-skin / .ai-box / .wtext) ---------- */
   .fu { border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-3); }
@@ -111,15 +172,18 @@
   <p class="how">Drag the yellow line <i>t</i> across the graph (or tap anywhere on it, or use the arrow keys). Then try the follow-up questions under it.</p>
   <div class="seg" role="group" aria-label="Motion"><span>Motion</span>
     <button type="button" data-rm="0">Text ticker</button><button type="button" data-rm="1">Reduced motion</button></div>
+  <div class="seg" role="group" aria-label="Look"><span>Look</span>
+    <button type="button" data-look="a">A · Tape</button><button type="button" data-look="b">B · Chips</button><button type="button" data-look="c">C · Ledger</button><button type="button" data-look="0">v2 (before)</button></div>
 
   <section class="card q" id="q1" aria-labelledby="q1h">
     <h2 id="q1h">QUESTION 1 · WORK FROM A GRAPH</h2>
     <p>A cart moves along the x-axis. The net force on it, <span class="tex">$F(x)$</span>, rises from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{N}$</span> over the first <span class="tex">$2.0\ \text{m}$</span>, stays at <span class="tex">$6.0\ \text{N}$</span> until <span class="tex">$x = 4.0\ \text{m}$</span>, then falls in a straight line to <span class="tex">$-2.0\ \text{N}$</span> at <span class="tex">$x = 6.0\ \text{m}$</span>. How much work does it do from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{m}$</span>?</p>
     <p class="cluck"><b>Cluck:</b> (waddles along the axis) Every pillar is a chunk of work. Above the line it pays you, under it it bills you. QUACK.</p>
     <div class="stage">
-      <div class="tape" id="tape" aria-hidden="true"><span class="big" id="bigW">W = 0.0 J</span><span class="tk" id="tk"></span>
+      <div class="tape" id="tape" aria-hidden="true"><span class="wb" id="wb">W = 0.0 J</span><span class="qq" id="qq"></span><span class="big" id="bigW">W = 0.0 J</span><span class="tk" id="tk"></span>
         <span class="total" id="total"><span class="chips" id="chips"></span><span class="gr" id="gr"></span></span></div>
       <div class="fig live" id="fig" tabindex="0" role="slider" aria-label="Line t on the force graph. Drag it, tap the graph, or use the arrow keys." aria-valuemin="0" aria-valuemax="6"></div>
+      <div class="gl" id="gl"></div>
     </div>
     <p class="sr-only" id="say" aria-live="polite"></p>
   </section>
@@ -135,10 +199,18 @@
     <p class="hintline">Mock replies, no AI call. Each reply is JSON blocks; open "reply JSON" to see it. Tap a question again to replay it.</p>
   </section>
 
+  <section class="card" aria-labelledby="shotH">
+    <h2 id="shotH">SCREENSHOTS · A / B / C AT 3 SIZES</h2>
+    <p class="hintline" style="margin:0 0 var(--s3)">Phone 390, laptop 1366, and zoomed far out (5464 px wide, about 25%). Each: mid-streak, the sign flip, the end. Tap one to open it full size.</p>
+    <div class="shots"><figure><figcaption>A · Tape</figcaption><div class="row3"><a href="shots/ticker-v3/a-1streak-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-1streak-390.png" alt="Look A, mid-streak, phone" loading="lazy"></a><a href="shots/ticker-v3/a-1streak-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-1streak-1366.png" alt="Look A, mid-streak, laptop" loading="lazy"></a><a href="shots/ticker-v3/a-1streak-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-1streak-zoom25.png" alt="Look A, mid-streak, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/a-2flip-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-2flip-390.png" alt="Look A, sign flip, phone" loading="lazy"></a><a href="shots/ticker-v3/a-2flip-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-2flip-1366.png" alt="Look A, sign flip, laptop" loading="lazy"></a><a href="shots/ticker-v3/a-2flip-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-2flip-zoom25.png" alt="Look A, sign flip, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/a-3end-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-3end-390.png" alt="Look A, the end, phone" loading="lazy"></a><a href="shots/ticker-v3/a-3end-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-3end-1366.png" alt="Look A, the end, laptop" loading="lazy"></a><a href="shots/ticker-v3/a-3end-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/a-3end-zoom25.png" alt="Look A, the end, zoomed out" loading="lazy"></a></div></figure><figure><figcaption>B · Chips</figcaption><div class="row3"><a href="shots/ticker-v3/b-1streak-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-1streak-390.png" alt="Look B, mid-streak, phone" loading="lazy"></a><a href="shots/ticker-v3/b-1streak-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-1streak-1366.png" alt="Look B, mid-streak, laptop" loading="lazy"></a><a href="shots/ticker-v3/b-1streak-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-1streak-zoom25.png" alt="Look B, mid-streak, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/b-2flip-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-2flip-390.png" alt="Look B, sign flip, phone" loading="lazy"></a><a href="shots/ticker-v3/b-2flip-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-2flip-1366.png" alt="Look B, sign flip, laptop" loading="lazy"></a><a href="shots/ticker-v3/b-2flip-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-2flip-zoom25.png" alt="Look B, sign flip, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/b-3end-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-3end-390.png" alt="Look B, the end, phone" loading="lazy"></a><a href="shots/ticker-v3/b-3end-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-3end-1366.png" alt="Look B, the end, laptop" loading="lazy"></a><a href="shots/ticker-v3/b-3end-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/b-3end-zoom25.png" alt="Look B, the end, zoomed out" loading="lazy"></a></div></figure><figure><figcaption>C · Ledger</figcaption><div class="row3"><a href="shots/ticker-v3/c-1streak-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-1streak-390.png" alt="Look C, mid-streak, phone" loading="lazy"></a><a href="shots/ticker-v3/c-1streak-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-1streak-1366.png" alt="Look C, mid-streak, laptop" loading="lazy"></a><a href="shots/ticker-v3/c-1streak-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-1streak-zoom25.png" alt="Look C, mid-streak, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/c-2flip-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-2flip-390.png" alt="Look C, sign flip, phone" loading="lazy"></a><a href="shots/ticker-v3/c-2flip-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-2flip-1366.png" alt="Look C, sign flip, laptop" loading="lazy"></a><a href="shots/ticker-v3/c-2flip-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-2flip-zoom25.png" alt="Look C, sign flip, zoomed out" loading="lazy"></a><a href="shots/ticker-v3/c-3end-390.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-3end-390.png" alt="Look C, the end, phone" loading="lazy"></a><a href="shots/ticker-v3/c-3end-1366.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-3end-1366.png" alt="Look C, the end, laptop" loading="lazy"></a><a href="shots/ticker-v3/c-3end-zoom25.png" target="_blank" rel="noopener"><img src="shots/ticker-v3/c-3end-zoom25.png" alt="Look C, the end, zoomed out" loading="lazy"></a></div></figure></div>
+  </section>
+
   <section class="card" aria-labelledby="resH">
     <h2 id="resH">YOUR PICK</h2>
     <p class="q" style="margin:0">Did the ticker help you see W = gains − losses?</p>
     <div class="pick" data-key="tk" role="group" aria-label="Ticker usefulness"><button type="button" data-v="1">1 meh</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5 yes</button></div>
+    <p class="q" style="margin:0">Which look (A / B / C)?</p>
+    <div class="pick" data-key="look" role="group" aria-label="Look pick"><button type="button" data-v="a">A Tape</button><button type="button" data-v="b">B Chips</button><button type="button" data-v="c">C Ledger</button></div>
     <p class="q" style="margin:0">Reduced motion version:</p>
     <div class="pick" data-key="rmv" role="group" aria-label="Reduced motion pick"><button type="button" data-v="worse">Worse</button><button type="button" data-v="same">Same</button><button type="button" data-v="better">Better</button></div>
     <p class="q" style="margin:0">Follow-up replies (blocks):</p>
@@ -158,8 +230,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const fmt = (v, d = 1) => (+Math.abs(v).toFixed(d)).toString();       // magnitude; the sign is printed separately (− is U+2212)
 const sgn = v => (v < 0 ? "−" : "+");
 const sysRM = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const S = { rm: qs.get("rm") === "1" || (qs.get("rm") !== "0" && sysRM), t: 0, entered: 0, revealed: false, hi: [],
-  tk: "", rmv: "", fu: "", cross: 0, drags: 0, reveals: 0, asked: [], t0: Date.now() };
+const S = { rm: qs.get("rm") === "1" || (qs.get("rm") !== "0" && sysRM), v: /^[abc0]$/.test(qs.get("v") || "") ? qs.get("v") : "a", t: 0, entered: 0, revealed: false, hi: [],
+  tk: "", rmv: "", fu: "", look: "", cross: 0, drags: 0, reveals: 0, asked: [], t0: Date.now() };
 
 /* ---------- Q1's force graph (try/live-scene.html QA, default dots) and its pillars ---------- */
 const PTS = [[0, 0], [2, 6], [4, 6], [6, -2]], XMAX = 6;
@@ -204,12 +276,12 @@ function paint() {
 const inv = () => { const X = fig._X, o = X([0, 0]), e = X([1, 1]); return px => (px - o[0]) / (e[0] - o[0]); };
 
 /* ---------- the ticker: W readout + plain text runs beside it ---------- */
-const tape = $("#tape"), tk = $("#tk"), bigW = $("#bigW");
+const tape = $("#tape"), tk = $("#tk"), bigW = $("#bigW"), wb = $("#wb"), qq = $("#qq"), gl = $("#gl");
 const log = [];                                                        // every flash, for the test + the result code
 const FADE = 1500;                                                     // a run fades this long after its last entry
 let revTok = 0, lastSign = 0, run = null;
 const arrow = s => (s > 0 ? "▲" : "▼");
-function readout() { if (!S.revealed) bigW.textContent = `W = ${sumTo(S.entered) < -1e-9 ? "−" : ""}${Math.abs(sumTo(S.entered)).toFixed(1)} J`; }
+function readout() { if (!S.revealed) bigW.textContent = wb.textContent = `W = ${sumTo(S.entered) < -1e-9 ? "−" : ""}${Math.abs(sumTo(S.entered)).toFixed(1)} J`; }
 function fadeLater(r) {
   clearTimeout(r._t);
   r._t = setTimeout(() => { r.classList.add("out"); setTimeout(() => { r.remove(); if (run === r) run = null; }, 450); }, FADE);
@@ -219,6 +291,7 @@ function flash(p, dir) {                                               // dir +1
   S.cross++;
   log.push({ id: p.id, v, s, t: Date.now() });
   $("#say").textContent = `${s > 0 ? "up" : "down"} ${fmt(v)} joules`;
+  if (S.v !== "0") return qPush(p, v, s);
   if (S.rm) return;
   if (!run || !run.isConnected || run.classList.contains("out") || +run.dataset.sign !== s) {   // a sign flip (or a cold start): a new run
     if (run && run.isConnected) [...run.querySelectorAll(".e")].slice(0, -2).forEach(x => { x.previousSibling?.nodeType === 3 && x.previousSibling.remove(); x.remove(); });   // the old run keeps its last 2: the flip stays in view on a phone
@@ -232,6 +305,32 @@ function flash(p, dir) {                                               // dir +1
   [...run.querySelectorAll(".e")].slice(0, -4).forEach(x => x.remove());   // the last 4 of a long streak
   fadeLater(run);                                                      // the colour stays on while the streak lasts
 }
+/* v3 queue: the newest entry slides in at the right (C: on top), the oldest slides out; MAX in view. Reduced motion: no slide */
+const MAX = { a: 4, b: 3, c: 3 };
+const xr = p => `${fmt(p.x1, 2)}–${fmt(p.x2, 2)} m`;
+function qPush(p, v, s) {
+  const el = document.createElement("span");
+  el.className = `qi ${s > 0 ? "up" : "dn"}${S.rm ? "" : " in"}`; el.dataset.pid = p.id;
+  el.innerHTML = `${sgn(v)}${fmt(v)}${S.v === "c" ? `<span class="x">${xr(p)}</span>` : ""}`;
+  qq.append(el);
+  const live = [...qq.querySelectorAll(".qi:not(.gone)")];
+  live.slice(0, Math.max(0, live.length - MAX[S.v])).forEach(o => {
+    if (S.rm) return o.remove();
+    o.classList.add("gone"); setTimeout(() => o.remove(), 320);
+  });
+}
+function table() {                                                     // the end: every pillar, gains and losses apart, summed
+  const gp = PIL.filter(p => p.s > 0), rp = PIL.filter(p => p.s < 0);
+  const n = v => `${sgn(v)}${fmt(v)}`;
+  if (S.v === "a") return `<span class="lab">Gains</span><span class="vals up">${gp.map(p => `<span>${n(p.a)}</span>`).join("")}</span><span class="tot up">${n(G)} J</span>
+    <span class="lab">Losses</span><span class="vals dn">${rp.map(p => `<span>${n(p.a)}</span>`).join("")}</span><span class="tot dn">−${fmt(R)} J</span>
+    <span class="wrow"><span class="lab">W = gains − losses</span><span class="w">${fmt(G)} − ${fmt(R)} = ${fmt(W)} J</span></span>`;
+  if (S.v === "b") return `<div class="col"><h3>Gains (above the axis)</h3>${gp.map(p => `<div class="li"><span class="x">${xr(p)}</span><span class="up">${n(p.a)}</span></div>`).join("")}<div class="ft"><span class="x">sum</span><span class="up">${n(G)} J</span></div></div>
+    <div class="col"><h3>Losses (below the axis)</h3>${rp.map(p => `<div class="li"><span class="x">${xr(p)}</span><span class="dn">${n(p.a)}</span></div>`).join("")}<div class="ft"><span class="x">sum</span><span class="dn">−${fmt(R)} J</span></div></div>
+    <div class="wrow w">W = ${fmt(G)} − ${fmt(R)} = ${fmt(W)} J</div>`;
+  return `<div class="scroll"><table><tr><th>x (m)</th>${PIL.map(p => `<th>${xr(p).replace(" m", "")}</th>`).join("")}<th>W</th></tr>
+    <tr><th>work (J)</th>${PIL.map(p => `<td class="${p.s > 0 ? "up" : "dn"}">${n(p.a)}</td>`).join("")}<td class="w">${fmt(W)}</td></tr></table></div>`;
+}
 function rmPaint() {                                                   // reduced motion: the current streak's sum, no fade
   if (!S.rm) return;
   tk.innerHTML = "";
@@ -243,12 +342,13 @@ function rmPaint() {                                                   // reduce
 function reveal(on) {
   if (on === S.revealed) return;
   S.revealed = on; revTok++;
-  if (!on) { tape.classList.remove("rev"); readout(); return; }
+  if (!on) { tape.classList.remove("rev"); gl.className = "gl"; gl.innerHTML = ""; readout(); return; }
   S.reveals++;
   tape.classList.add("rev"); tk.innerHTML = ""; run = null;
   $("#chips").innerHTML = `<span class="chip up" id="chipG">+${fmt(G)} J</span><span class="chip dn" id="chipR">−${fmt(R)} J</span>`;
   $("#gr").textContent = `W = ${fmt(G)} − ${fmt(R)}`;
-  bigW.textContent = `W = ${fmt(W)} J`;
+  bigW.textContent = wb.textContent = `W = ${fmt(W)} J`;
+  if (S.v !== "0") { gl.className = `gl g${S.v} on`; gl.innerHTML = table(); qq.innerHTML = ""; }
 }
 function setT(t) {
   t = Math.max(0, Math.min(XMAX, t));
@@ -386,13 +486,22 @@ document.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", 
   S.rm = b.dataset.rm === "1"; tk.innerHTML = ""; run = null; syncSeg(); rmPaint();
   const r = S.revealed; S.revealed = false; if (r) reveal(true); code();
 }));
+function syncLook() {
+  tape.dataset.v = S.v;
+  document.querySelectorAll("[data-look]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.look === S.v)));
+  const u = new URL(location); u.searchParams.set("v", S.v); history.replaceState(null, "", u);
+}
+document.querySelectorAll("[data-look]").forEach(b => b.addEventListener("click", () => {
+  S.v = b.dataset.look; qq.innerHTML = ""; tk.innerHTML = ""; run = null; syncLook(); rmPaint();
+  const r = S.revealed; S.revealed = false; gl.className = "gl"; gl.innerHTML = ""; if (r) reveal(true); code();
+}));
 document.querySelectorAll(".pick").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
   S[g.dataset.key] = b.dataset.v; g.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); code();
 })));
 $("#note").addEventListener("input", code);
 function code() {
   const note = $("#note").value.replace(/[;\n]+/g, " ").trim();
-  $("#code").value = `TK1;rm=${S.rm ? 1 : 0};drags=${S.drags};flashes=${S.cross};reveals=${S.reveals};asked=${S.asked.join(",") || "-"};secs=${Math.round((Date.now() - S.t0) / 1000)};tk=${S.tk || "?"};rmv=${S.rmv || "?"};fu=${S.fu || "?"};w=${innerWidth};note=${note}`;
+  $("#code").value = `TK1;v=${S.v};look=${S.look || "?"};rm=${S.rm ? 1 : 0};drags=${S.drags};flashes=${S.cross};reveals=${S.reveals};asked=${S.asked.join(",") || "-"};secs=${Math.round((Date.now() - S.t0) / 1000)};tk=${S.tk || "?"};rmv=${S.rmv || "?"};fu=${S.fu || "?"};w=${innerWidth};note=${note}`;
 }
 $("#copy").addEventListener("click", async () => {
   code();
@@ -403,7 +512,7 @@ $("#copy").addEventListener("click", async () => {
 let rz = 0;
 addEventListener("resize", () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(paint); });
 document.querySelectorAll("#q1 .tex").forEach(x => { x.innerHTML = Graph.tex(x.textContent); });
-syncSeg(); rmPaint(); paint(); code();
+syncSeg(); syncLook(); rmPaint(); paint(); code();
 window.__tk = { S, PIL, G, R, W, log, setT, play, renderReply };       // for tests/ticker.pw.mjs
 </script>
 </body>

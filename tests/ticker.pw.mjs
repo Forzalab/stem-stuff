@@ -51,7 +51,7 @@ const range = (a, z, n = 12) => Array.from({ length: n + 1 }, (_, i) => a + (z -
 const log = page => page.evaluate(() => window.__tk.log.map(l => [l.id, l.v]));
 
 for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
-  const { page, ctx, errs, drag, lift, shot } = await open(w, h, touch, "?rm=0");
+  const { page, ctx, errs, drag, lift, shot } = await open(w, h, touch, "?v=0&rm=0");   // v2 (before), still on the page as "v2 (before)"
   await step(`${w}: model: 7 pillars, G 22.5, R 0.5, W 22`, async () => {
     const m = await page.evaluate(() => ({ n: window.__tk.PIL.length, G: window.__tk.G, R: window.__tk.R, W: window.__tk.W, a: window.__tk.PIL.map(p => p.a) }));
     assert.deepEqual(m, { n: 7, G: 22.5, R: 0.5, W: 22, a: [1.5, 4.5, 6, 6, 4, 0.5, -0.5] });
@@ -148,7 +148,7 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
   await ctx.close();
 
   // ---------- ?rm=1: no flashes, one accumulating number, green then red ----------
-  const R = await open(w, h, touch, "?rm=1");
+  const R = await open(w, h, touch, "?v=0&rm=1");
   const rruns = () => R.page.$$eval("#tk .run", rs => rs.map(r => [r.dataset.sign, r.textContent.replace(/\s+/g, " ").trim()]));
   await step(`${w} rm: the ticker is the streak sum "▲ +18", green, W = 18.0 J`, async () => {
     await R.drag(range(0.05, 3.3));
@@ -173,6 +173,38 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
   });
   await R.shot("9-rm-reveal");
   await R.ctx.close();
+
+  // ---------- v3 looks (Tony's TK1 notes, Oct 6): queue ticker + W badge in the body font + gains / losses table ----------
+  for (const [v, max] of [["a", 4], ["b", 3], ["c", 3]]) for (const rm of [0, 1]) {
+    const V = await open(w, h, touch, `?v=${v}&rm=${rm}`);
+    const q = () => V.page.$$eval("#qq .qi:not(.gone)", es => es.map(e => [e.classList.contains("up") ? 1 : -1, e.firstChild.textContent]));
+    await step(`${w} ${v}${rm ? " rm" : ""}: 4 pillars → W badge "W = 18.0 J" in the body font, the queue holds the last ${max} gains`, async () => {
+      await V.drag(range(0.05, 3.3)); await sleep(400);
+      assert.equal(await V.page.textContent("#wb"), "W = 18.0 J");
+      assert.ok(!/Mono/.test(await V.page.$eval("#wb", e => getComputedStyle(e).fontFamily)), "the badge is not the mono font");
+      assert.deepEqual(await q(), [[1, "+1.5"], [1, "+4.5"], [1, "+6"], [1, "+6"]].slice(-max));
+      assert.equal(await V.page.isVisible("#tk"), false, "no v2 runs");
+    });
+    await step(`${w} ${v}${rm ? " rm" : ""}: the pink pillar joins the queue in red; the oldest left`, async () => {
+      await V.drag(range(3.3, 5.75, 8)); await sleep(400);
+      const r = await q();
+      assert.equal(r.length, max);
+      assert.deepEqual(r[r.length - 1], [-1, "−0.5"]);
+      assert.equal(await V.page.textContent("#wb"), "W = 22.0 J");
+      if (rm) assert.equal(await V.page.evaluate(() => document.querySelector("#tape").getAnimations({ subtree: true }).length), 0, "no motion under rm");
+    });
+    await step(`${w} ${v}${rm ? " rm" : ""}: the end → W = 22 J, the gains / losses table, no sideways scroll`, async () => {
+      await V.drag(range(5.75, 6.4, 3)); await V.lift();
+      assert.equal(await V.page.textContent("#wb"), "W = 22 J");
+      assert.equal(await V.page.isVisible("#gl"), true);
+      const t = (await V.page.innerText("#gl")).replace(/\s+/g, " ");
+      for (const want of ["+1.5", "+4.5", "+0.5", "−0.5", "22"]) assert.ok(t.includes(want), `table has ${want}: ${t}`);
+      assert.ok(await V.page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth));
+      assert.deepEqual(V.errs, []);
+    });
+    if (!rm) await V.shot(`v3-${v}-end`);
+    await V.ctx.close();
+  }
 }
 await b.close();
 console.log(failures ? `${failures} FAILED` : "all ok");
