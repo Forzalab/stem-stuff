@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try Lab</title>
+<link rel="icon" href="data:,">
+<!-- The try lab hub: every UI proposal you can test on the demo site, one line each. A new try page = one <li> in the list below
+     (newest first) + its own tests/<name>.pw.mjs. tests/try-tries.pw.mjs checks that every link here answers 200. -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../app.css">
+<style>
+  body { padding: var(--s5) var(--gut) var(--s7); }
+  main { max-width: 52rem; margin: 0 auto; }
+  h1 { font-size: var(--t-md); margin: 0 0 var(--s2); }
+  .lead { margin: 0 0 var(--s5); color: var(--muted); font-size: var(--t-sm); max-width: 65ch; }
+  .lead code { color: var(--ink); background: var(--field); padding: 0 var(--s1); border-radius: 4px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+  li a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s1) var(--s3); align-items: center; padding: var(--s3) var(--s4);
+    min-height: var(--btn); border-radius: 10px; background: var(--qbox); color: var(--ink); text-decoration: none; border: var(--bw) solid transparent;
+    transition: border-color .12s ease-out; }
+  li a:hover { border-color: var(--edge); }
+  li a:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+  .t { font-weight: 700; }
+  .d { grid-column: 1; color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
+  .qp { grid-column: 2; grid-row: 1 / 3; font: var(--t-xs)/1.3 var(--mono); color: var(--hint); text-align: right; }
+  .new { margin-left: var(--s2); padding: 1px 6px; border-radius: 4px; background: var(--c1); color: var(--paper); font-size: 0.75rem; font-weight: 700; vertical-align: 2px; }
+  li.next { padding: var(--s3) var(--s4); border-radius: 10px; border: var(--bw) dashed var(--line); color: var(--hint); font-size: var(--t-sm); }
+  @media (max-width: 30rem) { .qp { grid-column: 1; grid-row: auto; text-align: left; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Try lab</h1>
+  <p class="lead">Every UI proposal you can test right here. Each page switches its variants on the page (and by <code>?v=</code>); <code>?rm=1</code> forces reduced motion.</p>
+  <ul id="tries">
+    <li><a href="tries.html"><span class="t">Tries left + coin flash<span class="new">new</span></span><span class="d">A tries counter next to the "Question" label (pill, pips, words, crack) and the top-bar XP coin flashing +N on a right answer.</span><span class="qp">?v=A|B|C|D ?f=pulse|chip ?rm=1</span></a></li>
+    <li><a href="ticker.html"><span class="t">Work ticker</span><span class="d">Drag a line across the F–x graph: each pillar flashes +N J / −N J, then they collapse into W. Plus Cluck follow-ups as JSON blocks.</span><span class="qp">?rm=1</span></a></li>
+    <li><a href="live-scene.html"><span class="t">Live scene</span><span class="d">Two physics questions with a live figure (drag + sliders): how many numbers it shows and where it sits.</span><span class="qp">?num= ?at=</span></a></li>
+    <li><a href="redo-variants.html"><span class="t">Redo misses button</span><span class="d">Five looks for "Redo my misses" in the question bar, phone and desktop, idle and in a round.</span><span class="qp">all on one page</span></a></li>
+    <li class="next">Next proposal goes here: add one line at the top of this list.</li>
+  </ul>
+</main>
+</body>
+</html>
