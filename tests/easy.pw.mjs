@@ -433,6 +433,33 @@ try {
     assert.ok(m.handle <= 256, `divider handle near the top (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
   });
+
+  /* bug 5 (owner, Oct 6, zoomed out): bar + question + explain/Cluck form one block, centred: the gap left of the whole block
+     equals the gap right of it, Cluck open and closed, up to a 4K window (the owner's zoomed-out run) */
+  for (const [w, h] of [[1366, 768], [1920, 1080], [2560, 1440], [3840, 2160]]) await step(`centred at ${w}: the bar + both panes, Cluck open and closed`, async () => {
+    const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const zp = await z.newPage();
+    await zp.goto(BASE + "/#BANK_EZ12");
+    await zp.waitForFunction(() => !document.querySelector("#qnav").hidden && /^CALC1_E0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await zp.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(zp, "CALC1_E01");
+    const gaps = () => zp.evaluate(() => {
+      const rs = ["#qlistBtn", "#qnext", "#freeze", "#work", "#cluck"].map(s => document.querySelector(s)).filter(e => e && e.getClientRects().length).map(e => e.getBoundingClientRect());
+      const L = Math.min(...rs.map(r => r.left)), R = Math.max(...rs.map(r => r.right));
+      return { l: Math.round(L), r: Math.round(document.documentElement.clientWidth - R), cl: !!document.querySelector("#cluck")?.getClientRects().length };
+    });
+    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try, the sheet opens by itself
+    await zp.waitForFunction(() => document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 6000 });
+    const open = await gaps();
+    await zp.click("#cluck .cl-x2");
+    await zp.waitForFunction(() => !document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 3000 });
+    const shut = await gaps();
+    await z.close();
+    assert.ok(open.cl, "Cluck did not open");
+    assert.ok(Math.abs(open.l - open.r) <= 2, `Cluck open: left gap ${open.l}, right gap ${open.r}`);
+    assert.ok(Math.abs(shut.l - shut.r) <= 2, `Cluck closed: left gap ${shut.l}, right gap ${shut.r}`);
+  });
 } finally {
   await browser.close();
   srv.kill();
