@@ -396,6 +396,8 @@ try {
     const pop = await page.evaluate(() => ({ q: Math.round(document.querySelector("#q").getBoundingClientRect().top), pos: getComputedStyle(document.querySelector("#qlist")).position,
       shadow: getComputedStyle(document.querySelector("#qlist")).boxShadow !== "none" }));
     assert.deepEqual(pop, { q: before, pos: "absolute", shadow: true }, "the list floats over the page: the question does not move (Tony, Oct 6)");
+    const hit = await page.evaluate(() => ["#qlistBtn", "#qprev", "#qnext"].map(s => { const e = document.querySelector(s), r = e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }));
+    assert.deepEqual(hit, [true, true, true], "the open list never covers its own bar (List, Prev, Next stay clickable)");
     await page.mouse.click(5, 880); await page.waitForTimeout(150);
     assert.equal(await page.isHidden("#qlist"), true, "an outside tap closes the list");
     await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
