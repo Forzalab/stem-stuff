@@ -10,8 +10,9 @@
    Desktop / tablet side by side (html.side; Tony, Oct 4 picked "B: top of notes"): it docks as the first thing in the notes column,
    both players side by side, sticky, no drag, no corner math; – folds it into a "Show video" bar. Moving an iframe reloads it, so it is
    placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below).
-   Docked, a label row heads the column (Tony, Oct 5, video-bar.html ?v=1): the duck + "Cluck", level with the question's "Question" label,
-   and one "Curated brainrots" button that folds / unfolds the players (the – / ✕ overlays and the 36px "Show video" bar are gone there).
+   Docked, a label row heads the column, level with the question's "Question" label: a speech bubble + "Explain" (Tony, Oct 5, explain-column.html
+   D1), and one quiet text link, "Show / Hide curated brainrot", that folds / unfolds the players (Tony, Oct 5: "no buttons, just a link";
+   the – / ✕ overlays and the 36px "Show video" bar are gone there). Docked, all 3 videos sit in one box that scrolls sideways.
    The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
    While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
    was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
@@ -25,7 +26,7 @@
   ];
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const VIDS = shuffle(CATS.slice()).slice(0, 2).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // 2 of the 3, one video each, new every load
+  const VIDS = shuffle(CATS.slice()).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // one video per category, new every load; the corner shows 2 (app.css)
   const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
@@ -60,7 +61,7 @@
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=${RM.matches ? 0 : 1}&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
-  let el = null, duo = null, tab = null, btn = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
+  let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700 || RM.matches, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
   const docked = () => root.classList.contains("side");                // side by side: its own slot above the notes
   let userMin = false;                                                   // the – button, the only way to fold it when docked
@@ -70,13 +71,12 @@
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted" allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     const hd = document.createElement("div"); hd.className = "rot-hd";      // docked only (app.css): the column's label row
-    hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-duck")}<span>Cluck</span></span>`
-      + `<button type="button" class="btn btn-label rot-btn">${ico("i-play")}<span>Curated brainrots</span></button>`;
-    btn = hd.lastElementChild;
+    hd.innerHTML = `<span class="xb-label" aria-hidden="true">${ico("i-chat")}<span>Explain</span></span><button type="button" class="rot-link"></button>`;
+    link = hd.lastElementChild;
     el.append(hd, duo, tab);                                 // all stay put: moving an iframe reloads it, so stashing only hides the duo
     home();
     el.addEventListener("click", e => {
@@ -147,7 +147,8 @@
     home();
     if (el.classList.contains("docked")) {
       el.classList.toggle("stashed", stashed);
-      btn.dataset.act = stashed ? "open" : "min"; btn.setAttribute("aria-expanded", String(!stashed));
+      link.dataset.act = stashed ? "open" : "min"; link.setAttribute("aria-expanded", String(!stashed));
+      link.textContent = (stashed ? "Show" : "Hide") + " curated brainrot";
       return;
     }
     el.classList.toggle("stashed", stashed);

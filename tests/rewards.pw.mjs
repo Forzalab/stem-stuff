@@ -197,8 +197,8 @@ try {
     { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
       assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the label row stays above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the sheet is open: the players fold (Tony, Oct 5)");
-    await d.click("#rot .rot-btn");
-    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the header button still brings them back");
+    await d.click("#rot .rot-link");
+    assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the link still brings them back");
     assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");

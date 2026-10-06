@@ -48,9 +48,11 @@ writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P
 const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
 writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
-const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "Tick: a, c. Egg-cellent."];
+const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."];   // $$ on lines of their own: what live models send
 let asked = 0;
-const stub = createServer((req, res) => {
+const stub = createServer(async (req, res) => {
+  let body = ""; for await (const c of req) body += c;
+  if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   let i = 0;
@@ -114,7 +116,7 @@ try {
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: Key formulas, in order of use; the brainrot corner with the 2 muted players", async () => {
+  await step("sugar: Key formulas, in order of use; the brainrot corner: one muted player per category", async () => {
     assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
       return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
@@ -123,17 +125,17 @@ try {
       { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(122, 184, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
-    assert.equal(srcs.length, 2);
-    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): 2 of his 3 playlists, one video each
+    assert.equal(srcs.length, 3);
+    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): all 3 playlists, one video each
     assert.equal(cats.length, 3);
     const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
     for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
-    assert.notEqual(catOf(srcs[0]), catOf(srcs[1]), "two different playlists");
+    assert.equal(new Set(srcs.map(catOf)).size, 3, "one per playlist");
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
-      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 2 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 3 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
     assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "no original, no wrong pick yet: the scratchpad is the default (Tony, Oct 5)");
     const head = await page.evaluate(() => {                            // video-bar.html ?v=1 (Tony, Oct 5): "Cluck" level with "Question"
@@ -146,14 +148,19 @@ try {
     assert.ok(Math.abs(head.q - head.c) <= 1, `labels level: Question ${head.q}, Cluck ${head.c}`);
     assert.deepEqual([head.tall, head.cap, head.ctl], [true, true, false], "9:16 frames, at most 40vh tall; no – / ✕ / tab when docked");
     assert.equal(head.box, "block", "a box of its own (the top bar's .dock class once unwrapped it: nav.css display: contents)");
-    const b = "#rot .rot-btn";
-    assert.equal(await page.textContent(b), "Curated brainrots");
-    assert.equal(await page.getAttribute(b, "aria-expanded"), "true");
+    assert.equal(await page.textContent("#rot .rot-hd .xb-label"), "Explain", "the column label (Tony, Oct 5: explain-column.html D1)");
+    const b = "#rot .rot-link", folded = () => page.$eval("#rot", e => e.classList.contains("stashed"));
+    assert.deepEqual([await page.textContent(b), await page.getAttribute(b, "aria-expanded")], ["Hide curated brainrot", "true"]);
+    assert.equal(await page.$$eval("#rot .rot-btn, #rot .rot-grip", e => e.length), 0, "no button, no grip: one text link (Tony, Oct 5)");
+    { const [l, k] = await page.$$eval("#rot .rot-hd .xb-label, #rot .rot-link", es => es.map(e => e.getBoundingClientRect()).map(r => r.top + r.height / 2));
+      assert.ok(Math.abs(l - k) <= 2, `the link sits level with "Explain": ${l} vs ${k}`); }
     await page.click(b);
-    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), getComputedStyle(e.querySelector(".duo")).opacity]),
-      [true, "false", "0"], "the button folds the players");
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), getComputedStyle(e.querySelector(".duo")).opacity]),
+      [true, "false", "0"], "the link folds the players");
+    assert.equal(await page.textContent(b), "Show curated brainrot");
     assert.equal(await page.isVisible("#rot .rot-hd .xb-label"), true, "the label row stays");
-    await page.click(b); assert.equal(await page.$eval("#rot", e => e.classList.contains("stashed")), false, "and brings them back");
+    await page.click(b); assert.equal(await folded(), false, "and brings them back");
+    assert.deepEqual(await page.$eval("#rot .duo", d => [d.scrollWidth > d.clientWidth + 20, getComputedStyle(d).overflowX]), [true, "auto"], "3 videos in one box: the third scrolls in sideways");
   });
 
   await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
@@ -259,15 +266,15 @@ try {
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
   });
 
-  await step("Cluck's sheet: fills the notes column; 4 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
+  await step("Cluck's sheet: fills the notes column; 5 follow-ups through /chat with N left, then the field is done; Escape gives focus back", async () => {
     assert.equal(await page.$eval("#cluck", e => e.parentElement.id), "work", "desktop: the notes column");
     assert.equal(await page.isVisible("#cluck #clTabEP"), true);
     const box = await page.$eval("#cluck", e => { const r = e.getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(); return [r.width === w.width, w.height, Math.abs(r.bottom - w.bottom) < 1]; });
     assert.equal(box[0], true, "as wide as the column: no dead space"); assert.equal(box[1], 900 - 32, "the column: full height, less the 16px top and bottom margins");
     assert.equal(box[2], true, "the sheet fills the column under the videos");
-    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-btn").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
+    assert.deepEqual(await page.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").getAttribute("aria-expanded"), e.querySelector(".rot-hd").getClientRects().length > 0]),
       [true, "false", true], "the sheet is open: the players fold, the label row stays (Tony, Oct 5)");
-    assert.equal(await page.textContent("#cluck .ask .left"), "4 left");
+    assert.equal(await page.textContent("#cluck .ask .left"), "5 left");
     assert.equal(await page.$$eval("#cluck [role=tab], #cluck .cl-ttl", e => e.length), 0, "one scroll: no tabs, no second title (Tony, Oct 5: variant a)");
     const aa = await page.evaluate(() => {                                    // every RM3 pair reads AA (the mock: all >= 7:1)
       const rgb = s => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number), L = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
@@ -275,27 +282,31 @@ try {
       const cs = sel => getComputedStyle(document.querySelector(sel)), sheet = cs("#cluck").backgroundColor;
       return { text: cr(cs("#cluck .wtext").color, sheet), muted: cr(cs("#cluck .cl-fold-n").color, sheet), me: cr(getComputedStyle(document.querySelector("#cluck"), null).getPropertyValue("--ai-on-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`), getComputedStyle(document.querySelector("#cluck")).getPropertyValue("--ai-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`)),
         send: cr(cs("#cluck .send").color, cs("#cluck .send").backgroundColor), left: cr(cs("#cluck .ask .left").color, cs("#cluck .ask").backgroundColor),
-        live: cr(cs("#cluck .cl-live").color, cs("#cluck .cl-live").backgroundColor) };
+        live: cr(cs("#cluck .cl-live").color, sheet), tag: cr(cs("#cluck .who .tag").color, cs("#cluck .who .tag").backgroundColor),
+        name: cr(cs("#cluck .who .name").color, sheet), time: cr(cs("#cluck .who .time").color, sheet) };
     });
     for (const [k, v] of Object.entries(aa)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}:1 < 4.5`);
     await page.waitForFunction(() => { const r = document.querySelector("#cluck .ask").getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 })
       .catch(() => { throw new Error("the ask field is not on screen when the sheet opens"); });
-    for (let n = 1; n <= 4; n++) {
+    for (let n = 1; n <= 5; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
-      if (n === 1) assert.equal(await page.isVisible("#cluck .cl-live"), true, "LIVE while Cluck answers");
+      if (n === 1) assert.match(await page.textContent("#cluck .cl-live"), /Cluck is typing/, "the typing line while Cluck answers");
+      if (n === 1) assert.equal(await page.isVisible("#cluck .cl-live"), true, "the typing line while Cluck answers");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
       if (n === 1) {
-        assert.equal(await page.isVisible("#cluck .cl-live"), false, "LIVE off once typed");
+        assert.equal(await page.isVisible("#cluck .cl-live"), false, "the typing line leaves once typed");
+        assert.deepEqual(await page.$$eval("#cluck .msg .name", e => e.map(x => x.textContent)), ["Cluck", "You", "Cluck"], "Cluck and you, as chat users (C1)");
         const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
         assert.equal(await look("#cluck .wreply"), await look("#cluck .wtext:not(.wreply)"), "one speaker, one format: the reply has no card");
+        assert.deepEqual(await page.$eval("#cluck .wreply", r => [!!r.querySelector(".wmath .katex"), r.textContent.includes("$$")]), [true, false], "split $$ lines render as one display line");
       }
       assert.equal(asked, a0 + 1, "one /chat call");
       { const rr = await page.$$eval("#cluck .wreply", r => r.map(x => x.textContent)); assert.match(rr.at(-1), /Egg-cellent/); }
-      assert.equal((await page.$$eval("#cluck .bub.me", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");
-      if (n < 4) assert.equal(await page.textContent("#cluck .ask .left"), `${4 - n} left`);
+      assert.equal((await page.$$eval("#cluck .msg.me .md", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");
+      if (n < 5) assert.equal(await page.textContent("#cluck .ask .left"), `${5 - n} left`);
     }
-    assert.ok(!(await page.$("#cluck .ask")) && /4 questions/.test(await page.textContent("#cluck .done-row")), "4 asked: the field is done");
+    assert.ok(!(await page.$("#cluck .ask")) && /5 questions/.test(await page.textContent("#cluck .done-row")), "5 asked: the field is done");
     await page.keyboard.press("Escape");
     assert.equal(await page.isHidden("#cluck"), true);
     assert.equal(await page.evaluate(() => document.activeElement.classList.contains("wchip")), true, "focus goes back to the chip");

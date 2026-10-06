@@ -42,6 +42,23 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   ~35 chars/s word by word (`$..$` whole), caret at the end; a tap on the box skips; reduced motion = the wait, then the whole text.
   Once the typing ends, the box text (and only it) is read aloud at volume 0.2 (`speechSynthesis`, `speak.mjs`; Tony: "smaller voice"),
   muted per browser (`stem-voice=off`), stopped on a new question.
+- Cluck chat (`POST /chat`): 5 follow-ups per question per browser (`CHAT_TURNS`, serve.py + app.js).
+- The hidden NOTE (design/CLUCK-NOTE.md; Tony, Oct 5: "must be json"): before Cluck speaks, on `/explain` and `/chat`, one non-streamed call
+  reads the student and answers strict JSON (`NOTE_SCHEMA`: on_topic, field, concept, asked, need, assumed, real, reproduces, gap, evidence,
+  confidence). `OPENROUTER_NOTE_MODELS`, default `deepseek/deepseek-v4.1-flash` with thinking off; ZDR + `require_parameters`, temperature 0,
+  6 s, the message wrapped in an XML tag with a random suffix (`<student_3fa9c1>`; spotlighting: a tag the student cannot guess, they cannot close). Cluck's chat call gets every student turn wrapped the same way. It never reaches the browser: Cluck's context turn gets it, and sentence 2 names the
+  student's assumption (high: plainly; medium: "Looks like…"; low / no_signal: no claim). The server caps confidence at medium when the
+  pick has no written SLIP. On `/chat` it is also the gate: `INJECT_RE` first (free), then `on_topic: false` or a 403 "Request blocked"
+  from the key's OpenRouter guardrail → a canned confused-duck QUACK line (`CANNED`), no Cluck call, and the turn is spent. Any NOTE
+  failure fails open (Cluck answers without one). The log gets `gap / field / confidence` per question, no free text.
+- Models (`OPENROUTER_MODELS`, default deepseek-v4.1-flash → gemini-3.8-flash → gpt-6-luna): the server tries them in order, each with
+  its own thinking setting (`REASONING`: deepseek and luna off; gemini must think, effort low, 4x the tokens). The next model gets the turn
+  when one errors or says nothing before its first word (glm-5.3-flash returned empty: thinking ate the cap). Cluck's visible voice runs at
+  temperature 0.3 (Tony, Oct 5). Prompts v4: one `FORMAT` block (math → numbers → emphasis → allowed marks) shared by both; a topic
+  sentence first, then the assumption, then the steps as proof.
+  Prod key guardrail (OpenRouter dashboard, Workspace > Guardrails): daily budget, model allowlist (OPENROUTER_MODELS +
+  OPENROUTER_NOTE_MODELS), ZDR on all groups, Security on. Its Security check is regex only, so the NOTE's on_topic stays; the code keeps
+  `provider.zdr` too, so a key without the guardrail is still private. Known gap: the browser sends the history, so a forged Cluck turn is not checked.
 - Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
   corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
   the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides

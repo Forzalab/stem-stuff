@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Explain column</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../vendor/fonts/atkinson.css">
+<!--
+  Tony, Oct 5 (_drift 1615): the "Curated brainrots" button goes, a grip shows the videos. The column label "Cluck" → "Explain".
+  Cluck is a chat user (coloured duck avatar, name, TUTOR tag). The thread reads like Discord, in the warm colours.
+  Two independent axes in the URL, three presets:
+    ?drag=1  D1 pull-down grip: 36x4 pill under the "Explain" row, drag down = the videos open above it (0 → 40dvh), snap past 50 %.
+    ?drag=2  D2 edge drawer: 4x36 pill on the box's right edge, drag left = a drawer slides OVER Cluck's box (2 shorts stacked). Esc closes.
+    ?drag=3  D3 side rail: a 52px rail right of Explain (grip + play), drag left = a video column opens, Explain gets narrower.
+    ?chat=1  C1 Discord cozy: avatar + name + time line, text under; the same author in a row skips the header; hover tint.
+    ?chat=2  C2 Discord compact: one line per message, "12:41 [av] Cluck text".
+    ?chat=3  C3 transcript: one header per Cluck turn, prose full width; your asks are a slim line with a left rule.
+    ?v=1 = D1 + C1 · ?v=2 = D2 + C3 · ?v=3 = D3 + C2.  ?open=1 = videos open (for shots).
+  Every grip: role=separator, aria-valuenow 0-100, tap/Enter/Space = toggle, arrows = 10 % steps, Esc = close.
+  Tony, Oct 5 (D1 + C1 greenlit, then): the box takes E's R card (one container, one shadow, no borders, spacing 8/12/16/24) with
+  some tonal flair from M (tonal avatar circle, full-round TUTOR tag, tonal chevron). Three chatbars, ?bar=:
+    1 Pill: M's full-round field inside the card, round send, "4 left" inside.
+    2 Dock: a full-bleed band at the card's foot (Discord's input), tonal send.
+    3 Composer: a taller field; under it "4 left" and a labelled tonal "Send" pill.
+  Phone (<= 700px): no grip; the phone keeps today's corner dock video. The thread style applies to the sheet.
+-->
+<script>
+  const Q = new URLSearchParams(location.search);
+  const PRESET = { 1: [1, 1], 2: [2, 3], 3: [3, 2] }[Q.get("v")] || [1, 1];
+  const ax = (k, i) => ["1", "2", "3"].includes(Q.get(k)) ? +Q.get(k) : PRESET[i];
+  const DRAG = ax("drag", 0), CHAT = ax("chat", 1), BAR = ["1", "2", "3"].includes(Q.get("bar")) ? +Q.get("bar") : 2;   /* Tony, Oct 5: "dock go" */
+  document.documentElement.className = `d${DRAG} c${CHAT} b${BAR}`;
+</script>
+<style>
+:root {
+  --paper: #08111f; --qbox: #0f1d30; --sheet: #16243a; --raised: #20304a; --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e;
+  --focus: #8fb0ff; --bad: #ff7a7a; --c2: #ffb86b;
+  --ai: #ff9a3c; --ai-edge: #eeb16a; --ai-sheet: #17130f; --ai-text: #ece6df; --ai-strong: #ffffff; --ai-muted: #a99c8e; --ai-rule: #2c241c;
+  --ai-tint: #221c16; --ai-ct: #4a2a10; --ai-on-ct: #ffdcc0; --ai-pill: #2b231d; --ai-send: #ffb77c; --ai-send-ink: #4b2800;
+  --ai-line: rgb(255 154 60 / 0.35); --shadow-2: 0 6px 14px rgb(0 0 0 / 0.6);
+  --shadow-3: 0 10px 24px -6px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.35); --ai-high: #3a3029;   /* M surface-container-highest */
+  --me-ink: #f1ece6;                        /* your text: --ink, warmed for the warm sheet */
+  --col: 456px; --rail: 52px; --f: 0;      /* --f = how open the videos are, 0..1 (JS) */
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 18px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+svg.i { width: 24px; height: 24px; flex: none; display: block; }
+p { margin: 0; }
+
+/* picker bar */
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 20px; background: #000; font: 700 14px/1.4 system-ui, sans-serif; color: var(--muted); }
+.pick nav { display: flex; align-items: center; gap: 4px; }
+.pick nav b { margin-right: 4px; font-weight: 400; }
+.pick a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+.pick a.on { background: var(--raised); color: var(--ink); }
+.pick .why { font-weight: 400; }
+
+/* page: question left, the Explain column right */
+.page { display: grid; grid-template-columns: minmax(0, 1fr) var(--col); gap: 32px; max-width: 1240px; margin: 0 auto; padding: 24px 20px 48px; align-items: start; }
+.d3 .page { grid-template-columns: minmax(0, 1fr) calc(var(--col) + var(--rail) + var(--f) * 100px); }   /* half from the question, half from Explain */
+.lbl { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-bottom: 8px; color: var(--muted); font-size: 16px; font-weight: 700; }   /* .xb-label: both columns, Δ0 tops */
+.lbl .i { width: 20px; height: 20px; }
+.qbox { background: var(--qbox); border-radius: 10px; padding: 24px; }
+.qbox ol { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
+.qbox li { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 8px; background: var(--sheet); }
+.qbox li i { font-style: normal; font-weight: 700; color: var(--muted); width: 1.5em; }
+.qbox li.bad { box-shadow: inset 0 0 0 2px var(--bad); }
+
+/* ---------- the column ---------- */
+.wrap { display: flex; align-items: flex-start; min-width: 0; }
+.col { flex: 1; min-width: 0; }
+.x { display: grid; place-items: center; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--ai-edge); }
+.x:hover { background: var(--ai-tint); }
+.box { position: relative; overflow: hidden; background: var(--ai-sheet); border-radius: 12px; box-shadow: var(--shadow-3); }   /* R: one card, one shadow, no border */
+.thread { padding: 16px 16px 0; }
+.fold { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); min-height: 48px; margin: 16px 16px 0; padding: 0; border: 0; background: none; color: var(--ai-strong); font-size: 16px; font-weight: 700; text-align: left; }
+.fold .t { flex: 1; } .fold .n { color: var(--ai-muted); font-weight: 400; font-size: 14px; } .fold .i { width: 32px; height: 32px; padding: 6px; border-radius: 50%; background: var(--ai-tint); color: var(--ai-muted); }   /* M flair: a tonal chip round the chevron */
+.ft { padding: 8px 16px 16px; }
+.ask { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; border-radius: 10px; background: var(--ai-pill); }
+.fld { display: contents; }
+.left { flex: none; color: var(--ai-muted); font-size: 14px; }
+.st { display: none; }
+.ask input { flex: 1; min-width: 0; height: 48px; padding: 0; border: 0; background: none; color: var(--ai-strong); outline: none; }
+.ask input::placeholder { color: var(--ai-muted); opacity: 1; }
+.ask:focus-within { box-shadow: 0 0 0 2px var(--focus); }
+.send { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 8px; background: var(--ai-send); color: var(--ai-send-ink); flex: none; }
+
+/* ---------- Cluck as a chat user (every thread style) ---------- */
+.av { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; flex: none; background: var(--ai-ct); color: var(--ai); }   /* M flair: the tonal container */
+.av .i { width: 22px; height: 22px; }
+.av.me { background: var(--sheet); color: var(--ink); font-size: 15px; font-weight: 700; }
+.who { display: flex; align-items: baseline; gap: 8px; line-height: 1.3; }
+.name { font-weight: 700; color: var(--ai); }
+.me .name, .name.me { color: var(--ink); }
+.tag { align-self: center; padding: 1px 7px; border-radius: 999px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 11px; font-weight: 700; letter-spacing: .04em; line-height: 1.4; }
+.time { color: var(--ai-muted); font-size: 13px; }
+.md { color: var(--ai-text); overflow-wrap: anywhere; }
+.md b { color: var(--ai-strong); }
+.msg.me .md { color: var(--me-ink); }
+.md + .md { margin-top: 8px; }
+.typing { display: flex; align-items: center; gap: 8px; padding: 8px 16px 0; color: var(--ai-muted); font-size: 14px; }
+.typing b { color: var(--ai-text); }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ai-muted); }
+@media (prefers-reduced-motion: no-preference) {   /* Discord's wave (Tony, Oct 5); impeccable pulsing-dot waived in .impeccable/config.json */
+  .dots i { animation: wdot 1.2s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+}
+@keyframes wdot { 0%, 60%, 100% { opacity: .4; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+
+/* chatbar 1 Pill: M's full-round field inside the card */
+.b1 .ask { min-height: 56px; padding: 4px 4px 4px 20px; border-radius: 999px; background: var(--ai-high); }
+.b1 .send { border-radius: 50%; }
+/* chatbar 2 Dock: a full-bleed band at the card's foot */
+.b2 .ft { margin-top: 16px; padding: 0; }
+.b2 .ask { padding: 8px 8px 8px 16px; border-radius: 0; background: var(--ai-pill); }
+.b2 .send { width: 40px; height: 40px; background: var(--ai-ct); color: var(--ai-on-ct); }
+/* chatbar 3 Composer: a taller field, a footer row with the count and a labelled tonal Send */
+.b3 .ask { flex-wrap: wrap; padding: 4px 8px 8px 16px; border-radius: 12px; background: var(--ai-high); }
+.b3 .ask input { flex-basis: 100%; height: 56px; }
+.b3 .left { margin-right: auto; }
+.b3 .send { width: auto; height: 40px; display: flex; gap: 6px; padding: 0 16px 0 12px; border-radius: 999px; font-weight: 700; font-size: 15px; }
+.b3 .send .i { width: 20px; height: 20px; }
+.b3 .st { display: inline; }
+
+/* C1 Discord cozy */
+.c1 .msg { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; margin: 0 -8px; padding: 4px 8px; border-radius: 6px; }
+.c1 .msg:hover { background: rgb(255 255 255 / 0.03); }
+.c1 .msg > .av { grid-row: 1 / 3; margin-top: 2px; }
+.c1 .msg.cont > .av, .c1 .msg.cont > .who { display: none; }
+.c1 .msg.cont { padding-top: 0; }
+.c1 .msg.cont .md { grid-column: 2; }
+.c1 .msg + .msg:not(.cont) { margin-top: 12px; }
+.c1 .who { margin-bottom: 2px; }
+
+/* C2 Discord compact: one line */
+.c2 .thread { font-size: 16px; }
+.c2 .msg { margin: 0 -8px; padding: 2px 8px; border-radius: 6px; line-height: 1.5; }
+.c2 .msg:hover { background: rgb(255 255 255 / 0.03); }
+.c2 .msg + .msg { margin-top: 4px; }
+.c2 .msg > * { display: inline; }
+.c2 .time { display: inline-block; width: 44px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.c2 .av { display: inline-grid; width: 20px; height: 20px; vertical-align: -4px; margin-right: 6px; }
+.c2 .av .i { width: 15px; height: 15px; } .c2 .av.me { font-size: 11px; }
+.c2 .who { display: inline; } .c2 .tag { display: none; }
+.c2 .name { margin-right: 6px; }
+.c2 .md + .md { margin-top: 0; }
+.c2 .msg.cont .av, .c2 .msg.cont .name { display: none; }
+
+/* C3 transcript: one header per Cluck turn, prose full width; your asks a slim ruled line */
+.c3 .msg { margin-top: 16px; }
+.c3 .msg:first-child { margin-top: 0; }
+.c3 .msg.cont { margin-top: 8px; }
+.c3 .msg:not(.me) > .who { align-items: center; margin-bottom: 8px; }
+.c3 .msg.cont > .av, .c3 .msg.cont > .who { display: none; }
+.c3 .msg:not(.me) { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 10px; }
+.c3 .msg:not(.me) > .av { grid-row: 1; } .c3 .msg:not(.me) > .who { grid-column: 2; margin-bottom: 0; }
+.c3 .msg:not(.me) > .md { grid-column: 1 / -1; margin-top: 8px; }
+.c3 .msg.cont > .md { margin-top: 0; }
+.c3 .msg.me { display: flex; gap: 8px; padding: 2px 0 2px 12px; border-left: 2px solid var(--edge); font-size: 16px; }
+.c3 .msg.me > .av, .c3 .msg.me .time { display: none; }
+.c3 .msg.me .who::after { content: "·"; color: var(--ai-muted); }
+.c3 .msg.me .name { color: var(--muted); font-weight: 700; }
+
+/* ---------- grips (button + text gone; aria-label "Videos") ---------- */
+.grip { position: relative; display: block; padding: 0; border: 0; background: none; touch-action: none; outline: none; }
+.grip::before { content: ""; position: absolute; left: 50%; top: 50%; border-radius: 2px; background: var(--edge); }
+.grip:hover::before, .grip.drag::before { background: var(--muted); }
+.grip:focus-visible::before { outline: 2px solid var(--focus); outline-offset: 3px; }
+.vids { display: flex; gap: 8px; overflow: hidden; }
+.short { position: relative; flex: none; aspect-ratio: 9 / 16; border-radius: 8px; background: linear-gradient(160deg, #2a3550, #121a2a 70%); display: grid; place-items: center; color: var(--muted); }
+.short .i { width: 32px; height: 32px; }
+.short span { position: absolute; left: 8px; bottom: 6px; font-size: 13px; color: var(--ink); }
+.snap .vids, .snap .drawer, .snap .col, .snap .grip, .snap .page { transition: all .2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .snap .vids, .snap .drawer, .snap .col, .snap .grip, .snap .page { transition: none; } }
+.grip-1, .grip-2, .rail, .drawer, .vids-1, .vids-3 { display: none; }
+
+/* D1 pull-down: the videos open above the grip, which rides down with the finger */
+.d1 .vids-1 { display: flex; height: calc(var(--f) * 40dvh); }
+.d1 .vids-1 .short { height: 100%; }
+.d1 .grip-1 { display: block; width: 100%; height: 44px; margin: -4px 0 4px; cursor: row-resize; }
+.d1 .grip-1::before { width: 36px; height: 4px; margin: -2px 0 0 -18px; }
+
+/* D2 edge drawer: slides over Cluck's box from the right; the box does not move */
+.d2 .drawer { display: flex; flex-direction: column; gap: 8px; position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: calc(var(--f) * 204px); overflow: hidden auto;
+  padding: 8px 0; background: var(--qbox); box-shadow: -8px 0 24px rgb(0 0 0 / 0.5); }
+.d2 .drawer .short { width: 188px; margin: 0 8px; }
+.d2 .thread { padding-right: 32px; }                         /* the grip's lane */
+.d2 .grip-2 { display: block; position: absolute; z-index: 4; top: 50%; right: calc(var(--f) * 204px); width: 24px; height: 88px; margin-top: -44px; cursor: col-resize; }
+.d2 .grip-2::before { width: 4px; height: 36px; margin: -18px 0 0 -2px; }
+
+/* D3 side rail: the column sash pattern; the video column takes width from Explain */
+.d3 .col { flex: none; width: calc(var(--col) - var(--f) * 100px); }
+.d3 .rail { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: none; width: var(--rail); align-self: stretch; padding-top: 56px; margin-left: 8px; border-radius: 10px; background: var(--qbox); }
+.d3 .rail .i { width: 20px; height: 20px; color: var(--muted); }
+.d3 .grip-3 { width: 48px; height: 88px; cursor: col-resize; }
+.d3 .grip-3::before { width: 4px; height: 36px; margin: -18px 0 0 -2px; }
+.d3 .vids-3 { display: flex; flex-direction: column; flex: none; width: calc(var(--f) * 200px); margin-top: 56px; }
+.d3 .vids-3 .short { width: 184px; margin-left: 8px; }
+
+/* phone: the column is the page; no grips (today's corner/dock videos stay, not drawn here) */
+@media (max-width: 700px) {
+  .page, .d3 .page { grid-template-columns: 1fr; padding: 16px 16px 32px; }
+  .qside, .grip, .rail, .drawer, .vids { display: none !important; }
+  .d3 .col { width: auto; flex: 1; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.5v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.1" fill="currentColor"/></symbol>
+</defs></svg>
+
+<div class="pick">
+  <nav aria-label="Preset"><b>preset</b><a href="?v=1">1</a><a href="?v=2">2</a><a href="?v=3">3</a></nav>
+  <nav aria-label="Grip"><b>drag</b><a data-k="drag" data-n="1">D1</a><a data-k="drag" data-n="2">D2</a><a data-k="drag" data-n="3">D3</a></nav>
+  <nav aria-label="Thread"><b>chat</b><a data-k="chat" data-n="1">C1</a><a data-k="chat" data-n="2">C2</a><a data-k="chat" data-n="3">C3</a></nav>
+  <nav aria-label="Chatbar"><b>bar</b><a data-k="bar" data-n="1">Pill</a><a data-k="bar" data-n="2">Dock</a><a data-k="bar" data-n="3">Composer</a></nav>
+  <span class="why" id="why"></span>
+</div>
+
+<main class="page">
+  <section class="qside" aria-label="Question">
+    <div class="lbl"><svg class="i"><use href="#i-q"/></svg>Question</div>
+    <div class="qbox">
+      <p>A bag of trail mix lists 240 calories per &frac34; cup. How many calories are in one cup?</p>
+      <ol><li><i>A</i>160</li><li><i>B</i>300</li><li class="bad"><i>C</i>180</li><li><i>D</i>320</li></ol>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <aside class="col" aria-label="Explain">
+      <div class="lbl"><svg class="i"><use href="#i-chat"/></svg>Explain
+        <button type="button" class="x" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
+      <div class="vids vids-1" id="vids1"><div class="short"><svg class="i"><use href="#i-play"/></svg><span>Short 1</span></div><div class="short"><svg class="i"><use href="#i-play"/></svg><span>Short 2</span></div></div>
+      <button type="button" class="grip grip-1" role="separator" aria-orientation="horizontal" aria-label="Videos" aria-controls="vids1" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></button>
+      <div class="box">
+        <div class="drawer" id="vids2"><div class="short"><svg class="i"><use href="#i-play"/></svg><span>Short 1</span></div><div class="short"><svg class="i"><use href="#i-play"/></svg><span>Short 2</span></div></div>
+        <button type="button" class="grip grip-2" role="separator" aria-orientation="vertical" aria-label="Videos" aria-controls="vids2" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></button>
+        <div class="thread" id="thread" aria-live="polite"></div>
+        <div class="typing"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span><b>Cluck</b> is typing…</span></div>
+        <button type="button" class="fold" aria-expanded="false"><span class="t">See reference solution</span><span class="n">4 steps</span><svg class="i"><use href="#i-down"/></svg></button>
+        <form class="ft" onsubmit="return false"><div class="ask">
+          <label class="fld"><span hidden>Ask Cluck about a step</span><input type="text" placeholder="Ask Cluck about a step"></label>
+          <span class="left">4 left</span>
+          <button type="submit" class="send" aria-label="Send"><svg class="i"><use href="#i-send"/></svg><span class="st" aria-hidden="true">Send</span></button>
+        </div></form>
+      </div>
+    </aside>
+    <div class="vids vids-3" id="vids3"><div class="short"><svg class="i"><use href="#i-play"/></svg><span>Short 1</span></div><div class="short" style="margin-top:8px"><svg class="i"><use href="#i-play"/></svg><span>Short 2</span></div></div>
+    <div class="rail"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>
+      <button type="button" class="grip grip-3" role="separator" aria-orientation="vertical" aria-label="Videos" aria-controls="vids3" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></button></div>
+  </div>
+</main>
+
+<script>
+  // the thread: Cluck's explanation (2 messages in a row), 2 follow-ups, the 2nd still typing
+  const T = [
+    ["cluck", "12:41", "You multiplied 240 by &frac34;, which shrinks it. One cup is more than &frac34; cup, so the answer has to be bigger than 240."],
+    ["cluck", "12:41", "Divide instead: 240 &divide; &frac34; = <b>320</b>."],
+    ["me", "12:42", "why does dividing by 3/4 make it bigger?"],
+    ["cluck", "12:42", "QUACK. &frac34; cup holds 240. You need how many &frac34;-cups fit in one cup. That count is 4/3, more than 1. So the calories grow."],
+    ["me", "12:43", "so 1 cup = 4/3 of the 3/4 cup?"],
+  ];
+  const duck = '<svg class="i"><use href="#i-duck"/></svg>';
+  document.getElementById("thread").innerHTML = T.map(([who, t, md], i) => {
+    const me = who === "me", cont = i && T[i - 1][0] === who;
+    return `<div class="msg${me ? " me" : ""}${cont ? " cont" : ""}">` +
+      (CHAT === 2 ? `<span class="time">${t}</span>` : "") +
+      `<span class="av${me ? " me" : ""}" aria-hidden="true">${me ? "T" : duck}</span>` +
+      `<div class="who"><span class="name">${me ? "you" : "Cluck"}</span>${me ? "" : '<span class="tag">TUTOR</span>'}${CHAT === 2 ? "" : `<span class="time">${t}</span>`}</div>` +
+      `<p class="md">${md}</p></div>`;
+  }).join("");
+
+  // picker
+  const why = { 1: "D1 pull-down grip under the label", 2: "D2 edge drawer over the box", 3: "D3 side rail, Explain gets narrower" };
+  const whyC = { 1: "C1 Discord cozy", 2: "C2 Discord compact", 3: "C3 transcript" };
+  document.getElementById("why").textContent = `${why[DRAG]} · ${whyC[CHAT]}`;
+  const preset = Object.entries({ 1: [1, 1], 2: [2, 3], 3: [3, 2] }).find(([, [d, c]]) => d === DRAG && c === CHAT)?.[0];
+  for (const a of document.querySelectorAll(".pick a")) {
+    if (a.dataset.k) { const p = new URLSearchParams({ drag: DRAG, chat: CHAT, bar: BAR }); p.set(a.dataset.k, a.dataset.n); a.href = "?" + p; a.classList.toggle("on", +a.dataset.n === { drag: DRAG, chat: CHAT, bar: BAR }[a.dataset.k]); }
+    else { a.href += "&bar=" + BAR; a.classList.toggle("on", a.getAttribute("href") === `?v=${preset}&bar=${BAR}`); }
+  }
+
+  // the grip: drag with the finger, snap past 50 %, tap / Enter / Space = toggle, arrows = 10 %, Esc = close
+  const root = document.documentElement, grip = document.querySelector(".grip-" + DRAG);
+  const span = () => DRAG === 1 ? innerHeight * 0.4 : 200;      // px for f = 1 (D2 drawer 204, close enough for the hand)
+  const sign = DRAG === 1 ? 1 : -1;                              // D1: down opens; D2/D3: left opens
+  let f = Q.get("open") === "1" ? 1 : 0;
+  const set = (v, snap) => {
+    f = Math.min(1, Math.max(0, v));
+    root.classList.toggle("snap", !!snap); root.style.setProperty("--f", f);
+    grip.setAttribute("aria-valuenow", Math.round(f * 100));
+  };
+  set(f);
+  let start = null, moved = false;
+  grip.addEventListener("pointerdown", e => { start = { p: DRAG === 1 ? e.clientY : e.clientX, f }; moved = false; grip.setPointerCapture(e.pointerId); grip.classList.add("drag"); });
+  grip.addEventListener("pointermove", e => {
+    if (!start) return;
+    const d = ((DRAG === 1 ? e.clientY : e.clientX) - start.p) * sign;
+    if (Math.abs(d) > 4) moved = true;
+    if (moved) set(start.f + d / span());
+  });
+  grip.addEventListener("pointerup", () => { if (!start) return; grip.classList.remove("drag"); set(moved ? (f > 0.5 ? 1 : 0) : (f > 0.5 ? 0 : 1), true); start = null; });
+  grip.addEventListener("click", e => e.preventDefault());       // pointerup already toggled
+  grip.addEventListener("keydown", e => {
+    const k = e.key, open = DRAG === 1 ? "ArrowDown" : "ArrowLeft", close = DRAG === 1 ? "ArrowUp" : "ArrowRight";
+    if (k === "Enter" || k === " ") set(f > 0.5 ? 0 : 1, true);
+    else if (k === open) set(f + 0.1, true);
+    else if (k === close) set(f - 0.1, true);
+    else return;
+    e.preventDefault();
+  });
+  addEventListener("keydown", e => { if (e.key === "Escape" && f) set(0, true); });
+</script>
+</body></html>
