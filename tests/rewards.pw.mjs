@@ -255,8 +255,8 @@ try {
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
     assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps", "phone: the head bar says what the card said (TODO C)");
     await p.click("#cluck .cl-bar .cl-x");
-    await p.route("**/narrate", r => r.fulfill({ json: { text: "QUACK. Pick a." } }));                 // the fixture has no narration
-    const told = p.waitForResponse(r => r.url().endsWith("/narrate"));
+    await p.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "QUACK. Pick a." }));   // Cluck's live stream, stubbed
+    const told = p.waitForResponse(r => r.url().endsWith("/explain"));
     await pick(p, "b"); await told; await p.waitForTimeout(200);
     assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
     await p.click("#origHd");

@@ -1110,23 +1110,15 @@ function wishReset() {
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
   clReset();
 }
-/* One text source (Tony, Oct 4): the box shows the pre-written saccharine.narration when the item has one (instant, free, no key),
-   else the live /explain stream. */
+/* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
   wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false };
   const w = wish;
-  fetch("narrate", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ code: w.code }) })
-    .then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
-      if (wish !== w) return;
-      const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
-      if (j && j.text) { w.text = j.text; w.done = true; }
-      else if (wishLog().length < WISH_AUTO) { wishStart(true); auto(); return; }
-      else w.started = false;                                              // past the cap: "Ask Cluck" does it (no auto-open)
-      wishPaint();
-      if (w.started) auto();
-    });
+  const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
+  if (wishLog().length >= WISH_AUTO) w.started = false;                   // past the cap: "Ask Cluck" does it (no auto-open)
   wishPaint();
+  if (w.started) { wishStart(true); auto(); }
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
