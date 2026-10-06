@@ -221,8 +221,12 @@ function init() {
     if (e.key === "Escape") { e.preventDefault(); close(true); }
     else if (to !== undefined && r.length) { e.preventDefault(); r[Math.max(0, Math.min(r.length - 1, to))].focus(); }
   });
-  /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
-     pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
+  /* an outside tap closes it: the list floats over the page (Tony, Oct 6), so closing moves nothing under the pointer.
+     Taps on its own bar row (the button, the code box, Shuffle, Redo) keep it open. Also: the button, Escape, a pick, Prev/Next. */
+  document.addEventListener("pointerdown", e => {
+    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, #qshuf, #qredo, .code-sug")) return;
+    close(false);
+  });
   /* the order is a snapshot: it changes on a bank, a shuffle, or the first open after a mark changed (Tony, Oct 3: never
      under your thumb while you are on a question). The re-sort runs inside the open's own update, so Prev never flickers. */
   let dirty = false;
