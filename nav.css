@@ -18,7 +18,7 @@
 
 /* phones and touch (entry dock at the bottom): the nav is the top bar. */
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
-.dock-bottom .qlist { width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; }
+.dock-bottom .qlist { position: absolute; z-index: 30; left: 0; right: 0; width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; box-shadow: var(--shadow-3); }   /* phones too: floats where it would have sat, the question stays put (Tony, Oct 6) */
 
 /* desktop: one row. Bank side first (list, shuffle), then the entry box, only as wide as a code needs; Prev/Next at the
    right edge (Tony, Sep 30 sketches). The nav and .dock unwrap (display: contents) so their buttons are grid items.
@@ -41,7 +41,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qnav-on:not(.dock-bottom):not(.start) #qprev { grid-row: 1; grid-column: 6; }
 .qnav-on:not(.dock-bottom):not(.start) #qnext { grid-row: 1; grid-column: 7; }
 .qnav-on:not(.dock-bottom):not(.start) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
-.qnav-on:not(.dock-bottom):not(.start) .qlist { grid-row: 3; grid-column: 1 / -1; margin-top: var(--s3); }   /* the bar's full width (Tony, Oct 6: no gap at its right); the rows go in columns (below), so a short title never makes a 1800px row (C14) */
+.qnav-on:not(.dock-bottom):not(.start) .qlist { position: absolute; z-index: 30; top: 100%; left: var(--gut); right: var(--gut); margin-top: var(--s2); box-shadow: var(--shadow-3); }   /* a dropdown under the bar, over the page, like .code-sug: nothing moves (Tony, Oct 6; Refactoring UI p.159). Anchored to .top, not a grid row: an abspos item on a row no in-flow item makes falls back to the top of the bar and covers it. left/right = .top's padding, so its edges sit on the bar's; the rows go in columns (below), never one 1800px row (C14) */
 /* C2 / C15 (Tony, Oct 5 clutter pass): with a bank open the row is List · XP · Prev / Next. The code box (Upload, Paste) and Shuffle
    come with the list, on a row of their own above it. A load error (message or Retry) brings the box back on its own */
 .qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) :is(.entry, #qshuf) { display: none; }
@@ -58,14 +58,16 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
    the button is "on" like an open list; the list button says "Redo" and the list's own ticks show progress */
 .redo-on #qredo { background: var(--raised); }
 
-/* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
+/* the list: a card like the problem's; long lists scroll inside. Bar on top: it floats over the page (above). Phone bottom dock: as before */
 .qlist {
   position: relative; max-height: min(32rem, 60svh); overflow-y: auto; overscroll-behavior: contain;
   padding: var(--s2); background: var(--sheet); border-radius: 10px;
 }
 .qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .qnav-on:not(.dock-bottom):not(.start) .qlist ol { grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); column-gap: var(--s2); }   /* wide: rows side by side, in order left to right */
-.qnav-on:not(.dock-bottom):not(.start) .qlist .qh { grid-column: 1 / -1; }   /* a group header heads a band of its own, never a cell */
+.qnav-on:not(.dock-bottom):not(.start) .qlist .qh { grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom):not(.start) .qlist a { align-items: center; }   /* wide: one line per row, so the columns line up (Tony, Oct 6: variant A); the full title is the tooltip and the label */
+.qnav-on:not(.dock-bottom):not(.start) .qlist .qt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* a group header heads a band of its own, never a cell */
 .qlist a {
   display: flex; align-items: baseline; gap: var(--s3); min-height: var(--btn); padding: var(--s3);
   border-radius: 8px; color: var(--ink); text-decoration: none; line-height: 1.35;

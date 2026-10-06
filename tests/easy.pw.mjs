@@ -387,6 +387,20 @@ try {
       w: document.querySelector("#qlist").getBoundingClientRect().width, bar: ["#qlistBtn", "#qnext"].map(s => document.querySelector(s).getBoundingClientRect()).map(r => [r.left, r.right]),
       list: (r => [r.left, r.right])(document.querySelector("#qlist").getBoundingClientRect()), cols: getComputedStyle(document.querySelector("#qlist ol")).gridTemplateColumns.split(" ").length,
       tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)), hidden: [...document.querySelectorAll("#qlist .qh")].every(h => h.getAttribute("aria-hidden") === "true") }));
+    const one = await page.$$eval("#qlist .qt", ts => ts.map(t => ({ ws: getComputedStyle(t).whiteSpace, h: Math.round(t.getBoundingClientRect().height) })));
+    assert.ok(one.every(x => x.ws === "nowrap") && new Set(one.map(x => x.h)).size === 1, `wide list: one line per row, rows line up (variant A): ${JSON.stringify(one)}`);
+    assert.ok(await page.$$eval("#qlist a", as => as.every(a => a.title && a.title.length > 0)), "the full title is the tooltip");
+    const shut = async () => { if (await page.isVisible("#qlist")) await page.click("#qlistBtn"); };
+    await shut(); const before = await page.$eval("#q", e => Math.round(e.getBoundingClientRect().top));
+    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
+    const pop = await page.evaluate(() => ({ q: Math.round(document.querySelector("#q").getBoundingClientRect().top), pos: getComputedStyle(document.querySelector("#qlist")).position,
+      shadow: getComputedStyle(document.querySelector("#qlist")).boxShadow !== "none" }));
+    assert.deepEqual(pop, { q: before, pos: "absolute", shadow: true }, "the list floats over the page: the question does not move (Tony, Oct 6)");
+    const hit = await page.evaluate(() => ["#qlistBtn", "#qprev", "#qnext"].map(s => { const e = document.querySelector(s), r = e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); }));
+    assert.deepEqual(hit, [true, true, true], "the open list never covers its own bar (List, Prev, Next stay clickable)");
+    await page.mouse.click(5, 880); await page.waitForTimeout(150);
+    assert.equal(await page.isHidden("#qlist"), true, "an outside tap closes the list");
+    await page.click("#qlistBtn"); await page.waitForSelector("#qlist:not([hidden])");
     assert.deepEqual(l.heads, ["Term"], "C14: one header");
     assert.deepEqual(l.rows, ["one", "three", "two"], "C14: rows show the rest of the title");
     assert.ok(l.hidden && l.labels.every(x => /^\d\. Term: \w+\.$/.test(x)), `C14: the link keeps the full title: ${l.labels}`);

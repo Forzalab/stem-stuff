@@ -126,7 +126,7 @@ function init() {
     list.innerHTML = codes.map((c, k) => {
       const t = ts[k], h = hs[k], m = marks(mark(c)), grouped = h && (hs[k - 1] === h || hs[k + 1] === h);
       return (grouped && hs[k - 1] !== h ? `<li class="qh" aria-hidden="true">${esc(h)}</li>` : "") +
-        `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
+        `<li><a href="#${esc(c)}" title="${esc(t)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
         `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(grouped ? t.slice(h.length + 2) : t)}</span>${m.html}</a></li>`;
     }).join("");
   }
@@ -221,8 +221,12 @@ function init() {
     if (e.key === "Escape") { e.preventDefault(); close(true); }
     else if (to !== undefined && r.length) { e.preventDefault(); r[Math.max(0, Math.min(r.length - 1, to))].focus(); }
   });
-  /* no close on an outside click: the list is in the flow, so closing on pointerdown would move the page under the
-     pointer and the click could land on something else (an MC choice). It closes on the button, Escape, a pick, Prev/Next. */
+  /* an outside tap closes it: the list floats over the page (Tony, Oct 6), so closing moves nothing under the pointer.
+     Taps on its own bar row (the button, the code box, Shuffle, Redo) keep it open. Also: the button, Escape, a pick, Prev/Next. */
+  document.addEventListener("pointerdown", e => {
+    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, #qshuf, #qredo, .code-sug")) return;
+    close(false);
+  });
   /* the order is a snapshot: it changes on a bank, a shuffle, or the first open after a mark changed (Tony, Oct 3: never
      under your thumb while you are on a question). The re-sort runs inside the open's own update, so Prev never flickers. */
   let dirty = false;

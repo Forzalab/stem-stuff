@@ -345,9 +345,10 @@ async function run(browserType, label, opts = {}) {
       for (const t of await page.locator("#qlist .qt").allTextContents()) assert.ok(t.length <= 60 && !/[\\$]/.test(t), `title ${t}`);
       assert.equal(await rows.nth(0).getAttribute("aria-current"), "true");
       assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-current")), "true", "focus not on the current row");
-      // in the flow: the list pushes the problem down and covers nothing
-      const lr = await page.locator("#qlist").boundingBox(), fr = await page.locator("#freeze").boundingBox();
-      assert.ok(lr.y + lr.height <= fr.y, "list covers the problem");
+      // a dropdown (Tony, Oct 6): floats over the problem, never over its own bar
+      const lr = await page.locator("#qlist").boundingBox(), br = await page.locator("#qlistBtn").boundingBox();
+      assert.ok(lr.y >= br.y + br.height - 1, "the list covers its own bar");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#qlist")).position), "absolute", "the list floats");
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-open-${viewport.width}.png` });
       await rows.nth(2).click();
       await at(codes[2]);
