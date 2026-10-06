@@ -270,6 +270,7 @@ def sub_problem(parent, row):
     if isinstance(ch, list) and len(ch) >= 2:                 # main's v3 rows: a row is its own mc (answer = a choice id, slip per wrong id), the authored tries
         slip = row.get("slip") if isinstance(row.get("slip"), dict) else {}
         layer["slip"], layer["note"] = slip, row.get("note") if isinstance(row.get("note"), dict) else None
+        layer["skills"] = row.get("skills") or sg.get("skills")
         return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "body": body,
                 "choices": [{k: c[k] for k in ("id", "md") if k in c} for c in ch if isinstance(c, dict)], "correct": str(row.get("answer")),
                 "wrong": [{"choice": i, "hint": h} for i, h in slip.items() if i != str(row.get("answer"))],
@@ -277,6 +278,7 @@ def sub_problem(parent, row):
     wrong = "f" if right == "t" else "t"
     layer["slip"] = {wrong: row.get("slip")} if row.get("slip") else {}
     layer["note"] = {wrong: row["note"]} if isinstance(row.get("note"), dict) else None
+    layer["skills"] = row.get("skills") or sg.get("skills")
     return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
             "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
             "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],
@@ -882,6 +884,20 @@ def scratch_block(text, tag):
     return "" if not text or INJECT_RE.search(text) else "\n\nSCRATCHPAD (their work so far, newest last):\n" + wrap(text, tag)
 
 
+_skills = {}
+
+
+def skill_ideas(p):
+    """the plain-words idea of each algebra skill the question lists (saccharine.skills -> skills.json), [] without any"""
+    if not _skills:
+        try:
+            with open(os.path.join(ROOT, "skills.json"), encoding="utf-8") as f:
+                _skills.update({s["id"]: s["idea"] for s in json.load(f)["skills"]})
+        except (OSError, ValueError, KeyError):
+            return []
+    return [_skills[i] for i in (sugar(p).get("skills") or []) if i in _skills]
+
+
 def explain_prompt(p, answer):
     """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
     text = "\n".join("\n".join(m) if isinstance(m, list) else m for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))   # md may be a list of lines
@@ -893,6 +909,9 @@ def explain_prompt(p, answer):
     slips = [(sg.get("slip") or {}).get(str(a)) for a in picked]
     lines += [f"STUDENT PICKED: {', '.join(map(str, picked)) or 'nothing ticked'}", f"KEY:\n{sg['key']}",
               "SLIP: " + (" ".join(x for x in slips if x) or "(none written; name the likely slip from the KEY)")]
+    ideas = skill_ideas(p)
+    if ideas:                                            # SCHEMA.md "Skills": the algebra behind it, explained in plain words, no calculus
+        lines.append("ALGEBRA THIS NEEDS (many students are shaky here; when the slip is one of these, explain it in plain words, no calculus):\n" + "\n".join("- " + i for i in ideas))
     fs = formulas(p.get("code"), sg.get("part"))
     if fs:
         lines.append("SHEET FORMULAS: " + "; ".join(f["tex"] for f in fs))

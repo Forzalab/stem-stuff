@@ -264,3 +264,30 @@ test("codes unique, suffixes unique across subjects", () => {
     seen.set(s, code);
   }
 });
+
+// skills.json (SCHEMA.md "Skills"): the catalog validates, ids are unique, families exist; every question's skills are known ids
+{
+  const S = JSON.parse(readFileSync(new URL("../skills.json", import.meta.url), "utf8")), check = validator("skills");
+  const ids = new Set(S.skills.map(s => s.id));
+  test("skills.json: schema, unique ids, known families", () => {
+    assert.ok(check(S), JSON.stringify(check.errors, null, 1));
+    assert.equal(ids.size, S.skills.length, "duplicate skill id");
+    for (const s of S.skills) assert.ok(s.family in S.families, `${s.id}: unknown family ${s.family}`);
+  });
+  const dir = new URL("../banks/", import.meta.url);
+  const files = [["problems.json", problems], ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).map(f => [f, JSON.parse(readFileSync(new URL(f, dir), "utf8")).problems ?? []]) : [])];
+  test("saccharine.skills: every id is in skills.json", () => {
+    for (const [f, ps] of files) for (const p of ps) {
+      const sg = p.saccharine ?? {};
+      for (const list of [sg.skills, ...(sg.split ?? []).map(r => r.skills)]) for (const id of list ?? []) assert.ok(ids.has(id), `${f} ${p.code}: unknown skill ${id}`);
+    }
+  });
+  test("skills: the schema takes a list and refuses junk", () => {
+    const base = problems.find(p => p.saccharine) ?? problems[0];
+    const withSkills = skills => ({ ...B, problems: [{ ...base, saccharine: { ...(base.saccharine ?? { title: "Practice Exam 2, Question 1" }), skills } }] });
+    assert.ok(validate(withSkills(["negative_work", "shape_area"])), JSON.stringify(validate.errors));
+    assert.ok(!validate(withSkills([])));
+    assert.ok(!validate(withSkills(["Bad Id"])));
+    assert.ok(!validate(withSkills(["shape_area", "shape_area"])));
+  });
+}

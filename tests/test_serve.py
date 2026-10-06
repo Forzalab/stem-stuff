@@ -758,6 +758,17 @@ class Explain(unittest.TestCase):
         self.assertEqual(serve._chats[("c" * 32, "CALC1_XP1")], 1)
         self.assertFalse(any("*" in c for c in serve.CANNED))                           # actions in (parentheses): the site shows *stars* raw
 
+    def test_prompt_carries_the_skill_ideas(self):                                     # SCHEMA.md "Skills": saccharine.skills -> skills.json ideas
+        p = dict(BANK["CALC1_X2P"], saccharine={"key": "k", "skills": ["negative_work", "no_such_skill"]})
+        out = serve.explain_prompt(p, "a")
+        self.assertIn("ALGEBRA THIS NEEDS", out)
+        self.assertIn("takes energy away", out)
+        self.assertNotIn("no_such_skill", out)
+        self.assertNotIn("ALGEBRA THIS NEEDS", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))
+        self.assertNotIn("skills", serve.view(p, "sugar"))                                  # server only
+        with open(os.path.join(serve.ROOT, "vercel.json")) as f:
+            self.assertIn("skills.json", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # the function bundle carries the catalog
+
     def test_prompt_reads_md_given_as_lines(self):                                    # PHYS_HIA's body: md is a list (live crash, Oct 5)
         p = dict(BANK["CALC1_X2P"], body=[{"type": "text", "md": ["line one", "line two"]}], key="k")
         self.assertIn("QUESTION:\nline one\nline two", serve.explain_prompt(p, "a"))
