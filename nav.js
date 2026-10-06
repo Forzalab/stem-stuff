@@ -126,7 +126,7 @@ function init() {
     list.innerHTML = codes.map((c, k) => {
       const t = ts[k], h = hs[k], m = marks(mark(c)), grouped = h && (hs[k - 1] === h || hs[k + 1] === h);
       return (grouped && hs[k - 1] !== h ? `<li class="qh" aria-hidden="true">${esc(h)}</li>` : "") +
-        `<li><a href="#${esc(c)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
+        `<li><a href="#${esc(c)}" title="${esc(t)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
         `<span class="qn" aria-hidden="true">${k + 1}</span><span class="qt" aria-hidden="true">${esc(grouped ? t.slice(h.length + 2) : t)}</span>${m.html}</a></li>`;
     }).join("");
   }

@@ -65,7 +65,9 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 }
 .qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .qnav-on:not(.dock-bottom):not(.start) .qlist ol { grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); column-gap: var(--s2); }   /* wide: rows side by side, in order left to right */
-.qnav-on:not(.dock-bottom):not(.start) .qlist .qh { grid-column: 1 / -1; }   /* a group header heads a band of its own, never a cell */
+.qnav-on:not(.dock-bottom):not(.start) .qlist .qh { grid-column: 1 / -1; }
+.qnav-on:not(.dock-bottom):not(.start) .qlist a { align-items: center; }   /* wide: one line per row, so the columns line up (Tony, Oct 6: variant A); the full title is the tooltip and the label */
+.qnav-on:not(.dock-bottom):not(.start) .qlist .qt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* a group header heads a band of its own, never a cell */
 .qlist a {
   display: flex; align-items: baseline; gap: var(--s3); min-height: var(--btn); padding: var(--s3);
   border-radius: 8px; color: var(--ink); text-decoration: none; line-height: 1.35;
