@@ -6,6 +6,7 @@ node_modules
 tests
 design/shots
 design/mockups
+# ^ mockups never ship. A page Tony opens on the site (a test drive) goes in try/ instead.
 tries.json
 tries.json.tmp
 host.log
