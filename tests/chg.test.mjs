@@ -39,3 +39,36 @@ test("unchanged, figures, arrays, \\text{} and the original's steps", () => {
   assert.equal(markNums("$W = 4 \\cdot 2.0 = 8$ and 4", c.olds), "$W = \\htmlClass{chg}{4} \\cdot 2.0 = 8$ and \uE0004\uE001");
   assert.equal(markNums("$x = 1$", new Set()), "$x = 1$");
 });
+
+/* every $..$ of a source renders: KaTeX with the page's options (app.js renderMath), but throwing instead of the red error text */
+import katex from "katex";
+import { readFileSync, readdirSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+const KX = { throwOnError: true, strict: "ignore", trust: c => c.command === "\\htmlClass" };
+const texOf = s => [...s.matchAll(/\\\$|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g)].filter(m => m[0] !== "\\$").map(m => m[1] ?? m[2]);
+const renders = (s, where) => { for (const t of texOf(s)) assert.doesNotThrow(() => katex.renderToString(t, KX), `${where}: $${t}$`); };
+
+test("a changed bare exponent (m/s^2) is braced, so it renders highlighted, not as a red KaTeX error", () => {
+  const c = changes([T("Use $g = 9.80\\ \\text{m/s}^2$ and $x_3$.")], [T("Use $g = 9.8\\ \\text{m/s}^3$ and $x_4$.")]);
+  assert.equal(c.snack[0], "Use $g = \\htmlClass{chg}{9.80}\\ \\text{m/s}^{\\htmlClass{chg}{2}}$ and $x_{\\htmlClass{chg}{3}}$.");
+  renders(c.snack[0], "snack"); renders(c.orig[0], "original");
+  assert.equal(markNums("$t^ 23$", new Set(["23"])), "$t^ {\\htmlClass{chg}{2}}3$", "TeX's bare script is one digit: the rest stays on the line");
+  assert.match(katex.renderToString("\\text{m/s}^{\\htmlClass{chg}{2}}", KX), /class="[^"]*\bchg\b/, "the mark survives as a class");
+});
+
+test("every bank question and every snack's marked text renders without a KaTeX error (STEM_BANKS=<dir> for the real banks)", () => {
+  const dir = process.env.STEM_BANKS ? pathToFileURL(process.env.STEM_BANKS + "/") : new URL("../banks/", import.meta.url), files = [new URL("../problems.json", import.meta.url),
+    ...readdirSync(dir).filter(f => /^BANK_[A-Z0-9]{3,6}\.json$/.test(f)).map(f => new URL(f, dir))];
+  const md = b => Array.isArray(b.md) ? b.md.join("\n") : String(b.md ?? "");
+  let n = 0;
+  for (const f of files) for (const p of JSON.parse(readFileSync(f, "utf8")).problems) {
+    const texts = [...(p.body || []), ...(p.choices || [])].filter(b => b.md != null).map(md);
+    const o = p.saccharine && p.saccharine.original;
+    if (o && Array.isArray(o.body)) {
+      const c = changes(p.body, o.body);
+      texts.push(...c.snack.filter(Boolean), ...c.orig.filter(Boolean), ...(o.solution || []).map(l => markNums(l, c.olds)));
+    }
+    for (const s of texts) { renders(s, p.code); n++; }
+  }
+  assert.ok(n > 0, "no bank text found");
+});
