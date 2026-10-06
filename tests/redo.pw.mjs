@@ -41,6 +41,7 @@ async function openBank(page) {
   await showCode(page);
   await page.fill("#code", "BANK_RD12"); await page.press("#code", "Enter");
   await page.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+  await page.evaluate(() => window.Rewards && window.Rewards.config({ minDwell: 1e12 }));   // no random drops: their overlay takes clicks (rewards.pw tests drops)
 }
 async function pick(page, id) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
@@ -61,7 +62,8 @@ async function redoClick(page) {
 const ctxOpts = (viewport, phone) => ({ viewport, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
 const init = () => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } };
 
-const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
+const ENGINE = process.env.PW_BROWSER || "chromium";                 // PW_BROWSER=webkit: Safari's engine (iOS is ~half the visitors)
+const browser = await pw[ENGINE].launch(ENGINE === "chromium" ? { args: ["--no-sandbox"] } : {});
 try {
   for (const [vname, viewport] of [["desktop", { width: 1280, height: 900 }], ["phone", { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext(ctxOpts(viewport, vname === "phone"));
@@ -85,14 +87,14 @@ try {
     });
 
     let xp0 = 0;
-    await step(`${vname}: Redo misses = exactly R02 + R03, blank, "Redo 0/2", Exit on the bar`, async () => {
+    await step(`${vname}: Redo misses = exactly R02 + R03, blank, "Redo", Exit on the bar`, async () => {
       xp0 = await page.evaluate(() => window.Rewards.state().xp);
-      assert.equal(await page.$eval("#qredoTx", t => t.textContent), "Redo misses (2)");
+      assert.equal(await page.$eval("#qredoTx", t => t.textContent), "Redo misses");
       await redoClick(page);
       const r = await rows(page);
       assert.deepEqual(r.map(x => x.code).sort(), ["CALC1_R02", "CALC1_R03"]);
       assert.ok(r.every(x => !x.x && !x.ok), JSON.stringify(r));
-      assert.equal(await name(page), "Redo 0/2");
+      assert.equal(await name(page), "Redo");
       assert.ok(["CALC1_R02", "CALC1_R03"].includes(await cur(page)));
       assert.equal(await page.isVisible("#qredo"), true, "Exit stays on the bar");
       assert.equal(await page.$eval("#qredoTx", t => t.textContent), "Exit redo");
@@ -100,10 +102,10 @@ try {
       assert.equal(live, 5, "the old lockout is gone in the round");
       const b = await page.$eval("#qredo", e => e.getBoundingClientRect().toJSON());
       assert.ok(b.right <= viewport.width && b.left >= 0, `Exit fits on screen: ${JSON.stringify(b)}`);
-      if (SHOTS) await page.screenshot({ path: join(SHOTS, `redo-${vname}.png`) });
+      if (SHOTS) { await page.waitForTimeout(2600); await page.screenshot({ path: join(SHOTS, `redo-${vname}-${ENGINE}.png`) }); }   // after the drop banner fades
     });
 
-    await step(`${vname}: R02 right again = Comeback toast, no XP; R03 pays once; "Redo done 2/2"`, async () => {
+    await step(`${vname}: R02 right again = Comeback toast, no XP; R03 pays once; "Redo done"`, async () => {
       for (let k = 0; k < 2; k++) {
         const c = await cur(page), before = await page.evaluate(() => window.Rewards.state().xp);
         await pick(page, "a");
@@ -115,14 +117,14 @@ try {
         if (k === 0) { await page.click("#qnext"); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, c, { timeout: 6000 }); }
       }
       assert.ok(await page.evaluate(() => window.Rewards.state().xp) > xp0, "R03 never paid: it pays now");
-      await page.waitForFunction(() => document.querySelector("#qlistName").textContent === "Redo done 2/2", null, { timeout: 4000 });
+      await page.waitForFunction(() => document.querySelector("#qlistName").textContent === "Redo done", null, { timeout: 4000 });
     });
 
     await step(`${vname}: a reload stays in the round with its record`, async () => {
       const c = await cur(page);
       await page.reload();
       await opened(page, c);
-      assert.equal(await name(page), "Redo done 2/2");
+      assert.equal(await name(page), "Redo done");
       assert.ok(await page.$eval("#q", q => q.classList.contains("closed") || !!q.querySelector(".opt.right")), "the round's right answer shows");
     });
 
@@ -148,9 +150,9 @@ try {
     await go(page, "CALC1_R04"); await pick(page, "b"); await pick(page, "c");
     await redoClick(page);
     assert.equal(await cur(page), "CALC1_R04");
-    assert.equal(await name(page), "Redo 0/1");
+    assert.equal(await name(page), "Redo");
     await pick(page, "a");
-    await page.waitForFunction(() => document.querySelector("#qlistName").textContent === "Redo done 1/1", null, { timeout: 4000 });
+    await page.waitForFunction(() => document.querySelector("#qlistName").textContent === "Redo done", null, { timeout: 4000 });
     assert.equal(await page.$(".fx-toast"), null, "diet: no reward toast");
     await page.click("#qredo"); await page.waitForTimeout(400);
     assert.equal(await page.$$eval("#q .opt:not(:disabled)", o => o.length), 0, "the real record: out of tries");

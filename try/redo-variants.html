@@ -4,94 +4,95 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Redo Button Variants</title>
-<!-- Redo my misses: 5 icon + colour variants for Tony to pick (Oct 6). Mockup only, the app's dark tokens copied from app.css.
-     Red = wrong, green = right, orange = Cluck: a redo hue stays clear of all three. -->
+<!-- Redo my misses: 5 looks inside STYLE.md + Refactoring UI (v2, Oct 6). The real app.css / nav.css / rewards.css and the real icon
+     sprite (fetched from index.html), so every token and icon is true. Rules kept: colour only for state (§2.1, no new hue), one filled
+     control (§3), fill-first buttons (§2.6), no side stripes, no counters in the bar (§3 List and nav: the list's own ticks show progress),
+     2px sprite icons (§4). Refactoring UI: hierarchy by contrast and weight, emphasize by de-emphasizing, labels last.
+     Violet lives only in the reward layer (E, sugar). Serve over http (the sprite fetch): python3 serve.py, then /try/redo-variants.html -->
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../nav.css">
+<link rel="stylesheet" href="../rewards/rewards.css">
 <style>
-:root {
-  --paper: #08111f; --sheet: #16243a; --raised: #20304a; --qbox: #0f1d30;
-  --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --ok: #5fd394; --bad: #ff7a7a; --ai: #ff9a3c;
-  --s2: .5rem; --s3: .75rem; --s4: 1rem; --s5: 1.5rem;
-}
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; padding: 16px; }
-h1 { font-size: 1.4rem; margin: 0 0 4px; }
-p.lead { color: var(--muted); margin: 0 0 var(--s5); }
-.v { background: var(--qbox); border-radius: 14px; padding: var(--s4); margin-bottom: var(--s5); border-left: 6px solid var(--h); }
-.v h2 { margin: 0; font-size: 1.15rem; display: flex; gap: 10px; align-items: center; }
-.v h2 .sw { width: 18px; height: 18px; border-radius: 50%; background: var(--h); }
-.v .why { color: var(--muted); font-size: .9rem; margin: 2px 0 var(--s3); }
-.lab { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: var(--s3) 0 6px; }
+body { background: var(--paper); color: var(--ink); margin: 0; padding: var(--s4); }
+main.vs { max-width: 72rem; margin: 0 auto; }
+h1 { font-size: var(--t-md); margin: 0 0 var(--s2); }
+.lead { color: var(--muted); font-size: var(--t-sm); margin: 0 0 var(--s5); max-width: 65ch; }
+.v { background: var(--qbox); border-radius: 10px; padding: var(--s4); margin-bottom: var(--s4); }
+.v h2 { margin: 0; font-size: var(--t-sm); }
+.v p { margin: var(--s1) 0 var(--s3); color: var(--muted); font-size: var(--t-xs); max-width: 65ch; }
+.lab { font-size: var(--t-xs); color: var(--hint); margin: var(--s3) 0 var(--s2); }
 .row { display: flex; gap: var(--s2); align-items: center; flex-wrap: wrap; }
 .row.phone { flex-wrap: nowrap; }
-.phone { width: 358px; max-width: 100%; }
-.grow { margin-left: auto; }
-.btn { height: 48px; min-width: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); flex: none;
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; font: 700 .95rem/1 inherit; white-space: nowrap; }
-.btn.ic { padding: 0; width: 48px; }
-.btn svg { width: 24px; height: 24px; flex: none; }
-.btn.dim { opacity: .45; }
-/* the redo button, idle: the hue on the icon + a hue edge, so it never reads as a plain reload */
-.redo { color: var(--ink); border-color: color-mix(in srgb, var(--h) 70%, transparent); }
-.redo svg { color: var(--h); }
-/* inside a round: the bar gets a hue strip, the list button a hue tint, Exit is filled */
-.round { position: relative; padding-top: 10px; }
-.round::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; border-radius: 4px; background: var(--strip, var(--h)); }
-.round .lst { background: color-mix(in srgb, var(--h) 22%, var(--sheet)); border-color: color-mix(in srgb, var(--h) 60%, transparent); }
-.round .exit { background: var(--fill, var(--h)); border-color: transparent; color: var(--on); }
-.round .exit svg { color: var(--on); }
-.toast { display: inline-flex; gap: 10px; align-items: center; padding: 10px 16px; border-radius: 12px; background: var(--sheet);
-  border: 1px solid color-mix(in srgb, var(--h) 60%, transparent); box-shadow: 0 10px 24px -6px rgb(0 0 0 / .55); }
-.toast svg { width: 28px; height: 28px; color: var(--h); }
-.toast b { display: block; } .toast span { color: var(--muted); font-size: .9rem; }
-.grid { display: grid; grid-template-columns: 1fr; gap: 0 var(--s5); }
-@media (min-width: 900px) { .grid { grid-template-columns: auto 1fr; } }
-.grid > div { min-width: 0; }
-@media (max-width: 420px) { body { padding: 10px; } .v { padding: 10px; } .phone { zoom: .86; } }   /* the 358px phone bar, scaled into a card on a real phone */
+.row.phone .btn-label { min-width: 0; flex-shrink: 1; overflow: hidden; }   /* the mock row is a few px narrower than the app bar */
+.cols > div { min-width: 0; }
+@media (max-width: 26rem) { body { padding: var(--s4) 0; } h1, .lead { padding: 0 var(--s4); } .v { border-radius: 0; } }   /* a phone: the rows get the real 358px */
+.row .push { margin-left: auto; }
+.phone { max-width: calc(390px - 2 * var(--s4)); }
+.cols { display: grid; gap: 0 var(--s6); }
+@media (min-width: 60rem) { .cols { grid-template-columns: 22rem 1fr; } }
+.mini { list-style: none; margin: var(--s2) 0 0; padding: var(--s2); background: var(--sheet); border-radius: 10px; display: grid; gap: 2px; }
+.mini li { display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 8px; font-size: var(--t-sm); }
+.mini .qn { color: var(--muted); font-weight: 700; }
+.mini .cur { background: var(--raised); } .mini .cur .qn { color: var(--c1); }
+.mini .mk { margin-left: auto; display: flex; gap: 2px; }
+.mini .mk .ico { width: 1.25rem; height: 1.25rem; }
+.mk-ok { color: var(--ok); } .mk-x { color: var(--bad); }
+.btn.on { background: var(--raised); }
+
+/* B. Selected blue: --c1 means current / selected (§2.1) */
+.vB .on { color: var(--c1); }
+/* D. Look here: --mark as an underline only (the snack .chg precedent) */
+.vD .lst.on span { text-decoration: underline; text-decoration-color: var(--mark); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.vD .lst.on { background: var(--sheet); }
+/* E. Sugar: the reward layer's violet bevel + sun icon (STYLE.md §3 Reward layer); diet shows A */
+.vE .rwbtn { flex: none; height: var(--btn); padding: 0 var(--s4) 0 var(--s3); border: 0; border-radius: 12px; display: inline-flex; align-items: center; gap: var(--s2);
+  font: 700 var(--t-sm)/1 var(--rw-font); color: var(--rw-lav); background: var(--rw-v600); box-shadow: inset 0 -3px 0 var(--rw-v900); }
+.vE .rwbtn .ico { color: var(--rw-sun); }
+.vE .rwbtn.ic { width: var(--btn); padding: 0; justify-content: center; }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9.2a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.5M12 15.2v.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <!-- 1: a loop around an X: "the X ones, again" -->
-  <symbol id="r-loopx" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4.5H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 10l4 4M14 10l-4 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
-  <!-- 2: stacked cards, the front one pulled back -->
-  <symbol id="r-cards" viewBox="0 0 24 24"><rect x="8" y="3.5" width="12" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 7v11.5A2.5 2.5 0 0 0 7.5 21H15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 9.5h-5M11.5 9.5l2-2M11.5 9.5l2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <!-- 3: a target: aim at what you missed -->
-  <symbol id="r-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></symbol>
-  <!-- 4: a U-turn arrow over a flag: back to the flagged ones -->
-  <symbol id="r-uturn" viewBox="0 0 24 24"><path d="M6 20V5M6 5h9l-2 3 2 3H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 20v-5a3 3 0 0 0-6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 13l2 2 2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <!-- 5: two swords crossed in a circle arrow: a rematch -->
-  <symbol id="r-rematch" viewBox="0 0 24 24"><path d="M5 5l9 9M19 5l-9 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12.5 15.5l3 3M11.5 15.5l-3 3M16 17l2 2M8 17l-2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-</svg>
-
-<h1>Redo misses: 5 looks</h1>
-<p class="lead">Each one: a new icon + one hue. Idle = hue icon and edge. In a round = hue strip on the bar, tinted list button, filled Exit. Red, green and Cluck orange are taken.</p>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<main class="vs">
+<h1>Redo misses: 5 looks inside our style</h1>
+<p class="lead">Each look follows STYLE.md: no new colour, one filled button, no counters in the bar, 2px sprite icons. In a round, progress shows as ticks in the list, like everywhere else.</p>
 <div id="out"></div>
-
+</main>
 <script>
+const ico = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
+const lbl = (id, t, cls = "") => `<button class="btn btn-label ${cls}">${ico(id)}<span>${t}</span></button>`;
+const icb = (id, cls = "") => `<button class="btn ${cls}">${ico(id)}</button>`;
+const arrows = `<button class="btn push" disabled>${ico("i-prev")}</button>${icb("i-next")}`;
+const list = `<ol class="mini">
+  <li><span class="qn">1</span><span>Satellite period at altitude h</span><span class="mk"><svg class="ico mk-ok"><use href="#i-ok"/></svg></span></li>
+  <li class="cur"><span class="qn">2</span><span>Block, rough ramp and spring</span></li>
+  <li><span class="qn">3</span><span>Collision, 30° and 60°</span></li></ol>`;
+const idle = ph => `${lbl("i-list", "BANK_P2X", "lst")}${icb("i-shuffle")}${ph ? icb("i-redo") : lbl("i-redo", "Redo misses")}${arrows}`;
 const V = [
-  { n: "1. Violet loop", h: "#b69cff", on: "#1c1038", icon: "r-loopx", why: "A loop around an X: 'the X ones, again'. Violet reads as study mode." },
-  { n: "2. Teal cards", h: "#4fd1c5", on: "#03211e", icon: "r-cards", why: "Stacked cards pulled back: a review deck. Teal = calm, clear of ok-green." },
-  { n: "3. Gold target", h: "#ffd84a", on: "#2b2200", icon: "r-target", why: "A target: aim at the misses. Gold ties to the XP coin and the Comeback toast." },
-  { n: "4. Pink flag", h: "#ff8fc8", on: "#3a0b25", icon: "r-uturn", why: "U-turn to the flagged ones. Pink is loud, away from error red." },
-  { n: "5. Rematch gradient", h: "#8f7bff", on: "#ffffff", icon: "r-rematch", why: "Game feel: a rematch. A violet-to-pink strip and fill, for sugar mode.",
-    strip: "linear-gradient(90deg,#6d5cff,#ff6fb5)", fill: "linear-gradient(90deg,#6d5cff,#d25cff)" }
+  { k: "A", n: "A. Quiet toggle", why: "Calm Textbook, pure. In a round the redo button is 'on', like an open list (--raised fill). No hue; the state shows by contrast.",
+    round: ph => `${lbl("i-list", "Redo", "lst")}${ph ? icb("i-redo", "on") : lbl("i-redo", "Exit redo", "on")}${arrows}` },
+  { k: "B", n: "B. Selected blue", why: "--c1 already means current / selected. In a round the list button and the on button turn blue, like the current row: 'you are inside this'.",
+    round: ph => `${lbl("i-redo", "Redo", "lst on")}${ph ? icb("i-redo", "on") : lbl("i-redo", "Exit redo", "on")}${arrows}` },
+  { k: "C", n: "C. The list changes", why: "State on the thing it is about (§1.7). The list button becomes the round (redo icon + 'Redo'); the other button names where it goes: 'All questions'. No hue.",
+    round: ph => `${lbl("i-redo", "Redo", "lst on")}${ph ? icb("i-list") : lbl("i-list", "All questions")}${arrows}` },
+  { k: "D", n: "D. Look here", why: "--mark ('look here') as an underline only, the snack-number precedent. One short yellow line under 'Redo'; everything else neutral.",
+    round: ph => `${lbl("i-redo", "Redo", "lst on")}${ph ? icb("i-list") : lbl("i-list", "All questions")}${arrows}` },
+  { k: "E", n: "E. Sugar bevel", why: "Sugar only: the reward layer's violet bevel and sun icon, where the game look is allowed (§3 Reward layer). Diet shows A.",
+    idle: ph => `${lbl("i-list", "BANK_P2X", "lst")}${icb("i-shuffle")}${ph ? `<span class="rwbtn ic">${ico("i-redo")}</span>` : `<span class="rwbtn">${ico("i-redo")}Redo misses</span>`}${arrows}`,
+    round: ph => `${lbl("i-redo", "Redo", "lst on")}${ph ? `<span class="rwbtn ic">${ico("i-list")}</span>` : `<span class="rwbtn">${ico("i-list")}All questions</span>`}${arrows}` }
 ];
-const ico = id => `<svg aria-hidden="true"><use href="#${id}"/></svg>`;
-const bar = (v, round, phone) => `<div class="row ${round ? "round" : ""} ${phone ? "phone" : ""}">
-  <span class="btn lst">${ico("i-list")}${round ? "Redo 1/4" : "BANK_P2X"}</span>
-  ${round ? `<span class="btn exit">${ico(v.icon)}Exit redo</span>`
-          : phone ? `<span class="btn ic redo">${ico(v.icon)}</span>` : `<span class="btn redo">${ico(v.icon)}Redo misses</span>`}
-  <span class="btn ic dim grow">${ico("i-prev")}</span><span class="btn ic">${ico("i-next")}</span></div>`;
-document.getElementById("out").innerHTML = V.map(v => `<section class="v" style="--h:${v.h};--on:${v.on};${v.strip ? `--strip:${v.strip};--fill:${v.fill};` : ""}">
-  <h2><span class="sw"></span>${v.n}</h2><p class="why">${v.why}</p>
-  <div class="grid"><div><div class="lab">Phone, idle (list open)</div>${bar(v, false, true)}
-  <div class="lab">Phone, in a round</div>${bar(v, true, true)}</div>
-  <div><div class="lab">Desktop, idle</div>${bar(v, false, false)}
-  <div class="lab">Comeback toast</div><div class="toast">${ico(v.icon)}<div><b>Comeback!</b><span>Missed it before. Got it now.</span></div></div></div></div>
+document.getElementById("out").innerHTML = V.map(v => `<section class="v v${v.k} ${v.k === "E" ? "rw-skin" : ""}">
+  <h2>${v.n}</h2><p>${v.why}</p>
+  <div class="cols"><div>
+    <div class="lab">Phone, list open</div><div class="row phone">${(v.idle || idle)(true)}</div>
+    <div class="lab">Phone, in a round</div><div class="row phone">${v.round(true)}</div>${list}</div>
+  <div><div class="lab">Desktop, list open</div><div class="row">${(v.idle || idle)(false)}</div>
+    <div class="lab">Desktop, in a round</div><div class="row">${v.round(false)}</div></div></div>
 </section>`).join("");
+fetch("../index.html").then(r => r.text()).then(t => {                // the app's own icon sprite
+  const s = new DOMParser().parseFromString(t, "text/html").querySelector("svg symbol#i-list")?.closest("svg");
+  if (s) document.getElementById("sprite").append(document.importNode(s, true));
+}).catch(() => {});
 </script>
 </body>
 </html>

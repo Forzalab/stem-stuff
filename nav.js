@@ -102,10 +102,9 @@ function init() {
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
     const r = redo(), ok = r ? codes.filter(c => (mark(c) || {}).done === "correct").length : 0;
     const shut = r ? codes.filter(c => mark(c) && mark(c).done !== "open").length : 0;
-    name.textContent = r ? `Redo ${shut === codes.length ? "done " : ""}${ok}/${codes.length}` : bank() ? bank().code : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
+    name.textContent = r ? (shut === codes.length ? "Redo done" : "Redo") : bank() ? bank().code : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
     redoBtn.hidden = !bank();
-    const miss = r ? 0 : codes.filter(c => ((mark(c) || {}).x || 0) > 0).length;
-    redoTx.textContent = r ? "Exit redo" : miss ? `Redo misses (${miss})` : "Redo misses";
+    redoTx.textContent = r ? "Exit redo" : "Redo misses";                   // no counters in the bar (STYLE.md §3): the list ticks show progress
     redoBtn.setAttribute("aria-label", r ? "Exit redo" : "Redo missed questions");   // phones show the icon only
     root.classList.toggle("redo-on", !!r);
     if (r && on && shut === codes.length && !doneSaid) { doneSaid = true; say(`Redo done. ${ok} of ${codes.length} cleared.`); }

@@ -56,19 +56,12 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qnav-on.redo-on:not(.dock-bottom):not(.start):not(.ql-open) .top > .rw-hud { grid-column: 2 / 4; }
 .qnav-on.ql-open:not(.dock-bottom):not(.start) #qredo { grid-row: 2; grid-column: 5 / 7; justify-self: end; margin-top: var(--s3); }
 .dock-bottom.qnav-on:not(.ql-open):not(.redo-on) #qredo { display: none; }
-.dock-bottom:not(.redo-on) #qredo { width: 48px; padding: 0; justify-content: center; }   /* phones: icon only until a round, or the bar overflows */
+.dock-bottom:not(.redo-on) #qredo { width: var(--btn); padding: 0; justify-content: center; }   /* phones: icon only until a round, or the bar overflows */
 .dock-bottom:not(.redo-on) #qredoTx { display: none; }
 .redo-on #qshuf { display: none; }   /* a round has its own order */
-/* its look (try/redo-variants.html, Tony picks one of 5): a loop around an X in one hue clear of wrong red, right green and Cluck
-   orange. Idle: hue icon + edge. In a round: a hue line on the top bar, a tinted list button, a filled Exit */
-:root { --redo: #b69cff; --redo-ink: #1c1038; }
-#qredo { border-color: color-mix(in srgb, var(--redo) 70%, transparent); }
-#qredo .ico { color: var(--redo); }
-.redo-on .top { background-image: linear-gradient(var(--redo) 0 4px, transparent 4px); }
-.redo-on #qlistBtn { background: color-mix(in srgb, var(--redo) 22%, var(--sheet)); border-color: color-mix(in srgb, var(--redo) 60%, transparent); }
-.redo-on #qredo { background: var(--redo); color: var(--redo-ink); border-color: transparent; }
-.redo-on #qredo .ico { color: var(--redo-ink); }
-.redo-on #qredo:hover { background: color-mix(in srgb, var(--redo) 85%, white); }
+/* its look: variant A "Quiet toggle" of try/redo-variants.html (STYLE.md: no new hue, one filled control, no counters): in a round
+   the button is "on" like an open list; the list button says "Redo" and the list's own ticks show progress */
+.redo-on #qredo { background: var(--raised); }
 
 /* the list: in the flow (pushes the problem down, covers nothing), a card like the problem's; long lists scroll inside */
 .qlist {
