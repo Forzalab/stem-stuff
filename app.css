@@ -515,6 +515,8 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 /* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain"; "Cluck is typing…" sits under the thread while he types */
 .cl-live { display: none; align-items: center; gap: var(--s2); margin: var(--s3) 0 0; color: var(--ai-muted); font-size: var(--t-xs); }
 .cl-live b { color: var(--ai-text); }
+.cl-verify { display: none; margin: var(--s2) 0 0; color: var(--ai-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */
+.cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
 .cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: flex; }
 .cl-live .dots { display: inline-flex; gap: 3px; }
 .cl-live .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ai-muted); }
