@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Work ticker: test drive</title>
 <link rel="icon" href="data:,">
-<!-- Work ticker test drive (Oct 6). Part 1: Q1 from try/live-scene.html (the F–x work graph). The area is cut into pillars
-     (1 m grid columns, split where F crosses zero; under the axis = negative). Drag the line t: each pillar t enters prints a ticker
-     flash (green ↑ +N J / red ↓ −N J) that pops, piles up while the streak lasts and fades out; at the end the pile collapses into
-     W and the two chips +G / −R stay. ?rm=1 (or the system's reduced motion): no flashes, one accumulating number.
+<!-- Work ticker test drive (Oct 6, v2: plain text ticker). Part 1: Q1 from try/live-scene.html (the F–x work graph). The area is cut
+     into pillars (1 m grid columns, split where F crosses zero; under the axis = negative). Drag the line t: a running readout
+     "W = 12.0 J" (the signed sum up to t) and, right beside it, a plain text ticker like a stock quote: green "▲ +1.5 +4.5" while a
+     positive streak lasts, a red "▼ −0.5" run after a sign flip. A run fades out ~1.5 s after its last entry. At the end: "W = 22 J"
+     with the chips +G / −R that stay. ?rm=1 (or the system's reduced motion): no fade, the ticker shows the current streak sum.
      Part 2: a Cluck follow-up rendered from a JSON "blocks" reply (the proposed reply schema; renderer = one function per block type).
      Serve over http: python3 serve.py, then /try/ticker.html  (?rm=1 forces reduced motion). Reuses graph.js + app.css. -->
 <link rel="stylesheet" href="../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../app.css">
@@ -17,63 +18,43 @@
 <style>
   body { padding: var(--s4) var(--gut) var(--s7); overflow-x: hidden; }
   main { max-width: 52rem; margin: 0 auto; }
-  h1 { font-size: var(--t-md); margin: 0 0 var(--s2); }
-  .how { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); }
+  h1 { font-size: calc(var(--t-md) * 1.25); margin: 0 0 var(--s2); }
+  .how { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); max-width: 65ch; }
   .seg { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s4); }
   .seg > span { color: var(--muted); font-size: var(--t-sm); min-width: 4.5rem; }
-  .seg button, .pick button, .act, .ask-b { font: inherit; font-size: var(--t-sm); color: var(--ink); background: var(--raised); border: var(--bw) solid var(--edge);
+  .seg button, .pick button, .act, .ask-b { font: inherit; font-size: var(--t-sm); color: #fff; background: var(--sheet); border: var(--bw) solid var(--edge);
     border-radius: 8px; padding: var(--s2) var(--s3); min-height: 44px; cursor: pointer; }
   .seg button[aria-pressed="true"], .pick button[aria-pressed="true"] { background: var(--c1); color: var(--paper); border-color: var(--c1); font-weight: 700; }
   button:focus-visible, textarea:focus-visible, .live:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
   .card { background: var(--qbox); border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-1); }
   .card h2 { font-size: var(--t-sm); color: var(--muted); margin: 0 0 var(--s2); letter-spacing: .04em; }
-  .q p { margin: 0 0 var(--s3); }
-  .cluck { margin: 0 0 var(--s3); font-size: var(--t-sm); }
+  .q p { margin: 0 0 var(--s3); max-width: 65ch; }
+  .cluck { margin: 0 0 var(--s3); font-size: var(--t-sm); max-width: 65ch; }
   .cluck b { color: var(--c2); }
-  .stage { display: grid; gap: var(--s3); }
-  @media (min-width: 44rem) { .stage { grid-template-columns: minmax(0, 1fr) 14rem; align-items: stretch; } .tape { order: 2; } }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
   .live { touch-action: none; cursor: ew-resize; border-radius: 8px; user-select: none; -webkit-user-select: none; }
   .live.drag { cursor: grabbing; }
-  .hintline { font-size: var(--t-xs); color: var(--hint); margin: var(--s1) 0 0; }
+  .hintline { font-size: var(--t-xs); color: var(--hint); margin: var(--s1) 0 0; max-width: 65ch; }
 
-  /* ---------- the ticker tape ---------- */
-  .tape { position: relative; background: var(--field); border: var(--bw) solid var(--line); border-radius: 10px; padding: var(--s2) var(--s3);
-    font-family: var(--mono); font-variant-numeric: tabular-nums; overflow: hidden; height: 9.5rem; display: flex; flex-direction: column; }
-  @media (min-width: 44rem) { .tape { height: auto; min-height: 15rem; } }
-  .tape-hd { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); color: var(--hint); letter-spacing: .08em; flex: none; }
-  .tape-hd .wsofar { margin-left: auto; color: var(--muted); letter-spacing: 0; }
-  .led { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; transition: background .15s, box-shadow .15s; }
-  .led.up { background: var(--ok); box-shadow: 0 0 10px 2px rgb(95 211 148 / .55); }
-  .led.dn { background: var(--bad); box-shadow: 0 0 10px 2px rgb(255 122 122 / .55); }
-  .ledt { min-width: 1ch; font-weight: 700; }
-  .ledt.up { color: var(--ok); } .ledt.dn { color: var(--bad); }
-  .stack { list-style: none; margin: var(--s2) 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow: hidden; }
-  .fl { display: flex; align-items: center; gap: var(--s2); padding: 2px var(--s2); border-radius: 6px; font-weight: 700; font-size: var(--t-md); line-height: 1.35;
-    transform-origin: left center; transition: opacity .5s ease-out, transform .3s ease-in; }
-  .fl.up { color: var(--ok); background: rgb(95 211 148 / .12); }
-  .fl.dn { color: var(--bad); background: rgb(255 122 122 / .14); }
-  .fl .pid { margin-left: auto; font-size: var(--t-xs); font-weight: 400; color: var(--hint); }
-  .fl.new { animation: pop .32s cubic-bezier(.2, 1.4, .4, 1) both; }
-  .fl.settled { opacity: .45; }
-  .fl.gone { opacity: 0; }
-  @keyframes pop { 0% { opacity: 0; transform: translateY(-10px) scale(.7); } 100% { opacity: 1; transform: none; } }
-  .stack.collapse .fl { opacity: 0; transform: translateY(1.5rem) scale(.5); }
-  .total { display: none; flex: 1; flex-direction: column; justify-content: center; gap: var(--s2); }
-  .tape.rev .total { display: flex; }
-  .tape.rev .stack { display: none; }
-  .big { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.1; white-space: nowrap; }
-  .chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
-  .chip { display: inline-flex; align-items: center; padding: 2px var(--s2); border-radius: 6px; font-weight: 700; font-size: var(--t-sm); border: var(--bw) solid; }
+  /* ---------- the ticker: one line of plain text, W + a stock-quote run beside it ---------- */
+  .tape { min-width: 0; display: flex; flex-wrap: nowrap; align-items: baseline; column-gap: var(--s3); row-gap: var(--s1); min-height: 2.5rem;
+    font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .big { font-size: var(--t-md); font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .tk { flex: 0 1 auto; min-width: 0; overflow: hidden; display: inline-flex; justify-content: flex-end; align-items: baseline; column-gap: var(--s3); font-size: var(--t-sm); font-weight: 700; }   /* too long for a phone: the oldest text slides off the left edge, the newest stays by W */
+  .run { white-space: nowrap; transition: opacity .4s ease-out; }
+  .run.up { color: var(--ok); } .run.dn { color: var(--bad); }
+  .run.out { opacity: 0; }
+  .tape.rev { flex-wrap: wrap; }
+  .tape.rev .tk { display: none; }
+  .total { display: none; min-width: 0; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+  .tape.rev .total { display: inline-flex; }
+  .chips { display: inline-flex; flex-wrap: wrap; gap: var(--s2); }
+  .chip { display: inline-flex; align-items: center; padding: 0 var(--s2); border-radius: 6px; font-weight: 700; font-size: var(--t-sm); border: var(--bw) solid; }
   .chip.up { color: var(--ok); border-color: var(--ok); background: rgb(95 211 148 / .1); }
   .chip.dn { color: var(--bad); border-color: var(--bad); background: rgb(255 122 122 / .1); }
-  .chip.new { animation: pop .3s ease-out both; }
-  .chip.new + .chip.new { animation-delay: .12s; }
   .gr { font-size: var(--t-xs); color: var(--muted); }
-  /* reduced motion: one accumulating number */
-  .rmv { display: none; flex: 1; flex-direction: column; justify-content: center; gap: var(--s2); }
-  .tape.rm .stack { display: none; } .tape.rm:not(.rev) .rmv { display: flex; }
-  .rmv .big.up { color: var(--ok); } .rmv .big.dn { color: var(--bad); }
-  @media (prefers-reduced-motion: reduce) { .fl, .chip, .led { animation: none !important; transition: none !important; } }
+  .tape.rm .run { transition: none; }
+  @media (prefers-reduced-motion: reduce) { .run { transition: none !important; } }
 
   /* ---------- follow-up chat (Cluck's sheet look: app.css .ai-skin / .ai-box / .wtext) ---------- */
   .fu { border-radius: 12px; padding: var(--s4); margin: 0 0 var(--s4); box-shadow: var(--shadow-3); }
@@ -129,19 +110,15 @@
   <h1>Work ticker: test drive</h1>
   <p class="how">Drag the yellow line <i>t</i> across the graph (or tap anywhere on it, or use the arrow keys). Then try the follow-up questions under it.</p>
   <div class="seg" role="group" aria-label="Motion"><span>Motion</span>
-    <button type="button" data-rm="0">Ticker flashes</button><button type="button" data-rm="1">Reduced motion</button></div>
+    <button type="button" data-rm="0">Text ticker</button><button type="button" data-rm="1">Reduced motion</button></div>
 
   <section class="card q" id="q1" aria-labelledby="q1h">
     <h2 id="q1h">QUESTION 1 · WORK FROM A GRAPH</h2>
     <p>A cart moves along the x-axis. The net force on it, <span class="tex">$F(x)$</span>, rises from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{N}$</span> over the first <span class="tex">$2.0\ \text{m}$</span>, stays at <span class="tex">$6.0\ \text{N}$</span> until <span class="tex">$x = 4.0\ \text{m}$</span>, then falls in a straight line to <span class="tex">$-2.0\ \text{N}$</span> at <span class="tex">$x = 6.0\ \text{m}$</span>. How much work does it do from <span class="tex">$0$</span> to <span class="tex">$6.0\ \text{m}$</span>?</p>
     <p class="cluck"><b>Cluck:</b> (waddles along the axis) Every pillar is a chunk of work. Above the line it pays you, under it it bills you. QUACK.</p>
     <div class="stage">
-      <div class="tape" id="tape" aria-hidden="true">
-        <div class="tape-hd"><span class="led" id="led"></span><span class="ledt" id="ledt"></span><span>W TICKER</span><span class="wsofar" id="sofar"></span></div>
-        <ul class="stack" id="stack"></ul>
-        <div class="rmv" id="rmv"><div class="chips" id="rmPrior"></div><div class="big" id="rmBig">0 J</div></div>
-        <div class="total" id="total"><div class="big" id="bigW">W = 0 J</div><div class="chips" id="chips"></div><div class="gr" id="gr"></div></div>
-      </div>
+      <div class="tape" id="tape" aria-hidden="true"><span class="big" id="bigW">W = 0.0 J</span><span class="tk" id="tk"></span>
+        <span class="total" id="total"><span class="chips" id="chips"></span><span class="gr" id="gr"></span></span></div>
       <div class="fig live" id="fig" tabindex="0" role="slider" aria-label="Line t on the force graph. Drag it, tap the graph, or use the arrow keys." aria-valuemin="0" aria-valuemax="6"></div>
     </div>
     <p class="sr-only" id="say" aria-live="polite"></p>
@@ -223,75 +200,55 @@ function paint() {
   if (fig.clientWidth) { fig._g = null; Graph.render(fig, block()); }
   fig.setAttribute("aria-valuenow", S.t.toFixed(2));
   fig.setAttribute("aria-valuetext", `t = ${S.t.toFixed(1)} m, ${S.entered} of ${PIL.length} pillars, work so far ${sgn(sumTo(S.entered)).replace("+", "")}${fmt(sumTo(S.entered))} J`);
-  $("#sofar").textContent = S.entered ? `${S.entered}/${PIL.length}` : "";
 }
 const inv = () => { const X = fig._X, o = X([0, 0]), e = X([1, 1]); return px => (px - o[0]) / (e[0] - o[0]); };
 
-/* ---------- the ticker ---------- */
-const tape = $("#tape"), stack = $("#stack"), led = $("#led"), ledt = $("#ledt");
+/* ---------- the ticker: W readout + plain text runs beside it ---------- */
+const tape = $("#tape"), tk = $("#tk"), bigW = $("#bigW");
 const log = [];                                                        // every flash, for the test + the result code
-let idle = 0, revTok = 0, streak = 0, lastSign = 0;
-function light(s) {
-  led.className = "led" + (s > 0 ? " up" : s < 0 ? " dn" : "");
-  ledt.className = "ledt" + (s > 0 ? " up" : s < 0 ? " dn" : "");
-  ledt.textContent = s > 0 ? "↑" : s < 0 ? "↓" : "";
+const FADE = 1500;                                                     // a run fades this long after its last entry
+let revTok = 0, lastSign = 0, run = null;
+const arrow = s => (s > 0 ? "▲" : "▼");
+function readout() { if (!S.revealed) bigW.textContent = `W = ${sumTo(S.entered) < -1e-9 ? "−" : ""}${Math.abs(sumTo(S.entered)).toFixed(1)} J`; }
+function fadeLater(r) {
+  clearTimeout(r._t);
+  r._t = setTimeout(() => { r.classList.add("out"); setTimeout(() => { r.remove(); if (run === r) run = null; }, 450); }, FADE);
 }
-function flash(p, dir) {                                               // dir +1: t entered p; −1: t left p backwards (the opposite flash)
+function flash(p, dir) {                                               // dir +1: t entered p; −1: t left p backwards (the opposite entry)
   const v = p.a * dir, s = v > 0 ? 1 : -1;
-  streak = s === lastSign ? streak + 1 : 1; lastSign = s;
   S.cross++;
   log.push({ id: p.id, v, s, t: Date.now() });
-  light(s);
   $("#say").textContent = `${s > 0 ? "up" : "down"} ${fmt(v)} joules`;
   if (S.rm) return;
-  const li = document.createElement("li");
-  li.className = `fl new ${s > 0 ? "up" : "dn"}`; li.dataset.sign = s; li.dataset.pid = p.id;
-  li.innerHTML = `<span>${s > 0 ? "↑" : "↓"} ${sgn(v)}${fmt(v)} J</span><span class="pid">${dir > 0 ? "" : "undo "}${p.id}</span>`;
-  stack.querySelectorAll(".fl:not(.gone)").forEach(x => { if (+x.dataset.sign !== s) x.classList.add("settled"); });   // the old streak dims under a flip
-  stack.prepend(li);
-  setTimeout(() => { li.classList.remove("new"); if (li.isConnected) li.classList.add("settled"); }, 1100);
-  [...stack.children].slice(8).forEach(x => x.remove());
-  clearTimeout(idle);
-  idle = setTimeout(() => {                                            // the drag stopped: the pile fades out (the light stays on)
-    stack.querySelectorAll(".fl").forEach(x => x.classList.add("gone"));
-    setTimeout(() => stack.querySelectorAll(".fl.gone").forEach(x => x.remove()), 600);
-  }, 2600);
+  if (!run || !run.isConnected || run.classList.contains("out") || +run.dataset.sign !== s) {   // a sign flip (or a cold start): a new run
+    if (run && run.isConnected) [...run.querySelectorAll(".e")].slice(0, -2).forEach(x => { x.previousSibling?.nodeType === 3 && x.previousSibling.remove(); x.remove(); });   // the old run keeps its last 2: the flip stays in view on a phone
+    run = document.createElement("span");
+    run.className = `run ${s > 0 ? "up" : "dn"}`; run.dataset.sign = s;
+    run.innerHTML = `<span class="ar">${arrow(s)}</span> `;
+    tk.append(run);
+    [...tk.children].slice(0, -2).forEach(x => x.remove());           // at most the old run + the new one
+  }
+  run.insertAdjacentHTML("beforeend", `${run.querySelector(".e") ? " " : ""}<span class="e" data-pid="${p.id}">${sgn(v)}${fmt(v)}</span>`);
+  [...run.querySelectorAll(".e")].slice(0, -4).forEach(x => x.remove());   // the last 4 of a long streak
+  fadeLater(run);                                                      // the colour stays on while the streak lasts
 }
-function rmPaint() {                                                   // reduced motion: the running sum, green; a red streak switches it
+function rmPaint() {                                                   // reduced motion: the current streak's sum, no fade
+  if (!S.rm) return;
+  tk.innerHTML = "";
   const n = S.entered, segs = [];
   PIL.slice(0, n).forEach(p => { const l = segs[segs.length - 1]; if (l && l.s === p.s) l.v += p.a; else segs.push({ s: p.s, v: p.a }); });
-  const cur = segs.pop() || { s: 1, v: 0 };
-  $("#rmPrior").innerHTML = segs.map(g => `<span class="chip ${g.s > 0 ? "up" : "dn"}">${sgn(g.v)}${fmt(g.v)} J</span>`).join("");
-  const big = $("#rmBig");
-  big.className = "big " + (cur.s > 0 ? "up" : "dn");
-  big.textContent = `${cur.v ? (cur.s > 0 ? "↑ " : "↓ ") : ""}${sgn(cur.v)}${fmt(cur.v)} J`;
+  const cur = segs.pop();
+  if (cur) tk.innerHTML = `<span class="run ${cur.s > 0 ? "up" : "dn"}" data-sign="${cur.s}"><span class="ar">${arrow(cur.s)}</span> <span class="e">${sgn(cur.v)}${fmt(cur.v)}</span></span>`;
 }
 function reveal(on) {
   if (on === S.revealed) return;
   S.revealed = on; revTok++;
-  if (!on) { tape.classList.remove("rev"); stack.classList.remove("collapse"); stack.innerHTML = ""; return; }
+  if (!on) { tape.classList.remove("rev"); readout(); return; }
   S.reveals++;
-  const tok = revTok, chips = `<span class="chip up${S.rm ? "" : " new"}" id="chipG">+${fmt(G)} J</span><span class="chip dn${S.rm ? "" : " new"}" id="chipR">−${fmt(R)} J</span>`;
-  const done = () => {
-    if (tok !== revTok) return;
-    tape.classList.add("rev"); stack.classList.remove("collapse"); stack.innerHTML = "";
-    $("#chips").innerHTML = chips;
-    $("#gr").textContent = `W = ${fmt(G)} − ${fmt(R)}`;
-    if (S.rm) { $("#bigW").textContent = `W = ${fmt(W)} J`; return; }
-    const t0 = performance.now(), dur = 700;                           // the ticker count: 0 → W
-    const step = now => {
-      if (tok !== revTok) return;
-      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      $("#bigW").textContent = `W = ${k < 1 ? (W * e).toFixed(1) : fmt(W)} J`;
-      if (k < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  };
-  if (S.rm) return done();
-  clearTimeout(idle);
-  stack.querySelectorAll(".fl").forEach(x => x.classList.remove("new", "gone"));
-  stack.classList.add("collapse");                                  // the pile falls into one number
-  setTimeout(done, 320);
+  tape.classList.add("rev"); tk.innerHTML = ""; run = null;
+  $("#chips").innerHTML = `<span class="chip up" id="chipG">+${fmt(G)} J</span><span class="chip dn" id="chipR">−${fmt(R)} J</span>`;
+  $("#gr").textContent = `W = ${fmt(G)} − ${fmt(R)}`;
+  bigW.textContent = `W = ${fmt(W)} J`;
 }
 function setT(t) {
   t = Math.max(0, Math.min(XMAX, t));
@@ -302,8 +259,8 @@ function setT(t) {
   for (let i = S.entered; i < n; i++) flash(PIL[i], 1);
   for (let i = S.entered - 1; i >= n; i--) flash(PIL[i], -1);
   S.entered = n;
-  if (n === 0) { light(0); lastSign = 0; }
-  if (S.rm) rmPaint();
+  readout();
+  rmPaint();
   reveal(t >= XMAX);
   paint();
   code();
@@ -426,7 +383,7 @@ function syncSeg() {
   const u = new URL(location); u.searchParams.set("rm", S.rm ? "1" : "0"); history.replaceState(null, "", u);
 }
 document.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => {
-  S.rm = b.dataset.rm === "1"; stack.innerHTML = ""; syncSeg(); rmPaint();
+  S.rm = b.dataset.rm === "1"; tk.innerHTML = ""; run = null; syncSeg(); rmPaint();
   const r = S.revealed; S.revealed = false; if (r) reveal(true); code();
 }));
 document.querySelectorAll(".pick").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {

@@ -1,6 +1,7 @@
-// try/ticker.html (work ticker test drive): drag t across every pillar by pointer (touch at 390x844, mouse at 1366x768); the flashes
-// have the right signs, a sign flip stacks on top, the reveal shows W and the chips +G / −R, dragging back reverses; ?rm=1 has no
-// flashes and one accumulating number; the three follow-up replies render every block (an invalid one falls back to plain text);
+// try/ticker.html (work ticker test drive, v2 plain text): drag t across every pillar by pointer (touch at 390x844, mouse at 1366x768);
+// the readout "W = 18.0 J" runs, the text ticker beside it shows a green "▲ +1.5 +4.5 +6 +6" run, a sign flip starts a red "▼ −0.5"
+// run after it, a run fades ~1.5 s after its last entry, no cards; the reveal shows W and the chips +G / −R, dragging back reverses;
+// ?rm=1: no fade, the ticker shows the current streak sum; the three follow-up replies render every block (an invalid one falls back to plain text);
 // no console errors; no horizontal scroll at 390.
 // usage: node tests/ticker.pw.mjs http://localhost:8812 [shotDir]
 import { createRequire } from "node:module";
@@ -60,39 +61,47 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
     assert.ok(r.sw <= r.cw, `scrollWidth ${r.sw} > ${r.cw}`);
   });
   await shot("1-start");
-  await step(`${w}: dragging t across 4 pillars prints 4 green flashes that stack`, async () => {
+  const runs = () => page.$$eval("#tk .run", rs => rs.map(r => [r.dataset.sign, r.textContent.replace(/\s+/g, " ").trim()]));
+  await step(`${w}: dragging t across 4 pillars: W = 18.0 J and one green run "▲ +1.5 +4.5 +6 +6" beside it`, async () => {
     await drag(range(0.05, 3.3));
     assert.deepEqual(await log(page), [["p1", 1.5], ["p2", 4.5], ["p3", 6], ["p4", 6]]);
-    const fl = await page.$$eval("#stack .fl", els => els.map(e => [e.dataset.sign, e.textContent]));
-    assert.equal(fl.length, 4); assert.ok(fl.every(f => f[0] === "1"), JSON.stringify(fl));
-    assert.match(fl[0][1], /↑ \+6 J/);
-    assert.ok(await page.$eval("#led", e => e.classList.contains("up")), "the green light is on");
+    assert.equal(await page.textContent("#bigW"), "W = 18.0 J");
+    assert.deepEqual(await runs(), [["1", "▲ +1.5 +4.5 +6 +6"]]);
+    assert.equal(await page.$$eval(".fl, .stack, .led", e => e.length), 0, "no cards, no pile");
+    const [wb, tb] = await page.evaluate(() => ["#bigW", "#tk"].map(q => document.querySelector(q).getBoundingClientRect()).map(r => ({ l: r.left, r: r.right, t: r.top, b: r.bottom })));
+    assert.ok(tb.l >= wb.r - 1 && Math.abs(tb.t - wb.t) < 12, `the ticker sits right beside W: ${JSON.stringify([wb, tb])}`);
+    assert.equal(await page.$eval("#tk .run", e => getComputedStyle(e).color), "rgb(95, 211, 148)");
   });
   await shot("2-streak");
-  await step(`${w}: the pink pillar's red flash stacks on top of the greens`, async () => {
+  await step(`${w}: the pink pillar starts a red run right after the green one`, async () => {
     await drag(range(3.3, 5.75, 8));
     assert.deepEqual((await log(page)).slice(4), [["p5", 4], ["p6", 0.5], ["p7", -0.5]]);
-    const top = await page.$eval("#stack .fl", e => [e.dataset.sign, e.textContent]);
-    assert.equal(top[0], "-1"); assert.match(top[1], /↓ −0\.5 J/);
-    assert.ok(await page.$$eval("#stack .fl[data-sign='1']", e => e.length) >= 2, "the greens are still under it");
-    assert.ok(await page.$eval("#led", e => e.classList.contains("dn")), "the light turned red");
+    const r = await runs();
+    assert.deepEqual(r[r.length - 1], ["-1", "▼ −0.5"]);
+    assert.deepEqual(r[0], ["1", "▲ +4 +0.5"], "the green run keeps its last 2 entries");
+    assert.equal(await page.textContent("#bigW"), "W = 22.0 J");
   });
   await shot("3-flip");
-  await step(`${w}: t at the end: the pile collapses into W = 22 J, chips +22.5 J and −0.5 J stay`, async () => {
+  await step(`${w}: a run fades out ~1.5 s after its last entry`, async () => {
+    await sleep(2300);
+    assert.deepEqual(await runs(), []);
+    assert.equal(await page.textContent("#bigW"), "W = 22.0 J", "the readout stays");
+  });
+  await step(`${w}: t at the end: W = 22 J, chips +22.5 J and −0.5 J stay`, async () => {
     await drag(range(5.75, 6.4, 4)); await lift();
     await page.waitForFunction(() => document.querySelector("#bigW").textContent === "W = 22 J", null, { timeout: 4000 });
     assert.equal(await page.textContent("#chipG"), "+22.5 J");
     assert.equal(await page.textContent("#chipR"), "−0.5 J");
-    assert.equal(await page.$$eval("#stack .fl", e => e.length), 0);
+    assert.equal(await page.isVisible("#tk"), false);
     await sleep(500);
   });
   await shot("4-reveal");
-  await step(`${w}: dragging back reverses (the opposite flash) and hides the total`, async () => {
+  await step(`${w}: dragging back reverses (a green "▲ +0.5"), hides the chips, W = 22.5 J`, async () => {
     await drag(range(6, 5.3, 4)); await lift();
     assert.deepEqual((await log(page)).slice(7), [["p7", 0.5]]);
-    const top = await page.$eval("#stack .fl", e => [e.dataset.sign, e.textContent]);
-    assert.equal(top[0], "1"); assert.match(top[1], /↑ \+0\.5 J/);
-    assert.equal(await page.isVisible("#bigW"), false);
+    assert.deepEqual((await runs()).pop(), ["1", "▲ +0.5"]);
+    assert.equal(await page.isVisible("#chipG"), false);
+    assert.equal(await page.textContent("#bigW"), "W = 22.5 J");
   });
   await step(`${w}: keyboard: End reveals, Home clears`, async () => {
     await page.focus("#fig"); await page.keyboard.press("End");
@@ -140,18 +149,19 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
 
   // ---------- ?rm=1: no flashes, one accumulating number, green then red ----------
   const R = await open(w, h, touch, "?rm=1");
-  await step(`${w} rm: running sum in green, no flashes`, async () => {
+  const rruns = () => R.page.$$eval("#tk .run", rs => rs.map(r => [r.dataset.sign, r.textContent.replace(/\s+/g, " ").trim()]));
+  await step(`${w} rm: the ticker is the streak sum "▲ +18", green, W = 18.0 J`, async () => {
     await R.drag(range(0.05, 3.3));
-    assert.equal(await R.page.$$eval("#stack .fl", e => e.length), 0);
-    assert.equal(await R.page.textContent("#rmBig"), "↑ +18 J");
-    assert.ok(await R.page.$eval("#rmBig", e => e.classList.contains("up")));
+    assert.equal(await R.page.textContent("#bigW"), "W = 18.0 J");
+    assert.deepEqual(await rruns(), [["1", "▲ +18"]]);
   });
-  await step(`${w} rm: on the red pillar the prior total stays, the ticker turns red`, async () => {
+  await step(`${w} rm: on the red pillar: W = 22.0 J first, the ticker turns red "▼ −0.5"; nothing fades`, async () => {
     await R.drag(range(3.3, 5.75, 8));
-    assert.equal(await R.page.textContent("#rmPrior"), "+22.5 J");
-    assert.equal(await R.page.textContent("#rmBig"), "↓ −0.5 J");
-    assert.ok(await R.page.$eval("#rmBig", e => e.classList.contains("dn")));
-    assert.equal(await R.page.$$eval("#stack .fl", e => e.length), 0);
+    assert.equal(await R.page.textContent("#bigW"), "W = 22.0 J");
+    assert.deepEqual(await rruns(), [["-1", "▼ −0.5"]]);
+    await sleep(2200);
+    assert.deepEqual(await rruns(), [["-1", "▼ −0.5"]], "no fade under reduced motion");
+    assert.equal(await R.page.evaluate(() => document.querySelector("#tape").getAnimations({ subtree: true }).length), 0);
   });
   await R.shot("8-rm");
   await step(`${w} rm: reveal: W and the same chips, at once`, async () => {
