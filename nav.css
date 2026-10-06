@@ -88,3 +88,25 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qlist a.gone .qn { color: var(--hint); }
 .qlist a.gone .mk { opacity: 0.8; }
 .qlist a.gone[aria-current] .qn { color: var(--c1); }
+
+/* the open list dims the page behind it (Tony, Oct 6): everything but the top bar. The XP strip in the bar dims too; it is not
+   part of picking a question. Layers: page < FAB 40 < Cluck 45 < dim 46 < bar 47 < reward pop 50 / toast 60 / splash 100 / FX 140, 150.
+   The bar is lifted, not cut out: .top gets the page's colour, full width (border-image paints it past the column, ink only, no
+   scroll), and the XP strip gets the same dim as its own layer. A tap on either dim is an outside tap: nav.js closes the list. */
+.ql-dim {
+  position: fixed; inset: 0; z-index: 46; background: var(--ql-dim); opacity: 0; visibility: hidden;
+  pointer-events: none;   /* closing: the tap that closed it (Prev, Next, a row) lands on what is under it, not on the fading dim */
+  transition: opacity .15s ease-out, visibility 0s linear .15s;
+}
+:root { --ql-dim: rgb(0 0 0 / 0.55); }
+html.ql-open .ql-dim { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .15s ease-out; }
+/* the bar stays lifted while the dim fades out (z-index steps after .15s), and its colour is always on (it is the page's) */
+.top { border-image: linear-gradient(var(--paper) 0 0) fill 0 / 0 / 0 100vw; }
+html.ql-open .top { z-index: 47; }
+html:not(.ql-open) .top { z-index: auto; transition: opacity .25s ease-out, filter .3s ease-out, z-index .15s step-end; transition-behavior: allow-discrete; }
+.top > .rw-hud::after {
+  content: ""; position: absolute; z-index: 4; inset: 0; border-radius: 16px; background: var(--ql-dim);
+  opacity: 0; pointer-events: none; transition: opacity .15s ease-out;
+}
+html.ql-open .top > .rw-hud::after { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .ql-dim, html.ql-open .ql-dim, .top > .rw-hud::after { transition: none; } }
