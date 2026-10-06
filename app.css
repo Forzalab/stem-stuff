@@ -501,6 +501,10 @@ html.side #work > .orig { margin: 0; }
 .cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .6s ease-out;   /* ref 1's ember light, top only */
   background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
 .cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
+@media (prefers-reduced-motion: no-preference) {                            /* and it breathes, subtly (Tony, Oct 5); still under reduced motion */
+  .cl:has(.wrun)::before, .cl.wbusy::before { animation: wember 2.4s ease-in-out infinite; }
+}
+@keyframes wember { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
