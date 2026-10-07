@@ -142,11 +142,18 @@
       const b = document.createElement("button");
       b.id = "updateBar"; b.type = "button"; b.setAttribute("role", "status");
       b.textContent = "New version ready. Tap to update.";
-      b.addEventListener("click", () => location.reload());
+      b.addEventListener("click", () => { b.disabled = true; taken().then(() => location.reload()); });
       document.body.appendChild(b);
     };
+    /* the tap waits (≤15 s) for a new worker still installing to take over: a reload under the old one = a 2nd bar (DEPLOY.md) */
+    const taken = () => Promise.resolve(reg).then(r => r && (r.installing || r.waiting) && new Promise(ok => {
+      navigator.serviceWorker.addEventListener("controllerchange", ok, { once: true });
+      setTimeout(ok, 15000);
+    })).catch(() => {});
     const show = () => document.body ? bar() : addEventListener("DOMContentLoaded", bar, { once: true });
-    navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "stem-update") show(); });
+    const stamped = () => { const m = document.querySelector('meta[name="stem-build"]'); return !!m && m.content !== "dev"; };
+    /* "a file changed" is the dev path (serve.py); a deploy always brings its own sw.js, so it comes through controllerchange */
+    navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "stem-update" && !stamped()) show(); });
     navigator.serviceWorker.addEventListener("controllerchange", () => { if (!had) return; if (busy) show(); else location.reload(); });
     navigator.serviceWorker.startMessages();
   }

@@ -206,7 +206,8 @@ def max_tries(p):
 
 
 # ---------------- modes (design/EASY.md): sugar (saccharine) is the default; diet = the original questions, the cookie stem-mode=diet ----------------
-# Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet (cookies set before the rename still work).
+# Code box: DIET_<code> / SUGAR_<code> (mode.mjs). "hard" is the old name of diet. D6 (Oct 7): diet/hard counts only beside the
+# flag stem-mode-v=2 (mode.mjs sets it with every mode change); an old cookie without it = sugar (mode.mjs clears it on the next load).
 SUGAR_KEYS = ("title", "tip", "part", "key", "slip", "note", "narration")   # note: the NOTE per wrong pick, written with the key (pass-1 cache)
 
 
@@ -216,7 +217,8 @@ def mode_of(cookie_header):
         jar.load(cookie_header or "")
     except http.cookies.CookieError:
         pass
-    return "diet" if "stem-mode" in jar and jar["stem-mode"].value in ("diet", "hard") else "sugar"
+    v2 = "stem-mode-v" in jar and jar["stem-mode-v"].value == "2"
+    return "diet" if v2 and "stem-mode" in jar and jar["stem-mode"].value in ("diet", "hard") else "sugar"
 
 
 def sugar(p):

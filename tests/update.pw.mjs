@@ -22,9 +22,11 @@ cpSync(ROOT, SITE, { recursive: true, filter: s => !/[\\/](\.git|tests|node_modu
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json",
   ".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png" };
-const server = createServer((req, res) => {
+let slow = null;                                          // a phone on bus data: this file answers 4 s late (the new worker's install waits on it)
+const server = createServer(async (req, res) => {
   const p = normalize(decodeURIComponent(new URL(req.url, BASE).pathname)).replace(/^[\\/]+/, "") || "index.html";
   const f = join(SITE, p);
+  if (slow && slow.test(p)) await new Promise(r => setTimeout(r, 4000));
   try {
     if (!f.startsWith(SITE) || !statSync(f).isFile()) throw 0;
     res.writeHead(200, { "Content-Type": TYPES[extname(f)] || "application/octet-stream", "Cache-Control": "no-cache" });
@@ -94,6 +96,28 @@ try {
     assert.deepEqual(await ver(page), ["#90", "#90"], "still the page you were on");
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);
     assert.deepEqual(await ver(page), ["#91", "#91"], "tap: the new version");
+  });
+  await step("a deploy on a slow network (the old worker sees the changed files first): ONE tap → the new version, no second bar", async () => {
+    slow = /^vendor\/math\.min\.js$/;                      // the new sw.js precaches it: its install takes 4 s
+    deploy("#92", "ccc3333");
+    await page.reload();
+    await page.keyboard.press("Shift");                    // she taps around while it loads: busy
+    check(page).catch(() => {});
+    await bar(page).waitFor({ state: "visible", timeout: 15000 });
+    let loads = 0; page.on("load", () => { loads++; });
+    await bar(page).click();
+    await page.waitForFunction(() => document.querySelector('meta[name="stem-build"]')?.content === "#92" && document.readyState === "complete", null, { timeout: 15000 });
+    await page.keyboard.press("Shift");                    // busy again on the new page
+    await page.waitForTimeout(10000);                      // past the slow install
+    assert.equal(await bar(page).count(), 0, "no second bar");
+    assert.equal(loads, 1, "one reload, no second one");
+    assert.deepEqual(await ver(page), ["#92", "#92"]);
+    const keys = await page.evaluate(() => caches.keys());
+    assert.deepEqual(keys.filter(k => k.endsWith("-shell")), ["stem-92-ccc3333-shell"], `the page runs on the new worker's shell: ${keys}`);
+    await page.reload();
+    await page.waitForTimeout(2000);
+    assert.equal(await bar(page).count(), 0, "no bar after a further reload");
+    slow = null;
   });
 } finally {
   await browser.close();

@@ -1,10 +1,24 @@
 /* mode.mjs: sugar (saccharine, the default) or diet (the original questions), per browser (design/EASY.md). The cookie stem-mode=diet
    is the one truth: the server reads it on every request (serve.py mode_of), this page reads it here. The code box sets it:
-   DIET_<code> = diet, SUGAR_<code> = sugar (ADMIN_ / UNADMIN_, the old names, still work; so does an old stem-mode=hard cookie).
+   DIET_<code> = diet, SUGAR_<code> = sugar (ADMIN_ / UNADMIN_, the old names, still work).
+   D6 (Oct 7): a diet/hard cookie counts only beside stem-mode-v=2. A browser with the old cookie and no flag goes back to sugar
+   once, silently (reset(), run on import, before app.js asks anything); setMode() always sets the flag, so a DIET_ entry sticks.
    view() / hidden() mirror serve.py for problems from an uploaded file (the server applies them to its own). Pure but for the cookie. */
 
-export const modeOf = () => /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/.test(typeof document === "object" ? document.cookie : "") ? "diet" : "sugar";
+const DOC = typeof document === "object" ? document : null;
+const OLD = /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/, V2 = /(?:^|;\s*)stem-mode-v=2(?:;|$)/;
+const FLAG = "stem-mode-v=2; Max-Age=31536000; Path=/; SameSite=Lax";
+export function reset(doc = DOC) {                         // true = an old diet/hard browser was put back on sugar
+  if (!doc || V2.test(doc.cookie)) return false;
+  const old = OLD.test(doc.cookie);
+  if (old) doc.cookie = "stem-mode=; Path=/; Max-Age=0; SameSite=Lax";
+  doc.cookie = FLAG;
+  return old;
+}
+reset();
+export const modeOf = () => DOC && OLD.test(DOC.cookie) && V2.test(DOC.cookie) ? "diet" : "sugar";
 export function setMode(m) {
+  document.cookie = FLAG;
   document.cookie = m === "diet" ? "stem-mode=diet; Path=/; Max-Age=31536000; SameSite=Lax" : "stem-mode=; Path=/; Max-Age=0; SameSite=Lax";
 }
 /* "DIET_BANK_P2X" -> { mode: "diet", rest: "BANK_P2X" }; "SUGAR_p2x" -> { mode: "sugar", rest: "p2x" }; else null */
