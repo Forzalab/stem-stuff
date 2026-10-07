@@ -93,3 +93,19 @@ test("rage tap: 3 taps in 700 ms within 30 px; spread or slow taps are not", () 
   T.rageCheck(c, 0, 0, 0); T.rageCheck(c, 500, 0, 0);
   assert.equal(T.rageCheck(c, 1000, 0, 0), false, "slow");
 });
+
+test("replay PII blanker: e-mail + phone shapes go, physics stays", () => {
+  const T = run().win.__stemTelemetry;
+  assert.equal(T.blankPII("call me 559-555-1234 ok"), "call me ***-***-**** ok");
+  assert.equal(T.blankPII("(559) 555 1234"), "(***) *** ****");
+  assert.equal(T.blankPII("maria.g@gmail.com"), "*****.*@*****.***");
+  for (const t of ["v = 9.81 m/s, t=12.5", "F = 1234567 N", "1/2 m v^2 = 80 J", "x 2.0e8 m"]) assert.equal(T.blankPII(t), t);
+  assert.equal(T.blankPII(""), ""); assert.equal(T.blankPII(null), null);
+});
+
+test("Don't record me (stem-t-off=1) with a key: stays a no-op", () => {
+  const T = run().win.__stemTelemetry;
+  assert.equal(T.userOff({ getItem: () => "1" }), true);
+  assert.equal(T.userOff({ getItem: () => null }), false);
+  assert.equal(T.userOff({ getItem: () => { throw new Error("blocked"); } }), false);
+});

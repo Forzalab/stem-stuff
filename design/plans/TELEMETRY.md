@@ -16,8 +16,17 @@ PostHog (events + session replay) and Microsoft Clarity (heatmaps + replay). One
 ## Gates (silent: nothing is ever shown or said)
 - `navigator.doNotTrack === "1"` (or `window.doNotTrack`, `msDoNotTrack`) or `navigator.globalPrivacyControl` → load NOTHING,
   queue nothing. PostHog also gets `respect_dnt: true`.
-- Unmasked on purpose (D20/D24): PostHog `mask_all_text:false`, `mask_all_element_attributes:false`,
-  `session_recording.maskAllInputs:false`. Clarity masking is off in its dashboard; the code does not re-mask.
+- `localStorage["stem-t-off"] === "1"` → the same: nothing loads. Set by privacy.html "Don't record me" (a second tap undoes
+  it). This is the real opt-out: DNT/GPC never fire on iOS Safari.
+- Recorded unmasked (D20/D24) EXCEPT e-mail and phone-number shapes: PostHog `mask_all_text:false`,
+  `mask_all_element_attributes:false`; session replay `maskAllInputs:true` + `maskTextSelector:"*"` route every input and text
+  node through `maskInputFn` / `maskTextFn` = `blankPII()`, which stars out only these two shapes and returns the rest
+  unchanged (rrweb calls the mask functions on "masked" nodes only, hence "mask all, blank little"). Covers #scratch, Cluck's
+  ask field and the thread that echoes it. `persistence: "localStorage"` (no PostHog cookie riding every /check).
+- PII regexes (JS; reuse server-side in serve.py, Python `re` takes them as-is):
+  - e-mail: `[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`
+  - phone: `(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)`
+  - kept intact (tested): `9.81 m/s`, `1234567 N`, `2.0e8 m`, `80 J`. Blanked: `559-555-1234`, `(559) 555 1234`, `5595551234`.
 - posthog-js drops events from automation (`navigator.webdriver`, Headless UA). Real users are unaffected; a live test must
   spoof both (see `tests/telemetry.pw.mjs` header).
 
@@ -65,7 +74,9 @@ Plus PostHog autocapture, `$pageview`, `$pageleave`, session replay; Clarity rep
 
 ## Footer
 `index.html`: `<a id="privacy" href="privacy.html">privacy</a>` left of the dev tag (#ver), same quiet style. Under Cluck's
-text: "verify b4 use lol" + a new line "no sensitive data pls". `privacy.html`: what is recorded, why, contact (3 lines).
+text: "verify b4 use lol · no sensitive data pls" (CSS `::after`, so no text check moves). The link is a 44 px target and is
+hidden on phones while a question is open (the bottom belongs to the bar, the notes button and Swap; swap.pw audits it); it
+shows on the start page and on desktop. `privacy.html`: what is recorded, why, contact (3 lines) + "Don't record me".
 
 ## Tests
 `tests/telemetry.test.mjs` (pure helpers: gates, config parsing, guess-spam, rage), `tests/telemetry.pw.mjs` (DNT, GPC,

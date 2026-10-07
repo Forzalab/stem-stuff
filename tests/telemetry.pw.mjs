@@ -11,7 +11,7 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 
 const BASE = process.argv[2] || "http://localhost:8812";
 const LIVE = process.env.LIVE === "1" && /^phc_\w+$/.test(process.env.POSTHOG_TOKEN || "");
-const CODE = process.env.STEM_T_BANK || "BANK_P2X";
+const CODE = process.env.STEM_T_CODE || "CALC1_X2P";   // an MC question in problems.json: works on a plain serve.py (no bank copy)
 let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
@@ -24,9 +24,10 @@ const STUB = `window.posthog = { init(k, o) { window.__ph = { key: k, opts: o, e
   capture(n, p, x) { window.__ph.ev.push({ n, p, x }); } };`;
 
 /* a context: env = { dnt, gpc } (navigator overrides), key = stamp a fake key into index.html */
-async function open({ dnt = false, gpc = false, key = false, hash = "" } = {}) {
+async function open({ dnt = false, gpc = false, off = false, key = false, hash = "" } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
-  await ctx.addInitScript(([dnt, gpc]) => {
+  await ctx.addInitScript(([dnt, gpc, off]) => {
+    if (off) localStorage.setItem("stem-t-off", "1");
     if (dnt) Object.defineProperty(Navigator.prototype, "doNotTrack", { get: () => "1", configurable: true });
     if (gpc) Object.defineProperty(Navigator.prototype, "globalPrivacyControl", { get: () => true, configurable: true });
     try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ }
@@ -36,7 +37,7 @@ async function open({ dnt = false, gpc = false, key = false, hash = "" } = {}) {
       if (!window.__qAt && document.querySelector("#q .opt, #q input")) window.__qAt = t;
       if (!window.__libAt && document.querySelector('script[src*="posthog"], script[src*="clarity.ms"]')) window.__libAt = t;
     }).observe(document, { childList: true, subtree: true });
-  }, [dnt, gpc]);
+  }, [dnt, gpc, off]);
   const hits = [], errors = [];
   await ctx.route(HOSTS, async r => {
     hits.push({ url: r.request().url(), t: Date.now() });
@@ -57,9 +58,9 @@ async function open({ dnt = false, gpc = false, key = false, hash = "" } = {}) {
   await page.goto(BASE + "/" + hash, { waitUntil: "load" });
   return { ctx, page, hits, errors };
 }
-const firstQ = page => page.waitForSelector("#q .opt, #q input", { timeout: 15000 });
+const firstQ = page => page.waitForSelector("#q .opt, #q input, #q textarea", { state: "attached", timeout: 30000 });
 
-for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Control", { gpc: true }]]) {
+for (const [name, env] of [["Do Not Track", { dnt: true }], ["Global Privacy Control", { gpc: true }], ["privacy.html \"Don't record me\" (stem-t-off)", { off: true }]]) {
   await step(`${name} on + a key stamped: zero requests to PostHog / Clarity, stemT a no-op, nothing said`, async () => {
     const { ctx, page, hits, errors } = await open({ ...env, key: true, hash: "#" + CODE });
     await firstQ(page);
@@ -94,7 +95,11 @@ await step("a key: libraries load only after the first question shows; app_load,
   assert.ok(hits.some(h => /clarity\.ms\/tag\/abc123/.test(h.url)), "Clarity not requested (the fake meta stamps an id, as a CLARITY=1 build does)");
   const o = await page.evaluate(() => window.__ph.opts);
   assert.equal(o.respect_dnt, true); assert.equal(o.mask_all_text, false); assert.equal(o.mask_all_element_attributes, false);
-  assert.equal(o.session_recording.maskAllInputs, false);
+  const m = await page.evaluate(() => { const r = window.__ph.opts.session_recording; return [r.maskInputFn("call 559-555-1234 or a.b@c.edu"), r.maskTextFn("v = 9.81 m/s, KE = 80 J"), r.maskAllInputs, r.maskTextSelector]; });
+  assert.equal(m[0], "call ***-***-**** or *.*@*.***", "PII not blanked in replay inputs");
+  assert.equal(m[1], "v = 9.81 m/s, KE = 80 J", "physics text must stay recorded");
+  assert.equal(m[2], true); assert.equal(m[3], "*");   // every node goes through the PII blanker; the blanker keeps the rest
+  assert.equal(o.persistence, "localStorage", "no cookie on every /check");
   assert.equal(o.disable_surveys, true); assert.equal(o.capture_dead_clicks, false);   // D22 bench
   const live = await page.$$("#q .opt:not([disabled])");
   if (live.length) {   // a fast pick (< 2 s after open is not guaranteed here, so the burst rule: 3 picks in 10 s)
@@ -125,7 +130,11 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 3 plain 
   assert.ok(await a.isVisible(), "link hidden on the start page");
   await a.click();
   await page.waitForURL(/privacy\.html$/);
-  assert.equal((await page.$$("main p")).length, 3);
+  assert.equal((await page.$$("main > p")).length, 3);
+  assert.equal(/Clarity/.test(await page.textContent("main")), false, "Clarity is off: not named");
+  await page.click("#offBtn");
+  assert.equal(await page.evaluate(() => localStorage.getItem("stem-t-off")), "1");
+  assert.match(await page.textContent("#offTx"), /off on this device/);
   await ctx.close();
 });
 

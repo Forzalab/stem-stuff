@@ -44,10 +44,20 @@
     if (near.length >= 3) { taps.length = 0; return true; }
     return false;
   }
-  W.__stemTelemetry = { optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck };
+  /* replay records everything EXCEPT e-mail and phone-number shapes (Fable fix c): typed into #scratch, Cluck's ask field, or
+     echoed back as text. Same regexes in design/plans/TELEMETRY.md for the server side. */
+  var EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+  var PHONE = /(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
+  function blankPII(text) {
+    if (typeof text !== "string" || !text) return text;
+    return text.replace(EMAIL, function (m) { return m.replace(/[^@.]/g, "*"); }).replace(PHONE, function (m) { return m.replace(/\d/g, "*"); });
+  }
+  /* the viewer's own switch (privacy.html "Don't record me"): DNT/GPC never fire on iOS Safari, so this is the real opt-out */
+  function userOff(ls) { try { return ls.getItem("stem-t-off") === "1"; } catch (e) { return false; } }
+  W.__stemTelemetry = { optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
-  try { if (optedOut(N, W)) return; cfg = readConfig(D); } catch (e) { return; }
+  try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
   if (!cfg) return;
 
   /* ---- state ---- */
@@ -185,11 +195,13 @@
         var p = W.posthog;
         if (!p || !p.init) return;
         p.init(cfg.ph, {
-          api_host: cfg.host, respect_dnt: true, person_profiles: "always", persistence: "localStorage+cookie",
+          api_host: cfg.host, respect_dnt: true, person_profiles: "always", persistence: "localStorage",
           bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true, autocapture: true,
           disable_surveys: true, capture_dead_clicks: false,   // D22 bench: −42 KB; our dead_tap covers dead clicks
           mask_all_text: false, mask_all_element_attributes: false,
-          session_recording: { maskAllInputs: false, maskTextSelector: null },
+          /* rrweb calls the mask functions only on "masked" nodes: so every input and text node is "masked", and the functions
+             blank only e-mail / phone shapes. Net effect: unmasked (D20/D24) minus those two. */
+          session_recording: { maskAllInputs: true, maskInputFn: function (t) { return blankPII(t); }, maskTextSelector: "*", maskTextFn: function (t) { return blankPII(t); } },
           loaded: function (inst) {
             ph = inst;
             var q = queue.splice(0);
