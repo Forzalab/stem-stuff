@@ -279,6 +279,13 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .opt.wrong .badge { border-color: var(--bad); color: var(--bad); }
 .opt.right { border-color: var(--ok); background: var(--raised); }
 .opt.right .badge { background: var(--ok); border-color: var(--ok); color: var(--field); }
+/* one-shot feedback (Tony, Oct 6 TK1; app.js nudge): a wrong pick shakes once, a right one pulses twice. Transform only: nothing
+   around it moves. Reduced motion: still (the colour and the icon already say it) */
+@keyframes opt-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes opt-pop { 0%, 100% { transform: none; } 50% { transform: scale(1.025); } }
+.opt.jolt { animation: opt-jolt .36s ease-out; }
+.opt.pop { animation: opt-pop .28s ease-out 2; }
+@media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
 .opt.pend { border-color: var(--c1); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
 /* pick all (design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
@@ -844,6 +851,12 @@ html.side main {
   grid-template-columns: calc(var(--r, .5) * (100% - var(--s6))) var(--s6) minmax(0, 1fr);   /* 32px between the halves (Tony, Oct 5: 16 read cramped) */
 }
 html.side.mt-r0 main { grid-template-columns: 52px var(--s6) minmax(0, 1fr); }
+/* the bar + the page sit snug in the middle of the window, up-down too (Tony, Oct 6 sketch: "snug in the center"). Auto margins
+   split the spare height above the bar and below the page; a page taller than the window gets none, so it starts at the top as
+   before. Every other body child is fixed or absolute. width: 100%: an auto cross margin would shrink the item to its content */
+html.side:not(.start) body { display: flex; flex-direction: column; }
+html.side:not(.start):not(.dock-bottom) body > .top { width: 100%; margin-top: auto; }   /* beats nav.css .qnav-on:not(.dock-bottom):not(.start) .top { margin: 0 auto } */
+html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }

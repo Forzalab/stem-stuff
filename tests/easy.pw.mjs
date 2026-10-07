@@ -416,7 +416,7 @@ try {
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
   await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));
-  await step("zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll", async () => {
+  await step("zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll, centred up-down", async () => {
     const z = await browser.newContext({ viewport: { width: 5464, height: 3600 }, serviceWorkers: "block" });   // Tony's test protocol, Oct 6
     await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
@@ -426,7 +426,8 @@ try {
     const m = await zp.evaluate(() => {
       const v = [...document.querySelectorAll("#rot .vid")].map(x => x.getBoundingClientRect()), ta = document.querySelector("#scratch").getBoundingClientRect();
       return { gap: Math.round(v[1].left - v[0].right), side: Math.abs(v[0].top - v[1].top) < 1, notes: Math.round(ta.height),
-        handle: parseFloat(getComputedStyle(document.querySelector("#sash"), "::before").top), hscroll: document.documentElement.scrollWidth > innerWidth };
+        handle: parseFloat(getComputedStyle(document.querySelector("#sash"), "::before").top), hscroll: document.documentElement.scrollWidth > innerWidth,
+        above: Math.round(document.querySelector(".top").getBoundingClientRect().top), below: Math.round(innerHeight - document.querySelector("main").getBoundingClientRect().bottom) };
     });
     await z.close();
     assert.equal(m.gap, 24, "variant B: 24px between the videos");
@@ -434,6 +435,7 @@ try {
     assert.ok(m.notes <= 800, `notes box capped (${m.notes}px)`);
     assert.ok(m.handle <= 256, `divider handle near the top (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
+    assert.ok(m.above > 300 && Math.abs(m.above - m.below) <= 4, `snug in the middle up-down too (Tony, Oct 6 sketch): ${m.above}px above the bar, ${m.below}px below the page`);
   });
 
   /* bug 5 (owner, Oct 6, zoomed out): bar + question + explain/Cluck form one block, centred: the gap left of the whole block

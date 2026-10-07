@@ -125,7 +125,7 @@ try {
     await pick(page, "a");
     await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
       .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
-    assert.ok(await page.evaluate(() => window.__fx) > 1, "the bells on try 2");
+    assert.ok(await page.waitForFunction(() => window.__fx > 1, null, { timeout: 2000 }).then(() => true, () => false), "the bells on try 2");   // the FX nodes land a frame after the XP (a race, red once in a full run)
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
       .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
@@ -299,6 +299,30 @@ try {
     assert.ok(r[0].right <= 390 && r[0].left >= 0, "inside the page");
     assert.equal(await p2.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
     await ph.close();
+  });
+
+  await step("a wrong pick shakes once, a right pick pulses; reduced motion: neither moves (Tony, Oct 6 TK1)", async () => {
+    for (const rmode of ["no-preference", "reduce"]) {
+      const cx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: rmode, serviceWorkers: "block" });
+      await cx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+      const p5 = await cx.newPage();
+      await p5.goto(BASE + "/#CALC1_R03"); await opened(p5, "CALC1_R03");
+      await p5.evaluate(() => { window.__nudge = []; new MutationObserver(ms => { for (const m of ms) { const t = m.target; if (t.classList && t.classList.contains("opt"))
+        for (const c of ["jolt", "pop"]) if (t.classList.contains(c)) window.__nudge.push([t.dataset.id, c, getComputedStyle(t).animationName]); } })
+        .observe(document.querySelector("#q"), { subtree: true, attributes: true, attributeFilter: ["class"] }); });
+      await rig(p5, [0.99]);
+      await pick(p5, "c");
+      await pick(p5, "a");
+      await p5.waitForTimeout(900);
+      const n = await p5.evaluate(() => window.__nudge);
+      const first = c => n.find(x => x[1] === c);
+      assert.ok(first("jolt") && first("jolt")[0] === "c", `wrong pick c got the shake (${rmode}): ${JSON.stringify(n)}`);
+      assert.ok(first("pop") && first("pop")[0] === "a", `right pick a got the pulse (${rmode}): ${JSON.stringify(n)}`);
+      const names = n.map(x => x[2]);
+      if (rmode === "reduce") assert.ok(names.every(x => x === "none"), `reduced motion: no animation (${names})`);
+      else assert.ok(names.includes("opt-jolt") && names.includes("opt-pop"), `animations play (${names})`);
+      await cx.close();
+    }
   });
 
   await step("reduced motion: a correct answer pays but makes no particles", async () => {

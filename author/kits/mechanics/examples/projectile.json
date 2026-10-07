@@ -1,0 +1,106 @@
+{
+ "v": 1,
+ "view": {
+  "x": [
+   0,
+   40
+  ],
+  "y": [
+   0,
+   20
+  ]
+ },
+ "params": {
+  "th": {
+   "min": 10,
+   "max": 80,
+   "init": 45,
+   "unit": "deg"
+  },
+  "v0": {
+   "min": 5,
+   "max": 20,
+   "init": 15
+  },
+  "t": {
+   "min": 0,
+   "max": 3,
+   "init": 0
+  }
+ },
+ "derive": {
+  "r": "th*pi/180",
+  "x": "v0*cos(r)*t",
+  "y": "max(0,v0*sin(r)*t-4.9*t^2)"
+ },
+ "marks": [
+  {
+   "id": "g",
+   "sym": "ground",
+   "y": 0
+  },
+  {
+   "id": "traj",
+   "mark": "fn",
+   "param": "s",
+   "range": [
+    0,
+    "=2*v0*sin(r)/9.8"
+   ],
+   "x": "=v0*cos(r)*s",
+   "y": "=v0*sin(r)*s-4.9*s^2",
+   "style": "dashed"
+  },
+  {
+   "id": "ball",
+   "sym": "ball",
+   "x": "=x",
+   "y": "=y"
+  },
+  {
+   "id": "vel",
+   "sym": "vector",
+   "from": [
+    0,
+    0
+   ],
+   "to": [
+    "=3*cos(r)",
+    "=3*sin(r)"
+   ],
+   "label": "v_0"
+  }
+ ],
+ "handles": [
+  {
+   "bind": "th",
+   "on": "vel.to",
+   "constraint": "radial:[0,0]",
+   "snap": 5
+  }
+ ],
+ "knobs": [
+  {
+   "bind": "v0",
+   "kind": "slider",
+   "label": "v_0\\,(m/s)"
+  }
+ ],
+ "timeline": {
+  "drive": {
+   "param": "t",
+   "from": 0,
+   "to": "=2*v0*sin(r)/9.8",
+   "dur": 2000,
+   "ease": "linear"
+  }
+ },
+ "reveal": [
+  {
+   "after": "answer",
+   "show": [
+    "traj"
+   ]
+  }
+ ]
+}

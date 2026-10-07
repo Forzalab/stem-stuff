@@ -1,0 +1,132 @@
+{
+ "v": 1,
+ "goal": {
+  "slip": "used the full weight mg along the ramp",
+  "skill": "trig_part",
+  "see": "the along-ramp arrow shrink as the ramp flattens",
+  "say": "only mg sin θ pulls down the ramp",
+  "predict": "Flatten the ramp: does the pull down the ramp grow or shrink?",
+  "approach": "poe"
+ },
+ "view": {
+  "x": [
+   0,
+   6
+  ],
+  "y": [
+   0,
+   4
+  ]
+ },
+ "params": {
+  "th": {
+   "min": 10,
+   "max": 60,
+   "step": 1,
+   "init": 30,
+   "unit": "deg"
+  },
+  "m": {
+   "min": 1,
+   "max": 5,
+   "step": 0.5,
+   "init": 2,
+   "unit": "kg"
+  }
+ },
+ "derive": {
+  "r": "th*pi/180",
+  "W": "m*9.8",
+  "par": "W*sin(r)",
+  "perp": "W*cos(r)",
+  "bx": "3*cos(r)",
+  "by": "3*sin(r)"
+ },
+ "marks": [
+  {
+   "id": "ramp",
+   "sym": "incline",
+   "at": [
+    0,
+    0
+   ],
+   "base": 5,
+   "angle": "=th"
+  },
+  {
+   "id": "box",
+   "sym": "block",
+   "x": "=bx",
+   "y": "=by",
+   "angle": "=th"
+  },
+  {
+   "id": "Wv",
+   "sym": "vector",
+   "from": [
+    "=bx",
+    "=by"
+   ],
+   "to": [
+    "=bx",
+    "=by - W/20"
+   ],
+   "label": "mg"
+  },
+  {
+   "id": "Ppar",
+   "sym": "vector",
+   "from": [
+    "=bx",
+    "=by"
+   ],
+   "to": [
+    "=bx - par/20*cos(r)",
+    "=by - par/20*sin(r)"
+   ],
+   "label": "mg\\sin\\theta"
+  },
+  {
+   "id": "Pperp",
+   "sym": "vector",
+   "from": [
+    "=bx",
+    "=by"
+   ],
+   "to": [
+    "=bx + perp/20*sin(r)",
+    "=by - perp/20*cos(r)"
+   ],
+   "label": "mg\\cos\\theta"
+  },
+  {
+   "id": "val",
+   "mark": "text",
+   "at": [
+    4.2,
+    3.6
+   ],
+   "text": "=par"
+  }
+ ],
+ "knobs": [
+  {
+   "bind": "th",
+   "kind": "slider",
+   "label": "\\theta"
+  },
+  {
+   "bind": "m",
+   "kind": "stepper",
+   "label": "m\\,(kg)"
+  }
+ ],
+ "reveal": [
+  {
+   "after": "interact",
+   "show": [
+    "val"
+   ]
+  }
+ ]
+}
