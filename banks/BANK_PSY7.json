@@ -1,0 +1,2355 @@
+{
+ "v": 1,
+ "problems": [
+  {
+   "code": "PSY_7AA",
+   "title": "Faces rated in a flash",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Maya, a design major who drinks too much cold brew, sees 40 stranger faces for 100 milliseconds each and rates how trustworthy each one looks. Her roommate rates the same faces with no time limit. Their ratings come out nearly the same. Which idea does this MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "snap judgments, because quick face ratings closely match ratings made with unlimited time"
+    },
+    {
+     "id": "b",
+     "md": "thin slices, because short behavior clips predict end-of-term teaching evaluations"
+    },
+    {
+     "id": "c",
+     "md": "the primacy effect, because the first faces in the set shaped how the later ones were read"
+    },
+    {
+     "id": "d",
+     "md": "the availability heuristic, because faces that came to mind easily were rated as more common"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AB",
+   "title": "Two dimensions of a face",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In a lab in a converted basement, Todorov's team has people rate many faces on dozens of traits. Most of the variation collapses into two judgments: should I approach or avoid this person, and how powerful is this person? Which two dimensions are these, MOST precisely?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "warmth and competence, because they are the two halves of the stereotype content model"
+    },
+    {
+     "id": "b",
+     "md": "trustworthiness and dominance, because faces are judged on approachability and on power"
+    },
+    {
+     "id": "c",
+     "md": "attractiveness and maturity, because baby-faced people are seen as both pretty and young"
+    },
+    {
+     "id": "d",
+     "md": "extraversion and agreeableness, because those are the traits read most fast from faces"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AC",
+   "title": "A baby-faced candidate",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A city council candidate who coaches youth soccer on weekends has a round face, large eyes, and a small chin. Voters who see only his photo rate him quickly. Based on Todorov's work, how is he MOST likely to be judged?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "high on dominance and low on trustworthiness, because his features signal raw power"
+    },
+    {
+     "id": "b",
+     "md": "high on competence and low on warmth, because a youthful face signals intellect"
+    },
+    {
+     "id": "c",
+     "md": "high on trustworthiness and low on dominance, as baby faces seem safe, not strong"
+    },
+    {
+     "id": "d",
+     "md": "low on both dimensions, because snap judgments of faces are mostly random noise"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AD",
+   "title": "What the 69% shows",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Students who had never heard of the candidates looked at pairs of faces for about one second and picked who looked more competent. Their picks matched the actual election winner about 69% of the time. According to the textbook, what does this result MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "that the faces truly reveal competence, because the winners proved better at the job"
+    },
+    {
+     "id": "b",
+     "md": "that thin slices are accurate, because one second is enough to judge a stranger correctly"
+    },
+    {
+     "id": "c",
+     "md": "that framing drives voting, because the photos were edited to make some look strong"
+    },
+    {
+     "id": "d",
+     "md": "that face judgments track consensus, since people agree, which is not accuracy"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AE",
+   "title": "Blaming the ref, crediting the self",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Jordan, who wears the same lucky socks every game, says his team's win was due to his great passing but blames the loss the next week on a terrible referee. Which bias does this MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the fundamental attribution error, because he overweights dispositions when explaining others"
+    },
+    {
+     "id": "b",
+     "md": "the self-serving attributional bias, because success goes to him and failure to circumstance"
+    },
+    {
+     "id": "c",
+     "md": "the representativeness heuristic, because he judges the outcome by how much it fits a type"
+    },
+    {
+     "id": "d",
+     "md": "the recency effect, because the most recent game had the most impact on his judgment"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AF",
+   "title": "Judging the slow driver",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "On a rainy Tuesday, Priya sees a stranger driving 20 mph under the limit and concludes, \"That guy is a timid, incompetent person,\" never considering the fog or a sick child in the car. Which bias does this MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the self-serving attributional bias, because Priya protects her own self-esteem here"
+    },
+    {
+     "id": "b",
+     "md": "the availability heuristic, because a timid driver comes to mind more easily than fog"
+    },
+    {
+     "id": "c",
+     "md": "the fundamental attribution error, as she overweights disposition"
+    },
+    {
+     "id": "d",
+     "md": "the primacy effect, because the first thing she noticed set her entire later impression"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AG",
+   "title": "Order of traits",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In a study run in a drafty lecture hall, one group hears a person described as \"intelligent, industrious, impulsive, critical, stubborn, envious\" and another hears the same list in reverse. The first group rates the person much more positively. Which term MOST directly names this?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the recency effect, because the traits heard last had the strongest effect on judgment"
+    },
+    {
+     "id": "b",
+     "md": "spin framing, because the words were chosen to make the same person sound better"
+    },
+    {
+     "id": "c",
+     "md": "priming, because the first trait was a stimulus presented to activate a concept"
+    },
+    {
+     "id": "d",
+     "md": "the primacy effect, because the first traits had outsized influence"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AH",
+   "title": "Same meat, different label",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "At a grocery store with a squeaky cart, shoppers rate ground beef labeled \"75% lean\" as higher quality than the same beef labeled \"25% fat.\" Which concept does this MOST directly illustrate?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "a framing effect, because how the same information is presented changes the judgment"
+    },
+    {
+     "id": "b",
+     "md": "the availability heuristic, because the word lean comes to mind more readily than fat"
+    },
+    {
+     "id": "c",
+     "md": "the representativeness heuristic, because lean meat looks more like a quality prototype"
+    },
+    {
+     "id": "d",
+     "md": "priming, because the label was presented first to activate an unrelated later concept"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AJ",
+   "title": "Testing the lucky workout",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Devon, who lifts at 6 a.m. in a mostly empty gym, wants to know whether working out the day before a match helps him win. He thinks mainly about the times he worked out AND won, and ignores the other combinations. According to Crocker's work, what is he MOST likely doing?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "using base rates, because he is weighing how often he wins across all of his matches"
+    },
+    {
+     "id": "b",
+     "md": "showing a recency effect, because the last time he worked out and won stands out most"
+    },
+    {
+     "id": "c",
+     "md": "showing confirmation bias, as he overweights cases that fit the link"
+    },
+    {
+     "id": "d",
+     "md": "showing the self-serving bias, because he credits his own workouts for his wins"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AK",
+   "title": "Librarian or waitress",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Participants watch a video of a woman having a birthday dinner; some are told she is a librarian and others that she is a waitress. Later they are more accurate on details, like a history book or beer, that fit her job. According to the textbook, what does Cohen's (1981) study MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "that schemas guide personality ratings, because the librarian was rated quiet and bookish"
+    },
+    {
+     "id": "b",
+     "md": "that priming works subliminally, because the job label was shown outside of awareness"
+    },
+    {
+     "id": "c",
+     "md": "that base rates are ignored, because people forgot how common each occupation is"
+    },
+    {
+     "id": "d",
+     "md": "that schemas guide memory, as schema-consistent details were recalled better"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AL",
+   "title": "Adventurous or reckless Donald",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In an \"unrelated\" first task, participants memorize words like adventurous and self-confident, or reckless and conceited. In a second task they read about Donald, who kayaks rapids and won't change his mind. Those who saw the first set rate him far more positively. Which concept does this MOST directly illustrate?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "priming, because earlier words made a concept more accessible"
+    },
+    {
+     "id": "b",
+     "md": "the primacy effect, because the first traits in Donald's description dominated the rest"
+    },
+    {
+     "id": "c",
+     "md": "the fundamental attribution error, because people explained his risks by his traits"
+    },
+    {
+     "id": "d",
+     "md": "confirmation bias, because participants searched for proof that Donald was adventurous"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AM",
+   "title": "Kansas or Nebraska?",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Asked whether Kansas or Nebraska has more tornadoes per year, most people say Kansas, likely thinking of The Wizard of Oz, though the two average about the same number. Which heuristic does this MOST directly show?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the representativeness heuristic, because Kansas better matches a tornado-state prototype"
+    },
+    {
+     "id": "b",
+     "md": "the availability heuristic, as Kansas tornadoes come to mind more readily"
+    },
+    {
+     "id": "c",
+     "md": "base-rate neglect, because people ignored how often tornadoes occur in the region overall"
+    },
+    {
+     "id": "d",
+     "md": "a framing effect, because the order of the two state names in the question changed answers"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AN",
+   "title": "Tom W. the engineer",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Participants read that Tom W. is neat, mechanical, and dislikes people, and are told only a small fraction of grad students are in engineering. They still rate Tom as very likely an engineering student. Which pair of ideas MOST directly explains this?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "availability and recency, because the last trait read came to mind most readily of all"
+    },
+    {
+     "id": "b",
+     "md": "framing and priming, because the description was worded to activate an engineer schema"
+    },
+    {
+     "id": "c",
+     "md": "confirmation bias and schemas, because people sought proof that Tom fit engineering"
+    },
+    {
+     "id": "d",
+     "md": "representativeness and base-rate neglect, as fit to type beat rarity"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AP",
+   "title": "Term: frequency in a population",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Which term matches this definition?\n\nInformation about the relative frequency of events or members of different categories in a population."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "base-rate information"
+    },
+    {
+     "id": "b",
+     "md": "representativeness heuristic"
+    },
+    {
+     "id": "c",
+     "md": "availability heuristic"
+    },
+    {
+     "id": "d",
+     "md": "illusory correlation"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AQ",
+   "title": "Grumpy all weekend",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Lena, who keeps a cactus named Gerald on her desk, has felt vaguely irritable since Friday and can't say what about. On Monday, a coworker takes credit for her work and she feels a sharp burst of anger that fades in a few minutes. Which statement MOST accurately classifies these two states?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the weekend feeling is an emotion and Monday's is a mood, because emotions last for days"
+    },
+    {
+     "id": "b",
+     "md": "the weekend feeling is a mood and Monday's is an emotion, as emotions are brief"
+    },
+    {
+     "id": "c",
+     "md": "both are emotional disorders, because each one involves negative feelings about other people"
+    },
+    {
+     "id": "d",
+     "md": "both are emotions, because any feeling state with a clear negative tone counts as an emotion"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AR",
+   "title": "Same event, two feelings",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Two runners, both wearing new shoes, are bumped in a race. One interprets the bump as deliberate and unfair and feels angry; the other interprets it as an accident and feels nothing much. Which concept MOST directly explains the different emotions?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "focal emotions, because each runner's culture makes a different emotion common"
+    },
+    {
+     "id": "b",
+     "md": "suppression, because one runner hid the outward signs of the emotion he felt"
+    },
+    {
+     "id": "c",
+     "md": "appraisal, because each runner's interpretation of the event produced the emotion"
+    },
+    {
+     "id": "d",
+     "md": "the primacy effect, because the first thing each runner noticed shaped his reaction"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AS",
+   "title": "Term: interpretation that gives rise",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Which term matches this definition?\n\nThe interpretation an individual gives to a situation that gives rise to the experience of the emotion."
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "appraisal"
+    },
+    {
+     "id": "b",
+     "md": "emotion regulation"
+    },
+    {
+     "id": "c",
+     "md": "reappraisal"
+    },
+    {
+     "id": "d",
+     "md": "acceptance"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AT",
+   "title": "Critics of Ekman's first study",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ekman and Friesen showed photos of six facial expressions to people in Japan, Brazil, Argentina, Chile, and the United States, who matched them to emotion terms at 70 to 90 percent accuracy. What was the critics' MOST important objection?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the rates were near chance, because guessing among six terms is right most of the time"
+    },
+    {
+     "id": "b",
+     "md": "participants had seen Western media, so they may have learned the faces"
+    },
+    {
+     "id": "c",
+     "md": "the photos were posed, because real emotions only appear in spontaneous expressions"
+    },
+    {
+     "id": "d",
+     "md": "the sample was too small, because only students in two nations actually took part"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AU",
+   "title": "Why the Fore",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ekman traveled to Papua New Guinea to study the Fore, who had seen no movies or magazines and had never worked for Westerners. He told stories such as \"the person's child had died\" and had them pick the matching face. Why was this study MOST important?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "it showed the Fore had their own focal emotions, supporting cultural specificity"
+    },
+    {
+     "id": "b",
+     "md": "it showed blind people make the same faces, supporting an evolutionary account"
+    },
+    {
+     "id": "c",
+     "md": "it showed above-chance recognition without Western media, so universality"
+    },
+    {
+     "id": "d",
+     "md": "it showed emotions are brief and specific, supporting the distinction from moods"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AV",
+   "title": "Darwin's view of a snarl",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A zookeeper notes that an angry man's furrowed brow, bared teeth, and clenched fists resemble a chimp's threat display. Which idea from Darwin MOST directly explains this?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "focal emotions, because anger is especially common in cultures that value honor"
+    },
+    {
+     "id": "b",
+     "md": "appraisal, because anger depends on judging the event as unfair or threatening"
+    },
+    {
+     "id": "c",
+     "md": "suppression, because people minimize the outward signs of anger around others"
+    },
+    {
+     "id": "d",
+     "md": "expressions are vestiges of useful acts, as threat displays aided us"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AW",
+   "title": "Head down, a shy smile",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "After knocking over a stack of papers in a meeting, Sam looks down, smiles self-consciously, turns his head to the side, and touches his face. Coworkers soften toward him. According to the textbook, what MOST likely explains this display?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "it is pride, because head and gaze movement signals status to the other group members"
+    },
+    {
+     "id": "b",
+     "md": "it is suppression, because Sam is hiding the outward signs of his anger at himself"
+    },
+    {
+     "id": "c",
+     "md": "it is embarrassment, as it mirrors appeasement, which acts like an apology"
+    },
+    {
+     "id": "d",
+     "md": "it is a focal emotion, because shame is especially common in his workplace culture"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AX",
+   "title": "Blind judo winners",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Tracy and Matsumoto filmed judo athletes from 37 countries at the Olympics. After winning, both sighted athletes and those blind from birth smiled, tilted their heads back, and raised their arms. Which conclusion does this MOST directly support?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "expressions are evolved, as people blind from birth made them too"
+    },
+    {
+     "id": "b",
+     "md": "expressions are learned by watching others, because athletes copied what they saw"
+    },
+    {
+     "id": "c",
+     "md": "pride is a focal emotion, because it is especially common among Olympic athletes"
+    },
+    {
+     "id": "d",
+     "md": "winners reappraise, because they reinterpret the causes of emotion after a match"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AY",
+   "title": "Shame is everywhere here",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "An anthropologist, between bouts of jet lag, notes that in one interdependent culture people have many words for shame and embarrassment and talk about these feelings daily. Which term MOST directly describes this?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "appraisal, because people interpret situations in ways that give rise to shame"
+    },
+    {
+     "id": "b",
+     "md": "suppression, because the culture encourages hiding the outward signs of feeling"
+    },
+    {
+     "id": "c",
+     "md": "emotion regulation, because people there alter their own emotional states often"
+    },
+    {
+     "id": "d",
+     "md": "focal emotion, as one emotion is especially common within that culture"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7AZ",
+   "title": "Rethinking a friend's snub",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ana's friend ignores her text. Instead of staying angry, Ana thinks, \"She's probably slammed with finals and didn't see it,\" and her anger fades. Which emotion regulation strategy is this MOST clearly?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "acceptance, because she adopts an open, welcoming attitude toward her own emotion"
+    },
+    {
+     "id": "b",
+     "md": "reappraisal, as she reinterprets the emotion's cause and meaning"
+    },
+    {
+     "id": "c",
+     "md": "suppression, because she attenuates the outward signs of the emotion she feels"
+    },
+    {
+     "id": "d",
+     "md": "appraisal, because her first interpretation of the text is what created the anger"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7A2",
+   "title": "Biting back a laugh",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "At a quiet library table, Ravi watches his friend trip over a chair while asking someone out. Ravi feels like laughing but keeps a straight face so he won't humiliate him. Which emotion regulation strategy is this MOST clearly?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "reappraisal, because he reinterprets the causes of the emotion and its meaning"
+    },
+    {
+     "id": "b",
+     "md": "suppression, as he attenuates its outward signs"
+    },
+    {
+     "id": "c",
+     "md": "acceptance, because he adopts an open and welcoming attitude to his emotions"
+    },
+    {
+     "id": "d",
+     "md": "appraisal, because his interpretation of the fall is what gave rise to the urge"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BA",
+   "title": "A photographer changed after a crash",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Maya, a 38-year-old architect who loves jazz, suffers a head injury in a bike crash. Afterward her IQ tests are normal, but she forgets her partner's birthday, feels no guilt after breaking promises, and drifts away from her closest friends. Damage to which brain region would MOST likely explain this?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the orbitofrontal cortex, because it uses emotion to guide social commitment"
+    },
+    {
+     "id": "b",
+     "md": "the hypothalamus, because it produces the oxytocin that drives trust and generosity"
+    },
+    {
+     "id": "c",
+     "md": "the amygdala, because it quickly flags threatening stimuli before conscious awareness"
+    },
+    {
+     "id": "d",
+     "md": "the hippocampus, because it stores the memories of past promises made to partners"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BB",
+   "title": "The cuddle chemical's origin",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In a lab, couples who receive a nasal spray of a certain hormone share more money with a partner in a trust game. The hormone is a peptide linked to bonding and nursing. Where in the body is this hormone MOST accurately said to be produced?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "in the hypothalamus, because oxytocin is made there and released into brain and blood"
+    },
+    {
+     "id": "b",
+     "md": "in the pituitary gland, because oxytocin is made there and stored only in that gland"
+    },
+    {
+     "id": "c",
+     "md": "in the amygdala, because oxytocin is made there to dampen fear of unfamiliar people"
+    },
+    {
+     "id": "d",
+     "md": "in the orbitofrontal cortex, because oxytocin is made there to guide social judgments"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BC",
+   "title": "Happiness, East and West",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Asked to describe a perfect day, an American student lists winning a contest and feeling excited, while a student raised in Japan lists a calm dinner in harmony with family. These answers MOST directly illustrate that:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "happiness has different cultural meanings, because ideal feelings vary by culture"
+    },
+    {
+     "id": "b",
+     "md": "display rules differ by culture, because both students hid feelings in public settings"
+    },
+    {
+     "id": "c",
+     "md": "happiness peaks at midlife, because both students described adult family routines"
+    },
+    {
+     "id": "d",
+     "md": "money buys well-being, because both students named activities that cost money"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BD",
+   "title": "Income and two kinds of well-being",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In a survey of 400,000+ U.S. residents, a manager earning \\$180,000 and a teacher earning \\$80,000 are compared. Based on Kahneman and Deaton (2010), which is MOST likely?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "The manager reports higher emotional well-being, but their life satisfaction is similar"
+    },
+    {
+     "id": "b",
+     "md": "The manager reports higher life satisfaction, but their emotional well-being is similar"
+    },
+    {
+     "id": "c",
+     "md": "The manager reports both higher life satisfaction and higher emotional well-being"
+    },
+    {
+     "id": "d",
+     "md": "The manager reports neither higher life satisfaction nor higher emotional well-being"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BE",
+   "title": "The lowest point in the life span",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A researcher pools happiness surveys from over 40 cultures, including farmers, nurses, and retirees. At about what age is happiness MOST likely to hit its low point?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "around 20, because young adults face the most uncertainty about jobs and partners"
+    },
+    {
+     "id": "b",
+     "md": "around 50, because happiness falls from adolescence to midlife and then rises"
+    },
+    {
+     "id": "c",
+     "md": "around 75, because happiness plateaus then and declines with failing health"
+    },
+    {
+     "id": "d",
+     "md": "around 35, because raising young children produces the most daily stress"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BF",
+   "title": "Which nation is happiest",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A travel blogger visits Brazil, the U.S., Finland, and Singapore, noting the food and the weather in each. According to the World Happiness Report, which country is MOST likely to rank happiest, and why?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "the U.S., because higher average income raises everyone's emotional well-being"
+    },
+    {
+     "id": "b",
+     "md": "Singapore, because dense cities provide more chances for daily social contact"
+    },
+    {
+     "id": "c",
+     "md": "Finland, because strong safety nets like day care and leave raise happiness"
+    },
+    {
+     "id": "d",
+     "md": "Brazil, because warm climates and outdoor life produce more positive emotion"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BG",
+   "title": "Ranking the daily activities",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Using the day reconstruction method, women in Texas rated each activity of the previous day: socializing after work, eating lunch, watching TV, working, and commuting. Which activity was MOST likely rated least pleasant?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "watching TV, because passive activities give little sense of meaningful engagement"
+    },
+    {
+     "id": "b",
+     "md": "eating lunch, because meals at work are usually rushed and eaten alone at a desk"
+    },
+    {
+     "id": "c",
+     "md": "socializing, because after-work events often create obligation and social stress"
+    },
+    {
+     "id": "d",
+     "md": "commuting, because it ranked lowest of all the activities people reported that day"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BH",
+   "title": "A breakup forecast",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Before his breakup, Leo, a sophomore who plays intramural soccer, predicts he will be miserable for a year. Two months later he is fine, having rationalized that they were incompatible. His forecast error is MOST directly due to:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "immune neglect, because he underestimated his own ability to rationalize"
+    },
+    {
+     "id": "b",
+     "md": "focalism, because he focused on the breakup and ignored other daily events"
+    },
+    {
+     "id": "c",
+     "md": "duration neglect, because he ignored how long the relationship had lasted"
+    },
+    {
+     "id": "d",
+     "md": "the peak-end rule, because he judged it only by its worst and last moments"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BJ",
+   "title": "Two colonoscopy patients",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Patient A's procedure lasts 8 minutes and ends at peak pain. Patient B's lasts 20 minutes, with the same peak but a mildly uncomfortable final few minutes. B later rates the procedure as less unpleasant. This MOST directly shows:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "immune neglect, because B coped better with pain than he had predicted beforehand"
+    },
+    {
+     "id": "b",
+     "md": "focalism, because B focused on the procedure and ignored the rest of the day"
+    },
+    {
+     "id": "c",
+     "md": "the peak-end rule with duration neglect, because length barely affected memory"
+    },
+    {
+     "id": "d",
+     "md": "the impact bias, because B overestimated how long the pain would affect him later"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BK",
+   "title": "Choosing between two jobs",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Tess, who drives a blue Civic and loves hiking, chooses between two equally good job offers. A week later, she rates the chosen job higher and the rejected job lower than before. This MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "reactance, because she resisted pressure from friends to take the other offer"
+    },
+    {
+     "id": "b",
+     "md": "post-decision dissonance, because freely choosing spreads the alternatives apart"
+    },
+    {
+     "id": "c",
+     "md": "self-perception, because she inferred her preference from her job-search behavior"
+    },
+    {
+     "id": "d",
+     "md": "the overjustification effect, because the salary undermined her intrinsic interest"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BL",
+   "title": "Which condition was missing?",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Students wrote essays favoring a tuition hike. Some were told they could decline; others were told the essay was required. Only the first group became more favorable toward the hike. Which condition for dissonance MOST explains the difference?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "insufficient justification, because both groups were paid the same amount to write"
+    },
+    {
+     "id": "b",
+     "md": "negative consequences, because only the first group's essays were used by the board"
+    },
+    {
+     "id": "c",
+     "md": "free choice, because dissonance arises only when the behavior is freely chosen"
+    },
+    {
+     "id": "d",
+     "md": "foreseeability, because only the first group knew the essays would be published"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BM",
+   "title": "Learned it only afterward",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Dev freely gives a speech urging classmates to skip flu shots. Only the next day does he learn it would be posted online; nobody told him beforehand. Several classmates skip shots. Will Dev's attitude MOST likely shift toward the speech?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "Yes, because free choice alone is sufficient to produce dissonance-driven change"
+    },
+    {
+     "id": "b",
+     "md": "Yes, because the negative consequences occurred and he feels responsible for them"
+    },
+    {
+     "id": "c",
+     "md": "No, because he was given sufficient justification by the instructor's assignment"
+    },
+    {
+     "id": "d",
+     "md": "No, because the consequences weren't foreseeable, so no dissonance is aroused"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BN",
+   "title": "The \\$1 versus \\$20 liar",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Participants did a dull peg-turning task, then told a waiting student it was fun. Those paid \\$1 later rated the task as more enjoyable than those paid \\$20. This MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "insufficient justification, because a small reward can't explain the lie"
+    },
+    {
+     "id": "b",
+     "md": "the overjustification effect, because a large reward undermined interest in the task"
+    },
+    {
+     "id": "c",
+     "md": "reactance, because a large payment felt like pressure to agree with the experimenter"
+    },
+    {
+     "id": "d",
+     "md": "self-affirmation, because the \\$1 group affirmed their values by telling the lie"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BP",
+   "title": "The forbidden toy",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Children were told not to play with an attractive robot toy. Some were mildly threatened; others severely threatened. Weeks later, the mild-threat children still avoided the toy and liked it less. This MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "reverse psychology, because mild threats make forbidden objects more appealing"
+    },
+    {
+     "id": "b",
+     "md": "insufficient deterrence, because a mild threat can't justify avoiding it"
+    },
+    {
+     "id": "c",
+     "md": "the overjustification effect, because the severe threat removed intrinsic interest"
+    },
+    {
+     "id": "d",
+     "md": "effort justification, because the children worked hard to avoid playing with toys"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BQ",
+   "title": "Hazing and the club",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Women who had to read embarrassing passages aloud to join a dull discussion group rated the group as more interesting than women with a mild initiation. This MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "insufficient deterrence, because a mild threat led the women to devalue the group"
+    },
+    {
+     "id": "b",
+     "md": "post-decision dissonance, because choosing the group spread the alternatives apart"
+    },
+    {
+     "id": "c",
+     "md": "effort justification, because people come to value what they suffered to obtain"
+    },
+    {
+     "id": "d",
+     "md": "self-perception, because the women inferred their liking from their own reading"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BR",
+   "title": "Dissonance in Japan",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Japanese and Canadian students chose between two CDs. Canadians rated the chosen CD higher afterward; Japanese students did not. But Japanese students did show the effect when a poster of schematic faces was on the wall. This MOST suggests:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "dissonance is uniquely Western, because Japanese participants never justified choices"
+    },
+    {
+     "id": "b",
+     "md": "self-affirmation eliminates dissonance in all cultures, regardless of the paradigm"
+    },
+    {
+     "id": "c",
+     "md": "Japanese participants show reactance, because the poster created feelings of pressure"
+    },
+    {
+     "id": "d",
+     "md": "East Asians feel dissonance when cued to think about how others view their choice"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BS",
+   "title": "Rationalizing the status quo",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A worker earning low pay says, \"Rich people have money, but they're miserable and lonely; we poor folks are happier.\" According to system justification theory, this belief MOST directly:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "is a compensatory stereotype, because it makes inequality seem fair"
+    },
+    {
+     "id": "b",
+     "md": "is self-affirmation, because praising his own group restores his global self-worth"
+    },
+    {
+     "id": "c",
+     "md": "is the false consensus effect, because he assumes others share his own preferences"
+    },
+    {
+     "id": "d",
+     "md": "is focalism, because he concentrates on loneliness and ignores other life events"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BT",
+   "title": "Reminded of death",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "After being asked to write about what will happen when they die, judges set higher bail for a sex worker than control judges did. Terror management theory MOST directly explains this by saying that:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "death reminders arouse dissonance, which judges reduce by changing their attitudes"
+    },
+    {
+     "id": "b",
+     "md": "death reminders strengthen defense of cultural worldviews that provide meaning"
+    },
+    {
+     "id": "c",
+     "md": "death reminders increase reactance, so judges reject lenient legal recommendations"
+    },
+    {
+     "id": "d",
+     "md": "death reminders trigger focalism, so judges overweight one feature of the case"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BU",
+   "title": "Self-esteem as a buffer",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Before a mortality-salience prompt, half the participants got glowing feedback on a personality test. Those participants showed less death-related anxiety. According to terror management theory, this MOST likely occurs because:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "praise provides sufficient justification, so no counterattitudinal act is required"
+    },
+    {
+     "id": "b",
+     "md": "positive feedback produces post-decision dissonance that pushes away death thoughts"
+    },
+    {
+     "id": "c",
+     "md": "self-esteem buffers death anxiety, since one feels valued within a lasting culture"
+    },
+    {
+     "id": "d",
+     "md": "flattery triggers system justification, which makes existing hierarchies feel fair"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BV",
+   "title": "Building a legacy",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Aware that she will die, a novelist, who also volunteers at a shelter and loves cats, says she writes so her books will \"live on after me.\" Terror management theory MOST directly calls this pursuit:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "self-affirmation, because she bolsters her worth to cope with a specific threat"
+    },
+    {
+     "id": "b",
+     "md": "effort justification, because she values the books she worked hard to produce"
+    },
+    {
+     "id": "c",
+     "md": "system justification, because her books reinforce existing cultural hierarchies"
+    },
+    {
+     "id": "d",
+     "md": "symbolic immortality, because cultural works outlast the self"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BW",
+   "title": "The 1930s restaurant study",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "In the 1930s, a researcher traveled with a Chinese couple and was refused service at only 1 of about 250 establishments, yet over 90% later wrote they would not serve Chinese guests. Which factor MOST explains the gap?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "social norms, because face-to-face norms of hospitality outweighed the attitude"
+    },
+    {
+     "id": "b",
+     "md": "introspection, because analyzing reasons changed the owners' stated attitudes"
+    },
+    {
+     "id": "c",
+     "md": "attitude specificity, because the general letter matched the specific situation"
+    },
+    {
+     "id": "d",
+     "md": "dissonance, because owners changed attitudes after serving the Chinese couple"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BX",
+   "title": "Listing reasons for liking",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Students were asked to write why they liked each of several posters before choosing one to take home. Weeks later they were less satisfied than students who chose without listing reasons. This MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "dissonance reduction, because choosing a poster spread the alternatives apart"
+    },
+    {
+     "id": "b",
+     "md": "introspection misleads, because reasons shift focus to easy-to-say features"
+    },
+    {
+     "id": "c",
+     "md": "insufficient justification, because no payment was given for choosing a poster"
+    },
+    {
+     "id": "d",
+     "md": "self-perception, because students inferred liking from watching their choices"
+    }
+   ],
+   "correct": "b",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BY",
+   "title": "General vs. specific",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "A researcher wants to predict whether residents will sign up for a curbside recycling program next month. Which measure will MOST likely predict this behavior best?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "general attitude toward the environment, because broad values guide all actions"
+    },
+    {
+     "id": "b",
+     "md": "general attitude toward recycling, because it captures the overall evaluation"
+    },
+    {
+     "id": "c",
+     "md": "specific attitude toward this program, because it matches the act"
+    },
+    {
+     "id": "d",
+     "md": "general attitude toward local government, because it shapes trust in programs"
+    }
+   ],
+   "correct": "c",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7BZ",
+   "title": "Ben Franklin's rival",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Ben Franklin asked a rival legislator to lend him a rare book, and the rival agreed. Afterward the rival became friendlier toward Franklin. Which explanation MOST fits this change?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "reactance, because the request restricted the rival's freedom to dislike Franklin"
+    },
+    {
+     "id": "b",
+     "md": "system justification, because the rival defended the legislative status quo"
+    },
+    {
+     "id": "c",
+     "md": "the overjustification effect, because the request removed the rival's motive"
+    },
+    {
+     "id": "d",
+     "md": "dissonance, because helping a disliked man clashed with his attitude"
+    }
+   ],
+   "correct": "d",
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  },
+  {
+   "code": "PSY_7B2",
+   "title": "Bettors after placing the bet",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "At a racetrack, bettors who had just placed \\$2 bets rated their horse's chances higher than bettors still waiting in line. Using the BOOK's framing, this MOST directly reflects:"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "post-decision dissonance, because committing makes a choice seem better"
+    },
+    {
+     "id": "b",
+     "md": "the peak-end rule, because the bet was the most intense moment of the visit"
+    },
+    {
+     "id": "c",
+     "md": "focalism, because bettors ignored other horses running in the same race"
+    },
+    {
+     "id": "d",
+     "md": "introspection, because thinking about reasons inflated the horse's chances"
+    }
+   ],
+   "correct": "a",
+   "wrong": [
+    {
+     "choice": "b",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
+     "error": "misread",
+     "hint": "QUACK."
+    }
+   ]
+  }
+ ]
+}
