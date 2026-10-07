@@ -200,7 +200,7 @@
     else { s.mine.push(i); s.sel = -1; if (s.tries >= MAX) s.done = "out"; }
     paint();
     /* show what the check said: the feedback (or the Next under it) scrolls up just above the bar, never to the top */
-    if (!(V === 5 && phone())) ($("#slotCard").firstChild || $("#fb")).scrollIntoView({ block: "nearest", behavior: RM ? "auto" : "smooth" });
+    (V === 5 && phone() ? $("#q") : $("#slotCard").firstChild || $("#fb")).scrollIntoView({ block: "nearest", behavior: RM ? "auto" : "smooth" });
     const o = $("#q").querySelectorAll(".opt")[i];
     if (s.done === "right" && !RM) { o.classList.remove("pop"); void o.offsetWidth; o.classList.add("pop"); }
     if (root.classList.contains("kbup") && s.done) setTimeout(() => kb(false), 900);   // prod doneExit: the keyboard steps away, Next is back

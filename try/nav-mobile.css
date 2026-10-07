@@ -60,9 +60,12 @@ html.ph.foot-on .nbwrap { background: var(--sheet); border-top: 0; border-radius
 .foot-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
 .foot-skip { background: var(--paper); }
 .foot .nm-tries { margin: 0; }
+.foot .verdict { align-items: flex-start; color: var(--ink); font-weight: 400; }
+.foot .verdict .ico { color: var(--ok); margin-top: 3px; }
 /* v6: one segmented control */
 html.v6 .nb { gap: 2px; padding: 0; margin: var(--s2) var(--gut); max-width: calc(var(--col) - 2 * var(--gut)); background: var(--line); border-radius: 12px; overflow: hidden; }
-html.v6:not(.ph) .nb { margin: var(--s3) auto; }
+html.v6:not(.ph) .nbwrap { padding: var(--s3) 0; }
+html.v6:not(.ph) .nb { margin: 0 auto; }
 html.v6 .nb-sp { display: none; }
 html.v6 .nb > .btn, html.v6 .nb > .slot { flex: 1 1 0; width: auto; border-radius: 0; }
 html.v6 .nb > .btn { background: var(--sheet); }
@@ -73,6 +76,7 @@ html.v6 .nb-skip .nb-skiptx { display: inline; }
 html.v6 .nb-skip { display: inline-flex; gap: var(--s1); font-size: var(--t-sm); font-weight: 700; }
 html.v6 .slot-bar .nx { width: 100%; border-radius: 0; }
 html.v6 .nb .btn:disabled { background: var(--sheet); }
+html.v6.nx-bar .nb > .nb-skip { display: none; }
 /* v7: the bar hides on scroll down (phones); Next floats in the thumb zone */
 html.ph.v7.nb-away .nbwrap { opacity: 0; transform: translateY(8px); visibility: hidden; transition: opacity .2s ease-out, transform .2s ease-out, visibility 0s linear .2s; }
 @media (prefers-reduced-motion: reduce) { html.ph .nbwrap, html.ph.v7.nb-away .nbwrap { transform: none; } }
@@ -98,6 +102,7 @@ html:not(.ph) .nbwrap .qlist { position: absolute; z-index: 21; top: 100%; left:
 .nm-out { margin: 0; font-weight: 700; color: var(--ink); }
 .nm-cluck > .ico { color: var(--mark); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .nm-tries { display: flex; align-items: center; gap: var(--s2); margin: var(--s2) 0 0; color: var(--muted); font-size: var(--t-sm); }
+.pips i.used { background: var(--muted); border-color: var(--muted); }   /* a used try is grey, not red (§1 banned: red) */
 .nm-ask { margin-top: var(--s3); background: var(--field); border-color: var(--edge); }
 
 /* ---------- Cluck: a partial sheet ABOVE the bar, so Next is never under it ---------- */
@@ -123,7 +128,7 @@ html:not(.ph) .sheet { left: auto; right: var(--s5); bottom: var(--s5); width: 2
 /* ---------- the keyboard stand-in ---------- */
 .kb { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; height: 291px; display: flex; flex-direction: column; padding: 0 var(--s1) env(safe-area-inset-bottom); background: var(--raised); }
 .kb[hidden] { display: none; }
-.kb-done { align-self: flex-end; min-height: 44px; padding: 0 var(--s4); border: 0; background: transparent; color: var(--c1-hi); font-weight: 700; font-size: var(--t-sm); }
+.kb-done { order: -1; align-self: flex-end; min-height: 44px; padding: 0 var(--s4); border: 0; background: transparent; color: var(--c1-hi); font-weight: 700; font-size: var(--t-sm); }
 .kb-in { flex: 1; display: grid; align-content: start; gap: 10px; }
 .kb-in div { display: flex; justify-content: center; gap: 6px; }
 .kb-in i { width: 32px; height: 42px; border-radius: 5px; background: var(--edge); }
