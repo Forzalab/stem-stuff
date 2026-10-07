@@ -32,7 +32,22 @@ Owner: T-bd. Script: `tools/bench-telemetry.mjs`. Event names, props and loaders
 
 ### Results (wired, 5 runs each, median (min–max))
 
-TABLE
+| config | JS KB all | 3rd-party JS KB | LCP ms | INP ms (3 taps) | TBT ms (20 s window) |
+|---|---|---|---|---|---|
+| none | 433.2 (433.2–433.2) | 0 | 4176 (4012–4428) | 56 (40–64) | 550 (464–605) |
+| posthog | 651.7 (651.7–651.9) | **218.5** (218.4–218.6) | 4340 (4004–4936) | **192** (120–200) | **1044** (788–1850) |
+| clarity | 459.8 (459.8–459.8) | 26.5 (26.5–26.6) | 4432 (3912–5128) | 56 (48–88) | 690 (497–1003) |
+| both | 678.4 (677.9–678.5) | 245.1 (244.7–245.3) | 4484 (4044–4760) | 160 (112–232) | 987 (743–1093) |
+
+Deltas vs none (medians): **PostHog +218.5 KB, TBT +494 ms, INP +136 ms**, LCP +164 ms (inside the none spread).
+**Clarity +26.5 KB, TBT +140 ms** (spread 497–1003 overlaps none), INP +0, LCP +256 ms (inside spread).
+Both: +245.1 KB, TBT +437 ms, INP +104 ms: on top of PostHog, Clarity's marginal TBT/INP cost is lost in the noise.
+LCP does not move beyond noise for any config: T-ev's "load after the first screen, on idle" works.
+No-traffic check: 129 ingestion requests issued across the 20 runs, 129 aborted, 0 reached PostHog or Clarity.
+Tap target (same in every run): `#upload` (the first visible button).
+
+Snippet-in-`<head>` smoke (official snippets, 1 run each, indicative only): PostHog LCP +796 ms, TBT +576 ms;
+Clarity LCP +88 ms, TBT +92 ms. Loading PostHog from `<head>` would cost ~0.8 s of LCP; keep T-ev's deferred loader.
 
 ### Where the PostHog bytes go (gzip/br on the wire, fetched with curl --compressed)
 | file | KB | needed? |
@@ -46,7 +61,25 @@ TABLE
 
 ### The call
 
-CALL
+Rule (D22): drop a lib that adds >100 ms TBT or >50 KB **and** brings no unique data.
+
+1. **PostHog: KEEP, but slim it.** It breaks both limits (+218 KB, +494 ms TBT, INP 56→192 ms, right under the
+   200 ms "good" line on a 4x-throttled phone). It stays because its data is unique: every D21 event, the bail funnel and
+   all 4 D23 dashboards exist only in PostHog, and its replays link to funnel steps. Cut what we do not use, in
+   `telemetry.js` `posthog.init` (T-ev's file; ask below): `disable_surveys: true` (−33 KB, we run no surveys),
+   `capture_dead_clicks: false` (−9 KB, our own `dead_tap` covers it). Keep the recorder (replay tied to the funnel)
+   and web vitals (7 KB, real-phone LCP/INP). Expected ≈ −42 KB → ~176 KB. Still over 50 KB, accepted for unique data.
+2. **Clarity: DROP.** Alone it adds +140 ms median TBT (over the 100 ms limit, though noisy), and it brings no unique
+   data: replay, rage clicks and dead clicks are already covered by PostHog replay + our `rage_tap` / `dead_tap` events,
+   and two replay engines means recording every DOM mutation twice on her phone. Cheap in bytes (26.5 KB), so if Tony
+   wants Clarity's free, unlimited replays instead of PostHog's monthly replay quota, swap rather than stack: keep
+   Clarity, set PostHog `disable_session_recording: true` (−66 KB recorder). One replay engine, never two.
+3. **Follow-up bench** (one command once T-ev applies the init flags):
+   `node tools/bench-telemetry.mjs <build> --mode wired --configs none,posthog` and check INP stays ≤ 200 ms.
+   If it does not, the next lever is `autocapture: false` (our D21 events do not need it; it costs the heatmap).
+
+Ask for T-ev (owns `telemetry.js`): add `disable_surveys: true, capture_dead_clicks: false` to `posthog.init`, and
+remove `loadClarity()` (or keep it behind the swap above if Tony prefers Clarity replay).
 
 ## D23: PostHog dashboards (project 650708, built via API)
 
