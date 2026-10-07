@@ -114,7 +114,15 @@ Burst = one "+3" in `--rw-sun`, opacity + ≤14 px rise, once; HUD coin pops twi
 ## 4. Testing layers run
 
 Chromium (Playwright) 393×852 / 820×1180 / 1280×800 fold + full; WebKitGTK 390×844; ios-sim safari-expanded, safari-compact, standalone
-(--overlay) for v1–v3 wrong state of genui-ui. Impeccable on every `?v=` of both pages + one `?rm=1` each. No BrowserStack creds.
+(--overlay) for v1 wrong state; safari-expanded only for v2/v3 (orchestrator cut). Impeccable on every `?v=` of both pages + one `?rm=1`
+each: 0 findings on all 32 page×viewport runs; static scan of `genui-ui.css` + `genui-redeem.css` 0. A static scan of the HTML files reports
+4 items that all live in prod `app.css` / `rewards.css` (`.rw-chip`, `.rw-hint-*` side-tab, `.cl-live .dots` pulse), not in these pages.
+`?state=out` (not in the accept set) still trips `text-occlusion` on graph.js labels over the truth fill: a graph.js label-knockout issue.
+No BrowserStack creds.
+
+Findings from ios-sim: v2 on Safari expanded (659 px visible) shows only the top third of the figure copy inside the 45 svh sheet: the
+ghost is below the sheet's fold, so v2 needs a smaller copy (≤9rem) or the sheet's slot first. v1 (figure scrolled above the sheet) shows
+the ghost and the full Cluck line + Try again on all three profiles.
 
 ## 5. Needs real iOS
 
