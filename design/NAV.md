@@ -51,7 +51,7 @@ So: server mode looks exactly as it does today (the code bar), and the empty pag
   skip history items no longer in the list (an older upload) and are off when the open problem is not in it.
 - **Answers**: app.js fires `drill:answer` `{ code, right }` after each graded pick; nav.js re-ranks (D62). `drill:problem` records
   a showing unless the code is the history item already open (a reload, Prev / Next through history).
-- **First question**: the server's resume pointer (`at`), else the queue's pick (`window.stemOrder(list)[0]`, used by app.js
+- **First question**: the server's resume pointer (`at`), else the queue's pick (`window.stemOrder(list)[0]`; a fresh queue starts at the file's first real question, used by app.js
   `openBank` and offline.js `first()`).
 - **Old progress**: the first open of a bank under the queue reads the saved marks: rights rest, misses owe a Redeem after a
   warm-up of 3. Nothing is wiped.

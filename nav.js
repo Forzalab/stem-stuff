@@ -148,10 +148,12 @@ function init() {
     const again = !!(st.seen[code] && st.seen[code].n);           // any re-showing is a fresh round: never a closed card (rewards never pay twice)
     return { e: { c: code, r: again && code !== cur ? Math.floor(Date.now() / 1000) : 0, redeem } };
   }
-  /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick leads */
+  /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick, but a fresh queue (nothing
+     shown or saved yet) starts where the author starts, the first real question of the file */
   window.stemOrder = list => {
     const live = list.filter(c => !snack(c) && !(window.stemHidden && window.stemHidden(c)));
-    const p = live.length ? qPick(Q(), live, topicOf) : null;
+    const st = Q(), fresh = st.pos === 0 && !Object.keys(st.seen).length;
+    const p = !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
   /* the list (a jump index, not the queue): one fixed per-bank order that never moves under you (salted, so a row's position

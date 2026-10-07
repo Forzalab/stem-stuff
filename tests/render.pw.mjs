@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { qNew, qPick, qShow, qRest, qFresh } from "../shuffle.mjs";
+import { qNew, qPick, qShow, qRest } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -292,7 +292,7 @@ async function run(browserType, label, opts = {}) {
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-      const first = qFresh(bank.problems.map(p => p.code), "pin")[0];   // the page opens the queue's first pick (salt pinned)
+      const first = bank.problems[0].code;   // a fresh queue opens the file's first question
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
       assert.equal(await page.getAttribute("#qlistBtn", "title"), "my-problems.json", "the list button's title names the file (it says Questions)");
       await page.evaluate(() => { location.hash = "CALC1_QT6B"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_QT6B");
@@ -313,7 +313,7 @@ async function run(browserType, label, opts = {}) {
       for (const p of bank.problems) p.code = p.code.replace("_", "_N");
       const file = bank.problems.map(p => p.code), codes = qRest(qNew("pin"), file), n = codes.length;   // the list's fixed order (salt pinned above)
       assert.notDeepEqual(codes, file, "the list kept file order");
-      const f0 = qFresh(file, "pin")[0], k0 = codes.indexOf(f0);                   // the queue's first pick opens first
+      const f0 = file[0], k0 = codes.indexOf(f0);                                  // a fresh queue opens the file's first question
       bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);

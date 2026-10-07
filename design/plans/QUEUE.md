@@ -70,6 +70,11 @@ answered again. Wrong: no penalty (no +1 farming), it comes back on the next gap
 later a fixed +3 burst (never random: the bet is the only variable reward). **Prod ships only the flag.** The visible "Redeem +3"
 chip waits for Tony's pick of `try/genui-redeem.html`.
 
+## The first question
+
+A reload or a link resumes where she was (the server's pointer, or the `#CODE` in the link). A fresh queue (nothing shown or saved
+yet for this bank or upload) opens the file's first real question, where the author starts; every Next after that is the queue.
+
 ## Snacks (sugar mode)
 
 A snack rides right in front of its real the first time that real is played, unless the rewards say the student is cruising
