@@ -4,7 +4,7 @@
 //   node tools/gen-loop.mjs regen --cases <cases.json> --prod <gens.json> [--model m] --out <log.jsonl>
 //   node tools/gen-loop.mjs grade-scene <case.json>       (internal: runs the scene gate in a child, prints @@RESULT)
 // cases.json = [{name, code, pick, correct, choices:[{id,md}], key, slip, prompt}] where prompt = serve.py explain_prompt(p, pick)
-// (built by the `cases` snippet at the bottom of GEN-QUALITY.md). Key: $OPENROUTER_API_KEY (env only, never printed).
+// (built by the "Reproduce" snippet in design/plans/GEN-QUALITY.md). Key: $OPENROUTER_API_KEY (env only, never printed).
 import { readFileSync, appendFileSync, writeFileSync, mkdtempSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";

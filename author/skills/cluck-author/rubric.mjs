@@ -59,7 +59,8 @@ function allowedNums(ctx) {
   return { base, derived };
 }
 const valueOf = ctx => { const c = (ctx.choices || []).find(c => c.id === ctx.correct); return c ? c.md : null; };
-const normTex = t => String(t || "").replace(/\$|\\[,;!: ]|\s|\\text\{[^}]*\}|\\left|\\right|\\displaystyle/g, "").replace(/\\[dt]frac/g, "\\frac");
+const normTex = t => String(t || "").replace(/\$|\\[,;!: ]|\s|\\text\{[^}]*\}|\\left|\\right|\\displaystyle/g, "").replace(/\\[dt]frac/g, "\\frac")
+  .replace(/\\cdot|\\times|\*|_\{?\d\}?/g, "").replace(/^O\((.*)\)$/, "$1");          // n \cdot \log_2 n == O(n \log n): big-O by its body
 
 function leaks() {                                          // "CODE=phrase" or a plain phrase owned by the example's code:
   const out = [];
