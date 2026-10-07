@@ -7,7 +7,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, mkdtempSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, symlinkSync, writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,11 +19,18 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BANKS = process.env.STEM_BANKS || join(ROOT, "banks");
 const BANK = process.env.QW_BANK || (existsSync(join(BANKS, "BANK_P2X.json")) ? "BANK_P2X" : "BANK_PSY6");
 const ARG = process.argv[2] || "8851", SHOTS = process.argv[3] || "";
-let BASE = ARG, srv = null;
+let BASE = ARG, srv = null, OWN = false;
 if (!/^https?:/.test(ARG)) {
   BASE = `http://127.0.0.1:${ARG}`;
-  const tmp = mkdtempSync(join(tmpdir(), "qwalk-"));
-  srv = spawn("python3", [join(ROOT, "serve.py"), ARG], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+  const tmp = mkdtempSync(join(tmpdir(), "qwalk-")), banks = join(tmp, "banks");
+  /* its own banks folder: the real banks (links, never copied or edited) + a 5-question bank for the re-showing check */
+  mkdirSync(banks);
+  for (const f of readdirSync(BANKS)) if (/^BANK_\w+\.json$/.test(f)) symlinkSync(join(BANKS, f), join(banks, f));
+  const q5 = n => ({ code: `CALC1_W0${n}`, type: "mc", shuffle: false, body: [{ type: "text", md: `Five ${n}: pick a.` }], correct: "a",
+    choices: ["one", "two", "three"].map((md, i) => ({ id: "abc"[i], md })) });
+  writeFileSync(join(banks, "BANK_QW5.json"), JSON.stringify({ v: 1, problems: [1, 2, 3, 4, 5].map(q5) }));
+  OWN = true;
+  srv = spawn("python3", [join(ROOT, "serve.py"), ARG], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
   for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 }
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
@@ -46,6 +53,8 @@ async function answer(page, code, right) {
   const want = [p.correct].flat(), all = p.pick === "all";
   const pickIds = right ? want.filter(i => ids.includes(i)) : ids.filter(i => !want.includes(i)).slice(0, 1);
   if (!pickIds.length) return null;
+  /* a pick under 2 s is a guess the queue logs but never weights (nav.js SPAM_MS): think like a student first */
+  await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
   const n = await tries(page);
   const tap = sel => page.$eval(sel, b => b.click());                // a DOM click: a send bubble from the last pick may sit over the row
   for (const id of pickIds) await tap(`#q .opt[data-id="${id}"]`);
@@ -86,7 +95,7 @@ try {
   const WRONG = new Set([1, 3, 6]), RETRY = new Set([1, 6]);
   let missedBack = null;
   await step(`20 answers on ${BANK}: Next each time, a reload at 10`, async () => {
-    for (let i = 1; walk.filter(w => w.first).length < 20 && i <= 40; i++) {
+    for (let i = 1; walk.filter(w => w.first).length < 20 && i <= 70; i++) {
       const code = await cur(page), { item } = await qstate(page), snack = !!KEY.get(code)?.saccharine?.snack;
       const locked = !(await page.$("#q .opt:not(:disabled)"));
       const real = !locked && !snack && KEY.get(code)?.type === "mc" && !item?.redeem, n = real ? ++keyed : 0;
@@ -145,6 +154,33 @@ try {
   });
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `queue-walk-end-${ENGINE}.png`), fullPage: true });
   void missedBack;
+  /* Fable fix 1: a 5-question bank answered all right; the 6th showing (a question already right) is a fresh round, not a closed card */
+  if (OWN) await step("5-question bank, all right: the 6th showing can be answered again", async () => {
+    await page.goto(`${BASE}/#BANK_QW5`); await opened(page, "");
+    await page.evaluate(() => window.Rewards && window.Rewards.config({ minDwell: 1e12 }));
+    const five = [];
+    for (let i = 1; i <= 6; i++) {
+      const code = await cur(page), open = !!(await page.$("#q .opt:not(:disabled)"));
+      five.push({ code, open });
+      if (i === 6) break;
+      await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
+      const n = await tries(page);
+      await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForTimeout(80); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
+      await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
+      await quiet(page);
+      await page.click("#qnext");
+      await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, code, { timeout: 8000 });
+      await opened(page, "");
+    }
+    assert.equal(new Set(five.slice(0, 5).map(x => x.code)).size, 5, "one pass, no repeats: " + five.map(x => x.code));
+    assert.ok(five.slice(0, 5).some(x => x.code === five[5].code), "the 6th is a re-showing");
+    assert.equal(five[5].open, true, "the re-showing is answerable (a fresh round)");
+    await page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
+    await page.$eval('#q .opt[data-id="a"]', b => b.click()); await page.waitForTimeout(80); await page.$eval('#q .ch[data-id="a"] .send', b => b.click());
+    await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => window.__drill.state.tries.at(-1).v), "correct", "graded again");
+    assert.ok(!/Ask Tony/.test(await page.textContent("body")), "no shaming lockout line");
+  });
   await ctx.close();
 } finally {
   await browser.close();

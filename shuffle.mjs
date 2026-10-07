@@ -34,13 +34,14 @@ export const PULL = 4;            // every 4th slot pulls the least-seen topic (
 const hash = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); h = Math.imul(h ^ (h >>> 15), 2246822507); return (h ^ (h >>> 13)) >>> 0; };
 export function qNew(salt = "") { return { v: 1, salt: String(salt), pos: 0, seen: {}, hist: [], at: -1 }; }
 /* the first open of a bank under the queue: the marks already saved (server or this browser) become history, so no progress is
-   lost. A right one rests FAR away; a miss owes a Redeem and comes back after a short warm-up of NEAR fresh questions. */
+   lost. A right one rests FAR away; a miss owes a Redeem: the first after a warm-up of NEAR fresh questions, the rest one per PULL. */
 export function qMigrate(st, codes, markOf) {
+  let k = 0;                                                     // old misses come back one per PULL slots (4, 8, 12...), not back to back
   for (const c of codes) {
     const m = markOf(c);
     if (!m || (!m.x && m.done !== "correct" && m.done !== "out")) continue;
     const ok = m.done === "correct" && !m.x;
-    st.seen[c] = { n: 1, right: ok ? 1 : 0, miss: ok ? 0 : 1, last: 0, wait: ok ? FAR : NEAR, gapIdx: ok ? 0 : 1, owe: !ok, first: ok ? "right" : "wrong", redeem: false, retry: 0 };
+    st.seen[c] = { n: 1, right: ok ? 1 : 0, miss: ok ? 0 : 1, last: 0, wait: ok ? FAR : NEAR + PULL * k++, gapIdx: ok ? 0 : 1, owe: !ok, first: ok ? "right" : "wrong", redeem: false, retry: 0 };
   }
   return st;
 }
@@ -64,7 +65,7 @@ export function qPick(st, pool, topicOf = family) {
   const free = pool.filter(c => { const s = S(c); return !s || s.last == null || t - s.last > near; });
   const live = free.length ? free : pool;
   const ready = live.filter(c => due(c) <= t);
-  const out = (code, why) => ({ code, redeem: !!(S(code) && S(code).owe), why });
+  const out = (code, why) => ({ code, redeem: !!(S(code) && S(code).owe), again: !!(S(code) && S(code).n), why });   // again: a re-showing (graded fresh)
   const owed = ready.filter(c => S(c) && S(c).owe).sort(soon);
   if (owed.length) return out(owed[0], "miss");
   if (t % PULL === 0) {
@@ -86,10 +87,11 @@ export function qShow(st, code) {
 /* a graded pick on code. ONLY the first pick of a showing moves the queue: right -> rest FAR, the gaps start over; wrong -> back
    after GAPS[gapIdx] others, and the next miss waits longer. A later pick (a retry-right after the ghost) is logged, nothing else.
    Returns true when it moved the queue. */
-export function qAnswer(st, code, right) {
+export function qAnswer(st, code, right, { spam = false } = {}) {
   const s = st.seen[code];
   if (!s || s.last == null) return false;
   if (s.first) { s.retry = (s.retry || 0) + 1; if (right) s.retryRight = (s.retryRight || 0) + 1; return false; }
+  if (spam) { s.first = "spam"; s.spam = (s.spam || 0) + 1; return false; }   // a guess in under 2 s (nav.js): logged, the showing counts as a skip
   s.first = right ? "right" : "wrong";
   if (right) { s.right += 1; s.owe = false; s.gapIdx = 0; s.wait = FAR; }
   else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }

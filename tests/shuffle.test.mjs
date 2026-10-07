@@ -157,8 +157,28 @@ test("queue: migration keeps saved progress (rights rest, misses owe a Redeem af
   assert.deepEqual(Object.keys(st.seen).sort(), ["PHYS_A0", "PHYS_B1", "PHYS_C2"]);
   const picks = play(st, pool, 12, () => true);
   assert.ok(!picks.slice(0, 3).some(p => ["PHYS_B1", "PHYS_C2"].includes(p.code)), "a warm-up first");
-  assert.ok(picks.slice(3, 5).every(p => p.redeem), "then the old misses, as Redeems");
+  assert.deepEqual([slotsOf(picks, "PHYS_B1")[0], slotsOf(picks, "PHYS_C2")[0]], [4, 8], "then the old misses, one per 4 slots, not back to back");
+  assert.ok(picks[3].redeem && picks[7].redeem && picks[3].again, "as Redeems, graded fresh");
   assert.ok(!picks.some(p => p.code === "PHYS_A0"), "an old right rests far back");
+});
+test("queue: migration staggers many old misses (Fable fix 3)", () => {
+  const pool = bank(40), st = qMigrate(qNew("stag"), pool, c => +c.slice(6) < 7 ? { x: 1, done: "out" } : null);
+  const picks = play(st, pool, 30, () => true), back = picks.map((p, i) => p.redeem ? i + 1 : 0).filter(Boolean);
+  assert.deepEqual(back, [4, 8, 12, 16, 20, 24, 28]);
+});
+test("queue: a 5-question bank answered all right: the 6th showing is a fresh round, never a closed card (Fable fix 1)", () => {
+  const pool = bank(5), st = qNew("again"), picks = play(st, pool, 6, () => true);
+  assert.ok(picks.slice(0, 5).every(p => !p.again), "the first pass is fresh");
+  assert.equal(picks[5].again, true, "the 6th showing is a re-showing (nav.js grades it in a fresh round)");
+  assert.equal(picks[5].redeem, false, "but owes nothing: no Redeem");
+});
+test("queue: a guess in under 2 s is logged, never weighted (Fable fix 4)", () => {
+  const st = qNew("spam"); qShow(st, "PHYS_A0");
+  assert.equal(qAnswer(st, "PHYS_A0", false, { spam: true }), false);
+  const s = st.seen.PHYS_A0;
+  assert.deepEqual([s.first, s.spam, s.miss, s.owe], ["spam", 1, 0, false]);
+  assert.equal(qAnswer(st, "PHYS_A0", true), false, "a later pick in the same showing is a retry");
+  assert.equal(s.right, 0);
 });
 test("queue: a skipped showing (Next, no answer) comes back later, owing nothing", () => {
   const pool = bank(20), st = qNew("skip");

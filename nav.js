@@ -7,6 +7,7 @@
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
 import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest } from "./shuffle.mjs";
 const MAX = 60;
+const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
 /* ---------- titles: problem.title, else the first paragraph of the first text block as plain text ---------- */
@@ -92,7 +93,9 @@ function init() {
   const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
   const all = () => { const o = off(); return (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))); };
   const pool = () => all().filter(c => !snack(c));                   // the queue plays the reals; a snack rides in front of its real
-  const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent)) || family(c); };
+  /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
+  const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
+  const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
 
   /* ---------- the queue: one per bank (D64), saved after every change; the first open migrates the saved marks ---------- */
   let q = null, qFor = "", pending = null;
@@ -108,7 +111,7 @@ function init() {
   /* a Redeem showing (D60/D61 data flag): the item carries redeem; app.js grades it fresh in round r, so the old lockout stays */
   function use(e) {
     const R = rd(); if (!R) return;
-    if (e.r) R.set(e.c, e.r); else R.clear();
+    if (e.r) R.set(e.c, e.r, e.redeem); else R.clear();
   }
   function shown(code, fresh = false) {                              // a load: history, else a new showing (a pick, a list row, a typed code)
     const st = Q(), h = st.hist[st.at];
@@ -142,7 +145,8 @@ function init() {
       const sn = all().find(c => snack(c) && beforeOf(c) === code && !st.seen[c]);   // a snack goes once, before its real's first showing
       if (sn && !(st.seen[code] && st.seen[code].n) && !(window.stemSkipSnack && window.stemSkipSnack())) { st.then = code; return { e: { c: sn, r: 0, redeem: false } }; }
     }
-    return { e: { c: code, r: redeem && code !== cur ? Math.floor(Date.now() / 1000) : 0, redeem } };
+    const again = !!(st.seen[code] && st.seen[code].n);           // any re-showing is a fresh round: never a closed card (rewards never pay twice)
+    return { e: { c: code, r: again && code !== cur ? Math.floor(Date.now() / 1000) : 0, redeem } };
   }
   /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick leads */
   window.stemOrder = list => {
@@ -253,7 +257,7 @@ function init() {
   addEventListener("drill:answer", e => {
     const d = e.detail || {};
     if (!d.code || d.code !== cur || !off()) return;
-    qAnswer(Q(), d.code, !!d.right); save();
+    qAnswer(Q(), d.code, !!d.right, { spam: typeof d.ms === "number" && d.ms < SPAM_MS }); save();   // a guess in under 2 s: logged, no weight
   });
   addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c); });
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)

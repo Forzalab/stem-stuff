@@ -27,8 +27,9 @@ One queue per bank, never mixed across subjects (D64): localStorage `stem-q-<BAN
 
 ## The pick (`qPick`)
 
-Topic = the question's `topic` or `parent` when the bank has one, else `family(code)` (prefix + first suffix letter,
-`PHYS_U8BA` → `PHYS_U`). Today's banks have no topic field, so the fallback is what runs.
+Topic = the question's `topic` or `parent` when the bank has one, else the sugar title's "…Question N" (so the variants of one
+exam question, `PHYS_U8BA` / `U8BB` / `U8BC`, group and get spread apart), else `family(code)` (prefix + first suffix letter,
+`PHYS_U8BA` → `PHYS_U`). Today's banks have no topic field, so the title grouping is what runs in sugar mode.
 
 The pool is the bank's real questions (sugar snacks are not in it; see below). Let `n` = pool size and `t` = the next slot.
 
@@ -49,10 +50,18 @@ owes nothing. **Tiny banks:** every wait and the no-repeat window are capped at 
 after 4 others at most, and a 1-question bank repeats itself.
 
 **Only the first pick of a showing counts** (Fable fix). `qAnswer` sets `first` once per showing. A retry-right after the
-ghost is logged (`retry`, `retryRight`) and changes nothing: a wrong-then-right question still comes back after 3. Re-rank
+ghost is logged (`retry`, `retryRight`) and changes nothing: a wrong-then-right question still comes back after 3. A first pick
+under **2 s** after the question opened is a guess (`drill:answer` carries `ms`; nav.js `SPAM_MS`): logged as `first: "spam"`,
+never weighted; the showing counts as a skip. Re-rank
 after every answer (D62): the next pick is computed when Next is pressed, from the state as it is then.
 
-## Redeem (D60, D61)
+## Re-showings and Redeem (D60, D61)
+
+**Every re-showing from Next is a fresh round** (Fable fix 1): a question the queue plays again (a right one after its rest, or
+any question in a small bank that has gone round) is graded in its own round, so it is never a closed card that only Next
+works on. Rewards never pay twice for a code (the engine knows a done code). A list row opened by hand still shows the real
+record (read-only when done), as before. The lockout line says "Out of tries for now. This one comes back around." (it used
+to send her to Tony).
 
 A question that comes back owing a miss is a **Redeem showing**: its history item carries `redeem: true`
 (`window.stemQueue.item()`). It is graded fresh, in its own server namespace (`serve.py` grade `round`, the old Redo
@@ -70,8 +79,8 @@ behind a snack + real pair comes back one slot late.
 ## Migration (old progress)
 
 The first open of a bank under the queue (no `stem-q-<BANK>` yet) reads the marks already saved (this browser's records, else
-the server's): a right first try rests far back; any miss (wrong tries, or out) owes a Redeem and comes back after a warm-up of 3
-fresh questions. Nothing is wiped. The old `stem-order` seed is no longer read for the question order (MC choices still use
+the server's): a right first try rests far back; any miss (wrong tries, or out) owes a Redeem. The first comes back after a
+warm-up of 3 fresh questions, the next ones one every 4 slots (slots 4, 8, 12…), never back to back (Fable fix 3). Nothing is wiped. The old `stem-order` seed is no longer read for the question order (MC choices still use
 their own seed). The question list remains as a jump index in one fixed salted per-bank order (it never moves under you),
 snacks above their real.
 
@@ -124,3 +133,12 @@ the pull slot. A retry-right never moved anything (M1 at 4, K1 at 11 both came b
 - First pick on a multi-part problem = its first graded part.
 - A Redeem showing opened from the list (not from Next) still grades in its round; a list jump to anything else is a normal showing.
 - Uploads share one queue (`stem-q-upload`) across files.
+
+## Verification (PR D)
+
+- `node --test tests/shuffle.test.mjs`: the algorithm (gaps, first pick only, guesses, tiny banks, topic pull, migration stagger,
+  the 5-question re-showing).
+- `tests/queue-walk.pw.mjs`: Chromium 393×852, 20 graded answers on BANK_P2X with Next, a reload, Prev / Next history, and a
+  5-question bank answered all right whose 6th showing is answerable again.
+- Safari engine: a **WebKitGTK smoke** only (load, one pick, Next ×7, reload, Next; 390×844 shots), not the full walk. Needs real
+  iOS: touch, ITP storage, service worker lifecycle.

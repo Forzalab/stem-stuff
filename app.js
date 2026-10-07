@@ -369,8 +369,8 @@ window.stemBank = {
   mark: c => (bank && bank.marks[c]) || null
 };
 const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
-/* a Redeem showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a missed question
-   back, graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
+/* a re-showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a question back (a
+   Redeem when it owes a miss), graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
    real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. No UI yet. */
 const REDO = "stem-redo";
 window.stemRedo = {
@@ -380,10 +380,10 @@ window.stemRedo = {
     return r && bank && r.bank === bank.code && Array.isArray(r.codes) && Number.isInteger(r.n) ? r : null;
   },
   has(code) { const r = this.get(); return !!r && r.codes.includes(code); },
-  set(code, n) {                                                         // nav.js, before it opens code
+  set(code, n, redeem = true) {                                          // nav.js, before it opens code; redeem = it owes a miss
     if (!bank) return;
     const old = this.get();
-    try { localStorage.setItem(REDO, JSON.stringify({ bank: bank.code, n, codes: [code] })); } catch { return; }
+    try { localStorage.setItem(REDO, JSON.stringify({ bank: bank.code, n, codes: [code], redeem: !!redeem })); } catch { return; }
     if (!old || old.n !== n || !old.codes.includes(code)) doneStore()?.doneDrop(code);   // an older showing's "r:" record
   },
   clear() { try { localStorage.removeItem(REDO); } catch { /* blocked */ } }
@@ -895,7 +895,7 @@ function settle() {
   S.solved = right === n;
   finish();
   $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
-    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
+    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span></p>`;
   say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
 }
 
@@ -909,7 +909,7 @@ function record(a, r) {
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
-  if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct" } }));   // nav.js: the queue re-ranks
+  if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   rewardTry(a, r);
 }
 
@@ -1076,7 +1076,7 @@ function feedback(r, typed) {
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
-    h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
+    h += `<p class="verdict lock">${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span></p>`;
   const quack = r.hint ? `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>` : "";
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
      Phones: the Scratchpad button sits on that row, so under the question. */
@@ -1417,7 +1417,7 @@ function rewardGo(mine, o) {
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
-  const back = o.correct && window.stemRedo.has(mine.code);                      // a past miss, now right
+  const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right
   if (!res.xp) { RW().render(0); if (back) comeback(); return; }                 // a done code: the numbers change, nothing moves
   if (back) mine.rwBack = true;
   if (res.tick) { if (o.open) mine.rwHeld = (mine.rwHeld || 0) + res.xp; else rewardTick(res, mine); return; }   // a wrong try: +1 for trying, tiny;
