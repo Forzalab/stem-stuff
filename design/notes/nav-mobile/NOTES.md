@@ -28,3 +28,10 @@ Pipeline: brain directive 13 (`_files/NOTES-PIPELINE.md`). One stage or ONE loop
 | 6 | implement | ✔ v1..v7 mockups on `-navmock` (R2 build @42c3c19) |
 | loop | blind bench rounds | R1 ✔ · **R2 = this session** · R3, R4 max |
 | 7 | review | after the loop passes |
+
+## Tony picks (Oct 7 ~10:20 PT) — LOCKED, reviewers do not re-argue
+- **Bar = main's current bar** (`nav.js` / `nav.css` qnav: question list, shuffle, code box, redo, Prev/Next; icon-only on phones, `aria-label`s) **moved to the bottom.**
+- **REJECTED:** R2's "every bar button has a word" bar (icon over caption: Questions · Notes · Back · Skip). Tony: "i do not like the one with the text … i like the main-branch current one more".
+- Counterpoint kept on file, not acted on: R1 testers flagged unlabeled bar icons as friction (nav1-j1: "? card icon and pencil icon have no labels").
+- Effect on R2: bar-caption praise or complaints in R2 reports do not count toward the next design. Check / Next placement findings still count.
+- Open (Tony to say): bottom on desktop too, or bottom on phones only?
