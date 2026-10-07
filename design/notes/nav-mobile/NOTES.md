@@ -72,7 +72,7 @@ R1 → R2 medians. "Phone parts" = clarity + clutter + frustration (max 80).
 | v | R1 | R2 | change | phone parts R1→R2 | unity R1→R2 | reason |
 |---|---|---|---|---|---|---|
 | v1 | 74.5 | 76 | +1.5 | – | – | new design in this slot (R1 "Dock swap"). Do not compare. |
-| v2 | 79.5 | 84 | +4.5 | 64→68 | 15.5→15.5 | one forward control + labeled Check: clutter 16/16/18/17 → 22/21/21/22 |
+| v2 | 79.5 | 84 | +4.5 | 64→68 | 15.5→15.5 | clutter 16/16/18/17 → 22/21/21/22. Testers credit "Skip hides once I pick" (j2:35, j4:29) and the tiny, tidy bar (j1:34, j3:36: captioned bar, discounted). [fixed by review 1: no clutter line credits the labeled Check] |
 | v3 | 83.5 | 76.5 | −7 | 67.5→61 | 15.5→15.5 | the new sticky Check moves and covers answers |
 | v4 | 85 | 86 | +1 | 73→67 | 11.5→19 | phone fell (Skip slot); unity rose (desktop bottom bar) |
 | v5 | 81.5 | 88.5 | +7 | 69.5→69.5 | 12→19 | all from unity (desktop bottom bar + same footer) |
@@ -91,7 +91,7 @@ Leniency check. Testers are new each round, so R1 j2 and R2 j2 are different peo
 
 - R1 had one harsh tester (j2, about 11 below the rest). R2 has none. R2 j2 is the most lenient (about 4 above the rest). This lifts R2 a little.
 - The rise is not general. v5 and v7 had only small phone changes (§7), and their phone parts did not move (69.5, 62). On v2–v5 and v7 together, mean phone parts went 66.1 → 65.0. Unity on the top-bar variants (v2, v3, v7) went 15.5 → 15.3.
-- The rise is in unity, and only where desktop got the bottom bar (v4, v5). The rest is the new v6.
+- Most of the rise is in unity where desktop got the bottom bar (v4, v5), plus the new v6. v2 also rose (+4.5), from phone clutter (phone parts 64 → 68). [fixed by review 1: the old line said "only" and left out v2's rise]
 - Without R2 j2, the v4 / v5 / v6 medians are 86 / 88 / 87. The pass does not depend on the most lenient tester.
 - On v4, R2 was stricter than R1: clarity 29/28/28/27 → 24/26/24/25, all for the Skip slot.
 
@@ -110,20 +110,20 @@ Leniency check. Testers are new each round, so R1 j2 and R2 j2 are different peo
 
 **"Skip in the thumb spot"**
 - All 4 testers flagged Skip in the Check/Next slot of v1, v4 and v6 (j1:7/55/87, j2:8/57/87, j3:7/58/92, j4:6/49/72). It is worst right after a wrong pick: "tempts me to bail" (j4:8), "a tired me could tap it" (j2:10).
-- R1 already flagged it (r1-j2:58, r1-j4:55; fix r1-j4:131). §7 says the R2 Skip is "quiet: no fill, --muted". The shot shows a large bold "Skip ›" in that slot (shot j4-phone/028). The fix did not land.
+- R1 already flagged it (r1-j2:58, r1-j4:55; fix r1-j4:131). §7 says the R2 Skip is "quiet: no fill, --muted". At load that is true: no fill, and the same grey as the bar captions (shot j4-phone/028, pixel check). But it is a bold word, bigger than the captions, alone in the slot. After a tap in the slot (a wrong Check, or Next), it shows in a filled dark pill with near-white text (shots j4-phone/030, j4-phone/051, j2-phone/003). This is likely hover or focus left under the thumb; iOS keeps hover after a tap too. All 4 testers flagged it at load, where it was quiet. So a quieter style is not enough: the slot must not say Skip. [fixed by review 1: the quiet style did land at load; it failed only after a tap in the slot]
 - A small icon Skip was fine (j1:25, j2:25, j4:20; shot j4-phone/010).
 - Asked fix: a disabled "Check" in that slot before a pick and after a wrong pick (j1:131, j3:138, j4:112, j4:114). Or Skip as a small link elsewhere (j2:129).
-- With main's bar at the bottom, main's › sits in the bottom-right thumb spot. It is a small icon, which testers accepted. The action button must not share that spot or stack right on it.
+- With main's bar at the bottom, main's › sits in the bottom-right thumb spot. R2 testers accepted a small Skip icon, but that icon had a "Skip" caption (j1:25, j2:25, j4:20; shot j4-phone/010). Main's › has no caption. R1 asked of a bare ›: "does > skip?" (r1-j4:7). [fixed by review 1: the accepted icon had a caption] The action button must not share that spot or stack right on it.
 
 **Wrong-pick flow**
 - "Pick again. 1 more try." is clear (j1:9, j2:10, j3:60, j4:8). Keep it.
 - The page "jumped" after a wrong Check where the hint sits in the page (j1:9/25/41/57/105, j3:9/26). No jump was reported for v5 or v6, where the hint docks at the bottom (j1:73, j1:89).
 - v6: Ask Cluck sits right above Check in the thumb column, so a near-miss is easy (j1:90, j2:89, j3:94, j3:95; shot j4-phone/048).
-- v5: "Skip for now" is as loud as Ask Cluck and sits where Next comes later (j2:74, j3:77, j4:60, j4:67). Asked fix: a quiet text link (j2:130, j3:139, j4:113). One tester liked the wording (j1:73).
+- v5: "Skip for now" is as loud as Ask Cluck and sits where Next comes later (j2:74, j3:77, j4:60, j4:67). Asked fix: a quiet text link (j1:132, j3:139, j4:113). j2 asks instead to keep the Next spot free: Check there, or nothing (j2:130). [fixed by review 1: j2:130 asks a different fix; the quiet-link ask is j1:132] One tester liked the wording (j1:73).
 - v5: the wrong footer hid the bar, so Questions and Notes vanished (j3:77).
 
 **Unity (desktop keeps main's top bar)**
-- R2 has a clean test. v1 and v2 had the same desktop: top bar, full-width sticky "Next question", "Right." hidden (shots j4-desk/003, j4-desk/006). v2's phone used the same full-width button: unity 14/18/13/17. v1's phone used a corner "Next": 9/11/9/9. So the same button shape and word on both screens is worth 4–8 points per tester.
+- R2 has a near-clean test. After Check, v1 and v2 had the same desktop: top bar, full-width sticky "Next question", "Right." hidden (shots j4-desk/003, j4-desk/006). Their desktop Check differed: v1 a full-width sticky bar (shot j4-desk/002, j1:15), v2 in the row (shot j4-desk/005, j1:31). v2's phone matched its desktop for both Check and Next: unity 14/18/13/17. v1's phone matched for neither (a corner button, and "Next", not "Next question"): 9/11/9/9. So the same place, shape and word for both controls is worth 4–8 points per tester. v1's header name ("card on desktop", shot j4-desk/003) also told testers to expect a different desktop. [fixed by review 1: the two desktops were not the same at the Check step]
 - Hidden feedback on desktop also costs unity (j1:15, j2:17, j3:16, j4:12, j4:31).
 - The nav flip: j1 and j3 docked it by name (j1:36/52/116, j3:38/55/123). j2 and j4 mostly did not (j2:37 gave 18; j4:31 blamed the hidden feedback).
 - So with a top bar on desktop, the best R2 result is min unity 13. To get 15 from every tester, the action area must match exactly: same button, same word, same place next to the content, feedback always in view.
@@ -159,4 +159,66 @@ Top fixes for every carried variant:
 Open, for Tony or the coordinator:
 - May main's › hide while Check or Next shows (fix 4)? If not, main's › and the new Next must do the same thing.
 - R3 testers will see the bar move (bottom on phone, top on desktop) by design. Either the R3 brief says so and unity is judged on the action area, or we accept a unity cost of about 1–6 points per tester (v2 vs v4/v6 in R2).
-- Main's bar has more buttons than the mock bar (list, shuffle, code box, redo, Prev, Next). Expect some clutter cost in R3.
+- At rest, main's bar does not have more buttons than the mock bar. With a bank open it shows List, Prev and Next (plus the XP strip on desktop). Shuffle and Redo show only while the list is open, and on desktop the code box too (main nav.css:45–53, "C2 / C15"). On phones the code box is its own bottom strip (main index.html:130–133). The R3 clutter risks are elsewhere: the List button shows the bank code as a word, on phones too (main nav.js:103, nav.css:12–13; R1 called "BANK_P2X" jargon: r1-j1:131, r1-j2:21). And main's "Open notes" button is fixed at the bottom right on phones (main app.css:826–832, app.js:1893). [fixed by review 1: Shuffle, Redo and the desktop code box are hidden at rest]
+
+## R2 adversarial review 1/5
+
+Read: this file, nav2-j1..4, nav1-j1..4, NAV-TESTER-BRIEF, method "Variant 2", NAV-MOBILE §2/§3/§7, the shot logs (`dev/j*/log.json`), 16 shots, and main's `nav.js`, `nav.css`, `index.html`, `app.css`, `app.js` (`origin/main`). No code written. No lock re-argued.
+
+### Findings, by severity
+
+**High**
+
+1. **The R3 plan breaks its own rule.** R2.3 says the action button "must not share that spot or stack right on it" (main's ›). R2.5 puts v6's corner action button in a panel "just above main's bar on phones", so it sits right on top of main's ›. Testers flagged the same stack with Ask Cluck over Check (j1:90, j2:89, j3:94, j3:95; shot j4-phone/048). On main, the "Open notes" button is also fixed at the bottom right on phones (main app.css:826–832, app.js:1893). That corner could hold 3 controls. A corner button works only if main's › hides while the button shows. Tony has not answered that yet (R2.5 open question 1).
+   - Ask Tony before the R3 build. If main's › must stay, drop the corner shape.
+2. **"PASS as tested" overstates R2.** Every R2 variant used the captioned bar, which Tony rejected. The 3 passing variants also had a bottom bar on desktop, which the lock rules out (R2.2). The phone part only partly transfers too. In v4 and v6 the Check/Next button is the bar's right slot (§7), and main's icon-only bar has no such slot. v5 hides the bar during the result (j2:82), which is Tony's call. So no R2 variant can be built as tested. R3 tests a new layout, so it is a real test, not a confirm.
+   - The method says "any eval >85 → raise the goal" (blind-judge-method.md:56). R2 has 12 evals above 85. This file does not say if the goal rises for R3.
+   - Suggested headline (scribe's call): "Score goal met on paper. Not a loop pass: no tested variant fits Tony's locks."
+3. **The unity risk uses R2 data only.** R2.2 and R2.3 say every top-bar desktop got min unity 13 or less. That is true for R2. But in R1, two top-bar desktops got unity ≥ 15 from every tester: v3 17/15/15/16 and v7 16/15/15/17 (r1-j1:48/108, r1-j2:51/119, r1-j3:48/116, r1-j4:48/112). Their action sat in the same place next to the content (r1-j2:55, r1-j4:52, r1-j1:112, r1-j2:123). So the goal can be met with a top bar. In R2, v2, v3 and v7 each failed because j3 gave 13 to all three and one other tester gave 14. j3 is R2's strictest tester (mean 77.9; the other 3 average 83.1). On v1–v3 the desktop also hid the result for some testers (j3:33, j4:26, j4:41).
+
+**Medium**
+
+4. **Order, names and mock controls bias the close calls.** All 4 testers walked v1→v7 (`dev/j*-phone/log.json`; j1 also opened v4 once before v1). Testers compared each variant with earlier ones (j1:63, j3:67, j4:50: the first desktop click missed because the layout differed from v1's; j2:73: "same 'huh, there?' as v2"). v6, the v4 + v5 hybrid, always came right after both of its parents. The header showed each name, e.g. "Mock · 1 · Thumb button, card on desktop" (shots j4-desk/003, j4-phone/028). The page also showed a variant switcher and state buttons ("Mockup controls", shot j4-phone/051). v7 lost clutter points for covering them (j1:107, j3:113).
+   - Effect: these calls are not safe: v6 vs v4 (1–4 points per tester), the v5 = v6 tie, and v1's unity. The 4-of-4 findings still stand (Skip slot, moving button, result line above the button).
+   - Cheap R3 fixes: counterbalance the order (j1 and j3 see A then B; j2 and j4 see B then A). Hide the header and the Mockup controls in the test URL. Use neutral letters.
+5. **4 same-family testers and a min rule.** Unity must be ≥ 15 from every tester, so one tester decides. Scores for one variant spread up to 15 points (v2: 72 at j3:34, 87 at j4:27). The testers and the designer are the same model family. They agree in words, not only in scores ("thumb never moves": j1:67, j2:68, j3:71). Count a 4-of-4 result as fewer than 4 independent votes.
+   - Cheap R3 fixes: on the finalist, add one human walk (Tony, 10 min, his phone) or one tester from another model. Add the wrong pick to the desktop look. The brief asks only "answer one question right, take one shot" (NAV-TESTER-BRIEF:13), but unity decides pass or fail. If a deciding cell is within 2 points of the bar, add 2 fresh testers for that variant.
+6. **"Carry 3" is not the simplest R3.** The R3 top fixes say: Check leaves the row, the result line sits right above one action button, and both screens match. With these fixes, v5 and v6 become one design that differs only in button shape. v2 with fixes 1 and 3 is v5. As written, v2 keeps "result line in the page", which breaks top fix 3 ("for every carried variant").
+   - Smallest R3 that answers the open question (unity with a top-bar desktop): A = a result panel with one full-width action button (Check, then Next). On phones it sits above main's bar. On desktop it is pinned to the window bottom, and main's bar stays in the top row. Add B = the corner button only if Tony lets main's › hide. Use 4 testers and counterbalance. R4 stays free for one fix round.
+   - For desktop, write "pinned". "At the bottom of the content column" (R2.5) can be read as in the page flow. In R1, v4's in-flow desktop Check fell below the fold and got unity 11/5/12/13 (r1-j2:72, r1-j4:68). The pinned panel in R2 v5/v6 kept the result in view (shots j4-desk/016, j4-desk/019).
+7. **Dropping v4 is right, but only for the structural reason.** v4's button is the bar's right slot (§7), and main's bar keeps an icon-only › there. "v6 beat v4 with all 4 testers" is weak evidence. The margins are 2/3/1/4 (j1:96 vs j1:64, j2:95 vs j2:65, j3:102 vs j3:68, j4:79 vs j4:51). v6 always came after v4. And 4 of 4 gives p ≈ 0.06 (one-sided sign test) even before any order effect.
+
+**Low**
+
+8. 7 fixes made in place (table below). None of them changes a score, a median or the verdict.
+9. R2.4 says no tester flagged unlabeled icons "because the R2 bar had captions". That cause is not shown. Two testers saw the captioned bar as icons: "bar is just icons" (j1:23), "small icon-only Skip" (j3:24). This gives mild support to Tony's icon-only pick. On file only.
+10. Main's List button shows the bank code as a word (main nav.js:103, tests/bank.pw.mjs:76). R1 testers called "BANK_P2X" jargon (r1-j1:131, r1-j2:16, r1-j2:21, r1-j3:13). It is part of main's bar. Expect R3 testers to flag it.
+11. When a button changes state under the thumb, it keeps its hover or focus look after the tap. Example: Skip shows in a filled pill after a wrong Check and after Next (shots j4-phone/030, j4-phone/051; fill (22,36,58) vs bar (8,17,31)). In R3, a disabled Check in the thumb spot must not look active after Next.
+12. `med.py` strips "/30" as well as "/20" and "/25" (R2.1). This has no effect on R2.
+
+### What review 1 changed (in place, each marked)
+
+| where | was | now |
+|---|---|---|
+| R2.2 R1→R2 table, v2 reason | "one forward control + labeled Check" | the testers' own clutter reasons (j2:35, j4:29; j1:34, j3:36) |
+| R2.2 leniency, "The rise is…" | "only" v4 and v5, plus the new v6 | adds v2's +4.5 from phone clutter |
+| R2.3 Skip slot | "The fix did not land" | quiet at load (shot 028, pixels); filled pill after a tap (shots 030, 051, j2-phone/003) |
+| R2.3 main's › | "a small icon, which testers accepted" | the accepted icon had a "Skip" caption; main's › has none (r1-j4:7) |
+| R2.3 v5 "Skip for now" | quiet-link fix cited j2:130 | cites j1:132; j2:130 asks for a different fix |
+| R2.3 unity "clean test" | "v1 and v2 had the same desktop" | same only after Check; the desktop Check differs (shots j4-desk/002, j4-desk/005) |
+| R2.5 open, main's bar | "more buttons than the mock bar" | at rest: List, Prev, Next. Real risks: the bank-code word and "Open notes" at the bottom right |
+
+### Checked and found sound
+- All 28 R2 cells match their SCORE lines. Every total equals its 4 sub-scores. All 7 medians and min-unity values are right.
+- The 2 helper misses (j4:42, j4:51) and their cause. The 3 R1 misses. The R1 medians in §0.1 (all 28 R1 cells summed by hand).
+- R1→R2 table: every median, phone-part median and unity median. Leniency: all 10 means, "about 11 below", "about 4 above", 66.1 → 65.0, 15.5 → 15.3, and 86/88/87 without j2.
+- Verdict arithmetic: v4, v5 and v6 meet both parts as tested. v2 misses on both counts (84; unity 14 and 13). v1, v3 and v7 miss on both parts.
+- Rankings (j1:120, j2:117, j3:126, j4:100).
+- Quotes: I checked over 40 R2 cites and all 8 R1 cites against the report lines. All match except j2:130 (fixed). There are only small paraphrases: "my thumb never moves" (j1:67 says "the thumb"; j4:82 says "never moved my thumb once"), and j3:26 says "scrolled", not "jumped".
+- Shots: j4-desk/014 (v5 desktop bar at the bottom), j4-desk/003 and /006 (v1 = v2 after Check), j4-phone/010 (captioned bar), j4-phone/048 (Ask Cluck right above the slot), j4-phone/014 (Skip hidden while Next shows), j4-desk/019 (v6 desktop panel). All of them support the text.
+
+### Open questions for Tony
+1. Does "any eval >85 → raise the goal" fire again (R2 has 12 evals above 85)? Review 1 suggests no. Keep the R2 goal for R3, because R3 tests a new layout.
+2. May main's › hide, or be disabled, while Check or Next shows? This decides whether a corner button is possible. Please answer before the R3 build.
+3. Unity under "bottom = phones only": should the R3 brief tell testers that the bar position differs by design, and ask them to judge the action area? Or keep the brief as it is? R1 v3 and v7 show that 15+ is possible either way, but one strict tester can decide the result.
+4. On phones, main's "Open notes" button sits at the bottom right. When main's bar moves to the bottom, where does Notes go?
