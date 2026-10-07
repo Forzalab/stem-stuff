@@ -862,6 +862,14 @@ class Explain(unittest.TestCase):
         self.assertNotIn("NOTE:", msgs[3]["content"])                                  # an older turn carries none
         self.assertIn("why step 1?", self.gates[0]["messages"][1]["content"].split("MESSAGE:")[1])
 
+    def test_scratchpad_hides_email_and_phone_keeps_physics_numbers(self):
+        b = serve.scratch_block("W = 80 J, g = 9.81 m/s, 1234567 N, 2.0e8 m; call 559-555-1234, (559) 555 1234 or a.b@c.co", "t")
+        for keep in ("80 J", "9.81 m/s", "1234567 N", "2.0e8 m"):
+            self.assertIn(keep, b)
+        for gone in ("559", "a.b@c.co"):
+            self.assertNotIn(gone, b)
+        self.assertEqual(b.count("[hidden]"), 3)
+
     def test_scratchpad_rides_into_the_note_fenced_and_capped(self):
         self.ask(scratch="p = mv\n" + "y" * 3000 + "\n0.5*6 = 3")
         user = self.gates[0]["messages"][1]["content"]
