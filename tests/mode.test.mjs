@@ -60,6 +60,17 @@ for (const old of ["diet", "hard"]) test(`D6: stem-mode=${old} without the flag 
   assert.equal(m.modeOf(), "sugar", "SUGAR_ still switches back");
 });
 
+test("D6: a throwing cookie (blocked storage, sandboxed frame) never breaks the import: sugar, setMode a no-op", async () => {
+  for (const doc of [{ get cookie() { return "stem-mode=diet"; }, set cookie(s) { throw new Error("SecurityError"); } },
+                     { get cookie() { throw new Error("SecurityError"); }, set cookie(s) { throw new Error("SecurityError"); } }]) {
+    const m = await page({ doc });
+    assert.equal(m.modeOf(), "sugar");
+    assert.doesNotThrow(() => as({ doc }, () => m.setMode("diet")));
+    assert.equal(m.modeOf(), "sugar");
+    assert.doesNotThrow(() => m.reset(doc));
+  }
+});
+
 test("D6: a sugar browser (no mode cookie) just gets the flag; reset() reports only real resets", async () => {
   const j = jar({});
   const m = await page(j);

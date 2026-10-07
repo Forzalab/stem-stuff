@@ -8,18 +8,24 @@
 const DOC = typeof document === "object" ? document : null;
 const OLD = /(?:^|;\s*)stem-mode=(?:diet|hard)(?:;|$)/, V2 = /(?:^|;\s*)stem-mode-v=2(?:;|$)/;
 const FLAG = "stem-mode-v=2; Max-Age=31536000; Path=/; SameSite=Lax";
+/* cookies can throw (blocked storage, sandboxed frame): never at import (= a blank page); no cookie = sugar */
+const read = doc => { try { return doc ? String(doc.cookie) : ""; } catch { return ""; } };
+const write = (doc, s) => { try { doc.cookie = s; return true; } catch { return false; } };
 export function reset(doc = DOC) {                         // true = an old diet/hard browser was put back on sugar
-  if (!doc || V2.test(doc.cookie)) return false;
-  const old = OLD.test(doc.cookie);
-  if (old) doc.cookie = "stem-mode=; Path=/; Max-Age=0; SameSite=Lax";
-  doc.cookie = FLAG;
+  const c = read(doc);
+  if (!doc || V2.test(c)) return false;
+  const old = OLD.test(c);
+  if (old) write(doc, "stem-mode=; Path=/; Max-Age=0; SameSite=Lax");
+  write(doc, FLAG);
   return old;
 }
 reset();
-export const modeOf = () => DOC && OLD.test(DOC.cookie) && V2.test(DOC.cookie) ? "diet" : "sugar";
-export function setMode(m) {
-  document.cookie = FLAG;
-  document.cookie = m === "diet" ? "stem-mode=diet; Path=/; Max-Age=31536000; SameSite=Lax" : "stem-mode=; Path=/; Max-Age=0; SameSite=Lax";
+export const modeOf = () => { const c = read(DOC); return OLD.test(c) && V2.test(c) ? "diet" : "sugar"; };
+/* diet first, then the flag: both are capped at 7 days on iOS (ITP, JS cookies), so the flag never expires before the diet cookie */
+export function setMode(m, doc = typeof document === "object" ? document : null) {
+  if (!doc) return;
+  write(doc, m === "diet" ? "stem-mode=diet; Path=/; Max-Age=31536000; SameSite=Lax" : "stem-mode=; Path=/; Max-Age=0; SameSite=Lax");
+  write(doc, FLAG);
 }
 /* "DIET_BANK_P2X" -> { mode: "diet", rest: "BANK_P2X" }; "SUGAR_p2x" -> { mode: "sugar", rest: "p2x" }; else null */
 export function modePrefix(raw) {
