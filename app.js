@@ -29,7 +29,8 @@ const CODE_RE = /^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
-const lastQuackPrefix = {};  // Track last prefix per seed to avoid duplicates
+let lastQuack = "";   // quack.mjs: the last prefix shown, so the next one differs (Tony D72: every Cluck hint starts with a QUACK)
+const quackHint = (h, seed) => { const out = withQuack(h, seed, lastQuack); lastQuack = quack(seed, lastQuack); return out; };
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
 /* onboarding (STYLE.md §3 Toast): only on a new device, i.e. no stem-* key at the first load; remembered as stem-ob until all are shown */
 const onboard = (() => { try {
@@ -875,10 +876,7 @@ function partFeedback(i, r, typed) {
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.hint) {
-    const hintSeed = S.code + ":part" + i + ":" + S.tries.length;
-    const prevPrefix = lastQuackPrefix[hintSeed] || "";
-    const hintWithQuack = withQuack(r.hint, hintSeed, prevPrefix);
-    lastQuackPrefix[hintSeed] = hintWithQuack.split(" ").slice(0, 2).join(" ");  // Store the prefix part
+    const hintWithQuack = quackHint(r.hint, S.code + ":part" + i + ":" + S.tries.length);
     h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   hint.innerHTML = h;
@@ -1094,10 +1092,7 @@ function feedback(r, typed) {
     h += `<p class="verdict lock">${icon("i-lock")}<span>No tries left. Ask Tony about ${esc(S.code)}.</span></p>`;
   let quackHtml = "";
   if (r.hint) {
-    const hintSeed = S.code + ":" + S.tries.length;
-    const prevPrefix = lastQuackPrefix[hintSeed] || "";
-    const hintWithQuack = withQuack(r.hint, hintSeed, prevPrefix);
-    lastQuackPrefix[hintSeed] = hintWithQuack.split(" ").slice(0, 2).join(" ");  // Store the prefix part
+    const hintWithQuack = quackHint(r.hint, S.code + ":" + S.tries.length);
     quackHtml = `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
@@ -1235,17 +1230,8 @@ function wishFrame(now) {
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) {
-    // Add quack prefix once when we first start showing text
-    let content = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
-    if (!w.quackAdded && w.shown > 0) {
-      const quackSeed = w.code + ":cluck";
-      const prevPrefix = lastQuackPrefix[quackSeed] || "";
-      const quackPrefix = quack(quackSeed, prevPrefix);
-      lastQuackPrefix[quackSeed] = quackPrefix;
-      content = `<p class="cl-quack">${quackPrefix}</p>` + content;
-      w.quackAdded = true;
-    }
-    x.innerHTML = content;
+    if (!w.quack && w.shown > 0) w.quack = lastQuack = quack(w.code + ":cluck", lastQuack);   // D72: one QUACK line on top, picked once per explanation
+    x.innerHTML = (w.quack ? `<p class="cl-quack">${esc(w.quack)}</p>` : "") + wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
     w.drawn = w.shown; w.ended = end;
   }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
