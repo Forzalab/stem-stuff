@@ -1,0 +1,121 @@
+{
+ "v": 1,
+ "goal": {
+  "pick": "b",
+  "slip": "stopped counting the height drop at the spring's first touch",
+  "skill": "conserved_total",
+  "see": "the orange height bar keep shrinking after the block touches the spring",
+  "say": "it keeps losing height while it squeezes",
+  "predict": "Once the block touches the spring, does it still lose height?",
+  "approach": "poe"
+ },
+ "view": {
+  "x": [
+   0,
+   8
+  ],
+  "y": [
+   0,
+   32
+  ]
+ },
+ "params": {
+  "s": {
+   "min": 0,
+   "max": 1.797,
+   "step": 0.01,
+   "init": 0,
+   "unit": "m"
+  }
+ },
+ "derive": {
+  "f": "2*9.8*sin(30*pi/180)",
+  "k": "400",
+  "d": "1.5",
+  "xm": "(f + sqrt(f^2 + 2*k*f*d))/k",
+  "c": "max(0, s - d)",
+  "K": "f*s - 0.5*k*c^2",
+  "Ug": "f*(d + xm - s)",
+  "Us": "0.5*k*c^2",
+  "E": "f*(d + xm)"
+ },
+ "marks": [
+  {
+   "id": "ramp",
+   "sym": "incline",
+   "at": [
+    0,
+    0
+   ],
+   "base": 4,
+   "angle": 30
+  },
+  {
+   "id": "spr",
+   "sym": "spring",
+   "from": [
+    0.2,
+    0.3
+   ],
+   "to": [
+    0.9,
+    0.7
+   ]
+  },
+  {
+   "id": "box",
+   "sym": "block",
+   "x": "=3.5 - 1.5*s",
+   "y": "=2 - 0.85*s",
+   "angle": 30
+  },
+  {
+   "id": "barK",
+   "mark": "bar",
+   "x": 5,
+   "h": "=K",
+   "color": "c1",
+   "label": "K"
+  },
+  {
+   "id": "barUg",
+   "mark": "bar",
+   "x": 6,
+   "h": "=Ug",
+   "color": "c2",
+   "label": "U_g"
+  },
+  {
+   "id": "barUs",
+   "mark": "bar",
+   "x": 7,
+   "h": "=Us",
+   "color": "c3",
+   "label": "U_s"
+  },
+  {
+   "id": "xval",
+   "mark": "text",
+   "at": [
+    6,
+    30
+   ],
+   "text": "=xm"
+  }
+ ],
+ "handles": [
+  {
+   "bind": "s",
+   "on": "box",
+   "constraint": "onPath:ramp"
+  }
+ ],
+ "reveal": [
+  {
+   "after": "interact",
+   "show": [
+    "xval"
+   ]
+  }
+ ]
+}

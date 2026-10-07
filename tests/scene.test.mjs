@@ -110,3 +110,90 @@ test("scene: bad meaning is caught (valid shape, wrong references)", () => {
     assert.ok(check(s).some(l => re.test(l)), `${what}: ${JSON.stringify(check(s))}`);
   }
 });
+
+/* ---------- kits (author/kits/<name>/KIT.md + examples/*.json; VISUAL-LANGUAGE.md §5): the gate ---------- */
+import { readdirSync } from "node:fs";
+const KITS = new URL("author/kits/", root);
+const kitDirs = readdirSync(KITS, { withFileTypes: true }).filter(d => d.isDirectory()).map(d => d.name);
+const kitOf = name => JSON.parse(readFileSync(new URL(`${name}/KIT.md`, KITS), "utf8").match(/<!-- kit -->\s*```json\n([\s\S]*?)\n```/)[1]);
+
+export function uses(s, kit) {                               // components outside the kit = [] when the scene keeps to it
+  const c = kit.components, out = [];
+  for (const m of s.marks) {
+    if (m.mark && !c.marks.includes(m.mark)) out.push(`mark ${m.mark}`);
+    if (m.sym && !c.syms.includes(m.sym)) out.push(`sym ${m.sym}`);
+  }
+  for (const t of s.trace || []) if (!c.ops.includes(t.op)) out.push(`op ${t.op}`);
+  for (const h of s.handles || []) { const k = h.constraint.split(":")[0]; if (!c.constraints.includes(k)) out.push(`constraint ${k}`); }
+  return out;
+}
+const grid = over => {                                       // 6 points per param, every combination
+  let pts = [{}];
+  for (const [p, [a, b]] of Object.entries(over)) pts = pts.flatMap(o => Array.from({ length: 6 }, (_, i) => ({ ...o, [p]: a + (b - a) * i / 5 })));
+  return pts;
+};
+function at(s, vals) {                                       // every derive at these param values
+  const sc = { ...Object.fromEntries(Object.entries(s.params || {}).map(([k, v]) => [k, v.init])), t: 0, ...vals };
+  for (let pass = 0; pass < 4; pass++) for (const [k, src] of Object.entries(s.derive || {})) { try { sc[k] = evaluate(src, { ...sc }); } catch { /* a later pass */ } }
+  return sc;
+}
+export function invariant(s, inv) {                          // "" = holds; else what broke
+  if (inv.type === "conserved") for (const v of grid(inv.over)) {
+    const sc = at(s, v), sum = inv.of.reduce((a, k) => a + sc[k], 0);
+    if (!(Math.abs(sum - sc[inv.total]) < 1e-9)) return `conserved: ${inv.of.join(" + ")} = ${sum} ≠ ${inv.total} = ${sc[inv.total]} at ${JSON.stringify(v)}`;
+  }
+  if (inv.type === "pythag") for (const v of grid(inv.over)) {
+    const sc = at(s, v), l = inv.legs.reduce((a, k) => a + sc[k] ** 2, 0);
+    if (!(Math.abs(l - sc[inv.hyp] ** 2) < 1e-9)) return `pythag: ${l} ≠ ${sc[inv.hyp] ** 2} at ${JSON.stringify(v)}`;
+  }
+  if (inv.type === "finite") for (const v of grid(inv.over)) {
+    const sc = at(s, v);
+    for (const k of Object.keys(s.derive || {})) if (!Number.isFinite(sc[k])) return `finite: ${k} = ${sc[k]} at ${JSON.stringify(v)}`;
+  }
+  const nodes = s.marks.filter(m => m.mark === "node").map(m => m.id), visits = (s.trace || []).filter(t => t.op === "visit").map(t => t.args[0]);
+  if (inv.type === "visit_once") {
+    for (const n of nodes) if (visits.filter(x => x === n).length !== 1) return `visit_once: ${n} visited ${visits.filter(x => x === n).length}×`;
+  }
+  if (inv.type === "visits_follow_edges") {
+    const e = s.marks.filter(m => m.mark === "edge").map(m => [m.from, m.to]);
+    for (let i = 1; i < visits.length; i++) if (!e.some(([a, b]) => (a === visits[i] && visits.slice(0, i).includes(b)) || (b === visits[i] && visits.slice(0, i).includes(a))))
+      return `visits_follow_edges: ${visits[i]} has no edge to ${visits.slice(0, i)}`;
+  }
+  return "";
+}
+
+test("kits: there are 3, each with 2 examples", () => {
+  assert.deepEqual(kitDirs.sort(), ["energy-bars", "graph-search", "mechanics"]);
+  for (const d of kitDirs) assert.equal(kitOf(d).examples.length, 2, d);
+});
+for (const d of kitDirs) {
+  const kit = kitOf(d);
+  test(`kit ${d}: name matches its folder, one-line description, subjects from the closed list`, () => {
+    assert.equal(kit.name, d);
+    assert.ok(kit.description.length > 10 && !kit.description.includes("\n"));
+    for (const s of kit.subjects) assert.ok(["physics.mechanics", "physics.em", "discrete", "cs"].includes(s), s);
+  });
+  for (const ex of kit.examples) {
+    const s = JSON.parse(readFileSync(new URL(`${d}/examples/${ex.file}`, KITS), "utf8"));
+    test(`kit ${d} / ${ex.file}: schema, sound, kit components only, invariants hold`, () => {
+      assert.ok(validate(s), JSON.stringify(validate.errors, null, 1));
+      assert.deepEqual(check(s), []);
+      assert.deepEqual(uses(s, kit), [], "components outside the kit");
+      for (const inv of ex.invariants) assert.equal(invariant(s, inv), "", inv.type);
+    });
+  }
+}
+test("kits: the gate catches a component outside the kit and a broken invariant", () => {
+  const mech = kitOf("mechanics"), en = kitOf("energy-bars"), gs = kitOf("graph-search");
+  const inc = JSON.parse(readFileSync(new URL("mechanics/examples/incline-forces.json", KITS), "utf8"));
+  inc.marks.push({ id: "q", mark: "node", x: 1, y: 1 });
+  assert.deepEqual(uses(inc, mech), ["mark node"]);
+  const rs = JSON.parse(readFileSync(new URL("energy-bars/examples/ramp-spring.json", KITS), "utf8"));
+  rs.derive.Ug = "f*(d + xm - min(s, d))";                    // Q2 b's slip: the height stops falling at first touch
+  assert.match(invariant(rs, en.examples[0].invariants[0]), /^conserved/);
+  const dfs = JSON.parse(readFileSync(new URL("graph-search/examples/dfs.json", KITS), "utf8"));
+  dfs.trace.push({ op: "visit", args: ["A"] });
+  assert.match(invariant(dfs, gs.examples[1].invariants[0]), /visit_once: A visited 2×/);
+  dfs.trace.push({ op: "sort", args: ["S"] });
+  assert.deepEqual(uses(dfs, gs), ["op sort"]);
+});
