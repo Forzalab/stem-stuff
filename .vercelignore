@@ -14,3 +14,5 @@ host.log
 stem-stuff.html
 public
 .env*
+design/plans
+# ^ swarm plans/reports never ship.
