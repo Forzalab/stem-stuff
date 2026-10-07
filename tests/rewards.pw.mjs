@@ -279,7 +279,7 @@ try {
     await page.click('#q .opt[data-id="a"]').catch(() => {});
     assert.equal(await page.$$eval("#rwHud, .fx-layer, .fx-ov", e => e.length), 0);
     assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("stem-rw")).length), 0);
-    assert.equal((await fetch(BASE + "/p/CALC1_S01.json", { headers: { cookie: "stem-mode=diet" } })).status, 404);
+    assert.equal((await fetch(BASE + "/p/CALC1_S01.json", { headers: { cookie: "stem-mode=diet; stem-mode-v=2" } })).status, 404);
     await typeCode(page, "SUGAR_BANK_RW12");
     await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
   });

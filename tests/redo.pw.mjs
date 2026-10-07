@@ -144,7 +144,7 @@ try {
   await step("diet: a miss, a round, right again, exit", async () => {
     const ctx = await browser.newContext(ctxOpts({ width: 1280, height: 900 }, false));
     await ctx.addInitScript(init);
-    await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }]);
+    await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     const page = await ctx.newPage();
     await openBank(page);
     await go(page, "CALC1_R04"); await pick(page, "b"); await pick(page, "c");
