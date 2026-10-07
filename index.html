@@ -234,14 +234,16 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
 <div id="toast" role="status" aria-live="polite"></div>
 <p class="sr-only" id="sr" aria-live="polite"></p>
 <small id="ver" aria-hidden="true"></small>
-<!-- footer: the privacy note, left of the dev tag (#ver). Quiet like it (--hint, smallest type); a real link, keyboard + screen reader reachable -->
+<!-- footer: the privacy note, left of the dev tag (#ver). Quiet like it (--hint, smallest type); a real link, keyboard + screen reader reachable. z 21: over the phone dock (20, the whole window on the start page), under the notes button (40) and Cluck (45) -->
 <style>
-#privacy { position: fixed; z-index: 1; right: calc(max(var(--s2), env(safe-area-inset-right)) + 3.2em); bottom: max(0px, calc(env(safe-area-inset-bottom) - var(--s1)));
+#privacy { position: fixed; z-index: 21; right: calc(max(var(--s2), env(safe-area-inset-right)) + 3.2em); bottom: max(0px, calc(env(safe-area-inset-bottom) - var(--s1)));
   padding: var(--s1) var(--s1); color: var(--hint); font-size: var(--t-xs); line-height: 1; text-decoration: underline; text-underline-offset: 2px; }
 #privacy:hover, #privacy:focus-visible { color: var(--muted); }
 .dock-bottom:not(.start) #privacy { bottom: calc(var(--dock-h, 88px)); }
 html.bar-open #privacy { visibility: hidden; }
+#privacy::after { content: "privacy"; }   /* drawn by CSS like #ver: not page text, never in a copy or a text check */
+#cluck .cl-verify::after { content: " · no sensitive data pls"; }   /* D20: next to Cluck's "verify b4 use lol" */
 </style>
-<a id="privacy" href="privacy.html">privacy</a>
+<a id="privacy" href="privacy.html" aria-label="Privacy"></a>
 </body>
 </html>

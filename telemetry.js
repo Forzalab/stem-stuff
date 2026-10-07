@@ -187,6 +187,7 @@
         p.init(cfg.ph, {
           api_host: cfg.host, respect_dnt: true, person_profiles: "always", persistence: "localStorage+cookie",
           bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true, autocapture: true,
+          disable_surveys: true, capture_dead_clicks: false,   // D22 bench: −42 KB; our dead_tap covers dead clicks
           mask_all_text: false, mask_all_element_attributes: false,
           session_recording: { maskAllInputs: false, maskTextSelector: null },
           loaded: function (inst) {
@@ -200,7 +201,7 @@
     s.onerror = noop;
     D.head.appendChild(s);
   }
-  function loadClarity() {
+  function loadClarity() {   // OFF by default (D22 bench: >100 ms TBT, no unique data): the build stamps an id only with CLARITY=1
     if (!cfg.cl) return;
     try {
       W.clarity = W.clarity || function () { (W.clarity.q = W.clarity.q || []).push(arguments); };

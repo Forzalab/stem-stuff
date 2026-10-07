@@ -38,8 +38,10 @@ def stamp(out):
 
 def stamp_telemetry(out, env=os.environ):
     """Telemetry keys (design/plans/TELEMETRY.md): the Vercel Production env has POSTHOG_TOKEN (phc_, public by design) and CLARITY_ID
-    (+ optional POSTHOG_HOST). Stamped into index.html's <meta name="stem-t">; absent (local, preview) → the meta stays empty, telemetry.js no-ops."""
+    (+ optional POSTHOG_HOST; CLARITY=1 turns Clarity back on). Stamped into index.html's <meta name="stem-t">; absent (local, preview) → the meta stays empty, telemetry.js no-ops."""
     ph, cl = env.get("POSTHOG_TOKEN", "").strip(), env.get("CLARITY_ID", "").strip()
+    if env.get("CLARITY", "0").strip() != "1":   # D22 bench: Clarity added >100 ms TBT with no unique data. Off unless CLARITY=1
+        cl = ""
     host = env.get("POSTHOG_HOST", "").strip().rstrip("/") or "https://us.i.posthog.com"
     ph = ph if re.fullmatch(r"phc_\w+", ph) else ""
     cl = cl if re.fullmatch(r"[A-Za-z0-9]+", cl) else ""
