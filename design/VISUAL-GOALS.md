@@ -38,6 +38,14 @@ Energy: mg·sin θ·(1.5 + x) = ½kx², with mg·sin θ = 9.8 N. The block keeps
 | c) 0.38 m | used the 1.5 m along the ramp as the drop (no sin θ), and stopped at first touch: 0.383 | `trig_part` (+ `components`) | SEE: the drop's vertical leg come out at 0.75 m, half the 1.5 m slope → SAY: "the height lost is 1.5 sin 30°, not 1.5" | "The block slides 1.5 m. Is that how far it drops?" | the ramp-angle slider (15°–45°) | the vertical leg's length, then x |
 | d) 0.19 m | lost the ½ in ½kx² (and the extra drop): mg·sin θ·1.5 = kx² gives 0.192 | `square_scaling` (+ `substitute`) | SEE: the spring's blue bar grow as x² with the ½ in → SAY: "spring energy is ½kx², the ½ halves it" | "Without the ½, would the spring stop the block sooner or later?" | drag the block into the spring | the spring bar with and without ½, then x |
 
+## Approach menu (§8 step 2; Tony, Oct 6 ~19:0x PT)
+- **Every visual uses POE, always.** There is no per-skill or per-question choice for now.
+- **Parked as ideas** (kept, not built), each with the slips it would fit:
+  - **Knobs** (free sliders): scaling slips, `square_scaling`, `proportional`.
+  - **Lego** (snap pieces): sum-of-parts slips, `decompose`, `signed_sum`, Q1 c).
+  - **Fill-in** (one blank in the worked line): algebra slips, Q2 d), the missing ½.
+- **Dropped:** Socratic (text only, no scene).
+
 ## Open (for Tony)
 - **Q1 c) 16 J:** "left out the first triangle" is my best reconstruction. It fits the number exactly, but a student could reach 16 another way.
-- **§8 step 2 next:** the approach menu (POE is the default; when Knobs, Lego or Socratic fit better).
+- **Next (§8 step 3):** `scene.schema.json`, the 10 concepts from VISUAL-LANGUAGE.md §3 as a JSON Schema, with tests.
