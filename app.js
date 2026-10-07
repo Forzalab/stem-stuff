@@ -369,31 +369,24 @@ window.stemBank = {
   mark: c => (bank && bank.marks[c]) || null
 };
 const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
-/* "Redo my misses" (cram week, Oct 6): a round replays only the questions this browser missed (nav.js picks them), graded fresh in
-   their own server namespace (serve.py grade() round) and kept in their own done records (offline.js "r:"); the real history and
-   marks stay as they were. sessionStorage: one round per tab, and it ends when the bank changes. */
+/* a Redeem showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a missed question
+   back, graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
+   real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. No UI yet. */
 const REDO = "stem-redo";
 window.stemRedo = {
   get() {
     let r = null;
-    try { r = JSON.parse(sessionStorage.getItem(REDO)); } catch { /* blocked or broken */ }
+    try { r = JSON.parse(localStorage.getItem(REDO)); } catch { /* blocked or broken */ }
     return r && bank && r.bank === bank.code && Array.isArray(r.codes) && Number.isInteger(r.n) ? r : null;
   },
   has(code) { const r = this.get(); return !!r && r.codes.includes(code); },
-  start(codes) {
-    if (!bank || !codes.length) return false;
-    const r = { bank: bank.code, n: Math.floor(Date.now() / 1000), codes };
-    try { sessionStorage.setItem(REDO, JSON.stringify(r)); } catch { return false; }
-    for (const c of codes) doneStore()?.doneDrop(c);                    // an older round's "r:" records
-    bankChanged();
-    load(window.stemOrder ? window.stemOrder(codes)[0] : codes[0]);
-    return true;
+  set(code, n) {                                                         // nav.js, before it opens code
+    if (!bank) return;
+    const old = this.get();
+    try { localStorage.setItem(REDO, JSON.stringify({ bank: bank.code, n, codes: [code] })); } catch { return; }
+    if (!old || old.n !== n || !old.codes.includes(code)) doneStore()?.doneDrop(code);   // an older showing's "r:" record
   },
-  exit() {
-    try { sessionStorage.removeItem(REDO); } catch { /* blocked */ }
-    bankChanged();
-    if (S) load(S.code);                                                 // the real record comes back
-  }
+  clear() { try { localStorage.removeItem(REDO); } catch { /* blocked */ } }
 };
 function leaveBank() { src("file"); if (bank) { bank = null; bankChanged(); } }
 /* code: BANK_XXX, or "last" (the server's pointer for this browser). go: open a question (at, else the first).
@@ -417,8 +410,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
   remembered(b.code);
   bankChanged();
   if (!go) return true;
-  const rd = window.stemRedo.get();                                       // a reload inside a redo round stays in it
-  const to = bank.codes.includes(b.at) && (!rd || rd.codes.includes(b.at)) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // first in the shuffled list (nav.js)
+  const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // resume where you were, else the queue's pick (nav.js)
   if (S && S.code === to && !modeFlip) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
   return true;
 }
@@ -917,6 +909,7 @@ function record(a, r) {
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
+  if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct" } }));   // nav.js: the queue re-ranks
   rewardTry(a, r);
 }
 
