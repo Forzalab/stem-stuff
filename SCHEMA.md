@@ -783,6 +783,474 @@ Rules:
 }
 ```
 
+## JSON Schema: scene (the visual language)
+One visual, data only: params, derive (math.js over params and `t`), marks / symbols, handles, knobs, timeline, trace, reveal.
+The 10 concepts are in `design/VISUAL-LANGUAGE.md` §3. Each wrong pick's goal (SEE → SAY, the predict-observe-explain prompt) is in
+`design/VISUAL-GOALS.md`. The enums are closed. `reveal.after: "interact"` = after the student moves the scene (Tony, Oct 6: the value only after interaction).
+`tests/scene.test.mjs` also checks what a schema can't: every expression compiles in math.js and names only params, derives, `t` and math.js functions;
+handles, knobs, keyframes and the drive bind real params; reveal and trace name real mark ids.
+
+<!-- schema: scene -->
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "stem-stuff scene (v1): the data-only visual language of design/VISUAL-LANGUAGE.md §3. Goals: design/VISUAL-GOALS.md",
+  "type": "object",
+  "required": [
+    "v",
+    "marks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "goal": {
+      "type": "object",
+      "description": "why this visual exists (VISUAL-GOALS.md): a wrong pick's slip, SEE -> SAY, the POE prediction",
+      "required": [
+        "see",
+        "say"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pick": {
+          "type": "string",
+          "pattern": "^[a-z]$"
+        },
+        "slip": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skill": {
+          "type": "string",
+          "pattern": "^[a-z_]+$"
+        },
+        "see": {
+          "type": "string",
+          "minLength": 1
+        },
+        "say": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predict": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approach": {
+          "const": "poe"
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "$ref": "#/$defs/range"
+        },
+        "y": {
+          "$ref": "#/$defs/range"
+        }
+      }
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "min",
+          "max",
+          "init"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "step": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "init": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 12
+          }
+        }
+      }
+    },
+    "derive": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "marks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/mark"
+      }
+    },
+    "handles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "bind",
+          "on",
+          "constraint"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bind": {
+            "$ref": "#/$defs/name"
+          },
+          "on": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[a-z]+)?$"
+          },
+          "constraint": {
+            "type": "string",
+            "pattern": "^(free|onX|onY|onPath:[A-Za-z_][A-Za-z0-9_]*|radial:\\[-?[0-9.]+,-?[0-9.]+\\])$"
+          },
+          "snap": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      }
+    },
+    "knobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "bind",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bind": {
+            "$ref": "#/$defs/name"
+          },
+          "kind": {
+            "enum": [
+              "slider",
+              "stepper",
+              "toggle",
+              "select"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2
+          }
+        }
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "set"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "at": {
+                "type": "number",
+                "minimum": 0
+              },
+              "set": {
+                "type": "object",
+                "propertyNames": {
+                  "$ref": "#/$defs/name"
+                },
+                "additionalProperties": {
+                  "type": "number"
+                }
+              },
+              "ease": {
+                "$ref": "#/$defs/ease"
+              }
+            }
+          }
+        },
+        "drive": {
+          "type": "object",
+          "required": [
+            "param",
+            "from",
+            "to",
+            "dur"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/name"
+            },
+            "from": {
+              "$ref": "#/$defs/val"
+            },
+            "to": {
+              "$ref": "#/$defs/val"
+            },
+            "dur": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 20000
+            },
+            "ease": {
+              "$ref": "#/$defs/ease"
+            }
+          }
+        },
+        "stepMs": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 5000
+        },
+        "ease": {
+          "$ref": "#/$defs/ease"
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "prev",
+              "play",
+              "next",
+              "reset"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "trace": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "required": [
+          "op",
+          "args"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "op": {
+            "enum": [
+              "visit",
+              "mark",
+              "unmark",
+              "swap",
+              "set",
+              "push",
+              "pop",
+              "highlightEdge",
+              "enqueue",
+              "dequeue",
+              "gateOut"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "reveal": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "after",
+          "show"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "type": "string",
+            "pattern": "^(answer|interact|step:[0-9]+|param:.+)$"
+          },
+          "show": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "range": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false,
+      "minItems": 2
+    },
+    "ease": {
+      "enum": [
+        "linear",
+        "inOut",
+        "out",
+        "step"
+      ]
+    },
+    "val": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "pattern": "^="
+        }
+      ]
+    },
+    "mark": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/name"
+        },
+        "mark": {
+          "enum": [
+            "fn",
+            "param",
+            "shade",
+            "tangent",
+            "vline",
+            "hline",
+            "point",
+            "seg",
+            "line",
+            "arrow",
+            "arc",
+            "poly",
+            "path",
+            "rect",
+            "circle",
+            "text",
+            "tex",
+            "node",
+            "edge",
+            "bar",
+            "body",
+            "spring",
+            "pulley",
+            "rope",
+            "surface",
+            "incline",
+            "force",
+            "pivot",
+            "axes"
+          ]
+        },
+        "sym": {
+          "enum": [
+            "block",
+            "cart",
+            "ball",
+            "spring",
+            "pulley",
+            "incline",
+            "ground",
+            "vector",
+            "gate:AND",
+            "gate:OR",
+            "gate:NOT",
+            "gate:XOR",
+            "state",
+            "arrayCell",
+            "stackFrame"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "mark"
+          ],
+          "not": {
+            "required": [
+              "sym"
+            ]
+          }
+        },
+        {
+          "required": [
+            "sym"
+          ],
+          "not": {
+            "required": [
+              "mark"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
 ## JSON Schema: Copy button payload
 What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
 

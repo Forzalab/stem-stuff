@@ -38,6 +38,28 @@ Energy: mg·sin θ·(1.5 + x) = ½kx², with mg·sin θ = 9.8 N. The block keeps
 | c) 0.38 m | used the 1.5 m along the ramp as the drop (no sin θ), and stopped at first touch: 0.383 | `trig_part` (+ `components`) | SEE: the drop's vertical leg come out at 0.75 m, half the 1.5 m slope → SAY: "the height lost is 1.5 sin 30°, not 1.5" | "The block slides 1.5 m. Is that how far it drops?" | the ramp-angle slider (15°–45°) | the vertical leg's length, then x |
 | d) 0.19 m | lost the ½ in ½kx² (and the extra drop): mg·sin θ·1.5 = kx² gives 0.192 | `square_scaling` (+ `substitute`) | SEE: the spring's blue bar grow as x² with the ½ in → SAY: "spring energy is ½kx², the ½ halves it" | "Without the ½, would the spring stop the block sooner or later?" | drag the block into the spring | the spring bar with and without ½, then x |
 
+## Q1 b) as a scene (validates against `<!-- schema: scene -->` in SCHEMA.md; tests/scene.test.mjs)
+The pink-pillar visual for a wrong pick of 23 J: t walks the graph, and W shows only after the student drags (reveal: interact).
+
+<!-- scene: q1-b -->
+```json
+{"v":1,
+ "goal":{"pick":"b","slip":"added the pink area instead of subtracting it","skill":"negative_work",
+   "see":"the running W drops as t crosses the pink pillar","say":"area under the axis counts negative",
+   "predict":"When t walks into the pink part, does W go up or down?","approach":"poe"},
+ "view":{"x":[0,6.5],"y":[-4,8]},
+ "params":{"t":{"min":0,"max":6,"step":0.05,"init":5,"unit":"m"}},
+ "derive":{"F":"t <= 2 ? 3*t : (t <= 4 ? 6 : 6 - 4*(t-4))",
+   "W":"t <= 2 ? 1.5*t^2 : (t <= 4 ? 6 + 6*(t-2) : 18 + 6*(t-4) - 2*(t-4)^2)"},
+ "marks":[
+  {"id":"blue","mark":"poly","pts":[[0,0],[2,6],[4,6],[5.5,0]],"fill":true,"color":"c1"},
+  {"id":"pink","mark":"poly","pts":[[5.5,0],[6,-2],[6,0]],"fill":true,"color":"c3"},
+  {"id":"tline","mark":"vline","x":"=t","color":"mark","label":"$t$"},
+  {"id":"wread","mark":"text","at":[3,-3.2],"text":"=W","color":"mark"}],
+ "handles":[{"bind":"t","on":"tline","constraint":"onX","snap":0.5}],
+ "reveal":[{"after":"interact","show":["wread","pink"]}]}
+```
+
 ## Approach menu (§8 step 2; Tony, Oct 6 ~19:0x PT)
 - **Every visual uses POE, always.** There is no per-skill or per-question choice for now.
 - **Parked as ideas** (kept, not built), each with the slips it would fit:
