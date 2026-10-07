@@ -74,7 +74,7 @@ Plus PostHog autocapture, `$pageview`, `$pageleave`, session replay; Clarity rep
 
 ## Footer
 `index.html`: `<a id="privacy" href="privacy.html">privacy</a>` left of the dev tag (#ver), same quiet style. Under Cluck's
-text: "verify b4 use lol · no sensitive data pls" (CSS `::after`, so no text check moves). The link is a 44 px target and is
+text: "verify b4 use lol, and pls no private shit in it xoxo" (Tony, Oct 7) (CSS `::after`, so no text check moves). The link is a 44 px target and is
 hidden on phones while a question is open (the bottom belongs to the bar, the notes button and Swap; swap.pw audits it); it
 shows on the start page and on desktop. `privacy.html`: what is recorded, why, contact (3 lines) + "Don't record me".
 
