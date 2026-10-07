@@ -8,7 +8,8 @@
 //   node tools/bench-telemetry.mjs   (env: POSTHOG_KEY → project token looked up in memory, or PH_TOKEN; CLARITY_ID) /tmp/x/public [--runs 5] [--mode snippet|wired] [--json out.json]
 //
 // --mode snippet (default): the official PostHog + Clarity snippets are injected into index.html <head> (route rewrite).
-// --mode wired: the build's own telemetry.js decides; config is chosen with ?tm=none|posthog|clarity|both (T-ev hook, if present).
+// --mode wired: the build's own telemetry.js loads the libs (after the first question, on idle); the bench stamps
+//   <meta name="stem-t"> per config in memory (PostHog token and/or Clarity id, or empty for none). Build WITHOUT keys.
 // No fake traffic: every PostHog ingestion request (/e/ /s/ /i/v0/ /batch /capture /engage /track) and every Clarity
 // upload (/collect) is aborted by route; the libs, remote config and recorder still download. Without PH_TOKEN a dummy
 // token is used (then PostHog skips the session recorder: noted in the output). Never prints a key.
@@ -93,11 +94,16 @@ async function run(browser, cfg) {
     const u = route.request().url();
     if (process.env.BENCH_DEBUG && THIRD.test(u)) console.error(`  [${cfg}] route ${route.request().method()} ${u.split("?")[0].replace(/phc_\w+/, "phc_…")}${INGEST.test(u) ? "  (BLOCKED)" : ""}`);
     if (INGEST.test(u)) { blocked.n++; return route.abort(); }
-    if (MODE === "snippet" && u.startsWith(ORIGIN) && route.request().resourceType() === "document") {
+    if (u.startsWith(ORIGIN) && route.request().resourceType() === "document") {
       const r = await route.fetch();
       let html = await r.text();
-      const inj = (cfg === "posthog" || cfg === "both" ? PH_SNIPPET : "") + (cfg === "clarity" || cfg === "both" ? CL_SNIPPET : "");
-      html = html.replace("</head>", inj + "</head>");
+      const ph = cfg === "posthog" || cfg === "both", cl = cfg === "clarity" || cfg === "both";
+      if (MODE === "snippet") html = html.replace("</head>", (ph ? PH_SNIPPET : "") + (cl ? CL_SNIPPET : "") + "</head>");
+      else {   // wired: telemetry.js reads <meta name="stem-t">; the token is stamped in memory here, never into the build on disk
+        const meta = `<meta name="stem-t" content="${ph ? PH_TOKEN : ""}" data-host="https://us.i.posthog.com" data-clarity="${cl ? CLARITY_ID : ""}">`;
+        const n = html.length; html = html.replace(/<meta name="stem-t"[^>]*>/, meta);
+        if (html.length === n && !html.includes(meta)) throw new Error("wired mode: no <meta name=stem-t> slot in index.html (telemetry.js not merged?)");
+      }
       return route.fulfill({ response: r, body: html, headers: Object.fromEntries(Object.entries(r.headers()).filter(([k]) => !/^(content-encoding|content-length)$/i.test(k))) });
     }
     return route.continue();
@@ -120,7 +126,7 @@ async function run(browser, cfg) {
     bytes.all += b; if (tp) bytes.all3p += b;
     if (t === "Script") { bytes.js += b; if (tp) bytes.js3p += b; }
   });
-  const url = MODE === "wired" ? `${ORIGIN}/?tm=${cfg}` : `${ORIGIN}/`;
+  const url = `${ORIGIN}/`;
   const t0 = Date.now();
   await page.goto(url, { waitUntil: "load", timeout: 90000 });
   await page.waitForTimeout(Math.max(0, WINDOW_MS - (Date.now() - t0)));
