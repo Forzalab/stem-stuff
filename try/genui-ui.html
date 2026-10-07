@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wrong-pick moment</title>
+<link rel="icon" href="data:,">
+<!-- Agent U (gen-UI swarm, Oct 7 2026). The full wrong-pick moment on iPhone, 3 variants: ?v=1|2|3, states ?state=pick|wrong|right|right1|out,
+     ?rm=1 = reduced motion. Real tokens (app.css :root, .ai-skin), the real choice markup (.choices .ch .opt .badge .txt), graph.js for the
+     figure and the ghost (tests/visual-cases/kwv-d-good.json). Plan + checklist + SHAME CHECK: design/plans/UI-UNIFY.md.
+     Serve over http (sprite fetch): python3 -m http.server, then /try/genui-ui.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/math.min.js"></script>
+<script src="../graph.js"></script>
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../rewards/rewards.css">
+<link rel="stylesheet" href="genui-ui.css">
+</head>
+<body>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<div class="bar" role="toolbar" aria-label="Mockup controls">
+  <span class="lab">Variant</span><div class="seg" id="segV"></div>
+  <span class="lab">State</span><div class="seg" id="segS"></div>
+</div>
+<main class="wrap app-wrap">
+  <section class="app" id="app" aria-label="Question"></section>
+
+  <h1 class="page-h" id="vname"></h1>
+  <p class="lead" id="vlead"></p>
+  <div class="why">
+    <p><b>Same in all three.</b> Her pick never turns red, never gets struck through and never gets an X: it keeps a dashed edge and a quiet "your pick". The question stays on screen. Cluck's first line is wise feedback with no joke and no value; the joke waits for the right answer. Out of tries says "Out of tries for now. This one comes back around." and offers Next or a twin.</p>
+    <p><b>The bet rides on the first pick only.</b> This follows Fable A1 and departs from D53 (double-or-nothing on the retry): the retry stays free, so the step that teaches never carries a stake. Tony: flag if you want D53 back.</p>
+  </div>
+
+  <div class="fbk">
+    <label for="note">Your notes on this variant</label>
+    <textarea id="note" maxlength="4000" rows="3" placeholder="What felt off? What would she feel?"></textarea>
+    <div class="row"><button type="button" class="copy" id="copyAll">Copy all</button><span id="copied" aria-live="polite"></span></div>
+  </div>
+
+  <section class="prime" aria-labelledby="primeH">
+    <h2 id="primeH">Priming questions</h2>
+    <ol>
+      <li>At midnight, after a wrong pick, does the first thing she reads sound like a verdict or like a next step?</li>
+      <li>Can she still see the question and her own answer while Cluck talks?</li>
+      <li>Does the dashed "your 80 J" box land before she reads a single word (zero taps to the aha)?</li>
+      <li>Is "Try again" where her thumb already is, and is "Just tell me" never a dead end?</li>
+      <li>Does the bet feel like fun on the first pick, or like a fine on the retry?</li>
+      <li>v2: does seeing the 2 coins stay on the table feel fair, or like being robbed?</li>
+      <li>After the right answer, does she get a moment (words + picture) before Next?</li>
+      <li>Which variant would you open again tomorrow, and why?</li>
+    </ol>
+  </section>
+</main>
+<script src="genui-kit.js"></script>
+<script src="genui-ui.js"></script>
+</body>
+</html>
