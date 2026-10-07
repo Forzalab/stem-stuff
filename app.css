@@ -942,3 +942,5 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
 #ver::after { content: attr(data-v); }
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
+
+.cl-quack { margin: 0 0 var(--s2); font-weight: 700; color: var(--ai); }   /* D72: the QUACK line on top of Cluck's steps (quack.mjs) */

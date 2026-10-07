@@ -56,7 +56,7 @@ const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.query
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const newCtx = browser.newContext.bind(browser);
-browser.newContext = async o => { const c = await newCtx(o); await c.addCookies([{ name: "stem-mode", value: "diet", url: BASE }]); return c; };
+browser.newContext = async o => { const c = await newCtx(o); await c.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]); return c; };
 try {
   for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1280, height: 900 }, false]]) {
     const ctx = await browser.newContext({ viewport, hasTouch: touch, serviceWorkers: "block" }), page = await ctx.newPage();
@@ -126,7 +126,7 @@ try {
     await step(`${name}: subset of correct = miss, out of tries, closed`, async () => {
       await tap(row(page, "d")); await check(page);
       const s = await st(page);
-      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.match(s.fb, /Ask Tony/);
+      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.match(s.fb, /comes back around/);
       assert.deepEqual(s.wrong, ["b"]);
       assert.equal(await page.isVisible("#mcGo"), false);
     });

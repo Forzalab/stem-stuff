@@ -155,14 +155,18 @@ try {
     assert.equal(await page.evaluate(() => window.Rewards.answer({ code: "CALC1_R03", correct: true, firstTry: true, dwellMs: 9e3 }).xp), 0);
   });
 
+  /* Next is the queue's pick (design/plans/QUEUE.md), not the next row: pin a queue whose only ready real is CALC1_R03 (R01 and R02
+     just answered right), so Next plays R03, with its snack S02 in front unless the student is cruising */
   await step("Next steps over a snack only while the last 10 first tries are above 90%", async () => {
-    await toggleList(page); const o = await listOrder(page); await toggleList(page);
-    const before = o[o.indexOf("CALC1_S02") - 1];
-    if (!before) return;                                                        // the snack opens the list: nothing steps onto it
-    await go(page, before);
+    const pinQ = () => page.evaluate(() => {
+      const r = { n: 1, right: 1, miss: 0, last: 2, wait: 30, gapIdx: 0, owe: false, first: "right", redeem: false, retry: 0 };
+      localStorage.setItem("stem-q-BANK_RW12", JSON.stringify({ v: 1, salt: "rw", pos: 2, seen: { CALC1_R01: { ...r, last: 1 }, CALC1_R02: r },
+        hist: [{ c: "CALC1_R01", r: 0 }, { c: "CALC1_R02", r: 0 }], at: 1 }));
+    });
+    await go(page, "CALC1_R02"); await pinQ(); await page.reload(); await opened(page, "CALC1_R02");
     await page.click("#qnext"); await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_S02", null, { timeout: 4000 });
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.hist = Array(10).fill(1); localStorage.setItem(k, JSON.stringify(s)); });
-    await go(page, before);
+    await go(page, "CALC1_R02"); await pinQ(); await page.reload(); await opened(page, "CALC1_R02");
     await page.click("#qnext"); await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_R03", null, { timeout: 4000 });
   });
 
@@ -279,7 +283,7 @@ try {
     await page.click('#q .opt[data-id="a"]').catch(() => {});
     assert.equal(await page.$$eval("#rwHud, .fx-layer, .fx-ov", e => e.length), 0);
     assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("stem-rw")).length), 0);
-    assert.equal((await fetch(BASE + "/p/CALC1_S01.json", { headers: { cookie: "stem-mode=diet" } })).status, 404);
+    assert.equal((await fetch(BASE + "/p/CALC1_S01.json", { headers: { cookie: "stem-mode=diet; stem-mode-v=2" } })).status, 404);
     await typeCode(page, "SUGAR_BANK_RW12");
     await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
   });

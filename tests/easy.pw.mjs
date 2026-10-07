@@ -390,7 +390,7 @@ try {
       rows: [...document.querySelectorAll("#qlist .qt")].map(t => t.textContent).sort(), labels: [...document.querySelectorAll("#qlist a")].map(a => a.getAttribute("aria-label")),
       w: document.querySelector("#qlist").getBoundingClientRect().width, bar: ["#qlistBtn", "#qnext"].map(s => document.querySelector(s).getBoundingClientRect()).map(r => [r.left, r.right]),
       list: (r => [r.left, r.right])(document.querySelector("#qlist").getBoundingClientRect()), cols: getComputedStyle(document.querySelector("#qlist ol")).gridTemplateColumns.split(" ").length,
-      tops: ["#qlistBtn", "#qshuf", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)) }));
+      tops: ["#qlistBtn", "#entry", "#qprev", "#qnext"].map(s => Math.round(document.querySelector(s).getBoundingClientRect().top)) }));
     const one = await page.$$eval("#qlist .qt", ts => ts.map(t => ({ ws: getComputedStyle(t).whiteSpace, h: Math.round(t.getBoundingClientRect().height) })));
     assert.ok(one.every(x => x.ws === "nowrap") && new Set(one.map(x => x.h)).size === 1, `wide list: one line per row, rows line up (variant A): ${JSON.stringify(one)}`);
     assert.ok(await page.$$eval("#qlist a", as => as.every(a => a.title && a.title.length > 0)), "the full title is the tooltip");

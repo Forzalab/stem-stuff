@@ -1,12 +1,13 @@
 /* nav.js: Prev / Next and the questions list (design/NAV.md).
    The list: the open practice bank (window.stemBank, design/BANK.md), else an uploaded problems.json
-   (window.stemOffline.codes()), shuffled by a seed kept in this browser (stable across reloads; the shuffle button draws a
-   new one), so a topic can't be guessed from its position. Neither: no list (codes are the gate), so the nav stays hidden.
-   The list button says "Questions" (a bank code or file name means nothing to a student; design/COPY-CTA.md).
-   Hook: app.js fires "drill:problem" { code } after every load. Navigation goes through location.hash, which app.js follows. */
-import { shuffled, seed, newSeed, mastery, glue } from "./shuffle.mjs";
+   (window.stemOffline.codes()). Neither: no list (codes are the gate), so the nav stays hidden.
+   Next plays a hidden queue (shuffle.mjs qPick, design/plans/QUEUE.md): fresh topics first, a miss back after 3 / 8 / 20 others,
+   one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
+   The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
+   { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest } from "./shuffle.mjs";
 const MAX = 60;
-const ORDER = "stem-order";
+const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
 /* ---------- titles: problem.title, else the first paragraph of the first text block as plain text ---------- */
@@ -78,48 +79,109 @@ if (typeof document !== "undefined" && document.getElementById("qnav")) init();
 function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
-  const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), shuf = $("#qshuf"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
-  const redoBtn = $("#qredo"), redoTx = $("#qredoTx");
-  const redo = () => window.stemRedo && bank() ? window.stemRedo.get() : null;   // a "Redo my misses" round (app.js)
+  const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
-  let codes = [], cur = null, setKey = "", doneSaid = false;
+  const rd = () => window.stemRedo || null;                          // a Redeem showing's own grading namespace (app.js)
+  let codes = [], cur = null;
   function mark(c) {                                                 // this browser's record first, else the bank's server mark
     const s = window.stemOffline, rec = s && s.doneGet ? s.doneGet(c) : null, b = bank();
-    return rec || (b && !(window.stemRedo && window.stemRedo.has(c)) ? b.mark(c) : null);   // a redo round starts blank
+    return rec || (b && !(rd() && rd().has(c)) ? b.mark(c) : null);   // a Redeem showing starts blank
+  }
+  /* sugar snacks ride right before their real (design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
+  const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
+  const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
+  const all = () => { const o = off(); return (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))); };
+  const pool = () => all().filter(c => !snack(c));                   // the queue plays the reals; a snack rides in front of its real
+  /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
+  const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
+  const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
+
+  /* ---------- the queue: one per bank (D64), saved after every change; the first open migrates the saved marks ---------- */
+  let q = null, qFor = "", pending = null;
+  function Q() {
+    const id = bank() ? bank().code : "upload";
+    if (q && qFor === id) return q;
+    qFor = id; pending = null;
+    q = qLoad(id);
+    if (!q) { q = qMigrate(qNew(Math.random().toString(36).slice(2)), pool(), mark); qSave(id, q); }
+    return q;
+  }
+  const save = () => { if (q) qSave(qFor, q); };
+  /* a Redeem showing (D60/D61 data flag): the item carries redeem; app.js grades it fresh in round r, so the old lockout stays */
+  function use(e) {
+    const R = rd(); if (!R) return;
+    if (e.r) R.set(e.c, e.r, e.redeem); else R.clear();
+  }
+  function shown(code, fresh = false) {                              // a load: history, else a new showing (a pick, a list row, a typed code)
+    const st = Q(), h = st.hist[st.at];
+    if (!fresh && h && h.c === code) return;                         // a reload, Prev / Next through history: the same showing
+    const e = pending && pending.c === code ? pending : { c: code, r: rd() && rd().has(code) ? rd().get().n : 0, redeem: false };
+    pending = null;
+    qShow(st, code);
+    if (st.then === code) st.then = null;
+    st.hist = st.hist.slice(0, st.at + 1).concat([{ c: e.c, r: e.r, redeem: !!e.redeem }]).slice(-80);
+    st.at = st.hist.length - 1;
+    save();
+  }
+  /* the next item: forward through history first, then a real waiting behind its snack, then the queue's pick */
+  /* the nearest history item in direction d that is still in the list (an older upload's codes are skipped), or -1 */
+  function hop(st, d) {
+    const live = new Set(all());
+    for (let i = st.at + d; i >= 0 && i < st.hist.length; i += d) if (live.has(st.hist[i].c)) return i;
+    return -1;
+  }
+  function upNext() {
+    const st = Q();
+    const fw = hop(st, 1);
+    if (fw >= 0) return { e: st.hist[fw], step: fw };
+    const live = new Set(pool());
+    let code = null, redeem = false;
+    if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
+    else {
+      const p = qPick(st, [...live], topicOf);
+      if (!p) return null;
+      code = p.code; redeem = p.redeem;
+      const sn = all().find(c => snack(c) && beforeOf(c) === code && !st.seen[c]);   // a snack goes once, before its real's first showing
+      if (sn && !(st.seen[code] && st.seen[code].n) && !(window.stemSkipSnack && window.stemSkipSnack())) { st.then = code; return { e: { c: sn, r: 0, redeem: false } }; }
+    }
+    const again = !!(st.seen[code] && st.seen[code].n);           // any re-showing is a fresh round: never a closed card (rewards never pay twice)
+    return { e: { c: code, r: again && code !== cur ? Math.floor(Date.now() / 1000) : 0, redeem } };
+  }
+  /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick, but a fresh queue (nothing
+     shown or saved yet) starts where the author starts, the first real question of the file */
+  window.stemOrder = list => {
+    const live = list.filter(c => !snack(c) && !(window.stemHidden && window.stemHidden(c)));
+    const st = Q(), fresh = st.pos === 0 && !Object.keys(st.seen).length;
+    const p = !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
+    return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
+  };
+  /* the list (a jump index, not the queue): one fixed per-bank order that never moves under you (salted, so a row's position
+     can't give its topic away); snacks right above their real */
+  function rows0(cs) {
+    return glue(qRest(Q(), cs), beforeOf);
   }
 
-  /* resort: compute the order again (a graded try, a bank, a shuffle). Opening a problem keeps the order as it is, so Prev / Next walk
-     a list that holds still (re-sorting on every open would bounce Next between two open questions) */
-  function update(code, resort = true) {
+  function update(code) {
     cur = code;
-    const o = off(), all = (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))), key = [...all].sort().join(" ");
-    if (resort || key !== setKey) codes = all.length ? order(all) : [];
-    setKey = key;
+    const o = off(), cs = all();
+    codes = cs.length ? rows0(cs) : [];
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    const r = redo(), ok = r ? codes.filter(c => (mark(c) || {}).done === "correct").length : 0;
-    const shut = r ? codes.filter(c => mark(c) && mark(c).done !== "open").length : 0;
-    name.textContent = r ? (shut === codes.length ? "Redo done" : "Redo") : bank() ? bank().code : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; was "Questions": design/COPY-CTA.md)
-    redoBtn.hidden = !bank();
-    redoTx.textContent = r ? "Exit redo" : "Redo misses";                   // no counters in the bar (STYLE.md §3): the list ticks show progress
-    redoBtn.setAttribute("aria-label", r ? "Exit redo" : "Redo missed questions");   // phones show the icon only
-    root.classList.toggle("redo-on", !!r);
-    if (r && on && shut === codes.length && !doneSaid) { doneSaid = true; say(`Redo done. ${ok} of ${codes.length} cleared.`); }
-    if (!r || shut < codes.length) doneSaid = false;
+    name.textContent = bank() ? bank().code : "Questions";             // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md)
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;
     root.classList.toggle("qnav-on", on);
     if (!on) { close(false); return; }
-    const i = codes.indexOf(cur), focused = document.activeElement;
-    prev.disabled = i <= 0;
-    next.disabled = i < 0 || i >= codes.length - 1;
+    const st = Q(), focused = document.activeElement;
+    const here = codes.includes(cur);                                // a server code typed after an upload: arrows off
+    prev.disabled = !here || hop(st, -1) < 0;
+    next.disabled = !here || !pool().length;                        // Next always works: the queue never runs dry
     if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
-    /* one row = its number + one label, the whole title (owner, Oct 6: the C14 shared-prefix header read as a row of its own and ran
-       into the next row, "Practice Exam 2, Question 13" over "26 true or false rows") */
+    /* one row = its number + one label, the whole title (owner, Oct 6) */
     list.innerHTML = codes.map((c, k) => {
       const t = titleOf(o.get(c)) || c, m = marks(mark(c));
       return `<li><a href="#${esc(c)}" title="${esc(t)}" aria-label="${k + 1}. ${esc(t)}.${m.say}"${m.gone ? ' class="gone"' : ""}${c === cur ? ' aria-current="true"' : ""}>` +
@@ -137,45 +199,12 @@ function init() {
     return { html, gone: rec.done !== "open", say };
   }
 
-  /* the order everyone reads: list, numbers, Prev/Next, [ ], and the first problem after an upload (offline.js).
-     Seeded shuffle, then mastery (design/NAV.md "Mastery order"): answered first, the open one, then the families with the most
-     wrong tries. Silent: it re-sorts on a bank change, the shuffle button, and the first open after a mark changed (drill:marks). */
-  /* sugar snacks ride right before their real (glue, design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
-  const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
-  const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
-  const order = all => {
-    const r = redo();                                                // a redo round: only its codes, its own shuffle, no snack glue
-    return r ? shuffled(all.filter(c => r.codes.includes(c)), "redo" + r.n) : glue(mastery(shuffled(all, seed(ORDER, "")), mark, cur), beforeOf);
-  };
-  window.stemOrder = all => order(all);
-  shuf.addEventListener("click", () => {
-    newSeed(ORDER);
-    update(cur);
-    panel.scrollTop = 0;
-    const i = codes.indexOf(cur);
-    say(`Shuffled. This is ${i + 1} of ${codes.length}.`);
-  });
-
-  /* Redo my misses: the questions with a wrong try (a miss, even one fixed on try 2), read before the round starts */
-  let redoT = 0;
-  redoBtn.addEventListener("click", () => {
-    if (redo()) { window.stemRedo.exit(); say("Back to all questions."); return; }
-    const missed = codes.filter(c => ((mark(c) || {}).x || 0) > 0);
-    if (!missed.length) {
-      redoTx.textContent = "No misses yet"; clearTimeout(redoT);
-      redoT = setTimeout(() => { if (!redo()) redoTx.textContent = "Redo misses"; }, 1600);
-      say("No misses yet."); return;
-    }
-    close(false);
-    if (window.stemRedo.start(missed)) say(`Redo: ${missed.length} missed question${missed.length > 1 ? "s" : ""}, shuffled.`);
-  });
-
   const rows = () => [...list.querySelectorAll("a")];
   function open() {
     if (!panel.hidden) return;
     panel.hidden = false;
     btn.setAttribute("aria-expanded", "true");
-    shown(true);
+    showList(true);
     const a = list.querySelector("[aria-current]") || rows()[0];
     if (!a) return;
     panel.scrollTop = Math.max(0, a.offsetTop - (panel.clientHeight - a.offsetHeight) / 2);
@@ -185,24 +214,27 @@ function init() {
     if (panel.hidden) return;
     panel.hidden = true;
     btn.setAttribute("aria-expanded", "false");
-    shown(false);
+    showList(false);
     if (back) btn.focus();
   }
-  /* the code box and Shuffle come with the list (Tony, Oct 5 clutter pass C2 / C15): html.ql-open shows them (nav.css, app.css);
+  /* the code box comes with the list (Tony, Oct 5 clutter pass C2 / C15): html.ql-open shows it (nav.css, app.css);
      app.js puts the phone's code bar up while it is open (drill:qlist) */
-  function shown(on) { document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } })); }
+  function showList(on) { document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } })); }
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
   function go(d) {
-    const i = codes.indexOf(cur);
-    let k = i + d;
-    /* Next steps over a snack while the student is cruising (last 10 first tries > 90% right: the rewards decide, app.js) */
-    while (d > 0 && !redo() && codes[k + 1] && snack(codes[k]) && window.stemSkipSnack && window.stemSkipSnack()) k++;
-    const c = codes[k];
-    if (i < 0 || !c) return;
-    d = k - i;
+    const st = Q();
+    let e = null;
+    if (d < 0) { const b = hop(st, -1); if (b < 0) return; st.at = b; e = st.hist[b]; save(); }
+    else {
+      const n = upNext(); if (!n) return;
+      e = n.e;
+      if (n.step != null) { st.at = n.step; save(); } else pending = e;
+    }
     close(false);
-    location.hash = c;                                               // app.js: hashchange -> load(c)
-    say(`${i + d + 1} of ${codes.length}. ${titleOf(off().get(c))}`);
+    use(e);
+    if (e.c === cur && d > 0 && pending) { shown(e.c, true); update(cur); }   // a one-question bank: the same code, a new showing
+    else location.hash = e.c;                                        // app.js: hashchange -> load(c)
+    say(titleOf(off().get(e.c)) || e.c);
   }
 
   btn.addEventListener("click", () => { if (panel.hidden) open(); else close(false); });
@@ -218,17 +250,21 @@ function init() {
     else if (to !== undefined && r.length) { e.preventDefault(); r[Math.max(0, Math.min(r.length - 1, to))].focus(); }
   });
   /* an outside tap closes it: the list floats over the page (Tony, Oct 6), so closing moves nothing under the pointer.
-     Taps on its own bar row (the button, the code box, Shuffle, Redo) keep it open. Also: the button, Escape, a pick, Prev/Next. */
+     Taps on its own bar row (the button, the code box) keep it open. Also: the button, Escape, a pick, Prev/Next. */
   document.addEventListener("pointerdown", e => {
-    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, #qshuf, #qredo, .code-sug")) return;
+    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, .code-sug")) return;
     close(false);
   });
-  /* the order is a snapshot: it changes on a bank, a shuffle, or the first open after a mark changed (Tony, Oct 3: never
-     under your thumb while you are on a question). The re-sort runs inside the open's own update, so Prev never flickers. */
-  let dirty = false;
-  addEventListener("drill:problem", e => { update(e.detail && e.detail.code, dirty); dirty = false; });
-  addEventListener("drill:marks", () => { dirty = true; if (!nav.hidden) update(cur, false); });   // offline.js: a mark changed
-  addEventListener("drill:bank", () => { dirty = false; update(cur); });                          // a bank opened or left (app.js)
+  /* re-rank after every answer (D62): only the FIRST graded pick of a showing moves the queue; a retry is logged (shuffle.mjs) */
+  addEventListener("drill:answer", e => {
+    const d = e.detail || {};
+    if (!d.code || d.code !== cur || !off()) return;
+    qAnswer(Q(), d.code, !!d.right, { spam: typeof d.ms === "number" && d.ms < SPAM_MS }); save();   // a guess in under 2 s: logged, no weight
+  });
+  addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c); });
+  addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
+  addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
-  if (s) update(s.code);
+  if (s) { if (all().includes(s.code)) shown(s.code); update(s.code); }
+  window.stemQueue = { item: () => { const st = Q(); return st.hist[st.at] || null; }, state: () => Q() };   // tests + the Redeem chip later
 }
