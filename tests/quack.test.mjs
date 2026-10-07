@@ -88,3 +88,8 @@ test("withQuack strips multiple variations of QUACK prefix", () => {
     assert.ok(result.includes("hint text"), `Failed for: ${text}, got: ${result}`);
   }
 });
+
+test("emotes vary across nearby seeds too", () => {
+  const faces = new Set(Array.from({ length: 30 }, (_, i) => quack("PHYS_KWV:" + i).split(" ").slice(-1)[0] + quack("PHYS_KWV:" + i).slice(-3)));
+  assert.ok(faces.size >= 8, `only ${faces.size} different faces over 30 nearby seeds`);
+});

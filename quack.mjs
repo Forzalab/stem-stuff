@@ -43,7 +43,7 @@ export function quack(seed, prev = "") {
 
   // Pick QUACK word and emote deterministically from hash
   const quackIdx = hash % QUACKS.length;
-  const emoteIdx = Math.floor(hash / QUACKS.length) % EMOTES.length;
+  const emoteIdx = hashSeed(seed + "|emote") % EMOTES.length;   // its own hash: nearby seeds get different faces
 
   let result = QUACKS[quackIdx] + " " + EMOTES[emoteIdx];
 
