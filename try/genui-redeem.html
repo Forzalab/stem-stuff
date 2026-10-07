@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Redeem bonus</title>
+<link rel="icon" href="data:,">
+<!-- Agent U (gen-UI swarm, Oct 7 2026; moved from agent Q). The "Redeem +3" chip on a re-queued missed question and the FIXED +3 burst
+     on a right answer: ?v=1|2|3, ?state=idle|right|wrong, ?rm=1 = stills. Wrong = no penalty, "comes back later". D60: one fixed bonus, never
+     random; a Redeem is never lost (D61). Plan + SHAME CHECK: design/plans/UI-UNIFY.md. Serve over http, then /try/genui-redeem.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<script src="../vendor/katex/katex.min.js"></script>
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../rewards/rewards.css">
+<link rel="stylesheet" href="genui-ui.css">
+<link rel="stylesheet" href="genui-redeem.css">
+</head>
+<body>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<div class="bar" role="toolbar" aria-label="Mockup controls">
+  <span class="lab">Variant</span><div class="seg" id="segV"></div>
+  <span class="lab">State</span><div class="seg" id="segS"></div>
+</div>
+<main class="wrap app-wrap">
+  <section class="app rw-skin" id="app" aria-label="Question"></section>
+
+  <h1 class="page-h" id="vname"></h1>
+  <p class="lead" id="vlead"></p>
+  <div class="why">
+    <p><b>Same in all three.</b> The bonus is always +3, never a spin. A Redeem can't be lost: a miss costs nothing and the question returns later, still worth +3. The burst moves 14 px at most and fades; with reduced motion it is a still "+3".</p>
+    <p><b>Where it sits.</b> v1 in the label row (top left area, not a control), v2 on the question card, v3 beside the Check button. None of them is a button: nothing to tap by mistake.</p>
+  </div>
+
+  <div class="fbk">
+    <label for="note">Your notes on this variant</label>
+    <textarea id="note" maxlength="4000" rows="3" placeholder="What felt off? What would she feel?"></textarea>
+    <div class="row"><button type="button" class="copy" id="copyAll">Copy all</button><span id="copied" aria-live="polite"></span></div>
+  </div>
+
+  <section class="prime" aria-labelledby="primeH">
+    <h2 id="primeH">Priming questions</h2>
+    <ol>
+      <li>Does she notice it came back before she reads the stem, and does that feel like a second chance or a test she failed before?</li>
+      <li>Does "+3" read as a fixed promise she can count on?</li>
+      <li>After a miss on a Redeem, does she believe nothing was taken?</li>
+      <li>Is the burst where her eye already is at the moment of the right answer?</li>
+      <li>Does any variant make the question feel like homework she owes?</li>
+      <li>Which one would make her want the next Redeem tomorrow?</li>
+    </ol>
+  </section>
+</main>
+<script src="genui-kit.js"></script>
+<script src="genui-redeem.js"></script>
+</body>
+</html>
