@@ -81,7 +81,7 @@ try {
     await page.waitForSelector("#wish:not([hidden]) .wchip", { timeout: 6000 });
     await page.waitForTimeout(400);
     assert.deepEqual(await leaks(page), []);
-    assert.match(await page.textContent("#fb .cluck"), /QUACK\. Total mass\./);
+    assert.match(await page.textContent("#fb .cluck"), /^\s*qu+a+c+k\S*\s.*Total mass\./i);   // D72: a generated QUACK prefix replaces the bank's "QUACK."
     await page.click("#wish .wchip");
     await page.waitForFunction(() => /Six over three/.test(document.querySelector("#cluck .wtext, .cl .msg.me .md")?.textContent || ""), null, { timeout: 6000 });
     assert.deepEqual(await leaks(page), []);
