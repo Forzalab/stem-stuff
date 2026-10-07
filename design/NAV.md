@@ -35,20 +35,28 @@ Why not "codes this browser already opened" in server mode:
 
 So: server mode looks exactly as it does today (the code bar), and the empty page stays blank.
 
-### Mastery order
+### Mastery order (now: the queue, design/plans/QUEUE.md)
 
-On top of the seeded shuffle, `shuffle.mjs` `mastery(order, recOf, cur)` sorts the list (nav.js `order()`, with `mark(c)` as `recOf`):
-answered questions (done `correct` or `out`) first, in their seeded order; then the open question `cur` if it is unanswered; then the
-other unanswered ones, the families with the most wrong tries first (family = prefix + the suffix's first letter, `CSCI26_C2A` →
-`CSCI26_C`; weight = all wrong tries `x` of its members, a wrong-then-right still counts). Seeded order breaks ties. So Next after a
-graded try goes to the weakest topic. Silent: no message, nothing else changes. The order is a snapshot, recomputed on a bank
-change, the shuffle button, and the first open after a mark changed (`drill:marks`, from `offline.js` `donePut`/`doneDrop`, fired
-only when the list's mark, wrong tries or done, really changed; a server gen sync is silent). Answering never moves the list under
-you (Tony, Oct 3: Prev flickered off after every Next, because a quiet sync re-sorted the current question to the front). Other
-opens keep it, so Prev / Next walk a list that holds still (re-sorting on every open would bounce Next between two open questions).
-In a bank, Next opens the question from the bank in memory at once; `p/CODE.json` still goes out in the background (the server's
-resume pointer). `window.stemOrder` (the first
-problem of an upload or a bank) uses the same order. Unit tests: `tests/shuffle.test.mjs`.
+> **Update (PR D, D56–D64):** the seeded shuffle, the mastery sort and the Shuffle button are gone, and so is "Redo my misses"
+> (D50). Next plays a hidden per-bank queue (`shuffle.mjs` `qPick`, state in localStorage `stem-q-<BANK>`): fresh, least-seen
+> topics first, every 4th slot the least-seen topic, a miss back after 3, then 8, then 20 other questions as a Redeem showing
+> (graded fresh in its own round), a right one far back, never the same code within 3. Only the first pick of a showing moves it.
+> No queue UI (D57): Next is the whole interface.
+
+- **Next**: forward through what was already shown (after Prev), else the queue's pick (a sugar snack first, right in front of
+  its real, unless the rewards say skip). Never disabled while the bank has a question.
+- **Prev**: back through what was shown in this bank (`hist`). Disabled on the first one. History steps are not new showings.
+- **The list**: a jump index, not the queue: the questions already shown in the order they came, then the rest in a fixed
+  salted per-bank order (a row's position can't give its topic away), snacks right above their real. A row opens that question
+  (a new showing). The list is recomputed on every open and mark change.
+- **Answers**: app.js fires `drill:answer` `{ code, right }` after each graded pick; nav.js re-ranks (D62). `drill:problem` records
+  a showing unless the code is the history item already open (a reload, Prev / Next through history).
+- **First question**: the server's resume pointer (`at`), else the queue's pick (`window.stemOrder(list)[0]`, used by app.js
+  `openBank` and offline.js `first()`).
+- **Old progress**: the first open of a bank under the queue reads the saved marks: rights rest, misses owe a Redeem after a
+  warm-up of 3. Nothing is wiped.
+
+Unit tests: `tests/shuffle.test.mjs`. Browser walk: `tests/queue-walk.pw.mjs`.
 
 When the bank is loaded but the current problem is not in it (a server code typed after an upload), the list shows with no row marked, and Prev / Next are disabled.
 
