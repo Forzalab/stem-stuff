@@ -2,10 +2,11 @@
  * shell (index.html, its css/js, KaTeX): cache-first. Each deploy stamps VERSION (tools/build_public.py), so a deploy = a new
  * sw.js: it precaches the whole new shell, takes over and drops the old shell cache in one go; offline.js reloads the page
  * (design/DEPLOY.md, Oct 6: the page used to climb one deploy per reload). Unstamped (serve.py, dev): updated in the
- * background, a changed file tells the page (update bar).
+ * background, a changed file tells the page (update bar); stamped, a changed file is left to the next sw.js.
  * p/<CODE>.json: network-first, cached copy when offline.
  * k/, log/, /check and anything non-GET: never touched, never cached. */
 const VERSION = "stem-v4";                                     // tools/build_public.py: "stem-<PR>-<sha>" per deploy
+const STAMPED = VERSION !== "stem-v4";                         // a deploy (stamped) vs serve.py / dev (unstamped)
 const SHELL = VERSION + "-shell";
 const PROBS = "stem-v4-p";                                      // fixed (v4's name): problems saved for offline survive every deploy
 const CDN = ["https://cdnjs.cloudflare.com/ajax/libs/KaTeX/"];
@@ -75,6 +76,8 @@ const good = r => r && (r.ok || r.type === "opaque");
 
 // Same sw.js, different file (dev: serve.py edits): the background refresh stores it, then tells every open page, which
 // shows "New version ready. Tap to update." (offline.js). Stored first, so the tap never reloads into the old copy.
+// Stamped (a deploy): a different file means the NEXT deploy, whose new sw.js is on its way. Not stored, no bar: the old
+// way, the bar came first, the tap reloaded under this old worker (a half-old shell) and the new one's takeover needed a 2nd tap.
 async function differs(a, b) {
   const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
   if (x.byteLength !== y.byteLength) return true;
@@ -112,6 +115,7 @@ self.addEventListener("fetch", e => {
     const fresh = fetch(req).then(async r => {
       if (!good(r)) return r;
       const changed = !!old && await differs(old, r.clone());
+      if (changed && STAMPED) return r;                     // a deploy: its own sw.js swaps the whole shell (offline.js); never mix it into ours
       await c.put(key, r.clone());
       if (changed) newVersion();
       return r;
