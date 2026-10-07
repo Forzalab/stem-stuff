@@ -744,6 +744,14 @@ function strike(o) {                                        // a wrong choice: u
   o.querySelector(".badge").innerHTML = icon("i-x");
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
+/* one-shot feedback on a choice (Tony, Oct 6 TK1): a wrong pick shakes once, a right one pulses. CSS only animates it (app.css
+   .opt.jolt / .opt.pop), reduced motion keeps it still. Live picks only: a restored try never shakes */
+function nudge(o, cls) {
+  if (!o) return;
+  o.classList.remove(cls); void o.offsetWidth;
+  o.classList.add(cls);
+  o.addEventListener("animationend", () => o.classList.remove(cls), { once: true });
+}
 async function submitMC() {
   if (all(S.prob)) return submitAll();
   const o = opts().find(x => x.dataset.id === S.selected); if (!o || S.finished || busy) return;
@@ -755,9 +763,9 @@ async function submitMC() {
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
   const send = o.parentElement.querySelector(".send");
-  if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); finish(); }
+  if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); nudge(o, "pop"); finish(); }
   else if (r.verdict === "wrong") {
-    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x");
+    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); nudge(o, "jolt");
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
     if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
@@ -781,13 +789,13 @@ async function submitAll() {
   if (r.verdict !== "invalid") record({ a: S.prob.fix ? { tick, fix: Object.fromEntries(xs.map(o => [o.dataset.l, f[o.dataset.id]])) } : tick, c, l: on.map(o => o.dataset.l),
     ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}) }, r);
   if (r.verdict === "correct") {
-    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); nudge(o, "pop"); }
     for (const o of xs) fixOf(o).classList.add("ok", "done");
     finish();
   } else if (r.verdict === "wrong") {
     const o = r.struck && opts().find(x => x.dataset.id === r.struck), was = document.activeElement;
     const bad = r.fixWrong && opts().find(x => x.dataset.id === r.fixWrong); if (bad && fixOf(bad)) fixOf(bad).classList.add("bad");
-    strike(o); syncTicks();
+    strike(o); nudge(o, "jolt"); syncTicks();
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
