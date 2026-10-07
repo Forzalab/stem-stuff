@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Next on phones</title>
+<link rel="icon" href="data:,">
+<!-- Agent NM (gen-UI swarm, Oct 7 2026). Tony: "move the top bar downwards for mobile, show a next button after answer is correct".
+     7 variants ?v=1..7, reduced motion ?rm=1, jump to a state ?state=q|picked|wrong|right|out. Real tokens (app.css :root), the real
+     .btn / .btn-label / .opt / .qlist rules (app.css, nav.css). Plan, spec, risks, SHAME CHECK: design/plans/NAV-MOBILE.md.
+     Serve over http: python3 -m http.server, then /try/nav-mobile.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../nav.css">
+<link rel="stylesheet" href="nav-mobile.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-go" viewBox="0 0 24 24"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5 4 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h9A1.5 1.5 0 0 1 20 4.5v11a1.5 1.5 0 0 1-1.5 1.5H16M7.4 11.2a2.1 2.1 0 1 1 2.9 1.95c-.5.25-.8.65-.8 1.2v.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="6" width="13" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="17.6" r=".95" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-duck" viewBox="0 0 24 24"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z" fill="currentColor"/><path d="M12.8 7.8l3.4.9-3.4.9z" fill="var(--c2)"/><circle cx="9.8" cy="7.9" r="1" fill="var(--paper)"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- the bar: fixed at the bottom on phones / touch (thumb zone), sticky at the top on desktop. The shelf (v2) and the result footer (v5) ride on it -->
+<div class="nbwrap" id="nbwrap">
+  <div class="shelf" id="shelf"></div>
+  <div class="foot" id="foot" role="status" aria-live="polite" hidden></div>
+  <nav class="nb" id="nb" aria-label="Questions">
+    <button type="button" class="btn btn-label nb-list" id="listBtn" aria-expanded="false" aria-controls="qlist" aria-label="All questions">
+      <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span class="nb-code">BANK_P2X</span>
+    </button>
+    <button type="button" class="btn nb-notes" id="notesBtn" aria-label="Notes" title="Notes"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg></button>
+    <span class="nb-sp"></span>
+    <button type="button" class="btn nb-prev" id="prevBtn" aria-label="Go back one" title="Go back one"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg></button>
+    <button type="button" class="btn nb-skip" id="skipBtn" aria-label="Skip this one" title="Skip this one"><span class="nb-skiptx">Skip</span><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></button>
+    <span class="slot slot-bar" id="slotBar"></span>
+  </nav>
+  <div class="qlist" id="qlist" hidden><ol id="qlistOl"></ol></div>
+</div>
+
+<main class="nm-main" id="main">
+  <p class="mtag" id="mtag" aria-hidden="true"></p>
+  <section class="nm-q" aria-labelledby="pcode">
+    <article class="p" id="problem">
+      <h1 class="pcode sr-only" id="pcode"></h1>
+      <div class="blocks md" id="blocks"></div>
+    </article>
+    <div class="q" id="q"></div>
+    <div class="fb" id="fb" aria-live="polite"></div>
+    <div class="slot slot-card" id="slotCard"></div>
+  </section>
+
+  <section class="mock" aria-labelledby="mockH">
+    <h2 class="mock-h" id="mockH">Mockup controls</h2>
+    <div class="mrow"><span class="lab" id="labV">Variant</span><div class="seg" id="segV" role="group" aria-labelledby="labV"></div></div>
+    <div class="mrow"><span class="lab" id="labS">Jump to</span><div class="seg" id="segS" role="group" aria-labelledby="labS"></div></div>
+    <div class="mrow"><span class="lab" id="labT">Also</span><div class="seg" role="group" aria-labelledby="labT">
+      <button type="button" id="tCluck" aria-pressed="false">Cluck sheet</button>
+      <button type="button" id="tKb" aria-pressed="false">Keyboard up</button>
+      <button type="button" id="tRm" aria-pressed="false">Reduced motion</button>
+    </div></div>
+
+    <h2 class="page-h" id="vname"></h2>
+    <p class="lead" id="vlead"></p>
+    <dl class="why" id="vwhy"></dl>
+
+    <div class="fbk">
+      <label for="note">Your notes on this variant</label>
+      <textarea id="note" maxlength="4000" rows="3" placeholder="Where did your thumb go after the right answer? What felt off?"></textarea>
+      <div class="frow"><button type="button" class="copy" id="copyAll">Copy all</button><span id="copied" aria-live="polite"></span></div>
+    </div>
+
+    <section class="prime" aria-labelledby="primeH">
+      <h2 id="primeH">Priming questions</h2>
+      <ol>
+        <li>Right after the green check, where did your thumb go first? Was "Next" already there?</li>
+        <li>After a wrong pick, did anything look like "move on" louder than "pick again"?</li>
+        <li>On the long question (the Ferris wheel), could you reach the choices and Next without scrolling back up?</li>
+        <li>With the Cluck sheet open, could you still see and tap Next?</li>
+        <li>With the keyboard up, did the bar get in your way, and did Next come back once you were right?</li>
+        <li>Did anything ever cover a choice or the line under it?</li>
+        <li>At midnight, tired, would you know in under a second how to go on? Which variant felt like the app was waiting for you, not pushing you?</li>
+        <li>Out of tries: does "This one comes back around." feel like a door, or like a verdict?</li>
+        <li>Desktop: does the same Next feel like the same app as on the phone?</li>
+      </ol>
+    </section>
+  </section>
+</main>
+
+<!-- v7: Next floats in the thumb zone (extended button), only once the question is done -->
+<div class="fab" id="fab" hidden><span class="slot slot-fab" id="slotFab"></span></div>
+
+<!-- Cluck, partial sheet (agent U v1): sits ABOVE the bar, so Next is never under it -->
+<aside class="sheet ai-skin" id="sheet" aria-labelledby="sheetH" hidden>
+  <div class="sh-head"><svg class="ico sh-duck" aria-hidden="true"><use href="#i-duck"/></svg><h2 id="sheetH">Cluck</h2>
+    <button type="button" class="btn sh-x" id="sheetX" aria-label="Close Cluck" title="Close Cluck"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <p class="sh-line" id="sheetLine"></p>
+  <div class="sh-row"><button type="button" class="btn btn-label sh-retry" id="sheetRetry">Pick again</button><span class="slot slot-sheet" id="slotSheet"></span></div>
+</aside>
+
+<!-- stand-in for the phone keyboard (answer boxes): ?Keyboard up -->
+<div class="kb" id="kb" role="group" aria-label="Phone keyboard stand-in" hidden><div class="kb-in" id="kbIn" aria-hidden="true"></div><button type="button" class="kb-done" id="kbDone">Hide keyboard</button></div>
+
+<script src="nav-mobile.js"></script>
+</body>
+</html>
