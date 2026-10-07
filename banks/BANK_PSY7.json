@@ -1225,30 +1225,30 @@
   },
   {
    "code": "PSY_7BB",
-   "title": "The cuddle chemical's origin",
+   "title": "Spray, trust, and staying together",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "In a lab, couples who receive a nasal spray of a certain hormone share more money with a partner in a trust game. The hormone is a peptide linked to bonding and nursing. Where in the body is this hormone MOST accurately said to be produced?"
+     "md": "In a study, partners who get a nasal spray of a brain chemical made in the hypothalamus act more generous, look at each other's faces more, and score higher on empathy. Which idea does this MOST directly support?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "in the hypothalamus, because oxytocin is made there and released into brain and blood"
+     "md": "a chemical basis for commitment, because oxytocin fosters trust and bonding that keep relationships going"
     },
     {
      "id": "b",
-     "md": "in the pituitary gland, because oxytocin is made there and stored only in that gland"
+     "md": "the broaden-and-build hypothesis, because positive emotions widen attention and build new skills"
     },
     {
      "id": "c",
-     "md": "in the amygdala, because oxytocin is made there to dampen fear of unfamiliar people"
+     "md": "the facial feedback idea, because looking at faces more often makes people feel what others feel"
     },
     {
      "id": "d",
-     "md": "in the orbitofrontal cortex, because oxytocin is made there to guide social judgments"
+     "md": "suppression as regulation, because the spray lowers outward signs of anger during conflict"
     }
    ],
    "correct": "a",
@@ -1298,13 +1298,8 @@
      "md": "money buys well-being, because both students named activities that cost money"
     }
    ],
-   "correct": "d",
+   "correct": "a",
    "wrong": [
-    {
-     "choice": "a",
-     "error": "misread",
-     "hint": "QUACK."
-    },
     {
      "choice": "b",
      "error": "misread",
@@ -1312,6 +1307,11 @@
     },
     {
      "choice": "c",
+     "error": "misread",
+     "hint": "QUACK."
+    },
+    {
+     "choice": "d",
      "error": "misread",
      "hint": "QUACK."
     }
@@ -1366,30 +1366,30 @@
   },
   {
    "code": "PSY_7BE",
-   "title": "The lowest point in the life span",
+   "title": "Dreading getting older",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "A researcher pools happiness surveys from over 40 cultures, including farmers, nurses, and retirees. At about what age is happiness MOST likely to hit its low point?"
+     "md": "Jae, 22, who studies film and works nights at a cinema, fears that each decade after college will be less happy than the last. What do surveys from over 40 cultures MOST suggest about her fear?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "around 20, because young adults face the most uncertainty about jobs and partners"
+     "md": "it holds, because happiness drops steadily with each decade of adult life after the early twenties"
     },
     {
      "id": "b",
-     "md": "around 50, because happiness falls from adolescence to midlife and then rises"
+     "md": "it is wrong, because happiness dips to a low near 50 and then rises for about twenty years"
     },
     {
      "id": "c",
-     "md": "around 75, because happiness plateaus then and declines with failing health"
+     "md": "it is wrong, because happiness peaks in midlife when careers and families are most settled"
     },
     {
      "id": "d",
-     "md": "around 35, because raising young children produces the most daily stress"
+     "md": "it holds, because happiness falls sharply around 35 and stays low through older age"
     }
    ],
    "correct": "b",
@@ -1413,30 +1413,30 @@
   },
   {
    "code": "PSY_7BF",
-   "title": "Which nation is happiest",
+   "title": "What makes a nation happy",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "A travel blogger visits Brazil, the U.S., Finland, and Singapore, noting the food and the weather in each. According to the World Happiness Report, which country is MOST likely to rank happiest, and why?"
+     "md": "Two countries have the same average income and similar weather. One offers free day care, strong schools, paid parental leave, and elder care; the other offers few such programs. According to the World Happiness Report, which is MOST likely to rank happier, and why?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "the U.S., because higher average income raises everyone's emotional well-being"
+     "md": "neither, because national happiness depends mostly on average income, which is the same"
     },
     {
      "id": "b",
-     "md": "Singapore, because dense cities provide more chances for daily social contact"
+     "md": "the second, because people who rely less on government feel more freedom and autonomy"
     },
     {
      "id": "c",
-     "md": "Finland, because strong safety nets like day care and leave raise happiness"
+     "md": "the first, because strong social safety nets are what the happiest countries share"
     },
     {
      "id": "d",
-     "md": "Brazil, because warm climates and outdoor life produce more positive emotion"
+     "md": "neither, because climate and sunlight explain most differences in national happiness"
     }
    ],
    "correct": "c",
@@ -1460,30 +1460,30 @@
   },
   {
    "code": "PSY_7BG",
-   "title": "Ranking the daily activities",
+   "title": "Planning a happier weekday",
    "type": "mc",
    "body": [
     {
      "type": "text",
-     "md": "Using the day reconstruction method, women in Texas rated each activity of the previous day: socializing after work, eating lunch, watching TV, working, and commuting. Which activity was MOST likely rated least pleasant?"
+     "md": "Omar, a nurse who collects vinyl records, wants to feel better day to day without changing jobs. Based on studies where people rated each activity of their previous day, which change would MOST likely raise his moment-to-moment mood?"
     }
    ],
    "choices": [
     {
      "id": "a",
-     "md": "watching TV, because passive activities give little sense of meaningful engagement"
+     "md": "more time alone on his phone, because rest after work is the highest-rated part of the day"
     },
     {
      "id": "b",
-     "md": "eating lunch, because meals at work are usually rushed and eaten alone at a desk"
+     "md": "more overtime shifts, because working is rated among the most pleasant daily activities"
     },
     {
      "id": "c",
-     "md": "socializing, because after-work events often create obligation and social stress"
+     "md": "a longer drive to a nicer area, because commuting time is rated as neutral and harmless"
     },
     {
      "id": "d",
-     "md": "commuting, because it ranked lowest of all the activities people reported that day"
+     "md": "less commuting and more socializing, because those rate lowest and highest in a day"
     }
    ],
    "correct": "d",
