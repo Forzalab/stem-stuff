@@ -5,7 +5,7 @@
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave } from "./shuffle.mjs";
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest } from "./shuffle.mjs";
 const MAX = 60;
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
@@ -122,9 +122,16 @@ function init() {
     save();
   }
   /* the next item: forward through history first, then a real waiting behind its snack, then the queue's pick */
+  /* the nearest history item in direction d that is still in the list (an older upload's codes are skipped), or -1 */
+  function hop(st, d) {
+    const live = new Set(all());
+    for (let i = st.at + d; i >= 0 && i < st.hist.length; i += d) if (live.has(st.hist[i].c)) return i;
+    return -1;
+  }
   function upNext() {
     const st = Q();
-    if (st.at < st.hist.length - 1) return { e: st.hist[st.at + 1], step: true };
+    const fw = hop(st, 1);
+    if (fw >= 0) return { e: st.hist[fw], step: fw };
     const live = new Set(pool());
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
@@ -143,13 +150,10 @@ function init() {
     const p = live.length ? qPick(Q(), live, topicOf) : null;
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
-  /* the list (a jump index, not the queue): shown ones in the order they first came, then the rest in a fixed per-bank order
-     (salted, so a row's position can't give its topic away); snacks right above their real */
+  /* the list (a jump index, not the queue): one fixed per-bank order that never moves under you (salted, so a row's position
+     can't give its topic away); snacks right above their real */
   function rows0(cs) {
-    const st = Q(), h = c => { let x = 2166136261; for (const ch of st.salt + c) x = Math.imul(x ^ ch.charCodeAt(0), 16777619); return x >>> 0; };
-    const since = new Map(); st.hist.forEach((e, i) => { if (!since.has(e.c)) since.set(e.c, i); });
-    const key = c => since.has(c) ? since.get(c) : 1e6 + h(c) / 4294967296;
-    return glue([...cs].sort((a, b) => key(a) - key(b)), beforeOf);
+    return glue(qRest(Q(), cs), beforeOf);
   }
 
   function update(code) {
@@ -165,8 +169,9 @@ function init() {
     root.classList.toggle("qnav-on", on);
     if (!on) { close(false); return; }
     const st = Q(), focused = document.activeElement;
-    prev.disabled = st.at <= 0;
-    next.disabled = !pool().length;                                  // Next always works: the queue never runs dry
+    const here = codes.includes(cur);                                // a server code typed after an upload: arrows off
+    prev.disabled = !here || hop(st, -1) < 0;
+    next.disabled = !here || !pool().length;                        // Next always works: the queue never runs dry
     if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
@@ -213,11 +218,11 @@ function init() {
   function go(d) {
     const st = Q();
     let e = null;
-    if (d < 0) { if (st.at <= 0) return; st.at -= 1; e = st.hist[st.at]; save(); }
+    if (d < 0) { const b = hop(st, -1); if (b < 0) return; st.at = b; e = st.hist[b]; save(); }
     else {
       const n = upNext(); if (!n) return;
       e = n.e;
-      if (n.step) { st.at += 1; save(); } else pending = e;
+      if (n.step != null) { st.at = n.step; save(); } else pending = e;
     }
     close(false);
     use(e);

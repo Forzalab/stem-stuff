@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { shuffled, mastery } from "../shuffle.mjs";
+import { qNew, qPick, qShow, qRest, qFresh } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -35,7 +35,7 @@ async function run(browserType, label, opts = {}) {
     /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,
        tested in reload.pw.mjs), and these steps assume a fresh page shows server problems only */
     await ctx.addInitScript(() => { try { indexedDB.deleteDatabase("stem-stuff"); } catch { /* no idb */ } });
-    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-order", "pin"); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known list order; the shuffle button may change it later
+    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("pinned")) { localStorage.setItem("stem-q-upload", JSON.stringify({ v: 1, salt: "pin", pos: 0, seen: {}, hist: [], at: -1 })); sessionStorage.setItem("pinned", "1"); } } catch { /* blocked */ } });   // a known queue salt (design/plans/QUEUE.md)
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
@@ -292,10 +292,11 @@ async function run(browserType, label, opts = {}) {
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "my-problems.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
-      const first = shuffled(bank.problems.map(p => p.code), "pin")[0];   // the page opens the first in its (pinned) order
+      const first = qFresh(bank.problems.map(p => p.code), "pin")[0];   // the page opens the queue's first pick (salt pinned)
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, first);
       assert.equal(await page.getAttribute("#qlistBtn", "title"), "my-problems.json", "the list button's title names the file (it says Questions)");
-      assert.ok(await page.locator("#freeze .katex").count() > 0);
+      await page.evaluate(() => { location.hash = "CALC1_QT6B"; }); await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_QT6B");
+      assert.ok(await page.locator("#freeze .katex").count() > 0, "TeX from the uploaded file");   // the first pick is the queue's, so a known TeX one
       const f3n = "PHYS_QF3N";
       await showCode(page);
       await page.fill("#code", f3n); await page.press("#code", "Enter");
@@ -305,33 +306,32 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} nav: hidden for server problems; upload -> list, click a row, next, prev, keys`, async () => {
+      await page.evaluate(() => localStorage.setItem("stem-q-upload", JSON.stringify({ v: 1, salt: "pin", pos: 0, seen: {}, hist: [], at: -1 })));   // a fresh queue for this upload
       await open("CALC1_T6B");
       assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_N");
-      const file = bank.problems.map(p => p.code), codes = shuffled(file, "pin"), n = codes.length;   // the page's order (seed pinned above)
-      assert.notDeepEqual(codes, file, "shuffle kept file order");
+      const file = bank.problems.map(p => p.code), codes = qRest(qNew("pin"), file), n = codes.length;   // the list's fixed order (salt pinned above)
+      assert.notDeepEqual(codes, file, "the list kept file order");
+      const f0 = qFresh(file, "pin")[0], k0 = codes.indexOf(f0);                   // the queue's first pick opens first
       bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
       await ch.setFiles({ name: "bank.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bank)) });
       const at = c => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, c, { timeout: 8000 });
-      await at(codes[0]);
+      await at(f0);
       const nav = page.locator("#qnav"), btn = page.locator("#qlistBtn"), prev = page.locator("#qprev"), next = page.locator("#qnext");
       assert.ok(await nav.isVisible(), "nav hidden after upload");
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
-      const shuf = page.locator("#qshuf");
-      assert.equal((await shuf.textContent()).trim(), "", "shuffle button carries text");
+      assert.equal(await page.locator("#qshuf, #qredo").count(), 0, "Shuffle and Redo are gone (D63, D50)");
       for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
-      assert.ok(await shuf.isHidden(), "C15: Shuffle comes with the list");
-      await btn.click(); { const r = await shuf.boundingBox(); assert.ok(r && r.height >= 48 && r.width >= 48, "Shuffle under 48px"); } await btn.click();
       // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
       assert.equal((await btn.innerText()).trim(), "Questions", "list button label"); assert.equal(await btn.getAttribute("title"), "bank.json", "its title names the file");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
       // placement: beside the entry box on desktop; the top bar on phones and touch, clear of the bottom dock
-      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), shuf: r("#qshuf"), prev: r("#qprev") }; });
+      const g = await page.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(); return { nav: r("#qnav"), entry: r("#entry"), dock: r("#dock"), main: r("#main"), list: r("#qlistBtn"), prev: r("#qprev") }; });
       // desktop: list + shuffle, then the entry box, then Prev/Next at the right (Tony, Sep 30)
-      if (vname === "desktop") assert.ok(await page.locator("#entry").isHidden() && await shuf.isHidden() && Math.abs(g.list.top - g.prev.top) < 1 && g.list.right < g.prev.left, "desktop bar: List, XP, Prev / Next; the box and Shuffle come with the list (C2 / C15, Tony Oct 5)");
+      if (vname === "desktop") assert.ok(await page.locator("#entry").isHidden() && Math.abs(g.list.top - g.prev.top) < 1 && g.list.right < g.prev.left, "desktop bar: List, XP, Prev / Next; the box and Shuffle come with the list (C2 / C15, Tony Oct 5)");
       else assert.ok(g.nav.bottom <= g.main.top + 1 && g.nav.top < 80, `nav not the top bar: ${g.nav.top}`);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-closed-${viewport.width}.png` });
       // list: bare numbers + titles, current marked, focus on the current row
@@ -343,7 +343,7 @@ async function run(browserType, label, opts = {}) {
       assert.deepEqual(await page.locator("#qlist .qn").allTextContents(), codes.map((_, i) => String(i + 1)));
       assert.equal(await rows.nth(1).locator(".qt").textContent(), "Area between a parabola and a line");
       for (const t of await page.locator("#qlist .qt").allTextContents()) assert.ok(t.length <= 60 && !/[\\$]/.test(t), `title ${t}`);
-      assert.equal(await rows.nth(0).getAttribute("aria-current"), "true");
+      assert.equal(await rows.nth(k0).getAttribute("aria-current"), "true");
       assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-current")), "true", "focus not on the current row");
       // a dropdown (Tony, Oct 6): floats over the problem, never over its own bar
       const lr = await page.locator("#qlist").boundingBox(), br = await page.locator("#qlistBtn").boundingBox();
@@ -359,38 +359,31 @@ async function run(browserType, label, opts = {}) {
       await page.keyboard.press("Escape");
       assert.ok(await page.locator("#qlist").isHidden());
       assert.equal(await page.evaluate(() => document.activeElement.id), "qlistBtn", "Escape: focus not back on the button");
-      await next.click(); await at(codes[3]);
+      const st = qNew("pin"); qShow(st, f0); qShow(st, codes[2]);
+      const up = qPick(st, file).code;                                              // Next = the queue's pick, not the next row
+      await next.click(); await at(up);
       if (SHOTS && vname !== "ipad") await page.screenshot({ path: `${SHOTS}/nav-next-${viewport.width}.png` });
       await prev.click(); await at(codes[2]);
       // no keyboard shortcuts (Tony, Oct 2 ~23:59 PT: "kill key shortcut"): [ and ] do nothing outside fields
       await page.locator("#problem").click();
       await page.keyboard.press("]"); await page.waitForTimeout(150);
       assert.equal(await page.locator("#pcode").textContent(), codes[2], "] still navigates");
-      // last question: next off; the list works from the keyboard
+      // Next after Prev steps forward through what was shown; the last row: Next still works (the queue never runs dry)
+      await next.click(); await at(up);
       await page.evaluate(c => { location.hash = c; }, codes[n - 1]); await at(codes[n - 1]);
-      assert.ok(await next.isDisabled() && await prev.isEnabled(), "last question: next off, prev on");
+      assert.ok(await next.isEnabled() && await prev.isEnabled(), "last row: next and prev on");
       await btn.focus(); await page.keyboard.press("ArrowDown");
       await page.keyboard.press("Home"); await page.keyboard.press("Enter");
       await at(codes[0]);
-      // shuffle button: a new order (list, numbers, Prev/Next follow it); the open problem stays open; the order survives a reload
-      const hrefs = () => page.locator("#qlist a").evaluateAll(as => as.map(a => a.getAttribute("href").slice(1)));
-      if (await shuf.isHidden()) await btn.click();                                       // C15: Shuffle lives with the list
-      await shuf.click();
-      const seed2 = await page.evaluate(() => localStorage.getItem("stem-order"));
-      const codes2 = mastery(shuffled(file, seed2), () => null, codes[0]);   // nothing answered: the open problem leads (design/NAV.md "Mastery order")
-      assert.notEqual(seed2, "pin", "shuffle kept the seed");
-      assert.equal(await page.locator("#pcode").textContent(), codes[0], "shuffle moved off the open problem");
-      assert.deepEqual(await hrefs(), codes2, "list not in the new order");
-      const k = codes2.indexOf(codes[0]);
-      if (k < n - 1) { await next.click(); await at(codes2[k + 1]); await prev.click(); await at(codes[0]); }
       // a server problem after the upload: list stays, nothing marked, arrows off
       await showCode(page);
       await page.fill("#code", "CALC1_T6B"); await page.press("#code", "Enter"); await at("CALC1_T6B");
       assert.ok(await nav.isVisible() && await prev.isDisabled() && await next.isDisabled(), "server problem: arrows should be off");
       assert.equal(await page.locator("#qlist [aria-current]").count(), 0);
-      // reload: this harness deletes the bank on every load, so check the seed itself (reload.pw.mjs reloads a kept bank)
+      // reload: this harness deletes the bank on every load, so check the queue itself (reload.pw.mjs reloads a kept bank)
+      const q1 = await page.evaluate(() => localStorage.getItem("stem-q-upload"));
       await page.reload();
-      assert.equal(await page.evaluate(() => localStorage.getItem("stem-order")), seed2, "order seed lost on reload");
+      assert.equal(await page.evaluate(() => localStorage.getItem("stem-q-upload")), q1, "queue lost on reload");
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {

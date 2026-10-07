@@ -67,8 +67,8 @@ try {
   const page = await ctx.newPage();
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", e => errors.push(String(e)));
-  const bad = [];
-  page.on("response", r => { if (r.status() >= 400) bad.push(`${r.status()} ${new URL(r.url()).pathname}`); });
+  const bad = []; let ext = 0;           // ext: third-party failures (the brainrot corner's YouTube), not ours
+  page.on("response", r => { if (r.status() < 400) return; const u = new URL(r.url()); if (u.origin !== new URL(BASE).origin) ext++; else bad.push(`${r.status()} ${u.pathname}`); });
   await page.goto(`${BASE}/#${BANK}`);
   await opened(page, "");
   await page.evaluate(() => window.Rewards && window.Rewards.config({ minDwell: 1e12 }));   // no random drops over the choices
@@ -82,14 +82,16 @@ try {
   });
 
   const walk = [];                       // { code, first, redeem, snack }
-  const WRONG = new Set([1, 3, 6, 13, 16]), RETRY = new Set([6, 16]);
+  let keyed = 0;                         // aim wrong on the 1st, 3rd and 6th answerable real; retry-right after the 1st and 6th
+  const WRONG = new Set([1, 3, 6]), RETRY = new Set([1, 6]);
   let missedBack = null;
   await step(`20 answers on ${BANK}: Next each time, a reload at 10`, async () => {
     for (let i = 1; walk.filter(w => w.first).length < 20 && i <= 40; i++) {
       const code = await cur(page), { item } = await qstate(page), snack = !!KEY.get(code)?.saccharine?.snack;
       const locked = !(await page.$("#q .opt:not(:disabled)"));
-      const first = locked ? null : await answer(page, code, !(WRONG.has(i) && !snack));
-      if (first === "wrong" && RETRY.has(i) && (await page.$("#q .opt:not(:disabled)"))) await answer(page, code, true);   // retry-right: logged only
+      const real = !locked && !snack && KEY.get(code)?.type === "mc" && !item?.redeem, n = real ? ++keyed : 0;
+      const first = locked ? null : await answer(page, code, !WRONG.has(n));
+      if (first === "wrong" && RETRY.has(n) && (await page.$("#q .opt:not(:disabled)"))) await answer(page, code, true);   // retry-right: logged only
       walk.push({ code, first, redeem: !!(item && item.redeem), snack, locked });
       if (i === 10) {
         const before = await qstate(page);
@@ -138,8 +140,8 @@ try {
     /* a local serve.py with no OPENROUTER_API_KEY answers Cluck's live lines with 503: a resource status line, not a page error */
     const key503 = bad.filter(b => /^503 \/(explain|cluck|genie|ask)/.test(b)).length, other = bad.filter(b => !/^503 \/(explain|cluck|genie|ask)/.test(b));
     assert.deepEqual(other, [], "failed requests");
-    let left = key503;
-    assert.deepEqual(errors.filter(e => !(/status of 503/.test(e) && left-- > 0)), []);
+    let left = key503 + ext;
+    assert.deepEqual(errors.filter(e => !(/Failed to load resource/.test(e) && left-- > 0)), []);
   });
   if (SHOTS) await page.screenshot({ path: join(SHOTS, `queue-walk-end-${ENGINE}.png`), fullPage: true });
   void missedBack;

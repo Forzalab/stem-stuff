@@ -46,9 +46,9 @@ So: server mode looks exactly as it does today (the code bar), and the empty pag
 - **Next**: forward through what was already shown (after Prev), else the queue's pick (a sugar snack first, right in front of
   its real, unless the rewards say skip). Never disabled while the bank has a question.
 - **Prev**: back through what was shown in this bank (`hist`). Disabled on the first one. History steps are not new showings.
-- **The list**: a jump index, not the queue: the questions already shown in the order they came, then the rest in a fixed
-  salted per-bank order (a row's position can't give its topic away), snacks right above their real. A row opens that question
-  (a new showing). The list is recomputed on every open and mark change.
+- **The list**: a jump index, not the queue: one fixed salted per-bank order (`qRest`) that never moves under you (Tony, Oct 3)
+  and gives no topic away by position, snacks right above their real. A row opens that question (a new showing). Prev / Next
+  skip history items no longer in the list (an older upload) and are off when the open problem is not in it.
 - **Answers**: app.js fires `drill:answer` `{ code, right }` after each graded pick; nav.js re-ranks (D62). `drill:problem` records
   a showing unless the code is the history item already open (a reload, Prev / Next through history).
 - **First question**: the server's resume pointer (`at`), else the queue's pick (`window.stemOrder(list)[0]`, used by app.js

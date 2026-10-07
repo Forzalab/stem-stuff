@@ -27,11 +27,12 @@ const FILE = { v: 1, problems: [num("CALC1_U01", "1", "Upload one"), num("CALC1_
 (await import("node:fs")).mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_AB12.json"), JSON.stringify(BANK));
 
-/* the list is shuffled per browser (design/NAV.md): pin a seed that keeps file order for both tiny banks, re-set on every load
-   (one step wipes storage) */
-const { shuffled } = await import("../shuffle.mjs");
-const same = (a, s) => shuffled(a, s).every((c, i) => c === a[i]);
-const SEED = Array.from({ length: 500 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
+/* the order is a per-bank queue with a random salt (design/plans/QUEUE.md): pin a salt that plays file order for both tiny banks,
+   set again whenever it is missing (one step wipes storage) */
+const { qFresh, qRest, qNew } = await import("../shuffle.mjs");
+const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]) && qRest(qNew(s), a).every((c, i) => c === a[i]);
+const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
+const PIN = s => { try { for (const k of ["stem-q-BANK_AB12", "stem-q-upload"]) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } };
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -53,7 +54,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   for (const [vname, viewport] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1920, height: 1080 }]]) {
     const ctx = await browser.newContext({ viewport, serviceWorkers: "block", hasTouch: vname === "phone", isMobile: vname === "phone" });
-    await ctx.addInitScript(s => { try { if (localStorage.getItem("stem-order") !== s) localStorage.setItem("stem-order", s); } catch { /* blocked */ } }, SEED);
+    await ctx.addInitScript(PIN, SEED);
     const page = await ctx.newPage();
 
     await step(`${vname}: new browser = blank page, no list`, async () => {

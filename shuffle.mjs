@@ -95,6 +95,14 @@ export function qAnswer(st, code, right) {
   else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }
   return true;
 }
+/* the fixed per-bank order of the questions not shown yet (nav.js list rows): salted, so a row's position gives no topic away */
+export const qRest = (st, codes) => [...codes].sort((a, b) => hash(st.salt + a) - hash(st.salt + b));
+/* what a fresh queue with this salt plays when every showing is skipped (tests pin a salt, like they pinned the old seed) */
+export function qFresh(codes, salt, topicOf = family) {
+  const st = qNew(salt), out = [];
+  for (let i = 0; i < codes.length; i++) { const p = qPick(st, codes, topicOf); qShow(st, p.code); out.push(p.code); }
+  return out;
+}
 /* per bank, never mixed (D64): localStorage stem-q-<bank>. A broken or blocked store reads as a fresh queue. */
 export const qKey = bank => "stem-q-" + bank;
 export function qLoad(bank, store = globalThis.localStorage) {
