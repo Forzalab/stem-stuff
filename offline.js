@@ -142,7 +142,7 @@
       const b = document.createElement("button");
       b.id = "updateBar"; b.type = "button"; b.setAttribute("role", "status");
       b.textContent = "New version ready. Tap to update.";
-      b.addEventListener("click", () => { b.disabled = true; taken().then(() => location.reload()); });
+      b.addEventListener("click", () => { b.disabled = true; b.textContent = "Updating…"; taken().then(() => location.reload()); });
       document.body.appendChild(b);
     };
     /* the tap waits (≤15 s) for a new worker still installing to take over: a reload under the old one = a 2nd bar (DEPLOY.md) */
