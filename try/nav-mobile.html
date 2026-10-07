@@ -34,14 +34,13 @@
 <div class="nbwrap" id="nbwrap">
   <div class="shelf" id="shelf"></div>
   <div class="foot" id="foot" role="status" aria-live="polite" hidden></div>
+  <!-- round 2: every bar button carries a word (round 1: "the deck and pencil icons have no labels"); no bank code (it read like code) -->
   <nav class="nb" id="nb" aria-label="Questions">
-    <button type="button" class="btn btn-label nb-list" id="listBtn" aria-expanded="false" aria-controls="qlist" aria-label="All questions">
-      <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span class="nb-code">BANK_P2X</span>
-    </button>
-    <button type="button" class="btn nb-notes" id="notesBtn" aria-label="Notes" title="Notes"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg></button>
+    <button type="button" class="btn tb" id="listBtn" aria-expanded="false" aria-controls="qlist"><svg class="ico" aria-hidden="true"><use href="#i-list"/></svg><span class="cap">Questions</span></button>
+    <button type="button" class="btn tb" id="notesBtn"><svg class="ico" aria-hidden="true"><use href="#i-pen"/></svg><span class="cap">Notes</span></button>
     <span class="nb-sp"></span>
-    <button type="button" class="btn nb-prev" id="prevBtn" aria-label="Go back one" title="Go back one"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg></button>
-    <button type="button" class="btn nb-skip" id="skipBtn" aria-label="Skip this one" title="Skip this one"><span class="nb-skiptx">Skip</span><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg></button>
+    <button type="button" class="btn tb" id="prevBtn"><svg class="ico" aria-hidden="true"><use href="#i-prev"/></svg><span class="cap">Back</span></button>
+    <button type="button" class="btn tb" id="skipBtn"><svg class="ico" aria-hidden="true"><use href="#i-next"/></svg><span class="cap">Skip</span></button>
     <span class="slot slot-bar" id="slotBar"></span>
   </nav>
   <div class="qlist" id="qlist" hidden><ol id="qlistOl"></ol></div>

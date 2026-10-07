@@ -1,4 +1,4 @@
-/* try/nav-mobile.js: the interactive mock for design/plans/NAV-MOBILE.md (agent NM, Oct 7 2026).
+/* try/nav-mobile.js: the interactive mock for design/plans/NAV-MOBILE.md (agent NM, Oct 7 2026; round 2 variants in §7).
    One question screen, 3 MC questions (Q1 long: its choices start below the fold on a phone), 2 tries each.
    pick -> (row arrow, or the bar's Check in v4) -> wrong: "your pick" + the wise-feedback line, Skip stays quiet
    -> right / out of tries: the one Next appears, where the variant puts it. Prev / Next walk the 3 questions (Next past the last
@@ -33,18 +33,18 @@
         ${fig}
         <p>At the highest point, gravity pulls the rider down and the seat pushes up. The rider moves in a circle, so the net force on her points toward the center of the wheel, which is straight down at the top.</p>
         <p>Use g = 9.80 m/s².</p>
-        <p><b>How hard does the seat push up on the rider at the highest point?</b></p>`,
+        <p class="q-ask"><b>How hard does the seat push up on the rider at the highest point?</b></p>`,
       ch: ["584 N", "494 N", "539 N", "45.2 N", "366 N"], right: 1,
       l1: "Tricky one. At the top, the seat and gravity point opposite ways, and the net force points down. So which one has to be bigger? You can get it.",
       ok: "Right. Weight minus the seat's push is what turns her toward the center." },
     { code: "PHYS_KE2", title: "Kinetic energy of a cart",
-      body: `<p>A 2.0 kg cart rolls along a flat track at 3.0 m/s.</p><p><b>What is its kinetic energy?</b></p>`,
+      body: `<p>A 2.0 kg cart rolls along a flat track at 3.0 m/s.</p><p class="q-ask"><b>What is its kinetic energy?</b></p>`,
       ch: ["3.0 J", "6.0 J", "9.0 J", "18 J"], right: 2,
       l1: "This one trips most people: the ½ in ½mv² is easy to drop, and so is the square. Square the speed first. You can get it.",
       ok: "Right. You squared the speed before you halved. That's the move on the exam.", joke: "QUACK. The ½ is tiny, but it bites." },
     { code: "PHYS_OR3", title: "Two satellites, two speeds",
       body: `<p>Satellite A circles Earth at an altitude of one Earth radius, R<sub>E</sub>. Satellite B circles at an altitude of 3R<sub>E</sub>.</p>
-        <p><b>What is the ratio of their orbital speeds, v<sub>B</sub> / v<sub>A</sub>?</b></p>`,
+        <p class="q-ask"><b>What is the ratio of their orbital speeds, v<sub>B</sub> / v<sub>A</sub>?</b></p>`,
       ch: ["0.500", "0.707", "0.577", "1.41"], right: 1,
       l1: "Tricky one, and it trips most people: an orbit's radius is measured from Earth's center, not from the ground. You can get it.",
       ok: "Right. You measured both radii from Earth's center." }
@@ -53,59 +53,70 @@
   const st = Q.map(() => ({ sel: -1, tries: 0, mine: [], done: "" }));   // done: "" | "right" | "out"
   let cur = 0;
 
-  /* ---------- variants ---------- */
+  /* ---------- variants (round 2: design/plans/NAV-MOBILE.md §7) ----------
+     check: where she confirms a pick (bar = the one thumb button, card = a full-width button under the choices, row = a labeled
+     "Check" in the picked row); next: phone / desktop place of the one Next; bottom: the bar sits at the bottom on desktop too;
+     panel: the result slides up above the bar (v6) or replaces it (v5) */
   const VAR = {
-    1: { name: "1 · Dock swap", lead: "The bar moves to the bottom. When she is right, its › turns into a filled Next in the same spot.",
-      why: "The smallest change from prod: the same four buttons, just at the bottom. The thumb learns one spot for “forward” and it is always there.",
-      risk: "The change is small (an icon grows into a word), so a tired eye may still miss it. On 390 px the bar is full: the bank name hides.",
-      desk: "The bar stays on top but sticks (it never scrolls away); the same › turns into the same filled Next." },
-    2: { name: "2 · Next shelf", lead: "A full-width Next slides onto a shelf above the bar. The bar itself never changes.",
-      why: "The biggest target on the screen, right where the thumb rests. Nothing in the bar moves, so the bar stays a calm map.",
-      risk: "Two fixed layers take about 130 px of a 659 px Safari screen while it shows. It can feel like an ad banner.",
-      desk: "The shelf becomes a full-width Next under the answer card." },
-    3: { name: "3 · Next in the card", lead: "Next appears right under the answer she just tapped. The bar at the bottom stays quiet.",
-      why: "Her eyes and thumb are already on the row she picked; Next lands there, with the line that says why she was right.",
-      risk: "Two ways forward (quiet › in the bar, filled Next in the card). Under the Cluck sheet the card is covered, so the sheet carries its own Next.",
-      desk: "The same: Next sits under the answer, at the right edge of the column." },
-    4: { name: "4 · One thumb button", lead: "One button in the bottom-right corner does the next step, and its word says which: Skip, Check, then Next.",
-      why: "Fixes two judge complaints at once: the unlabeled arrow (now “Check”) and no Next. The thumb never moves between pick, check and go.",
-      risk: "The biggest change: no arrow in the row. A long stem puts Check far from the choice. A word that changes under the thumb can be tapped twice by accident (we wait 400 ms before Next takes taps).",
-      desk: "The same button sits under the choices (right edge), not in the top bar, so it stays next to the answer." },
-    5: { name: "5 · Result footer", lead: "After a check, the bar turns into a footer: the one line about her answer, and the way on.",
-      why: "Like Duolingo's footer: the verdict and the action in one place, at the thumb. A wrong pick shows the wise-feedback line and a quiet Skip, no Next.",
-      risk: "The footer covers the bottom of the page while it shows (we add room under the choices). Prev and the list hide until the next question.",
-      desk: "The footer is a strip under the card, the same words and the same Next." },
-    6: { name: "6 · Segmented bar", lead: "The bar is one segmented control: Back, the list, notes, and a wide Next segment that fills when she is right.",
-      why: "The bar reads as one object with a clear forward end. Next is always in the same half of the bar, even before it is the action (as a quiet Skip).",
-      risk: "Segments look like tabs; a quiet Skip in the forward slot may tempt skipping a retry. No progress count on purpose (no counters, STYLE §1.10).",
-      desk: "The same segmented bar at the top of the column, sticky." },
-    7: { name: "7 · Floating Next, peek bar", lead: "The bar hides while she scrolls down to read and comes back on scroll up. Next floats over the thumb once she is right.",
-      why: "The most room for a long question on a small phone. Next does not depend on the scroll: it shows on the answer, not on a gesture.",
-      risk: "The judges saw a bar that would not come back on scroll up. Here only Back, list and Skip depend on the scroll, but that is still a hidden control (STYLE §1.11).",
-      desk: "No hiding on desktop: a sticky top bar, and the floating Next sits at the bottom-right of the column." }
+    1: { name: "1 · Thumb button, card on desktop", cfg: { check: ["bar", "card"], next: ["bar", "card"], bottom: false },
+      lead: "Phone: v4's one button in the bar (Skip, Check, Next). Desktop keeps its top bar; Check and Next sit under the choices and stick to the bottom of the window, so they never fall below the fold.",
+      why: "Each screen gets its native place: the thumb spot on a phone, the end of the content on a desktop. One button, same words, same blue.",
+      risk: "The two screens use two different places, so unity rests on the words alone. On desktop the sticky Check floats over the last choices while you scroll up to them.",
+      desk: "Top bar: Questions, Notes, Back, Skip. Check / Next: under the choices, full column width, stuck to the window bottom." },
+    2: { name: "2 · Next shelf", cfg: { check: ["row", "row"], next: ["shelf", "card"], bottom: false },
+      lead: "A full-width Next question slides onto a shelf above the bar. The picked row says Check in words. The bar's Skip hides while a pick or the shelf is up.",
+      why: "The biggest target on the screen, right where the thumb rests. One forward button at a time.",
+      risk: "Two layers at the bottom take ~140 px of a 659 px Safari view while the shelf shows. Check is in the row, Next at the bottom: two places.",
+      desk: "The same full-width Next under the feedback, stuck to the window bottom; top bar keeps Questions, Notes, Back." },
+    3: { name: "3 · Check and Next in the card", cfg: { check: ["card", "card"], next: ["card", "card"], bottom: false },
+      lead: "After a pick, a full-width Check appears under the choices, and the same button turns into Next. It sticks to the bottom of the screen when the question is long.",
+      why: "Eyes and thumb stay on the answer; Check and Next are one button in one place, on both screens. No row arrow, no second forward.",
+      risk: "On a phone, the card button stacks over the bar (two layers); while picking it can sit over the lower choices until you scroll.",
+      desk: "Identical: the full-width card button, stuck to the window bottom; the top bar has no forward button while it shows." },
+    4: { name: "4 · One thumb button", cfg: { check: ["bar", "bar"], next: ["bar", "bar"], bottom: true },
+      lead: "One bar at the bottom, on the phone AND on desktop. Its right button says what it does: Skip (quiet), Check (after a pick), Next (after right or out of tries).",
+      why: "Round 1 winner (median 85), now the same on desktop: the bar and its button are pinned to the bottom of the window, so nothing is ever below the fold.",
+      risk: "On a wide desktop the button is far right of the choices (the bar spans the content column, so it lines up with the choices' right edge). A word changing under the thumb invites a double tap (400 ms guard).",
+      desk: "The same bar, the same buttons, pinned to the bottom of the content column." },
+    5: { name: "5 · Result footer", cfg: { check: ["row", "row"], next: ["foot", "foot"], bottom: true, foot: true },
+      lead: "The picked row says Check in words. After a check, the bar turns into a footer with the one line about her answer and the way on: Next question, or Ask Cluck + Skip for now.",
+      why: "Verdict and action in one place, at the thumb (Duolingo's habit). Now the same footer on desktop, pinned to the bottom of the column.",
+      risk: "Check is in the row, the result at the bottom: the eye jumps once. The footer is tall; Prev and the list hide until the next question.",
+      desk: "The same footer, the same words, pinned to the bottom of the content column." },
+    6: { name: "6 · Thumb button + result panel", cfg: { check: ["bar", "bar"], next: ["bar", "bar"], bottom: true, panel: true },
+      lead: "v4's one button, plus v5's result: after Check, a panel slides up above the bar with the line about her answer, and the same button (same spot) turns into Next.",
+      why: "The verdict lands right above the thumb, and the action never moves: Skip → Check → Next in one spot. The same on desktop.",
+      risk: "The panel takes ~120 px over the page bottom while it shows (the choices are scrolled above it). Two things to read at the bottom on a short phone.",
+      desk: "The same bar and panel, pinned to the bottom of the content column." },
+    7: { name: "7 · Floating Next", cfg: { check: ["row", "row"], next: ["fab", "fab"], bottom: false },
+      lead: "The picked row says Check in words. Once she is done, Next floats in the thumb zone. The bar hides on scroll down only while nothing is waiting; it never hides after a wrong pick.",
+      why: "The most room for a long stem; Next depends on the answer, not on a gesture.",
+      risk: "A float near content (we reserve room under the page). The bar still hides while reading, so Back / Questions need a scroll up.",
+      desk: "No hiding: a sticky top bar; the floating Next sits at the bottom right of the column." }
   };
-  /* where the one Next goes: phone / desktop */
-  const SLOT = { 1: ["bar", "bar"], 2: ["shelf", "card"], 3: ["card", "card"], 4: ["bar", "card"], 5: ["foot", "card"], 6: ["bar", "bar"], 7: ["fab", "fab"] };
+  const C = VAR[V].cfg;
   const phoneMQ = matchMedia("(max-width: 700px), (pointer: coarse)");
   const phone = () => phoneMQ.matches;
+  const pick2 = a => a[phone() ? 0 : 1];
+  const bottomBar = () => phone() || C.bottom;
 
-  /* the one Next (and v4's Check / Skip in the same button) */
+  /* the one action button: Skip / Check (bar and card variants) / Next */
   const nx = document.createElement("button");
   nx.type = "button"; nx.className = "btn btn-go btn-label nx"; nx.id = "nx";
   nx.innerHTML = `<span class="nx-tx">Next</span>${icon("i-next")}`;
   let nxReadyAt = 0;
-
-  function slotFor() { const s = SLOT[V][phone() ? 0 : 1]; return s === "card" ? $("#slotCard") : s === "shelf" ? $("#shelf") : s === "foot" ? $("#foot") : s === "fab" ? $("#slotFab") : $("#slotBar"); }
+  const SLOTS = { bar: "#slotBar", card: "#slotCard", shelf: "#shelf", foot: "#foot", fab: "#slotFab" };
 
   /* ---------- render ---------- */
   function render(jump) {
-    const q = Q[cur], s = st[cur];
+    const q = Q[cur];
     $("#pcode").textContent = `Question ${cur + 1}: ${q.title}`;
     $("#blocks").innerHTML = q.body;
-    const arrow = V !== 4;
+    const row = pick2(C.check) === "row";
     $("#q").innerHTML = `<div class="choices" role="radiogroup" aria-label="Choices">${q.ch.map((c, i) => `
       <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false" data-i="${i}" aria-label="${LET[i]}: ${c}"><span class="badge" aria-hidden="true">${LET[i]}</span><span class="txt">${c}</span></button>
-      ${arrow ? `<button type="button" class="btn btn-go send" data-i="${i}" aria-label="Check ${LET[i]}" hidden>${icon("i-go")}</button>` : ""}</div>`).join("")}</div>`;
+      ${row ? `<button type="button" class="btn btn-go btn-label send" data-i="${i}" aria-label="Check ${LET[i]}" hidden>${icon("i-ok")}<span>Check</span></button>` : ""}</div>`).join("")}</div>`;
+    root.classList.toggle("rowchk", row);
     $("#q").querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => pick(+b.dataset.i)));
     $("#q").querySelectorAll(".send").forEach(b => b.addEventListener("click", () => check(+b.dataset.i)));
     paint();
@@ -113,11 +124,14 @@
     if (jump) scrollTo({ top: 0, behavior: "auto" });
   }
 
+  const pips = s => `<span class="pips" aria-hidden="true">${Array.from({ length: MAX }, (_, k) => `<i class="${k < s.tries ? "used" : ""}"></i>`).join("")}</span>`;
+  const triesTx = n => `Pick again. ${n === 1 ? "1 more try." : n + " more tries."}`;
+
   function paint() {
-    const q = Q[cur], s = st[cur], done = !!s.done, q0 = $("#q");
+    const q = Q[cur], s = st[cur], done = !!s.done, q0 = $("#q"), left = MAX - s.tries;
     q0.classList.toggle("closed", done);
     q0.querySelectorAll(".opt").forEach((o, i) => {
-      const mine = s.mine.includes(i), right = done && i === q.right && (s.done === "right" || s.done === "out");
+      const mine = s.mine.includes(i), right = done && i === q.right;
       o.classList.toggle("mine", mine && !right);
       o.classList.toggle("right", right);
       o.setAttribute("aria-checked", String(!done && s.sel === i));
@@ -125,66 +139,81 @@
       o.querySelector(".badge").innerHTML = right ? icon("i-ok") : LET[i];
       const send = o.parentElement.querySelector(".send"); if (send) send.hidden = done || s.sel !== i;
     });
-    /* feedback under the choices */
-    const left = MAX - s.tries;
+    /* the result: in the card, or (v5, v6) at the bottom */
+    const atBottom = !!(C.foot || C.panel) && (done || s.mine.length > 0);
     let fb = "";
     if (s.done === "right") fb = `<p class="verdict ok">${icon("i-ok")}<span>Right.</span></p><p class="nm-line">${q.ok.replace(/^Right\. /, "")}</p>${q.joke ? `<p class="nm-joke">${q.joke}</p>` : ""}`;
     else if (s.done === "out") fb = `<p class="nm-out">Out of tries for now. This one comes back around.</p><p class="nm-line">The right one is ${LET[q.right]}, ${q.ch[q.right]}.</p>`;
     else if (s.mine.length) fb = `<div class="cluck nm-cluck">${icon("i-duck")}<div><p class="nm-line">${q.l1}</p>
-        <p class="nm-tries"><span class="pips" aria-hidden="true">${Array.from({ length: MAX }, (_, k) => `<i class="${k < s.tries ? "used" : ""}"></i>`).join("")}</span>Pick again. ${left === 1 ? "1 more try." : left + " more tries."}</p>
-        <button type="button" class="btn btn-label nm-ask" id="askBtn">${icon("i-chat")}<span>Ask Cluck</span></button></div></div>`;
-    $("#fb").innerHTML = V === 5 && phone() && (s.mine.length || done) ? "" : fb;
-    const ask = $("#askBtn"); if (ask) ask.addEventListener("click", () => sheet(true));
-    /* v5 footer (phones) */
+        <p class="nm-tries">${pips(s)}${triesTx(left)}</p>
+        <button type="button" class="btn btn-label nm-ask" data-ask>${icon("i-chat")}<span>Ask Cluck</span></button></div></div>`;
+    $("#fb").innerHTML = atBottom ? "" : fb;
     const foot = $("#foot");
-    const showFoot = V === 5 && phone() && (done || s.mine.length);
-    foot.hidden = !showFoot;
-    root.classList.toggle("foot-on", showFoot);
-    if (showFoot) {
+    foot.hidden = !atBottom;
+    root.classList.toggle("foot-on", atBottom && !!C.foot);
+    root.classList.toggle("panel-on", atBottom && !!C.panel);
+    if (atBottom) {
+      const wrongRow = `<div class="foot-row"><span class="nm-tries">${pips(s)}${triesTx(left)}</span><span class="foot-acts"><button type="button" class="btn btn-label foot-ask" data-ask>${icon("i-chat")}<span>Ask Cluck</span></button>${C.foot ? `<button type="button" class="btn btn-label foot-skip" id="footSkip">Skip for now</button>` : ""}</span></div>`;
       foot.innerHTML = s.done === "right" ? `<p class="verdict ok">${icon("i-ok")}<span>${q.ok}</span></p>`
         : s.done === "out" ? `<p class="nm-out">Out of tries for now. This one comes back around.</p><p class="nm-line nm-sm">The right one is ${LET[q.right]}, ${q.ch[q.right]}.</p>`
-        : `<p class="nm-line nm-sm">${q.l1}</p><div class="foot-row"><span class="nm-tries"><span class="pips" aria-hidden="true">${Array.from({ length: MAX }, (_, k) => `<i class="${k < s.tries ? "used" : ""}"></i>`).join("")}</span>Pick again. ${left} more ${left === 1 ? "try" : "tries"}.</span><button type="button" class="btn btn-label foot-skip" id="footSkip">Skip for now</button></div>`;
+        : `<p class="nm-line nm-sm">${q.l1}</p>${wrongRow}`;
       const fs = $("#footSkip"); if (fs) fs.addEventListener("click", () => go(1));
     }
+    document.querySelectorAll("[data-ask]").forEach(b => b.addEventListener("click", () => sheet(true)));
     /* the action button */
-    const was = nx.parentElement;
-    let mode = done ? "next" : "";
-    if (V === 4 && !done) mode = s.sel >= 0 && !s.mine.includes(s.sel) ? "check" : "skip";
+    const was = nx.parentElement, chk = pick2(C.check), picked = s.sel >= 0 && !s.mine.includes(s.sel);
+    let mode = "", where = pick2(C.next);
+    if (done) mode = "next";
+    else if (chk === "bar") { mode = picked ? "check" : "skip"; where = "bar"; }
+    else if (chk === "card" && picked) { mode = "check"; where = "card"; }
     nx.dataset.mode = mode;
     nx.classList.toggle("btn-go", mode === "next" || mode === "check");
     nx.classList.toggle("quiet", mode === "skip");
-    nx.querySelector(".nx-tx").textContent = mode === "check" ? "Check" : mode === "skip" ? "Skip" : V === 2 || V === 5 ? "Next question" : "Next";
+    nx.querySelector(".nx-tx").textContent = mode === "check" ? "Check" : mode === "skip" ? "Skip" : (where === "shelf" || where === "foot" || where === "card") ? "Next question" : "Next";
+    nx.querySelector("use").setAttribute("href", mode === "check" ? "#i-ok" : "#i-next");
+    nx.classList.toggle("ico-first", mode === "check");
     nx.setAttribute("aria-label", mode === "check" ? `Check ${LET[s.sel]}` : mode === "skip" ? "Skip this one" : "Next question");
     if (mode) {
-      const slot = slotFor();
-      if (was !== slot) { slot.append(nx); if (mode === "next") arrive(); }
-      else if (nx.dataset.last !== mode && mode === "next") arrive();
+      const slot = $(SLOTS[where]);
+      if (was !== slot) { slot.append(nx); if (mode !== "skip") arrive(mode); }
+      else if (nx.dataset.last !== mode && mode !== "skip") arrive(mode);
     } else nx.remove();
     nx.dataset.last = mode;
     root.classList.toggle("is-done", done);
-    root.classList.toggle("is-wrong", !done && s.mine.length > 0);
     root.classList.toggle("nx-bar", !!mode && nx.parentElement === $("#slotBar"));
-    $("#fab").hidden = !(V === 7 && done);
-    /* v3: the sheet carries its own Next when the card is under it */
+    /* one forward at a time: the bar's Skip hides while a pick waits, and while any Next shows */
+    $("#skipBtn").hidden = done || picked || nx.parentElement === $("#slotBar");
+    $("#slotCard").classList.toggle("stick", nx.parentElement === $("#slotCard"));
+    $("#fab").hidden = !(where === "fab" && done);
+    /* the Cluck sheet carries its own Next when the card button is under it */
     const sn = $("#slotSheet"); sn.innerHTML = "";
     if (done && !$("#sheet").hidden && nx.parentElement === $("#slotCard")) {
-      const b = document.createElement("button"); b.type = "button"; b.className = "btn btn-go btn-label nx"; b.innerHTML = `<span>Next</span>${icon("i-next")}`;
+      const b = document.createElement("button"); b.type = "button"; b.className = "btn btn-go btn-label nx"; b.innerHTML = `<span>Next question</span>${icon("i-next")}`;
       b.addEventListener("click", () => { sheet(false); go(1); }); sn.append(b);
     }
     $("#sheetRetry").hidden = done;
     $("#prevBtn").disabled = cur === 0;
-    $("#skipBtn").classList.toggle("worded", !done && s.mine.length > 0);
-    /* the sheet's line follows the question */
     $("#sheetLine").textContent = done ? (s.done === "right" ? q.ok : "Out of tries for now. This one comes back around.") : q.l1;
+    if (V === 7 && (done || s.mine.length)) root.classList.remove("nb-away");
     measure();
   }
 
   function arrive() {
-    nxReadyAt = performance.now() + (V === 4 ? 400 : 0);
+    nxReadyAt = performance.now() + 400;          // a word that changes under the thumb never takes the same tap twice
     nx.classList.remove("in"); void nx.offsetWidth; if (!RM) nx.classList.add("in");
-    const card = nx.parentElement === $("#slotCard");
-    if (card) nx.scrollIntoView({ block: "nearest", behavior: RM ? "auto" : "smooth" });
-    if (V === 7) { root.classList.remove("nb-away"); }
+  }
+
+  /* after a check: show the result, scrolling as little as needed and never past the question's own ask line,
+     so the question stays on screen (round 1: "the page scrolls and cuts off the question") */
+  function reveal() {
+    const ask = $("#blocks .q-ask"), fbEl = $("#foot").hidden ? ($("#slotCard").firstChild || $("#fb")) : $("#q");
+    if (!fbEl || !fbEl.getBoundingClientRect) return;
+    const h = parseFloat(getComputedStyle(root).getPropertyValue("--nb-h")) || 0;
+    const room = innerHeight - h - 12, b = fbEl.getBoundingClientRect().bottom;
+    if (b <= room) return;
+    let dy = b - room;
+    if (ask) dy = Math.min(dy, ask.getBoundingClientRect().top - 12);
+    if (dy > 0) scrollBy({ top: dy, behavior: RM ? "auto" : "smooth" });
   }
 
   /* ---------- actions ---------- */
@@ -192,6 +221,12 @@
     const s = st[cur]; if (s.done || s.mine.includes(i)) return;
     s.sel = s.sel === i ? -1 : i;
     paint();
+    /* a card Check that sticks to the window bottom must never sit on the row she just picked: lift the page by the overlap */
+    requestAnimationFrame(() => {
+      const sc = $("#slotCard"); if (!sc.classList.contains("stick") || s.sel < 0) return;
+      const o = $("#q").querySelectorAll(".opt")[s.sel].getBoundingClientRect(), t = sc.getBoundingClientRect().top;
+      if (o.bottom > t - 8) scrollBy({ top: o.bottom - t + 8, behavior: RM ? "auto" : "smooth" });
+    });
   }
   function check(i) {
     const q = Q[cur], s = st[cur]; if (s.done || i < 0) return;
@@ -199,8 +234,7 @@
     if (i === q.right) { s.done = "right"; s.sel = -1; }
     else { s.mine.push(i); s.sel = -1; if (s.tries >= MAX) s.done = "out"; }
     paint();
-    /* show what the check said: the feedback (or the Next under it) scrolls up just above the bar, never to the top */
-    (V === 5 && phone() ? $("#q") : $("#slotCard").firstChild || $("#fb")).scrollIntoView({ block: "nearest", behavior: RM ? "auto" : "smooth" });
+    requestAnimationFrame(reveal);
     const o = $("#q").querySelectorAll(".opt")[i];
     if (s.done === "right" && !RM) { o.classList.remove("pop"); void o.offsetWidth; o.classList.add("pop"); }
     if (root.classList.contains("kbup") && s.done) setTimeout(() => kb(false), 900);   // prod doneExit: the keyboard steps away, Next is back
@@ -213,14 +247,13 @@
   }
   nx.addEventListener("click", () => {
     const m = nx.dataset.mode;
-    if (m === "check") return check(st[cur].sel);
-    if (m === "skip") return go(1);
     if (performance.now() < nxReadyAt) return;
+    if (m === "check") return check(st[cur].sel);
     go(1);
   });
   $("#prevBtn").addEventListener("click", () => { if (cur > 0) { sheet(false); list(false); cur--; render(true); } });
   $("#skipBtn").addEventListener("click", () => go(1));
-  $("#notesBtn").addEventListener("click", () => { const t = $("#mtag"); t.textContent = "Notes would open here (the pad page). Not part of this mock."; });
+  $("#notesBtn").addEventListener("click", () => { $("#mtag").textContent = "Notes would open here (the pad page). Not part of this mock."; });
 
   /* ---------- the list ---------- */
   function listRows() {
@@ -254,25 +287,28 @@
   $("#tRm").setAttribute("aria-pressed", String(P.get("rm") === "1"));
   $("#tRm").addEventListener("click", () => { const q = new URLSearchParams(location.search); if (q.get("rm") === "1") q.delete("rm"); else q.set("rm", "1"); location.search = q.toString(); });
 
-  /* ---------- v7: the bar hides on scroll down, back on scroll up (or when Next shows) ---------- */
+  /* ---------- v7: the bar hides on scroll down only while nothing waits on it (never after a wrong pick or once done) ---------- */
   let lastY = scrollY;
   addEventListener("scroll", () => {
     if (V !== 7 || !phone()) return;
-    const y = scrollY, dy = y - lastY; lastY = y;
+    const y = scrollY, dy = y - lastY, s = st[cur]; lastY = y;
     if (Math.abs(dy) < 6) return;
-    root.classList.toggle("nb-away", dy > 0 && y > 40 && $("#qlist").hidden);
+    const calm = !s.done && !s.mine.length && s.sel < 0;
+    root.classList.toggle("nb-away", calm && dy > 0 && y > 40 && $("#qlist").hidden);
   }, { passive: true });
 
-  /* ---------- the bar's height: room under the page, and the sheet / FAB sit above it ---------- */
+  /* ---------- the bar's height: room under the page; the sheet, the card button and the FAB sit above it ---------- */
   function measure() {
-    const w = $("#nbwrap"), h = phone() && !root.classList.contains("kbup") ? w.offsetHeight : 0;
+    root.classList.toggle("bb", bottomBar());
+    const w = $("#nbwrap"), h = bottomBar() && !root.classList.contains("kbup") ? w.offsetHeight : 0;
     root.style.setProperty("--nb-h", h + "px");
     root.style.setProperty("--kb-h", root.classList.contains("kbup") ? $("#kb").offsetHeight + "px" : "0px");
   }
   new ResizeObserver(measure).observe($("#nbwrap"));
-  const onMQ = () => { root.classList.toggle("ph", phone()); paint(); };
+  const onMQ = () => { root.classList.toggle("ph", phone()); render(false); };
   if (phoneMQ.addEventListener) phoneMQ.addEventListener("change", onMQ);
   root.classList.toggle("ph", phone());
+  root.classList.toggle("bb", bottomBar());
 
   /* ---------- mockup chrome ---------- */
   const vv = VAR[V];
@@ -282,28 +318,28 @@
   $("#vwhy").innerHTML = `<dt>Why</dt><dd>${vv.why}</dd><dt>Risk</dt><dd>${vv.risk}</dd><dt>Desktop</dt><dd>${vv.desk}</dd>`;
   $("#segV").innerHTML = Object.keys(VAR).map(k => `<button type="button" data-v="${k}" aria-pressed="${+k === V}" aria-label="Variant ${VAR[k].name}">${k}</button>`).join("");
   $("#segV").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const q = new URLSearchParams(location.search); q.set("v", b.dataset.v); q.delete("state"); location.search = q.toString(); });
-  const STATES = [["q", "Start"], ["wrong", "Wrong"], ["right", "Right"], ["out", "Out of tries"]];
+  const STATES = [["q", "Start"], ["picked", "Picked"], ["wrong", "Wrong"], ["right", "Right"], ["out", "Out of tries"]];
   $("#segS").innerHTML = STATES.map(([k, l]) => `<button type="button" data-s="${k}">${l}</button>`).join("");
   $("#segS").addEventListener("click", e => { const b = e.target.closest("button"); if (b) jumpTo(b.dataset.s, true); });
 
   function jumpTo(state, scroll) {
     const q = Q[cur]; st[cur] = { sel: -1, tries: 0, mine: [], done: "" };
     const wrong = q.ch.findIndex((_, i) => i !== q.right);
-    if (state === "picked") st[cur].sel = wrong;
-    if (state === "wrong" || state === "out") { check(wrong); }
+    if (state === "picked") st[cur].sel = q.right;
+    if (state === "wrong" || state === "out") check(wrong);
     if (state === "out") { const w2 = q.ch.findIndex((_, i) => i !== q.right && i !== wrong); check(w2); }
     if (state === "right") check(q.right);
     paint();
     if (scroll) $("#q").scrollIntoView({ block: "center", behavior: "auto" });
   }
 
-  /* feedback box + Copy all: NAVM;v=..;state=..;note=.. */
+  /* feedback box + Copy all: NAVM;v=..;vp=..;q=..;state=..;note=.. */
   const ta = $("#note");
   const grow = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; };
   ta.addEventListener("input", grow);
   $("#copyAll").addEventListener("click", async () => {
     const s = st[cur], state = s.done || (s.mine.length ? "wrong" : s.sel >= 0 ? "picked" : "q");
-    const line = `NAVM;v=${V};vp=${phone() ? "phone" : "desk"};q=${cur + 1};state=${state}${RM ? ";rm=1" : ""};note=${ta.value.replace(/\s+/g, " ").trim()}`;
+    const line = `NAVM;r=2;v=${V};vp=${phone() ? "phone" : "desk"};q=${cur + 1};state=${state}${RM ? ";rm=1" : ""};note=${ta.value.replace(/\s+/g, " ").trim()}`;
     try { await navigator.clipboard.writeText(line); $("#copied").textContent = "Copied."; }
     catch { ta.value = line; grow(); ta.select(); $("#copied").textContent = "Selected: copy it by hand."; }
   });

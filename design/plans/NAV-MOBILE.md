@@ -126,3 +126,62 @@ Shared by all seven:
 | 5 | "The bottom told me why, kindly, with a small Skip; I picked again." | yes, the closure moment is clear (Duolingo habit) | 1 tap; the footer covers the page bottom |
 | 6 | "Skip was sitting there in the forward spot the whole time, a little tempting." | probably, since the bar is clear, but the Skip temptation is a retention risk for learning | 1 tap |
 | 7 | "I scrolled to read and the bar was gone; I had to scroll up to find Skip." | maybe: Next is fine, but the hidden bar echoes the judges' worst moment | 1 tap after right; 1 scroll to find Skip / Back |
+
+## 7. Round 2 (after nav round 1: 4 blind testers, phone walk + desktop unity)
+
+**What round 1 said.** Medians: v4 85, v3 83.5, v5 81.5, v2 79.5, v7 78.5, v1 74.5, v6 74. v1 and v6 failed.
+
+The new goal has two parts:
+- the best variant's median must be **≥ 85**;
+- every tester must give it **unity ≥ 15/20**. v4 got only 5–13/20 for unity: on a long question, its desktop Check sat below the fold.
+
+Reports: scratch `judge/nav1-j1..4.md`. **The variant numbers below are the round 2 numbers**: slots 1 and 6 now hold the two hybrids.
+Round 2 shots are `design/shots/genui/navm2-v{n}-{question,picked,wrong,right}-{393,1280}.png`, `navm2-v{n}-right-ios-safari-expanded.png`, `navm2-v{4,6}-{q,right}-390-webkit.png`, `navm2-v6-wrong-ios-safari-expanded.png` and `navm2-v4-right-rm-ios-standalone.png`. The `navm-*` files are round 1.
+
+**Changes in every variant** (the testers' TOP FIXES 2, 3 and 5):
+
+- **Every bar button has a word.** Icon over caption: Questions, Notes, Back, Skip. Each button is 56px tall, at least 56px wide, and the caption is `--t-xs` `--muted`. The "BANK_P2X" label is gone on desktop too.
+- **One forward button at a time.** The bar's Skip hides while a pick is waiting and whenever any Next shows. No more ">" sitting beside the real Next (v2, v3, v7).
+- **No bare row arrow.** Where Check stays in the row (v2, v5, v7), it is a labeled `✓ Check` button. The rows reserve its room (`padding-right: 7.5rem`), so nothing moves when it appears. Every other variant uses one Check button that later becomes Next.
+- **A wrong pick no longer cuts off the question.** After a check, the page scrolls only as far as needed to show the result (`reveal()`), and never past the question's own ask line (`.q-ask`). Measured: the ask line stays on screen in every variant (y = 153–293 px).
+- **A Check that sticks above the choices never covers the row she just picked.** If it would, the page lifts by the overlap.
+
+**What changed per variant:**
+
+| v (round 2) | was | phone | desktop | what changed |
+|---|---|---|---|---|
+| **1 Thumb button, card on desktop** (new hybrid) | v1 Dock swap (failed) | v4: the bar's right button goes Skip → Check → Next | top bar (Questions, Notes, Back, Skip); a full-width Check / Next question under the choices, **stuck to the window bottom** while the card runs past the fold | the coordinator's hybrid A; fixes v4's "Check below the fold" with the in-card place v3 testers liked |
+| **2 Next shelf** | v2 | labeled row Check; full-width Next question on a shelf above the bar | the same full-width button under the feedback, stuck to the window bottom | dock ">" hidden while the shelf shows; row arrow labeled |
+| **3 Check and Next in the card** | v3 | no row arrow: after a pick, a full-width **Check** under the choices, and the same button turns into **Next question**. Sticky above the bar | identical (full width, sticky to the window bottom) | TOP FIXES 2 and 3; same width on both screens (j3: "make desktop Next full-width like the phone's") |
+| **4 One thumb button** | v4 (R1 winner) | unchanged: Skip (now quiet: no fill, `--muted`) → Check → Next | **the same bottom bar on desktop**, pinned to the window bottom, content on the column | TOP FIX 1: nothing is ever below the fold; identical place on both screens (the unity fix) |
+| **5 Result footer** | v5 | labeled row Check; after a check the bar becomes a footer with the line + **Next question**, or + **Ask Cluck · Skip for now** after a wrong pick | **the same footer**, pinned to the bottom of the column | desktop uses the same footer (all 4 testers); Ask Cluck kept in the wrong footer (j1, j2); compact wrong row, choices scrolled above it |
+| **6 Thumb button + result panel** (new hybrid) | v6 Segmented (failed) | v4's bar; after Check, a panel slides up **above** the bar with the line (or the wise-feedback line + tries + Ask Cluck), and the same button in the same spot becomes Next (or goes back to a quiet Skip) | identical, pinned to the bottom of the column | the coordinator's hybrid B: v4's one spot + v5's verdict at the thumb |
+| **7 Floating Next** | v7 | labeled row Check; Next floats in the thumb zone once she is done | sticky top bar; floating Next at the column's bottom right | dock ">" hidden while the float shows; the bar never hides after a wrong pick or once done (j3, j4); more room reserved under the page |
+
+**Checks** (Chromium 393×852 touch + 1280×800, Q1, the long question): pick → Check → wrong → pick right → Check → Next.
+
+- Check visible without scrolling: **14/14**.
+- Next visible: **14/14**.
+- Exactly **1** forward control visible after right: **14/14**.
+- After Next, Question 2 opens; 0 page errors.
+- Impeccable: `?v=1..7` + `?v=4&rm=1` × 390 / 1920 / 2560 / 3840 = 32 live runs, plus a static scan of `nav-mobile.css` / `.js`. **0 findings, exit 0.**
+- WebKitGTK 390×844: v4 and v6. ios-sim safari-expanded (overlay): all 7 at right, plus v6 wrong; standalone `--rm`: v4.
+
+**Favourite (round 2): v4, One thumb button.**
+- Its phone flow was already the testers' best (median 85, frustration 22–23/25).
+- The only thing that cost it was unity. Desktop now has the identical bar in the identical place, with identical words, so Check and Next can never fall below the fold.
+- The runner-up is **v6**, which is v4 with the verdict above the thumb. If the testers miss v5's footer line, v6 is the one to ship.
+- On a wide desktop, v4's button sits at the right edge of the content column, lined up with the right edge of the choices.
+
+### SHAME CHECK, round 2 (changed variants)
+
+The shared answers from §6 still hold (2: no banned items; 3: techniques 1, 2, 5, 7, 8, 9, 10). The row additions:
+
+| v | (1) a wrong pick, in her voice | (4) reopen tomorrow? | (5) iPhone, after right |
+|---|---|---|---|
+| 1 | "The bottom button said Skip, then Check, and after the miss it went quiet again, so I picked again." | yes; desktop feels the same, just under the card | 1 tap |
+| 3 | "The big button under my answer said Check; after the miss it went away and the duck told me why." | yes; one place for everything | 1 tap; the button sticks above the bar |
+| 4 | same as round 1, and on my laptop the button was in the same place | yes; it waits for me on both | 1 tap, thumb never moves |
+| 5 | "The footer said why, kindly, and offered Ask Cluck or Skip for now." | yes | 1 tap |
+| 6 | "The line popped up right above my thumb, and the button just said Skip again; nothing yelled." | yes; the answer and the action sit together | 1 tap, thumb never moves |
+| 2, 7 | as in round 1 | as in round 1 | 1 tap |
