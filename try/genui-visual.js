@@ -247,10 +247,10 @@ function cluckHTML() {
     b.push(`<p class="note">It'll come back around in a few questions, with fresh tries.</p>`);
     b.push(`<div class="strip"><button type="button" data-act="twin">Try a twin</button><button type="button" data-act="next">Next</button></div>`);
   } else if (L < 3) {
-    if (L === 1) b.push(`<div class="strip"><button type="button" data-act="hint">${mech ? "Hint" : "Show me"}</button></div>`);
+    if (L === 1) b.push(`<div class="strip"><button type="button" data-act="hint">${mech ? "Hint" : "Explain in detail"}</button></div>`);
   }
   if (PREF) b.push(`<p class="note">You turned on tell-me mode. <button type="button" class="linkish" data-act="tmoff">Try it yourself instead</button></p>`);
-  b.push(`<p class="disc">Cluck can slip. Check the key. Keep private stuff out of the chat.</p>`);
+  b.push(`<p class="disc">verify b4 use lol, and pls no private shit in it xoxo</p>`);
   return b.join("");
 }
 function predLead(last) { return V.predict === "chips" && S.pred === "half a box" && last === "d" ? "Your gut said half a box. " : ""; }

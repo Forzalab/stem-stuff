@@ -146,7 +146,7 @@
       ${slot}
       ${S.phase === "out" || V === "3" ? "" : `<div class="strip"><button type="button" class="retry" id="retry">Try again</button><button type="button" class="tell" id="tell">Just tell me</button></div>`}
       <details id="steps"${level >= 3 ? " open" : ""}><summary>Show the steps</summary><ol>${level >= 3 ? steps.map(([h, m]) => `<li><b>${h}</b>${kx(m, true)}</li>`).join("") : ""}</ol></details>
-      <p class="disc">Cluck can slip. Check the key. Keep private stuff out of the chat.</p>
+      <p class="disc">verify b4 use lol, and pls no private shit in it xoxo</p>
       <div class="ask"><input type="text" aria-label="Ask Cluck about a step" placeholder="Ask about a step" maxlength="500"><button type="button" class="send" aria-label="Send">${icon("i-send")}</button></div>`;
   }
 
