@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ghost visual: round 1</title>
+<link rel="icon" href="data:,">
+<!-- Gen-UI visual mockup, round 1 (agent V, Oct 7 2026; plan: design/plans/VISUAL.md).
+     PHYS_KWV (Exam 2 Q4, F–x rectangle + triangle, key c = 60 J). ?v=A..E battle the viz home (D34), the predict input (D19) and demo-first.
+     Toggles: ?t=short|inter ?pick=a|b|d|c ?lvl=1|2|3 ?try=2 ?last=1 ?tellme=1 ?slip=mech ?rm=1. Renderer = graph.js; ghosts/handle = an overlay
+     on graph.js's own world->px map (el._X), because graph.js still dashes polys as "guide" (RUNTIME §3 #2 is not built yet). -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css"><link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css"><script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/math.min.js"></script><script src="../graph.js"></script>
+<link rel="stylesheet" href="genui-visual.css">
+<!-- impeccable-disable pulsing-dot: .cl-live .dots lives in the shared app.css (prod Cluck LIVE chip); this page never renders it -->
+</head>
+<body>
+<header class="mockbar">
+  <span id="vname" class="vname"></span>
+  <span class="score" aria-live="polite"><svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg> <b id="pts">12</b><span id="seg" class="seg-loss" hidden></span><span id="gain" class="gain" hidden></span></span>
+</header>
+
+<main id="app">
+  <section class="demo" id="demo" hidden aria-label="Warm-up">
+    <p><b>Warm-up, 5 s.</b> Work is the area under the force line. One grid square is <span class="tex">$2.5\ \text{m}$</span> wide and <span class="tex">$1.0\ \text{N}$</span> tall.</p>
+    <button type="button" class="btn-q" id="demoOk">Got it</button>
+  </section>
+
+  <article class="qcard" id="qcard">
+    <p class="vptitle">Practice Exam 2 · Question 4</p>
+    <p class="qtext">The force on a particle varies as shown. The <span class="tex">$x$</span>-axis is marked in steps of <span class="tex">$2.5\ \text{m}$</span>; the <span class="tex">$F_x$</span>-axis in steps of <span class="tex">$1.0\ \text{N}$</span>.</p>
+    <div class="figwrap" id="figwrap">
+      <div class="fig qfig" id="qfig" role="img" aria-label="Force versus x: flat from A to B, then a straight fall from B to C on the axis."></div>
+      <p class="figcap" id="qcap" hidden></p>
+    </div>
+    <p class="qtext">Find the net work (in <span class="tex">$\text{N}\cdot\text{m}$</span>) done by the force from A to C.</p>
+
+    <div class="predict" id="predict" hidden></div>
+
+    <div class="vchoices" id="choices" role="radiogroup" aria-label="Choices"></div>
+    <label class="sure" id="sureRow"><input type="checkbox" id="sure"> <span>I'm sure</span> <span class="sure-why">bet on this first pick: right +3 to +5, wrong −1</span></label>
+    <p class="sure-note" id="sureNote" hidden>The bet was on your first pick only. Retries are free.</p>
+    <div class="vfb" id="fb" aria-live="polite"></div>
+  </article>
+
+  <!-- Cluck surfaces: one is used per variant -->
+  <section class="vcl ai-skin ai-box" id="cl" hidden aria-label="Cluck">
+    <button type="button" class="vcl-grab" id="clGrab" aria-label="Expand Cluck"><span></span></button>
+    <button type="button" class="vcl-x" id="clX" aria-label="Close Cluck"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+    <div class="vcl-body" id="clBody"></div>
+  </section>
+
+  <section class="tony" aria-label="Your notes for Claude">
+    <h2>Pick a variant</h2>
+    <nav class="vpick" id="vpick" aria-label="Variants"></nav>
+    <h2>Switches</h2>
+    <div class="toggles" id="toggles"></div>
+    <details class="evlog"><summary>Events this page fired (telemetry preview)</summary><ol id="ev"></ol></details>
+    <h2>Priming questions</h2>
+    <ol class="prime">
+      <li>Picture her at midnight on the bus: after a wrong pick, which variant made you SEE your mistake before you read a word?</li>
+      <li>Did the dashed "your 80 J" feel like being shown something, or being caught?</li>
+      <li>Was the figure still on screen when Cluck spoke? Where did your eyes go first?</li>
+      <li>Did you ever want the number and have to hunt for it? Was "Just tell me" under your thumb?</li>
+      <li>Did the warm-up (A, B) help, or was it one more thing before the question?</li>
+      <li>Chips (C) and drag (D) ask you to guess first. Fun, or a toll?</li>
+      <li>Would the "I'm sure" bet make you braver, or more scared, on the first pick?</li>
+      <li>Grab the handle once: did the readout teach, or did the picture already do it?</li>
+      <li>Would she reopen the app tomorrow after this screen? Why?</li>
+    </ol>
+    <label for="note" class="nlab">Your note (anything)</label>
+    <textarea id="note" maxlength="4000" rows="3"></textarea>
+    <div class="vrow"><button type="button" class="btn-q" id="copy">Copy all</button><span id="copied" role="status"></span></div>
+    <label for="code" class="sr-only">Result code</label>
+    <textarea id="code" readonly rows="2"></textarea>
+  </section>
+</main>
+
+<!-- thumb zone: always visible, "Just tell me" never hides (D18) -->
+<nav class="thumb" id="thumb" aria-label="Answer actions">
+  <button type="button" class="btn-2" id="tellme">Just tell me</button>
+  <button type="button" class="btn-1" id="main" disabled>Check</button>
+</nav>
+<p class="tm-pref" id="tmPref" hidden>Tell-me mode is on. <button type="button" class="linkish" id="tmOff">Try it yourself instead</button></p>
+
+<dialog id="fs" aria-label="Figure, full screen"><button type="button" class="vcl-x fs-x" id="fsX" aria-label="Close full screen"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button><div class="fig" id="fsfig"></div></dialog>
+
+<script src="genui-visual.js"></script>
+</body>
+</html>
