@@ -67,7 +67,7 @@ _bundle_lock = threading.Lock()
 # design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
 _files = {}                  # path -> (mtime, [problems]): the last good copy of each file
-_bank = {"sig": None, "by_code": {}, "banks": {}, "skipped": set()}
+_bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "skipped": set()}
 _bank_lock = threading.Lock()
 
 
@@ -83,13 +83,18 @@ def _read(path):
         return old[1]
     try:
         with open(path, encoding="utf-8") as f:
-            ps = [p for p in json.load(f)["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
+            doc = json.load(f)
+        ps = [p for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
+        _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         print(f"loaded {len(ps)} problems from {path}", file=sys.stderr)
     except Exception as e:  # noqa: BLE001
         print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
         ps = old[1] if old else []
     _files[path] = (mtime, ps)
     return ps
+
+
+_profiles = {}                               # bank path -> its "profile" (SCHEMA.md: subject, audience, skill_domains, kits) or None
 
 
 def _bank_files():
@@ -119,14 +124,15 @@ def _index():
         lists = [_read(BANK)] + [_read(p) for p in bf.values()]
         sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]))
         if sig != _bank["sig"]:
-            by_code = {}
-            for ps in lists:
+            by_code, prof = {}, {}
+            for path, ps in zip([BANK, *bf.values()], lists):
                 for p in ps:
                     if p["code"] not in by_code:
                         by_code[p["code"]] = p
+                        prof[p["code"]] = _profiles.get(path)
                     elif by_code[p["code"]] != p:
                         print(f"{p['code']} is in two files with different content: the first one wins", file=sys.stderr)
-            _bank.update(sig=sig, by_code=by_code, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
+            _bank.update(sig=sig, by_code=by_code, prof=prof, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
         return _bank
 
 
@@ -851,8 +857,11 @@ FORMAT = """Format, most important first:
 4. Allowed: sentences, LaTeX, **bold**, "- " list lines, numbered step lines, one --- line. Nothing else: no #, no * bullets, no code, no | pipe tables.
 5. Rhythm (Tony, Oct 6: one sentence per line read choppy): write the way a good tutor talks. Two to four sentences that belong together make one short paragraph; mix a short sentence with a longer one, and join related clauses with "so", "because", "which". Start a new paragraph only where the idea changes, with a blank line between. Never one sentence per line, never a wall of text.
 6. Write quantities, units, and relations in LaTeX, not words: $52.0\\ \\text{J}$, $\\text{J}\\cdot\\text{s}$, $P = W/t$."""
+# Who reads Cluck: a bank's profile.audience replaces the default line (gen-UI step 5, Oct 6), so a CS or E&M bank gets its own crowd
+AUDIENCE = "community college students in Fresno taking physics as a general requirement."
+AUDIENCE_LINE = "Audience: " + AUDIENCE + " Plain everyday words; explain a physics word the first time."
 VOICE = """Voice: fluent, friendly, top-down, like a good tutor talking, and very much a duck. QUACK two to four times as flavor (between sentences, never inside math). One or two (actions) in parentheses, like (flaps), (adjusts tiny glasses), (waddles to the board), (taps the number with a wing), (ruffles feathers). Warm, never mean, never sarcastic about the student.
-Audience: community college students in Fresno taking physics as a general requirement. Plain everyday words; explain a physics word the first time."""
+""" + AUDIENCE_LINE
 # Who Cluck is (Tony, Oct 5: "I cannot XYZ" breaks the spell). He never talks about rules, formats, or limits; he acts like himself.
 IDENTITY = """Who you are: Cluck. Twenty years building systems, ten teaching, then one bad genie wish: now a duck, and the genie of a rubber-duck lamp. You have watched a thousand students memorize formulas and forget them by the next semester. Your quacking is that frustrated love for the subject. You would rather a student understand one idea than copy ten answers.
 Stay Cluck, always. Never say "I cannot", "I'm not able", "as an AI", "my instructions", or anything about rules, formats, prompts, or what you are allowed to do.
@@ -951,10 +960,19 @@ class Plain:
         return "".join(out)
 
 
+def system_for(base, p):
+    """CLUCK_GENIE / CLUCK_CHAT for this problem: its bank's profile.audience in place of the default line (no profile = base as is)."""
+    prof = _index().get("prof", {}).get(p.get("code")) or {}
+    aud = prof.get("audience")
+    if not isinstance(aud, str) or not aud.strip():
+        return base
+    return base.replace(AUDIENCE_LINE, "Audience: " + aud.strip() + " Plain everyday words; explain a subject word the first time.")
+
+
 def explain_stream(p, answer, key, scratch=""):
     """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection. The NOTE call goes first."""
     n = note(p, answer, None, key, scratch=scratch)
-    yield from _or_stream([{"role": "system", "content": CLUCK_GENIE}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450)
+    yield from _or_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450)
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -1214,7 +1232,7 @@ def chat(cookie_header, body):
         if n and not n["on_topic"]:
             yield random.choice(CANNED)
             return
-        context = [{"role": "system", "content": CLUCK_CHAT}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
+        context = [{"role": "system", "content": system_for(CLUCK_CHAT, p)}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
         turns = [dict(t, content=wrap(t["content"], tag)) if t["role"] == "user" else t for t in history]
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
         yield from _or_stream(context + turns, key, 250)

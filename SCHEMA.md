@@ -25,6 +25,10 @@ cd tests && npm install && npm test
 }
 ```
 
+A bank file may add a `"profile"` (optional): `subject` (physics.mechanics | physics.em | discrete | cs), `audience` (one sentence:
+who the students are; it replaces the default Fresno physics line in Cluck's prompts), `skill_domains` (["algebra"]), `kits` (visual
+kits that fit: author/kits/). No profile = today's behavior.
+
 Keep problems in any order: the page shuffles the list per browser (design/NAV.md), so file order is never shown. Codes must be unique (tests enforce it).
 
 ## Content rule (Tony, standing)
@@ -276,7 +280,12 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
   "type": "object",
   "required": ["v", "problems"],
   "additionalProperties": false,
-  "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}}},
+  "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
+    "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
+      "properties": {"subject": {"enum": ["physics.mechanics", "physics.em", "discrete", "cs"]},
+        "audience": {"type": "string", "minLength": 10, "maxLength": 300},
+        "skill_domains": {"type": "array", "uniqueItems": true, "items": {"enum": ["algebra"]}},
+        "kits": {"type": "array", "uniqueItems": true, "items": {"enum": ["mechanics", "energy-bars", "graph-search"]}}}}},
   "$defs": {
     "num": {"type": ["number", "string"], "minLength": 1, "description": "Number, or math.js constant expression like \"pi/3\""},
     "skills": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,31}$"}, "description": "server only: the algebra skills this question needs, ids from skills.json (SCHEMA.md 'Skills'); a split row's list replaces its parent's"},

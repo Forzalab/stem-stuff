@@ -770,6 +770,29 @@ class Explain(unittest.TestCase):
         status, head, chunks = serve.chat(cookie, json.dumps({"code": "CALC1_XP1", "answer": "a", "history": h, **over}).encode())
         return status, head, b"".join(chunks).decode()
 
+    def test_profile_audience_replaces_the_default_line(self):
+        """gen-UI step 5: a bank's profile.audience goes into both of Cluck's system prompts; no profile = the default prompt"""
+        path = os.path.join(serve.BANKS, "BANK_XP12.json")
+        with open(path) as f:
+            doc = json.load(f)
+        doc["profile"] = {"subject": "cs", "audience": "first-year CS majors in a data structures course."}
+        with open(path, "w") as f:
+            json.dump(doc, f)
+        os.utime(path, (time.time() + 5, time.time() + 5))               # a new mtime: the bank reloads
+        p = serve.problems()["CALC1_XP1"]
+        for base in (serve.CLUCK_CHAT, serve.CLUCK_GENIE):
+            got = serve.system_for(base, p)
+            self.assertIn("Audience: first-year CS majors in a data structures course.", got)
+            self.assertNotIn("Fresno", got)
+            self.assertEqual(got.replace("Audience: first-year CS majors in a data structures course. Plain everyday words; explain a subject word the first time.", serve.AUDIENCE_LINE), base)
+        self.chat(1)
+        self.assertIn("first-year CS majors", self.seen[0][1]["messages"][0]["content"])
+        del doc["profile"]
+        with open(path, "w") as f:
+            json.dump(doc, f)
+        os.utime(path, (time.time() + 10, time.time() + 10))
+        self.assertEqual(serve.system_for(serve.CLUCK_CHAT, serve.problems()["CALC1_XP1"]), serve.CLUCK_CHAT)
+
     def test_chat_streams_with_the_box_as_cluck_turn(self):
         status, head, text = self.chat(2)
         self.assertEqual((status, text), (200, "POOF! **Use:** $v$\n- step one\nYour pick: sign."))

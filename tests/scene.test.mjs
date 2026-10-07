@@ -197,3 +197,21 @@ test("kits: the gate catches a component outside the kit and a broken invariant"
   dfs.trace.push({ op: "sort", args: ["S"] });
   assert.deepEqual(uses(dfs, gs), ["op sort"]);
 });
+
+/* ---------- bank profile (SCHEMA.md "profile", gen-UI step 5) ---------- */
+test("bank profile: valid shapes pass, bad ones fail; its kits enum is exactly the kit folders", () => {
+  const vp = validator("problems");
+  const bank = { v: 1, problems: [{ code: "CALC1_PF1", type: "num", body: [{ type: "text", md: "1 + 1?" }], answer: "2", wrong: [], nudge: "QUACK." }] };
+  const withP = p => ({ ...bank, profile: p });
+  const ok = vp(bank);
+  if (!ok) return assert.fail("the base bank must validate: " + JSON.stringify(vp.errors));
+  assert.ok(vp(withP({ subject: "cs", audience: "first-year CS majors in data structures.", skill_domains: ["algebra"], kits: ["graph-search"] })), JSON.stringify(vp.errors));
+  for (const [what, p] of Object.entries({ "bad subject": { subject: "chemistry" }, "short audience": { audience: "kids" }, "unknown kit": { kits: ["sorting"] }, "unknown key": { colour: "red" } }))
+    assert.equal(vp(withP(p)), false, what);
+  const kits = require_enum(vp, "kits");
+  assert.deepEqual([...kits].sort(), [...kitDirs].sort(), "SCHEMA.md profile.kits must list exactly author/kits/*");
+});
+function require_enum() {                                    // the profile.kits enum, read from SCHEMA.md
+  const s = JSON.parse(readFileSync(new URL("SCHEMA.md", root), "utf8").match(/<!-- schema: problems -->\s*```json\n([\s\S]*?)\n```/)[1]);
+  return s.properties.profile.properties.kits.items.enum;
+}
