@@ -91,7 +91,7 @@ export function qAnswer(st, code, right, { spam = false } = {}) {
   const s = st.seen[code];
   if (!s || s.last == null) return false;
   if (s.first) { s.retry = (s.retry || 0) + 1; if (right) s.retryRight = (s.retryRight || 0) + 1; return false; }
-  if (spam) { s.first = "spam"; s.spam = (s.spam || 0) + 1; return false; }   // a guess in under 2 s (nav.js): logged, the showing counts as a skip
+  if (spam && !right) { s.first = "spam"; s.spam = (s.spam || 0) + 1; return false; }   // a wrong guess in under 2 s (nav.js): logged, the showing counts as a skip; a fast RIGHT pick counts (a Redeem gets paid off)
   s.first = right ? "right" : "wrong";
   if (right) { s.right += 1; s.owe = false; s.gapIdx = 0; s.wait = FAR; }
   else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }

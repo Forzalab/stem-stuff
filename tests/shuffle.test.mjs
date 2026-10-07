@@ -180,6 +180,15 @@ test("queue: a guess in under 2 s is logged, never weighted (Fable fix 4)", () =
   assert.equal(qAnswer(st, "PHYS_A0", true), false, "a later pick in the same showing is a retry");
   assert.equal(s.right, 0);
 });
+test("queue: a fast RIGHT pick still counts, so a Redeem gets paid off (Fable #2 B0)", () => {
+  const st = qNew("fastright"); qShow(st, "PHYS_A0");
+  assert.equal(qAnswer(st, "PHYS_A0", false), true);                 // missed: owed
+  assert.equal(st.seen.PHYS_A0.owe, true);
+  st.seen.PHYS_A0.first = null; qShow(st, "PHYS_A0");                // it comes back (a Redeem showing)
+  assert.equal(qAnswer(st, "PHYS_A0", true, { spam: true }), true);  // right in under 2 s
+  const s = st.seen.PHYS_A0;
+  assert.deepEqual([s.first, s.owe, s.right], ["right", false, 1]);
+});
 test("queue: a skipped showing (Next, no answer) comes back later, owing nothing", () => {
   const pool = bank(20), st = qNew("skip");
   let first = null;

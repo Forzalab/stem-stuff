@@ -94,8 +94,8 @@ function vmark(box, id) {
   m.dataset.v = id; m.innerHTML = icon(id);
 }
 /* the words the screen reader hears (the page shows only the icon) */
-const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "No tries left."
-  : r.verdict === "wrong" ? "Wrong. 1 try left." : "";
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries for now. This one comes back around."
+  : r.verdict === "wrong" ? "Not yet. 1 try left." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
