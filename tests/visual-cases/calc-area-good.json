@@ -1,0 +1,112 @@
+{
+ "case": "calc-area-good",
+ "source": "Calc 1 ∫₀² x² dx = 8/3 (rectangle reflex ghost)",
+ "expect": "pass",
+ "slip_kind": "concept",
+ "why": "The shade under x² from 0 to b encloses b³/3 for every b; the ghost rectangle b·f(b) = 8 at b = 2 matches its label.",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "A",
+   "equals": "I",
+   "over": {
+    "b": [
+     0.5,
+     3
+    ]
+   }
+  },
+  {
+   "type": "area",
+   "mark": "G",
+   "equals": "label"
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "b",
+   "slip": "used height times width (f(b)·b)",
+   "skill": "int_area",
+   "see": "the dashed rectangle cover space the curve never reaches",
+   "say": "the area hugs the curve",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    3.2
+   ],
+   "y": [
+    -0.5,
+    9.5
+   ]
+  },
+  "params": {
+   "b": {
+    "min": 0.5,
+    "max": 3,
+    "step": 0.1,
+    "init": 2
+   }
+  },
+  "derive": {
+   "I": "b^3/3"
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "f",
+    "mark": "fn",
+    "param": "x",
+    "y": "x^2",
+    "color": "c1"
+   },
+   {
+    "id": "A",
+    "mark": "shade",
+    "f": "x^2",
+    "from": 0,
+    "to": "=b",
+    "color": "c1",
+    "truth": true
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "label": "your 8",
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      "=b^2"
+     ],
+     [
+      "=b",
+      "=b^2"
+     ],
+     [
+      "=b",
+      0
+     ]
+    ]
+   }
+  ],
+  "knobs": [
+   {
+    "bind": "b",
+    "kind": "slider",
+    "label": "b"
+   }
+  ]
+ }
+}

@@ -1,0 +1,100 @@
+{
+ "case": "kwv-a-good",
+ "source": "PHYS_KWV a (40.0: rectangle only)",
+ "expect": "pass",
+ "slip_kind": "concept",
+ "why": "Ghost = the rectangle A–B only (16 squares x 2.5 J = 40 J), beside the solid truth (24 squares = 60 J).",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "T",
+   "equals": 60,
+   "scale": 2.5
+  },
+  {
+   "type": "area",
+   "mark": "G",
+   "equals": "label",
+   "scale": 2.5
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "a",
+   "slip": "counted the rectangle only",
+   "skill": "w_area",
+   "see": "the triangle B–C left out of the dashed shape",
+   "say": "the work is the whole area A to C",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    8.8
+   ],
+   "y": [
+    -1,
+    5
+   ]
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "T",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      8,
+      0
+     ]
+    ],
+    "fill": true,
+    "color": "c2",
+    "truth": true,
+    "label": "60 J"
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "label": "your 40 J",
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      4,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}

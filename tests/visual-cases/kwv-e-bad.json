@@ -1,0 +1,101 @@
+{
+ "case": "kwv-e-bad",
+ "source": "PHYS_KWV e (24.0: squares not rescaled), planted",
+ "expect": "fail",
+ "fails": "ghost_kind",
+ "slip_kind": "mechanical",
+ "why": "e is a units/rescale slip (mechanical, D32): a ghost there would show the same shape as the truth; ghosts are for concept slips only. The area itself is self-consistent (24 squares at scale 1), so only ghost_kind catches it.",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "T",
+   "equals": 60,
+   "scale": 2.5
+  },
+  {
+   "type": "area",
+   "mark": "G",
+   "equals": "label",
+   "scale": 1
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "e",
+   "slip": "forgot to multiply squares by 2.5 J",
+   "skill": "w_area",
+   "see": "the same shape with a different number",
+   "say": "one square is 2.5 J",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    8.8
+   ],
+   "y": [
+    -1,
+    5
+   ]
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "T",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      8,
+      0
+     ]
+    ],
+    "fill": true,
+    "color": "c2",
+    "truth": true,
+    "label": "60 J"
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "label": "your 24 J",
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      8,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}
