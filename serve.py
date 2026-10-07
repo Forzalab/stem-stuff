@@ -243,6 +243,7 @@ def hidden(p, mode):
 # ---- sugar split (Tony, Oct 3: "sugar = no choose-all"): a choose-all becomes one True/False question per row, in its place ----
 INSTR = re.compile(r"^\s*(tap a row|mark every row)", re.I)       # the parent's how-to-tick paragraph: meaningless for one row
 G_LINE = re.compile(r"Use \$g\s*=[^$]*\$\.?")
+ALL_LINE = re.compile(r"^\s*(choose all|select all|mark all|tap a row|mark every row)\b", re.I)   # a split_alone parent's choose-all lines: not shown on its rows
 CODE_RE = re.compile(r"^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$")
 _subs = {"sig": None, "map": {}}
 
@@ -261,6 +262,7 @@ def sub_problem(parent, row):
     """one row of a split choose-all as its own question: the parent's figures and text, then the row's stem. A row with its own
     choices is an mc (2 tries for 3+ choices); a row without them is True/False (1 try)."""
     sg, right = sugar(parent), "t" if str(row.get("answer")).lower() == "true" else "f"
+    alone = sg.get("split_alone") is True     # rewritten rows stand alone (qrewrite, D73): no parent choose-all lines, no inherited g line
     body, g = [], None
     for b in parent.get("body", []):
         md = b.get("md") if b.get("type") == "text" else None
@@ -269,15 +271,24 @@ def sub_problem(parent, row):
             m = G_LINE.search(text)
             g = m.group(0) if m else g
             continue
+        if text is not None and alone:
+            kept = "\n".join(l for l in text.split("\n") if not ALL_LINE.match(l)).strip()
+            if not kept:
+                continue
+            if kept != text.strip():
+                b = dict(b, md=kept)
         body.append(b)
+    if alone:
+        g = None                                # a row that needs g ends its own stem with the g line
     body.append({"type": "text", "md": row.get("stem", "") + ("\n\n" + g if g else "")})
-    layer = {"title": sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"), "narration": row.get("narration")}
+    rt = row.get("title").strip() if isinstance(row.get("title"), str) and row.get("title").strip() else None   # a row's own title (D73)
+    layer = {"title": rt or sg.get("title"), "tip": row.get("tip") or sg.get("tip"), "part": sg.get("part"), "key": sg.get("key"), "narration": row.get("narration")}
     ch = row.get("choices")
     if isinstance(ch, list) and len(ch) >= 2:                 # main's v3 rows: a row is its own mc (answer = a choice id, slip per wrong id), the authored tries
         slip = row.get("slip") if isinstance(row.get("slip"), dict) else {}
         layer["slip"], layer["note"] = slip, row.get("note") if isinstance(row.get("note"), dict) else None
         layer["skills"] = row.get("skills") or sg.get("skills")
-        return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "body": body,
+        return {"code": row["sub"], "title": rt or parent.get("title"), "type": "mc", "body": body,
                 "choices": [{k: c[k] for k in ("id", "md") if k in c} for c in ch if isinstance(c, dict)], "correct": str(row.get("answer")),
                 "wrong": [{"choice": i, "hint": h} for i, h in slip.items() if i != str(row.get("answer"))],
                 "saccharine": {k: v for k, v in layer.items() if v}}
@@ -285,7 +296,7 @@ def sub_problem(parent, row):
     layer["slip"] = {wrong: row.get("slip")} if row.get("slip") else {}
     layer["note"] = {wrong: row["note"]} if isinstance(row.get("note"), dict) else None
     layer["skills"] = row.get("skills") or sg.get("skills")
-    return {"code": row["sub"], "title": parent.get("title"), "type": "mc", "shuffle": False, "body": body,
+    return {"code": row["sub"], "title": rt or parent.get("title"), "type": "mc", "shuffle": False, "body": body,
             "choices": [{"id": "t", "md": "True"}, {"id": "f", "md": "False"}], "correct": right,
             "wrong": [{"choice": wrong, "hint": row["slip"]}] if row.get("slip") else [],
             "saccharine": {k: v for k, v in layer.items() if v}}
