@@ -4,7 +4,7 @@ html.part-open body { padding-bottom: calc(min(45svh, 420px) + var(--btn) + var(
 main { max-width: 40rem; margin: 0 auto; }
 .mockbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); max-width: 40rem; margin: 0 auto;
   padding: var(--s3) 0 var(--s2); font-size: var(--t-xs); color: var(--muted); }
-.vname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vname { min-width: 0; }
 .score { display: inline-flex; align-items: center; gap: var(--s1); color: var(--ink); font-variant-numeric: tabular-nums; flex: none; }
 .star { color: var(--mark); }
 .seg-loss { margin-left: var(--s1); padding: 0 var(--s1); border-radius: 4px; color: var(--paper); background: var(--bad); font-weight: 700; font-size: var(--t-xs); }
@@ -19,7 +19,7 @@ main { max-width: 40rem; margin: 0 auto; }
 .figwrap { position: relative; }
 .qfig { cursor: zoom-in; }
 .figcap { margin: 0 0 var(--s2); font-size: var(--t-xs); color: var(--muted); }
-html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; background: var(--qbox); padding-bottom: var(--s1); box-shadow: 0 6px 8px -6px rgb(0 0 0 / 0.6); }
+html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; background: var(--qbox); padding-bottom: var(--s1); border-bottom: var(--bw) solid var(--line); }
 
 /* overlay: ghost / truth / handle on graph.js's own map */
 .ov { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
@@ -37,14 +37,14 @@ html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; backg
 .predict p { margin: 0 0 var(--s2); font-size: var(--t-sm); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .chip { min-height: 44px; padding: 0 var(--s4); border-radius: 999px; border: var(--bw) solid var(--edge); background: var(--field); color: var(--ink); font-size: var(--t-sm); }
-.chip[aria-pressed="true"] { border-color: var(--c1); background: var(--raised); font-weight: 700; }
+.chip[aria-pressed="true"] { border-color: var(--c1); background: var(--sheet); font-weight: 700; }
 .dragnote { font-size: var(--t-xs); color: var(--muted); margin: var(--s1) 0 0; }
 
 .vchoices { display: grid; gap: var(--s2); margin: var(--s3) 0 var(--s2); }
 .vopt { display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: var(--s2) var(--s3); border-radius: 10px; text-align: left;
   border: var(--bw) solid var(--edge); background: var(--field); color: var(--ink); font-size: var(--t-md); }
 .vopt .l { color: var(--muted); font-weight: 700; min-width: 1.2em; }
-.vopt[aria-checked="true"] { border-color: var(--focus); background: var(--raised); }
+.vopt[aria-checked="true"] { border-color: var(--focus); background: var(--sheet); }
 .vopt.mine { border-style: dashed; border-color: var(--muted); }
 .vopt.mine::after { content: "your pick"; margin-left: auto; font-size: var(--t-xs); color: var(--muted); }
 .vopt.right { border: var(--bw-alarm) solid var(--ok); padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
@@ -74,7 +74,7 @@ html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; backg
 .vcl .vboxed { display: inline-block; padding: var(--s1) var(--s3); border-radius: 8px; background: var(--ai-ct); color: var(--ai-on-ct); font-weight: 700; }
 .vcl .strip { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .vcl .strip button, .btn-q { min-height: 44px; padding: 0 var(--s4); border-radius: 999px; border: var(--bw) solid var(--ai-line); background: var(--ai-tint); color: var(--ai-text); font-size: var(--t-sm); }
-.btn-q { border-color: var(--edge); background: var(--raised); color: var(--ink); }
+.btn-q { border-color: var(--edge); background: var(--sheet); color: var(--ink); }
 .vcl .note { font-size: var(--t-xs); color: var(--muted); margin: 0; }
 .vcl .disc { font-size: var(--t-xs); color: var(--muted); margin: var(--s4) 0 0; }
 .vcl .copyfig { cursor: zoom-in; }
@@ -113,7 +113,7 @@ html.home-card .vcl { border-radius: 4px 16px 16px 16px; }
   padding: var(--s2) var(--gut) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--paper); border-top: var(--bw) solid var(--line); }
 .thumb button { flex: 1; max-width: 19rem; min-height: var(--btn); border-radius: 12px; font-size: var(--t-md); font-weight: 700; }
 .btn-1 { background: var(--focus); color: var(--paper); border: 0; }
-.btn-1:disabled { background: var(--raised); color: var(--muted); }
+.btn-1:disabled { background: var(--sheet); color: var(--muted); border: var(--bw) solid var(--line); }
 .btn-2 { background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--edge); }
 .tm-pref { position: fixed; left: 0; right: 0; bottom: calc(var(--btn) + var(--s4) + env(safe-area-inset-bottom)); z-index: 29; margin: 0; text-align: center; font-size: var(--t-xs); color: var(--muted); }
 .linkish { background: none; border: 0; color: var(--focus); text-decoration: underline; min-height: 44px; padding: 0 var(--s2); font-size: inherit; }
@@ -122,7 +122,7 @@ html.home-card .vcl { border-radius: 4px 16px 16px 16px; }
 .tony h2 { font-size: var(--t-sm); color: var(--muted); letter-spacing: .04em; margin: var(--s4) 0 var(--s2); }
 .vpick, .toggles { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .vpick a, .toggles a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--edge); color: var(--ink); text-decoration: none; background: var(--sheet); }
-.vpick a[aria-current="page"], .toggles a[aria-current="true"] { border-color: var(--focus); background: var(--raised); font-weight: 700; }
+.vpick a[aria-current="page"], .toggles a[aria-current="true"] { border-color: var(--focus); background: var(--sheet); font-weight: 700; }
 .prime { padding-left: var(--s5); margin: 0; }
 .prime li + li { margin-top: var(--s1); }
 .nlab { display: block; margin: var(--s4) 0 var(--s1); }
@@ -142,3 +142,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .gain, .ov [data-role="ghost"], html.home-part .vcl, html.home-full .vcl { animation: none; }
 }
 html.rm .gain, html.rm .ov [data-role="ghost"], html.rm .vcl { animation: none !important; }
+.ico { width: 20px; height: 20px; display: block; margin: auto; }
+.star { width: 16px; height: 16px; fill: var(--mark); }
+/* C: the panel lives inside the question card, under the stuck figure: a divider, not a second card */
+html.home-sticky .vcl.ai-box { background: none; border-radius: 0; padding: var(--s4) 0 0; margin-top: var(--s4); border-top: var(--bw) solid var(--line); color: var(--ink); }

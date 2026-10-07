@@ -48,7 +48,7 @@ const SECOND = { d: "a", a: "d", b: "d" };
 const LINE2 = { a: "Your 40 J is the rectangle alone. The solid shape keeps going to C.", d: "Your 80 J adds a full box past B. The solid part past B is half of that." };
 const L3LINE = "This one trips most people: the triangle is half its box. Here is the whole thing.";
 const TEX_L2 = "W = \\underbrace{4\\cdot 4}_{\\text{box}} + \\underbrace{\\frac12\\cdot 4\\cdot 4}_{\\text{half a box}}\\ \\text{squares}";
-const TEX_L3 = "W = \\Big(4\\cdot 4 + \\frac12\\cdot 4\\cdot 4\\Big)\\ \\text{sq} \\times 2.5\\ \\frac{\\text{J}}{\\text{sq}} = 60\\ \\text{J}";
+const TEX_L3 = "\\begin{aligned} W &= \\Big(4\\cdot 4 + \\frac12\\cdot 4\\cdot 4\\Big)\\ \\text{squares} \\\\ &= 24 \\times 2.5\\ \\text{J} = 60\\ \\text{J} \\end{aligned}";
 
 /* ---------- state ---------- */
 const S = { sel: "", picks: [], tries: 3, lvl: 1, done: false, right: false, touched: false, viewAt: 0, bet: null, pts: 12,
@@ -226,6 +226,7 @@ function right(first) {
   $("#cl").hidden = true; root.classList.remove("part-open", "vcl-open");
   FIGS.forEach(f => f.isConnected && f.clientWidth && overlay(f));
   setMain("Next", false); code();
+  requestAnimationFrame(() => $("#fb").scrollIntoView({ block: "nearest", behavior: T.rm || BOOT ? "auto" : "smooth" }));
 }
 function cluckHTML() {
   const last = S.picks[S.picks.length - 1], mech = T.mech || KIND[last] === "mechanical", L = S.lvl;
@@ -261,8 +262,13 @@ function paint() {
   draw(q, "q");
   if (V.home !== "full" && V.home !== "card") io && io.observe(q);
   $("#sureNote").hidden = !(S.picks.length && !S.done && !S.right);
+  syncPref();
   setMain(S.done ? "Next" : "Try again", false);
-  if (V.home === "part" || V.home === "sticky") requestAnimationFrame(() => {   // keep the whole figure above the sheet (RUNTIME §1 A)
+  if (V.home === "sticky") requestAnimationFrame(() => {   // C: panel lands right under the stuck figure
+    const fw = $("#figwrap").getBoundingClientRect(), r = cl.getBoundingClientRect(), dy = r.top - fw.height - 8;
+    if (dy > 2) scrollBy({ top: dy, behavior: T.rm || BOOT ? "auto" : "smooth" });
+  });
+  if (V.home === "part") requestAnimationFrame(() => {   // keep the whole figure above the sheet (RUNTIME §1 A)
     const r = $("#figwrap").getBoundingClientRect(), top = V.home === "part" && innerWidth < 900 ? cl.getBoundingClientRect().top : innerHeight;
     const dy = r.top < 0 ? r.top - 8 : Math.min(r.top - 8, Math.max(0, r.bottom - top + 8));
     if (Math.abs(dy) > 2) scrollBy({ top: dy, behavior: T.rm || BOOT ? "auto" : "smooth" });

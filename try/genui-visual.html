@@ -13,11 +13,12 @@
 <link rel="stylesheet" href="../vendor/katex/katex.min.css"><script src="../vendor/katex/katex.min.js"></script>
 <script src="../vendor/math.min.js"></script><script src="../graph.js"></script>
 <link rel="stylesheet" href="genui-visual.css">
+<!-- impeccable-disable pulsing-dot: .cl-live .dots lives in the shared app.css (prod Cluck LIVE chip); this page never renders it -->
 </head>
 <body>
 <header class="mockbar">
   <span id="vname" class="vname"></span>
-  <span class="score" aria-live="polite"><span class="star" aria-hidden="true">★</span> <b id="pts">12</b><span id="seg" class="seg-loss" hidden></span><span id="gain" class="gain" hidden></span></span>
+  <span class="score" aria-live="polite"><svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg> <b id="pts">12</b><span id="seg" class="seg-loss" hidden></span><span id="gain" class="gain" hidden></span></span>
 </header>
 
 <main id="app">
@@ -46,7 +47,7 @@
   <!-- Cluck surfaces: one is used per variant -->
   <section class="vcl ai-skin ai-box" id="cl" hidden aria-label="Cluck">
     <button type="button" class="vcl-grab" id="clGrab" aria-label="Expand Cluck"><span></span></button>
-    <button type="button" class="vcl-x" id="clX" aria-label="Close Cluck">✕</button>
+    <button type="button" class="vcl-x" id="clX" aria-label="Close Cluck"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
     <div class="vcl-body" id="clBody"></div>
   </section>
 
@@ -83,7 +84,7 @@
 </nav>
 <p class="tm-pref" id="tmPref" hidden>Tell-me mode is on. <button type="button" class="linkish" id="tmOff">Try it yourself instead</button></p>
 
-<dialog id="fs" aria-label="Figure, full screen"><button type="button" class="vcl-x fs-x" id="fsX" aria-label="Close full screen">✕</button><div class="fig" id="fsfig"></div></dialog>
+<dialog id="fs" aria-label="Figure, full screen"><button type="button" class="vcl-x fs-x" id="fsX" aria-label="Close full screen"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button><div class="fig" id="fsfig"></div></dialog>
 
 <script src="genui-visual.js"></script>
 </body>
