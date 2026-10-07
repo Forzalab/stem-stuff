@@ -13,7 +13,7 @@
 .rd-say { margin: 0; }
 .rd-say.quiet { color: var(--muted); font-size: var(--t-sm); }
 /* the burst: one fixed "+3", rises 14px and fades (STYLE 2.8: transform + opacity, <=14px) */
-.rd-burst { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); font-weight: 700; font-size: var(--t-sm); color: var(--rw-sun); pointer-events: none; animation: rd-rise .6s ease-out both; }
+.rd-burst { position: absolute; left: 50%; bottom: calc(100% + var(--s1)); transform: translateX(-50%); font-weight: 700; font-size: var(--t-sm); color: var(--rw-sun); pointer-events: none; z-index: 1; animation: rd-rise .6s ease-out both; }
 .rd-burst.on-row { left: auto; right: var(--s4); bottom: auto; top: 50%; transform: translateY(-50%); animation-name: rd-rise-row; }
 .ch { position: relative; }
 .hud.bump .coin { animation: rd-pop .28s ease-out 2; }
@@ -27,3 +27,6 @@
 }
 html.rm .rd-burst { transform: translate(-50%, -14px); }
 html.rm .rd-burst.on-row { transform: translateY(calc(-50% - 6px)); }
+/* v1: the +3 rises beside the chip, never into the row above */
+.rd-slot .rd-burst { left: calc(100% + var(--s2)); bottom: auto; top: 50%; transform: translateY(-50%); animation-name: rd-rise-row; }
+html.rm .rd-slot .rd-burst { transform: translateY(calc(-50% - 6px)); }

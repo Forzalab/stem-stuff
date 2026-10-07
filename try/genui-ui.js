@@ -145,7 +145,7 @@
       <p class="line" id="cline" aria-live="polite"></p>
       ${slot}
       ${S.phase === "out" || V === "3" ? "" : `<div class="strip"><button type="button" class="retry" id="retry">Try again</button><button type="button" class="tell" id="tell">Just tell me</button></div>`}
-      <details id="steps"${level >= 3 ? " open" : ""}><summary>Show the steps</summary><ol>${steps.map(([h, m]) => `<li><b>${h}</b>${kx(m, true)}</li>`).join("")}</ol></details>
+      <details id="steps"${level >= 3 ? " open" : ""}><summary>Show the steps</summary><ol>${level >= 3 ? steps.map(([h, m]) => `<li><b>${h}</b>${kx(m, true)}</li>`).join("") : ""}</ol></details>
       <p class="disc">Cluck can slip. Check the key. Keep private stuff out of the chat.</p>
       <div class="ask"><input type="text" aria-label="Ask Cluck about a step" placeholder="Ask about a step" maxlength="500"><button type="button" class="send" aria-label="Send">${icon("i-send")}</button></div>`;
   }
@@ -166,12 +166,14 @@
     if (V === "3" && S.phase !== "out") strip(true);
     if (V === "2") { const c = $("#cfig"); c.style.maxWidth = "16rem"; c.style.margin = "0 auto"; draw(c, { ...FIG, marks: [...FIG.marks, ...ghostMarks()] }); }
     box.addEventListener("click", cluckClick);
+    /* the steps are built when the fold opens (closed = not in the layout at all) */
+    $("#steps", box).addEventListener("toggle", e => { const d = e.target, ol = d.querySelector("ol"); ol.innerHTML = d.open ? STEPS.slice(0, S.told || S.phase === "out" ? 4 : 3).map(([h, m]) => `<li><b>${h}</b>${kx(m, true)}</li>`).join("") : ""; });
     /* first token renders at once; each sentence lands whole (no 35 cps typewriter, pain #4) */
     const line = $("#cline", box), lines = S.phase === "out" ? ["This one trips most people.", "Here is the whole path. It comes back around later."] : L1[id];
     line.textContent = "";
     for (const s of lines) { await wait(140); const sp = document.createElement("span"); sp.className = "chunk"; sp.textContent = (line.textContent ? " " : "") + s; line.append(sp); }
-    if (V === "1" && $("#qfig")) $("#qfig").scrollIntoView({ block: "start", behavior: rm ? "auto" : "smooth" });
-    if (V === "3") box.scrollIntoView({ block: "nearest", behavior: rm ? "auto" : "smooth" });
+    if (V === "1" && $("#qfig")) $("#qfig").scrollIntoView({ block: "start", behavior: "auto" });
+    if (V === "3") box.scrollIntoView({ block: "nearest", behavior: "auto" });
   }
 
   function strip(on) {
@@ -196,7 +198,7 @@
   function retry() {
     S.phase = "pick"; paintOpts();
     if (V === "3") { strip(false); } else peek();
-    app.querySelector(".choices").scrollIntoView({ block: "nearest", behavior: rm ? "auto" : "smooth" });
+    app.querySelector(".choices").scrollIntoView({ block: "nearest", behavior: "auto" });
   }
   function closeCluck() { const b = $("#cluck"); if (b) b.remove(); strip(false); document.body.classList.remove("has-sheet", "has-peek"); }
 
