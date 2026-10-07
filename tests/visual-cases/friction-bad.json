@@ -1,0 +1,140 @@
+{
+ "case": "friction-bad",
+ "source": "energy-bars, planted",
+ "expect": "fail",
+ "fails": "nonincreasing",
+ "why": "Friction work added instead of subtracted: K + U grows as the block slides (energy from nowhere).",
+ "invariants": [
+  {
+   "type": "nonincreasing",
+   "of": "E",
+   "along": "s",
+   "along_range": [
+    0,
+    3
+   ],
+   "over": {
+    "mu": [
+     0.05,
+     0.5
+    ]
+   }
+  },
+  {
+   "type": "conserved",
+   "of": [
+    "K",
+    "U",
+    "Eth"
+   ],
+   "total": "Etot",
+   "over": {
+    "s": [
+     0,
+     3
+    ],
+    "mu": [
+     0.05,
+     0.5
+    ]
+   }
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "slip": "added the friction work",
+   "skill": "w_friction",
+   "see": "the total bar shrink as the block slides",
+   "say": "friction takes mechanical energy out",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    0,
+    8
+   ],
+   "y": [
+    0,
+    40
+   ]
+  },
+  "params": {
+   "s": {
+    "min": 0,
+    "max": 3,
+    "step": 0.05,
+    "init": 0,
+    "unit": "m"
+   },
+   "mu": {
+    "min": 0.05,
+    "max": 0.5,
+    "step": 0.05,
+    "init": 0.2
+   }
+  },
+  "derive": {
+   "m": "2",
+   "g": "9.8",
+   "th": "30*pi/180",
+   "v0": "1",
+   "H": "3*sin(th)",
+   "K": "0.5*m*v0^2 + m*g*s*sin(th) + mu*m*g*cos(th)*s",
+   "U": "m*g*(H - s*sin(th))",
+   "Eth": "mu*m*g*cos(th)*s",
+   "E": "K + U",
+   "Etot": "0.5*m*v0^2 + m*g*H"
+  },
+  "marks": [
+   {
+    "id": "ramp",
+    "sym": "incline",
+    "at": [
+     0,
+     0
+    ],
+    "base": 4,
+    "angle": 30
+   },
+   {
+    "id": "box",
+    "sym": "block",
+    "x": "=3.4 - 0.87*s",
+    "y": "=2 - 0.5*s",
+    "angle": 30
+   },
+   {
+    "id": "bK",
+    "mark": "bar",
+    "x": 5,
+    "h": "=K",
+    "color": "c1",
+    "label": "K"
+   },
+   {
+    "id": "bU",
+    "mark": "bar",
+    "x": 6,
+    "h": "=U",
+    "color": "c2",
+    "label": "U_g"
+   },
+   {
+    "id": "bE",
+    "mark": "bar",
+    "x": 7,
+    "h": "=E",
+    "color": "c3",
+    "label": "K + U"
+   }
+  ],
+  "handles": [
+   {
+    "bind": "s",
+    "on": "box",
+    "constraint": "onPath:ramp"
+   }
+  ]
+ }
+}

@@ -1,0 +1,96 @@
+{
+ "case": "kwv-b-good",
+ "source": "PHYS_KWV b (20.0: triangle only)",
+ "expect": "pass",
+ "slip_kind": "concept",
+ "why": "Ghost = the triangle B–C only (8 squares = 20 J).",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "T",
+   "equals": 60,
+   "scale": 2.5
+  },
+  {
+   "type": "area",
+   "mark": "G",
+   "equals": "label",
+   "scale": 2.5
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "b",
+   "slip": "counted the triangle only",
+   "skill": "w_area",
+   "see": "the rectangle missing from the dashed shape",
+   "say": "the rectangle counts too",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    8.8
+   ],
+   "y": [
+    -1,
+    5
+   ]
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "T",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      4
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      8,
+      0
+     ]
+    ],
+    "fill": true,
+    "color": "c2",
+    "truth": true,
+    "label": "60 J"
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "label": "your 20 J",
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      4,
+      0
+     ],
+     [
+      4,
+      4
+     ],
+     [
+      8,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}

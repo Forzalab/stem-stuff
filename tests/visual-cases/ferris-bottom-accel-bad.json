@@ -1,0 +1,235 @@
+{
+ "case": "ferris-bottom-accel-bad",
+ "source": "PHYS_8VQ / 8U2 bottom, planted",
+ "expect": "fail",
+ "fails": "toward",
+ "slip_kind": "concept",
+ "why": "At the bottom seat the a_c arrow points down, away from the hub: the classic 'heavier at the bottom because a points down' picture. a_c points to the center at the top AND the bottom.",
+ "invariants": [
+  {
+   "type": "ferris",
+   "m": "m",
+   "g": "g",
+   "v": "v",
+   "r": "R",
+   "top": "Ntop",
+   "bottom": "Nbot",
+   "side": "Nside",
+   "over": {
+    "w": [
+     0.3,
+     0.8
+    ]
+   }
+  },
+  {
+   "type": "gravity_down",
+   "mark": "Wg",
+   "over": {
+    "w": [
+     0.3,
+     0.8
+    ]
+   }
+  },
+  {
+   "type": "toward",
+   "mark": "aT",
+   "center": [
+    0,
+    0
+   ]
+  },
+  {
+   "type": "toward",
+   "mark": "aB",
+   "center": [
+    0,
+    0
+   ]
+  },
+  {
+   "type": "toward",
+   "mark": "aS",
+   "center": [
+    0,
+    0
+   ]
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "b",
+   "slip": "added the vertical and sideways parts",
+   "skill": "vec_add",
+   "see": "the dashed 355 N arrow longer than the slanted seat force",
+   "say": "perpendicular parts add like triangle sides",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -4,
+    4
+   ],
+   "y": [
+    -4.2,
+    4
+   ]
+  },
+  "params": {
+   "w": {
+    "min": 0.3,
+    "max": 0.8,
+    "step": 0.05,
+    "init": 0.6,
+    "unit": "rad/s"
+   }
+  },
+  "derive": {
+   "m": "28",
+   "R": "8",
+   "g": "9.8",
+   "v": "w*R",
+   "mg": "m*g",
+   "mc": "m*v^2/R",
+   "Ntop": "mg - mc",
+   "Nbot": "mg + mc",
+   "Nside": "sqrt(mg^2 + mc^2)"
+  },
+  "marks": [
+   {
+    "id": "wheel",
+    "mark": "circle",
+    "at": [
+     0,
+     0
+    ],
+    "r": 3,
+    "color": "muted"
+   },
+   {
+    "id": "hub",
+    "mark": "pivot",
+    "at": [
+     0,
+     0
+    ]
+   },
+   {
+    "id": "sT",
+    "mark": "body",
+    "shape": "dot",
+    "at": [
+     0,
+     3
+    ]
+   },
+   {
+    "id": "sB",
+    "mark": "body",
+    "shape": "dot",
+    "at": [
+     0,
+     -3
+    ]
+   },
+   {
+    "id": "sS",
+    "mark": "body",
+    "shape": "dot",
+    "at": [
+     3,
+     0
+    ]
+   },
+   {
+    "id": "aT",
+    "mark": "arrow",
+    "from": [
+     0,
+     3
+    ],
+    "to": [
+     0,
+     2
+    ],
+    "label": "a_c",
+    "color": "c3"
+   },
+   {
+    "id": "aB",
+    "mark": "arrow",
+    "from": [
+     0,
+     -3
+    ],
+    "to": [
+     0,
+     -4
+    ],
+    "label": "a_c",
+    "color": "c3"
+   },
+   {
+    "id": "aS",
+    "mark": "arrow",
+    "from": [
+     3,
+     0
+    ],
+    "to": [
+     2,
+     0
+    ],
+    "label": "a_c",
+    "color": "c3"
+   },
+   {
+    "id": "Wg",
+    "mark": "arrow",
+    "from": [
+     3,
+     0
+    ],
+    "to": [
+     3,
+     "=-mg/100"
+    ],
+    "label": "mg",
+    "color": "c1"
+   },
+   {
+    "id": "N",
+    "mark": "arrow",
+    "from": [
+     3,
+     0
+    ],
+    "to": [
+     "=3 - mc/100",
+     "=mg/100"
+    ],
+    "label": "N",
+    "color": "c1",
+    "truth": true
+   },
+   {
+    "id": "gN",
+    "ghost": true,
+    "label": "your 355 N",
+    "dash": true,
+    "color": "muted",
+    "mark": "arrow",
+    "from": [
+     3,
+     0
+    ],
+    "to": [
+     3,
+     "=(mg + mc)/100"
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,127 @@
+{
+ "case": "shm-omega-bad",
+ "source": "Exam 4 SHM, planted",
+ "expect": "fail",
+ "fails": "conserved",
+ "why": "ω = sqrt(m/k) (flipped): the motion is drawn 4x too slow and K + U_s no longer equals ½kA².",
+ "invariants": [
+  {
+   "type": "spring_restoring",
+   "F": "F",
+   "x": "x",
+   "mark": "Fa",
+   "over": {
+    "t": [
+     0,
+     6
+    ]
+   }
+  },
+  {
+   "type": "conserved",
+   "of": [
+    "K",
+    "Us"
+   ],
+   "total": "E",
+   "over": {
+    "t": [
+     0,
+     6
+    ]
+   }
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "slip": "spring force along the stretch",
+   "skill": "shm_force",
+   "see": "the force arrow always point back to the middle",
+   "say": "the spring pulls back toward equilibrium",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -2,
+    2
+   ],
+   "y": [
+    0,
+    3
+   ]
+  },
+  "params": {
+   "t": {
+    "min": 0,
+    "max": 6.28,
+    "step": 0.01,
+    "init": 0.4,
+    "unit": "s"
+   }
+  },
+  "derive": {
+   "k": "8",
+   "m": "2",
+   "A": "1",
+   "w": "sqrt(m/k)",
+   "x": "A*cos(w*t)",
+   "vx": "-A*w*sin(w*t)",
+   "F": "-k*x",
+   "K": "0.5*m*vx^2",
+   "Us": "0.5*k*x^2",
+   "E": "0.5*k*A^2"
+  },
+  "marks": [
+   {
+    "id": "wall",
+    "sym": "ground",
+    "at": [
+     -2,
+     0
+    ]
+   },
+   {
+    "id": "spr",
+    "sym": "spring",
+    "from": [
+     -2,
+     1
+    ],
+    "to": [
+     "=x",
+     1
+    ]
+   },
+   {
+    "id": "box",
+    "sym": "block",
+    "x": "=x",
+    "y": 1
+   },
+   {
+    "id": "Fa",
+    "mark": "arrow",
+    "from": [
+     "=x",
+     1.6
+    ],
+    "to": [
+     "=x + F/16",
+     1.6
+    ],
+    "label": "F_s",
+    "color": "c1"
+   }
+  ],
+  "timeline": {
+   "drive": {
+    "param": "t",
+    "from": 0,
+    "to": 6.28,
+    "dur": 6000,
+    "ease": "linear"
+   }
+  }
+ }
+}

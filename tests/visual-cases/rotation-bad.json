@@ -1,0 +1,117 @@
+{
+ "case": "rotation-bad",
+ "source": "Exam 3 rolling ball, planted",
+ "expect": "fail",
+ "fails": "conserved",
+ "why": "v = sqrt(2 g h) (the sliding-block speed) while the spin bar still shows ½Iω²: the bars add up to more than mgH.",
+ "invariants": [
+  {
+   "type": "conserved",
+   "of": [
+    "Kt",
+    "Kr",
+    "U"
+   ],
+   "total": "E",
+   "over": {
+    "s": [
+     0,
+     3
+    ]
+   }
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "slip": "left out the rotational energy",
+   "skill": "k_rot",
+   "see": "a spin bar take part of the energy",
+   "say": "a rolling ball spends energy on spinning",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    0,
+    8
+   ],
+   "y": [
+    0,
+    32
+   ]
+  },
+  "params": {
+   "s": {
+    "min": 0,
+    "max": 3,
+    "step": 0.05,
+    "init": 0,
+    "unit": "m"
+   }
+  },
+  "derive": {
+   "m": "1",
+   "R": "0.1",
+   "g": "9.8",
+   "th": "30*pi/180",
+   "I": "0.4*m*R^2",
+   "drop": "s*sin(th)",
+   "H": "3*sin(th)",
+   "v": "sqrt(2*g*drop)",
+   "w": "v/R",
+   "Kt": "0.5*m*v^2",
+   "Kr": "0.5*I*w^2",
+   "U": "m*g*(H - drop)",
+   "E": "m*g*H"
+  },
+  "marks": [
+   {
+    "id": "ramp",
+    "sym": "incline",
+    "at": [
+     0,
+     0
+    ],
+    "base": 4,
+    "angle": 30
+   },
+   {
+    "id": "ball",
+    "sym": "ball",
+    "x": "=3.4 - 0.87*s",
+    "y": "=2 - 0.5*s"
+   },
+   {
+    "id": "bKt",
+    "mark": "bar",
+    "x": 5,
+    "h": "=Kt",
+    "color": "c1",
+    "label": "K_{trans}"
+   },
+   {
+    "id": "bKr",
+    "mark": "bar",
+    "x": 6,
+    "h": "=Kr",
+    "color": "c3",
+    "label": "K_{rot}"
+   },
+   {
+    "id": "bU",
+    "mark": "bar",
+    "x": 7,
+    "h": "=U",
+    "color": "c2",
+    "label": "U_g"
+   }
+  ],
+  "handles": [
+   {
+    "bind": "s",
+    "on": "ball",
+    "constraint": "onPath:ramp"
+   }
+  ]
+ }
+}

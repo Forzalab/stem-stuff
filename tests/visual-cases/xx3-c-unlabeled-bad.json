@@ -1,0 +1,94 @@
+{
+ "case": "xx3-c-unlabeled-bad",
+ "source": "PHYS_XX3 c, planted",
+ "expect": "fail",
+ "fails": "ghost_label",
+ "slip_kind": "concept",
+ "why": "The ghost has no label: an unlabelled grey shape reads as part of the problem, not as 'your 48 J'.",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "T",
+   "equals": 36,
+   "scale": 2
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "c",
+   "slip": "counted only the area above the axis",
+   "skill": "w_area",
+   "see": "the dip below the axis missing from the dashed shape",
+   "say": "below the axis takes work away",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    12.8
+   ],
+   "y": [
+    -4,
+    7
+   ]
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "T",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      6
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      10,
+      -3
+     ],
+     [
+      12,
+      0
+     ]
+    ],
+    "fill": true,
+    "color": "c2",
+    "truth": true,
+    "label": "36 J"
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      6
+     ],
+     [
+      8,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}

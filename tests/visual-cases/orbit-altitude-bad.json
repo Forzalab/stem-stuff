@@ -1,0 +1,156 @@
+{
+ "case": "orbit-altitude-bad",
+ "source": "orbit family, planted",
+ "expect": "fail",
+ "fails": "orbit_radius",
+ "slip_kind": "concept",
+ "why": "The truth orbit circle is drawn at r = h = 3 R_E: the altitude-as-r slip in the figure itself.",
+ "invariants": [
+  {
+   "type": "orbit_radius",
+   "circle": "orbit",
+   "planet": "earth",
+   "h": "h",
+   "over": {
+    "h": [
+     1,
+     4
+    ]
+   }
+  },
+  {
+   "type": "power_law",
+   "of": "gr",
+   "r": "Re + h",
+   "n": 2,
+   "over": {
+    "h": [
+     1,
+     4
+    ]
+   }
+  },
+  {
+   "type": "power_law",
+   "of": "vo",
+   "r": "Re + h",
+   "n": 0.5,
+   "over": {
+    "h": [
+     1,
+     4
+    ]
+   }
+  },
+  {
+   "type": "toward",
+   "mark": "gv",
+   "center": [
+    0,
+    0
+   ],
+   "over": {
+    "h": [
+     1,
+     4
+    ]
+   }
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "e",
+   "slip": "used the altitude as the orbit radius",
+   "skill": "orbit_r",
+   "see": "the dashed circle sit inside the real orbit",
+   "say": "r is measured from Earth's center",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -5.5,
+    5.5
+   ],
+   "y": [
+    -5.5,
+    5.5
+   ]
+  },
+  "params": {
+   "h": {
+    "min": 1,
+    "max": 4,
+    "step": 0.5,
+    "init": 3,
+    "unit": "R_E"
+   }
+  },
+  "derive": {
+   "Re": "1",
+   "g0": "9.8",
+   "r": "Re + h",
+   "gr": "g0*Re^2/r^2",
+   "vo": "sqrt(g0*Re^2/r)"
+  },
+  "marks": [
+   {
+    "id": "earth",
+    "mark": "circle",
+    "at": [
+     0,
+     0
+    ],
+    "r": "=Re",
+    "color": "c2"
+   },
+   {
+    "id": "orbit",
+    "mark": "circle",
+    "at": [
+     0,
+     0
+    ],
+    "r": "=h",
+    "color": "c2",
+    "truth": true
+   },
+   {
+    "id": "sat",
+    "mark": "body",
+    "shape": "dot",
+    "at": [
+     "=h",
+     0
+    ]
+   },
+   {
+    "id": "gv",
+    "mark": "arrow",
+    "from": [
+     "=h",
+     0
+    ],
+    "to": [
+     "=h - 0.8",
+     0
+    ],
+    "label": "g",
+    "color": "c3"
+   },
+   {
+    "id": "gO",
+    "ghost": true,
+    "label": "your r = 3R_E",
+    "dash": true,
+    "color": "muted",
+    "mark": "circle",
+    "at": [
+     0,
+     0
+    ],
+    "r": "=h"
+   }
+  ]
+ }
+}
