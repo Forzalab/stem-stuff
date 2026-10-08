@@ -1,6 +1,6 @@
 # Telemetry (PR C, D20–D24, D69)
 
-PostHog (events + session replay) and Microsoft Clarity (heatmaps + replay). One file: `telemetry.js`. One entry point:
+PostHog (pageviews + the `stemT` events below; autocapture and session replay OFF since the 2026-10-07 bench, design/bench/posthog-2026-10-07) and Microsoft Clarity (heatmaps + replay; off, build flag). One file: `telemetry.js`. One entry point:
 `window.stemT(name, props)`; app.js calls it as `window.stemT?.(...)`, one line per hook. It never throws and never blocks.
 
 ## Key flow
@@ -11,14 +11,15 @@ PostHog (events + session replay) and Microsoft Clarity (heatmaps + replay). One
 3. No env (local `serve.py`, preview deploys, the offline download) → the meta stays `content=""` → `telemetry.js` returns at
    once: `stemT` stays a no-op, zero requests, no console output.
 
-**Decision (D22 bench, T-bd):** Clarity is OFF (>100 ms TBT, no unique data: PostHog replay + rage_tap/dead_tap cover it). Kept behind a build flag: Vercel env `CLARITY=1` stamps `CLARITY_ID` again. PostHog runs with `disable_surveys: true, capture_dead_clicks: false` (−42 KB).
+**Decision (D22 bench, T-bd):** Clarity is OFF (>100 ms TBT, no unique data: rage_tap/dead_tap cover it). Kept behind a build flag: Vercel env `CLARITY=1` stamps `CLARITY_ID` again. PostHog runs with `disable_surveys: true, capture_dead_clicks: false` (−42 KB).
 
 ## Gates (silent: nothing is ever shown or said)
 - `navigator.doNotTrack === "1"` (or `window.doNotTrack`, `msDoNotTrack`) or `navigator.globalPrivacyControl` → load NOTHING,
   queue nothing. PostHog also gets `respect_dnt: true`.
 - `localStorage["stem-t-off"] === "1"` → the same: nothing loads. Set by privacy.html "Don't record me" (a second tap undoes
   it). This is the real opt-out: DNT/GPC never fire on iOS Safari.
-- Recorded unmasked (D20/D24) EXCEPT e-mail and phone-number shapes: PostHog `mask_all_text:false`,
+- Session replay is OFF (`disable_session_recording: true`, bench 2026-10-07), so nothing typed or shown is sent; the mask
+  settings below stay in telemetry.js for the day it is switched back on. Recorded unmasked (D20/D24) EXCEPT e-mail and phone-number shapes: PostHog `mask_all_text:false`,
   `mask_all_element_attributes:false`; session replay `maskAllInputs:true` + `maskTextSelector:"*"` route every input and text
   node through `maskInputFn` / `maskTextFn` = `blankPII()`, which stars out only these two shapes and returns the rest
   unchanged (rrweb calls the mask functions on "masked" nodes only, hence "mask all, blank little"). Covers #scratch, Cluck's
@@ -58,7 +59,7 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 | `bail` | stage (start/open/wrong/right/cluck/next), via (hidden/pagehide), ms_on_page, code | telemetry.js, `transport: sendBeacon` + `send_instantly`; raw beacon if not loaded |
 | `next` | code | telemetry.js, click on `#qnext` (capture; nav.js untouched) |
 
-Plus PostHog autocapture, `$pageview`, `$pageleave`, session replay; Clarity replay + heatmaps.
+Plus PostHog `$pageview`, `$pageleave` (with PostHog's own browser / device / referrer properties). NOT on: autocapture and session replay (`autocapture: false, disable_session_recording: true`, bench 2026-10-07: both on = +202 ms TBT); Clarity (build flag, above).
 
 ## Events — defined, NOT wired (no prod surface yet; V / U / Q wire them)
 

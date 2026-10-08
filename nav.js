@@ -219,7 +219,10 @@ function init() {
   }
   /* the code box comes with the list (Tony, Oct 5 clutter pass C2 / C15): html.ql-open shows it (nav.css, app.css);
      app.js puts the phone's code bar up while it is open (drill:qlist) */
-  function showList(on) { document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } })); }
+  function showList(on) {
+    document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } }));
+    if (on) document.documentElement.style.setProperty("--ql-bottom", Math.round(panel.getBoundingClientRect().bottom) + "px");   // phones: the privacy link sits under the list (index.html, G3)
+  }
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
   function go(d) {
     const st = Q();
@@ -252,7 +255,7 @@ function init() {
   /* an outside tap closes it: the list floats over the page (Tony, Oct 6), so closing moves nothing under the pointer.
      Taps on its own bar row (the button, the code box) keep it open. Also: the button, Escape, a pick, Prev/Next. */
   document.addEventListener("pointerdown", e => {
-    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, .code-sug")) return;
+    if (panel.hidden || e.target.closest("#qlist, #qlistBtn, #entry, .code-sug, #privacy")) return;   // #privacy: phones show it with the list (index.html, G3)
     close(false);
   });
   /* re-rank after every answer (D62): only the FIRST graded pick of a showing moves the queue; a retry is logged (shuffle.mjs) */

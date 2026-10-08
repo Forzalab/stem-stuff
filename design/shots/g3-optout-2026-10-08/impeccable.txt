@@ -1,0 +1,20 @@
+# G3 Impeccable, 2026-10-08, branch ccr-ef299f82-2e1wio-g3-optout (raw output kept out of the repo: OUT=<scratch>)
+
+$ tools/impeccable.sh http://127.0.0.1:$PORT privacy.html -- privacy.html
+390x844 privacy.html: 0 lines / 1920x1080: 0 / 2560x1440: 0 / 3840x2160: 0 / static: 0 lines
+rc=0
+
+$ tools/impeccable.sh http://127.0.0.1:$PORT index.html privacy.html -- app.css privacy.html nav.css
+390x844 index.html: 0 lines
+1920x1080 index.html: 0 lines
+2560x1440 index.html: 0 lines
+3840x2160 index.html: 0 lines
+390x844 privacy.html: 0 lines
+1920x1080 privacy.html: 0 lines
+2560x1440 privacy.html: 0 lines
+3840x2160 privacy.html: 0 lines
+static: 0 lines
+rc=0
+
+## Extra: static scan with index.html added (-- app.css privacy.html nav.css index.html): rc=2, 3 [side-tab] (.rw-chip, .rw-hint-coin, .rw-hint-chev) + 1 advisory, all in index.html's casino-skin styles (waived, Tony Oct 4).
+PRE-EXISTING: the same command on main d5bffd1 (git archive) gives rc=2 with byte-identical findings (diff after path normalisation: none). Not touched by G3.
