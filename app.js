@@ -1544,8 +1544,8 @@ async function rewardShow(mine, res) {
     await fx.burst(res.burst, opt);
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
-  if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
-  else if (mine.rwBack) comeback();
+  if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
+  else if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
 }
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {
