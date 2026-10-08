@@ -286,7 +286,7 @@ try {
       const cs = sel => getComputedStyle(document.querySelector(sel)), sheet = cs("#cluck").backgroundColor;
       return { text: cr(cs("#cluck .wtext").color, sheet), muted: cr(cs("#cluck .cl-fold-n").color, sheet), me: cr(getComputedStyle(document.querySelector("#cluck"), null).getPropertyValue("--ai-on-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`), getComputedStyle(document.querySelector("#cluck")).getPropertyValue("--ai-ct").trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${[r, g, b].map(h => parseInt(h, 16))})`)),
         send: cr(cs("#cluck .send").color, cs("#cluck .send").backgroundColor), left: cr(cs("#cluck .ask .left").color, cs("#cluck .ask").backgroundColor),
-        live: cr(cs("#cluck .cl-live").color, sheet), tag: cr(cs("#cluck .who .tag").color, cs("#cluck .who .tag").backgroundColor),
+        tag: cr(cs("#cluck .who .tag").color, cs("#cluck .who .tag").backgroundColor),
         name: cr(cs("#cluck .who .name").color, sheet), time: cr(cs("#cluck .who .time").color, sheet) };
     });
     for (const [k, v] of Object.entries(aa)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}:1 < 4.5`);
@@ -295,11 +295,8 @@ try {
     for (let n = 1; n <= 5; n++) {
       const a0 = asked;
       await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
-      if (n === 1) assert.match(await page.textContent("#cluck .cl-live"), /Cluck is typing/, "the typing line while Cluck answers");
-      if (n === 1) assert.equal(await page.isVisible("#cluck .cl-live"), true, "the typing line while Cluck answers");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 4000 });
       if (n === 1) {
-        assert.equal(await page.isVisible("#cluck .cl-live"), false, "the typing line leaves once typed");
         assert.equal((await page.textContent("#cluck .cl-verify:visible")).trim(), "verify b4 use lol", "the grey line under Cluck's text (Tony, Oct 5)");
         assert.deepEqual(await page.$$eval("#cluck .msg .name", e => e.map(x => x.textContent)), ["Cluck", "You", "Cluck"], "Cluck and you, as chat users (C1)");
         const look = sel => page.$eval(sel, e => { const c = getComputedStyle(e); return [c.borderTopWidth, c.boxShadow, c.paddingLeft, c.backgroundColor].join(" | "); });
