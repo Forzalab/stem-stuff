@@ -4,6 +4,7 @@
 //   node tests/nav-stable.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import zlib from "node:zlib";
 import { spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -118,9 +119,10 @@ try {
     await c2.close();
   });
 
-  /* the open list dims the page, not the bar; the XP strip in the bar dims too (nav.css .ql-dim, Tony, Oct 6) */
-  for (const w of [390, 1366]) await step(`open list at ${w}: the page dims, the bar chip does not, the XP strip does; a tap on the dim closes it`, async () => {
-    const phone = w < 700, H = phone ? 844 : 768;
+  /* the open list: one even scrim over the page, the top bar and its XP strip; the bar's buttons still work under it
+     (nav.css .ql-dim + .top::after, Tony's Oct 7 bug shot: an undimmed bar, the strip's own dim, row 1 over the strip) */
+  for (const w of [393, 1366]) await step(`open list at ${w}: one even dim over the page, the bar and the XP strip; row 1 under the strip; a tap on the dim closes it`, async () => {
+    const phone = w < 700, H = phone ? 852 : 768;
     const c3 = await browser.newContext({ viewport: { width: w, height: H }, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
     const pg = await c3.newPage();
     await pg.goto(BASE + "/#BANK_NV56");
@@ -131,24 +133,40 @@ try {
     const hit = () => pg.evaluate(([x, y]) => {
       const at = el => { const r = el.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); };
       const dim = document.querySelector("#qlDim"), hud = document.querySelector(".top > .rw-hud");
-      return { chip: !!at(document.querySelector("#qlistBtn"))?.closest("#qlistBtn"),
-        hud: hud && !hud.hidden ? { on: getComputedStyle(hud, "::after").opacity, top: at(hud) === hud } : null,
+      const list = document.querySelector("#qlist"), row = list.querySelector("li"), top = document.querySelector(".top");
+      if (!list.hidden) list.scrollTop = 0;
+      const tb = top.getBoundingClientRect();
+      return { chip: !!at(document.querySelector("#qlistBtn"))?.closest("#qlistBtn"), lb: list.getBoundingClientRect().bottom,
+        hud: hud && !hud.hidden ? { tap: !!at(hud)?.closest(".top > .rw-hud"), bottom: hud.getBoundingClientRect().bottom } : null,
+        row1: !list.hidden && row ? { top: row.getBoundingClientRect().top, hit: !!at(row)?.closest("#qlist") } : null,
         page: document.elementFromPoint(x, y)?.id, dim: getComputedStyle(dim).visibility };
     }, spot);
     await pg.click("#qlistBtn");
     await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
     let h = await hit();
     assert.equal(h.dim, "visible");
-    assert.equal(h.chip, true, "the list button is under the dim");
+    assert.equal(h.chip, true, "the list button is not on top (it must still close the list)");
     assert.ok(h.hud, "no XP strip in the bar");
-    assert.equal(h.hud.on, "1", "the XP strip is not dimmed");
-    assert.equal(h.hud.top, true, "the XP strip's dim does not sit over it");
+    /* even: the bar's empty edge, the XP strip's row beside the strip and the page under the list are the same colour (main: bar 8,17,31 vs page 3,7,14) */
+    const px = (x, y) => pg.screenshot({ clip: { x, y, width: 1, height: 1 } }).then(b => b.toString("base64"));
+    const page0 = await px(2, h.lb + 48), bar0 = await px(2, 2), hud0 = await px(2, h.hud.bottom - 4);
+    const rgb = b => {   /* a 1x1 PNG's pixel: its IDAT chunks, inflated; byte 0 is the row filter */
+      const buf = Buffer.from(b, "base64"), dat = [];
+      for (let o = 8; o < buf.length; o += 12 + buf.readUInt32BE(o)) if (buf.toString("latin1", o + 4, o + 8) === "IDAT") dat.push(buf.subarray(o + 8, o + 8 + buf.readUInt32BE(o)));
+      return [...zlib.inflateSync(Buffer.concat(dat), { finishFlush: zlib.constants.Z_SYNC_FLUSH }).subarray(1, 4)].join();
+    };
+    const near = (a, b) => rgb(a).split(",").every((v, i) => Math.abs(v - rgb(b).split(",")[i]) <= 3);   /* the list's soft shadow reaches far */
+    assert.ok(near(bar0, page0), `the top bar (${rgb(bar0)}) is not under the same dim as the page (${rgb(page0)})`);
+    assert.ok(near(hud0, page0), `the XP strip's row (${rgb(hud0)}) is not under the same dim as the page (${rgb(page0)})`);
+    assert.ok(h.row1, "no list row");
+    assert.equal(h.row1.hit, true, "row 1 is not above the dim");
+    if (phone) assert.ok(h.row1.top >= h.hud.bottom, `row 1 (top ${h.row1.top}) overlaps the XP strip (bottom ${h.hud.bottom})`);
     assert.equal(h.page, "qlDim", "the page is not under the dim");
     await pg.mouse.click(...spot);                                              // a tap on the dim
     await pg.waitForFunction(() => document.querySelector("#qlist").hidden, null, { timeout: 2000 });
     await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
     h = await hit();
-    assert.equal(h.hud.on, "0", "the XP strip stays dim after close");
+    assert.equal(h.hud.tap, true, "the XP strip's tap target is covered after close");
     assert.notEqual(h.page, "qlDim", "the dim still covers the page");
     await pg.click("#qlistBtn"); await pg.keyboard.press("Escape");             // Escape closes it too
     await pg.waitForFunction(() => document.querySelector("#qlist").hidden && getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
