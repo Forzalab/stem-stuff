@@ -1,0 +1,2 @@
+desktop-scroll0 1280x800 before vs after: differing pixels = 0 of 1024000 (video corner #rot hidden in both: its spinners animate)
+desktop-scrolled 1280x800 before vs after: differing pixels = 0 of 1024000 (video corner #rot hidden in both: its spinners animate)

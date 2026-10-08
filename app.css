@@ -51,6 +51,8 @@ button:disabled { cursor: default; }
 
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
+/* phones, a problem open: the bar stays pinned to the top while a long question scrolls under it. It keeps its space (sticky), so the first line sits right under it at scroll 0; its --paper fill (nav.css border-image) hides what passes beneath; z-index in nav.css */
+html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* not side by side (touch tablets, >= 720px): there the problem column and the notes column are sticky at the top themselves (html.side .freeze, #work), a pinned bar would hide their first lines */
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
 /* code box (design/STYLE.md "Code box"): the bar's language. As tall as the buttons beside it (--btn, tops and bottoms line up),

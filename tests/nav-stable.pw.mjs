@@ -28,6 +28,10 @@ const MC = { code: "CALC1_M01", type: "mc", correct: "a", shuffle: false, body: 
 const sweet = n => ({ code: `CALC1_D0${n}`, type: "mc", shuffle: false, body: [{ type: "text", md: `Dim ${n}: pick a.` }],
   choices: [{ id: "a", md: "one" }, { id: "b", md: "two" }], correct: "a", saccharine: { title: `Practice Exam 2, Question ${n}`, key: "Answer: a" } });
 writeFileSync(join(BANKS, "BANK_NV56.json"), JSON.stringify({ v: 1, problems: [sweet(1), sweet(2), sweet(3)] }));
+/* a question longer than a phone screen, for the pinned top bar */
+const longQ = n => ({ code: `CALC1_L0${n}`, type: "mc", correct: "a", shuffle: false, body: [{ type: "text", md: `Long ${n}. ` + "A long question goes on and on. ".repeat(160) }],
+  choices: [{ id: "a", md: "right" }, { id: "b", md: "nope" }] });
+writeFileSync(join(BANKS, "BANK_NV78.json"), JSON.stringify({ v: 1, problems: [longQ(1), longQ(2)] }));
 writeFileSync(join(BANKS, "BANK_NV34.json"), JSON.stringify({ v: 1, problems: [MC, num("CALC1_M02", "2", "1 + 1")] }));
 
 const { qFresh, qRest, qNew } = await import("../shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
@@ -117,6 +121,38 @@ try {
     const g = await pg.evaluate(() => ({ next: document.querySelector("#qnext").getBoundingClientRect().top, y: scrollY }));
     assert.ok(g.next >= 0 && g.next < 100, `Next not in view: top ${g.next}, scrollY ${g.y}`);
     await c2.close();
+  });
+
+  /* phones: the top bar stays pinned while a long question scrolls (app.css html.dock-bottom .top sticky, nav.css z 35); at scroll 0 it
+     sits above the first line, not on it */
+  await step("393x852: a long question scrolled down, the top bar stays at the top of the screen and on top; at scroll 0 it does not cover the first line", async () => {
+    const c4 = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
+    await c4.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    const pg = await c4.newPage();
+    await pg.goto(BASE + "/#BANK_NV78");
+    await pg.waitForFunction(() => /^CALC1_L0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await pg.waitForFunction(() => !document.querySelector("#qnav").hidden && document.documentElement.classList.contains("dock-bottom"), null, { timeout: 4000 });
+    await pg.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
+    await pg.waitForTimeout(400);
+    const probe = () => pg.evaluate(() => {
+      const top = document.querySelector(".top"), r = top.getBoundingClientRect(), b = document.querySelector("#qlistBtn").getBoundingClientRect();
+      const q = document.querySelector("#freeze .md, #q").getBoundingClientRect();
+      return { y: scrollY, max: document.documentElement.scrollHeight - innerHeight, top: r.top, bottom: r.bottom, h: r.height, qTop: q.top,
+        on: !!document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)?.closest("#qlistBtn") };
+    });
+    let g = await probe();
+    assert.ok(g.h > 40, `no top bar (height ${g.h})`);
+    assert.ok(Math.abs(g.top) <= 1, `top bar at ${g.top} before any scroll`);
+    assert.ok(g.qTop >= g.bottom - 1, `the bar (bottom ${g.bottom}) covers the first line of the question (top ${g.qTop})`);
+    await pg.evaluate(() => window.scrollTo(0, 600)); await pg.waitForTimeout(400);
+    g = await probe();
+    assert.ok(g.y >= 500, `the page did not scroll (scrollY ${g.y}, room ${g.max}): the test question is not long enough`);
+    assert.ok(Math.abs(g.top) <= 1, `top bar scrolled away: top ${g.top} at scrollY ${g.y}`);
+    assert.equal(g.on, true, "the list button is not on top of the scrolled page");
+    await pg.evaluate(() => window.scrollTo(0, 0)); await pg.waitForTimeout(300);
+    g = await probe();
+    assert.ok(Math.abs(g.top) <= 1 && g.qTop >= g.bottom - 1, `back at the top: bar ${g.top}..${g.bottom}, question ${g.qTop}`);
+    await c4.close();
   });
 
   /* the open list: one even scrim over the page, the top bar and its XP strip; the bar's buttons still work under it
