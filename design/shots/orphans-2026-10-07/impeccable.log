@@ -1,0 +1,62 @@
+$ OUT=... tools/impeccable.sh http://127.0.0.1:8871 index.html -- index.html
+390x844 index.html: 0 lines
+1920x1080 index.html: 0 lines
+2560x1440 index.html: 0 lines
+3840x2160 index.html: 0 lines
+static: 15 lines
+rc=2
+== index.html@1920x1080.txt
+== index.html@2560x1440.txt
+== index.html@3840x2160.txt
+== index.html@390x844.txt
+== static.txt
+
+/home/user/wt-orphans/index.html
+  [side-tab] none with reduced motion. app.js keeps .wchip on it as the hook. */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.rw-chip — inset box-shadow 4px stripe (bottom)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+  [side-tab] .rw-hint-coin — inset box-shadow 3px stripe (top)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+  [side-tab] .rw-hint-chev — inset box-shadow 3px stripe (bottom)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+
+3 anti-patterns found.
+
+── Advisory (not counted as failures) ──
+
+/home/user/wt-orphans/index.html
+  [repeating-stripes-gradient] repeating-gradient decorative stripes
+    → Repeating-gradient stripes used as surface decoration are a recurring generated-UI signature. Reach for a deliberate texture or leave the surface plain.
+
+1 advisory note. Suppress with --no-advisory.
+
+=== live-only run (the 4 viewports, no static args): tools/impeccable.sh http://127.0.0.1:8871 index.html
+390x844 index.html: 0 lines
+1920x1080 index.html: 0 lines
+2560x1440 index.html: 0 lines
+3840x2160 index.html: 0 lines
+rc=0
+
+=== static on origin/main d18ac66 (separate worktree): npx impeccable detect index.html
+
+/tmp/wt-orphans-main/index.html
+  [side-tab] none with reduced motion. app.js keeps .wchip on it as the hook. */
+/* impeccable waiver: casino-themed (Tony, Oct 4) */
+.rw-chip — inset box-shadow 4px stripe (bottom)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+  [side-tab] .rw-hint-coin — inset box-shadow 3px stripe (top)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+  [side-tab] .rw-hint-chev — inset box-shadow 3px stripe (bottom)
+    → Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.
+
+3 anti-patterns found.
+
+── Advisory (not counted as failures) ──
+
+/tmp/wt-orphans-main/index.html
+  [repeating-stripes-gradient] repeating-gradient decorative stripes
+    → Repeating-gradient stripes used as surface decoration are a recurring generated-UI signature. Reach for a deliberate texture or leave the surface plain.
+
+1 advisory note. Suppress with --no-advisory.
+rc=2 (same 3 side-tab findings: pre-existing. They are waived inline in rewards/rewards.css:8 'impeccable-disable side-tab'; scanning rewards/rewards.css directly honors it, rc=0; via index.html's <link> the inline waiver is not applied)
