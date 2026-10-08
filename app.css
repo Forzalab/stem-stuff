@@ -530,19 +530,9 @@ html.cl-open body { overflow: hidden; }
 .cl-bar .cl-x { border: 0; cursor: pointer; }
 .cl-bar .cl-x .ico { width: 22px; height: 22px; }
 html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
-/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain"; "Cluck is typing…" sits under the thread while he types */
-.cl-live { display: none; align-items: center; gap: var(--s2); margin: var(--s3) 0 0; color: var(--ai-muted); font-size: var(--t-xs); }
-.cl-live b { color: var(--ai-text); }
+/* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain" */
 .cl-verify { display: none; margin: var(--s2) 0 0; color: var(--ai-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */
 .cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
-.cl:has(.wtext.wrun) .cl-live, .cl.wbusy .cl-live { display: flex; }
-.cl-live .dots { display: inline-flex; gap: 3px; }
-.cl-live .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ai-muted); }
-@media (prefers-reduced-motion: no-preference) {   /* Discord's wave (Tony, Oct 5); impeccable pulsing-dot waived in .impeccable/config.json */
-  .cl-live .dots i { animation: wdot 1.2s ease-in-out infinite; }
-  .cl-live .dots i:nth-child(2) { animation-delay: .15s; } .cl-live .dots i:nth-child(3) { animation-delay: .3s; }
-}
-@keyframes wdot { 0%, 60%, 100% { opacity: .4; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
 /* the thread (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar left, name + tag + time, the text under; Cluck is a chat user */
 .cl .msg { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); margin: 0 calc(-1 * var(--s2)); padding: var(--s1) var(--s2); border-radius: 6px; }
 .cl .msg:hover { background: var(--ai-tint); }
