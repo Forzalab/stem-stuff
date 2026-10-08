@@ -14,6 +14,7 @@
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
+import errno
 import hashlib
 import http.cookies
 import http.server
@@ -1392,9 +1393,57 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+def _other_servers(proc_root="/proc"):
+    """Other running `python serve.py [port]` processes: [(pid, port, age_seconds)]. Stdlib only (Linux /proc)."""
+    found = []
+    for pid in os.listdir(proc_root):
+        if not pid.isdigit() or int(pid) == os.getpid():
+            continue
+        try:
+            with open(os.path.join(proc_root, pid, "cmdline"), "rb") as f:
+                argv = f.read().decode(errors="replace").split("\0")
+            age = time.time() - os.stat(os.path.join(proc_root, pid)).st_mtime
+        except OSError:
+            continue
+        args = [a for a in argv[1:] if a and not a.startswith("-")]
+        if os.path.basename(argv[0]).startswith("python") and args and os.path.basename(args[0]) == "serve.py":
+            found.append((int(pid), int(args[1]) if len(args) > 1 and args[1].isdigit() else 5567, max(0, int(age))))
+    return sorted(found)
+
+
+def _age(sec):
+    return next(f"{sec // n}{u}" for n, u in ((86400, "d"), (3600, "h"), (60, "m"), (1, "s")) if sec >= n or n == 1)
+
+
+def _guard(proc_root="/proc", ask=input, tty=None, kill=os.kill):
+    """Warn about other serve.py processes; kill the listed ones only after an explicit y/yes on a terminal."""
+    others = _other_servers(proc_root)
+    for pid, port, age in others:
+        print(f"{pid} \u00b7 {port} \u00b7 {_age(age)}")
+    if not others or not (sys.stdin.isatty() if tty is None else tty):
+        return
+    try:
+        yes = ask("Kill them? [y/N] ").strip().lower() in ("y", "yes")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return
+    for pid, _, _ in others if yes else ():
+        try:
+            kill(pid, 15)
+        except OSError as e:
+            print(f"serve.py: could not kill {pid}: {e.strerror}")
+
+
 if __name__ == "__main__":
     problems()
+    _guard()
     socketserver.ThreadingTCPServer.allow_reuse_address = True
-    with socketserver.ThreadingTCPServer(("0.0.0.0", PORT), Handler) as s:
+    try:
+        s = socketserver.ThreadingTCPServer(("0.0.0.0", PORT), Handler)
+    except OSError as e:
+        if e.errno != errno.EADDRINUSE:
+            raise
+        sys.exit(f"serve.py: port {PORT} is already in use")
+    with s:
         print(f"http://0.0.0.0:{PORT}  bank: {BANK}")
         s.serve_forever()
