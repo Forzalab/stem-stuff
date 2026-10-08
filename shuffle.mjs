@@ -1,4 +1,4 @@
-/* shuffle.mjs: the seeded shuffle for an uploaded bank, shared by app.js (MC choices) and nav.js (question order).
+/* shuffle.mjs: the seeded shuffle for an uploaded bank, used by app.js (MC choices); the question order is the queue below (nav.js).
    Same seed -> same order, so it survives a reload. Items with .lock keep their slot (MC "none of these"). */
 export function shuffled(items, seed) {
   let h = 2166136261;
@@ -20,23 +20,101 @@ export function newSeed(key) {
   try { localStorage.setItem(key, s); } catch { /* blocked: this page only */ }
   return s;
 }
-/* mastery order (design/NAV.md "Mastery order"): order = the seeded list, recOf(code) -> { x, done } | null, cur = the open code.
-   Answered (done correct | out) first, in seeded order; then cur if it is still open; then the rest, the families with the most
-   wrong tries first (family = prefix + first letter of the suffix: CSCI26_C2A -> CSCI26_C). Stable: seeded order breaks ties. */
-export const family = code => code.replace(/_(.).*/, "_$1");
-export function mastery(order, recOf, cur) {
-  const rec = c => recOf(c) || null, answered = c => { const r = rec(c); return !!r && (r.done === "correct" || r.done === "out"); };
-  const weight = new Map();
-  for (const c of order) { const r = rec(c), f = family(c); weight.set(f, (weight.get(f) || 0) + ((r && r.x) || 0)); }
-  const done = order.filter(answered), open = order.filter(c => !answered(c));
-  const head = open.includes(cur) ? [cur] : [];
-  const rest = open.filter(c => c !== cur).map((c, i) => ({ c, i, w: weight.get(family(c)) }))
-    .sort((a, b) => b.w - a.w || a.i - b.i).map(o => o.c);
-  return [...done, ...head, ...rest];
+export const family = code => code.replace(/_(.).*/, "_$1");   // the topic fallback: prefix + first suffix letter (CSCI26_C2A -> CSCI26_C)
+
+/* ---------- the queue (design/plans/QUEUE.md, D49/D56-D64): a hidden, Spotify-like play order, one per bank ----------
+   State st = { v, salt, pos, seen: { CODE: { n, right, miss, last, wait, gapIdx, owe, first, redeem, retry } }, hist, at }.
+   pos = showings so far (the next slot is pos + 1). Pure: qPick / qShow / qAnswer read and write only st, so the same state gives
+   the same pick (tests), and a JSON round trip (localStorage) changes nothing. */
+export const GAPS = [3, 8, 20];   // a missed question comes back after 3, then 8, then 20 other questions (D58)
+export const FAR = 30;            // a right first pick: this many others before it may come back
+export const SKIP = 8;            // shown, never answered (Next): it comes back like a second miss, owing nothing
+export const NEAR = 3;            // never the same code within 3 slots
+export const PULL = 4;            // every 4th slot pulls the least-seen topic (D59)
+const hash = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); h = Math.imul(h ^ (h >>> 15), 2246822507); return (h ^ (h >>> 13)) >>> 0; };
+export function qNew(salt = "") { return { v: 1, salt: String(salt), pos: 0, seen: {}, hist: [], at: -1 }; }
+/* the first open of a bank under the queue: the marks already saved (server or this browser) become history, so no progress is
+   lost. A right one rests FAR away; a miss owes a Redeem: the first after a warm-up of NEAR fresh questions, the rest one per PULL. */
+export function qMigrate(st, codes, markOf) {
+  let k = 0;                                                     // old misses come back one per PULL slots (4, 8, 12...), not back to back
+  for (const c of codes) {
+    const m = markOf(c);
+    if (!m || (!m.x && m.done !== "correct" && m.done !== "out")) continue;
+    const ok = m.done === "correct" && !m.x;
+    st.seen[c] = { n: 1, right: ok ? 1 : 0, miss: ok ? 0 : 1, last: 0, wait: ok ? FAR : NEAR + PULL * k++, gapIdx: ok ? 0 : 1, owe: !ok, first: ok ? "right" : "wrong", redeem: false, retry: 0 };
+  }
+  return st;
 }
+/* the next slot's pick from pool (the bank's real questions, snacks left out), topicOf(code) -> topic.
+   Returns { code, redeem, why } or null for an empty pool. Tiers: a due miss (earliest first) > the 4th-slot topic pull > the
+   best score among the due > the soonest due. Never a code shown in the last NEAR slots; a tiny bank caps every gap at n - 1. */
+export function qPick(st, pool, topicOf = family) {
+  const n = pool.length;
+  if (!n) return null;
+  const t = st.pos + 1, cap = Math.max(0, n - 1), near = Math.min(NEAR, cap);
+  const S = c => st.seen[c];
+  const due = c => { const s = S(c); return !s || !s.n || s.last == null ? 0 : s.last + Math.min(s.wait ?? SKIP, cap) + 1; };
+  const avg = new Map(), size = new Map();
+  for (const c of pool) { const k = topicOf(c), s = S(c); size.set(k, (size.get(k) || 0) + 1); avg.set(k, (avg.get(k) || 0) + (s ? s.n : 0)); }
+  for (const [k, v] of avg) avg.set(k, v / size.get(k));
+  const most = Math.max(...avg.values());
+  const score = c => { const s = S(c) || {}; return (most - avg.get(topicOf(c))) + (s.n ? 0 : 1) + 0.5 * (s.miss || 0) - 0.5 * (s.right || 0); };
+  const tie = c => hash(st.salt + c);
+  const best = (a, b) => score(b) - score(a) || tie(a) - tie(b);
+  const soon = (a, b) => due(a) - due(b) || best(a, b);
+  const free = pool.filter(c => { const s = S(c); return !s || s.last == null || t - s.last > near; });
+  const live = free.length ? free : pool;
+  const ready = live.filter(c => due(c) <= t);
+  const out = (code, why) => ({ code, redeem: !!(S(code) && S(code).owe), again: !!(S(code) && S(code).n), why });   // again: a re-showing (graded fresh)
+  const owed = ready.filter(c => S(c) && S(c).owe).sort(soon);
+  if (owed.length) return out(owed[0], "miss");
+  if (t % PULL === 0) {
+    const tops = [...new Set(live.map(topicOf))].sort((a, b) => avg.get(a) - avg.get(b) || hash(st.salt + a) - hash(st.salt + b));
+    const inT = live.filter(c => topicOf(c) === tops[0]), r = inT.filter(c => due(c) <= t);
+    return out((r.length ? r.sort(best) : inT.sort(soon))[0], "topic");
+  }
+  if (ready.length) return out(ready.sort(best)[0], "score");
+  return out([...live].sort(soon)[0], "soonest");
+}
+/* a showing starts: the slot moves on; its first pick is still to come. redeem = it came back owing a miss (D60/D61 data flag). */
+export function qShow(st, code) {
+  st.pos += 1;
+  const s = st.seen[code] || (st.seen[code] = { n: 0, right: 0, miss: 0, last: null, wait: null, gapIdx: 0, owe: false, first: null, redeem: false, retry: 0 });
+  s.n += 1; s.last = st.pos; s.first = null; s.redeem = !!s.owe;
+  s.wait = SKIP;                                                 // until a first pick lands
+  return st;
+}
+/* a graded pick on code. ONLY the first pick of a showing moves the queue: right -> rest FAR, the gaps start over; wrong -> back
+   after GAPS[gapIdx] others, and the next miss waits longer. A later pick (a retry-right after the ghost) is logged, nothing else.
+   Returns true when it moved the queue. */
+export function qAnswer(st, code, right, { spam = false } = {}) {
+  const s = st.seen[code];
+  if (!s || s.last == null) return false;
+  if (s.first) { s.retry = (s.retry || 0) + 1; if (right) s.retryRight = (s.retryRight || 0) + 1; return false; }
+  if (spam && !right) { s.first = "spam"; s.spam = (s.spam || 0) + 1; return false; }   // a wrong guess in under 2 s (nav.js): logged, the showing counts as a skip; a fast RIGHT pick counts (a Redeem gets paid off)
+  s.first = right ? "right" : "wrong";
+  if (right) { s.right += 1; s.owe = false; s.gapIdx = 0; s.wait = FAR; }
+  else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }
+  return true;
+}
+/* the fixed per-bank order of the questions not shown yet (nav.js list rows): salted, so a row's position gives no topic away */
+export const qRest = (st, codes) => [...codes].sort((a, b) => hash(st.salt + a) - hash(st.salt + b));
+/* what a fresh queue with this salt plays when every showing is skipped (tests pin a salt, like they pinned the old seed) */
+export function qFresh(codes, salt, topicOf = family) {
+  const st = qNew(salt), out = [];
+  for (let i = 0; i < codes.length; i++) { const p = qPick(st, codes, topicOf); qShow(st, p.code); out.push(p.code); }
+  return out;
+}
+/* per bank, never mixed (D64): localStorage stem-q-<bank>. A broken or blocked store reads as a fresh queue. */
+export const qKey = bank => "stem-q-" + bank;
+export function qLoad(bank, store = globalThis.localStorage) {
+  try { const st = JSON.parse(store.getItem(qKey(bank))); if (st && st.v === 1 && st.seen && Number.isInteger(st.pos)) return st; } catch { /* blocked or broken */ }
+  return null;
+}
+export function qSave(bank, st, store = globalThis.localStorage) { try { store.setItem(qKey(bank), JSON.stringify(st)); } catch { /* blocked: this page only */ } }
 /* snacks (sugar, design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
    (beforeOf(code) -> that code, or null for a real). Several snacks with one target keep their order; a snack whose target is not in
-   the list stays where it is. Runs after mastery(), so the shuffle and the mastery sort never pull a snack away from its real. */
+   the list stays where it is. The question list runs it, so a snack row sits right above its real. */
 export function glue(order, beforeOf) {
   const live = new Set(order.filter(c => !beforeOf(c))), by = new Map();
   const moves = c => { const b = beforeOf(c); return !!b && live.has(b); };

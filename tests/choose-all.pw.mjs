@@ -129,7 +129,7 @@ try {
     await step(`${name}: subset of correct = miss, out of tries, closed`, async () => {
       await tap(row(page, "d")); await check(page);
       const s = await st(page);
-      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.match(s.fb, /Ask Tony/);
+      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.match(s.fb, /comes back around/);
       assert.deepEqual(s.wrong, ["b"]);
       assert.equal(await page.isVisible("#mcGo"), false);
     });

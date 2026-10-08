@@ -1,5 +1,5 @@
-// Prev/Next in a bank (design/NAV.md "Mastery order"): Next opens the question at once from the bank in memory (no wait on
-// p/CODE.json), Prev stays lit, the list holds still while you are on a question, and a graded try re-sorts on the next open.
+// Prev/Next in a bank (design/NAV.md "Mastery order", design/plans/QUEUE.md): Next opens the question at once from the bank in
+// memory (no wait on p/CODE.json), Prev stays lit, Prev walks back what was shown, the list keeps the shown ones in their order.
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/nav-stable.pw.mjs [port]
 import { createRequire } from "node:module";
@@ -29,8 +29,8 @@ const sweet = n => ({ code: `CALC1_D0${n}`, type: "mc", shuffle: false, body: [{
 writeFileSync(join(BANKS, "BANK_NV56.json"), JSON.stringify({ v: 1, problems: [sweet(1), sweet(2), sweet(3)] }));
 writeFileSync(join(BANKS, "BANK_NV34.json"), JSON.stringify({ v: 1, problems: [MC, num("CALC1_M02", "2", "1 + 1")] }));
 
-const { shuffled } = await import("../shuffle.mjs");
-const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => shuffled(CODES, s).every((c, i) => c === CODES[i]));
+const { qFresh, qRest, qNew } = await import("../shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
+const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => qFresh(CODES, s).every((c, i) => c === CODES[i]) && qRest(qNew(s), CODES).every((c, i) => c === CODES[i]));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -52,7 +52,7 @@ const prevEverOff = (page, ms) => page.evaluate(ms => new Promise(res => {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
-  await ctx.addInitScript(s => { try { if (localStorage.getItem("stem-order") !== s) localStorage.setItem("stem-order", s); } catch { /* blocked */ } }, SEED);
+  await ctx.addInitScript(s => { try { if (!localStorage.getItem("stem-q-BANK_NV12")) localStorage.setItem("stem-q-BANK_NV12", JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } }, SEED);
   const page = await ctx.newPage();
   await page.goto(BASE + "/#BANK_NV12");
   await opened(page, CODES[0]);
@@ -73,7 +73,7 @@ try {
     assert.ok(await page.$eval("#qprev", b => b.disabled), "Prev on the first question");
   });
 
-  await step("a graded try: the list holds while on the question, re-sorts on the next open", async () => {
+  await step("a graded try: the list holds; Next after Prev steps forward through what was shown; shown rows keep their order", async () => {
     await page.click("#qnext"); await opened(page, CODES[1]);
     const before = await order(page);
     await page.fill("#ans", "3"); await page.click("#ansGo");                 // 1 + 2: correct
@@ -81,10 +81,9 @@ try {
     await page.waitForTimeout(600);
     assert.deepEqual(await order(page), before, "re-sorted while on the answered question");
     await page.click("#qnext"); await opened(page, CODES[2]);
-    const after = await order(page);
-    assert.equal(after[0], CODES[1], "the answered question did not move first");
-    assert.equal(await page.$eval("#qprev", b => b.disabled), false, "Prev dim after the re-sort");
-    assert.equal(await prevEverOff(page, 1000), false, "Prev went dim after the re-sorting open");
+    assert.deepEqual((await order(page)).slice(0, 3), CODES.slice(0, 3), "the shown rows moved");
+    assert.equal(await page.$eval("#qprev", b => b.disabled), false, "Prev dim after the answer");
+    assert.equal(await prevEverOff(page, 1000), false, "Prev went dim after the open");
   });
 
   await step("Next does not wait on p/CODE.json (bank in memory), and still tells the server", async () => {
