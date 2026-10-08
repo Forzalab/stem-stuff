@@ -96,6 +96,9 @@ html.ql-open .top { z-index: 47; }
 .top::after { content: ""; position: absolute; z-index: 10; inset: 0; border-image: linear-gradient(var(--ql-dim) 0 0) fill 0 / 0 / 0 100vw; opacity: 0; pointer-events: none; transition: opacity .15s ease-out; }
 html.ql-open .top::after { opacity: 1; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .25s ease-out, filter .3s ease-out, z-index .15s step-end; transition-behavior: allow-discrete; }
+/* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
+   Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
+html.dock-bottom:not(.start):not(.side):not(.ql-open):not(.mt):not(.swap) .top { z-index: 35; }
 .top > .rw-hud::after {
   content: ""; position: absolute; z-index: 4; inset: 0; pointer-events: none;   /* no colour: .top::after dims it */
 }
