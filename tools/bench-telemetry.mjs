@@ -5,23 +5,25 @@
 //
 // usage (from repo root):
 //   python3 tools/build_public.py /tmp/x/public
-//   node tools/bench-telemetry.mjs   (env: POSTHOG_KEY → project token looked up in memory, or PH_TOKEN; CLARITY_ID) /tmp/x/public [--runs 5] [--mode snippet|wired] [--json out.json]
+//   (cd /tmp/ph && npm pack posthog-js && tar xzf posthog-js-*.tgz)   → a LOCAL posthog-js copy (nothing ships in vendor/)
+//   node tools/bench-telemetry.mjs /tmp/x/public [--runs 5] [--mode snippet|wired] [--ph-dist /tmp/ph/package/dist] [--json out.json]   (env: CLARITY_ID)
 //
-// --mode snippet (default): the official PostHog + Clarity snippets are injected into index.html <head> (route rewrite).
+// Both modes bench the PostHog options telemetry.js SHIPS (its p.init({...}) literal + blankPII are read from the build's telemetry.js).
+// --mode snippet (default): the official snippet stub + those options are injected into index.html <head> (route rewrite).
 // --mode wired: the build's own telemetry.js loads the libs (after the first question, on idle); the bench stamps
-//   <meta name="stem-t"> per config in memory (PostHog token and/or Clarity id, or empty for none). Build WITHOUT keys.
-// No fake traffic: every PostHog ingestion request (/e/ /s/ /i/v0/ /batch /capture /engage /track) and every Clarity
-// upload (/collect) is aborted by route; the libs, remote config and recorder still download. Without PH_TOKEN a dummy
-// token is used (then PostHog skips the session recorder: noted in the output). Never prints a key.
+//   <meta name="stem-t"> per config in memory (dummy PostHog token and/or Clarity id, or empty for none). Build WITHOUT keys.
+// Hermetic for PostHog: no request reaches *.posthog.com. /static/*.js (array.js, recorder) is served from --ph-dist, the
+// remote config / flags are stubbed with session recording + autocapture ON (the worst case the shipped options allow), and
+// every ingestion request is answered 200 locally. Dummy token phc_bench. Any other non-local request is aborted (Clarity: as before).
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
 
 const require = createRequire(import.meta.url);
-const { chromium } = require("playwright");
+let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
+const { chromium } = pw;
 
 const args = process.argv.slice(2);
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -31,19 +33,10 @@ const MODE = opt("--mode", "snippet");
 const JSON_OUT = opt("--json", "");
 const CONFIGS = (opt("--configs", "none,posthog,clarity,both")).split(",");
 const WINDOW_MS = +opt("--window", 12000);   // measurement window after navigation start (libs load late: Clarity tag is async)
-// public project token (phc_): $PH_TOKEN, else looked up in memory with the personal key ($POSTHOG_KEY), else a dummy
-const phLookup = () => {
-  if (process.env.PH_TOKEN) return process.env.PH_TOKEN;
-  if (!process.env.POSTHOG_KEY) return "";
-  try {
-    const out = execFileSync("curl", ["-sS", "--max-time", "20", "-H", "Authorization: Bearer " + process.env.POSTHOG_KEY,
-      "https://us.posthog.com/api/projects/@current/"], { stdio: ["ignore", "pipe", "ignore"] }).toString();
-    return JSON.parse(out).api_token || "";
-  } catch { return ""; }
-};
-const PH_FOUND = phLookup();
-const PH_TOKEN = PH_FOUND || "phc_bench_dummy_token_not_real";
-const PH_REAL = !!PH_FOUND;
+const PH_TOKEN = "phc_bench";   // dummy: never a real project token, nothing reaches PostHog
+const PH_REAL = false;
+const PH_DIST = path.resolve(opt("--ph-dist", process.env.PH_DIST || "/tmp/ph/package/dist"));
+if (CONFIGS.some(c => c === "posthog" || c === "both") && !fs.existsSync(path.join(PH_DIST, "array.js"))) throw new Error(`no local posthog-js at ${PH_DIST} (see usage)`);
 const CLARITY_ID = process.env.CLARITY_ID || "benchdummy";
 const EXE = fs.readdirSync("/opt/pw-browsers").filter(d => d.startsWith("chromium-")).map(d => `/opt/pw-browsers/${d}/chrome-linux/chrome`)[0];
 
@@ -64,9 +57,28 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const ORIGIN = `http://127.0.0.1:${server.address().port}`;
 
+// ---- the PostHog options telemetry.js ships, read from the build (so the bench can't drift from them again) ----
+const TJS = fs.readFileSync(path.join(ROOT, "telemetry.js"), "utf8");
+const PH_SHIPPED = { opts: (TJS.match(/p\.init\(cfg\.ph, \{[\s\S]*?\n {8}\}\);/) || [])[0], pii: (TJS.match(/var EMAIL[\s\S]*?function blankPII[\s\S]*?\n  \}/) || [])[0] };
+if (!PH_SHIPPED.opts || !PH_SHIPPED.pii) throw new Error("can't find p.init({...}) / blankPII in telemetry.js");
+// stubbed PostHog backend: remote config + flags with recording and autocapture on; ingestion answered locally
+const PH_RC = { token: PH_TOKEN, supportedCompression: ["gzip", "gzip-js"], hasFeatureFlags: false, autocapture_opt_out: false, captureDeadClicks: false,
+  capturePerformance: false, autocaptureExceptions: false, heatmaps: false, surveys: false, defaultIdentifiedOnly: false, siteApps: [], elementsChainAsString: true,
+  sessionRecording: { endpoint: "/s/", consoleLogRecordingEnabled: false, recorderVersion: "v2", sampleRate: null, minimumDurationMilliseconds: null,
+    linkedFlag: null, networkPayloadCapture: null, urlTriggers: [], urlBlocklist: [], eventTriggers: [], scriptConfig: null } };
+const phStub = u => {
+  const p = new URL(u).pathname;
+  const m = p.match(/^\/static\/(?:[\d.]+\/)?([\w.-]+\.js)$/);
+  if (m) { const f = path.join(PH_DIST, m[1]); return fs.existsSync(f) ? { status: 200, contentType: "text/javascript", body: fs.readFileSync(f) } : { status: 404, body: "" }; }
+  if (p.endsWith("/config.js")) return { status: 200, contentType: "text/javascript", body: `(window._POSTHOG_REMOTE_CONFIG=window._POSTHOG_REMOTE_CONFIG||{})[${JSON.stringify(PH_TOKEN)}]={config:${JSON.stringify(PH_RC)},siteApps:[]};` };
+  if (/\/array\/[\w]+\/config$/.test(p)) return { status: 200, contentType: "application/json", body: JSON.stringify(PH_RC) };
+  if (/^\/(flags|decide)\b/.test(p)) return { status: 200, contentType: "application/json", body: JSON.stringify({ ...PH_RC, featureFlags: {}, flags: {}, errorsWhileComputingFlags: false }) };
+  return { status: 200, contentType: "application/json", body: '{"status":1}' };   // ingestion (/e/ /s/ /i/v0/e/ /batch ...): swallowed here
+};
+
 // ---- official snippets (posthog-js docs "HTML snippet", Clarity "Install manually") ----
 const PH_SNIPPET = `<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-posthog.init(${JSON.stringify(PH_TOKEN)},{api_host:"https://us.i.posthog.com",person_profiles:"identified_only",respect_dnt:true,mask_all_text:false,mask_all_element_attributes:false,session_recording:{maskAllInputs:false}});</script>`;
+(function(){var cfg={host:"https://us.i.posthog.com"},did,ph,queue=[];${PH_SHIPPED.pii}posthog.init(${JSON.stringify(PH_TOKEN)},${PH_SHIPPED.opts.replace("p.init(cfg.ph, ", "").replace(/\);$/, "")});})();</script>`;
 const CL_SNIPPET = `<script>(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script",${JSON.stringify(CLARITY_ID)});</script>`;
 
 const INGEST = /(\.i\.posthog\.com\/(e|s|i\/v0\/e|batch|capture|engage|track|flags|decide)\b)|(clarity\.ms\/(collect|c\.gif))|bat\.bing\.com|c\.bing\.com/;
@@ -93,6 +105,7 @@ async function run(browser, cfg) {
   await page.route("**/*", async route => {
     const u = route.request().url();
     if (process.env.BENCH_DEBUG && THIRD.test(u)) console.error(`  [${cfg}] route ${route.request().method()} ${u.split("?")[0].replace(/phc_\w+/, "phc_…")}${INGEST.test(u) ? "  (BLOCKED)" : ""}`);
+    if (/^https?:\/\/([\w-]+\.)*posthog\.com\//.test(u)) { if (INGEST.test(u)) blocked.n++; return route.fulfill(phStub(u)); }   // never the real PostHog
     if (INGEST.test(u)) { blocked.n++; return route.abort(); }
     if (u.startsWith(ORIGIN) && route.request().resourceType() === "document") {
       const r = await route.fetch();
@@ -106,7 +119,7 @@ async function run(browser, cfg) {
       }
       return route.fulfill({ response: r, body: html, headers: Object.fromEntries(Object.entries(r.headers()).filter(([k]) => !/^(content-encoding|content-length)$/i.test(k))) });
     }
-    return route.continue();
+    return u.startsWith(ORIGIN) || u.startsWith("data:") || /clarity\.ms/.test(u) ? route.continue() : route.abort();
   });
   // safety net: every 3rd-party request the page makes, seen by the browser (catches beacons the route might miss)
   const leaks = [];
@@ -159,7 +172,7 @@ await browser.close(); server.close();
 
 const f = (n, d = 0) => n.toFixed(d);
 const keys = [["jsKB", "JS KB (all)", 1], ["js3pKB", "3rd-party JS KB", 1], ["all3pKB", "3rd-party total KB", 1], ["lcp", "LCP ms", 0], ["inp", "INP ms", 0], ["tbt", "TBT ms", 0]];
-const lines = [`tap target: ${results[0]?.tapped}`, `ingestion requests seen=${results.reduce((a, r) => a + r.ingestSeen, 0)} aborted=${results.reduce((a, r) => a + r.ingestFailed, 0)}`, `mode=${MODE} runs=${RUNS} posthog_token=${PH_REAL ? "real project token (ingestion blocked)" : "dummy"} window=${WINDOW_MS}ms`,
+const lines = [`tap target: ${results[0]?.tapped}`, `ingestion requests seen=${results.reduce((a, r) => a + r.ingestSeen, 0)} aborted=${results.reduce((a, r) => a + r.ingestFailed, 0)}`, `mode=${MODE} runs=${RUNS} posthog_token=dummy (backend stubbed, recording+autocapture on) ph_rec_started=${results.filter(r => r.cfg === "posthog" && r.lib.phRec).length}/${results.filter(r => r.cfg === "posthog").length} window=${WINDOW_MS}ms`,
   "| config | " + keys.map(k => k[1] + " median (min–max)").join(" | ") + " |", "|---|" + keys.map(() => "---").join("|") + "|"];
 const summary = {};
 for (const cfg of CONFIGS) {
