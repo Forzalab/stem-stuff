@@ -1,0 +1,198 @@
+== npm test (node --test) ==
+# tests 790
+# pass 789
+# fail 0
+# todo 1
+== style.test.mjs ==
+# tests 15
+# pass 14
+# fail 0
+== ok nav-stable (rc 0): 7 ok lines ==
+   ok   Next: Prev lights up and stays lit, the order holds
+   ok   Prev walks back the same list
+   ok   a graded try: the list holds; Next after Prev steps forward through what was shown; shown rows keep their order
+   ok   Next does not wait on p/CODE.json (bank in memory), and still tells the server
+   ok   all correct with the pad page open: the pad closes and the question row (Next) comes back
+   ok   open list at 393: one even dim over the page, the bar and the XP strip; row 1 under the strip; a tap on the dim closes it
+   ok   open list at 1366: one even dim over the page, the bar and the XP strip; row 1 under the strip; a tap on the dim closes it
+   all ok
+== ok bar (rc 0): 14 ok lines ==
+   ok   375 (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side
+   ok   375 (f) no problem: the full bar; problem open: a strip with the up-chevron
+   ok   375 (f) tap and swipe up reveal it over the page (no reflow); tap and swipe down put it away
+   ok   375 (grow) pad page: the pad fills to the bottom and scrolls; the code bar is away; the caret stays visible
+   ok   390 (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side
+   ok   390 (f) no problem: the full bar; problem open: a strip with the up-chevron
+   ok   390 (f) tap and swipe up reveal it over the page (no reflow); tap and swipe down put it away
+   ok   390 (grow) pad page: the pad fills to the bottom and scrolls; the code bar is away; the caret stays visible
+   ok   430 (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side
+   ok   430 (f) no problem: the full bar; problem open: a strip with the up-chevron
+   ok   430 (f) tap and swipe up reveal it over the page (no reflow); tap and swipe down put it away
+   ok   430 (grow) pad page: the pad fills to the bottom and scrolls; the code bar is away; the caret stays visible
+   ok   1920 (e) no strip handle: phones show the whole problem in the page (pad off); desktop is side by side
+   ok   1920 (f) desktop: the bar stays at the top, whole
+   all ok
+== ok bank (rc 0): 16 ok lines ==
+   ok   phone: new browser = blank page, no list
+   ok   phone: unknown bank says so
+   ok   phone: type "bank ab12" -> first question, list button says the bank code (Tony, Oct 5), checklist icon
+   ok   phone: Next, a wrong try, reload -> same bank, same question, X in the list
+   ok   phone: storage wiped, cookie kept -> the server reopens the bank where it was
+   ok   phone: upload wins over the bank, and stays after a reload
+   ok   phone: type just "ab12" -> the bank again, where it was
+   ok   phone: #BANK_AB12 link opens the bank again
+   ok   desktop: new browser = blank page, no list
+   ok   desktop: unknown bank says so
+   ok   desktop: type "bank ab12" -> first question, list button says the bank code (Tony, Oct 5), checklist icon
+   ok   desktop: Next, a wrong try, reload -> same bank, same question, X in the list
+   ok   desktop: storage wiped, cookie kept -> the server reopens the bank where it was
+   ok   desktop: upload wins over the bank, and stays after a reload
+   ok   desktop: type just "ab12" -> the bank again, where it was
+   ok   desktop: #BANK_AB12 link opens the bank again
+== ok done (rc 0): 18 ok lines ==
+   ok   upload: play every row state
+   ok   upload multi: parts keep their own state across a reload
+   ok   upload: list marks, before reload
+   ok   upload: list marks survive a reload
+   ok   upload: a crossed row stays tappable and opens read-only (XX, answer not shown)
+   ok   upload: reopened correct MC shows the student's pick, read-only
+   ok   upload: reopened out-of-tries MC never marks the right choice
+   ok   upload: 2-choice 1-try reopen is out, hint for the student's own wrong pick
+   ok   upload: one try left reopens live, old hint shown, grading continues
+   ok   upload: the same file uploaded again keeps its state; an edited problem starts fresh
+   ok   server: one wrong MC try survives a reload (struck, hint, one try left)
+   ok   server: out of tries, then a server restart: still locked (tries.json)
+   ok   server multi: a wrong part survives a restart; the other part stays open
+   ok   server: correct answer reopens read-only after a reload
+   ok   server further than the cache (same cookie, empty cache): server wins
+   ok   server: Tony deletes the entry in tries.json -> newer gen -> page drops its cache
+   ok   server: tries.json lost -> the cache stays locked (not a reset)
+   ok   server: unreachable -> cache still shows the done state
+   all ok
+== ok easy (rc 0): 20 ok lines ==
+   ok   sugar start page: the players warm up off screen (no question yet); no YouTube controls, no keyboard
+   ok   easy (default): None-is-the-answer hidden, no None row, the title on top (not the tip), empty Check live
+   ok   sugar: Key formulas, in order of use; the brainrot corner: one muted player per category
+   ok   sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom
+   ok   sugar: a split row is a True/False question, one try, its own slip
+   ok   nothing ticked is a real answer (a try, the miss hint)
+   ok   easy: an item with a narration still streams /explain (the narration is never the box text); a lone caret, then typed; reopening goes on where it was; no voice
+   ok   past 5 auto wishes an hour, nothing fires until the Explain my mistake tap
+   ok   Cluck's sheet: fills the notes column; 5 follow-ups through /chat with N left, then the field is done; Escape gives focus back
+   ok   easy: prove-mode question has no fix boxes; a tick-only set is graded
+   ok   DIET_EZ12: the original questions, every one, no tip, original titles, no fix boxes, no None row
+   ok   SUGAR_EZ12: sugar again; the prefixed form is never remembered
+   ok   clutter wave 4: no top gap, notes placeholder in the body font, Copy only with text, one row per question: number + its whole title, no shared-prefix header
+   ok   slow link (?slow=1): no brainrot corner, no YouTube at all
+   ok   slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all
+   ok   zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll, centred up-down
+   ok   centred at 1366: the bar + both panes, Cluck open and closed
+   ok   centred at 1920: the bar + both panes, Cluck open and closed
+   ok   centred at 2560: the bar + both panes, Cluck open and closed
+   ok   centred at 3840: the bar + both panes, Cluck open and closed
+   all ok
+== ok mode-reset (rc 0): 4 ok lines ==
+   ok   old stem-mode=diet, no flag: sugar on load, flag set for a year, no message, progress kept
+   ok   then DIET_ opts into diet and it sticks across reloads (was diet)
+   ok   old stem-mode=hard, no flag: sugar on load, flag set for a year, no message, progress kept
+   ok   then DIET_ opts into diet and it sticks across reloads (was hard)
+   all ok
+== ok queue-walk (rc 0): 7 ok lines ==
+   ok   no Shuffle button, no Redo my misses
+         walk: 1:DAAx 2:DAK+ 3:DAMx 4:DAH+ 5:DAA+R 6:DBA+ 7:DAM+R 8:DAFx 9:DBB+ 10:DAG+ 11:DA2+ 12:DAF+R 13:DAU+ 14:DA3+ 15:DAS+ 16:DA8+ 17:DA9+ 18:DAY+ 19:DAV+ 20:DAC+
+   ok   20 answers on BANK_PSY6: Next each time, a reload at 10
+   ok   never the same code within 3
+   ok   a missed question comes back after >= 3 others, as a Redeem showing, answerable again
+   ok   no question lost or duplicated in the first pass (every repeat is a Redeem)
+   ok   Prev walks back through what was shown, then Next steps forward to the same place
+   ok   no console errors
+   all ok
+== ok reload (rc 0): 4 ok lines ==
+   ok   chromium (a) bank survives closing and reopening the browser
+   ok   chromium (b) pageshow persisted after a stalled request: buttons work
+   ok   chromium (c) a request that never answers times out at 8 s; retry works
+   ok   chromium (c2) problem load that never answers: timeout, retry button in the entry row
+   skip firefox: browserType.launchPersistentContext: Executable doesn't exist at /opt/pw-browsers/firefox-1495/firefox/firefox
+   all ok
+== ok render (rc 0): 60 ok lines ==
+   ok   chromium phone CALC1_T6B: renders TeX, no raw TeX visible
+   ok   chromium phone CALC1_A9R: renders TeX, no raw TeX visible
+   ok   chromium phone PHYS_F3N: renders TeX, no raw TeX visible
+   ok   chromium phone PHYS_S2K: renders TeX, no raw TeX visible
+   ok   chromium phone CALC1_X2P: renders TeX, no raw TeX visible
+   ok   chromium phone CSCI26_G3H: renders TeX, no raw TeX visible
+   ok   chromium phone CSCI26_G2T: renders TeX, no raw TeX visible
+   ok   chromium phone no pull-tab on phones: the problem is never clipped (pad off)
+   ok   chromium phone MC: select shows arrow, reselect hides it, wrong strikes
+   ok   chromium phone freeform: arrow inside input, wrong then right
+   ok   chromium phone freeze: problem + question stay on top while scratchpad scrolls
+   ok   chromium phone balance: scratchpad spans the column (right edge = the problem card's)
+   ok   chromium phone entry box: upload + code bar only; start page = title + entry, centred; placement
+   ok   chromium phone code separator: "_" canonical, old "-" links and loose typing still work
+   ok   chromium phone paste: a code pasted elsewhere lands in the code box; paste button; placeholder
+   ok   chromium phone upload one problems.json: every problem loads, graded from the file
+   ok   chromium phone nav: hidden for server problems; upload -> list, click a row, next, prev, keys
+   ok   chromium phone copy button inside the scratchpad: text never runs under it
+   ok   chromium phone text + multi + 2-choice mc
+   ok   chromium phone scratchpad stops at the visible bottom and scrolls; Cut all copies then clears
+   ok   chromium phone no page errors
+   ok   chromium ipad CALC1_T6B: renders TeX, no raw TeX visible
+   ok   chromium ipad CALC1_A9R: renders TeX, no raw TeX visible
+   ok   chromium ipad PHYS_F3N: renders TeX, no raw TeX visible
+   ok   chromium ipad PHYS_S2K: renders TeX, no raw TeX visible
+   ok   chromium ipad CALC1_X2P: renders TeX, no raw TeX visible
+   ok   chromium ipad CSCI26_G3H: renders TeX, no raw TeX visible
+   ok   chromium ipad CSCI26_G2T: renders TeX, no raw TeX visible
+   ok   chromium ipad MC: select shows arrow, reselect hides it, wrong strikes
+   ok   chromium ipad freeform: arrow inside input, wrong then right
+   ok   chromium ipad freeze: problem + question stay on top while scratchpad scrolls
+   ok   chromium ipad balance: scratchpad spans the column (right edge = the problem card's)
+   ok   chromium ipad entry box: upload + code bar only; start page = title + entry, centred; placement
+   ok   chromium ipad code separator: "_" canonical, old "-" links and loose typing still work
+   ok   chromium ipad paste: a code pasted elsewhere lands in the code box; paste button; placeholder
+   ok   chromium ipad upload one problems.json: every problem loads, graded from the file
+   ok   chromium ipad nav: hidden for server problems; upload -> list, click a row, next, prev, keys
+   ok   chromium ipad copy button inside the scratchpad: text never runs under it
+   ok   chromium ipad text + multi + 2-choice mc
+   ok   chromium ipad no page errors
+   ok   chromium desktop CALC1_T6B: renders TeX, no raw TeX visible
+   ok   chromium desktop CALC1_A9R: renders TeX, no raw TeX visible
+   ok   chromium desktop PHYS_F3N: renders TeX, no raw TeX visible
+   ok   chromium desktop PHYS_S2K: renders TeX, no raw TeX visible
+   ok   chromium desktop CALC1_X2P: renders TeX, no raw TeX visible
+   ok   chromium desktop CSCI26_G3H: renders TeX, no raw TeX visible
+   ok   chromium desktop CSCI26_G2T: renders TeX, no raw TeX visible
+   ok   chromium desktop MC: select shows arrow, reselect hides it, wrong strikes
+   ok   chromium desktop freeform: arrow inside input, wrong then right
+   ok   chromium desktop freeze: problem + question stay on top while scratchpad scrolls
+   ok   chromium desktop balance: scratchpad spans the column (right edge = the problem card's)
+   ok   chromium desktop entry box: upload + code bar only; start page = title + entry, centred; placement
+   ok   chromium desktop code separator: "_" canonical, old "-" links and loose typing still work
+   ok   chromium desktop paste: a code pasted elsewhere lands in the code box; paste button; placeholder
+   ok   chromium desktop upload one problems.json: every problem loads, graded from the file
+   ok   chromium desktop nav: hidden for server problems; upload -> list, click a row, next, prev, keys
+   ok   chromium desktop copy button inside the scratchpad: text never runs under it
+   ok   chromium desktop text + multi + 2-choice mc
+   ok   chromium copy payload
+   ok   chromium desktop no page errors
+   skip webkit: browserType.launch: Executable doesn't exist at /opt/pw-browsers/webkit-2215/pw_run.sh
+   skip firefox: browserType.launch: Executable doesn't exist at /opt/pw-browsers/firefox-1495/firefox/firefox
+   
+   all passed
+== ok rewards (rc 0): 13 ok lines ==
+   ok   sugar: snacks sit right before their real in the list; the HUD row sits in the top bar
+   ok   a first-try correct pays 12-16 XP with the bells (float, coins, coin-pill shine); #toast stays off
+   ok   a wrong try with a try left: the +1 is kept but nothing moves (C12, Tony Oct 5); the streak waits; the second-try correct pays 6 with the bells
+   ok   a common drop (held 1 s+): slots, then the WIN burst with stars, out of the 15 s cap; #toast never shows with it
+   ok   reload: XP kept; a done question pays nothing again
+   ok   Next steps over a snack only while the last 10 first tries are above 90%
+   ok   a snack marks what it changed: the chip, its number, and the original's number in the question and the steps (TODO A)
+   ok   the original beside a snack fades: whole solution, then the last line behind Peek (2 XP), then folded
+   ok   diet: no HUD node, no FX, no stem-rw key, no snack anywhere
+   ok   phone 390x844: the HUD is its own row under the nav, clear of the nav, the code bar and the Scratchpad button
+   ok   a wrong pick shakes once, a right pick pulses; reduced motion: neither moves (Tony, Oct 6 TK1)
+   ok   reduced motion: a correct answer pays but makes no particles
+   ok   reduced motion: the players still show, muted and playing, and the link hides / shows them (Tony, Oct 6: it was a dead click)
+   all ok
+
+ALL GREEN

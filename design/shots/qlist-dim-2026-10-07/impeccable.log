@@ -1,0 +1,7 @@
+$ OUT=… tools/impeccable.sh http://127.0.0.1:8933 "?q=BANK_P2X" -- nav.css   (local serve.py, branch build)
+390x844 ?q=BANK_P2X: 0 lines
+1920x1080 ?q=BANK_P2X: 0 lines
+2560x1440 ?q=BANK_P2X: 0 lines
+3840x2160 ?q=BANK_P2X: 0 lines
+static: 0 lines
+rc=0
