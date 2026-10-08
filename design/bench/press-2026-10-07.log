@@ -48,3 +48,13 @@ exit=1
 === bad arg ===
 usage: tools/press.sh [demo|live]
 exit=2
+
+== press.sh url print (fake gh stub, 2026-10-07 bench) ==
+-- case 1: log has 'demo ready: https://stem-stuff-abc123-forzalabs-projects.vercel.app'
+run: https://github.com/Forzalab/stem-stuff/actions/runs/222
+OK: demo shipped: https://stem-stuff-abc123-forzalabs-projects.vercel.app (private preview: log in to Vercel to open)
+https://github.com/Forzalab/stem-stuff/actions/runs/222
+-- case 2: log has no URL
+run: https://github.com/Forzalab/stem-stuff/actions/runs/222
+OK: demo shipped
+https://github.com/Forzalab/stem-stuff/actions/runs/222

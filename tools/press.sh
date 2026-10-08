@@ -31,7 +31,13 @@ done
 echo "run: $URL"
 
 if gh run watch "$ID" -R "$REPO" --exit-status; then
-  echo "OK: $MODE shipped"; echo "$URL"
+  LOG="$(gh run view "$ID" -R "$REPO" --log 2>/dev/null || true)"
+  VU="$(grep -oE 'https://[a-z0-9.-]+\.vercel\.app' <<<"$LOG" | tail -1 || true)"
+  if [ "$MODE" = live ] && grep -q 'https://stem-stuff\.vercel\.app' <<<"$LOG"; then VU="https://stem-stuff.vercel.app"; fi
+  if [ -z "$VU" ]; then echo "OK: $MODE shipped"
+  elif [ "$MODE" = demo ]; then echo "OK: $MODE shipped: $VU (private preview: log in to Vercel to open)"
+  else echo "OK: $MODE shipped: $VU"; fi
+  echo "$URL"
 else
   gh run view "$ID" -R "$REPO" --log-failed 2>&1 | tail -n 30
   die "FAILED: see $URL"
