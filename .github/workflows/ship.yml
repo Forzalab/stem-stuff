@@ -1,0 +1,52 @@
+# The power button: tools/ship.sh demo|live on a GitHub runner, so a slow network only has to send one tiny request.
+# Phone: GitHub app → Actions → ship → Run workflow, or the curl in design/DEPLOY.md ("Power button"). Runs ship.sh unchanged:
+# origin/main + the brain banks (bank hatch) → Vercel → smoke. Banks live only in ship.sh's temp dirs on this throwaway runner:
+# no artifacts, no caches (banks never land on GitHub).
+name: ship
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "demo = private preview URL, live = stem-stuff.vercel.app"
+        type: choice
+        options: [demo, live]
+        default: demo
+        required: true
+permissions:
+  contents: read
+concurrency: { group: ship, cancel-in-progress: false }
+jobs:
+  ship:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run: { shell: bash }   # -eo pipefail (the default shell has no pipefail)
+    steps:
+      - name: Check secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
+        run: |
+          miss=
+          [ -n "$VERCEL_TOKEN" ] || miss="$miss VERCEL_TOKEN"
+          [ -n "$BRAIN_TOKEN" ] || miss="$miss BRAIN_TOKEN"
+          if [ -n "$miss" ]; then
+            echo "::error::missing repo secret(s):$miss. Settings → Secrets and variables → Actions (design/DEPLOY.md, Power button)"
+            exit 1
+          fi
+      # ref main: ship.sh deploys origin/main and stops if its own copy differs from main's. fetch-depth 0: version.sh reads the
+      # first-parent history for the PR number ("#83+1"); a shallow clone would stamp "?".
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      # ship.sh runs every Vercel command as `npx -y vercel@latest`: warm that cache once (and log the version)
+      - run: npx -y vercel@latest --version
+      - name: tools/ship.sh
+        env:
+          MODE: ${{ inputs.mode }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BRAIN_TOKEN: ${{ secrets.BRAIN_TOKEN }}
+        run: |
+          case "$MODE" in demo|live) ;; *) echo "::error::mode must be demo or live"; exit 2 ;; esac
+          tools/ship.sh "$MODE"
