@@ -601,9 +601,9 @@ any `md`), `names` (every `=expr` and derive compiles in math.js with declared n
 
 Command (from the worktree; `tests/node_modules` = the repo's ajv + mathjs):
 ```
-node /tmp/claude-0/-home-user-stem-stuff/2a061a38-6f99-5ffa-af2d-a757315daa12/scratchpad/S/validate.mjs design/plans/SCHEMA-V2.md
+node <your copy of validate.mjs> design/plans/SCHEMA-V2.md
 ```
-The script is in Appendix A (copy it to a file outside the repo and run it; agent X ports `gate()` into `tests/scene.test.mjs`).
+The script is inlined in Appendix A (the original /tmp copy is gone: copy it to a file outside the repo and run it). The semantic gate now runs in `tests/scene.test.mjs`.
 Output (Oct 7, exit 0):
 ```
 schema scene-v2: 23 $defs compiled (ajv 2020, strict)

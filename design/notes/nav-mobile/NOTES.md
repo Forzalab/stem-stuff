@@ -280,7 +280,7 @@ Read: this file; nav2-j1..4; nav1-j1..4; NAV-TESTER-BRIEF; the method (blind-jud
 8. Review 1 #9 overreached. j1:23 and j3:24 name the buttons by their caption words, so they read the captions. That is not evidence for icon-only. Fixed in place.
 9. Review 1 called R3 "not a confirm". Tony's lock calls it the confirm round (R2.2). Fixed in place.
 10. R2.2 leniency: v5 and v7 are not clean controls. §7 lists real phone fixes for both. Their phone parts still stayed flat (69.5, 62), so R1's top phone complaints were fixed with no phone gain. The 66.1 → 65.0 point holds. Fixed in place.
-11. PR #92 is open, not merged. It removes Shuffle and Redo from main's bar and makes › play the hidden queue. The mock assumed that world (NAV-MOBILE.md:6). The bar at rest is the same either way (List, ‹, ›). The R3 build must say which main it uses.
+11. PR #92 was open, not merged, at review time (it has merged since). It removes Shuffle and Redo from main's bar and makes › play the hidden queue. The mock assumed that world (NAV-MOBILE.md:6). The bar at rest is the same either way (List, ‹, ›). The R3 build must say which main it uses.
 12. Review 1 #4: v6 came right after v5, and 2 after v4, not "right after both". Review 1 open question 3: R1 tested only the brief as it is. Both fixed in place.
 
 ### Review 1's 3 High findings: verdict
