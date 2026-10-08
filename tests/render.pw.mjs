@@ -610,6 +610,7 @@ async function run(browserType, label, opts = {}) {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
         await open(`CALC1_A9R`);
         await page.locator("#ans").fill("9/2"); await page.locator("#ans").press("Enter");
+        await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 8000 });   // /check is async: copying first raced it (CI, PR #100)
         await page.locator("#scratch").fill("area between: integrate (4x-x^2) - x from 0 to 3");
         await page.locator("#copy").click();
         const txt = await page.evaluate(() => navigator.clipboard.readText());
