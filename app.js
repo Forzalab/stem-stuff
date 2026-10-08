@@ -1243,10 +1243,10 @@ function wishFrame(now) {
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) {
-    if (!w.quack && w.shown > 0) {   // D72: Cluck's message opens with a QUACK, in his name row (no extra height: the ask field stays on screen)
+    if (!w.quack && w.shown > 0) {   // D72: Cluck's message opens with a QUACK, as its first body line (not in the name row)
       w.quack = lastQuack = quack(w.code + ":cluck", lastQuack);
-      const who = x.parentElement?.querySelector(".who");
-      if (who) { who.querySelector(".cl-quack")?.remove(); who.insertAdjacentHTML("beforeend", `<span class="cl-quack">${esc(w.quack)}</span>`); }
+      const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
+      if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
     x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
     w.drawn = w.shown; w.ended = end;
@@ -1358,7 +1358,7 @@ function clWho(me) {
     + `${me ? "" : '<span class="tag">TUTOR</span>'}<span class="time">${clNow()}</span></div>`;
 }
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
-  cl?.el.querySelector("#clTabEP .who .cl-quack")?.remove();                // D72: the next explanation picks its own QUACK
+  cl?.el.querySelector("#clTabEP .cl-quack")?.remove();                     // D72: the next explanation picks its own QUACK
   if (!cl) return;
   clClose();
   cl.el.querySelector("#clTabEP .time").textContent = clNow();              // the first message's time: this question's
@@ -1999,6 +1999,7 @@ function layoutMT() {
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
     if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
+    if (sideMQ.matches) root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px");   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
     if (mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
     else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
     root.style.setProperty("--pad-max", mtCap + "px");
