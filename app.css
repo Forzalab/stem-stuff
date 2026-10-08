@@ -86,6 +86,10 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
   background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
 }
 .dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
+/* phones: the fixed dock (z 20) is its own stacking context inside .top, beside the open question list (z 30), so the list's z 30 beat the
+   suggestions' z 31 (which only ranks inside the dock) and a tap on a suggestion over the list's area landed on the list (G2c row 06). While
+   suggestions show, the dock ranks above the list; the dock sits at the bottom, so it covers none of the list's rows. */
+.dock-bottom .dock:has(.code-sug:not([hidden])) { z-index: 31; }
 .code-sug li {
   display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 6px; cursor: pointer;
   font-size: var(--t-sm); font-weight: 700; line-height: 1; color: var(--ink);
