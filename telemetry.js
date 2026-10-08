@@ -196,7 +196,8 @@
         if (!p || !p.init) return;
         p.init(cfg.ph, {
           api_host: cfg.host, respect_dnt: true, person_profiles: "always", persistence: "localStorage",
-          bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true, autocapture: true,
+          bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true,
+          autocapture: false, disable_session_recording: true,   // bench 2026-10-07 (design/bench/posthog-2026-10-07): both on = +202 ms TBT; pageview + stemT events only
           disable_surveys: true, capture_dead_clicks: false,   // D22 bench: −42 KB; our dead_tap covers dead clicks
           mask_all_text: false, mask_all_element_attributes: false,
           /* rrweb calls the mask functions only on "masked" nodes: so every input and text node is "masked", and the functions
