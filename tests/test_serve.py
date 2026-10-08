@@ -121,7 +121,9 @@ class Grade(unittest.TestCase):
     def test_modes(self):                                                       # design/EASY.md
         a7k, a8f = BANK["CSCI26_A7K"], BANK["CSCI26_A8F"]
         none_key = dict(a7k, code="CSCI26_N0N", correct=["e"], wrong=[w for w in a7k.get("wrong", []) if w.get("choice") != "e"])
-        self.assertEqual([serve.mode_of(c) for c in ("", "sid=x; stem-mode=diet", "stem-mode=hard", "stem-mode=sugar")], ["sugar", "diet", "diet", "sugar"])
+        self.assertEqual([serve.mode_of(c) for c in ("", "sid=x; stem-mode=diet; stem-mode-v=2", "stem-mode-v=2; stem-mode=hard", "stem-mode=sugar; stem-mode-v=2")], ["sugar", "diet", "diet", "sugar"])
+        # D6: an old diet/hard cookie without the flag = sugar (mode.mjs puts the browser back on sugar once)
+        self.assertEqual([serve.mode_of(c) for c in ("stem-mode=diet", "sid=x; stem-mode=hard","stem-mode=diet; stem-mode-v=1")], ["sugar"] * 3)
         for mode in ("sugar", "diet"):                                           # None of these is gone in both
             v = serve.view(a7k, mode)
             self.assertNotIn("e", [c["id"] for c in v["choices"]], mode)
@@ -521,7 +523,7 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.explain_prompt(raw, "a").count("Answer: b) 3"), 1)
         st, _, data = serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CALC1_SB1"}).encode())
         self.assertEqual((st, json.loads(data)["text"]), (200, "POOF. Three."))
-        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "stem-mode=diet", json.dumps({"code": "CALC1_SB1"}).encode())[2])["text"], "")
+        self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "stem-mode=diet; stem-mode-v=2", json.dumps({"code": "CALC1_SB1"}).encode())[2])["text"], "")
         self.assertTrue(sw["wish"]); self.assertNotIn("wish", dt)
 
     def test_sugar_hide_and_split(self):                                       # main's sugar v2: prune + one True/False per row
@@ -548,7 +550,7 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.grade(b, "x3", {"choice": "f"})["verdict"], "correct")
         st, _, data = serve.dispatch("POST", "/check", "", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())
         self.assertEqual(json.loads(data)["verdict"], "correct")
-        self.assertEqual(serve.dispatch("POST", "/check", "stem-mode=diet", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())[0], 404)
+        self.assertEqual(serve.dispatch("POST", "/check", "stem-mode=diet; stem-mode-v=2", json.dumps({"code": "CSCI26_SP1A", "choice": "t"}).encode())[0], 404)
         self.assertEqual(json.loads(serve.dispatch("POST", "/narrate", "", json.dumps({"code": "CSCI26_SP1A"}).encode())[2])["text"], "A says")
         self.assertIn("B is false.", serve.explain_prompt(b, "t")); self.assertIn("Tick: a, c", serve.explain_prompt(b, "t"))
         five = dict(pick, code="CSCI26_SP5", saccharine={"title": "Q12", "key": "k", "split": [{"sub": "CSCI26_SP5A", "stem": "Seat force at the top?",
@@ -563,7 +565,7 @@ class Banks(unittest.TestCase):
         self.assertIn("Bottom sign.", serve.explain_prompt(r5, "a"))
         self.assertEqual(sorted(c["md"] for c in serve.public(serve.view(r5, "sugar"), "x5")["choices"])[0], "$mg$")
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
-        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet")[0], 200)
+        self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet; stem-mode-v=2")[0], 200)
 
     def test_sugar_only_snacks(self):                                          # design/REWARDS-WIRING.md: snacks are sugar only
         pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SN1", saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c",
@@ -580,7 +582,7 @@ class Banks(unittest.TestCase):
         self.assertEqual(json.dumps(serve.bank_payload("BANK_SN1", "d1", "diet")), plain)          # diet: byte for byte the bank without snacks
         self.assertEqual([p["code"] for p in serve.bank_payload("BANK_SN1", "s1", "sugar")["problems"]],
                          ["CALC1_SK4", "CSCI26_SN1A", "CALC1_SK1", "CSCI26_SN1B", "CALC1_T6B", "CALC1_SK2", "CALC1_SK3", "CALC1_A9R"])   # before its target; no target = where it was
-        diet = "stem-mode=diet"
+        diet = "stem-mode=diet; stem-mode-v=2"
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_SK1.json", diet)[0], 404)
         self.assertEqual(serve.dispatch("GET", "/state/CALC1_SK1", diet)[0], 404)
         self.assertEqual(serve.dispatch("POST", "/check", diet, json.dumps({"code": "CALC1_SK1", "answer": "12"}).encode())[0], 404)
@@ -747,7 +749,7 @@ class Explain(unittest.TestCase):
         self.assertNotIn("NOTE:", self.seen[0][1]["messages"][1]["content"])
 
     def test_easy_only_key_needed_and_caps(self):
-        self.assertEqual(self.ask(cookie="stem-mode=hard")[0], 404)                   # hard mode: no genie
+        self.assertEqual(self.ask(cookie="stem-mode=hard; stem-mode-v=2")[0], 404)     # hard mode: no genie
         os.environ.pop("OPENROUTER_API_KEY")
         self.assertEqual(self.ask()[0], 503)
         os.environ["OPENROUTER_API_KEY"] = "sk-test"
@@ -908,7 +910,7 @@ class Explain(unittest.TestCase):
         self.assertEqual(self.seen, [])
 
     def test_chat_gates(self):
-        self.assertEqual(self.chat(cookie="stem-mode=diet")[0], 404)                  # diet: no Cluck
+        self.assertEqual(self.chat(cookie="stem-mode=diet; stem-mode-v=2")[0], 404)    # diet: no Cluck
         self.assertEqual(self.chat(code="NOPE_X1")[0], 404)
         self.assertEqual(self.chat(history=[])[0], 400)
         self.assertEqual(self.chat(history=[{"role": "user", "content": "hi"}])[0], 400)                      # Cluck goes first
