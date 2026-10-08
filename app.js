@@ -4,6 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
 import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
+import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
 
@@ -28,6 +29,8 @@ const CODE_RE = /^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
+let lastQuack = "";   // quack.mjs: the last prefix shown, so the next one differs (Tony D72: every Cluck hint starts with a QUACK)
+const quackHint = (h, seed) => { const out = withQuack(h, seed, lastQuack); lastQuack = quack(seed, lastQuack); return out; };
 const say = t => { const sr = $("#sr"); sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); };
 /* onboarding (STYLE.md §3 Toast): only on a new device, i.e. no stem-* key at the first load; remembered as stem-ob until all are shown */
 const onboard = (() => { try {
@@ -865,7 +868,10 @@ function partFeedback(i, r, typed) {
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
-  if (r.hint) h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>`;
+  if (r.hint) {
+    const hintWithQuack = quackHint(r.hint, S.code + ":part" + i + ":" + S.tries.length);
+    h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
+  }
   hint.innerHTML = h;
   row.classList.toggle("hinted", !!h);
   const again = hint.querySelector(".retry");
@@ -1079,18 +1085,22 @@ function feedback(r, typed) {
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
     h += `<p class="verdict lock">${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span></p>`;
-  const quack = r.hint ? `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(r.hint)}</div></div></div>` : "";
+  let quackHtml = "";
+  if (r.hint) {
+    const hintWithQuack = quackHint(r.hint, S.code + ":" + S.tries.length);
+    quackHtml = `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
+  }
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
      Phones: the Scratchpad button sits on that row, so under the question. */
   const chk = $("#q .chk"); chk?.querySelector(".cluck")?.remove();
   let inRow = !!(chk && r.hint && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
   fb.innerHTML = h;
   if (inRow) {
-    chk.insertAdjacentHTML("afterbegin", quack);
+    chk.insertAdjacentHTML("afterbegin", quackHtml);
     const m = chk.querySelector(".cluck .md"), lh = parseFloat(getComputedStyle(m).lineHeight) || 24;
     if (m.offsetHeight > 2 * lh + 2 || m.scrollWidth > m.clientWidth) { chk.querySelector(".cluck").remove(); inRow = false; }
   }
-  if (!inRow) fb.insertAdjacentHTML("beforeend", quack);
+  if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
   say((verdictWords(r) + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
@@ -1217,7 +1227,15 @@ function wishFrame(now) {
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
-  if (w.drawn !== w.shown || end !== w.ended) { x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET); w.drawn = w.shown; w.ended = end; }
+  if (w.drawn !== w.shown || end !== w.ended) {
+    if (!w.quack && w.shown > 0) {   // D72: Cluck's message opens with a QUACK, in his name row (no extra height: the ask field stays on screen)
+      w.quack = lastQuack = quack(w.code + ":cluck", lastQuack);
+      const who = x.parentElement?.querySelector(".who");
+      if (who) { who.querySelector(".cl-quack")?.remove(); who.insertAdjacentHTML("beforeend", `<span class="cl-quack">${esc(w.quack)}</span>`); }
+    }
+    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
+    w.drawn = w.shown; w.ended = end;
+  }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
   if (!end) { wishText(); return; }
   if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
@@ -1325,6 +1343,7 @@ function clWho(me) {
     + `${me ? "" : '<span class="tag">TUTOR</span>'}<span class="time">${clNow()}</span></div>`;
 }
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
+  cl?.el.querySelector("#clTabEP .who .cl-quack")?.remove();                // D72: the next explanation picks its own QUACK
   if (!cl) return;
   clClose();
   cl.el.querySelector("#clTabEP .time").textContent = clNow();              // the first message's time: this question's

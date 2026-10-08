@@ -105,7 +105,7 @@ try {
       await page.waitForSelector("#q .chk .pips"); await page.waitForTimeout(150);
       const s = await st(page);
       assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.dis, ["b"]); assert.deepEqual(s.on, ["a", "d"]);
-      assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast.on")?.textContent || ""), /try|wisely/i, "no try toast over the choices (Tony, Oct 5)");   // text, never a handle: a failing assert on a handle inspects the whole Playwright graph assert.match(s.fb, /QUACK/); assert.equal(s.finished, false);
+      assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast.on")?.textContent || ""), /try|wisely/i, "no try toast over the choices (Tony, Oct 5)");   // text, never a handle: a failing assert on a handle inspects the whole Playwright graph assert.match(s.fb, /qu+a+c+k/i); assert.equal(s.finished, false);
       assert.deepEqual(await page.$eval("#q .chk .pips", e => [e.querySelectorAll("i.used").length, e.querySelectorAll("i:not(.used)").length]), [1, 1], "try pips: one used, one left");
       assert.ok(await page.evaluate(() => document.querySelector("#q .chk .pips").getBoundingClientRect().right <= document.querySelector("#mcGo").getBoundingClientRect().left), "the pips sit beside Check");
       const sel = touch ? "#fb .cluck" : "#q .chk .cluck";
@@ -124,7 +124,7 @@ try {
     await step(`${name}: reload restores the strike and the ticks`, async () => {
       await page.reload(); await opened(page, CODE); await page.waitForTimeout(300);
       const s = await st(page);
-      assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.on, ["a", "d"]); assert.equal(s.go, false); assert.match(s.fb, /QUACK/);
+      assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.on, ["a", "d"]); assert.equal(s.go, false); assert.match(s.fb, /qu+a+c+k/i);
     });
     await step(`${name}: subset of correct = miss, out of tries, closed`, async () => {
       await tap(row(page, "d")); await check(page);
