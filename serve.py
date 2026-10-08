@@ -1419,12 +1419,20 @@ def _age(sec):
     return next(f"{sec // n}{u}" for n, u in ((86400, "d"), (3600, "h"), (60, "m"), (1, "s")) if sec >= n or n == 1)
 
 
+def _foreground_tty():
+    """True only when stdin is a terminal and we are its foreground process group (not `serve.py &`: input() would SIGTTIN-stop us)."""
+    try:
+        return sys.stdin.isatty() and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+    except (OSError, AttributeError, ValueError):  # no controlling tty, or no tcgetpgrp (Windows)
+        return False
+
+
 def _guard(proc_root="/proc", ask=input, tty=None, kill=os.kill):
-    """Warn about other serve.py processes; kill the listed ones only after an explicit y/yes on a terminal."""
+    """Warn about other serve.py processes; kill the listed ones only after an explicit y/yes on a foreground terminal."""
     others = _other_servers(proc_root)
     for pid, port, age in others:
         print(f"{pid} \u00b7 {port} \u00b7 {_age(age)}")
-    if not others or not (sys.stdin.isatty() if tty is None else tty):
+    if not others or not (_foreground_tty() if tty is None else tty):
         return
     try:
         yes = ask("Kill them? [y/N] ").strip().lower() in ("y", "yes")
