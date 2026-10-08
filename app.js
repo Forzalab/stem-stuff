@@ -463,6 +463,7 @@ async function load(code) {
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
+  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type });   // telemetry (design/plans/TELEMETRY.md)
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
@@ -912,6 +913,7 @@ function record(a, r) {
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
+  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null });   // telemetry
   const mine = x => x.part === a.part;        // a multi counts wrong tries per part; the others have part undefined
   if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
@@ -1137,6 +1139,7 @@ const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the
 async function wishStart(auto) {
   const w = wish, t = S.tries.at(-1) || {};
   w.started = true; w.ctl = new AbortController();
+  window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
   try {
     const r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
@@ -1147,11 +1150,13 @@ async function wishStart(auto) {
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
         w.text += dec.decode(value, { stream: true });
+        window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
       }
     }
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
   w.done = true;
+  window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, failed: w.failed || 0, auto: !!auto });   // telemetry
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
   wishPaint();
@@ -1281,6 +1286,7 @@ function clPlace() {                                                        // s
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
+  window.stemT?.("cluck_open", { tab, auto: !!auto });   // telemetry
   clEl(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
@@ -1288,6 +1294,7 @@ function clOpen(tab, from, auto) {                                        // aut
 }
 function clClose() {
   if (!cl || !cl.open) return;
+  window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
   cl.open = false; cl.el.hidden = true;
   clTab(cl.tab, false); clPlace(); padRule();

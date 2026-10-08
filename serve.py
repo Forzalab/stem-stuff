@@ -897,9 +897,14 @@ def explain_allowed(sid, auto, now=None):
 SCRATCH_MAX = 1500                           # the student's scratchpad rides into the NOTE call, cut to this many chars
 
 
+# e-mail / phone shapes (design/plans/TELEMETRY.md, Fable A6): blanked before the scratchpad leaves for the NOTE call
+PII_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|(?:\+?\d{1,3}[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)")
+
+
 def scratch_block(text, tag):
-    """the scratchpad for the NOTE call: fenced like a chat message (student-typed = data), "" when empty or when it tries the regex"""
-    text = text.strip()[-SCRATCH_MAX:] if isinstance(text, str) else ""
+    """the scratchpad for the NOTE call: fenced like a chat message (student-typed = data), "" when empty or when it tries the regex;
+    e-mail and phone shapes become [hidden]"""
+    text = PII_RE.sub("[hidden]", text.strip()[-SCRATCH_MAX:]) if isinstance(text, str) else ""
     return "" if not text or INJECT_RE.search(text) else "\n\nSCRATCHPAD (their work so far, newest last):\n" + wrap(text, tag)
 
 

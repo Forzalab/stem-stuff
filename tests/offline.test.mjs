@@ -22,7 +22,7 @@ test("problems: network-first", () => {
   assert.equal(r("p/CALC1_T6B.json?v=2"), "problem");
 });
 test("shell: cache-first", () => {
-  for (const p of ["", "index.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs",
+  for (const p of ["", "index.html", "privacy.html", "app.js", "app.css", "offline.js", "graph.js", "copy/payload.mjs",
     "vendor/katex/katex.min.js", "vendor/katex/fonts/KaTeX_Main-Regular.woff2", "design/explain-box.css",
     "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", "vendor/fonts/press-start-2p-latin-400-normal.woff2"])
     assert.equal(r(p), "shell", p);

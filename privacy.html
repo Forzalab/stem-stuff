@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08111f">
+<meta name="color-scheme" content="dark">
+<title>Privacy · STEM drill</title>
+<!-- the footer link's page (design/plans/TELEMETRY.md): three plain lines, no telemetry on this page itself -->
+<link rel="stylesheet" href="vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="app.css">
+<style>
+.pv { max-width: 40rem; margin: 0 auto; padding: var(--s6) var(--gut) var(--s7); }
+.pv h1 { margin: 0 0 var(--s4); font-size: var(--t-lg); line-height: 1.2; }
+.pv p { margin: 0 0 var(--s4); }
+.pv b { color: var(--ink); }
+.pv a { color: var(--c1); text-underline-offset: 3px; }
+.pv .opt-out { margin: var(--s5) 0 var(--s2); }
+.pv .opt-out p { margin: 0 0 var(--s2); }
+.pv .opt-out .btn { min-height: var(--btn); padding: 0 var(--s4); border: var(--bw) solid var(--line); border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; cursor: pointer; }
+.pv .opt-out .btn:hover { background: var(--raised); }
+.pv .back { display: inline-flex; align-items: center; min-height: var(--btn); margin-top: var(--s2); }
+</style>
+</head>
+<body>
+<main class="pv">
+  <h1>Privacy</h1>
+  <p><b>What we record:</b> what you tap, pick and type in this app, and a screen replay of the visit (PostHog). No name, no login. E-mail addresses and phone numbers are blanked in the replay. If your browser sends Do Not Track or Global Privacy Control, we record nothing.</p>
+  <p><b>Why:</b> to see where questions get confusing, so we can make them clearer.</p>
+  <p><b>Questions, or want your data removed?</b> Ask Tony, who shared this app with you. Please keep private info (phone numbers, passwords) out of your notes and Cluck.</p>
+  <div class="opt-out">
+    <p id="offTx">Don't want to be recorded on this device?</p>
+    <button type="button" class="btn btn-label" id="offBtn">Don't record me</button>
+  </div>
+  <a class="back" href="./">Back to questions</a>
+</main>
+<script>
+/* "Don't record me" (TELEMETRY.md): localStorage stem-t-off=1 → telemetry.js loads nothing on this device. A second tap undoes it. */
+(function () {
+  var b = document.getElementById("offBtn"), t = document.getElementById("offTx");
+  function get() { try { return localStorage.getItem("stem-t-off") === "1"; } catch (e) { return false; } }
+  function paint() {
+    var off = get();
+    t.textContent = off ? "Recording is off on this device." : "Don't want to be recorded on this device?";
+    b.textContent = off ? "Record again" : "Don't record me";
+  }
+  b.addEventListener("click", function () {
+    try { if (get()) localStorage.removeItem("stem-t-off"); else localStorage.setItem("stem-t-off", "1"); } catch (e) { t.textContent = "This browser blocks storage, so this switch can't be saved."; return; }
+    paint();
+  });
+  paint();
+})();
+</script>
+</body>
+</html>
