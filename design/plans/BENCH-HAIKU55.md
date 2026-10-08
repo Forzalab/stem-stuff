@@ -1,6 +1,6 @@
 # BENCH-HAIKU55: does claude-haiku-5.5 earn a slot in Cluck's model list?
 
-Task Q1, run 2026-10-08 on main a6cc486. **GRADING: pending (separate agent).** Nothing below is a quality verdict: only length, latency and cost were measured. The order and the diff are **provisional until graded**.
+Task Q1, run 2026-10-08 on main a6cc486. **GRADING: done (separate agent).** Nothing below is a quality verdict: only length, latency and cost were measured. The order and the diff are **provisional until graded**.
 
 ## Setup
 - OpenRouter models list fetched live (467 models). `anthropic/claude-haiku-5.5` exists (created 2026-10-07, $0.10/M in, $0.50/M out). Filtered cheap-chat list: `design/plans/bench-haiku55/models.txt`. No extra "newer cheap model" was added.
@@ -118,7 +118,67 @@ Keeps the v4 prompts as `*_V4` for rollback, adds the short prompts as the live 
 ## Rubric and grading
 - Rubric: `design/plans/bench-haiku55/RUBRIC.md`, frozen. Commit **26b33c8f3dfb1a9e9aa4cfcfc839fbb442aafb5f** (blob sha 0486b2c4427e06ef11f1f9727c2da4cc8d19e5b9). It was committed before the first API call and not edited after.
 - The rubric gives roleplay (duck professor, QUACK, one kaomoji) weight 2x. The prod prompts never ask for a kaomoji, so they cap at 1/2 on roleplay by design.
-- **GRADING: pending (separate agent).** Inputs for it: `raw.jsonl` (37 rows: `text`, `text_raw`, `input`, metrics), `RUBRIC.md`, `prompt-short.md`.
+- **GRADING: done (separate agent).** Inputs for it: `raw.jsonl` (37 rows: `text`, `text_raw`, `input`, metrics), `RUBRIC.md`, `prompt-short.md`.
 
 ## Files
 `design/plans/bench-haiku55/{models.txt, RUBRIC.md, prompt-short.md, raw.jsonl}` and this file.
+
+## Grades (grader: separate agent)
+
+Graded all 37 rows by the frozen `RUBRIC.md` (unchanged) in `design/plans/bench-haiku55/grades.jsonl` (one line per raw row, line number = row index; the `seq` field repeats 1 for rows 1 and 4). Score = 2 x roleplay + correctness + length, 0 to 8. Row 1 (empty haiku reply, the superseded call) scores 0/0/0 and is excluded from every mean, as the report above excludes it. Rows were read with model names visible (not blinded). No API calls were made.
+
+### Mean weighted score (0-8) by route x prompt x model
+Cells show weighted / roleplay / correctness / length (roleplay 0-2, correctness 0-2, length 0-2).
+
+| route | prompt | model | n | weighted | roleplay | correctness | length |
+|---|---|---|---|---|---|---|---|
+| /explain | prod | haiku-5.5 | 4 | 0.75 | 0.25 | 0.25 | 0.00 |
+| /explain | prod | deepseek-v4.1-flash | 4 | 3.50 | 0.75 | 2.00 | 0.00 |
+| /explain | prod | gemini-3.8-flash | 4 | 4.00 | 1.00 | 2.00 | 0.00 |
+| /explain | short | haiku-5.5 | 4 | 3.75 | 0.50 | 2.00 | 0.75 |
+| /explain | short | deepseek-v4.1-flash | 4 | 7.00 | 1.50 | 2.00 | 2.00 |
+| /explain | short | gemini-3.8-flash | 4 | 8.00 | 2.00 | 2.00 | 2.00 |
+| /chat | prod | haiku-5.5 | 2 | 3.50 | 1.00 | 1.50 | 0.00 |
+| /chat | prod | deepseek-v4.1-flash | 2 | 3.00 | 0.50 | 2.00 | 0.00 |
+| /chat | prod | gemini-3.8-flash | 2 | 4.00 | 1.00 | 2.00 | 0.00 |
+| /chat | short | haiku-5.5 | 2 | 2.50 | 0.00 | 1.50 | 1.00 |
+| /chat | short | deepseek-v4.1-flash | 2 | 4.00 | 0.00 | 2.00 | 2.00 |
+| /chat | short | gemini-3.8-flash | 2 | 4.00 | 0.00 | 2.00 | 2.00 |
+
+### Model x prompt (both routes pooled, n = 6 each) and totals
+
+| model | prompt | weighted | roleplay | correctness | length |
+|---|---|---|---|---|---|
+| haiku-5.5 | prod | 1.67 | 0.50 | 0.67 | 0.00 |
+| deepseek-v4.1-flash | prod | 3.33 | 0.67 | 2.00 | 0.00 |
+| gemini-3.8-flash | prod | 4.00 | 1.00 | 2.00 | 0.00 |
+| haiku-5.5 | short | 3.33 | 0.33 | 1.83 | 0.83 |
+| deepseek-v4.1-flash | short | 6.00 | 1.00 | 2.00 | 2.00 |
+| gemini-3.8-flash | short | 6.67 | 1.33 | 2.00 | 2.00 |
+
+Per model over both prompts (n = 12): gemini 5.33 (roleplay 1.17, correctness 2.00), deepseek 4.67 (0.83, 2.00), haiku 2.50 (0.42, 1.25). Per prompt over all models (n = 18): prod 3.00 (roleplay 0.72, correctness 1.56, length 0.00), short 5.33 (0.89, 1.94, 1.61).
+
+Roleplay means (2x criterion) by model: gemini 1.17, deepseek 0.83, haiku 0.42. Correctness means: gemini 2.00, deepseek 2.00, haiku 1.25. Haiku's correctness loss is all in the prod prompt: 4 of 4 haiku prod /explain rows were cut off at 450 tokens, and 3 of those never reach a final answer (scored 0). On the short prompt haiku is right on every /explain row and loses one point only on `chat_vector` (a "274 m east, 80.6 m north" analogy ends "= 286 N", a unit slip) and the muddled prod chat reply (never states 286 N).
+
+### Why the scores look the way they do
+- Prod prompt: every reply is over the length bands (length 0 on all 18), and roleplay tops out at 1 because no prod reply carries a kaomoji. Where a prod reply reaches a QUACK it scores 1; the haiku /explain rows that were cut off before one score 0.
+- Short prompt: deepseek and gemini are inside the length bands on all 12 rows. Haiku is over on 4 of 6 (66 and 72 /explain words, 40 and 53 /chat words; the 3-sentence paragraph rule also hit rows 11, 17 and 23) and speaks like a neutral tutor ("the student forgot ...", "Your pick of ...").
+- Persona, strict reading: I credited the persona only when the text has a duck marker beyond a bare "QUACK" and the kaomoji (a stage direction like waddles / ruffles feathers / adjusts spectacles, or naming itself Cluck). Most /chat short replies from deepseek and gemini are "QUACK! plain explanation (face)" with no marker, so they score 0 roleplay. That is why short /chat roleplay is 0.00 for all three models.
+- Sensitivity: if a bare QUACK also counted as persona (the rubric is not explicit), the short means become haiku 6.00, deepseek 8.00, gemini 8.00 (the prod means move little: haiku 1.67, deepseek 3.67, gemini 4.00). Deepseek and gemini tie; haiku stays last. The ranking haiku < deepseek <= gemini does not change under either reading.
+
+### SYN_AREA KEY verdict: AGREE
+Rebuilt item: area enclosed by y = 4x - x^2 and y = x. Crossings: 4x - x^2 = x gives x(3 - x) = 0, so x = 0 and 3. At x = 1 the parabola is 3 and the line is 1, so the parabola is on top. A = integral 0 to 3 of (3x - x^2) dx = (3/2)(9) - (1/3)(27) = 27/2 - 9 = 9/2. I also checked it numerically (4.5000). Choice a (9/2) is the only correct one, and the SLIP (line minus parabola gives -9/2) is a real choice (c). The other three choices (9, 27/2, 3/2) are plausible distractors and none equals 9/2. One caveat: the original live-gen item text is not in the repo, so this only shows the reconstruction is self-consistent, not that it equals the Oct 7 item. The other three KEYs also check out: KWV 24 squares x 2.50 = 60.0 J; 8VQ sqrt(274.4^2 + 80.64^2) = 286.0 N; G7H (bank file confirms correct = e) T = 7.32 h at r = 3R_E (1.41 h at r = R_E for the slip).
+
+### FINAL recommendation
+- `OPENROUTER_MODELS` = `deepseek/deepseek-v4.1-flash,google/gemini-3.8-flash,openai/gpt-6-luna` (current order kept). Do not add `anthropic/claude-haiku-5.5`; if Tony still wants it as a fallback, put it last, after luna, with the `anthropic/` `enabled: false` reasoning entry.
+- Prompt: **short** (both routes).
+- Why 1: the short prompt moves the mean from 3.00 to 5.33 and is the only one that scores on length at all (1.61 vs 0.00); on prod, every model overshoots the length bands, and 5 of 12 prod /explain rows were cut off before the answer.
+- Why 2: gemini edges deepseek on score (6.67 vs 6.00 on short, 5.33 vs 4.67 overall) but ties it if a bare QUACK counts as persona, and costs about 3x more and is about 2x slower on the short prompt (first token 1325 ms vs 580 ms; $0.083 vs $0.028 per 100 /explain calls). The gap is inside the noise at n = 6, so deepseek stays first; haiku scored last on every cell (terse, no persona, over the caps, truncation on prod) and does not earn a slot. gpt-6-luna was never run, so it stays last on prior only.
+
+### Grader notes (anchors that were unclear; lower score taken)
+- Persona (P) when the only duck signal is "QUACK!": taken as 0 (see sensitivity above). "Cluck here, quack." (row 11) was credited as persona.
+- A lone interjection "QUACK!" was not counted as a sentence for the "3 or more sentences" rule; "Cluck here, quack." was.
+- Truncated rows: rows 8, 14, 20 never reach the answer, so correctness 0; row 20 still gets roleplay 1 (QUACK and a duck stage direction are on the page). Row 4 reaches 60.0 J in the box but has no letter, so correctness 1. Row 9 (deepseek, cut inside the closing sentence after "a, 286 N") is correct 2.
+- Row 3 (gemini): bold final "c, 60.0" has no unit but the boxed line carries N.m; scored 2.
+- Row 32 (haiku prod chat): never states 286 N and says 354.6 N "is bigger than either push can make on its own when they're perpendicular", a muddled claim; scored 1.
+- Odd: the bench never ran `openai/gpt-6-luna`, so the "provisional order" listed it unbenched; the `seq` column repeats 1 because call 1 was re-run (rows 1 and 4).
