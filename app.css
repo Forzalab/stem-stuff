@@ -79,7 +79,7 @@ button:disabled { cursor: default; }
 /* suggestions (suggest.mjs): codes this browser knows that contain what is typed, banks first. Floats over the page
    (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
 .code-sug {
-  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;
+  position: absolute; z-index: 31; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;   /* 31: over an open question list (nav.css, z 30), or a tap on a suggestion lands on the list (G2c row 06) */
   max-height: min(22rem, 50vh); overflow-y: auto; overscroll-behavior: contain;
   background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
 }
@@ -623,6 +623,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext .wlist li + li { margin-top: var(--s1); }
 .wtext .wl + .wl:not(.wgap, .wmath, .wlist, .wstep) { margin-top: var(--s2); }   /* sentences get a breath between them (not steps: this outranked .wstep) */
 .wtext > .wl:first-child { margin-top: 0; }
+.wtext .wretry { min-height: 2.75rem; padding: 0 var(--s3); margin-left: var(--s1); font: inherit; font-weight: 600; color: var(--ai-text); background: none; border: 1px solid currentColor; border-radius: 10px; cursor: pointer; }   /* a failed explain: a real 44px tap target in the sheet */
 .wtext .wsbody > :last-child, .wtext > .wl:last-child { margin-bottom: 0; }   /* a step's last list/callout margin stays inside the grid item and doubled the step gap */
 /* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
 .wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
