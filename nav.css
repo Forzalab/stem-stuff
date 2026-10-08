@@ -20,12 +20,12 @@
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .dock-bottom .qlist { position: absolute; z-index: 30; left: 0; right: 0; width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; box-shadow: var(--shadow-3); }   /* phones too: floats where it would have sat, the question stays put (Tony, Oct 6) */
 
-/* desktop: one row. Bank side first (list, shuffle), then the entry box, only as wide as a code needs; Prev/Next at the
+/* desktop: one row. Bank side first (the list), then the entry box, only as wide as a code needs; Prev/Next at the
    right edge (Tony, Sep 30 sketches). The nav and .dock unwrap (display: contents) so their buttons are grid items.
    The list is a full-width row under them.
    .dock's children become grid items (entry + nav / message / list). Not on the start page (html.start, app.css): there the entry stands alone. */
 .qnav-on:not(.dock-bottom):not(.start) .top {
-  display: grid; grid-template-columns: auto auto minmax(0, auto) minmax(0, 1fr) auto auto auto; column-gap: var(--s2);   /* List Shuffle Code XP Redo Prev Next; the code box gives way first */
+  display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto auto; column-gap: var(--s2);   /* List Code XP Prev Next; the code box gives way first */
   max-width: var(--col); margin: 0 auto; padding: calc(env(safe-area-inset-top) + var(--s4)) var(--gut) 0;
 }
 /* side by side: the bar spans the same width as the two columns under it, so its ends sit on the content's edges (Tony, Oct 3) */
@@ -35,28 +35,16 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qnav-on:not(.dock-bottom):not(.start) .dock { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) .qnav { display: contents; }
 .qnav-on:not(.dock-bottom):not(.start) #qlistBtn { grid-row: 1; grid-column: 1; }
-.qnav-on:not(.dock-bottom):not(.start) #qshuf { grid-row: 1; grid-column: 2; }
-.qnav-on:not(.dock-bottom):not(.start) .entry { grid-row: 1; grid-column: 3; width: 21rem; max-width: 100%; }
-.qnav-on:not(.dock-bottom):not(.start) #qredo { grid-row: 1; grid-column: 5; }
-.qnav-on:not(.dock-bottom):not(.start) #qprev { grid-row: 1; grid-column: 6; }
-.qnav-on:not(.dock-bottom):not(.start) #qnext { grid-row: 1; grid-column: 7; }
+.qnav-on:not(.dock-bottom):not(.start) .entry { grid-row: 1; grid-column: 2; width: 21rem; max-width: 100%; }
+.qnav-on:not(.dock-bottom):not(.start) #qprev { grid-row: 1; grid-column: 4; }
+.qnav-on:not(.dock-bottom):not(.start) #qnext { grid-row: 1; grid-column: 5; }
 .qnav-on:not(.dock-bottom):not(.start) .entry-msg { grid-row: 2; grid-column: 1 / -1; }
 .qnav-on:not(.dock-bottom):not(.start) .qlist { position: absolute; z-index: 30; top: 100%; left: var(--gut); right: var(--gut); margin-top: var(--s2); box-shadow: var(--shadow-3); }   /* a dropdown under the bar, over the page, like .code-sug: nothing moves (Tony, Oct 6; Refactoring UI p.159). Anchored to .top, not a grid row: an abspos item on a row no in-flow item makes falls back to the top of the bar and covers it. left/right = .top's padding, so its edges sit on the bar's; the rows go in columns (below), never one 1800px row (C14) */
-/* C2 / C15 (Tony, Oct 5 clutter pass): with a bank open the row is List · XP · Prev / Next. The code box (Upload, Paste) and Shuffle
-   come with the list, on a row of their own above it. A load error (message or Retry) brings the box back on its own */
-.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) :is(.entry, #qshuf) { display: none; }
-.qnav-on:not(.dock-bottom):not(.start):not(.ql-open) .top > .rw-hud { grid-column: 2 / 5; }   /* the empty columns go to the XP strip */
+/* C2 / C15 (Tony, Oct 5 clutter pass): with a bank open the row is List · XP · Prev / Next. The code box (Upload, Paste)
+   comes with the list, on a row of their own above it. A load error (message or Retry) brings the box back on its own */
+.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }
+.qnav-on:not(.dock-bottom):not(.start):not(.ql-open) .top > .rw-hud { grid-column: 2 / 4; }   /* the empty columns go to the XP strip */
 /* open: they join row 1 in the XP strip's room, so the bar stays one row (Tony, Oct 6: "overflows the bar onto 2 rows") */
-.dock-bottom.qnav-on:not(.ql-open) #qshuf { display: none; }   /* phones: Shuffle shows with the list */
-/* Redo my misses (cram week, Oct 6): comes with the list like Shuffle; inside a round "Exit redo" stays on the bar */
-.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.redo-on) #qredo { display: none; }
-.dock-bottom.qnav-on:not(.ql-open):not(.redo-on) #qredo { display: none; }
-.dock-bottom:not(.redo-on) #qredo { width: var(--btn); padding: 0; justify-content: center; }   /* phones: icon only until a round, or the bar overflows */
-.dock-bottom:not(.redo-on) #qredoTx { display: none; }
-.redo-on #qshuf { display: none; }   /* a round has its own order */
-/* its look: variant A "Quiet toggle" of try/redo-variants.html (STYLE.md: no new hue, one filled control, no counters): in a round
-   the button is "on" like an open list; the list button says "Redo" and the list's own ticks show progress */
-.redo-on #qredo { background: var(--raised); }
 
 /* the list: a card like the problem's; long lists scroll inside. Bar on top: it floats over the page (above). Phone bottom dock: as before */
 .qlist {

@@ -31,7 +31,7 @@
   padding: 0; border-radius: 14px;   /* no gold frame (Tony, Oct 5 clutter pass C1): it was the loudest thing on the page */
   font-family: var(--rw-font); font-weight: 700; color: var(--rw-g-ink); user-select: none; -webkit-user-select: none;
 }
-.qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 4; justify-self: stretch; }
+.qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 3; justify-self: stretch; }
 /* no question list (a question opened by link): the HUD lines up with the content under it, not the window's edge */
 html:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { width: min(100% - 2 * var(--gut), var(--col) - 2 * var(--gut)); margin: var(--s2, 8px) auto 0; box-sizing: border-box; }
 html.side:not(.qnav-on):not(.dock-bottom) .top > .rw-hud { width: min(100% - 2 * var(--gut), var(--col) * 1.7 - 2 * var(--gut)); }
