@@ -231,8 +231,11 @@ html { background: #08111f; color: #e7edf6; }   /* --paper, --ink */
   display: inline-flex; align-items: flex-end; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 var(--s1) var(--s1);   /* a 44px target, the text on #ver's baseline */
   color: var(--hint); font-size: var(--t-xs); line-height: 1; text-decoration: underline; text-underline-offset: 2px; }
 #privacy:hover, #privacy:focus-visible { color: var(--muted); }
-.dock-bottom:not(.start) #privacy { display: none; }   /* phones over a question: the bottom belongs to the bar, the notes button and Swap; the start page shows it */
-html.bar-open #privacy { visibility: hidden; }
+.dock-bottom:not(.start):not(.ql-open) #privacy { display: none; }   /* phones over a question: the bottom belongs to the bar, the notes button and Swap; the start page shows it */
+html.bar-open:not(.ql-open) #privacy { visibility: hidden; }
+/* G3 (an opt-out reachable mid-question on a phone, 2 taps): it comes back with the question list (list button, then this), right under
+   the list's bottom-right corner (nav.js sets --ql-bottom), in the dimmed gap above the code bar, over the dim (46). Covers nothing. */
+html.dock-bottom.ql-open:not(.start) #privacy { z-index: 48; top: var(--ql-bottom, 50svh); bottom: auto; right: var(--gut); align-items: flex-start; padding: var(--s2) var(--s1) 0; }
 #privacy::after { content: "privacy"; }   /* drawn by CSS like #ver: not page text, never in a copy or a text check */
 #cluck .cl-verify::after { content: ", and pls no private shit in it xoxo"; }   /* D20: next to Cluck's "verify b4 use lol" */
 </style>
