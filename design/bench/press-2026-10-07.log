@@ -1,0 +1,50 @@
+=== case 1: gh missing ===
+gh is not installed. fix: pkg install gh
+exit=1
+=== case 2: secrets missing ===
+missing repo secret(s): BRAIN_TOKEN. fix: GitHub → repo Settings → Secrets and variables → Actions → Repository secrets
+exit=1
+=== case 3: run succeeds (live) ===
+run: https://github.com/Forzalab/stem-stuff/actions/runs/222
+(watching run 222)
+OK: live shipped
+https://github.com/Forzalab/stem-stuff/actions/runs/222
+exit=0
+=== case 4: run fails ===
+run: https://github.com/Forzalab/stem-stuff/actions/runs/222
+(watching run 222)
+log line 12
+log line 13
+log line 14
+log line 15
+log line 16
+log line 17
+log line 18
+log line 19
+log line 20
+log line 21
+log line 22
+log line 23
+log line 24
+log line 25
+log line 26
+log line 27
+log line 28
+log line 29
+log line 30
+log line 31
+log line 32
+log line 33
+log line 34
+log line 35
+log line 36
+log line 37
+log line 38
+log line 39
+log line 40
+Error: VERCEL_TOKEN is empty
+FAILED: see https://github.com/Forzalab/stem-stuff/actions/runs/222
+exit=1
+=== bad arg ===
+usage: tools/press.sh [demo|live]
+exit=2
