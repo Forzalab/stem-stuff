@@ -1,0 +1,35 @@
+ok   unittest
+ok   npm
+ok   autosave
+ok   bank
+ok   bar
+ok   blind
+ok   blur
+ok   choose-all-spam
+ok   choose-all
+ok   disabled
+ok   done
+ok   easy
+ok   fab
+ok   flow
+ok   font
+ok   katex-wrap
+ok   mcclick
+ok   mode-reset
+ok   nav-stable
+ok   polish
+ok   queue-walk
+ok   reload
+ok   render
+ok   rewards
+ok   splash
+--- run-all.sh hit the 590 s tool timeout during swap; the rest run one by one below, same args as run-all.sh ---
+ok   swap (100 s)
+ok   telemetry (22 s)
+ok   ticker (75 s)
+ok   try-tries (30 s)
+ok   update (29 s)
+# tests 790
+# pass 789
+# fail 0
+# todo 1
