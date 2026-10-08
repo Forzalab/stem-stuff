@@ -1,0 +1,52 @@
+# OpenRouter cheap chat models, fetched 2026-10-08 (GET /api/v1/models, 467 models total)
+# Filter: text output, no :free/:batch/:thinking/:extended variants, context >= 16k, prompt <= $1.00/M, completion <= $3.00/M. Newest first (created date), top 45.
+# Prod OPENROUTER_MODELS and the bench models are always listed (marked). Prices are $ per million tokens.
+# date       model                                       in/M     out/M    ctx      mark
+2026-10-07  anthropic/claude-haiku-5.5                 0.100    0.500    1000000  BENCH-TARGET
+2026-10-06  mistralai/mistral-large-4-0                0.680    2.090    524288   
+2026-09-25  perceptron/perceptron-mk1.5                0.150    1.500    36864    
+2026-09-23  aion-labs/aion-3.5-mini                    0.700    1.400    262144   
+2026-09-23  upstage/solar-mini4                        0.050    0.200    524288   
+2026-09-22  cohere/command-a-plus                      0.300    1.500    192000   
+2026-09-22  openai/gpt-6-luna-pro                      0.100    0.500    1050000  
+2026-09-22  openai/gpt-6-luna                          0.100    0.500    1050000  prod#3
+2026-09-21  xiaomi/mimo-v2.6-flash                     0.140    0.280    1050000  
+2026-09-21  xiaomi/mimo-v2.6-pro                       0.435    0.870    1050000  
+2026-09-21  qwen/qwen3.8-omni-flash                    0.150    0.470    1000000  
+2026-09-18  prism-ml/ternary-bonsai-2-27b              0.075    0.500    262144   
+2026-09-18  z-ai/glm-5.3-flashx                        0.370    1.250    1048576  
+2026-09-14  ~deepseek/deepseek-flash-latest            0.003    2.400    1048576  
+2026-09-12  inference-net/schematron-v2-turbo          0.030    0.150    128000   
+2026-09-12  inference-net/schematron-v2-small          0.050    0.230    128000   
+2026-09-11  ~openai/gpt-luna-latest                    0.100    0.500    1050000  
+2026-09-10  inclusionai/ling-3.0-flash-vl              0.021    0.062    262144   
+2026-09-10  deepseek/deepseek-v4.1-flash               0.300    1.200    1048576  prod#1
+2026-09-08  inception/mercury-2.5                      0.040    0.150    260000   
+2026-09-08  nex-agi/nex-n2.5-mini                      0.025    0.100    262144   
+2026-09-08  nex-agi/nex-n2.5-pro                       0.075    0.250    262144   
+2026-09-02  meta/muse-spark-1.3-contributor            0.100    0.200    1048576  
+2026-09-02  google/gemini-3.8-flash                    0.750    3.750    1048576  prod#2
+2026-08-31  ibm-granite/granite-4.2-8b                 0.060    0.250    131072   
+2026-08-28  tencent/hy4-preview                        0.834    2.501    1048576  
+2026-08-27  inclusionai/ling-3.0-flash-fin             0.042    0.123    262144   
+2026-08-27  ~z-ai/glm-flash-latest                     0.032    1.415    1048576  
+2026-08-26  qwen/qwen3.8-flash                         0.150    0.470    1000000  
+2026-08-26  z-ai/glm-5.3-flash                         0.150    0.500    1048576  
+2026-08-21  meta/muse-spark-1.2-contributor            0.100    0.200    1048576  
+2026-08-21  deepseek/deepseek-v4-flash-vision-exp      0.216    0.647    1048576  
+2026-08-14  qwen/qwen3.8-27b                           0.425    2.550    1000000  
+2026-08-12  bytedance-seed/seed-2-1-turbo              0.500    2.500    262144   
+2026-08-12  bytedance-seed/seed-2.0-code               0.500    3.000    262144   
+2026-08-11  nvidia/nemotron-3.5-lightning              0.049    0.140    262144   
+2026-08-10  upstage/solar-pro4                         0.090    0.360    524288   
+2026-08-09  meta/muse-glimmer-30b                      0.300    1.200    131072   
+2026-08-01  ~deepseek/deepseek-v4-flash-latest         0.008    0.661    1048576  
+2026-07-31  deepseek/deepseek-v4-flash-0731            0.010    1.280    1048576  
+2026-07-30  thinkingmachines/inkling-small             0.450    1.200    524288   
+2026-07-27  qwen/qwen3.7-flash                         0.030    0.130    1000000  
+2026-07-23  inclusionai/ling-3.0-flash                 0.021    0.063    262144   
+2026-07-21  poolside/laguna-s-2.1                      0.090    0.180    1048576  
+2026-07-21  google/gemini-3.5-flash-lite               0.300    2.500    1048576  
+
+confirmed: anthropic/claude-haiku-5.5 exists (created 2026-10-07, $0.10/M in, $0.50/M out, ctx 1M, reasoning-capable)
+extra model: none added (the optional newer-cheap-model slot is left unused to keep the 40-call cap for the 3 prod-comparable models)
