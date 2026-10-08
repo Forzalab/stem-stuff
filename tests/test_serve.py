@@ -1,4 +1,6 @@
 """serve.py: evaluator, grading, HTTP. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
+import contextlib
+import io
 import json
 import math
 import os
@@ -8,6 +10,7 @@ import subprocess
 import sys
 import time
 import unittest
+import unittest.mock
 import urllib.error
 import urllib.request
 
@@ -968,3 +971,112 @@ class Explain(unittest.TestCase):
         b"".join(chunks)
         self.assertEqual(status, 200)
         self.assertEqual(self.seen[0][1]["messages"][-1]["content"].count("x"), serve.CHAT_LINE)
+
+
+class Guard(unittest.TestCase):
+    """Start-up guard: warn about other serve.py processes, kill only on an explicit y at a terminal, refuse a taken port."""
+    def setUp(self):
+        self.procs = []
+        self.proc_root = tempfile.mkdtemp(prefix="fake-proc-", dir=TMP)
+        self.fake(os.getpid(), "python3", "serve.py", "7001")        # ourselves: skipped
+        self.fake(4001, "/usr/bin/python3", "/x/serve.py", "7002")
+        self.fake(4002, "python3.12", "-u", "serve.py")              # no port: default
+        self.fake(4003, "node", "serve.py", "7003")                  # not python
+        self.fake(4004, "python3", "-m", "http.server", "8000")
+        self.fake(4005, "python3", "other.py", "serve.py")           # serve.py is not what it runs
+        os.mkdir(os.path.join(self.proc_root, "self"))               # non-pid entry
+
+    def tearDown(self):
+        for p in self.procs:                                         # only the ones we started
+            p.terminate()
+            p.wait()
+
+    def fake(self, pid, *argv):
+        os.mkdir(os.path.join(self.proc_root, str(pid)))
+        with open(os.path.join(self.proc_root, str(pid), "cmdline"), "wb") as f:
+            f.write(b"\0".join(a.encode() for a in argv) + b"\0")
+
+    def guard(self, answer=None, tty=True):
+        ask = unittest.mock.Mock(side_effect=answer if isinstance(answer, BaseException) else None, return_value=answer)
+        kill, out = unittest.mock.Mock(), io.StringIO()
+        with contextlib.redirect_stdout(out):
+            serve._guard(self.proc_root, ask=ask, tty=tty, kill=kill)
+        return ask, kill, out.getvalue()
+
+    def spawn(self, port, **kw):
+        p = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(port)], stdin=subprocess.DEVNULL, **kw)
+        self.procs.append(p)
+        return p
+
+    @staticmethod
+    def free_port():
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
+
+    def up(self, port):
+        for _ in range(100):
+            try:
+                return urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).status == 200
+            except OSError:
+                time.sleep(0.1)
+        return False
+
+    def test_finds_only_other_serve_py(self):
+        self.assertEqual([(p, port) for p, port, _ in serve._other_servers(self.proc_root)], [(4001, 7002), (4002, 5567)])
+
+    def test_age(self):
+        old = time.time() - 7200
+        os.utime(os.path.join(self.proc_root, "4001"), (old, old))
+        found = {p: age for p, _, age in serve._other_servers(self.proc_root)}
+        self.assertAlmostEqual(found[4001], 7200, delta=5)
+        self.assertEqual([serve._age(n) for n in (5, 90, 7200, 200000)], ["5s", "1m", "2h", "2d"])
+
+    def test_no_tty_warns_never_asks_or_kills(self):
+        ask, kill, out = self.guard(tty=False)
+        self.assertEqual([ln.split(" \u00b7 ")[:2] for ln in out.splitlines()], [["4001", "7002"], ["4002", "5567"]])
+        ask.assert_not_called()
+        kill.assert_not_called()
+
+    def test_real_stdin_not_a_tty_never_prompts(self):
+        with unittest.mock.patch.object(sys.stdin, "isatty", return_value=False):
+            ask, kill, _ = self.guard(tty=None)
+        ask.assert_not_called()
+        kill.assert_not_called()
+
+    def test_nothing_found_stays_quiet(self):
+        empty = tempfile.mkdtemp(dir=TMP)
+        ask = unittest.mock.Mock()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            serve._guard(empty, ask=ask, tty=True, kill=unittest.mock.Mock())
+        self.assertEqual(out.getvalue(), "")
+        ask.assert_not_called()
+
+    def test_tty_answers_that_do_not_kill(self):
+        for answer in ["n", "", "no", "yep", "y es", EOFError(), KeyboardInterrupt()]:
+            ask, kill, _ = self.guard(answer)
+            ask.assert_called_once_with("Kill them? [y/N] ")
+            kill.assert_not_called()
+
+    def test_tty_yes_kills_exactly_the_listed(self):
+        for answer in ["y", " YES\n", "Yes"]:
+            _, kill, _ = self.guard(answer)
+            self.assertEqual(sorted(c.args[0] for c in kill.call_args_list), [4001, 4002], answer)
+
+    def test_two_servers_on_different_ports(self):
+        a, b = self.free_port(), self.free_port()
+        self.spawn(a)
+        self.assertTrue(self.up(a))
+        self.spawn(b)
+        self.assertTrue(self.up(b))
+        self.assertTrue(self.up(a))
+
+    def test_taken_port_exits_with_one_line(self):
+        port = self.free_port()
+        self.spawn(port)
+        self.assertTrue(self.up(port))
+        p = self.spawn(port, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(err.strip().splitlines()[-1], f"serve.py: port {port} is already in use")   # problems() logs "loaded ..." first
+        self.assertNotIn("Traceback", err)
