@@ -48,8 +48,11 @@ const st = page => page.evaluate(() => ({
 /* graded: take 5f put no verdict words on the page (rows / boxes carry the icons, try pips say a try is left), so wait for
    the feedback area (hint, lock or can't-read line) or a right row instead of "#fb .verdict" */
 async function check(page) {
+  const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click("#mcGo");
   await page.waitForFunction(() => document.querySelector("#fb").textContent.trim() || document.querySelector("#q .chk .cluck") || document.querySelector("#q .opt.right"), null, { timeout: 4000 });
+  /* the previous try's hint already fills #fb, so that wait can pass before this Check is graded (CI, PR #91): also wait for the new try */
+  await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 4000 }).catch(() => {});
   await page.waitForTimeout(150);
 }
 const okRows = page => page.$$eval("#q .opt.right", os => os.filter(o => o.querySelector('.badge use[href="#i-ok"]')).map(o => o.dataset.id).sort());
