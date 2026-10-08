@@ -1080,3 +1080,104 @@ class Guard(unittest.TestCase):
         self.assertEqual(p.returncode, 1)
         self.assertEqual(err.strip().splitlines()[-1], f"serve.py: port {port} is already in use")   # problems() logs "loaded ..." first
         self.assertNotIn("Traceback", err)
+
+    def test_foreground_tty_helper(self):
+        stdin = unittest.mock.Mock()
+        stdin.fileno.return_value = 0
+        with unittest.mock.patch.object(sys, "stdin", stdin):
+            stdin.isatty.return_value = False                                    # no terminal: never even asks the tty
+            with unittest.mock.patch("os.tcgetpgrp", side_effect=AssertionError("must not be called")):
+                self.assertFalse(serve._foreground_tty())
+            stdin.isatty.return_value = True
+            with unittest.mock.patch("os.getpgrp", return_value=100):
+                with unittest.mock.patch("os.tcgetpgrp", return_value=100):
+                    self.assertTrue(serve._foreground_tty())                     # our group owns the terminal
+                with unittest.mock.patch("os.tcgetpgrp", return_value=200):
+                    self.assertFalse(serve._foreground_tty())                    # `serve.py &`: another group does
+                with unittest.mock.patch("os.tcgetpgrp", side_effect=OSError("no controlling tty")):
+                    self.assertFalse(serve._foreground_tty())
+            with unittest.mock.patch.object(os, "tcgetpgrp", create=True):       # no tcgetpgrp at all (Windows)
+                del os.tcgetpgrp
+                self.assertFalse(serve._foreground_tty())
+
+    def test_background_pty_server_warns_and_starts(self):
+        """Real repro: `serve.py N &` from an interactive shell. B has a tty as stdin but is not its foreground group."""
+        import pty
+        import signal
+        a, b = self.free_port(), self.free_port()
+        self.spawn(a)
+        self.assertTrue(self.up(a))
+        pidfile = os.path.join(TMP, f"bg-{b}.pid")
+        leader_src = (                                                           # session leader owning the tty: stays foreground
+            "import fcntl, os, subprocess, sys, termios\n"
+            "fcntl.ioctl(0, termios.TIOCSCTTY, 0)\n"
+            "p = subprocess.Popen([sys.executable, sys.argv[1], sys.argv[2]], preexec_fn=lambda: os.setpgid(0, 0))\n"
+            "open(sys.argv[3], 'w').write(str(p.pid))\n"
+            "p.wait()\n")
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        leader = subprocess.Popen([sys.executable, "-c", leader_src, os.path.join(ROOT, "serve.py"), str(b), pidfile],
+                                  stdin=slave, stdout=slave, stderr=slave, start_new_session=True)
+        os.close(slave)
+
+        def reap():
+            try:
+                with open(pidfile) as f:
+                    os.kill(int(f.read()), signal.SIGKILL)                       # only the pid we saved (SIGKILL: B may be stopped)
+            except (OSError, ValueError):
+                pass
+            leader.kill()
+            leader.wait()
+        self.addCleanup(reap)
+        up = self.up(b)
+        state = ""
+        try:
+            with open(pidfile) as f:
+                with open(f"/proc/{int(f.read())}/stat") as st:
+                    state = st.read().rsplit(")", 1)[1].split()[0]
+        except (OSError, ValueError):
+            pass
+        self.assertNotEqual(state, "T", "background server was stopped by SIGTTIN")
+        self.assertTrue(up, "background server never bound its port")
+        out = b""
+        try:
+            os.set_blocking(master, False)
+            out = os.read(master, 4096)
+        except OSError:
+            pass
+        self.assertIn(f"· {a} ·".encode(), out)                         # it warned about A and carried on
+
+    def test_foreground_pty_server_still_prompts(self):
+        """Same setup but B owns the terminal: it asks, a plain n kills nothing, and it starts."""
+        import fcntl
+        import pty
+        import termios
+        a, b = self.free_port(), self.free_port()
+        pa = self.spawn(a)
+        self.assertTrue(self.up(a))
+        master, slave = pty.openpty()
+        os.set_blocking(master, False)
+        self.addCleanup(os.close, master)
+
+        def own_tty():
+            os.setsid()
+            fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+        pb = subprocess.Popen([sys.executable, os.path.join(ROOT, "serve.py"), str(b)],
+                              stdin=slave, stdout=slave, stderr=slave, preexec_fn=own_tty)
+        self.procs.append(pb)                                                    # tearDown terminates it
+        os.close(slave)
+        out = b""
+        for _ in range(100):
+            if b"Kill them? [y/N] " in out:
+                break
+            time.sleep(0.1)
+            try:
+                out += os.read(master, 4096)
+            except BlockingIOError:
+                pass
+            except OSError:
+                break
+        os.write(master, b"n\n")
+        self.assertIn(b"Kill them? [y/N] ", out)
+        self.assertTrue(self.up(b))
+        self.assertIsNone(pa.poll())                                             # A was not killed
