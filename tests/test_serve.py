@@ -567,6 +567,26 @@ class Banks(unittest.TestCase):
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "")[0], 404)                 # pruned in sugar
         self.assertEqual(serve.dispatch("GET", "/p/CALC1_HD1.json", "stem-mode=diet; stem-mode-v=2")[0], 200)
 
+    def test_split_alone_rows(self):                                            # D73 qrewrite: rows that stand alone, own titles, g only where used
+        body = [{"type": "text", "md": "A puck slides.\nChoose all that are true."},
+                {"type": "text", "md": "Tap a row to tick it. Leave false rows blank. Use $g = 9.80\\ \\text{m/s}^2$."}]
+        rows = [{"sub": "CSCI26_AL1A", "stem": "What is the speed?", "title": "Q7: the speed", "choices": [{"id": i, "md": i} for i in "abc"], "answer": "a"},
+                {"sub": "CSCI26_AL1B", "stem": "What is the weight?\n\nUse $g = 9.80\\ \\text{m/s}^2$.", "answer": "true"}]
+        on = dict(BANK["CSCI26_A7K"], code="CSCI26_AL1", body=body, saccharine={"title": "Q7: true or false rows", "key": "k", "split_alone": True, "split": rows})
+        off = dict(on, code="CSCI26_AL2", saccharine={"title": "Q7: true or false rows", "key": "k", "split": [dict(r, sub=r["sub"].replace("AL1", "AL2")) for r in rows]})
+        self.write("BANK_AL12", {"v": 1, "problems": [on, off]})
+        a = serve.public(serve.view(serve.lookup("CSCI26_AL1A", "sugar"), "sugar"), "x")
+        texts = [b["md"] for b in a["body"] if b.get("type") == "text"]
+        self.assertEqual(texts[0], "A puck slides.")                                 # the choose-all line is gone, the setup stays
+        self.assertFalse(any("Use $g" in x or "Choose all" in x for x in texts))    # no inherited g on a row that doesn't use it
+        self.assertEqual(a["title"], "Q7: the speed")                                # the row's own title
+        b = serve.public(serve.view(serve.lookup("CSCI26_AL1B", "sugar"), "sugar"), "x")
+        self.assertEqual(sum("Use $g" in x["md"] for x in b["body"] if x.get("type") == "text"), 1)   # its own g line, once
+        self.assertEqual(b["title"], "Q7: true or false rows")                       # no row title: the parent's
+        c = serve.public(serve.view(serve.lookup("CSCI26_AL2A", "sugar"), "sugar"), "x")      # no split_alone: exactly as before
+        ct = [x["md"] for x in c["body"] if x.get("type") == "text"]
+        self.assertIn("Choose all that are true.", ct[0]); self.assertIn("Use $g", ct[-1]); self.assertEqual(c["title"], "Q7: the speed")
+
     def test_sugar_only_snacks(self):                                          # design/REWARDS-WIRING.md: snacks are sugar only
         pick = dict(BANK["CSCI26_A7K"], code="CSCI26_SN1", saccharine={"title": "Practice Exam 2, Question 3", "key": "Tick: a, c",
                     "split": [{"sub": "CSCI26_SN1A", "stem": "Row A.", "answer": "true"}, {"sub": "CSCI26_SN1B", "stem": "Row B.", "answer": "false"}]})
