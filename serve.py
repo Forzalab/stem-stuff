@@ -1396,7 +1396,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 def _other_servers(proc_root="/proc"):
     """Other running `python serve.py [port]` processes: [(pid, port, age_seconds)]. Stdlib only (Linux /proc)."""
     found = []
-    for pid in os.listdir(proc_root):
+    try:
+        pids = os.listdir(proc_root)
+    except OSError:  # no /proc (macOS, Windows), unreadable, or not a directory: nothing to warn about
+        return found
+    for pid in pids:
         if not pid.isdigit() or int(pid) == os.getpid():
             continue
         try:
