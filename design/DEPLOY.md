@@ -34,6 +34,8 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 ## Power button (slow network)
 - Oct 8 (Tony, hotel wifi: `tools/ship.sh live` from Termux took forever). `.github/workflows/ship.yml` runs the same
   `tools/ship.sh demo|live`, unchanged, on a GitHub runner; the phone sends one tiny request. One run at a time (`concurrency: ship`).
+- From Termux: `tools/press.sh demo` (then `live`). It queues the run, watches it, and says in one line what is wrong (no gh, not logged in,
+  secret missing, run failed + log tail). Needs `pkg install gh` and `gh auth login`.
 - Press: GitHub app → Actions → **ship** → Run workflow → mode `demo` or `live`. The button exists only once ship.yml is on main.
 - Termux (~1 KB), with a fine-grained PAT (this repo only, Actions: read and write) in `$GH_PAT`:
   `curl -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" https://api.github.com/repos/forzalab/stem-stuff/actions/workflows/ship.yml/dispatches -d '{"ref":"main","inputs":{"mode":"live"}}'`
