@@ -43,7 +43,7 @@ function shown(p) {                                       // app.js shown() / se
   return ch.filter(c => keep.includes(c));
 }
 const locks = p => p.type === "mc" ? new Set(shown(p).filter(c => c.lock).map(c => c.id)) : new Set();
-export const NONE_MISS = "QUACK. A true one is still unticked, or a false one is ticked. Check every row again.";   // serve.py NONE_MISS
+export const NONE_MISS = "QUACK. Some taps are wrong. Check each row again.";   // serve.py NONE_MISS
 
 /* sugar leaves out a question whose answer is "None of these"; diet leaves out every sugar_only item (the snacks) */
 export function hidden(p, mode) {
