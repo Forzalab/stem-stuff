@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notes Button Variants</title>
+<!-- Q2 notes-variants (Oct 8): 5 ways to reach the scratchpad (#scratch) and brainrot (#rot) on a sugar phone (393x852) so the
+     "Open notes" button (#padFab) never rests on question text or choices. Design exploration only: nothing here ships.
+     The real app.css / nav.css and the real icon sprite (fetched from index.html), so every token and icon is true. Rules kept
+     (design/STYLE.md): no new colour, no badge or dot on the button (§3 Scratchpad button), no pulsing, no ambient motion (§1.6),
+     in-flow panels push content only after a tap (§1.5), a floating thing never rests on a live control (§1.5), one tap away is not
+     hidden (§1.11). In every variant the content scrolls in its own area and the notes control lives in reserved room around it,
+     so no scroll position puts the control over the question; an open menu pushes the content instead of covering it.
+     URL: ?v=1..5 picks a variant, &s=rest|open|drag|hidden a state, &bare=1 drops the switcher (the phone fills the window: shots).
+     Serve over http (the sprite fetch): python3 serve.py 8000, then /try/notes-variants.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../nav.css">
+<style>
+body { background: var(--paper); color: var(--ink); margin: 0; }
+.sw { max-width: 393px; margin: 0 auto; padding: var(--s3) var(--s4) var(--s2); }
+.sw h1 { font-size: var(--t-sm); margin: 0 0 var(--s2); }
+.sw .row { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.sw .btn { min-width: var(--btn); font: inherit; font-size: var(--t-sm); font-weight: 700; }
+.sw .btn[aria-pressed="true"] { background: var(--raised); color: var(--c1); }
+.sw p { color: var(--muted); font-size: var(--t-xs); line-height: 1.4; margin: var(--s2) 0 0; min-height: 3.6em; }
+.sw .st { margin-top: var(--s2); }
+.sw .st .btn { font-weight: 400; color: var(--muted); padding: 0 var(--s3); }
+html.bare .sw { display: none; }
+
+/* the phone: 393 x 852 (bare: the whole visible window). Chrome rows are flex siblings of the scroll area, never over it */
+.phone { position: relative; width: 393px; max-width: 100%; height: 852px; margin: 0 auto var(--s6); display: flex; flex-direction: column;
+  overflow: hidden; background: var(--paper); border-radius: 10px; }
+html.bare .phone { width: 100%; height: 100vh; height: 100dvh; margin: 0; border-radius: 0; }
+.ptop { flex: none; display: flex; gap: var(--s2); padding: var(--s4) var(--s4) var(--s3); }
+.ptop .btn-label span { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ptop .push { margin-left: auto; }
+.pmid { flex: 1; min-height: 0; display: flex; }
+.scroll { flex: 1; min-width: 0; overflow-y: auto; padding: 0 var(--s4) var(--s4); scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+.p .fig { display: block; width: 100%; height: auto; margin-top: var(--s3); }
+.fig text { font: 400 16px "Atkinson Hyperlegible", sans-serif; fill: var(--ink); }
+.fig .lb { fill: var(--muted); font-size: 14px; }
+.q .opt { width: 100%; }
+/* the dock's resting strip (the code bar, put away): every variant keeps it */
+.strip { flex: none; display: flex; justify-content: center; align-items: center; height: 36px; background: var(--paper);
+  box-shadow: 0 -10px 24px -6px rgb(0 0 0 / .55), 0 -2px 4px rgb(0 0 0 / .35); position: relative; z-index: 2; }
+.strip .chev { width: 64px; height: 36px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); padding: 0; cursor: pointer; }
+.strip .chev .ico { width: var(--ico); height: var(--ico); transform: rotate(180deg); }
+.ico { width: var(--ico); height: var(--ico); flex: none; }
+
+/* shared: the two-item notes menu (Scratchpad, Brainrot) as rows, M3 list style */
+.menu { display: grid; gap: 2px; padding: var(--s2); background: var(--sheet); border-radius: 10px; }
+.menu button { display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border: 0; border-radius: 8px;
+  background: none; color: var(--ink); font: inherit; font-size: var(--t-sm); text-align: left; cursor: pointer; }
+.menu button:hover { background: var(--raised); }
+.menu button .sub { margin-left: auto; color: var(--hint); font-size: var(--t-xs); }
+.menu button:focus-visible, .grab:focus-visible, .etab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -3px; }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: var(--s1) var(--s2); }
+
+/* 1. Tony: drag the button onto an X to hide it; a grab bar brings back a mini-menu */
+.lane1 { flex: none; position: relative; display: flex; align-items: center; justify-content: flex-end; height: calc(56px + var(--s4)); padding: 0 var(--s4) var(--s3); }
+.lane1 .fab { position: relative; z-index: 3; height: 56px; padding: 0 var(--s5) 0 var(--s4); display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 16px;
+  background: var(--raised); color: var(--ink); box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+.lane1 .fab.dragging { box-shadow: var(--shadow-4); cursor: grabbing; }
+.lane1 .fab .chv { width: 20px; height: 20px; color: var(--muted); transform: rotate(180deg); margin-left: calc(-1 * var(--s1)); }
+.lane1 .xt { position: absolute; left: calc(var(--s4) + 28px); top: calc(50% - var(--s3) / 2); width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; display: grid; place-items: center;
+  border: var(--bw) dashed var(--edge); color: var(--muted); opacity: 0; transition: opacity var(--d-move, .2s) ease-out, border-color .12s, color .12s; pointer-events: none; }
+.lane1 .xt.hot { border-style: solid; border-color: var(--ink); color: var(--ink); background: var(--raised); }
+.phone[data-s="drag"] .lane1 .xt { opacity: 1; }
+.lane1 .hint { position: absolute; left: var(--s4); top: calc(50% - var(--s3) / 2); transform: translateY(-50%); color: var(--hint); font-size: var(--t-xs); opacity: 0; transition: opacity .2s ease-out; }
+.phone[data-s="drag"] .lane1 .hint { opacity: 1; }
+.grabrow { flex: none; display: none; }
+.v1[data-s="hidden"] .lane1, .v1[data-s="open"] .lane1 { display: none; }
+.v1[data-s="hidden"] .grabrow, .v1[data-s="open"] .grabrow { display: block; }
+.grab { display: grid; place-items: center; width: 100%; height: 28px; border: 0; background: none; padding: 0; cursor: pointer; touch-action: none; }
+.grab i { display: block; width: 32px; height: 3px; border-radius: 2px; background: var(--edge); }
+.menu1 { display: none; margin: 0 var(--s4) var(--s2); }
+.v1[data-s="open"] .menu1 { display: grid; }
+
+/* 2. Edge tab: a 24px tab in a reserved right gutter; tap = a rail of two buttons that pushes the column narrower */
+.gut2 { flex: none; width: 28px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding-bottom: var(--s6); }
+.etab { width: 24px; height: 96px; border: 0; border-radius: 10px 0 0 10px; background: var(--raised); color: var(--ink); display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: var(--shadow-3); }
+.etab .ico { width: 20px; height: 20px; }
+.rail2 { display: none; flex-direction: column; gap: var(--s2); padding: var(--s2); background: var(--sheet); border-radius: 10px 0 0 10px; }
+.rail2 .btn { width: var(--btn); }
+.rail2 .btn.x { color: var(--muted); background: none; }
+.v2[data-s="open"] .gut2 { width: calc(var(--btn) + var(--s2) * 2); }
+.v2[data-s="open"] .etab { display: none; }
+.v2[data-s="open"] .rail2 { display: flex; }
+
+/* 3. Top bar slot: a pen button in the bar; the menu opens in the flow under the bar (like the question list) */
+.ptop .nb.on { background: var(--raised); }
+.menu3 { display: none; flex: none; margin: 0 var(--s4) var(--s3); }
+.v3[data-s="open"] .menu3 { display: grid; }
+
+/* 4. Bottom bar: the strip becomes a 3-slot bar in thumb reach, both tools one tap, no menu */
+.bar4 { flex: none; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s2); padding: var(--s2) var(--s4) var(--s3); background: var(--paper);
+  box-shadow: 0 -10px 24px -6px rgb(0 0 0 / .55), 0 -2px 4px rgb(0 0 0 / .35); position: relative; z-index: 2; }
+.bar4 .btn { width: 100%; height: var(--btn); gap: var(--s2); font: inherit; font-size: var(--t-sm); font-weight: 700; color: var(--ink); }
+.bar4 .btn .ico { width: var(--ico); }
+.bar4 .btn.code { color: var(--muted); font-weight: 400; }
+.bar4 .btn.code .ico { transform: rotate(180deg); }
+
+/* 5. In the flow: a label row on top of the question (the desktop "Question" row's twin) holds both tools; nothing floats */
+.lab5 { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
+.lab5 .q-l { display: inline-flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
+.lab5 .q-l .ico { width: 20px; height: 20px; }
+.lab5 .push { margin-left: auto; }
+.lab5 .btn-label, .end5 .btn-label { font: inherit; font-size: var(--t-sm); font-weight: 700; }
+.end5 { display: flex; gap: var(--s2); justify-content: flex-end; margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--line); }
+.end5 .lead5 { margin-right: auto; align-self: center; color: var(--hint); font-size: var(--t-xs); }
+.v5 .strip { box-shadow: 0 -10px 24px -6px rgb(0 0 0 / .55), 0 -2px 4px rgb(0 0 0 / .35); }
+
+.vx { display: none; } .v1 .x1, .v2 .x2, .v3 .x3, .v4 .x4, .v5 .x5 { display: revert; }
+.v1 .x1.lane1, .v1 .x1.grabrow { display: flex; } .v1 .x1.grabrow { flex-direction: column; }
+.phone.v1[data-s="hidden"] .x1.lane1, .phone.v1[data-s="open"] .x1.lane1 { display: none; }
+.phone.v1:not([data-s="hidden"]):not([data-s="open"]) .x1.grabrow { display: none; }
+.v2 .x2.gut2, .v3 .x3.menu3, .v4 .x4.bar4, .v5 .x5.lab5, .v5 .x5.end5 { display: flex; }
+.v4 .x4.bar4 { display: grid; } .v3:not([data-s="open"]) .x3.menu3 { display: none; } .v3[data-s="open"] .x3.menu3 { display: grid; }
+.v4 .strip { display: none; }
+@media (prefers-reduced-motion: reduce) { .lane1 .xt, .lane1 .hint { transition: none; } }
+</style>
+</head>
+<body>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<div class="sw">
+  <h1>Open notes: 5 ways it never covers the question</h1>
+  <div class="row" role="group" aria-label="Variant" id="vbtns"></div>
+  <div class="row st" role="group" aria-label="State" id="sbtns"></div>
+  <p id="why"></p>
+</div>
+
+<div class="phone v1" id="phone" data-s="rest">
+  <header class="ptop">
+    <button class="btn btn-label" type="button"><svg class="ico"><use href="#i-list"/></svg><span>SUGAR_P2X</span></button>
+    <button class="btn push" type="button" aria-label="Go back one"><svg class="ico"><use href="#i-prev"/></svg></button>
+    <button class="btn" type="button" aria-label="Next question"><svg class="ico"><use href="#i-next"/></svg></button>
+    <button class="btn vx x3 nb" type="button" id="nb3" aria-label="Notes" aria-expanded="false" aria-controls="menu3"><svg class="ico"><use href="#i-pen"/></svg></button>
+  </header>
+  <div class="menu menu3 vx x3" id="menu3" role="menu" aria-label="Notes">
+    <button role="menuitem" type="button"><svg class="ico"><use href="#i-pen"/></svg>Scratchpad<span class="sub">your working</span></button>
+    <button role="menuitem" type="button"><svg class="ico"><use href="#i-play"/></svg>Brainrot<span class="sub">2 videos</span></button>
+  </div>
+  <div class="pmid">
+    <div class="scroll" id="scroll">
+      <div class="lab5 vx x5">
+        <span class="q-l"><svg class="ico"><use href="#i-doc"/></svg>Question</span>
+        <button class="btn push" type="button" aria-label="Brainrot" title="Brainrot"><svg class="ico"><use href="#i-play"/></svg></button>
+        <button class="btn btn-label" type="button"><svg class="ico"><use href="#i-pen"/></svg><span>Scratchpad</span></button>
+      </div>
+      <article class="p">
+        <div class="blocks">
+          <p>A 2.0 kg block starts from rest at the bottom of a rough ramp tilted 30° above the horizontal. A constant horizontal push of 25 N acts on it the whole way up. The coefficient of kinetic friction between the block and the ramp is 0.20, and the ramp is 3.0 m long.</p>
+          <p>Take g = 9.8 m/s². Ignore air resistance and treat the block as a point. How fast is the block moving when it reaches the top of the ramp?</p>
+        </div>
+        <svg class="fig" viewBox="0 0 320 150" role="img" aria-label="A block on a ramp tilted 30 degrees, pushed by a horizontal force F">
+          <path d="M20 132 H300 L300 40 Z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M70 132 A50 50 0 0 0 68 118" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+          <text x="82" y="126" class="lb">30°</text>
+          <g transform="translate(176 92) rotate(-18.2)"><rect x="-20" y="-34" width="40" height="34" fill="var(--sheet)" stroke="var(--ink)" stroke-width="2" rx="2"/></g>
+          <path d="M100 76 H156" stroke="var(--c1)" stroke-width="2.5"/><path d="M156 70 L166 76 L156 82 Z" fill="var(--c1)"/>
+          <text x="104" y="68">F = 25 N</text>
+          <text x="226" y="128" class="lb">3.0 m</text>
+          <text x="196" y="52">2.0 kg</text>
+        </svg>
+      </article>
+      <div class="q">
+        <div class="choices" role="radiogroup" aria-label="Choices">
+          <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">A</span><span class="txt">1.9 m/s, because friction takes most of the work done by the push</span></button></div>
+          <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">B</span><span class="txt">3.4 m/s</span></button></div>
+          <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">C</span><span class="txt">4.6 m/s</span></button></div>
+          <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">D</span><span class="txt">5.4 m/s, the speed with no friction at all</span></button></div>
+          <div class="ch"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">E</span><span class="txt">It never reaches the top: the push is too small</span></button></div>
+        </div>
+      </div>
+      <div class="end5 vx x5"><span class="lead5">Stuck?</span>
+        <button class="btn" type="button" aria-label="Brainrot" title="Brainrot"><svg class="ico"><use href="#i-play"/></svg></button>
+        <button class="btn btn-label" type="button"><svg class="ico"><use href="#i-pen"/></svg><span>Scratchpad</span></button>
+      </div>
+    </div>
+    <div class="gut2 vx x2">
+      <button class="etab" type="button" id="etab" aria-label="Notes" aria-expanded="false" aria-controls="rail2"><svg class="ico"><use href="#i-pen"/></svg></button>
+      <div class="rail2" id="rail2" role="group" aria-label="Notes">
+        <button class="btn" type="button" aria-label="Scratchpad" title="Scratchpad"><svg class="ico"><use href="#i-pen"/></svg></button>
+        <button class="btn" type="button" aria-label="Brainrot" title="Brainrot"><svg class="ico"><use href="#i-play"/></svg></button>
+        <button class="btn x" type="button" id="rx2" aria-label="Close" title="Close"><svg class="ico"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Tony: the button's lane; dragging shows the X; dropped on it, the lane folds to a grab bar -->
+  <div class="lane1 vx x1">
+    <span class="xt" id="xt" aria-hidden="true"><svg class="ico"><use href="#i-x"/></svg></span>
+    <button class="fab" type="button" id="fab1" aria-haspopup="menu" aria-expanded="false"><svg class="ico"><use href="#i-pen"/></svg><span>Open notes</span><svg class="ico chv" aria-hidden="true"><use href="#i-down"/></svg></button>
+  </div>
+  <div class="grabrow vx x1">
+    <button class="grab" type="button" id="grab1" aria-label="Notes menu" aria-expanded="false"><i></i></button>
+    <div class="menu menu1" role="menu" aria-label="Notes">
+      <button role="menuitem" type="button"><svg class="ico"><use href="#i-pen"/></svg>Scratchpad<span class="sub">your working</span></button>
+      <button role="menuitem" type="button"><svg class="ico"><use href="#i-play"/></svg>Brainrot<span class="sub">2 videos</span></button>
+      <hr>
+      <button role="menuitem" type="button" id="pin1"><svg class="ico" id="pin1i"><use href="#i-min"/></svg><span id="pin1t">Show the button again</span></button>
+    </div>
+  </div>
+
+  <!-- 4. the bottom bar: code bar | Brainrot | Scratchpad -->
+  <nav class="bar4 vx x4" aria-label="Tools">
+    <button class="btn code" type="button" aria-label="Show code box"><svg class="ico"><use href="#i-down"/></svg>Code</button>
+    <button class="btn" type="button"><svg class="ico"><use href="#i-play"/></svg>Brainrot</button>
+    <button class="btn" type="button"><svg class="ico"><use href="#i-pen"/></svg>Notes</button>
+  </nav>
+  <div class="strip"><button class="chev" type="button" aria-label="Show code box"><svg class="ico"><use href="#i-down"/></svg></button></div>
+</div>
+
+<script>
+const V = {
+  1: { n: "Drag to X", s: ["rest", "drag", "hidden", "open"], why: "Tony's idea. The button sits in its own lane above the bar. Drag it onto the X to hide it; a grab bar is left. Tap or swipe up the bar for Scratchpad, Brainrot, and Show the button again. Tap fallback: a tap on the button opens the same menu, with Hide in it." },
+  2: { n: "Edge tab", s: ["rest", "open"], why: "A 24px pen tab in a reserved right gutter, low, in thumb reach. A tap opens a rail of two icon buttons; the column gets narrower while it is open, so nothing is covered." },
+  3: { n: "Top bar", s: ["rest", "open"], why: "A pen button in the bar, next to Prev / Next. A tap opens Scratchpad and Brainrot in the flow under the bar, the way the question list opens. No new chrome." },
+  4: { n: "Bottom bar", s: ["rest"], why: "The resting code strip becomes a 3-slot bar: Code, Brainrot, Notes. Both tools are one tap in thumb reach, always. Costs one row of height." },
+  5: { n: "In the flow", s: ["rest", "end"], why: "No floating thing at all. A label row on top of the question holds Brainrot and Scratchpad, and they repeat under the last choice. They scroll with the page." }
+};
+const ph = document.getElementById("phone"), qs = new URLSearchParams(location.search);
+let v = +qs.get("v") || 1, s = qs.get("s") || "rest";
+if (qs.get("bare")) document.documentElement.classList.add("bare");
+function set(nv, ns) {
+  v = nv; s = V[v].s.includes(ns) ? ns : "rest";
+  ph.className = `phone v${v}`; ph.dataset.s = s === "end" ? "rest" : s;
+  document.getElementById("why").textContent = `${v}. ${V[v].n}: ${V[v].why}`;
+  document.getElementById("vbtns").innerHTML = Object.keys(V).map(k => `<button type="button" class="btn" aria-pressed="${+k === v}" data-v="${k}" title="${V[k].n}">${k}</button>`).join("");
+  document.getElementById("sbtns").innerHTML = V[v].s.map(k => `<button type="button" class="btn" aria-pressed="${k === s}" data-s="${k}">${k}</button>`).join("");
+  document.querySelectorAll("#sbtns .btn").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === s));
+  ["fab1", "grab1", "nb3", "etab"].forEach(id => document.getElementById(id).setAttribute("aria-expanded", s === "open"));
+  document.getElementById("nb3").classList.toggle("on", s === "open");
+  if (v === 1 && s !== "open") hid1 = s === "hidden";
+  document.getElementById("pin1t").textContent = hid1 ? "Show the button again" : "Hide the button";
+  document.querySelector("#pin1i use").setAttribute("href", hid1 ? "#i-expand" : "#i-min");
+  const sc = document.getElementById("scroll"); sc.scrollTop = s === "end" ? sc.scrollHeight : 0;
+  const fab = document.getElementById("fab1"); fab.style.transform = ""; fab.classList.toggle("dragging", s === "drag");
+  if (s === "drag") { const x = document.getElementById("xt").getBoundingClientRect(), r = fab.getBoundingClientRect();
+    fab.style.transform = `translate(${Math.round(x.left + x.width / 2 - (r.left + r.width / 2) + 120)}px, ${Math.round(x.top + x.height / 2 - (r.top + r.height / 2))}px)`; }
+  const u = new URL(location); u.searchParams.set("v", v); u.searchParams.set("s", s); history.replaceState(null, "", u);
+}
+document.getElementById("vbtns").addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (b) set(+b.dataset.v, "rest"); });
+document.getElementById("sbtns").addEventListener("click", e => { const b = e.target.closest("[data-s]"); if (b) set(v, b.dataset.s); });
+const tog = st => set(v, s === st ? (v === 1 ? "hidden" : "rest") : st);
+document.getElementById("grab1").addEventListener("click", () => tog("open"));
+let hid1 = false;                                                      // 1: was the button hidden when the menu opened?
+document.getElementById("pin1").addEventListener("click", () => { hid1 = !hid1; set(1, hid1 ? "hidden" : "rest"); });
+document.getElementById("nb3").addEventListener("click", () => tog("open"));
+document.getElementById("etab").addEventListener("click", () => set(2, "open"));
+document.getElementById("rx2").addEventListener("click", () => set(2, "rest"));
+/* 1: the button follows the finger; on release over the X it hides (lane folds to the grab bar), else it snaps back */
+const fab = document.getElementById("fab1"), xt = document.getElementById("xt"); let d = null;
+const overX = e => { const r = xt.getBoundingClientRect(); return Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < 48; };
+fab.addEventListener("pointerdown", e => { if (e.button > 0) return; d = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }; try { fab.setPointerCapture(e.pointerId); } catch {} });
+fab.addEventListener("pointermove", e => { if (!d || e.pointerId !== d.id) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) return;
+  if (!d.moved) { d.moved = true; ph.dataset.s = "drag"; fab.classList.add("dragging"); }
+  fab.style.transform = `translate(${e.clientX - d.x}px, ${e.clientY - d.y}px)`; xt.classList.toggle("hot", overX(e)); });
+fab.addEventListener("pointerup", e => { if (!d) return; const m = d.moved; d = null; xt.classList.remove("hot");
+  if (!m) return; fab._skip = true; set(1, overX(e) ? "hidden" : "rest"); });
+fab.addEventListener("pointercancel", () => { d = null; set(1, "rest"); });
+/* tap fallback: the button's own tap opens the menu (Scratchpad, Brainrot, Hide the button) from the grab bar's place */
+fab.addEventListener("click", () => { if (fab._skip) { fab._skip = false; return; } set(1, "open"); });
+set(v, s);
+fetch("../index.html").then(r => r.text()).then(t => {                // the app's own icon sprite
+  const sp = new DOMParser().parseFromString(t, "text/html").querySelector("svg symbol#i-list")?.closest("svg");
+  if (sp) document.getElementById("sprite").append(document.importNode(sp, true));
+}).catch(() => {});
+</script>
+</body>
+</html>
