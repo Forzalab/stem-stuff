@@ -1153,8 +1153,13 @@ async function wishStart(auto) {
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
   w.done = true;
   if (wish !== w) return;
-  if (w.failed === 429) { w.started = false; w.failed = 0; }               // the server's cap: the student can still ask
+  if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
   wishPaint();
+  if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
+}
+function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
+  Object.assign(w, { failed: 0, capped: false, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
+  wishStart(false);
 }
 /* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
    follows until the next step or a "---" rule; "- " lines in a row make one short list (the ChatGPT break-up, Tony's ref); a line
@@ -1214,6 +1219,16 @@ function wishFrame(now) {
   if (!x || !w || !w.open) return;
   if (!w.at) w.at = now + (w.shown ? 0 : WISH_DOTS);
   const t = w.text;
+  if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
+    if (w.drawn !== -2) {
+      x.innerHTML = w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button></div>`
+        : `<div class="wl">Cluck is out of wishes for this hour. Try again later.</div>`;
+      w.drawn = -2;
+      x.querySelector(".wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
+      say(w.failed ? "Cluck didn't load." : "Cluck is out of wishes for this hour.");
+    }
+    x.classList.remove("wrun"); return;
+  }
   if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
@@ -1238,7 +1253,7 @@ function wishPaint() {
   el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
   el.querySelector(".wchip").addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
-    if (!w.started || w.failed) { Object.assign(w, { failed: 0, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false }); wishStart(false); }
+    if (!w.started || w.failed) wishRetry(w);
     else if (w.open) { clClose(); return; }
     clOpen("explain", "#wish .wchip");
   });
