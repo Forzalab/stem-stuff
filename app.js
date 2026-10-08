@@ -1692,6 +1692,9 @@ new MutationObserver(() => { if ($("#entryMsg").textContent || !retryLoad.hidden
 dock.addEventListener("focusin", e => { if (e.target !== barTab) barOpen(true); });   // keyboard / Tab into the code box: shown
 swipeTab(barTab, d => barOpen(d === "tap" ? !root.classList.contains("bar-open") : d === "up"));
 /* C7 (Tony, Oct 5 clutter pass): desktop, no bank: the label opens the code box; the box folds back once focus leaves it (a message keeps it) */
+/* a press on the label must not move focus: the focusin it caused ran barOpen / layoutFreeze / fabSync between pointerdown and click, the layout shifted under the
+   pointer and the click landed on <body> (G2c row 10: only the 2nd click worked). Same pattern as swapBtn: cancel the press, act on the click (keyboard focus is unchanged) */
+for (const ev of ["pointerdown", "mousedown"]) $("#codeChip").addEventListener(ev, e => e.preventDefault());
 $("#codeChip").addEventListener("click", () => { root.classList.add("entry-open"); const c = $("#code"); c.focus(); c.select(); });
 $("#entry").addEventListener("focusout", e => {
   if (!e.currentTarget.contains(e.relatedTarget)) setTimeout(() => { if (!$("#entry").contains(document.activeElement) && S) root.classList.remove("entry-open"); }, 0);
