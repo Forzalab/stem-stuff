@@ -31,6 +31,19 @@ Decided Oct 3, 2026 (PR #34). How to deploy: README, "Deploy on Vercel".
 - `--no-brain` / `SHIP_NO_BRAIN=1` skips the brain. `--print-banks` prints the chosen file per bank and stops (no worktree, no Vercel).
 - Banks still never go to GitHub: ship.sh only copies them into the temp worktree that is uploaded to Vercel.
 
+## Power button (slow network)
+- Oct 8 (Tony, hotel wifi: `tools/ship.sh live` from Termux took forever). `.github/workflows/ship.yml` runs the same
+  `tools/ship.sh demo|live`, unchanged, on a GitHub runner; the phone sends one tiny request. One run at a time (`concurrency: ship`).
+- Press: GitHub app → Actions → **ship** → Run workflow → mode `demo` or `live`. The button exists only once ship.yml is on main.
+- Termux (~1 KB), with a fine-grained PAT (this repo only, Actions: read and write) in `$GH_PAT`:
+  `curl -X POST -H "Authorization: Bearer $GH_PAT" -H "Accept: application/vnd.github+json" https://api.github.com/repos/forzalab/stem-stuff/actions/workflows/ship.yml/dispatches -d '{"ref":"main","inputs":{"mode":"live"}}'`
+  (204 = started; the run log, smoke included, is in Actions.)
+- Repo secrets (Settings → Secrets and variables → Actions): `VERCEL_TOKEN` (team-scoped, as in Rules) and `BRAIN_TOKEN` (GitLab,
+  `read_api`). A missing one stops the run before anything else.
+- Banks on the runner: only ship.sh's temp dirs (removed on exit), throwaway VM, no artifacts, no caches.
+- Rejected: a Vercel Deploy Hook. It builds from Git, and the banks are not on GitHub, so it ships without them (banks 404, like
+  Oct 3).
+
 ## Versions and instant updates (Oct 6)
 - Bug (Tony, Oct 6): open pages climbed one deploy per reload (v1 → v2 → v3) instead of jumping to the latest. Cause: sw.js serves the
   shell cache-first and refreshed it in the background, so a reload showed what the reload before it fetched; `VERSION` was hand-bumped,
