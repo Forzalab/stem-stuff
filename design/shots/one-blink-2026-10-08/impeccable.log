@@ -1,0 +1,7 @@
+390x844 index.html: 0 lines
+1920x1080 index.html: 0 lines
+2560x1440 index.html: 0 lines
+3840x2160 index.html: 0 lines
+static: 15 lines
+note: pre-existing static rc 2 (3 side-tab findings from rewards.css waiver on index.html; same on main). Live scans 0 findings at 4 viewports; no pulsing-dot finding.
+rc=2
