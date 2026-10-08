@@ -2128,11 +2128,23 @@ function fabPlace({ avoid } = {}) {
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
   const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
+  const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
   for (let n = 0; avoid && n < 6; n++) {
     const hit = ctl.find(q => q.bottom > top && q.top < top + b.h); if (!hit) break;
     const upY = hit.top - b.h - 8, downY = hit.bottom + 8;
-    top = upY >= b.min ? upY : downY <= b.max ? downY : top;
+    top = upY >= Math.max(b.min, textBottom + 8) ? upY : downY <= b.max ? downY : top;
     if (top !== upY && top !== downY) break;
+  }
+  /* no clear step (a long question leaves no gap between the text and the choices): the nearest place that covers neither the text nor a
+     choice (a figure may be covered); failing that, the nearest place off the answer controls (the text may be covered) */
+  const txt = [...document.querySelectorAll("#blocks .md")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  const clear = (t, obs) => !obs.some(q => q.bottom > t && q.top < t + b.h);
+  for (const obs of [[...ctl, ...txt], ctl]) {
+    if (!avoid || clear(top, obs)) break;
+    for (let d = 8; d <= b.max - b.min; d += 8) {
+      const t = [top - d, top + d].find(t => t >= b.min && t <= b.max && clear(t, obs)); if (t !== undefined) { top = t; break; }
+    }
   }
   /* anchored by its distance from the bottom, like the bar: when a phone's URL bar slides away, the bar and the button move down
      together (top-anchored, the button stayed put and left a dead band the height of the URL bar above the bar; Tony, Oct 3) */

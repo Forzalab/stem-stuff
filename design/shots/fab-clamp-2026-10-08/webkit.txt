@@ -1,0 +1,3 @@
+before-webkit-393.png: WebKitGTK (ios-sim safari-expanded, 393 wide, visible viewport 393x659 @3x), main's app.js: the Open notes button sits on the question text ("Which option describes the force on the block?" is cut off behind it); probe: button 218,411..377,467 overlaps text block 1, no choice.
+after-webkit-393.png: same page, same stub question (CSCI26_FB2, 5 choices + figure), scroll 0, branch app.js: the button sits over the figure (allowed) at the bottom right, clear of both question text blocks and all 5 choices; probe: button 218,335..377,391, onText -1, onOpt -1.
+Made with wk-fab.py (serves this worktree + the stubbed /p/CSCI26_FB2.json on a free local port; main's app.js passed as the 2nd argument for the before shot).
