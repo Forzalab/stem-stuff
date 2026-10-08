@@ -1,0 +1,23 @@
+run 1/7 none    js=439.7KB 3p=0.0KB lcp=4264 inp=56 tbt=549 blocked=0 ingestSeen=0 ingestFailed=0 
+run 1/7 posthog js=972.0KB 3p=532.4KB lcp=4008 inp=128 tbt=704 blocked=2 ingestSeen=2 ingestFailed=0 
+run 2/7 none    js=439.7KB 3p=0.0KB lcp=4000 inp=40 tbt=541 blocked=0 ingestSeen=0 ingestFailed=0 
+run 2/7 posthog js=972.0KB 3p=532.4KB lcp=3896 inp=128 tbt=772 blocked=2 ingestSeen=2 ingestFailed=0 
+run 3/7 none    js=439.7KB 3p=0.0KB lcp=4172 inp=56 tbt=444 blocked=0 ingestSeen=0 ingestFailed=0 
+run 3/7 posthog js=972.0KB 3p=532.4KB lcp=4200 inp=120 tbt=963 blocked=2 ingestSeen=2 ingestFailed=0 
+run 4/7 none    js=439.7KB 3p=0.0KB lcp=4320 inp=56 tbt=665 blocked=0 ingestSeen=0 ingestFailed=0 
+run 4/7 posthog js=972.0KB 3p=532.4KB lcp=4352 inp=144 tbt=818 blocked=2 ingestSeen=2 ingestFailed=0 
+run 5/7 none    js=439.7KB 3p=0.0KB lcp=4052 inp=40 tbt=539 blocked=0 ingestSeen=0 ingestFailed=0 
+run 5/7 posthog js=972.0KB 3p=532.4KB lcp=3844 inp=136 tbt=689 blocked=2 ingestSeen=2 ingestFailed=0 
+run 6/7 none    js=439.7KB 3p=0.0KB lcp=4012 inp=32 tbt=560 blocked=0 ingestSeen=0 ingestFailed=0 
+run 6/7 posthog js=972.0KB 3p=532.4KB lcp=4148 inp=112 tbt=743 blocked=2 ingestSeen=2 ingestFailed=0 
+run 7/7 none    js=439.7KB 3p=0.0KB lcp=3936 inp=64 tbt=514 blocked=0 ingestSeen=0 ingestFailed=0 
+run 7/7 posthog js=972.0KB 3p=532.4KB lcp=3924 inp=128 tbt=686 blocked=2 ingestSeen=2 ingestFailed=0 
+tap target: <button type="button" class="btn" id="upload" aria-label="Open file" title="Open
+ingestion requests seen=14 aborted=0
+mode=wired runs=7 posthog_token=dummy (backend stubbed, recording+autocapture on) ph_rec_started=7/7 window=12000ms
+| config | JS KB (all) median (min–max) | 3rd-party JS KB median (min–max) | 3rd-party total KB median (min–max) | LCP ms median (min–max) | INP ms median (min–max) | TBT ms median (min–max) |
+|---|---|---|---|---|---|---|
+| none | 439.7 (439.7–439.7) | 0.0 (0.0–0.0) | 0.0 (0.0–0.0) | 4052 (3936–4320) | 56 (32–64) | 541 (444–665) |
+| posthog | 972.0 (972.0–972.0) | 532.4 (532.4–532.4) | 532.7 (532.7–532.7) | 4008 (3844–4352) | 128 (112–144) | 743 (686–963) |
+
+delta vs none (medians): posthog: JS +532.4 KB, TBT +202 ms, LCP -44 ms, INP 72 ms
