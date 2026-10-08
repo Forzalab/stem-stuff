@@ -215,3 +215,112 @@ function require_enum() {                                    // the profile.kits
   const s = JSON.parse(readFileSync(new URL("SCHEMA.md", root), "utf8").match(/<!-- schema: problems -->\s*```json\n([\s\S]*?)\n```/)[1]);
   return s.properties.profile.properties.kits.items.enum;
 }
+
+/* ---------- physics invariants + visual cases (tests/visual-cases/*.json, design/plans/VISUAL-TESTS.md) ----------
+   A case = { case, source, expect: "pass"|"fail", fails?: <rule>, slip_kind?: "concept"|"mechanical", why, invariants: [...], scene }.
+   Ghost marks carry `ghost: true` + `label`; the truth they sit beside carries `truth: true` (mark-level: the scene schema's marks are open).
+   physics() returns "" when an invariant holds; lint() runs on every case (ghost rules + the ported benchmark criteria). */
+const EPS = 1e-6, near = (a, b) => Math.abs(a - b) <= EPS * Math.max(1, Math.abs(a), Math.abs(b));
+const r2 = v => +(+v).toFixed(2);
+const num = (v, sc) => Array.isArray(v) ? v.map(x => num(x, sc)) : typeof v === "string" ? evaluate(v.startsWith("=") ? v.slice(1) : v, { ...sc }) : v;
+const markOf = (s, id) => { const m = s.marks.find(x => x.id === id); if (!m) throw new Error(`no mark ${id}`); return m; };
+const vec = (m, sc) => { const a = num(m.from, sc), b = num(m.to, sc); return [a, [b[0] - a[0], b[1] - a[1]]]; };
+const labelNum = m => Number(String(m.label || "").replace(/[−–]/g, "-").match(/-?\d+(\.\d+)?/)?.[0]);
+function areaOf(m, sc) {                                     // a poly = the signed ∫ y dx of its outline (edges on the axis add 0); a shade = ∫ (f − g)
+  if (m.mark === "poly") { const p = num(m.pts, sc); let A = 0; for (let i = 0; i < p.length; i++) { const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length]; A += (x1 - x0) * (y0 + y1) / 2; } return A; }
+  if (m.mark === "shade") {                                  // Simpson, 400 panels
+    const v = m.var || "x", a = num(m.from, sc), b = num(m.to, sc), n = 400, h = (b - a) / n;
+    const F = x => evaluate(m.f, { ...sc, [v]: x }) - (m.g ? evaluate(m.g, { ...sc, [v]: x }) : 0);
+    let S = F(a) + F(b); for (let i = 1; i < n; i++) S += (i % 2 ? 4 : 2) * F(a + i * h); return S * h / 3;
+  }
+  throw new Error(`area of a ${m.mark}`);
+}
+export function physics(s, inv) {                            // "" = holds; else what broke
+  if (["conserved", "pythag", "finite", "visit_once", "visits_follow_edges"].includes(inv.type)) return invariant(s, inv);
+  const pts = grid(inv.over || {});
+  for (const v of pts) {
+    const sc = at(s, v), E = x => num(x, sc), w = JSON.stringify(v);
+    switch (inv.type) {
+      case "gravity_down": { const [, d] = vec(markOf(s, inv.mark), sc);
+        if (!(Math.abs(d[0]) <= EPS * Math.hypot(...d) && d[1] < 0)) return `gravity_down: ${inv.mark} points (${d.map(r2)}) at ${w}`; break; }
+      case "toward": { const [a, d] = vec(markOf(s, inv.mark), sc), c = E(inv.center), u = [c[0] - a[0], c[1] - a[1]];
+        if ((d[0] * u[0] + d[1] * u[1]) / (Math.hypot(...d) * Math.hypot(...u)) < 1 - 1e-6) return `toward: ${inv.mark} does not point at the center (${c}) at ${w}`; break; }
+      case "spring_restoring": { const F = E(inv.F), x = E(inv.x);
+        if (Math.abs(x) > EPS && !(F * x < 0)) return `spring_restoring: F = ${r2(F)} with x = ${r2(x)} at ${w}`;
+        if (inv.mark && Math.abs(x) > EPS) { const [, d] = vec(markOf(s, inv.mark), sc); if (!(d[0] * x < 0)) return `spring_restoring: arrow ${inv.mark} points along x = ${r2(x)} at ${w}`; } break; }
+      case "nonincreasing": { const [a, b] = inv.along_range, k = 40; let prev = Infinity;
+        for (let i = 0; i <= k; i++) { const e = at(s, { ...v, [inv.along]: a + (b - a) * i / k })[inv.of];
+          if (e > prev + EPS) return `nonincreasing: ${inv.of} rises to ${r2(e)} at ${inv.along} = ${r2(a + (b - a) * i / k)}`; prev = e; } break; }
+      case "incline": { const W = E(inv.W), th = E(inv.th);
+        if (!near(E(inv.par), W * Math.sin(th))) return `incline: ${inv.par} = ${r2(E(inv.par))} ≠ W sinθ = ${r2(W * Math.sin(th))} at ${w}`;
+        if (!near(E(inv.perp), W * Math.cos(th))) return `incline: ${inv.perp} = ${r2(E(inv.perp))} ≠ W cosθ = ${r2(W * Math.cos(th))} at ${w}`; break; }
+      case "momentum": { const P = list => list.reduce(([x, y], [m, vx, vy]) => [x + E(m) * E(vx), y + E(m) * E(vy)], [0, 0]), b = P(inv.before), a = P(inv.after);
+        if (!near(b[0], a[0]) || !near(b[1], a[1])) return `momentum: before (${b.map(r2)}) ≠ after (${a.map(r2)}) at ${w}`; break; }
+      case "ferris": { const mg = E(inv.m) * E(inv.g), mc = E(inv.m) * E(inv.v) ** 2 / E(inv.r);
+        if (inv.top && !near(E(inv.top), mg - mc)) return `ferris: N_top = ${r2(E(inv.top))} ≠ mg − mv²/r = ${r2(mg - mc)} at ${w}`;
+        if (inv.bottom && !near(E(inv.bottom), mg + mc)) return `ferris: N_bottom = ${r2(E(inv.bottom))} ≠ mg + mv²/r = ${r2(mg + mc)} at ${w}`;
+        if (inv.side && !near(E(inv.side), Math.hypot(mg, mc))) return `ferris: N_side = ${r2(E(inv.side))} ≠ √((mg)² + (mv²/r)²) = ${r2(Math.hypot(mg, mc))} at ${w}`; break; }
+      case "power_law": { const c0 = at(s, pts[0]), k0 = num(inv.of, c0) * num(inv.r, c0) ** inv.n, c = E(inv.of) * E(inv.r) ** inv.n;
+        if (!near(c, k0)) return `power_law: ${inv.of}·r^${inv.n} = ${r2(c)} ≠ ${r2(k0)} at ${w}`; break; }
+      case "orbit_radius": { const R = E(markOf(s, inv.circle).r), Rp = E(markOf(s, inv.planet).r), h = E(inv.h);
+        if (!near(R, Rp + h)) return `orbit_radius: circle r = ${r2(R)} ≠ R_planet + h = ${r2(Rp + h)} at ${w}`; break; }
+      case "area": { const m = markOf(s, inv.mark), A = areaOf(m, sc) * (inv.scale || 1), want = inv.equals === "label" ? labelNum(m) : E(inv.equals);
+        if (!(Math.abs(A - want) <= 1e-3 * Math.max(1, Math.abs(want)))) return `area: ${inv.mark} encloses ${r2(A)} ≠ ${r2(want)}${inv.equals === "label" ? ` (its label "${m.label}")` : ""} at ${w}`; break; }
+      case "anchored": { const [a] = vec(markOf(s, inv.mark), sc), b = markOf(s, inv.body), c = E(b.at || [b.x, b.y]);
+        if (Math.hypot(a[0] - c[0], a[1] - c[1]) > (inv.tol ?? 0.05)) return `anchored: ${inv.mark} starts at (${a.map(r2)}), not on ${inv.body} (${c.map(r2)}) at ${w}`; break; }
+      default: return `unknown invariant ${inv.type}`;
+    }
+  }
+  return "";
+}
+export function lint(c) {                                    // [] = clean; each entry "<rule>: what broke"
+  const s = c.scene, out = [], ghosts = s.marks.filter(m => m.ghost), truths = s.marks.filter(m => m.truth && !m.ghost), sc = at(s, {});
+  for (const g of ghosts) {
+    if (!String(g.label || "").trim()) out.push(`ghost_label: ghost ${g.id} has no label`);
+    if (g.truth) out.push(`ghost_label: ${g.id} is both ghost and truth`);
+    if (!g.dash || !["muted", "grey"].includes(g.color)) out.push(`ghost_style: ghost ${g.id} must be dashed + muted/grey`);
+  }
+  for (const t of truths) if (t.dash) out.push(`ghost_style: truth ${t.id} must be solid`);
+  if (ghosts.length && !truths.length) out.push("ghost_alone: a ghost with no truth mark in the scene");
+  const shownAt = id => (s.reveal || []).filter(r => r.show.includes(id)).map(r => r.after);   // [] = always on screen
+  for (const g of ghosts) { const gs = shownAt(g.id);
+    if (truths.length && !truths.some(t => { const ts = shownAt(t.id); return !ts.length || ts.some(a => !gs.length ? false : gs.includes(a)); }))
+      out.push(`ghost_alone: ghost ${g.id} is on screen before any truth mark`); }
+  if (ghosts.length && c.slip_kind !== "concept") out.push(`ghost_kind: ghost on a ${c.slip_kind || "unset"} slip (ghosts are for kind=concept only)`);
+  for (const m of s.marks) if ((m.sym === "vector" || m.mark === "arrow" || m.mark === "force") && !String(m.label || "").trim()) out.push(`label_recall: arrow ${m.id} has no label`);
+  if (s.view) for (const m of s.marks) {                     // render validity / in-canvas (SVGenius, VGBench)
+    const P = [];
+    try {
+      for (const k of ["at", "from", "to"]) if (Array.isArray(m[k])) P.push(num(m[k], sc));
+      if (m.pts) P.push(...num(m.pts, sc));
+      if (m.mark === "circle" && m.at) { const [x, y] = num(m.at, sc), r = num(m.r, sc); P.push([x - r, y - r], [x + r, y + r]); }
+    } catch { continue; }
+    const { x: [x0, x1], y: [y0, y1] } = s.view;
+    const o = P.find(([x, y]) => x < x0 - EPS || x > x1 + EPS || y < y0 - EPS || y > y1 + EPS);
+    if (o) out.push(`in_view: ${m.id} reaches (${r2(o[0])}, ${r2(o[1])}) outside the view`);
+  }
+  return out;
+}
+const CASES = new URL("tests/visual-cases/", root);
+export const cases = readdirSync(CASES).filter(f => f.endsWith(".json")).sort().map(f => ({ file: f, ...JSON.parse(readFileSync(new URL(f, CASES), "utf8")) }));
+export const verdict = c => [...lint(c), ...c.invariants.map(i => physics(c.scene, i)).filter(Boolean)];
+const RULES = ["gravity_down", "toward", "spring_restoring", "nonincreasing", "incline", "momentum", "ferris", "power_law", "orbit_radius", "area", "conserved",
+  "ghost_label", "ghost_alone", "ghost_kind", "ghost_style", "label_recall", "in_view", "anchored"];
+test("visual cases: ≥14, a good and a planted-bad for every rule", () => {
+  assert.ok(cases.length >= 14, `${cases.length} cases`);
+  const bad = new Set(cases.filter(c => c.expect === "fail").map(c => c.fails));
+  for (const r of RULES) assert.ok(bad.has(r), `no planted-bad case for ${r}`);
+  for (const c of cases.filter(c => c.expect === "fail")) assert.ok(RULES.includes(c.fails), `${c.file}: unknown rule ${c.fails}`);
+});
+for (const c of cases) test(`visual case ${c.file} (${c.expect}${c.fails ? ": " + c.fails : ""})`, () => {
+  assert.equal(c.case + ".json", c.file, "case name = file name");
+  assert.ok(validate(c.scene), JSON.stringify(validate.errors, null, 1));
+  assert.deepEqual(check(c.scene), [], "names, binds and ids");
+  const v = verdict(c);
+  if (c.expect === "pass") assert.deepEqual(v, [], "a good case must pass every rule");
+  else {
+    assert.equal(c.expect, "fail");
+    assert.ok(v.length, "planted-bad passed every rule: a false pass");
+    assert.ok(v.some(l => l.startsWith(c.fails + ":")), `fails for the wrong reason: ${JSON.stringify(v)}`);
+  }
+});

@@ -1,0 +1,160 @@
+/* try/genui-ui.css: shared look for try/genui-ui.html and try/genui-redeem.html (agent U, Oct 7 2026).
+   Tokens only (app.css :root, .ai-skin, rewards.css --rw-*). Spacing scale --s1..--s7. Two type sizes per card: --t-md prose, --t-sm labels.
+   Every @keyframes has its own reduced-motion rule; ?rm=1 adds html.rm which does the same. */
+
+/* ---------- page chrome (the try/ wrapper, not the product) ---------- */
+body { padding: 0 0 var(--s7); overflow-x: hidden; }
+.bar { background: var(--paper); padding: var(--s2) var(--gut); display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; border-bottom: var(--bw) solid var(--line); }
+.bar .seg { display: flex; gap: var(--s1); }
+.bar button { font-size: var(--t-sm); min-height: 44px; min-width: 44px; padding: 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--edge); background: var(--sheet); color: var(--ink); }
+.bar button[aria-pressed="true"] { background: var(--c1); border-color: var(--c1); color: var(--field); font-weight: 700; }
+.bar .lab { color: var(--muted); font-size: var(--t-sm); }
+.wrap { max-width: var(--col); margin: 0 auto; padding: 0 var(--gut); }
+.page-h { font-size: var(--t-lg); line-height: 1.2; margin: var(--s4) 0 var(--s1); }
+.lead { color: var(--muted); font-size: var(--t-sm); margin: 0 0 var(--s4); max-width: 60ch; }
+.why { margin: var(--s5) 0 0; padding: var(--s3) var(--s4); background: var(--sheet); border-radius: 10px; font-size: var(--t-sm); color: var(--muted); max-width: 65ch; }
+.why b { color: var(--ink); }
+.why p { margin: 0 0 var(--s2); }
+.why p:last-child { margin: 0; }
+
+/* feedback + copy + priming */
+.fbk { margin: var(--s5) 0 0; }
+.fbk label { display: block; font-weight: 700; font-size: var(--t-sm); margin: 0 0 var(--s2); }
+.fbk textarea { width: 100%; min-height: 6rem; resize: none; overflow: hidden; font: var(--t-sm)/1.5 var(--mono); color: var(--ink); background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px; padding: var(--s3); }
+.fbk textarea:focus { outline: none; border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.fbk .row { display: flex; gap: var(--s2); align-items: center; margin-top: var(--s2); }
+.fbk .row span { color: var(--muted); font-size: var(--t-sm); }
+.copy { min-height: var(--btn); padding: 0 var(--s4); border-radius: 8px; border: var(--bw) solid var(--c1); background: var(--c1); color: var(--field); font-weight: 700; font-size: var(--t-sm); display: inline-flex; align-items: center; gap: var(--s2); }
+.prime { margin: var(--s5) 0 0; font-size: var(--t-sm); color: var(--muted); max-width: 65ch; }
+.prime h2 { font-size: var(--t-md); color: var(--ink); margin: 0 0 var(--s2); }
+.prime ol { margin: 0; padding-left: var(--s5); }
+.prime li { margin: 0 0 var(--s2); }
+
+/* ---------- the app frame (looks like the real question screen) ---------- */
+.app { padding: var(--s4) 0 var(--s5); }
+.qrow { display: flex; align-items: center; gap: var(--s2); min-height: var(--btn); margin: 0 0 var(--s2); }
+.qrow .lbl-q { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 700; font-size: var(--t-sm); color: var(--muted); }
+.hud { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s2); font-weight: 700; font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+.coin { width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--rw-sun); box-shadow: inset 0 -2px 0 var(--rw-sun-dk); flex: none; }
+.hud .delta { color: var(--muted); font-weight: 400; }
+.card { background: var(--qbox); border-radius: 10px; padding: var(--s4); }
+.card .md p { margin: 0 0 var(--s3); max-width: 65ch; }
+.card .md p:last-child { margin: 0; }
+.fig { min-height: 240px; scroll-margin-top: var(--s2); }
+
+/* her pick after a miss: a neutral "your pick" marker, no red, no strike, no X (pain #3) */
+.opt.mine { border: var(--bw) dashed var(--edge); background: var(--sheet); color: var(--ink); }
+.opt.mine .badge { border-style: dashed; color: var(--muted); }
+.opt.mine::after { content: "your pick"; position: absolute; right: var(--s3); top: 50%; transform: translateY(-50%); font-size: var(--t-sm); color: var(--muted); }
+.opt:disabled:not(.mine):not(.right) { color: var(--muted); }
+.opt:disabled:not(.mine):not(.right) .badge { color: var(--muted); }
+.opt.right { background: var(--sheet); }   /* proposal: --raised under --ink trips Impeccable gray-on-color */
+.opt { position: relative; }
+.opt.right::after { content: none; }
+
+/* the "I'm sure" tick (v1 bet, v3 confidence) */
+.sure { display: flex; align-items: center; gap: var(--s3); margin: var(--s3) 0 0; min-height: var(--btn); }
+.sure button { display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--btn); padding: 0 var(--s4) 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--edge); background: var(--sheet); color: var(--ink); font-size: var(--t-sm); font-weight: 700; }
+.sure button .box { width: 1.25rem; height: 1.25rem; border-radius: 4px; border: var(--bw) solid var(--edge); display: grid; place-items: center; }
+.sure button .box .ico { width: 1rem; height: 1rem; visibility: hidden; }
+.sure button[aria-pressed="true"] { border-color: var(--c1); background: var(--sheet); }
+.sure button[aria-pressed="true"] .box { background: var(--c1); border-color: var(--c1); color: var(--field); }
+.sure button[aria-pressed="true"] .box .ico { visibility: visible; }
+.sure button:disabled { color: var(--muted); border-color: var(--line); }
+.sure .odds { color: var(--muted); font-size: var(--t-sm); }
+
+/* v2 ante: the table */
+.table { display: flex; align-items: center; gap: var(--s3); margin: var(--s3) 0 0; min-height: var(--btn); padding: 0 var(--s3); border-radius: 8px; background: var(--sheet); }
+.table .pile { display: inline-flex; gap: var(--s1); min-width: 2.75rem; }
+.table .pile .coin { opacity: 0.25; }
+.table.on .pile .coin { opacity: 1; animation: coin-in .2s ease-out both; }
+.table .say { flex: 1 1 auto; font-size: var(--t-sm); color: var(--muted); }
+.table button { min-height: 44px; padding: 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--edge); background: transparent; color: var(--ink); font-weight: 700; font-size: var(--t-sm); }
+.table.lost .pile .coin { opacity: 0.6; }
+@keyframes coin-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { @keyframes coin-in { from { opacity: 0; } to { opacity: 1; } } }
+
+/* the check row: one primary action */
+.go { display: flex; gap: var(--s2); margin: var(--s3) 0 0; }
+.go .btn-go, .next { min-height: var(--btn); padding: 0 var(--s5); border-radius: 8px; border: var(--bw) solid var(--c1); background: var(--c1); color: var(--field); font-weight: 700; font-size: var(--t-sm); display: inline-flex; align-items: center; gap: var(--s2); }
+.go .btn-go:disabled, .go .btn-go:disabled:hover { opacity: 1; background: var(--sheet); border-color: var(--edge); color: var(--muted); }
+.btn-out { min-height: var(--btn); padding: 0 var(--s4); border-radius: 8px; border: var(--bw) solid var(--edge); background: var(--sheet); color: var(--ink); font-weight: 700; font-size: var(--t-sm); display: inline-flex; align-items: center; gap: var(--s2); }
+
+/* #fb: affirm + lock line */
+.fb { margin: var(--s4) 0 0; }
+.affirm { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--s3); align-items: center; background: var(--sheet); border-radius: 10px; padding: var(--s3); animation: fade-in .2s ease-out both; }
+.affirm .thumb { min-height: 0; margin: 0; }
+.affirm p { margin: 0; }
+.affirm .joke { color: var(--muted); font-size: var(--t-sm); margin-top: var(--s1); }
+.lockline { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); margin: 0 0 var(--s3); }
+.lockline .ico { color: var(--muted); }
+.nextrow { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s3); }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { @keyframes fade-in { from { opacity: 1; } to { opacity: 1; } } }
+
+/* ---------- Cluck box (FABLE-1 C3): line -> visual slot -> strip -> steps fold -> affirm -> ask ---------- */
+.clk { background: var(--ai-sheet); color: var(--ai-text); }
+.clk .hd { display: flex; align-items: center; gap: var(--s2); min-height: var(--btn); font-weight: 700; font-size: var(--t-sm); color: var(--ai); }
+.clk .hd > .ico { color: var(--mark); }
+.clk .hd .x { margin-left: auto; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ai-muted); }
+.clk .line { margin: 0 0 var(--s3); max-width: 58ch; }
+.clk .line.wait { color: var(--ai-muted); }
+.clk .slot { min-height: var(--slot, 0px); margin: 0 0 var(--s3); }
+.clk .chip { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); border-radius: 8px; background: var(--ai-tint); font-size: var(--t-md); }
+.clk .chip .miss { color: var(--mark); }
+.clk .strip { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); margin: 0 0 var(--s3); }
+.clk .strip button { min-height: var(--btn); border-radius: 8px; font-weight: 700; font-size: var(--t-sm); }
+.clk .strip .retry { background: var(--c1); border: var(--bw) solid var(--c1); color: var(--field); }
+.clk .strip .tell { background: transparent; border: var(--bw) solid var(--ai-line); color: var(--ai-text); }
+.clk details { margin: 0 0 var(--s3); }
+.clk summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; font-size: var(--t-sm); color: var(--ai-text); cursor: pointer; list-style: none; }
+.clk summary::-webkit-details-marker { display: none; }
+.clk summary::before { content: ""; width: 0.5rem; height: 0.5rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); margin-right: var(--s3); }
+.clk details[open] summary::before { transform: rotate(45deg); }
+.clk ol { margin: 0; padding-left: var(--s5); }
+.clk ol li { margin: 0 0 var(--s3); }
+.clk .boxed { display: inline-block; padding: 0 var(--s2); border-radius: 6px; background: var(--ai-ct); color: var(--ai-on-ct); font-weight: 700; }
+.clk .disc { font-size: var(--t-sm); color: var(--ai-muted); margin: 0 0 var(--s3); }
+.clk .ask { display: flex; gap: var(--s2); align-items: center; }
+.clk .ask input { flex: 1 1 auto; min-width: 0; height: var(--btn); border-radius: 999px; border: 0; padding: 0 var(--s4); background: var(--ai-pill); color: var(--ai-text); font: inherit; font-size: var(--t-sm); }
+.clk .ask input::placeholder { color: var(--ai-muted); opacity: 1; }
+.clk .ask input:focus { outline: var(--ring) solid var(--ai); outline-offset: 0; }
+.clk .ask .send { width: var(--btn); height: var(--btn); border-radius: 50%; border: 0; background: var(--ai-send); color: var(--ai-send-ink); display: grid; place-items: center; }
+.clk .chunk { animation: fade-in .12s ease-out both; }
+
+/* v1 + v2: the partial sheet (RUNTIME §2 proposal; the real rule would be html:not(.side) .cl.part) */
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: min(45svh, 420px); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-4);
+  padding: 0 var(--gut) calc(var(--s4) + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; transform: translateY(0); animation: sheet-up .2s ease-out both; }
+.sheet .grab { display: flex; justify-content: center; align-items: center; height: var(--s5); margin: 0 calc(-1 * var(--gut)); border: 0; width: calc(100% + 2 * var(--gut)); background: transparent; }
+.sheet .grab span { width: 2.5rem; height: 4px; border-radius: 2px; background: var(--ai-muted); }
+.sheet.full { height: min(88svh, 760px); }
+.sheet.peek { height: auto; }
+.sheet.peek > :not(.peekbar) { display: none; }
+.sheet .peekbar { display: none; }
+.sheet.peek .peekbar { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--btn); border: 0; background: transparent; color: var(--ai-text); font-weight: 700; font-size: var(--t-sm); padding: var(--s2) 0; }
+.sheet.peek .peekbar .ico { color: var(--mark); }
+.sheet .in { max-width: var(--col); margin: 0 auto; }
+@keyframes sheet-up { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { @keyframes sheet-up { from { opacity: 0; } to { opacity: 1; } } }
+body.has-sheet .app { padding-bottom: calc(min(45svh, 420px) + var(--s4)); }   /* Next scrolls above the sheet (pain #6) */
+body.has-peek .app { padding-bottom: calc(var(--s7) + var(--s5)); }
+
+/* v3: Cluck in flow under the choices + the strip fixed in the thumb zone */
+.inline { border-radius: 10px; padding: 0 var(--s4) var(--s4); margin: var(--s4) 0 0; animation: fade-in .2s ease-out both; }
+.thumb-strip { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: var(--s2) var(--gut) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--paper); box-shadow: 0 -10px 24px -6px rgb(0 0 0 / 0.55); }
+.thumb-strip .strip { max-width: var(--col); margin: 0 auto; }
+body.has-strip .app { padding-bottom: calc(var(--btn) + var(--s6)); }
+
+/* ghost (graph.js change #6: opacity in, no movement) */
+.fig .ghosted { animation: fade-in .2s ease-out both; }
+
+/* reduced motion forced by ?rm=1 (WebKitGTK/ios-sim --rm do the media query) */
+html.rm *, html.rm *::before, html.rm *::after { animation: none !important; transition: none !important; }
+
+@media (min-width: 720px) {
+  .sheet { left: auto; right: var(--s5); bottom: var(--s5); width: 26rem; border-radius: 16px; }
+  body.has-sheet .app { padding-bottom: var(--s5); }
+  body.has-sheet .wrap.app-wrap { max-width: calc(var(--col) + 26rem + var(--s6)); padding-right: calc(26rem + var(--s6) + var(--gut)); }
+}
+.opt[aria-checked="true"] { background: var(--sheet); }   /* same proposal as .opt.right: the --c1 edge + badge carry "selected" */

@@ -1,0 +1,108 @@
+{
+ "case": "xx3-d-good",
+ "source": "PHYS_XX3 d (60: lower triangle flipped)",
+ "expect": "pass",
+ "slip_kind": "concept",
+ "why": "Ghost = the dip mirrored above the axis (24 + 6 = 30 squares = 60 J).",
+ "invariants": [
+  {
+   "type": "area",
+   "mark": "T",
+   "equals": 36,
+   "scale": 2
+  },
+  {
+   "type": "area",
+   "mark": "G",
+   "equals": "label",
+   "scale": 2
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "pick": "d",
+   "slip": "counted the lower triangle as positive",
+   "skill": "w_area",
+   "see": "the dashed dip flipped above the axis",
+   "say": "below the axis counts negative",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    -0.5,
+    12.8
+   ],
+   "y": [
+    -4,
+    7
+   ]
+  },
+  "marks": [
+   {
+    "id": "ax",
+    "mark": "axes"
+   },
+   {
+    "id": "T",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      6
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      10,
+      -3
+     ],
+     [
+      12,
+      0
+     ]
+    ],
+    "fill": true,
+    "color": "c2",
+    "truth": true,
+    "label": "36 J"
+   },
+   {
+    "id": "G",
+    "ghost": true,
+    "label": "your 60 J",
+    "dash": true,
+    "color": "muted",
+    "mark": "poly",
+    "pts": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      6
+     ],
+     [
+      8,
+      0
+     ],
+     [
+      10,
+      3
+     ],
+     [
+      12,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}

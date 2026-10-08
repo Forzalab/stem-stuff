@@ -1,0 +1,175 @@
+{
+ "case": "incline-label-bad",
+ "source": "incline, planted",
+ "expect": "fail",
+ "fails": "label_recall",
+ "why": "The into-ramp component has no label: an anonymous arrow (text-fidelity / label-recall criterion).",
+ "invariants": [
+  {
+   "type": "incline",
+   "W": "W",
+   "th": "r",
+   "par": "par",
+   "perp": "perp",
+   "over": {
+    "th": [
+     10,
+     60
+    ],
+    "m": [
+     1,
+     5
+    ]
+   }
+  },
+  {
+   "type": "pythag",
+   "legs": [
+    "par",
+    "perp"
+   ],
+   "hyp": "W",
+   "over": {
+    "th": [
+     10,
+     60
+    ],
+    "m": [
+     1,
+     5
+    ]
+   }
+  },
+  {
+   "type": "gravity_down",
+   "mark": "Wv",
+   "over": {
+    "th": [
+     10,
+     60
+    ],
+    "m": [
+     1,
+     5
+    ]
+   }
+  },
+  {
+   "type": "anchored",
+   "mark": "Wv",
+   "body": "box",
+   "over": {
+    "th": [
+     10,
+     60
+    ],
+    "m": [
+     1,
+     5
+    ]
+   }
+  }
+ ],
+ "scene": {
+  "v": 1,
+  "goal": {
+   "slip": "swapped sin and cos",
+   "skill": "trig_part",
+   "see": "the along-ramp arrow shrink as the ramp flattens",
+   "say": "only mg sin θ pulls down the ramp",
+   "approach": "poe"
+  },
+  "view": {
+   "x": [
+    0,
+    6
+   ],
+   "y": [
+    0,
+    4
+   ]
+  },
+  "params": {
+   "th": {
+    "min": 10,
+    "max": 60,
+    "step": 1,
+    "init": 30,
+    "unit": "deg"
+   },
+   "m": {
+    "min": 1,
+    "max": 5,
+    "step": 0.5,
+    "init": 2,
+    "unit": "kg"
+   }
+  },
+  "derive": {
+   "r": "th*pi/180",
+   "W": "m*9.8",
+   "par": "W*sin(r)",
+   "perp": "W*cos(r)",
+   "bx": "3*cos(r)",
+   "by": "3*sin(r)"
+  },
+  "marks": [
+   {
+    "id": "ramp",
+    "sym": "incline",
+    "at": [
+     0,
+     0
+    ],
+    "base": 5,
+    "angle": "=th"
+   },
+   {
+    "id": "box",
+    "sym": "block",
+    "x": "=bx",
+    "y": "=by",
+    "angle": "=th"
+   },
+   {
+    "id": "Wv",
+    "sym": "vector",
+    "from": [
+     "=bx",
+     "=by"
+    ],
+    "to": [
+     "=bx",
+     "=by - W/20"
+    ],
+    "label": "mg"
+   },
+   {
+    "id": "Ppar",
+    "sym": "vector",
+    "from": [
+     "=bx",
+     "=by"
+    ],
+    "to": [
+     "=bx - par/20*cos(r)",
+     "=by - par/20*sin(r)"
+    ],
+    "label": "mg\\sin\\theta"
+   },
+   {
+    "id": "Pperp",
+    "sym": "vector",
+    "from": [
+     "=bx",
+     "=by"
+    ],
+    "to": [
+     "=bx + perp/20*sin(r)",
+     "=by - perp/20*cos(r)"
+    ],
+    "label": ""
+   }
+  ]
+ }
+}
