@@ -517,7 +517,7 @@ html.side #work > .orig { margin: 0; }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
-html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - 2 * var(--s4)); }   /* the column is the sticky one; as tall as its content, at most the window (Tony, Oct 6: no empty bottom) */
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--s4)); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
