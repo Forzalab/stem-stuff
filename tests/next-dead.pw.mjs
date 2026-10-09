@@ -15,7 +15,10 @@ let pw;
 try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PORT = +(process.argv[2] || 8836), BASE = `http://localhost:${PORT}`;
+import { createServer } from "node:net";
+/* run-all.sh hands .pw scripts a base URL; this one starts its own server, so a number is the port, anything else a free one */
+const freePort = () => new Promise(r => { const s = createServer().listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => r(p)); }); });
+const PORT = /^\d+$/.test(process.argv[2] || "") ? +process.argv[2] : await freePort(), BASE = `http://localhost:${PORT}`;
 const LOG = !!process.env.NEXT_LOG;
 const TMP = mkdtempSync(join(tmpdir(), "nextdead-")), BANKS = join(TMP, "banks");
 mkdirSync(BANKS);

@@ -1,0 +1,93 @@
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+
+** (WebKitWebProcess:16437): WARNING **: 08:18:43.400: Unable to get session D-Bus address: Failed to execute child process “dbus-launch” (No such file or directory)
+js[0] -> ob
+js[1] -> ing
+js[2] -> undefined
+js[3] -> 0
+js[4] -> 0
+js[5] -> 1
+js[6] -> 2
+js[7] -> 2
+js[8] -> 3
+js[9] -> 4
+js[10] -> 4
+js[11] -> 5
+js[12] -> 6
+js[13] -> 6
+js[14] -> 7
+js[15] -> 8
+js[16] -> 8
+js[17] -> 9
+js[18] -> 10
+js[19] -> 1 #CSCI26_BAA>#CSCI26_BAT shown CSCI26_BAA>CSCI26_BAT dis=false hid=false said="Tap here to write notes."
+2 #CSCI26_BAT>#CSCI26_BAW shown CSCI26_BAT>CSCI26_BAW dis=false hid=false said="Tap here to write notes."
+3 #CSCI26_BAW>#CSCI26_BAG shown CSCI26_BAW>CSCI26_BAG dis=false hid=false said=""
+4 #CSCI26_BAG>#CSCI26_BA5 shown CSCI26_BAG>CSCI26_BA5 dis=false hid=false said=""
+5 #CSCI26_BA5>#CSCI26_BAQ shown CSCI26_BA5>CSCI26_BAQ dis=false hid=false said=""
+6 #CSCI26_BAQ>#CSCI26_BAM shown CSCI26_BAQ>CSCI26_BAM dis=false hid=false said=""
+7 #CSCI26_BAM>#CSCI26_BAD shown CSCI26_BAM>CSCI26_BAD dis=false hid=false said=""
+8 #CSCI26_BAD>#CSCI26_BAZ shown CSCI26_BAD>CSCI26_BAZ dis=false hid=false said=""
+9 #CSCI26_BAZ>#CSCI26_BAK shown CSCI26_BAZ>CSCI26_BAK dis=false hid=false said=""
+10 #CSCI26_BAK>#CSCI26_BAX shown CSCI26_BAK>CSCI26_BAX dis=false hid=false said=""
+{
+ "profile": "safari-expanded",
+ "note": "svh=dvh=659 (Playwright), vh=lvh=745 (estimate)",
+ "viewCSS": [
+  393,
+  659
+ ],
+ "loads": [
+  {
+   "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+   "dpr": 3,
+   "inner": [
+    393,
+    659
+   ],
+   "visualViewport": [
+    393,
+    659
+   ],
+   "screen": [
+    393,
+    852
+   ],
+   "standalone": false,
+   "mq": {
+    "standalone": false,
+    "dark": false,
+    "reducedMotion": false,
+    "hoverNone": true,
+    "coarse": true
+   },
+   "touch": {
+    "ontouchstart": true,
+    "maxTouchPoints": 5
+   },
+   "font": {
+    "appleSystem17pxWidth": 183
+   },
+   "rewrite": {
+    "env": 19,
+    "vh": 6,
+    "media": 4,
+    "sheets": 9,
+    "blocked": 0
+   },
+   "hasSW": false,
+   "sw": null,
+   "storage": {
+    "localStorageKeys": 2
+   },
+   "title": "STEM drill"
+  }
+ ],
+ "drag": null,
+ "png": "/home/user/wt-next-dead/design/shots/next-dead-2026-10-09/wk-after-bear.png",
+ "pngPx": [
+  1179,
+  1977
+ ]
+}

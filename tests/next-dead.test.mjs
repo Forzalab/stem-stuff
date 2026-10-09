@@ -20,9 +20,8 @@ test("nav.js go(): a hash already on the target is asked again, not assigned aga
   assert.match(go, /location\.hash === "#" \+ e\.c\) dispatchEvent\(new HashChangeEvent\("hashchange"\)\)/);
 });
 
-test("nav.js: Next is not dimmed by a current code that is not in the list", () => {
-  assert.match(nav, /next\.disabled = !pool\(\)\.length;/);
-  assert.doesNotMatch(nav, /next\.disabled = !here/);
+test("nav.js: in a bank, Next is not dimmed by a current code that is not in the bank (a direct link); an upload still dims it (render.pw.mjs)", () => {
+  assert.match(nav, /next\.disabled = \(!here && !bank\(\)\) \|\| !pool\(\)\.length;/);
 });
 
 test("app.js: a code the page can't open is said, not dropped (load, fromHash)", () => {

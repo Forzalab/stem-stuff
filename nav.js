@@ -177,7 +177,7 @@ function init() {
     const st = Q(), focused = document.activeElement;
     const here = codes.includes(cur);                                // a server code typed after an upload: arrows off
     prev.disabled = !here || hop(st, -1) < 0;
-    next.disabled = !pool().length;                                  // Next always works: the queue never runs dry, even from a code that is not in the list (a direct link)
+    next.disabled = (!here && !bank()) || !pool().length;            // Next always works: the queue never runs dry, even from a code that is not in the bank (a direct link); after an upload a server code still turns the arrows off
     if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
