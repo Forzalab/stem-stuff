@@ -1,0 +1,163 @@
+      P2X #1 hash #PHYS_P01 -> #PHYS_P05  shown PHYS_P01 -> PHYS_P05  disabled=false  MOVED
+      P2X #2 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      P2X #3 hash #PHYS_P08 -> #PHYS_P03  shown PHYS_P08 -> PHYS_P03  disabled=false  MOVED
+      P2X #4 hash #PHYS_P03 -> #PHYS_P07  shown PHYS_P03 -> PHYS_P07  disabled=false  MOVED
+      P2X #5 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      P2X #6 hash #PHYS_P06 -> #PHYS_P04  shown PHYS_P06 -> PHYS_P04  disabled=false  MOVED
+      P2X #7 hash #PHYS_P04 -> #PHYS_P02  shown PHYS_P04 -> PHYS_P02  disabled=false  MOVED
+      P2X #8 hash #PHYS_P02 -> #PHYS_P01  shown PHYS_P02 -> PHYS_P01  disabled=false  MOVED
+      P2X #9 hash #PHYS_P01 -> #PHYS_P05  shown PHYS_P01 -> PHYS_P05  disabled=false  MOVED
+      P2X #10 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+ok   1280: BANK_P2X, Next 10x: every press moves
+      DIET #1 hash #PHYS_P01 -> #PHYS_P03  shown PHYS_P01 -> PHYS_P03  disabled=false  MOVED
+      DIET #2 hash #PHYS_P03 -> #PHYS_P08  shown PHYS_P03 -> PHYS_P08  disabled=false  MOVED
+      DIET #3 hash #PHYS_P08 -> #PHYS_P05  shown PHYS_P08 -> PHYS_P05  disabled=false  MOVED
+      DIET #4 hash #PHYS_P05 -> #PHYS_P07  shown PHYS_P05 -> PHYS_P07  disabled=false  MOVED
+      DIET #5 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      DIET #6 hash #PHYS_P06 -> #PHYS_P02  shown PHYS_P06 -> PHYS_P02  disabled=false  MOVED
+      DIET #7 hash #PHYS_P02 -> #PHYS_P04  shown PHYS_P02 -> PHYS_P04  disabled=false  MOVED
+      DIET #8 hash #PHYS_P04 -> #PHYS_P01  shown PHYS_P04 -> PHYS_P01  disabled=false  MOVED
+      DIET #9 hash #PHYS_P01 -> #PHYS_P03  shown PHYS_P01 -> PHYS_P03  disabled=false  MOVED
+      DIET #10 hash #PHYS_P03 -> #PHYS_P08  shown PHYS_P03 -> PHYS_P08  disabled=false  MOVED
+ok   1280: DIET_BANK_P2X typed in the code box, Next 10x: every press moves
+      UPLOAD #1 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #2 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #3 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #4 hash #CSCI26_BAD -> #CSCI26_BAA  shown CSCI26_BAD -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #5 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #6 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #7 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #8 hash #CSCI26_BAD -> #CSCI26_BAA  shown CSCI26_BAD -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #9 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #10 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+ok   1280: an uploaded file the page can open, Next 10x: every press moves
+      ODD after upload: "|Can't open BEAR_001."
+ok   1280: an uploaded file whose codes the page can't open: it says why (T15 owns the pattern)
+      MIX #1 hash #PHYS_M01 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #2 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #3 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #4 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #5 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #6 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #7 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #8 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #9 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+      MIX #10 hash #BEAR_002 -> #BEAR_002  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open BEAR_002."
+ok   1280: a mixed upload (one good code, two that can't open): Next moves or says why, never silent
+      DIRECT-IN #1 hash #PHYS_P05 -> #PHYS_P02  shown PHYS_P05 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #2 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-IN #3 hash #PHYS_P07 -> #PHYS_P03  shown PHYS_P07 -> PHYS_P03  disabled=false  MOVED
+      DIRECT-IN #4 hash #PHYS_P03 -> #PHYS_P04  shown PHYS_P03 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-IN #5 hash #PHYS_P04 -> #PHYS_P08  shown PHYS_P04 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-IN #6 hash #PHYS_P08 -> #PHYS_P06  shown PHYS_P08 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-IN #7 hash #PHYS_P06 -> #PHYS_P01  shown PHYS_P06 -> PHYS_P01  disabled=false  MOVED
+      DIRECT-IN #8 hash #PHYS_P01 -> #PHYS_P05  shown PHYS_P01 -> PHYS_P05  disabled=false  MOVED
+      DIRECT-IN #9 hash #PHYS_P05 -> #PHYS_P02  shown PHYS_P05 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #10 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+ok   1280: direct #CODE link of a question in the remembered bank: Next 10x moves
+      DIRECT-OUT #1 hash #PHYS_F3N -> #PHYS_P02  shown PHYS_F3N -> PHYS_P02  disabled=false  MOVED
+      DIRECT-OUT #2 hash #PHYS_P02 -> #PHYS_P05  shown PHYS_P02 -> PHYS_P05  disabled=false  MOVED
+      DIRECT-OUT #3 hash #PHYS_P05 -> #PHYS_P06  shown PHYS_P05 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-OUT #4 hash #PHYS_P06 -> #PHYS_P07  shown PHYS_P06 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-OUT #5 hash #PHYS_P07 -> #PHYS_P08  shown PHYS_P07 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-OUT #6 hash #PHYS_P08 -> #PHYS_P04  shown PHYS_P08 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-OUT #7 hash #PHYS_P04 -> #PHYS_P03  shown PHYS_P04 -> PHYS_P03  disabled=false  MOVED
+      DIRECT-OUT #8 hash #PHYS_P03 -> #PHYS_P01  shown PHYS_P03 -> PHYS_P01  disabled=false  MOVED
+      DIRECT-OUT #9 hash #PHYS_P01 -> #PHYS_P02  shown PHYS_P01 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-OUT #10 hash #PHYS_P02 -> #PHYS_P05  shown PHYS_P02 -> PHYS_P05  disabled=false  MOVED
+ok   1280: direct #CODE link of a question NOT in the remembered bank: Next moves or says why
+      ONE #1 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #2 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #3 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #4 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #5 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #6 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #7 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #8 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #9 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #10 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+ok   1280: a one-question bank: Next says why
+      P2X #1 hash #PHYS_P01 -> #PHYS_P02  shown PHYS_P01 -> PHYS_P02  disabled=false  MOVED
+      P2X #2 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+      P2X #3 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      P2X #4 hash #PHYS_P06 -> #PHYS_P03  shown PHYS_P06 -> PHYS_P03  disabled=false  MOVED
+      P2X #5 hash #PHYS_P03 -> #PHYS_P04  shown PHYS_P03 -> PHYS_P04  disabled=false  MOVED
+      P2X #6 hash #PHYS_P04 -> #PHYS_P05  shown PHYS_P04 -> PHYS_P05  disabled=false  MOVED
+      P2X #7 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      P2X #8 hash #PHYS_P08 -> #PHYS_P01  shown PHYS_P08 -> PHYS_P01  disabled=false  MOVED
+      P2X #9 hash #PHYS_P01 -> #PHYS_P02  shown PHYS_P01 -> PHYS_P02  disabled=false  MOVED
+      P2X #10 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+ok   393: BANK_P2X, Next 10x: every press moves
+      DIET #1 hash #PHYS_P01 -> #PHYS_P06  shown PHYS_P01 -> PHYS_P06  disabled=false  MOVED
+      DIET #2 hash #PHYS_P06 -> #PHYS_P07  shown PHYS_P06 -> PHYS_P07  disabled=false  MOVED
+      DIET #3 hash #PHYS_P07 -> #PHYS_P05  shown PHYS_P07 -> PHYS_P05  disabled=false  MOVED
+      DIET #4 hash #PHYS_P05 -> #PHYS_P04  shown PHYS_P05 -> PHYS_P04  disabled=false  MOVED
+      DIET #5 hash #PHYS_P04 -> #PHYS_P08  shown PHYS_P04 -> PHYS_P08  disabled=false  MOVED
+      DIET #6 hash #PHYS_P08 -> #PHYS_P02  shown PHYS_P08 -> PHYS_P02  disabled=false  MOVED
+      DIET #7 hash #PHYS_P02 -> #PHYS_P03  shown PHYS_P02 -> PHYS_P03  disabled=false  MOVED
+      DIET #8 hash #PHYS_P03 -> #PHYS_P01  shown PHYS_P03 -> PHYS_P01  disabled=false  MOVED
+      DIET #9 hash #PHYS_P01 -> #PHYS_P06  shown PHYS_P01 -> PHYS_P06  disabled=false  MOVED
+      DIET #10 hash #PHYS_P06 -> #PHYS_P07  shown PHYS_P06 -> PHYS_P07  disabled=false  MOVED
+ok   393: DIET_BANK_P2X typed in the code box, Next 10x: every press moves
+      UPLOAD #1 hash #CSCI26_BAA -> #CSCI26_BAB  shown CSCI26_BAA -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #2 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #3 hash #CSCI26_BAD -> #CSCI26_BAC  shown CSCI26_BAD -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #4 hash #CSCI26_BAC -> #CSCI26_BAA  shown CSCI26_BAC -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #5 hash #CSCI26_BAA -> #CSCI26_BAB  shown CSCI26_BAA -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #6 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #7 hash #CSCI26_BAD -> #CSCI26_BAC  shown CSCI26_BAD -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #8 hash #CSCI26_BAC -> #CSCI26_BAA  shown CSCI26_BAC -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #9 hash #CSCI26_BAA -> #CSCI26_BAB  shown CSCI26_BAA -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #10 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+ok   393: an uploaded file the page can open, Next 10x: every press moves
+      ODD after upload: "|Can't open BEAR_001."
+ok   393: an uploaded file whose codes the page can't open: it says why (T15 owns the pattern)
+      MIX #1 hash #PHYS_M01 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #2 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #3 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #4 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #5 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #6 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #7 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #8 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #9 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+      MIX #10 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SAID "Can't open CSCI26_TOOLONG7."
+ok   393: a mixed upload (one good code, two that can't open): Next moves or says why, never silent
+      DIRECT-IN #1 hash #PHYS_P05 -> #PHYS_P02  shown PHYS_P05 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #2 hash #PHYS_P02 -> #PHYS_P03  shown PHYS_P02 -> PHYS_P03  disabled=false  MOVED
+      DIRECT-IN #3 hash #PHYS_P03 -> #PHYS_P08  shown PHYS_P03 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-IN #4 hash #PHYS_P08 -> #PHYS_P04  shown PHYS_P08 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-IN #5 hash #PHYS_P04 -> #PHYS_P07  shown PHYS_P04 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-IN #6 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-IN #7 hash #PHYS_P06 -> #PHYS_P01  shown PHYS_P06 -> PHYS_P01  disabled=false  MOVED
+      DIRECT-IN #8 hash #PHYS_P01 -> #PHYS_P05  shown PHYS_P01 -> PHYS_P05  disabled=false  MOVED
+      DIRECT-IN #9 hash #PHYS_P05 -> #PHYS_P02  shown PHYS_P05 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #10 hash #PHYS_P02 -> #PHYS_P03  shown PHYS_P02 -> PHYS_P03  disabled=false  MOVED
+ok   393: direct #CODE link of a question in the remembered bank: Next 10x moves
+      DIRECT-OUT #1 hash #PHYS_F3N -> #PHYS_P03  shown PHYS_F3N -> PHYS_P03  disabled=false  MOVED
+      DIRECT-OUT #2 hash #PHYS_P03 -> #PHYS_P05  shown PHYS_P03 -> PHYS_P05  disabled=false  MOVED
+      DIRECT-OUT #3 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-OUT #4 hash #PHYS_P08 -> #PHYS_P07  shown PHYS_P08 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-OUT #5 hash #PHYS_P07 -> #PHYS_P02  shown PHYS_P07 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-OUT #6 hash #PHYS_P02 -> #PHYS_P06  shown PHYS_P02 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-OUT #7 hash #PHYS_P06 -> #PHYS_P04  shown PHYS_P06 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-OUT #8 hash #PHYS_P04 -> #PHYS_P01  shown PHYS_P04 -> PHYS_P01  disabled=false  MOVED
+      DIRECT-OUT #9 hash #PHYS_P01 -> #PHYS_P03  shown PHYS_P01 -> PHYS_P03  disabled=false  MOVED
+      DIRECT-OUT #10 hash #PHYS_P03 -> #PHYS_P05  shown PHYS_P03 -> PHYS_P05  disabled=false  MOVED
+ok   393: direct #CODE link of a question NOT in the remembered bank: Next moves or says why
+      ONE #1 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #2 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #3 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #4 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #5 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #6 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #7 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #8 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #9 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+      ONE #10 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SAID "This is the only question here."
+ok   393: a one-question bank: Next says why
+ok   393: the first load of Next's target is dropped: the next press loads it
+      LIST-OPEN next moved 0px after pointerdown; shown PHYS_P01 -> PHYS_P04
+ok   393: list open, tap Next: the button holds still between pointerdown and the click, and the press moves
+ALL OK
+RC=0

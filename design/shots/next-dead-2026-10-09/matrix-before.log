@@ -1,0 +1,232 @@
+      P2X #1 hash #PHYS_P01 -> #PHYS_P07  shown PHYS_P01 -> PHYS_P07  disabled=false  MOVED
+      P2X #2 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      P2X #3 hash #PHYS_P06 -> #PHYS_P03  shown PHYS_P06 -> PHYS_P03  disabled=false  MOVED
+      P2X #4 hash #PHYS_P03 -> #PHYS_P04  shown PHYS_P03 -> PHYS_P04  disabled=false  MOVED
+      P2X #5 hash #PHYS_P04 -> #PHYS_P02  shown PHYS_P04 -> PHYS_P02  disabled=false  MOVED
+      P2X #6 hash #PHYS_P02 -> #PHYS_P05  shown PHYS_P02 -> PHYS_P05  disabled=false  MOVED
+      P2X #7 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      P2X #8 hash #PHYS_P08 -> #PHYS_P01  shown PHYS_P08 -> PHYS_P01  disabled=false  MOVED
+      P2X #9 hash #PHYS_P01 -> #PHYS_P07  shown PHYS_P01 -> PHYS_P07  disabled=false  MOVED
+      P2X #10 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+ok   1280: BANK_P2X, Next 10x: every press moves
+      DIET #1 hash #PHYS_P01 -> #PHYS_P08  shown PHYS_P01 -> PHYS_P08  disabled=false  MOVED
+      DIET #2 hash #PHYS_P08 -> #PHYS_P06  shown PHYS_P08 -> PHYS_P06  disabled=false  MOVED
+      DIET #3 hash #PHYS_P06 -> #PHYS_P03  shown PHYS_P06 -> PHYS_P03  disabled=false  MOVED
+      DIET #4 hash #PHYS_P03 -> #PHYS_P02  shown PHYS_P03 -> PHYS_P02  disabled=false  MOVED
+      DIET #5 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+      DIET #6 hash #PHYS_P07 -> #PHYS_P05  shown PHYS_P07 -> PHYS_P05  disabled=false  MOVED
+      DIET #7 hash #PHYS_P05 -> #PHYS_P04  shown PHYS_P05 -> PHYS_P04  disabled=false  MOVED
+      DIET #8 hash #PHYS_P04 -> #PHYS_P01  shown PHYS_P04 -> PHYS_P01  disabled=false  MOVED
+      DIET #9 hash #PHYS_P01 -> #PHYS_P08  shown PHYS_P01 -> PHYS_P08  disabled=false  MOVED
+      DIET #10 hash #PHYS_P08 -> #PHYS_P06  shown PHYS_P08 -> PHYS_P06  disabled=false  MOVED
+ok   1280: DIET_BANK_P2X typed in the code box, Next 10x: every press moves
+      UPLOAD #1 hash #CSCI26_BAA -> #CSCI26_BAD  shown CSCI26_BAA -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #2 hash #CSCI26_BAD -> #CSCI26_BAC  shown CSCI26_BAD -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #3 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #4 hash #CSCI26_BAB -> #CSCI26_BAA  shown CSCI26_BAB -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #5 hash #CSCI26_BAA -> #CSCI26_BAD  shown CSCI26_BAA -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #6 hash #CSCI26_BAD -> #CSCI26_BAC  shown CSCI26_BAD -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #7 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #8 hash #CSCI26_BAB -> #CSCI26_BAA  shown CSCI26_BAB -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #9 hash #CSCI26_BAA -> #CSCI26_BAD  shown CSCI26_BAA -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #10 hash #CSCI26_BAD -> #CSCI26_BAC  shown CSCI26_BAD -> CSCI26_BAC  disabled=false  MOVED
+ok   1280: an uploaded file the page can open, Next 10x: every press moves
+FAIL 1280: an uploaded file whose codes the page can't open: Next says why, never silent 
+      silent presses
++ actual - expected
+
++ [
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   ''
++ ]
+- []
+
+      MIX #1 hash #PHYS_M01 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #2 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #3 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #4 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #5 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #6 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #7 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #8 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #9 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #10 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+FAIL 1280: a mixed upload (one good code, two that can't open): Next moves or says why, never silent 
+      silent presses
++ actual - expected
+
++ [
++   '#PHYS_M01',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7'
++ ]
+- []
+
+      DIRECT-IN #1 hash #PHYS_P05 -> #PHYS_P06  shown PHYS_P05 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-IN #2 hash #PHYS_P06 -> #PHYS_P07  shown PHYS_P06 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-IN #3 hash #PHYS_P07 -> #PHYS_P04  shown PHYS_P07 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-IN #4 hash #PHYS_P04 -> #PHYS_P08  shown PHYS_P04 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-IN #5 hash #PHYS_P08 -> #PHYS_P03  shown PHYS_P08 -> PHYS_P03  disabled=false  MOVED
+      DIRECT-IN #6 hash #PHYS_P03 -> #PHYS_P02  shown PHYS_P03 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #7 hash #PHYS_P02 -> #PHYS_P01  shown PHYS_P02 -> PHYS_P01  disabled=false  MOVED
+      DIRECT-IN #8 hash #PHYS_P01 -> #PHYS_P05  shown PHYS_P01 -> PHYS_P05  disabled=false  MOVED
+      DIRECT-IN #9 hash #PHYS_P05 -> #PHYS_P06  shown PHYS_P05 -> PHYS_P06  disabled=false  MOVED
+      DIRECT-IN #10 hash #PHYS_P06 -> #PHYS_P07  shown PHYS_P06 -> PHYS_P07  disabled=false  MOVED
+ok   1280: direct #CODE link of a question in the remembered bank: Next 10x moves
+      DIRECT-OUT #1 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #2 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #3 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #4 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #5 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #6 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #7 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #8 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #9 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+      DIRECT-OUT #10 hash #PHYS_F3N -> #PHYS_F3N  shown PHYS_F3N -> PHYS_F3N  disabled=true  SILENT
+FAIL 1280: direct #CODE link of a question NOT in the remembered bank: Next moves or says why 
+      silent presses
++ actual - expected
+
++ [
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N',
++   'PHYS_F3N'
++ ]
+- []
+
+      ONE #1 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #2 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #3 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #4 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #5 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #6 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #7 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #8 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #9 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+      ONE #10 hash #PHYS_P01 -> #PHYS_P01  shown PHYS_P01 -> PHYS_P01  disabled=false  SILENT
+FAIL 1280: a one-question bank: Next says why 
+      silent presses
++ actual - expected
+
++ [
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01',
++   'PHYS_P01'
++ ]
+- []
+
+      P2X #1 hash #PHYS_P01 -> #PHYS_P04  shown PHYS_P01 -> PHYS_P04  disabled=false  MOVED
+      P2X #2 hash #PHYS_P04 -> #PHYS_P03  shown PHYS_P04 -> PHYS_P03  disabled=false  MOVED
+      P2X #3 hash #PHYS_P03 -> #PHYS_P05  shown PHYS_P03 -> PHYS_P05  disabled=false  MOVED
+      P2X #4 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      P2X #5 hash #PHYS_P08 -> #PHYS_P07  shown PHYS_P08 -> PHYS_P07  disabled=false  MOVED
+      P2X #6 hash #PHYS_P07 -> #PHYS_P06  shown PHYS_P07 -> PHYS_P06  disabled=false  MOVED
+      P2X #7 hash #PHYS_P06 -> #PHYS_P02  shown PHYS_P06 -> PHYS_P02  disabled=false  MOVED
+      P2X #8 hash #PHYS_P02 -> #PHYS_P01  shown PHYS_P02 -> PHYS_P01  disabled=false  MOVED
+      P2X #9 hash #PHYS_P01 -> #PHYS_P04  shown PHYS_P01 -> PHYS_P04  disabled=false  MOVED
+      P2X #10 hash #PHYS_P04 -> #PHYS_P03  shown PHYS_P04 -> PHYS_P03  disabled=false  MOVED
+ok   393: BANK_P2X, Next 10x: every press moves
+      DIET #1 hash #PHYS_P01 -> #PHYS_P06  shown PHYS_P01 -> PHYS_P06  disabled=false  MOVED
+      DIET #2 hash #PHYS_P06 -> #PHYS_P08  shown PHYS_P06 -> PHYS_P08  disabled=false  MOVED
+      DIET #3 hash #PHYS_P08 -> #PHYS_P02  shown PHYS_P08 -> PHYS_P02  disabled=false  MOVED
+      DIET #4 hash #PHYS_P02 -> #PHYS_P07  shown PHYS_P02 -> PHYS_P07  disabled=false  MOVED
+      DIET #5 hash #PHYS_P07 -> #PHYS_P04  shown PHYS_P07 -> PHYS_P04  disabled=false  MOVED
+      DIET #6 hash #PHYS_P04 -> #PHYS_P05  shown PHYS_P04 -> PHYS_P05  disabled=false  MOVED
+      DIET #7 hash #PHYS_P05 -> #PHYS_P03  shown PHYS_P05 -> PHYS_P03  disabled=false  MOVED
+      DIET #8 hash #PHYS_P03 -> #PHYS_P01  shown PHYS_P03 -> PHYS_P01  disabled=false  MOVED
+      DIET #9 hash #PHYS_P01 -> #PHYS_P06  shown PHYS_P01 -> PHYS_P06  disabled=false  MOVED
+      DIET #10 hash #PHYS_P06 -> #PHYS_P08  shown PHYS_P06 -> PHYS_P08  disabled=false  MOVED
+ok   393: DIET_BANK_P2X typed in the code box, Next 10x: every press moves
+      UPLOAD #1 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #2 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #3 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #4 hash #CSCI26_BAD -> #CSCI26_BAA  shown CSCI26_BAD -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #5 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #6 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+      UPLOAD #7 hash #CSCI26_BAB -> #CSCI26_BAD  shown CSCI26_BAB -> CSCI26_BAD  disabled=false  MOVED
+      UPLOAD #8 hash #CSCI26_BAD -> #CSCI26_BAA  shown CSCI26_BAD -> CSCI26_BAA  disabled=false  MOVED
+      UPLOAD #9 hash #CSCI26_BAA -> #CSCI26_BAC  shown CSCI26_BAA -> CSCI26_BAC  disabled=false  MOVED
+      UPLOAD #10 hash #CSCI26_BAC -> #CSCI26_BAB  shown CSCI26_BAC -> CSCI26_BAB  disabled=false  MOVED
+ok   393: an uploaded file the page can open, Next 10x: every press moves
+FAIL 393: an uploaded file whose codes the page can't open: Next says why, never silent 
+      silent presses
++ actual - expected
+
++ [
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   '',
++   ''
++ ]
+- []
+
+      MIX #1 hash #PHYS_M01 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #2 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #3 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #4 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #5 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #6 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #7 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #8 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #9 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+      MIX #10 hash #CSCI26_TOOLONG7 -> #CSCI26_TOOLONG7  shown PHYS_M01 -> PHYS_M01  disabled=false  SILENT
+FAIL 393: a mixed upload (one good code, two that can't open): Next moves or says why, never silent 
+      silent presses
++ actual - expected
+
++ [
++   '#PHYS_M01',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7',
++   '#CSCI26_TOOLONG7'
++ ]
+- []
+
+      DIRECT-IN #1 hash #PHYS_P05 -> #PHYS_P08  shown PHYS_P05 -> PHYS_P08  disabled=false  MOVED
+      DIRECT-IN #2 hash #PHYS_P08 -> #PHYS_P07  shown PHYS_P08 -> PHYS_P07  disabled=false  MOVED
+      DIRECT-IN #3 hash #PHYS_P07 -> #PHYS_P04  shown PHYS_P07 -> PHYS_P04  disabled=false  MOVED
+      DIRECT-IN #4 hash #PHYS_P04 -> #PHYS_P02  shown PHYS_P04 -> PHYS_P02  disabled=false  MOVED
+      DIRECT-IN #5 hash #PHYS_P02 -> #PHYS_P06  shown PHYS_P02 -> PHYS_P06  disabled=false  MOVED
+
+[exited with code 0]
