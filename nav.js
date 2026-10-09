@@ -177,7 +177,7 @@ function init() {
     const st = Q(), focused = document.activeElement;
     const here = codes.includes(cur);                                // a server code typed after an upload: arrows off
     prev.disabled = !here || hop(st, -1) < 0;
-    next.disabled = !here || !pool().length;                        // Next always works: the queue never runs dry
+    next.disabled = (!here && !bank()) || !pool().length;            // Next always works: the queue never runs dry, even from a code that is not in the bank (a direct link); after an upload a server code still turns the arrows off
     if (focused === prev || focused === next) {                      // never leave focus on a disabled arrow
       if (focused.disabled) (focused === prev ? next : prev).disabled ? btn.focus() : (focused === prev ? next : prev).focus();
     }
@@ -224,18 +224,25 @@ function init() {
     if (on) document.documentElement.style.setProperty("--ql-bottom", Math.round(panel.getBoundingClientRect().bottom) + "px");   // phones: the privacy link sits under the list (index.html, G3)
   }
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
+  /* a press that cannot move says why (app.js drill:note: a toast under Next); never a silent return (T16) */
+  const note = text => { dispatchEvent(new CustomEvent("drill:note", { detail: { text } })); say(text); };
   function go(d) {
     const st = Q();
     let e = null;
-    if (d < 0) { const b = hop(st, -1); if (b < 0) return; st.at = b; e = st.hist[b]; save(); }
+    if (d < 0) { const b = hop(st, -1); if (b < 0) { note("This is the first question you opened."); return; } st.at = b; e = st.hist[b]; save(); }
     else {
-      const n = upNext(); if (!n) return;
+      const n = upNext(); if (!n) { note("No other question to open here."); return; }
       e = n.e;
       if (n.step != null) { st.at = n.step; save(); } else pending = e;
     }
     close(false);
     use(e);
-    if (e.c === cur && d > 0 && pending) { shown(e.c, true); update(cur); }   // a one-question bank: the same code, a new showing
+    if (e.c === cur) {                                               // already on screen: a one-question list, the same code, a new showing
+      if (d > 0 && pending) shown(e.c, true);
+      update(cur); note("This is the only question here.");
+      return;
+    }
+    if (location.hash === "#" + e.c) dispatchEvent(new HashChangeEvent("hashchange"));   // the hash is already there (that load failed or never ran): no event would come, so ask again
     else location.hash = e.c;                                        // app.js: hashchange -> load(c)
     say(titleOf(off().get(e.c)) || e.c);
   }

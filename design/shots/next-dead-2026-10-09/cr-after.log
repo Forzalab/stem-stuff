@@ -1,0 +1,5 @@
+out before-press {"hash":"#PHYS_F3N","shown":"PHYS_F3N","toast":"","msg":"","nextDisabled":false}
+out after-press {"hash":"#PHYS_P08","shown":"PHYS_P08","toast":"","msg":"","nextDisabled":false}
+mix press 1 {"hash":"#BEAR_002","shown":"PHYS_M01","toast":"Can't open BEAR_002.","msg":"","nextDisabled":false}
+mix press 2 {"hash":"#BEAR_002","shown":"PHYS_M01","toast":"Can't open BEAR_002.","msg":"","nextDisabled":false}
+one press {"hash":"#PHYS_P01","shown":"PHYS_P01","toast":"This is the only question here.","msg":"","nextDisabled":false}

@@ -80,6 +80,12 @@ function toast(text, at) {
   t.textContent = text; toastAt = at; t.classList.add("on");
   placeToast(); armToast(2000);
 }
+/* a press that cannot move says why (nav.js "drill:note", load()): a toast under Next, else the entry line */
+function note(text) {
+  const at = $("#qnext");
+  if (at && !at.hidden && at.getClientRects().length) toast(text, at); else $("#entryMsg").textContent = text;
+}
+addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
 $("#toast")?.addEventListener("click", hideToast);
 $("#toast")?.addEventListener("pointerenter", holdToast);
 $("#toast")?.addEventListener("pointerleave", goToast);
@@ -432,7 +438,7 @@ async function getProblem(code) {
   const e = new Error("not found"); e.status = r.status; throw e;
 }
 async function load(code) {
-  if (!CODE_RE.test(code)) return;
+  if (!CODE_RE.test(code)) { note(`Can't open ${code}.`); return; }   // T16: said, not silent (the pattern itself is T15)
   let prob;
   retryLoad.hidden = true;
   try {
@@ -2222,7 +2228,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 const hashCode = () => location.hash.length > 1 ? normalize(decodeURIComponent(location.hash.slice(1))) : null;
 const fromHash = () => {
   const n = hashCode();
-  if (!n) return;
+  if (!n) { if (location.hash.length > 1) note(`Can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };

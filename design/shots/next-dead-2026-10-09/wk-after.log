@@ -1,0 +1,81 @@
+ROW p2x
+js[18] -> 1 #PHYS_P01>#PHYS_P04 shown PHYS_P01>PHYS_P04 dis=false hid=false said=""
+2 #PHYS_P04>#PHYS_P05 shown PHYS_P04>PHYS_P05 dis=false hid=false said=""
+3 #PHYS_P05>#PHYS_P02 shown PHYS_P05>PHYS_P02 dis=false hid=false said=""
+4 #PHYS_P02>#PHYS_P06 shown PHYS_P02>PHYS_P06 dis=false hid=false said=""
+5 #PHYS_P06>#PHYS_P07 shown PHYS_P06>PHYS_P07 dis=false hid=false said=""
+6 #PHYS_P07>#PHYS_P03 shown PHYS_P07>PHYS_P03 dis=false hid=false said=""
+7 #PHYS_P03>#PHYS_P08 shown PHYS_P03>PHYS_P08 dis=false hid=false said=""
+8 #PHYS_P08>#PHYS_P01 shown PHYS_P08>PHYS_P01 dis=false hid=false said=""
+9 #PHYS_P01>#PHYS_P04 shown PHYS_P01>PHYS_P04 dis=false hid=false said=""
+10 #PHYS_P04>#PHYS_P05 shown PHYS_P04>PHYS_P05 dis=false hid=false said=""
+  393,
+  659
+  1179,
+  1977
+ROW diet
+js[19] -> 1 #PHYS_P01>#PHYS_P02 shown PHYS_P01>PHYS_P02 dis=false hid=false said=""
+2 #PHYS_P02>#PHYS_P04 shown PHYS_P02>PHYS_P04 dis=false hid=false said=""
+3 #PHYS_P04>#PHYS_P05 shown PHYS_P04>PHYS_P05 dis=false hid=false said=""
+4 #PHYS_P05>#PHYS_P08 shown PHYS_P05>PHYS_P08 dis=false hid=false said=""
+5 #PHYS_P08>#PHYS_P06 shown PHYS_P08>PHYS_P06 dis=false hid=false said=""
+6 #PHYS_P06>#PHYS_P03 shown PHYS_P06>PHYS_P03 dis=false hid=false said=""
+7 #PHYS_P03>#PHYS_P07 shown PHYS_P03>PHYS_P07 dis=false hid=false said=""
+8 #PHYS_P07>#PHYS_P01 shown PHYS_P07>PHYS_P01 dis=false hid=false said=""
+9 #PHYS_P01>#PHYS_P02 shown PHYS_P01>PHYS_P02 dis=false hid=false said=""
+10 #PHYS_P02>#PHYS_P04 shown PHYS_P02>PHYS_P04 dis=false hid=false said=""
+  393,
+  659
+  1179,
+  1977
+ROW bear
+js[19] -> 1 #CSCI26_BAA>#CSCI26_BAT shown CSCI26_BAA>CSCI26_BAT dis=false hid=false said="Tap here to write notes."
+2 #CSCI26_BAT>#CSCI26_BAW shown CSCI26_BAT>CSCI26_BAW dis=false hid=false said="Tap here to write notes."
+3 #CSCI26_BAW>#CSCI26_BAG shown CSCI26_BAW>CSCI26_BAG dis=false hid=false said=""
+4 #CSCI26_BAG>#CSCI26_BA5 shown CSCI26_BAG>CSCI26_BA5 dis=false hid=false said=""
+5 #CSCI26_BA5>#CSCI26_BAQ shown CSCI26_BA5>CSCI26_BAQ dis=false hid=false said=""
+6 #CSCI26_BAQ>#CSCI26_BAM shown CSCI26_BAQ>CSCI26_BAM dis=false hid=false said=""
+7 #CSCI26_BAM>#CSCI26_BAD shown CSCI26_BAM>CSCI26_BAD dis=false hid=false said=""
+8 #CSCI26_BAD>#CSCI26_BAZ shown CSCI26_BAD>CSCI26_BAZ dis=false hid=false said=""
+9 #CSCI26_BAZ>#CSCI26_BAK shown CSCI26_BAZ>CSCI26_BAK dis=false hid=false said=""
+10 #CSCI26_BAK>#CSCI26_BAX shown CSCI26_BAK>CSCI26_BAX dis=false hid=false said=""
+  393,
+  659
+  1179,
+  1977
+ROW odd
+js[4] -> Can't open BEAR_001.
+  393,
+  659
+  1179,
+  1977
+ROW one
+js[18] -> 1 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+2 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+3 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+4 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+5 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+6 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+7 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+8 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+9 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+10 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said="This is the only question here."
+  393,
+  659
+  1179,
+  1977
+ROW in
+js[17] -> 1 #PHYS_P05>#PHYS_P03 shown PHYS_P05>PHYS_P03 dis=false hid=false said=""
+2 #PHYS_P03>#PHYS_P04 shown PHYS_P03>PHYS_P04 dis=false hid=false said=""
+3 #PHYS_P04>#PHYS_P08 shown PHYS_P04>PHYS_P08 dis=false hid=false said=""
+4 #PHYS_P08>#PHYS_P07 shown PHYS_P08>PHYS_P07 dis=false hid=false said=""
+5 #PHYS_P07>#PHYS_P06 shown PHYS_P07>PHYS_P06 dis=false hid=false said=""
+6 #PHYS_P06>#PHYS_P02 shown PHYS_P06>PHYS_P02 dis=false hid=false said=""
+7 #PHYS_P02>#PHYS_P01 shown PHYS_P02>PHYS_P01 dis=false hid=false said=""
+8 #PHYS_P01>#PHYS_P05 shown PHYS_P01>PHYS_P05 dis=false hid=false said=""
+9 #PHYS_P05>#PHYS_P03 shown PHYS_P05>PHYS_P03 dis=false hid=false said=""
+10 #PHYS_P03>#PHYS_P04 shown PHYS_P03>PHYS_P04 dis=false hid=false said=""
+  393,
+  659
+  1179,
+  1977

@@ -1,0 +1,90 @@
+libEGL warning: DRI3 error: Could not get DRI3 device
+libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering
+js[0] -> ob
+js[1] -> undefined
+js[2] -> 0
+js[3] -> 0
+js[4] -> 1
+js[5] -> 2
+js[6] -> 2
+js[7] -> 3
+js[8] -> 4
+js[9] -> 4
+js[10] -> 5
+js[11] -> 6
+js[12] -> 6
+js[13] -> 7
+js[14] -> 8
+js[15] -> 8
+js[16] -> 9
+js[17] -> 10
+js[18] -> 1 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+2 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+3 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+4 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+5 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+6 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+7 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+8 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+9 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+10 #PHYS_P01>#PHYS_P01 shown PHYS_P01>PHYS_P01 dis=false hid=false said=""
+{
+ "profile": "safari-expanded",
+ "note": "svh=dvh=659 (Playwright), vh=lvh=745 (estimate)",
+ "viewCSS": [
+  393,
+  659
+ ],
+ "loads": [
+  {
+   "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+   "dpr": 3,
+   "inner": [
+    393,
+    659
+   ],
+   "visualViewport": [
+    393,
+    659
+   ],
+   "screen": [
+    393,
+    852
+   ],
+   "standalone": false,
+   "mq": {
+    "standalone": false,
+    "dark": false,
+    "reducedMotion": false,
+    "hoverNone": true,
+    "coarse": true
+   },
+   "touch": {
+    "ontouchstart": true,
+    "maxTouchPoints": 5
+   },
+   "font": {
+    "appleSystem17pxWidth": 183
+   },
+   "rewrite": {
+    "env": 19,
+    "vh": 6,
+    "media": 4,
+    "sheets": 9,
+    "blocked": 0
+   },
+   "hasSW": false,
+   "sw": null,
+   "storage": {
+    "localStorageKeys": 5
+   },
+   "title": "PHYS_P01"
+  }
+ ],
+ "drag": null,
+ "png": "/home/user/wt-next-dead/design/shots/next-dead-2026-10-09/wk-before-one.png",
+ "pngPx": [
+  1179,
+  1977
+ ]
+}
