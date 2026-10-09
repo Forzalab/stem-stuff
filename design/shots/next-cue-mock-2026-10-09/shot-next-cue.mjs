@@ -16,7 +16,9 @@ const covers = () => { const cue = [document.querySelector("#nx.cue"), document.
   const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
   const vis = r => ({ left: r.left, right: r.right, top: Math.max(r.top, sc.top), bottom: Math.min(r.bottom, sc.bottom) });
   const live = [...document.querySelectorAll(".p, #choices .opt")].map(e => vis(e.getBoundingClientRect())).filter(r => r.bottom > r.top);
-  return cue.map(c => (c.id || c.className) + ":" + (live.some(l => hit(c.getBoundingClientRect(), l)) ? "COVERS" : "clear")).join(" ") || "no cue"; };
+  const fab = document.querySelector("#nfab"), fr = getComputedStyle(fab).display === "none" ? null : fab.getBoundingClientRect();
+  return cue.map(c => (c.id || c.className) + ":" + (live.some(l => hit(c.getBoundingClientRect(), l)) ? "COVERS" : "clear") +
+    (fr && hit(c.getBoundingClientRect(), fr) ? " UNDER-NOTES-BUTTON" : "")).join(" ") || "no cue"; };
 const res = [];
 async function shot(name, q, { rm = false, wait = 2500 } = {}) {
   const c = await ctx(rm), p = await c.newPage();

@@ -1,0 +1,22 @@
+v1-before: no cue; cue -
+v1-after: nx:clear; cue in view
+v1-out-after: nx:clear; cue in view
+v1-after-rm: nx:clear; cue in view
+one-blink v1 correct: max 1 animated element(s) at once [button.opt.right.pop]
+one-blink v1 out+cluck stream: max 1 animated element(s) at once [button.opt.wrong.jolt]
+one-blink v1 correct, reduced motion: max 0 animated element(s) at once []
+v2-before: no cue; cue -
+v2-after: res2:clear; cue in view
+v2-out-after: res2:clear; cue in view
+v2-after-rm: res2:clear; cue in view
+one-blink v2 correct: max 1 animated element(s) at once [button.opt.right.pop]
+one-blink v2 out+cluck stream: max 1 animated element(s) at once [button.opt.wrong.jolt]
+one-blink v2 correct, reduced motion: max 0 animated element(s) at once []
+v3-before: no cue; cue -
+v3-after: sheet3:clear; cue in view
+v3-out-after: sheet3:clear; cue in view
+v3-after-rm: sheet3:clear; cue in view
+one-blink v3 correct: max 1 animated element(s) at once [button.opt.right.pop]
+one-blink v3 out+cluck stream: max 1 animated element(s) at once [button.opt.wrong.jolt]
+one-blink v3 correct, reduced motion: max 0 animated element(s) at once []
+v1-peak: nx:clear; cue in view

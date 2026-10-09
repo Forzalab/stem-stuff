@@ -14,7 +14,7 @@
      motion at all (static ring / no slide), the cue never rests on the question or the choices (V3's sheet is in the flow: it
      takes room from the scroll area, it does not float over it).
        1. Glow: Next pulses once (one ring out, 1.1 s), then keeps a static --c1 ring until you leave. Reduced motion: the ring only.
-       2. Pill: a filled "Next" pill under the last choice, on the result row, right side (thumb). No motion.
+       2. Pill: a filled "Next" pill under the last choice, on the result row, left (the notes button owns the bottom right). No motion.
        3. Sheet: a docked bottom sheet "Correct · Next question" with one big button; X / Escape / swipe down puts it away.
      URL: ?v=1..3 picks a variant, &s=open|before|after (open = not answered yet, before = graded today, no cue; after = graded + cue),
      &r=ok|out (correct / out of tries), &peak=1 (V1: freeze the glow at its brightest, for a shot), &cluck=1 (out: a streaming Cluck
@@ -63,7 +63,8 @@ html.bare .phone { width: 100%; height: 100vh; height: 100dvh; margin: 0; border
   100% { box-shadow: inset 0 0 0 1px var(--c1), 0 0 0 12px rgb(122 184 255 / 0), 0 0 0 0 rgb(122 184 255 / 0); }
 }
 
-/* ---- 2. Pill: the result row under the choices; the verdict words left, a filled Next pill right (thumb side) ---- */
+/* ---- 2. Pill: the result row under the choices; a filled Next pill first (LEFT: on a 659pt Safari view the row sits at the notes
+   button's height, and that button owns the bottom right), then the verdict words ---- */
 .res2 { display: none; align-items: center; gap: var(--s2); margin-top: var(--s3); }
 .v2 .res2.on { display: flex; }
 .res2 .verdict { flex: 1; min-width: 0; font-size: var(--t-sm); }
@@ -121,8 +122,8 @@ html.bare .phone { width: 100%; height: 100vh; height: 100dvh; margin: 0; border
       </div>
     </div>
     <div class="fb" id="fb">
-      <div class="res2" id="res2"><p class="verdict" id="v2w"></p>
-        <button type="button" class="btn btn-go pill" id="pill" aria-label="Next question">Next<svg class="ico"><use href="#i-next"/></svg></button></div>
+      <div class="res2" id="res2"><button type="button" class="btn btn-go pill" id="pill" aria-label="Next question">Next<svg class="ico"><use href="#i-next"/></svg></button>
+        <p class="verdict" id="v2w"></p></div>
       <p class="verdict lock vlock" id="vlock" hidden><svg class="ico"><use href="#i-lock"/></svg><span>Out of tries for now. This one comes back around.</span></p>
       <div class="cluck" id="cluck" hidden><svg class="ico"><use href="#i-duck"/></svg><div><div class="md"><p id="clt"></p></div></div></div>
     </div>
@@ -140,7 +141,7 @@ html.bare .phone { width: 100%; height: 100vh; height: 100dvh; margin: 0; border
 <script>
 const V = {
   1: { n: "Glow", why: "Next in the top bar rings out once (1.1 s) after the pick's own pop ends, then keeps a static blue ring until you leave. Reduced motion: the ring only. Nothing new on the page." },
-  2: { n: "Pill", why: "A filled Next pill on the result row, right under the last choice, on the right (thumb side). It appears with the result, no motion. The bar's Next still works." },
+  2: { n: "Pill", why: "A filled Next pill on the result row, right under the last choice, on the left (the notes button owns the bottom right; on a 659pt Safari view they share a height). It appears with the result, no motion. The bar's Next still works." },
   3: { n: "Sheet", why: "A bottom sheet in the flow (the page gets shorter, nothing is covered): \"Correct\" + one big Next question button. X, Escape or a swipe down puts it away; Next stays in the bar." }
 };
 const ph = document.getElementById("phone"), qs = new URLSearchParams(location.search), $ = id => document.getElementById(id);
