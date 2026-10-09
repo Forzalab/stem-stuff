@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next Cue Variants</title>
+<!-- T17a next-cue-variants (Oct 9): after a graded pick that ENDS the showing (correct, or out of tries), how does the student SEE
+     how to move on, on a 393x852 phone, without scrolling? Tony: "next button should glow or otherwise animate, OR a dialog that lets
+     me NEXT onto a question right away". Design exploration only: nothing here ships.
+     The real app.css / nav.css and the real icon sprite (fetched from index.html), so every token and icon is true. Layout = the live
+     phone (BANK_PSY6 bar: list, Prev, Next; the question card; the choice rows; the "Open notes" button bottom right).
+     Rules kept: no new colour (--c1 = the one "go" colour, --ok / --lock words as today), ONE animated thing at a time (T2 one-blink:
+     the right pick's pop runs first, the cue waits for it; a streaming Cluck holds the cue as a static ring), reduced motion = no
+     motion at all (static ring / no slide), the cue never rests on the question or the choices (V3's sheet is in the flow: it
+     takes room from the scroll area, it does not float over it).
+       1. Glow: Next pulses once (one ring out, 1.1 s), then keeps a static --c1 ring until you leave. Reduced motion: the ring only.
+       2. Pill: a filled "Next" pill under the last choice, on the result row, right side (thumb). No motion.
+       3. Sheet: a docked bottom sheet "Correct · Next question" with one big button; X / Escape / swipe down puts it away.
+     URL: ?v=1..3 picks a variant, &s=open|before|after (open = not answered yet, before = graded today, no cue; after = graded + cue),
+     &r=ok|out (correct / out of tries), &peak=1 (V1: freeze the glow at its brightest, for a shot), &cluck=1 (out: a streaming Cluck
+     answer, the cue waits), &bare=1 drops the switcher (the phone fills the window: shots).
+     Serve over http (the sprite fetch): python3 serve.py 8000, then /try/next-cue-variants.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../nav.css">
+<style>
+body { background: var(--paper); color: var(--ink); margin: 0; }
+.sw { max-width: 393px; margin: 0 auto; padding: var(--s3) var(--s4) var(--s2); }
+.sw h1 { font-size: var(--t-sm); margin: 0 0 var(--s2); }
+.sw .row { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.sw .btn { min-width: var(--btn); font: inherit; font-size: var(--t-sm); font-weight: 700; width: auto; padding: 0 var(--s3); }
+.sw .btn[aria-pressed="true"] { background: var(--raised); color: var(--c1); }
+.sw p { color: var(--muted); font-size: var(--t-xs); line-height: 1.4; margin: var(--s2) 0 0; min-height: 3.6em; }
+.sw .st { margin-top: var(--s2); }
+.sw .st .btn { font-weight: 400; color: var(--muted); }
+html.bare .sw { display: none; }
+
+/* the phone: 393 x 852 (bare: the whole visible window). The bar and the sheet are flex siblings of the scroll area, never over it */
+.phone { position: relative; width: 393px; max-width: 100%; height: 852px; margin: 0 auto var(--s6); display: flex; flex-direction: column;
+  overflow: hidden; background: var(--paper); border-radius: 10px; }
+html.bare .phone { width: 100%; height: 100vh; height: 100dvh; margin: 0; border-radius: 0; }
+.ptop { flex: none; display: flex; gap: var(--s2); padding: var(--s4) var(--s4) var(--s3); }
+.ptop .push { margin-left: auto; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--s4) calc(56px + var(--s5)); scrollbar-width: none; }   /* room at the end: the notes button never rests on the last row */
+.scroll::-webkit-scrollbar { display: none; }
+.p .ttl { margin: 0 0 var(--s2); font-size: var(--t-sm); font-weight: 700; line-height: 1.35; }
+.p p { margin: 0; }
+.p p + p { margin-top: var(--s3); }
+.q .opt { width: 100%; }
+.ico { width: var(--ico); height: var(--ico); flex: none; }
+/* the live "Open notes" button (#padFab), bottom right, over the page's reserved end room */
+.nfab { position: absolute; right: var(--s4); bottom: var(--s4); z-index: 4; height: 56px; padding: 0 var(--s5) 0 var(--s4); display: inline-flex; align-items: center; gap: var(--s2);
+  border: 0; border-radius: 16px; background: var(--raised); color: var(--ink); box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; }
+.cluck .wcaret { display: inline-block; width: 2px; height: 1.1em; margin-left: 2px; vertical-align: -0.15em; background: var(--ink); animation: wblink 1s steps(1) infinite; }
+
+/* ---- 1. Glow: one ring out of Next, after the pick's pop; then a static ring that stays until you leave (= the reduced-motion look) ---- */
+.v1 #nx.cue { border-color: var(--c1); color: var(--c1); box-shadow: inset 0 0 0 1px var(--c1); }
+.v1 #nx.glow { animation: nx-glow 1.1s ease-out 1; }
+.v1 #nx.peak { box-shadow: inset 0 0 0 1px var(--c1), 0 0 0 6px rgb(122 184 255 / .35), 0 0 18px 4px rgb(122 184 255 / .45); }   /* the brightest frame, frozen (shots) */
+@keyframes nx-glow {
+  0% { box-shadow: inset 0 0 0 1px var(--c1), 0 0 0 0 rgb(122 184 255 / .65), 0 0 0 0 rgb(122 184 255 / 0); }
+  35% { box-shadow: inset 0 0 0 1px var(--c1), 0 0 0 6px rgb(122 184 255 / .35), 0 0 18px 4px rgb(122 184 255 / .45); }
+  100% { box-shadow: inset 0 0 0 1px var(--c1), 0 0 0 12px rgb(122 184 255 / 0), 0 0 0 0 rgb(122 184 255 / 0); }
+}
+
+/* ---- 2. Pill: the result row under the choices; the verdict words left, a filled Next pill right (thumb side) ---- */
+.res2 { display: none; align-items: center; gap: var(--s2); margin-top: var(--s3); }
+.v2 .res2.on { display: flex; }
+.res2 .verdict { flex: 1; min-width: 0; font-size: var(--t-sm); }
+.res2 .verdict.lock { font-size: var(--t-xs); line-height: 1.35; }
+.pill { flex: none; width: auto; height: var(--btn); padding: 0 var(--s3) 0 var(--s4); display: inline-flex; align-items: center; gap: var(--s1);
+  border-radius: 24px; font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; }
+.v2 .res2.on ~ .vlock { display: none; }   /* the pill row carries the lock words itself */
+
+/* ---- 3. Sheet: docked under the scroll area (in the flow: the page gets shorter, nothing is covered); one big button ---- */
+.sheet3 { flex: none; display: none; position: relative; z-index: 5; padding: var(--s2) var(--s4) calc(var(--s4) + env(safe-area-inset-bottom));
+  background: var(--sheet); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 24px -6px rgb(0 0 0 / .55), 0 -2px 4px rgb(0 0 0 / .35); touch-action: none; }
+.v3 .sheet3.on { display: block; }
+.sheet3.rise { animation: sh-rise .24s cubic-bezier(.2, .8, .2, 1) 1; }
+@keyframes sh-rise { from { transform: translateY(100%); } to { transform: none; } }
+.sheet3 .grab { display: block; width: 32px; height: 4px; margin: 0 auto var(--s2); border-radius: 2px; background: var(--edge); }
+.sheet3 .hd { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
+.sheet3 .hd .verdict { flex: 1; min-width: 0; font-size: var(--t-sm); }
+.sheet3 .hd .btn { background: none; color: var(--muted); }
+.sheet3 .big { width: 100%; height: 56px; display: flex; justify-content: center; align-items: center; gap: var(--s2); border-radius: 12px; font: inherit; font-size: var(--t-md); font-weight: 700; }
+.v3 .sheet3.on ~ .nfab { display: none; }   /* the sheet owns the bottom while it is up; the notes button comes back when it goes */
+
+.vx { display: none; } .v1 .x1, .v2 .x2, .v3 .x3 { display: revert; }
+@media (prefers-reduced-motion: reduce) {
+  .v1 #nx.glow, .sheet3.rise, .opt.pop, .cluck .wcaret { animation: none; }
+}
+</style>
+</head>
+<body>
+<div id="sprite" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"></div>
+<div class="sw">
+  <h1>Next cue: 3 ways to see how to move on</h1>
+  <div class="row" role="group" aria-label="Variant" id="vbtns"></div>
+  <div class="row st" role="group" aria-label="State" id="sbtns"></div>
+  <p id="why"></p>
+</div>
+
+<div class="phone v1" id="phone">
+  <header class="ptop">
+    <button class="btn btn-label" type="button"><svg class="ico"><use href="#i-list"/></svg><span>BANK_PSY6</span></button>
+    <button class="btn push" type="button" aria-label="Go back one" title="Go back one"><svg class="ico"><use href="#i-prev"/></svg></button>
+    <button class="btn" type="button" id="nx" aria-label="Next question" title="Next question"><svg class="ico"><use href="#i-next"/></svg></button>
+  </header>
+  <div class="scroll" id="scroll">
+    <article class="p">
+      <p class="ttl">Term: An evaluation of an object in a positive…</p>
+      <p>Which term matches this definition?</p>
+      <p>An evaluation of an object in a positive or negative fashion, with affect, cognition, and behavior components.</p>
+    </article>
+    <div class="q" id="q">
+      <div class="choices" role="radiogroup" aria-label="Choices" id="choices">
+        <div class="ch" data-id="a"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">A</span><span class="txt">attitude accessibility</span></button></div>
+        <div class="ch" data-id="b"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">B</span><span class="txt">attitude centrality</span></button></div>
+        <div class="ch" data-id="c"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">C</span><span class="txt">attitude</span></button></div>
+        <div class="ch" data-id="d"><button type="button" class="opt" role="radio" aria-checked="false"><span class="badge">D</span><span class="txt">negativity bias</span></button></div>
+      </div>
+    </div>
+    <div class="fb" id="fb">
+      <div class="res2" id="res2"><p class="verdict" id="v2w"></p>
+        <button type="button" class="btn btn-go pill" id="pill" aria-label="Next question">Next<svg class="ico"><use href="#i-next"/></svg></button></div>
+      <p class="verdict lock vlock" id="vlock" hidden><svg class="ico"><use href="#i-lock"/></svg><span>Out of tries for now. This one comes back around.</span></p>
+      <div class="cluck" id="cluck" hidden><svg class="ico"><use href="#i-duck"/></svg><div><div class="md"><p id="clt"></p></div></div></div>
+    </div>
+  </div>
+  <!-- 3. the docked sheet: in the flow, under the scroll area -->
+  <section class="sheet3" id="sheet3" role="dialog" aria-modal="false" aria-labelledby="s3w">
+    <span class="grab" aria-hidden="true"></span>
+    <div class="hd"><p class="verdict" id="s3w"></p>
+      <button type="button" class="btn" id="s3x" aria-label="Close" title="Close (Next stays in the bar)"><svg class="ico"><use href="#i-x"/></svg></button></div>
+    <button type="button" class="btn btn-go big" id="s3go">Next question<svg class="ico"><use href="#i-next"/></svg></button>
+  </section>
+  <button class="nfab" type="button" id="nfab"><svg class="ico"><use href="#i-pen"/></svg><span>Open notes</span></button>
+</div>
+
+<script>
+const V = {
+  1: { n: "Glow", why: "Next in the top bar rings out once (1.1 s) after the pick's own pop ends, then keeps a static blue ring until you leave. Reduced motion: the ring only. Nothing new on the page." },
+  2: { n: "Pill", why: "A filled Next pill on the result row, right under the last choice, on the right (thumb side). It appears with the result, no motion. The bar's Next still works." },
+  3: { n: "Sheet", why: "A bottom sheet in the flow (the page gets shorter, nothing is covered): \"Correct\" + one big Next question button. X, Escape or a swipe down puts it away; Next stays in the bar." }
+};
+const ph = document.getElementById("phone"), qs = new URLSearchParams(location.search), $ = id => document.getElementById(id);
+const RM = matchMedia("(prefers-reduced-motion: reduce)");
+let v = +qs.get("v") || 1, s = qs.get("s") || "after", r = qs.get("r") || "ok";
+const peak = !!qs.get("peak"), cluckOn = !!qs.get("cluck");
+if (qs.get("bare")) document.documentElement.classList.add("bare");
+const RIGHT = "c", WRONG = ["a", "b"];                                 // out of tries: two wrong picks (2 tries)
+const icon = id => `<svg class="ico"><use href="#${id}"/></svg>`;
+const words = () => r === "ok" ? `${icon("i-ok")}<span>Correct</span>` : `${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span>`;
+
+/* T2 one-blink: one animated thing at a time. blink(el, cls) waits for the one before it (and for a streaming Cluck), then runs. */
+let chain = Promise.resolve(), gen = 0;
+const streaming = () => !!document.querySelector("#cluck:not([hidden]) .wcaret");
+function blink(el, cls, g, start) {
+  chain = chain.then(() => new Promise(done => {
+    if (g !== gen) return done();
+    const go = () => {
+      if (g !== gen) return done();
+      start?.();                                                       // its end state goes on in its own turn, not during the one before
+      if (RM.matches || !cls) return done();                                   // reduced motion: no animation, the end state is already on
+      el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+      const end = () => { el.classList.remove(cls); done(); };
+      el.addEventListener("animationend", end, { once: true });
+      setTimeout(end, 3000);                                           // never wedge the chain
+    };
+    if (!streaming()) return go();
+    const t = setInterval(() => { if (g !== gen) { clearInterval(t); return done(); } if (!streaming()) { clearInterval(t); go(); } }, 100);
+  }));
+}
+
+function reset() {
+  gen++; chain = Promise.resolve();
+  document.querySelectorAll("#choices .opt").forEach(o => { o.className = "opt"; o.disabled = false; o.removeAttribute("aria-disabled"); o.setAttribute("aria-checked", "false");
+    o.querySelector(".badge").textContent = o.closest(".ch").dataset.id.toUpperCase(); });
+  $("q").classList.remove("closed");
+  $("nx").className = "btn"; $("res2").classList.remove("on"); $("vlock").hidden = true; $("cluck").hidden = true; $("clt").textContent = "";
+  $("sheet3").classList.remove("on", "rise"); $("sheet3").style.transform = "";
+}
+function grade(animate) {
+  const g = gen, opt = id => document.querySelector(`.ch[data-id="${id}"] .opt`);
+  const os = [...document.querySelectorAll("#choices .opt")]; os.forEach(o => { o.style.transition = "none"; });   // colours land at once: the pop / jolt is the motion
+  requestAnimationFrame(() => requestAnimationFrame(() => os.forEach(o => { o.style.transition = ""; })));
+  if (r === "ok") { const o = opt(RIGHT); o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); if (animate) blink(o, "pop", g); }
+  else { for (const id of WRONG) { const o = opt(id); o.classList.add("wrong"); o.querySelector(".badge").innerHTML = icon("i-x"); }
+    if (animate) blink(opt(WRONG[1]), "jolt", g); $("vlock").hidden = false;
+    if (cluckOn) blink(null, "", g, () => { $("cluck").hidden = false; streamCluck(g); }); }   /* Cluck's stream is the next blink: after the jolt */
+  document.querySelectorAll("#choices .opt").forEach(o => { o.disabled = true; o.setAttribute("aria-disabled", "true"); });
+  $("q").classList.add("closed");
+}
+function streamCluck(g) {                                              // a fake /explain stream (counts as the one animated thing)
+  const txt = "quACK. Attitude is the whole evaluation: affect, cognition and behavior. Accessibility is only how fast it comes to mind.";
+  const p = $("clt"); p.innerHTML = '<span></span><i class="wcaret"></i>'; let i = 0;
+  const t = setInterval(() => { if (g !== gen) return clearInterval(t); i += 3; p.firstChild.textContent = txt.slice(0, i);
+    if (i >= txt.length) { clearInterval(t); p.querySelector(".wcaret")?.remove(); } }, 60);
+}
+function cue(animate) {
+  const g = gen;
+  /* the graded row (and the cue) in view: the user just tapped it, so this is a no-op unless the sheet took its room */
+  const show = () => { document.querySelector(r === "ok" ? ".opt.right" : "#fb")?.scrollIntoView({ block: "nearest" }); if (v === 2) $("res2").scrollIntoView({ block: "nearest" }); };
+  const on = {
+    1: () => { $("nx").classList.add("cue"); if (peak) $("nx").classList.add("peak"); },
+    2: () => { $("v2w").className = "verdict " + (r === "ok" ? "ok" : "lock"); $("v2w").innerHTML = words(); $("res2").classList.add("on"); $("vlock").hidden = true; show(); },
+    3: () => { $("s3w").className = "verdict " + (r === "ok" ? "ok" : "lock"); $("s3w").innerHTML = r === "ok" ? words() : `${icon("i-lock")}<span>Out of tries</span>`;
+      $("sheet3").classList.add("on"); show(); }
+  }[v];
+  if (!animate) return on();
+  blink(v === 1 ? $("nx") : $("sheet3"), v === 1 && !peak ? "glow" : v === 3 ? "rise" : "", g, on);
+}
+function set(nv, ns, animate = true) {
+  v = nv; s = ns; ph.className = `phone v${v}`; reset();
+  if (s !== "open") { grade(animate); if (s === "after") cue(animate); }
+  $("why").textContent = `${v}. ${V[v].n}: ${V[v].why}`;
+  $("vbtns").innerHTML = Object.keys(V).map(k => `<button type="button" class="btn" aria-pressed="${+k === v}" data-v="${k}">${k}. ${V[k].n}</button>`).join("");
+  $("sbtns").innerHTML = ["open", "before", "after"].map(k => `<button type="button" class="btn" aria-pressed="${k === s}" data-s="${k}">${k}</button>`).join("") +
+    ["ok", "out"].map(k => `<button type="button" class="btn" aria-pressed="${k === r}" data-r="${k}">${k === "ok" ? "correct" : "out of tries"}</button>`).join("");
+  const u = new URL(location); u.searchParams.set("v", v); u.searchParams.set("s", s); u.searchParams.set("r", r); history.replaceState(null, "", u);
+}
+$("vbtns").addEventListener("click", e => { const b = e.target.closest("[data-v]"); if (b) set(+b.dataset.v, s); });
+$("sbtns").addEventListener("click", e => { const b = e.target.closest("[data-s],[data-r]"); if (!b) return; if (b.dataset.r) r = b.dataset.r; set(v, b.dataset.s || s); });
+/* open: a real pick plays the graded sequence (the pick's pop / jolt, then the cue) */
+$("choices").addEventListener("click", e => { const o = e.target.closest(".opt"); if (!o || o.disabled || s !== "open") return;
+  r = o.closest(".ch").dataset.id === RIGHT ? "ok" : "out"; set(v, "after"); });
+const leave = () => set(v, "open", false);
+$("nx").addEventListener("click", leave); $("pill").addEventListener("click", leave); $("s3go").addEventListener("click", leave);
+const shut = () => { $("sheet3").classList.remove("on", "rise"); $("nfab").focus({ preventScroll: true }); };
+$("s3x").addEventListener("click", shut);
+addEventListener("keydown", e => { if (e.key === "Escape" && $("sheet3").classList.contains("on")) shut(); });
+/* swipe down on the sheet puts it away */
+let y0 = null; const sh = $("sheet3");
+sh.addEventListener("pointerdown", e => { if (!e.target.closest("button")) { y0 = e.clientY; sh.setPointerCapture?.(e.pointerId); } });
+sh.addEventListener("pointermove", e => { if (y0 != null) sh.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+sh.addEventListener("pointerup", e => { if (y0 == null) return; const d = e.clientY - y0; y0 = null; sh.style.transform = ""; if (d > 40) shut(); });
+set(v, s);
+fetch("../index.html").then(x => x.text()).then(t => {                // the app's own icon sprite
+  const sp = new DOMParser().parseFromString(t, "text/html").querySelector("svg symbol#i-list")?.closest("svg");
+  if (sp) $("sprite").append(document.importNode(sp, true));
+}).catch(() => {});
+/* shots / tests: how many animations run right now (T2: never more than 1) */
+const tgt = a => { const t = a.effect?.target; return t ? (t.id ? "#" + t.id : t.tagName.toLowerCase() + "." + [...t.classList].join(".")) : "?"; };
+window.__running = () => [...new Set(document.getAnimations().filter(a => a.playState === "running").map(tgt))];   // distinct animated elements
+</script>
+</body>
+</html>
