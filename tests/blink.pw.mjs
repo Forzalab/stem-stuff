@@ -85,6 +85,7 @@ function summary(log, skip = []) {
   const rows = log.rows.map(([t, g, f]) => runs.some(([a, b]) => t >= a && t <= b) ? [t, [...new Set([...g, "hud"])].sort(), [...f, "hud:count"]] : [t, g, f])
     .map(([t, g, f]) => [t, g.filter(x => !skip.includes(x)), f]);
   const starts = { ...log.starts }; if (runs.length && !(starts.hud <= runs[0][0])) starts.hud = runs[0][0];
+  for (const [t, g] of rows) for (const k of g) if (!(k in starts)) starts[k] = t;              // seen only by a sample (a start the clock did not give)
   const on = rows.filter(r => r[1].length);
   const peak = Math.max(0, ...rows.map(r => r[1].length)), finePeak = Math.max(0, ...rows.map(r => r[2].length));
   const over = rows.filter(r => r[1].length > 1);
