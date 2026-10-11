@@ -25,10 +25,15 @@ test("nav.js: in a bank, Next is not dimmed by a current code that is not in the
 });
 
 test("app.js: a code the page can't open is said, not dropped (load, fromHash)", () => {
-  assert.match(app, /async function load\(code\) \{\n  if \(!CODE_RE\.test\(code\)\) \{ note\(`Can't open \$\{code\}\.`\); return; \}/);
+  assert.match(app, /async function load\(code\) \{\n  if \(!codes\.isCode\(code\)\) \{ note\(`Can't open \$\{code\}\.`\); return; \}/);
   assert.match(app, /if \(!n\) \{ if \(location\.hash\.length > 1\) note\(`Can't open /);
 });
 
-test("app.js: CODE_RE is untouched here (T15 owns the pattern)", () => {
-  assert.match(app, /^const CODE_RE = \/\^\(CALC1\|CSCI26\|PHYS\|PSY\)_\[A-Z0-9\]\{3,6\}\$\/;$/m);
+test("no prefix allowlist copy survives: codes.mjs is the only place (T15)", () => {
+  const sg = readFileSync(join(ROOT, "suggest.mjs"), "utf8"), off = readFileSync(join(ROOT, "offline.js"), "utf8");
+  assert.doesNotMatch(app, /\bCODE_RE\b/);
+  for (const [name, src] of [["app.js", app], ["suggest.mjs", sg], ["offline.js", off]]) {
+    assert.doesNotMatch(src, /CALC1\|CSCI26|CSCI26\|PHYS|PHYS\|PSY/, name + " has a prefix allowlist literal");
+    assert.doesNotMatch(src, /\{3,6\}|\{2,5\}/, name + " writes a length");
+  }
 });

@@ -25,6 +25,8 @@ cd tests && npm install && npm test
 }
 ```
 
+A bank file may add a `"bank"` flag (optional): the bank's id, `BANK_` + 3–6 of `A-Z0-9`, e.g. `"bank": "BANK_BEAR"`. A file that uses only the built-in code prefixes never needs it. A file that contains any custom-prefix code must carry a valid flag whose name matches that prefix (see Codes). A hosted bank's id is its file name (`banks/BANK_XXX.json`); an uploaded bank's id is this field, and the upload's file name is never read.
+
 A bank file may add a `"profile"` (optional): `subject` (physics.mechanics | physics.em | discrete | cs), `audience` (one sentence:
 who the students are; it replaces the default Fresno physics line in Cluck's prompts), `skill_domains` (["algebra"]), `kits` (visual
 kits that fit: author/kits/). No profile = today's behavior.
@@ -38,9 +40,11 @@ Keep problems in any order: the page shuffles the list per browser (design/NAV.m
 - Units in the ask: "Find the stretch of the spring, in $\\text{m}$."
 
 ## Codes
-- Format is `PREFIX_SUFFIX` (underscore: it joins words, so one double-tap on a phone selects the whole code; the page still accepts `-`, a space or no separator and normalizes to `_`). Prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math), `PSY` (psychology).
-- The suffix is 3 characters, A–Z and 0–9. Don't use O/0 or I/1.
-- **A suffix must be unique across all subjects** (the tests enforce this).
+- Format is `PREFIX_SUFFIX` (underscore: it joins words, so one double-tap on a phone selects the whole code; the page still accepts `-` or a space and normalizes to `_`). Built-in prefixes: `CALC1` (calculus), `PHYS` (physics), `CSCI26` (discrete math), `PSY` (psychology). They work in every file, flagged or not.
+- **Custom prefixes:** 3–6 of `A-Z0-9`, starting with a letter, never a built-in and never a reserved word (`BANK`, `DIET`, `SUGAR`, `ADMIN`, `UNADMIN`: the code box eats the last four, `BANK` is the bank id). A custom prefix **equals the bank flag minus `BANK_`**: `BEAR_QAA` belongs to `"bank": "BANK_BEAR"`. A code alone therefore names its bank, so a shared link on a device without it says `BEAR_QAA needs BANK_BEAR`. A file with custom-prefix codes and no valid flag (or a flag that names another prefix) loads without those codes and says why; its built-in-prefix codes still load. One custom prefix per bank (built-ins may be mixed in).
+- The suffix is 3 characters, A–Z and 0–9 (the page accepts 3–6). Don't use O/0 or I/1 (an authoring rule, the page does not refuse them).
+- **A suffix must be unique across the four built-in prefixes** (the tests enforce this), and unique within a custom prefix.
+- The lengths and word lists live in one place, `codes.mjs`; the patterns below are generated from it and a test keeps them equal.
 
 ## One problem
 | key | for | meaning | served to the browser |
@@ -281,6 +285,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
   "required": ["v", "problems"],
   "additionalProperties": false,
   "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
+    "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
       "properties": {"subject": {"enum": ["physics.mechanics", "physics.em", "discrete", "cs"]},
         "audience": {"type": "string", "minLength": 10, "maxLength": 300},
@@ -351,7 +356,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
       "properties": {
         "code": {
           "type": "string",
-          "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$"
+          "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$"
         },
         "title": {
           "type": "string",
@@ -403,7 +408,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
             "hide": {"type": "boolean", "description": "true: left out of sugar (sugar v2 prune)"},
             "split": {"type": "array", "minItems": 1, "description": "sugar: a choose-all becomes one True/False question per row, in its place (serve.py sub_problem)",
               "items": {"type": "object", "required": ["sub", "stem", "answer"], "additionalProperties": false, "properties": {
-                "sub": {"type": "string", "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,7}$"}, "stem": {"type": "string", "minLength": 3},
+                "sub": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,7}$"}, "stem": {"type": "string", "minLength": 3},
                 "choices": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/choice"}, "description": "a row with its own choices: an mc (answer = a choice id); none = True/False"},
                 "answer": {"type": ["string", "boolean"], "description": "\"true\" / \"false\" (True/False row) or the right choice id"},
                 "slip": {"oneOf": [{"type": "string", "minLength": 3}, {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}}], "description": "the wrong pick's slip (True/False), or choice id -> slip"},
@@ -412,7 +417,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
                 "tip": {"type": "string", "minLength": 3, "maxLength": 200},
                 "narration": {"type": "string", "minLength": 3, "maxLength": 700}}}},
             "snack": {"type": "boolean", "description": "a very easy twin of a Practice Exam question (design/REWARDS-WIRING.md); goes with top-level sugar_only"},
-            "before": {"type": "string", "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,7}$", "description": "snack: the code (or split sub code) it is served right before"},
+            "before": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,7}$", "description": "snack: the code (or split sub code) it is served right before"},
             "original": {"type": "object", "required": ["body"], "additionalProperties": false, "description": "snack: the original question and its worked solution, shown beside it (sugar side panel)",
               "properties": {"q": {"type": "integer", "minimum": 1}, "body": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},
                 "solution": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "worked lines, plain text + $..$, the original's numbers"}}}
@@ -1289,14 +1294,11 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
     },
     "code": {
       "type": "string",
-      "pattern": "^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$"
+      "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$"
     },
     "subject": {
-      "enum": [
-        "CALC1",
-        "CSCI26",
-        "PHYS"
-      ]
+      "type": "string",
+      "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)$)[A-Z][A-Z0-9]{2,5}$"
     },
     "start": {
       "$ref": "#/$defs/iso",

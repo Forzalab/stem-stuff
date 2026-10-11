@@ -26,7 +26,7 @@ const num = (code, answer, md, extra = {}) => ({ code, type: "num", answer, body
 const P2X = Array.from({ length: 8 }, (_, i) => num(`PHYS_P0${i + 1}`, String(i + 2), `Phys ${i + 1}: 1 + ${i + 1}`, { topic: `t${i % 3}` }));
 writeFileSync(join(BANKS, "BANK_P2X.json"), JSON.stringify({ v: 1, problems: P2X }));
 writeFileSync(join(BANKS, "BANK_ONE.json"), JSON.stringify({ v: 1, problems: [P2X[0]] }));
-/* an uploaded file whose codes pass offline.js (any PREFIX_XX) but not app.js CODE_RE: nothing of it can be opened (T15 widens the regex, not this) */
+/* an uploaded file with custom-prefix codes and no "bank" flag (T15): nothing of it loads, and it says why */
 const ODD = ["BEAR_001", "BEAR_002", "BEAR_003"].map((c, i) => num(c, "2", `Odd ${i + 1}: 1 + 1`));
 const oddFile = { name: "ODD.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ v: 1, problems: ODD })) };
 /* an upload with one good code and two that cannot open */
@@ -123,13 +123,13 @@ try {
       await ctx.close();
     });
 
-    await step(`${V}: an uploaded file whose codes the page can't open: it says why (T15 owns the pattern)`, async () => {
+    await step(`${V}: an uploaded file with custom codes and no bank flag: it says why (codes.mjs, prefix.pw.mjs has the rest)`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/"); await page.waitForTimeout(500);
       await upload(page, oddFile); await page.waitForTimeout(1200);
       const said = await page.evaluate(() => (document.querySelector("#toast.on")?.textContent || "") + "|" + (document.querySelector("#entryMsg")?.textContent || ""));
       if (LOG) console.log(`      ODD after upload: ${JSON.stringify(said)}`);
-      assert.match(said, /can't open BEAR_001/i, "an upload nothing of which opens said nothing");
+      assert.match(said, /bank flag missing/i, "an upload nothing of which opens said nothing");
       await ctx.close();
     });
 

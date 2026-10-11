@@ -4,6 +4,7 @@ import katex from "katex";
 import { compile, evaluate } from "mathjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { validator, bank } from "./schemas.mjs";
+import { isBankId, isBuiltin, isReserved, prefixOf } from "../codes.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
 const validate = validator("problems");
@@ -32,6 +33,55 @@ test("part.prompt: string or lines validate; other types and unknown keys do not
   assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
 });
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
+/* the bank flag rule (SCHEMA.md "Codes"), as a list of faults: [] = sound. id = the flag, else the file stem (hosted banks need no flag).
+   Built-in prefixes are free; every other prefix must equal the id minus BANK_ and may not be reserved. */
+function prefixFaults(doc, stem) {
+  const out = [], id = doc.bank ?? stem;
+  if (doc.bank !== undefined && !isBankId(doc.bank)) out.push(`bad flag ${doc.bank}`);
+  if (doc.bank !== undefined && stem && doc.bank !== stem) out.push(`flag ${doc.bank} is not the file stem ${stem}`);
+  for (const p of doc.problems) {
+    const pre = prefixOf(p.code);
+    if (isBuiltin(pre)) continue;
+    if (isReserved(pre)) out.push(`${p.code}: reserved prefix`);
+    else if (!isBankId(id) || pre !== id.slice(5)) out.push(`${p.code}: prefix is not ${id} minus BANK_`);
+  }
+  return out;
+}
+/* custom-prefix suffixes: the authoring rule (3 characters, no O/0/I/1), unique inside the prefix */
+function suffixFaults(doc) {
+  const out = [], seen = new Set();
+  for (const { code } of doc.problems) {
+    if (isBuiltin(prefixOf(code))) continue;
+    if (!/^[A-Z0-9]+_[A-HJ-NP-Z2-9]{3}$/.test(code)) out.push(`${code}: suffix is not 3 of A-HJ-NP-Z2-9`);
+    if (seen.has(code)) out.push(`${code}: repeated`);
+    seen.add(code);
+  }
+  return out;
+}
+test("bank flag: bank:BANK_BEAR validates; bear / BANK_AB / BANK_ABCDEFG do not", () => {
+  const one = { ...B, problems: [B.problems[0]] };
+  assert.ok(validate({ ...one, bank: "BANK_BEAR" }), JSON.stringify(validate.errors));
+  for (const bad of ["bear", "BANK_AB", "BANK_ABCDEFG", "BANK_bear", "BEAR", 7]) assert.ok(!validate({ ...one, bank: bad }), String(bad));
+});
+test("the flag rule: custom prefix = flag minus BANK_ (synthetic files)", () => {
+  const mk = (codes, bank) => ({ ...(bank ? { bank } : {}), problems: codes.map(code => ({ code })) });
+  assert.deepEqual(prefixFaults(mk(["PSY_ABC", "PHYS_ABC", "CALC1_ABC", "CSCI26_ABC"]), "BANK_PSY6"), [], "built-ins need no flag");
+  assert.deepEqual(prefixFaults(mk(["BEAR_QAA", "PSY_ABC"], "BANK_BEAR")), []);
+  assert.equal(prefixFaults(mk(["BEAR_QAA"])).length, 1, "custom prefix, no flag");
+  assert.equal(prefixFaults(mk(["BEAR_QAA"], "BANK_XYZ")).length, 1, "flag names another prefix");
+  assert.equal(prefixFaults(mk(["BEAR_QAA", "COW_QAA"], "BANK_BEAR")).length, 1, "two custom prefixes");
+  assert.equal(prefixFaults(mk(["DIET_QAA"], "BANK_DIET")).length, 1, "reserved");
+  assert.equal(prefixFaults(mk(["BEAR_QAA"], "bear")).length >= 1, true, "bad flag");
+  assert.equal(prefixFaults(mk(["BEAR_QAA"], "BANK_BEAR"), "BANK_COW").length, 1, "hosted: flag and file stem differ");
+});
+test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the prefix (synthetic)", () => {
+  const mk = (...codes) => ({ problems: codes.map(code => ({ code })) });
+  assert.deepEqual(suffixFaults(mk("BEAR_QAA", "BEAR_QAB", "PSY_O0I")), []);
+  assert.equal(suffixFaults(mk("BEAR_QOA")).length, 1);
+  assert.equal(suffixFaults(mk("BEAR_QA")).length, 1);
+  assert.equal(suffixFaults(mk("BEAR_QAA", "BEAR_QAA")).length, 1);
+});
+
 // practice banks (design/BANK.md): banks/BANK_XXX.json, the same format; problem codes shared with another file = the same problem
 {
   const dir = new URL("../banks/", import.meta.url), seen = new Map(problems.map(p => [p.code, JSON.stringify(p)]));
@@ -40,6 +90,9 @@ test("problems.json: has problems", () => assert.ok(problems.length > 0));
       assert.match(f, /^BANK_[A-Z0-9]{3,6}\.json$/);
       const b = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
       assert.ok(validate(b), JSON.stringify(validate.errors, null, 1));
+      const stem = f.replace(/\.json$/, "");
+      assert.deepEqual(prefixFaults(b, stem), [], "flag / prefix rule (SCHEMA.md Codes)");
+      assert.deepEqual(suffixFaults(b), [], "custom-prefix suffix rule");
       for (const p of b.problems) {
         const j = JSON.stringify(p);
         assert.ok(!seen.has(p.code) || seen.get(p.code) === j, `${p.code}: in two files with different content`);
