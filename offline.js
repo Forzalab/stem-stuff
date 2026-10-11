@@ -332,6 +332,7 @@
     }
     /* A real upload REPLACES the old one (memory = what saveBank stores; restore() rebuilds the same set). Nothing valid in the pick: nothing changes.
        The swap has no await in it, so a reader never sees the store half empty. restore() (save = false) only fills the empty store. */
+    if (!save && local.size) pend.length = 0;       // a restore that lost the race to a fresh upload must not add the old files back
     if (save && pend.length) { local.clear(); names.clear(); }
     for (const [f, s] of pend) for (const p of s.kept) { local.set(p.code, p); names.set(p.code, s.flag || f.name); got.push(p); }
     if (save && keep.length) await saveBank(keep);
