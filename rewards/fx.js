@@ -82,13 +82,15 @@
     h.style.setProperty('--rw-fs0', (fl && fl.style.getPropertyValue('--fs')) || '1');
     h.classList.add('rw-hold');
     held = h;
-    /* the balance too: engine.js counts it up for 600 ms from app.js's 450 ms, which would tick under the ribbon and the coins. The
-       number on screen waits (what engine.js writes is kept, and read back) until the HUD's slot, where it counts up in 200 ms */
-    const num = h.querySelector('.rw-num');
-    if (num && !num.__held) {
-      const k = num.__held = { from: +num.textContent || 0, want: num.textContent, to: null };
-      Object.defineProperty(num, 'textContent', { configurable: true, get: () => k.want, set: v => { k.want = String(v); if (k.to != null && k.want === k.to) letGo(num); } });
-    }
+  }
+  /* a right answer holds the balance too: engine.js counts it up for 600 ms from app.js's 450 ms, which would tick under the ribbon and
+     the coins. The number on screen waits (what engine.js writes is kept, and read back) until the HUD's slot, where it counts up in
+     200 ms. A wrong try's +1 is not held: one number swap, no count */
+  function holdNum() {
+    const h = document.querySelector('.rw-hud'), num = h && h.querySelector('.rw-num');
+    if (!num || num.__held || still()) return;
+    const k = num.__held = { from: +num.textContent || 0, want: num.textContent, to: null };
+    Object.defineProperty(num, 'textContent', { configurable: true, get: () => k.want, set: v => { k.want = String(v); if (k.to != null && k.want === k.to) letGo(num); } });
   }
   const setText = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').set;
   function letGo(num) { if (!num.__held) return; clearTimeout(num.__held.t); delete num.__held; delete num.textContent; }
@@ -114,8 +116,8 @@
     const all = [];
     if (pp && pp.isConnected) all.push(pp.animate(popKF(1.15), { duration: D, easing: 'ease-out' }));
     if (sh && sh.isConnected) {
-      sh.classList.remove('rw-shine'); void sh.offsetWidth; sh.classList.add('rw-shine');
-      sh.addEventListener('animationend', () => sh.classList.remove('rw-shine'), { once: true });
+      sh.classList.remove('rw-shine'); void sh.offsetWidth; sh.classList.add('rw-shine');   // the class stays until the next shine: it plays once
+      all.push({ finished: wait(D) });
     }
     const n = countIn(h.querySelector('.rw-num')); if (n) all.push({ finished: n });
     if (h.isConnected) all.push(...h.getAnimations({ subtree: true }).filter(a => isFinite(a.effect.getComputedTiming().endTime)));   // flushes style: the transitions start now
@@ -163,6 +165,7 @@
   function pop(el) {
     if (!el || still()) return;
     for (const a of el.getAnimations()) if (a.animationName === 'opt-pop') a.finish();
+    holdNum();
     part('answer', at => el.isConnected ? done(el.animate(popKF(1.06), { duration: D, delay: at, easing: 'ease-out' })) : null);
   }
 
