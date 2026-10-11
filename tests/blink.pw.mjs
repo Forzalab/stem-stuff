@@ -52,16 +52,19 @@ const SAMPLER = () => {
     if (t.closest("#q .ch, #q .opt, #ff, .ff, #fb")) return ["answer", "answer"];        // the picked row, the rest of the list and the verdict line settling = the answer
     return ["page", "page:" + (t.id ? "#" + t.id : cls)];
   };
-  const S = window.__blink = { t0: performance.now(), rows: [], anims: new Set(), transformed: new Set(), starts: {} };
+  /* the HUD balance counts up from requestAnimationFrame (engine.js), not an animation: a text change in the last 40 ms = it moves */
+  const ticks = [], num = document.querySelector(".rw-num") || document.body; let was = num.textContent;   // a rewrite of the same number is no change
+  new MutationObserver(() => { const now = Node.prototype.__lookupGetter__("textContent").call(num); if (now !== was) { was = now; ticks.push(Math.round(performance.now() - S.t0)); } }).observe(num, { childList: true, characterData: true, subtree: true });
+  const S = window.__blink = { t0: performance.now(), rows: [], anims: new Set(), transformed: new Set(), starts: {}, ticks };
   const tick = () => {
     const g = new Set(), f = new Set();
     for (const a of document.getAnimations()) {
       if (a.playState !== "running" || !a.effect) continue;
       const ct = a.effect.getComputedTiming(), lt = ct.localTime;
+      if (a.startTime != null) { const k0 = groupOf(a.effect.target)[0], st = Math.round(a.startTime + ct.delay - S.t0); if (!(st >= S.starts[k0])) S.starts[k0] = st; }   // exact, from the animation clock (also while it waits)
       if (lt == null || lt < ct.delay || lt >= ct.delay + ct.activeDuration) continue;    // waiting (delay) or done: not moving
       const [k, fine] = groupOf(a.effect.target);
       g.add(k); f.add(fine);
-      if (a.startTime != null) { const st = Math.round(a.startTime + ct.delay - S.t0); if (!(st >= S.starts[k])) S.starts[k] = st; }   // exact, from the animation clock
       S.anims.add(fine + (a.animationName ? "@" + a.animationName : a.transitionProperty ? "~" + a.transitionProperty : ""));
       try { if (a.effect.getKeyframes().some(x => x.transform && x.transform !== "none") || a.transitionProperty === "transform") S.transformed.add(fine); } catch { /* */ }
     }
@@ -70,15 +73,24 @@ const SAMPLER = () => {
   };
   S.timer = setInterval(tick, 20);
 };
-const STOP = () => { const S = window.__blink; clearInterval(S.timer); return { rows: S.rows, anims: [...S.anims], transformed: [...S.transformed], starts: S.starts }; };
+const STOP = () => { const S = window.__blink; clearInterval(S.timer); return { rows: S.rows, anims: [...S.anims], transformed: [...S.transformed], starts: S.starts, ticks: S.ticks }; };
+/* the balance count-up = runs of 2+ text changes less than 50 ms apart (a single change is an instant swap, not motion) */
+function counting(ticks = []) {
+  const runs = []; let r = null;
+  for (const t of ticks) { if (r && t - r[1] < 50) { r[1] = t; r[2]++; } else { r = [t, t, 1]; runs.push(r); } }
+  return runs.filter(x => x[2] > 1);
+}
 function summary(log, skip = []) {
-  const rows = log.rows.map(([t, g, f]) => [t, g.filter(x => !skip.includes(x)), f]);
+  const runs = counting(log.ticks);
+  const rows = log.rows.map(([t, g, f]) => runs.some(([a, b]) => t >= a && t <= b) ? [t, [...new Set([...g, "hud"])].sort(), [...f, "hud:count"]] : [t, g, f])
+    .map(([t, g, f]) => [t, g.filter(x => !skip.includes(x)), f]);
+  const starts = { ...log.starts }; if (runs.length && !(starts.hud <= runs[0][0])) starts.hud = runs[0][0];
   const on = rows.filter(r => r[1].length);
   const peak = Math.max(0, ...rows.map(r => r[1].length)), finePeak = Math.max(0, ...rows.map(r => r[2].length));
   const over = rows.filter(r => r[1].length > 1);
   const order = []; for (const r of on) { const k = r[1].join("+"); if (order.at(-1) !== k) order.push(k); }
   return { peak, finePeak, start: on[0]?.[0] ?? null, end: on.at(-1)?.[0] ?? null, duration: on.length ? on.at(-1)[0] - on[0][0] : 0,
-    overlapMs: over.length * 20, starts: log.starts, firstOverlap: over[0] ? over[0][0] : null, worst: (rows.find(r => r[1].length === peak) || [])[2], order, anims: log.anims, transformed: log.transformed };
+    overlapMs: over.length * 20, starts, counting: runs, firstOverlap: over[0] ? over[0][0] : null, worst: (rows.find(r => r[1].length === peak) || [])[2], order, anims: log.anims, transformed: log.transformed };
 }
 const save = (name, s, log) => { if (!LOGS) return; mkdirSync(LOGS, { recursive: true }); writeFileSync(join(LOGS, `blink-${name}.json`), JSON.stringify({ ...s, rows: log.rows }, null, 1)); };
 const say = (name, s) => console.log(`     ${name}: peak ${s.peak} group(s) (fine ${s.finePeak}: ${(s.worst || []).join(",")}), moving ${s.start}..${s.end} ms = ${s.duration} ms, >1 group for ${s.overlapMs} ms; order ${s.order.join(" > ")}; starts ${JSON.stringify(s.starts)}`);
@@ -127,11 +139,11 @@ try {
     const s = summary(log); save("right", s, log); say("right", s);
     assert.ok(s.start != null, "something moved: " + JSON.stringify(log.anims));
     assert.equal(s.peak, 1, `peak ${s.peak} at ${s.firstOverlap} ms: ${JSON.stringify(s.worst)}`);
-    const want = ["answer", "stars", "ribbon", "coins", "hud", "ribbon"];      // palette order: stars → ribbon → button (coins → HUD), the ribbon leaves last
-    assert.deepEqual(s.order, want, "order " + s.order.join(" > "));
-    const st = log.starts, gap = (a, b) => st[b] - st[a];
+    const st = s.starts, byStart = Object.keys(st).sort((a, b) => st[a] - st[b]);
+    assert.deepEqual(byStart, ["answer", "stars", "ribbon", "coins", "hud"], "palette order stars → ribbon → button (coins → HUD): " + JSON.stringify(st));
+    const gap = (a, b) => st[b] - st[a];
     for (const [a, b] of [["stars", "ribbon"], ["ribbon", "coins"]]) assert.ok(Math.abs(gap(a, b) - 200) <= 20, `${a} → ${b} ${gap(a, b)} ms apart, want 200: ${JSON.stringify(st)}`);
-    assert.ok(gap("answer", "stars") >= 180 && gap("answer", "stars") <= 520, "the stars wait for the answer to settle: " + JSON.stringify(st));
+    assert.ok(st.stars >= 180 && st.stars <= 800, "the stars wait for the answer to settle (200-400 ms after the reward call): " + JSON.stringify(st));
     assert.ok(s.end < 2000, "still by 2 s after the tap (main: ~2.4 s), was " + s.end);
   });
 

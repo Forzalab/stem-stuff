@@ -35,6 +35,15 @@
     return (lane = lane.then(job).catch(() => {}).then(() => { if (!--jobs) root.classList.remove('fx-busy'); }));
   }
 
+  /* the Cluck chip's wiggle (rewards.css) never moves with the answer: html.fx-pick while a picked choice waits for Check (paused),
+     html.fx-rest once the question is solved (it rests; out of tries keeps it). Set in the same task as the change, before a paint */
+  function hush() {
+    const q = document.getElementById('q'), fb = document.getElementById('fb');
+    root.classList.toggle('fx-pick', !!(q && q.querySelector('.opt[aria-checked="true"]')));
+    root.classList.toggle('fx-rest', !!(q && q.classList.contains('closed') && !(fb && fb.querySelector('.verdict.lock'))));
+  }
+  new MutationObserver(hush).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-checked'] });
+
   /* the beat: what app.js asks for in one go (rewardShow, rewardTick) is one lane job. Each part gets a slot in palette order, answer →
      stars → ribbon ("+N XP") → button (the coins into the HUD strip), and every start is set up front as a WAAPI delay 200 ms apart, so
      a busy main thread cannot push two parts together. The answer's slot also waits for the page's own lock-in fades (app.css, ≤ 400 ms).
@@ -73,6 +82,30 @@
     h.style.setProperty('--rw-fs0', (fl && fl.style.getPropertyValue('--fs')) || '1');
     h.classList.add('rw-hold');
     held = h;
+    /* the balance too: engine.js counts it up for 600 ms from app.js's 450 ms, which would tick under the ribbon and the coins. The
+       number on screen waits (what engine.js writes is kept, and read back) until the HUD's slot, where it counts up in 200 ms */
+    const num = h.querySelector('.rw-num');
+    if (num && !num.__held) {
+      const k = num.__held = { from: +num.textContent || 0, want: num.textContent, to: null };
+      Object.defineProperty(num, 'textContent', { configurable: true, get: () => k.want, set: v => { k.want = String(v); if (k.to != null && k.want === k.to) letGo(num); } });
+    }
+  }
+  const setText = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').set;
+  function letGo(num) { if (!num.__held) return; clearTimeout(num.__held.t); delete num.__held; delete num.textContent; }
+  /* the held balance counts up in the HUD's slot (one 200 ms ease-out, no overshoot). engine.js may still be counting (a busy phone):
+     its writes stay swallowed until it reaches the same number (or 1 s passes), so the two counts never show together */
+  function countIn(num) {
+    const k = num && num.__held; if (!k) return null;
+    const R = window.Rewards, b = R && R.state ? +R.state().xp : +k.want, a = k.from;
+    k.to = String(b);
+    if (k.want === k.to) letGo(num); else k.t = setTimeout(() => letGo(num), 1000);
+    if (!isFinite(b) || b === a) { setText.call(num, String(b)); return null; }
+    const t0 = performance.now();
+    return new Promise(r => { (function step(t) {
+      const q = Math.min(1, Math.max(0, (t - t0) / D));
+      setText.call(num, String(q < 1 ? Math.round(a + (b - a) * (1 - Math.pow(1 - q, 3))) : b));
+      if (q < 1) requestAnimationFrame(step); else r();
+    })(t0); });
   }
   async function release() {
     const h = held, sh = hudShine, pp = hudPop; held = hudShine = hudPop = null;
@@ -84,6 +117,7 @@
       sh.classList.remove('rw-shine'); void sh.offsetWidth; sh.classList.add('rw-shine');
       sh.addEventListener('animationend', () => sh.classList.remove('rw-shine'), { once: true });
     }
+    const n = countIn(h.querySelector('.rw-num')); if (n) all.push({ finished: n });
     if (h.isConnected) all.push(...h.getAnimations({ subtree: true }).filter(a => isFinite(a.effect.getComputedTiming().endTime)));   // flushes style: the transitions start now
     await Promise.all(all.map(done));
   }

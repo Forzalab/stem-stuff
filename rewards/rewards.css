@@ -101,8 +101,8 @@ html.start .rw-hud { display: none; }
    The slot / red-gold kit pill, redrawn as our own CSS (no pixels copied): dark outline, thick gold rim, red-orange body, light top
    edge, gloss cap, dark base, white duck in a candy coin. .rw-wiggle (app.js wishPaint, until the first tap on this question): 3 quick
    swings, ±6°, 1.2 s after it shows, once more 3 s later, then still for good (20261010-B2: it looped every 6 s; STYLE §2.8 allows no
-   ambient loop). It waits (paused) while a reward beat plays (html.fx-busy, fx.js) or a picked choice waits for Check, and rests once
-   the question is solved, so it never moves with the answer. Transform only;
+   ambient loop). It waits (paused) while a reward beat plays (html.fx-busy) or a picked choice waits for Check (html.fx-pick), and
+   rests once the question is solved (html.fx-rest; both set by fx.js), so it never moves with the answer. Transform only;
    none with reduced motion. app.js keeps .wchip on it as the hook. */
 /* impeccable waiver: casino-themed (Tony, Oct 4) */
 .rw-chip {
@@ -125,8 +125,8 @@ html.start .rw-hud { display: none; }
   background: radial-gradient(circle at 35% 30%, #fff6c2, #ffd23f 55%, #c99a00); box-shadow: 0 0 0 3px var(--rw-wc-rim), 0 0 0 5px var(--rw-wc-out), inset 0 -3px 0 rgb(107 36 0 / .45); }   /* a gold duck coin, like the hint card's bulb coin */
 .rw-coin2 svg { width: 24px; height: 24px; color: #6b2400; }
 .rw-chip.rw-wiggle { animation: rw-wiggle 3s ease-in-out 1.2s 2; }
-html.fx-busy .rw-chip.rw-wiggle, html:has(#q .opt[aria-checked="true"]) .rw-chip.rw-wiggle { animation-play-state: paused; }   /* a reward plays / a pick waits for Check */
-html:has(#q.closed):not(:has(#fb .verdict.lock)) .rw-chip.rw-wiggle { animation: none; }   /* solved: the ad is done, it rests (out of tries keeps it) */
+html.fx-busy .rw-chip.rw-wiggle, html.fx-pick .rw-chip.rw-wiggle { animation-play-state: paused; }   /* a reward plays / a pick waits for Check */
+html.fx-rest .rw-chip.rw-wiggle { animation: none; }   /* solved: the ad is done, it rests (out of tries keeps it). Classes: fx.js */
 @keyframes rw-wiggle {
   0%, 16.8%, 100% { transform: rotate(0); }
   2.8% { transform: rotate(-6deg); } 5.6% { transform: rotate(6deg); } 8.4% { transform: rotate(-6deg); } 11.2% { transform: rotate(6deg); } 14% { transform: rotate(-3deg); }
