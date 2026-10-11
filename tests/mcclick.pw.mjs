@@ -12,7 +12,7 @@ const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 let fails = 0;
 for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1920, height: 1080 }, false]]) {
   const page = await (await b.newContext({ viewport, hasTouch: touch })).newPage();
-  await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   for (const [i, code] of CODES.entries()) {
     await page.evaluate(c => { location.hash = c; }, code);
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code);

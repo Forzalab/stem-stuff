@@ -38,7 +38,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const shot = async name => { if (SHOTS && W === 390) { await page.waitForTimeout(150); await page.screenshot({ path: `${SHOTS}/fab-${name}-390.png` }); } };
   const range = () => page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
 
-  await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
   await page.waitForTimeout(500);
   await page.evaluate(() => scrollTo(0, 0)); await settle();
@@ -177,7 +177,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     return { fab: r(document.querySelector("#padFab")), text: [...document.querySelectorAll("#blocks .md")].filter(e => e.offsetParent).map(r),
       opts: [...document.querySelectorAll("#q .opt")].filter(e => e.offsetParent).map(r) }; });
   const hit = (a, b) => a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
-  await page.goto(`${BASE}/#${FQ.code}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/#${FQ.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, FQ.code, { timeout: 8000 });
   await page.waitForFunction(() => !document.querySelector("#padFab").hidden, null, { timeout: 8000 });
   await page.waitForTimeout(500);
