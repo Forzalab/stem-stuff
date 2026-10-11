@@ -1,0 +1,74 @@
+ok   unittest
+ok   npm
+ok   autosave
+ok   bank
+ok   bar
+ok   blind
+ok   blur
+ok   choose-all-spam
+ok   choose-all
+ok   disabled
+ok   done
+ok   easy
+ok   fab
+ok   flow
+ok   font
+ok   katex-wrap
+ok   mcclick
+ok   mode-reset
+ok   nav-stable
+ok   next-dead
+FAIL polish
+     FAIL 375 (a) focused scratchpad: one edge (border --focus + 1px inset = 2px, STYLE.md 2.6), no outline 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+     FAIL 375 (b) pad page: the top bar is out of the way while it is open; back when it closes 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+     FAIL 375 (c) same type sizes in the pad page's tile (q and a) as in the normal view 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+     FAIL 375 (d) pad page: the pad starts a small gap under the tile and reaches the bottom 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+     FAIL 390 (a) focused scratchpad: one edge (border --focus + 1px inset = 2px, STYLE.md 2.6), no outline 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+     FAIL 390 (b) pad page: the top bar is out of the way while it is open; back when it closes 
+           page.click: Timeout 30000ms exceeded.
+     Call log:
+     [2m  - waiting for locator('#padFab')[22m
+     --
+ok   prefix
+ok   privacy-reach
+ok   queue-walk
+ok   reload
+FAIL render
+     FAIL chromium desktop nav: hidden for server problems; upload -> list, click a row, next, prev, keys 
+           desktop bar: List, XP, Prev / Next; the box and Shuffle come with the list (C2 / C15, Tony Oct 5)
+     ok   chromium desktop copy button inside the scratchpad: text never runs under it
+     ok   chromium desktop text + multi + 2-choice mc
+ok   rewards
+ok   splash
+ok   swap
+ok   telemetry
+ok   ticker
+ok   try-tries
+ok   update
+ok   ux-flows
+
+2 FAILED (logs: /tmp/tmp.DoMFPyqTKY)
+RUN_RC=1
+
+NOTE (re-runs alone, same worktree, server on a fixed port): polish -> still FAIL (375/390/430 a-d: page.click #padFab timeout); render -> still FAIL (chromium desktop nav: #entry is visible after upload).
+Baseline origin/main 6c27121: polish all ok. Cause: the upload line (#entryMsg, directive 2.1.6) summons the dock/entry box (app.css C8, nav.css:45) and opens the phone bar (app.js MutationObserver), hiding #padFab / showing #entry.
