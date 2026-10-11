@@ -1,0 +1,15 @@
+Traced reward icons (2026-10-11)
+
+These files in rewards/icons/ are NOT Microsoft Fluent Emoji. They are flat colour SVGs vector-traced (vtracer 0.6.15)
+from isolated transparent PNG parts:
+
+  coin_color.svg          <- 06-gold-coin-icon   (gold coin with a star)
+  gem_stone_color.svg     <- 04-sym-diamond      (blue cut diamond)
+  star_color.svg          <- 01-gold-star        (gold star)
+  cherries_color.svg      <- 04-sym-cherry       (cherry pair with leaf)
+  glowing_star_color.svg  <- 01-gold-star        (the traced star above, plus a hand-written vector glow and 5 rays)
+
+Traced from owner-supplied reference art (via image-model isolation); licence of the source art UNKNOWN. Do not ship to production until cleared.
+
+The other icons here (duck_color.svg, fire_color.svg, trophy_color.svg) are still Microsoft Fluent Emoji Color, MIT License:
+see LICENSE-fluentui-emoji.txt. Settings, sizes and before/after evidence: design/shots/reward-icons-traced-2026-10-11/README.md.
