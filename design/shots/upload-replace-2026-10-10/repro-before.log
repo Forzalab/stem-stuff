@@ -1,0 +1,318 @@
+=========== S1: A then B (different codes), different file names
+--- s1_after_A
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA2",
+  "CALC1_ZA3"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA2": "A-old :: CALC1_ZA2 :: ",
+  "CALC1_ZA3": "A-old :: CALC1_ZA3 :: "
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA2": "A.json",
+  "CALC1_ZA3": "A.json"
+ },
+ "shown": "CALC1_ZA1",
+ "label": "A.json",
+ "listRows": [
+  "#CALC1_ZA2",
+  "#CALC1_ZA1",
+  "#CALC1_ZA3"
+ ],
+ "idb": [
+  {
+   "name": "A.json",
+   "codes": [
+    "CALC1_ZA1",
+    "CALC1_ZA2",
+    "CALC1_ZA3"
+   ]
+  }
+ ]
+}
+--- s1_after_B
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA2",
+  "CALC1_ZA3",
+  "CALC1_ZB1",
+  "CALC1_ZB2",
+  "CALC1_ZB3"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA2": "A-old :: CALC1_ZA2 :: ",
+  "CALC1_ZA3": "A-old :: CALC1_ZA3 :: ",
+  "CALC1_ZB1": "B :: CALC1_ZB1 :: Whic",
+  "CALC1_ZB2": "B :: CALC1_ZB2 :: Whic",
+  "CALC1_ZB3": "B :: CALC1_ZB3 :: Whic"
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA2": "A.json",
+  "CALC1_ZA3": "A.json",
+  "CALC1_ZB1": "B.json",
+  "CALC1_ZB2": "B.json",
+  "CALC1_ZB3": "B.json"
+ },
+ "shown": "CALC1_ZB1",
+ "label": "B.json",
+ "listRows": [
+  "#CALC1_ZA2",
+  "#CALC1_ZA1",
+  "#CALC1_ZB1",
+  "#CALC1_ZB2",
+  "#CALC1_ZA3",
+  "#CALC1_ZB3"
+ ],
+ "idb": [
+  {
+   "name": "B.json",
+   "codes": [
+    "CALC1_ZB1",
+    "CALC1_ZB2",
+    "CALC1_ZB3"
+   ]
+  }
+ ]
+}
+S1 Next sequence after B: ["CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZA3","CALC1_ZB3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZA3","CALC1_ZB3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2"]
+S1 deep link #CALC1_ZA2 shows: CALC1_ZA2 label A.json
+=========== S2: A then A' (same filename A.json; A_02 removed, A_03 changed, A_04 added)
+--- s2_after_A
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA2",
+  "CALC1_ZA3"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA2": "A-old :: CALC1_ZA2 :: ",
+  "CALC1_ZA3": "A-old :: CALC1_ZA3 :: "
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA2": "A.json",
+  "CALC1_ZA3": "A.json"
+ },
+ "shown": "CALC1_ZA1",
+ "label": "A.json",
+ "listRows": [
+  "#CALC1_ZA2",
+  "#CALC1_ZA3",
+  "#CALC1_ZA1"
+ ],
+ "idb": [
+  {
+   "name": "A.json",
+   "codes": [
+    "CALC1_ZA1",
+    "CALC1_ZA2",
+    "CALC1_ZA3"
+   ]
+  }
+ ]
+}
+--- s2_after_A2_before_reload
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA2",
+  "CALC1_ZA3",
+  "CALC1_ZA4"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA2": "A-old :: CALC1_ZA2 :: ",
+  "CALC1_ZA3": "A-NEW-EDIT :: CALC1_ZA",
+  "CALC1_ZA4": "A-new :: CALC1_ZA4 :: "
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA2": "A.json",
+  "CALC1_ZA3": "A.json",
+  "CALC1_ZA4": "A.json"
+ },
+ "shown": "CALC1_ZA1",
+ "label": "A.json",
+ "listRows": [
+  "#CALC1_ZA2",
+  "#CALC1_ZA3",
+  "#CALC1_ZA1",
+  "#CALC1_ZA4"
+ ],
+ "idb": [
+  {
+   "name": "A.json",
+   "codes": [
+    "CALC1_ZA1",
+    "CALC1_ZA3",
+    "CALC1_ZA4"
+   ]
+  }
+ ]
+}
+S2 Next sequence: ["CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3"]
+=========== S3a: reload after S2
+--- s3a_after_reload_S2
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA3",
+  "CALC1_ZA4"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA3": "A-NEW-EDIT :: CALC1_ZA",
+  "CALC1_ZA4": "A-new :: CALC1_ZA4 :: "
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA3": "A.json",
+  "CALC1_ZA4": "A.json"
+ },
+ "shown": "CALC1_ZA3",
+ "label": "A.json",
+ "listRows": [
+  "#CALC1_ZA3",
+  "#CALC1_ZA1",
+  "#CALC1_ZA4"
+ ],
+ "idb": [
+  {
+   "name": "A.json",
+   "codes": [
+    "CALC1_ZA1",
+    "CALC1_ZA3",
+    "CALC1_ZA4"
+   ]
+  }
+ ]
+}
+S3a Next after reload: ["CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4"]
+S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA4 | entryMsg: CALC1_ZA2 not found.
+=========== S3b: A, B, reload
+--- s3b_before_reload
+{
+ "inMemory": [
+  "CALC1_ZA1",
+  "CALC1_ZA2",
+  "CALC1_ZA3",
+  "CALC1_ZB1",
+  "CALC1_ZB2",
+  "CALC1_ZB3"
+ ],
+ "text": {
+  "CALC1_ZA1": "A-old :: CALC1_ZA1 :: ",
+  "CALC1_ZA2": "A-old :: CALC1_ZA2 :: ",
+  "CALC1_ZA3": "A-old :: CALC1_ZA3 :: ",
+  "CALC1_ZB1": "B :: CALC1_ZB1 :: Whic",
+  "CALC1_ZB2": "B :: CALC1_ZB2 :: Whic",
+  "CALC1_ZB3": "B :: CALC1_ZB3 :: Whic"
+ },
+ "file": {
+  "CALC1_ZA1": "A.json",
+  "CALC1_ZA2": "A.json",
+  "CALC1_ZA3": "A.json",
+  "CALC1_ZB1": "B.json",
+  "CALC1_ZB2": "B.json",
+  "CALC1_ZB3": "B.json"
+ },
+ "shown": "CALC1_ZB1",
+ "label": "B.json",
+ "listRows": [
+  "#CALC1_ZB1",
+  "#CALC1_ZA3",
+  "#CALC1_ZB3",
+  "#CALC1_ZA2",
+  "#CALC1_ZB2",
+  "#CALC1_ZA1"
+ ],
+ "idb": [
+  {
+   "name": "B.json",
+   "codes": [
+    "CALC1_ZB1",
+    "CALC1_ZB2",
+    "CALC1_ZB3"
+   ]
+  }
+ ]
+}
+S3b Next before reload: ["CALC1_ZB1","CALC1_ZA3","CALC1_ZB3","CALC1_ZA2","CALC1_ZB2","CALC1_ZA1","CALC1_ZB1"]
+--- s3b_after_reload
+{
+ "inMemory": [
+  "CALC1_ZB1",
+  "CALC1_ZB2",
+  "CALC1_ZB3"
+ ],
+ "text": {
+  "CALC1_ZB1": "B :: CALC1_ZB1 :: Whic",
+  "CALC1_ZB2": "B :: CALC1_ZB2 :: Whic",
+  "CALC1_ZB3": "B :: CALC1_ZB3 :: Whic"
+ },
+ "file": {
+  "CALC1_ZB1": "B.json",
+  "CALC1_ZB2": "B.json",
+  "CALC1_ZB3": "B.json"
+ },
+ "shown": "CALC1_ZB3",
+ "label": "B.json",
+ "listRows": [
+  "#CALC1_ZB1",
+  "#CALC1_ZB3",
+  "#CALC1_ZB2"
+ ],
+ "idb": [
+  {
+   "name": "B.json",
+   "codes": [
+    "CALC1_ZB1",
+    "CALC1_ZB2",
+    "CALC1_ZB3"
+   ]
+  }
+ ]
+}
+S3b Next after reload: ["CALC1_ZB3","CALC1_ZB2","CALC1_ZB1","CALC1_ZB3","CALC1_ZB2","CALC1_ZB1","CALC1_ZB3"]
+S3b after reload deep link #CALC1_ZA2 shows: CALC1_ZB3 | entryMsg: CALC1_ZA2 not found.
+=========== S4: upload reuses hosted code PSY_DAA
+hosted PSY_DAA body: Which term matches this definition?
+
+An evaluation of an obj
+before upload PSY_DAA page text:  PSY_DAA Question PSY_DAA Term: An evaluation of an object in a positive..
+--- s4_after_upload
+{
+ "inMemory": [
+  "PSY_DAA"
+ ],
+ "text": {
+  "PSY_DAA": "UPLOADED-OVERRIDE-TEXT"
+ },
+ "file": {
+  "PSY_DAA": "H.json"
+ },
+ "shown": "PSY_DAA",
+ "label": "H.json",
+ "listRows": [
+  "#PSY_DAA"
+ ],
+ "idb": [
+  {
+   "name": "H.json",
+   "codes": [
+    "PSY_DAA"
+   ]
+  }
+ ]
+}
+after upload PSY_DAA page text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te
+PSY_DAB (not uploaded) still hosted: PSY_DAB  PSY_DAB Question PSY_DAB Term: A 
+after reload PSY_DAA text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te

@@ -313,7 +313,7 @@
      The name is kept as a label when the file has no valid "bank" flag. report: totals for codes.uploadMsg. */
   async function ingest(list, save = true) {
     const all = [...(list || [])], files = all.filter(f => /\.json$/i.test(f.name));
-    const got = [], bad = [], keep = [], report = C.emptyReport();
+    const got = [], bad = [], keep = [], pend = [], report = C.emptyReport();
     report.notjson = all.length - files.length;
     for (const f of files) {
       try {
@@ -325,11 +325,15 @@
         if (s.fatal) { report.notbank++; bad.push(f.name); continue; }
         for (const k in s.skipped) report[k] += s.skipped[k];
         if (!s.kept.length) { bad.push(f.name); continue; }
-        for (const p of s.kept) { local.set(p.code, p); names.set(p.code, s.flag || f.name); got.push(p); }
+        pend.push([f, s]);
         report.kept += s.kept.length;
         keep.push({ name: f.name, text });
       } catch (e) { report.json++; bad.push(f.name); }
     }
+    /* A real upload REPLACES the old one (memory = what saveBank stores; restore() rebuilds the same set). Nothing valid in the pick: nothing changes.
+       The swap has no await in it, so a reader never sees the store half empty. restore() (save = false) only fills the empty store. */
+    if (save && pend.length) { local.clear(); names.clear(); }
+    for (const [f, s] of pend) for (const p of s.kept) { local.set(p.code, p); names.set(p.code, s.flag || f.name); got.push(p); }
     if (save && keep.length) await saveBank(keep);
     return { files, got, bad, report };
   }
