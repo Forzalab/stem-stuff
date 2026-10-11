@@ -152,11 +152,11 @@
       const s = par.appendChild(mk('i', 'fx-sp fx-sp' + (i % 4)));
       s.style.cssText = `left:${x}px;top:${y}px;--c:${pick(COLORS)};opacity:0`;   // unseen until its slot
       const a = i / n * 360 + rnd(-12, 12), d = dist * rnd(.6, 1.2), r = `rotate(${a}deg) translateX`;
-      all.push(run(s, [
-        { transform: `${r}(0) scale(.3)`, opacity: 1 },
-        { transform: `${r}(${d * .75}px) scale(1)`, opacity: 1, offset: .35 },
-        { transform: `${r}(${d}px) scale(0)`, opacity: 0 }
-      ], { duration: D, delay, easing: 'cubic-bezier(.1,.7,.3,1)' }));
+      all.push(run(s, [                                            // out fast, seen most of the slot, gone at its end
+        { transform: `${r}(0) scale(.3)`, opacity: 1, easing: 'cubic-bezier(.1,.7,.3,1)' },
+        { transform: `${r}(${d * .85}px) scale(1)`, opacity: 1, offset: .7, easing: 'ease-in' },
+        { transform: `${r}(${d}px) scale(.4)`, opacity: 0 }
+      ], { duration: D, delay }));
     }
     return Promise.all(all);
   }
