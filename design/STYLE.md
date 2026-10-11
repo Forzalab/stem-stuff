@@ -12,7 +12,7 @@ When a ruling changes, edit the rule here and add one line to the feature doc. N
 ## 1. Principles
 
 **Style: Calm Textbook.** A quiet page that teaches. Typography is the interface; the student always sees one clear next step; small jokes live in the content, never in the chrome.
-**Precedents:** Calm Technology (Weiser and Brown; Amber Case), Rams' "less but better", the GOV.UK autism design poster, W3C COGA, Tufte's data-ink, iA Writer, Apple HIG and Material 3 canonical layouts, tiling window managers, Atkinson Hyperlegible (Braille Institute). Impeccable is a hard gate (§7).
+**Precedents:** Calm Technology (Weiser and Brown; Amber Case), Rams' "less but better", the GOV.UK autism design poster, W3C COGA, Tufte's data-ink, iA Writer, Apple HIG and Material 3 canonical layouts, tiling window managers, Atkinson Hyperlegible (Braille Institute). Impeccable and greyscale legibility are hard gates (§7).
 
 1. **One system.** Every control comes from the same tokens and the same `.btn` / field rules. Why: the student learns the page once.
 2. **Calm (baby-friendly).** Dark, quiet surfaces; color only for state; no shouting, no scolding. Why: a drill is stressful already.
@@ -370,6 +370,7 @@ From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactori
 13. `npm test` passes, including `tests/style.test.mjs` (this file as code: colours, shadows, radii, fonts, `--mark`, emoji, toast, key handlers; §9 items are its `todo` tests).
 14. Floating things (toast, Scratchpad button) clear every live control at 375×667, 390×844 and in landscape.
 15. No new keyboard shortcut; no humour in chrome.
+16. Greyscale legibility (Tony, Oct 11): every changed screen and state must read in greyscale, alongside Impeccable. Shoot it with `filter: grayscale(1)` (or desaturate the PNG) at 393×852 and 1920×1080. Each state (idle, selected, right, wrong, locked, out of tries, sugar vs diet) must be distinguishable by lightness, shape, icon or text, never by hue alone; text keeps 4.5:1 and controls/icons 3:1 in greyscale too; in any reward or celebration art the one thing that matters (e.g. the prize coin) is still the most salient element. Fail = no go: redo, iterate, or ask Tony. Put the greyscale shots next to the colour ones in `design/shots/<slug>-<date>/`.
 
 ---
 
