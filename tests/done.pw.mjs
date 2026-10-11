@@ -154,7 +154,7 @@ try {
     const s = await qstate(page);
     assert.ok(s.finished && s.closed, "read-only"); assert.equal(s.live, 0); assert.equal(s.sendShown, false);
     assert.equal(s.ans, "5", "the student's last answer, not the right one");
-    assert.equal(s.mark, "i-lock"); assert.match(s.fb, /comes back around/);
+    assert.equal(s.mark, "i-lock"); assert.doesNotMatch(s.fb, /Out of tries/);   // T17b-1 / Q13: the lock says it, no line
   });
 
   await step("upload: reopened correct MC shows the student's pick, read-only", async () => {
@@ -168,7 +168,7 @@ try {
     await go(page, "CALC1_D07");
     const s = await qstate(page);
     assert.deepEqual(s.right, [], "no right choice revealed"); assert.deepEqual(s.wrong.sort(), ["a", "c"]);
-    assert.ok(s.finished); assert.equal(s.live, 0); assert.match(s.fb, /comes back around/);
+    assert.ok(s.finished); assert.equal(s.live, 0); assert.doesNotMatch(s.fb, /Out of tries/);   // T17b-1 / Q13
     const html = await page.innerHTML("#q");
     assert.doesNotMatch(html, /\bright\b/, "no .right anywhere");
     if (SHOTS) {
@@ -230,7 +230,7 @@ try {
     assert.equal(st.wrong, 2);
     await sp.reload(); await opened(sp, "CALC1_X2P");
     const s = await qstate(sp);
-    assert.ok(s.finished); assert.deepEqual(s.right, []); assert.match(s.fb, /comes back around/);
+    assert.ok(s.finished); assert.deepEqual(s.right, []); assert.doesNotMatch(s.fb, /Out of tries/);
     await sp.waitForTimeout(500);
     assert.ok((await qstate(sp)).finished, "still locked after /state");
   });
@@ -262,7 +262,7 @@ try {
     await go(op, "CALC1_X2P");
     await op.waitForFunction(() => window.__drill.state.finished, null, { timeout: 9000 });
     const s = await qstate(op);
-    assert.match(s.fb, /comes back around/); assert.deepEqual(s.right, []);
+    assert.doesNotMatch(s.fb, /Out of tries/); assert.deepEqual(s.right, []);
     await other.close();
   });
 

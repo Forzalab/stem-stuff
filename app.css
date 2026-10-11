@@ -316,11 +316,12 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .chk .cluck { flex: 1; min-width: 0; align-items: center; }   /* a short wrong-answer hint, in the room left of Check (app.js feedback) */
 .chk .cluck > .ico { margin-top: 0; }
 .chk .cluck .md { overflow-wrap: anywhere; }
-.q.closed .chk { display: none; }
+.q.closed .chk:not(.cue) { display: none; }   /* closed: the Check row goes, unless it carries Next (T17b-1) */
 /* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
 .pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
 .pips i { width: 10px; height: 10px; border-radius: 50%; border: var(--bw) solid var(--muted); }
 .pips i.used { background: var(--bad); border-color: var(--bad); }
+.pips.spent, .preview.spent { visibility: hidden; }   /* the question closed: the dots go, their room stays (T17b-1: nothing moves after Check) */
 .choices + .pips, .ff + .pips { display: flex; justify-content: flex-end; margin-top: var(--s2); }   /* no Check beside them: right-aligned under the rows / the box */
 
 /* 2 choices, or 3 short ones: one row of pills, no A/B/C badges (fitChoices() in app.js measures and decides).
@@ -333,7 +334,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt.wrong { padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }   /* the wrong edge takes its 1px back: nothing moves */
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
 .choices.inline .opt .badge { display: none; }
-.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) + 8px); }
+.choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) * 2 + 8px); }   /* T17b-1: the selected pill keeps Next's room (96px) from the start, so its Check rect is where Next lands */
 .choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
 
 .ff {
@@ -353,7 +354,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff.done input { color: var(--ok); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
-.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay */
+.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.cue) { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay.
+   Out of tries, every mc row dims (untried ones too, L2). The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--ok); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
@@ -400,10 +402,71 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff.bad :is(.send, .vk) { right: 0; top: 0; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
-.ff.shut { opacity: 0.5; }   /* right ones too: closed = looks disabled */
+.ff.shut:not(.cue) { opacity: 0.5; }   /* right ones too: closed = looks disabled (the one with Next: not dimmed, T17b-1) */
 .ff.shut:hover { border-color: var(--edge); }
 .ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
+   96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. A light-blue filled
+   face, the word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
+:root { --d-fast: 120ms; --d-move: 200ms; --nxw: calc(var(--btn) * 2); }
+.nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 0; border: 0; border-radius: 8px; background: transparent;
+  color: var(--field); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
+  padding: 0 var(--s2) 0 var(--s3); border-radius: 8px; background: var(--c1); color: var(--field); }
+.nx:hover .nf { background: var(--c1-hi); }
+.nx:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.nx .ico { width: 20px; height: 20px; }
+.q.closed .nx { cursor: pointer; }
+.ch .nx { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }   /* exactly on the row's Check */
+.ff .nx { position: absolute; right: var(--bw-up); top: var(--bw-up); }                       /* exactly on the box's Check */
+.ff.bad .nx { right: 0; top: 0; }
+/* the carrier makes room: its text stops short of Next, the verdict icon moves to the left of Next */
+.ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
+.ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 8px - var(--bw-up)); }
+.ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw-up)); }
+.ff.cue .vk { right: calc(var(--nxw) + var(--bw-up)); }
+.q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
+.q .ff.cue.ok:focus-within { border-color: var(--ok); }
+.ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
+.choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
+.choices.inline .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 8px - var(--bw-up)); }
+.choices.inline .ch.cue .opt.right .badge { display: none; }   /* the pill's check would sit under Next: the green rim says it (no reflow, the pill keeps its width) */
+/* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
+.q.closed :is(.ch, .opt) { transition: none; }
+html:has(#q.closed) :is(#work, #fb) { transition: none; }
+/* fix A (sugar right row / box only): a 10% --ok wash (#11242b), a 2px --ok rim, and a 3px --field ring round a 44px face, so the blue
+   face never touches the green rim. Sugar moves the mc slot 4px in from the rim (Check too, so its rect stays inside Next). Diet: none */
+html.sugar .ch.cue .opt.right, html.sugar .ff.cue.ok { background: color-mix(in srgb, var(--ok) 10%, var(--paper)); border: var(--bw-alarm) solid var(--ok); }
+html.sugar .ch :is(.send, .nx) { right: 6px; }
+html.sugar .ch.cue .opt, html.sugar .choices.inline .opt[aria-checked="true"], html.sugar .choices.inline .probe .opt { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 12px - var(--bw-up)); }
+html.sugar .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .choices.inline .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 12px - var(--bw-up)); }
+html.sugar .ch.cue .opt.right { padding: calc(var(--s2) - var(--bw-up)) calc(var(--nxw) + 12px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
+html.sugar .ff.cue.ok { padding-left: calc(var(--s3) - var(--bw-up)); padding-right: calc(var(--btn) * 3); }
+html.sugar .ff.cue.ok :is(.nx, .vk) { top: 0; }
+html.sugar .ff.cue.ok .nx { right: 0; }
+html.sugar .ff.cue.ok .vk { right: var(--nxw); }
+html.sugar .ch.cue:has(.opt.right) .nx, html.sugar .ff.cue.ok .nx { padding: 2px; }
+html.sugar .ch.cue:has(.opt.right) .nx .nf, html.sugar .ff.cue.ok .nx .nf { position: relative; border-radius: 6px; padding: 0 6px 0 10px; }
+/* the ring: a --field plate 1px outside Next's 96x48 box, under the face (2px in) = 3px of --field all round. Not a shadow (STYLE §2.7), not an outline (that is the keyboard ring) */
+html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::before { content: ""; position: absolute; inset: -1px; border-radius: calc(6px + 3px); background: var(--field); }   /* the face radius + the ring */
+/* the shared one-shot motion token (palette §9): Next lands once, after the verdict colour; the calm nod after Next. Never a loop */
+.g-next { animation: g-next-in var(--d-move) ease-out var(--d-fast) both; }
+@keyframes g-next-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes g-next-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes g-nod { 0%, 100% { transform: none; } 45% { transform: rotate(-8deg) translateY(2px); } }
+.g-nod { transform-origin: 40% 95%; animation: g-nod 360ms ease-out calc(var(--d-fast) + var(--d-move)) 1 both; }
+@media (prefers-reduced-motion: reduce) { .g-next { animation: g-next-fade var(--d-move) linear both; } .g-nod { animation: none; } }
+/* the duck chip (sugar; app.js wishPaint on a closed question): the official 48px pose + the word, the live label-button look. No wiggle */
+.wish.cue { margin-top: var(--s3); }
+.cue-chip { box-sizing: border-box; height: var(--btn); margin: 0; display: inline-flex; align-items: center; gap: var(--s2); padding: 0 var(--s4) 0 var(--s1);
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--edge); border-radius: 8px; font: inherit; font-size: var(--t-sm); font-weight: 700;
+  line-height: 1; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.cue-chip:hover { background: var(--raised); }
+.cue-chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.cue-chip .dk { display: block; flex: none; height: 48px; width: auto; }
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
 .boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }

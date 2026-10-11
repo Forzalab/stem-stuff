@@ -195,10 +195,12 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 | typed | `--edge` | `.btn-go` arrow | `--ink` |
 | focus | `--focus`, 2px (field rule) | arrow if typed | `--ink` |
 | wrong, try left | `--bad` 2px dashed | `i-x` in `--bad` | `--ink`, editable |
-| correct | `--ok` | `i-ok` in `--ok` | `--ok`, read-only |
-| locked (out of tries) | `--edge`, 50% opacity | `i-lock` in `--muted` | read-only, not-allowed cursor |
+| correct | `--ok` (sugar: `--ok` 2px rim + 10% `--ok` wash `#11242b`) | verdict `i-ok` in `--ok` LEFT of the slot; the slot holds the labelled **Next ▶** (96x48, right-aligned on Check; sugar: 3px `--field` ring round a 44px face) | `--ok`, read-only |
+| locked (out of tries) | `--edge`, not dimmed (it carries Next) | verdict `i-lock` in `--muted` LEFT of the slot; the slot holds the labelled **Next ▶** | `--muted`, read-only, no words under it (no out-of-tries line) |
+| closed, not the last try (multi parts) | `--edge` / `--ok`, 50% opacity | its verdict icon | read-only, not-allowed cursor |
 
 - Do: show the verdict icon in the arrow slot, so the result sits where the eye already is. Keep the box the same size in every state.
+- Next (T17b-1, app.js `cueNext`): once a question closes, the last try's Check slot (box, mc row, multi part, pick-all Check row) gets a labelled Next. The Check rect lies inside it (right edges flush), so nothing moves; focus goes to it; a held Enter (`e.repeat`) never presses it. It lands once with `g-next-in` (200ms, 120ms delay; reduced motion `g-next-fade`). The filled ▶ (`i-tri`) is only on this filled Next; the nav bar Next and every ghost / text button keep the thin chevron `i-next`. Sugar adds the duck chip under the answer ("Compare with Cluck's steps" / "Ask Cluck", no XP); diet has no chip, duck or wash.
 - Don't: put the verdict in a new line that pushes content; show a glow; use both a colored border and a focus outline (one ring).
 
 ### Multiple-choice choice (`.opt`)
