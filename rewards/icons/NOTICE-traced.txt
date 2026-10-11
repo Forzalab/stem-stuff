@@ -9,7 +9,10 @@ from isolated transparent PNG parts:
   cherries_color.svg      <- 04-sym-cherry       (cherry pair with leaf)
   glowing_star_color.svg  <- 01-gold-star        (the traced star above, plus a hand-written vector glow and 5 rays)
 
-Traced from owner-supplied reference art (via image-model isolation); licence of the source art UNKNOWN. Do not ship to production until cleared.
+The traces are RECOLOURED onto the gift-box palette (blue #1A4196 to #B2D0FD for the gem, gold #B48329 to #FEF585 for coin and stars;
+cherries keep natural colours). The gem was further simplified by hand (clean facets) and the glowing star has a hand-made outline, halo and rays.
+
+Traced from owner-supplied reference art (via image-model isolation); licence of the source art is still UNKNOWN. Do not ship to production until cleared.
 
 The other icons here (duck_color.svg, fire_color.svg, trophy_color.svg) are still Microsoft Fluent Emoji Color, MIT License:
 see LICENSE-fluentui-emoji.txt. Settings, sizes and before/after evidence: design/shots/reward-icons-traced-2026-10-11/README.md.

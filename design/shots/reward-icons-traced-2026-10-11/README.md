@@ -58,12 +58,12 @@ noisy at 16 px. Going below k = 7 (6 for the coin) flattened the coin's rim and 
 | icon | old Fluent | new traced | paths |
 |---|---|---|---|
 | coin_color.svg | 11,772 B | **6,643 B** | 11 |
-| gem_stone_color.svg | 4,669 B | **8,687 B** | 16 |
+| gem_stone_color.svg | 4,669 B | **2,057 B** | 8 (simplified, see below) |
 | star_color.svg | 7,684 B | **5,494 B** | 9 |
-| glowing_star_color.svg | 12,111 B | **6,136 B** | 9 + glow + rays |
+| glowing_star_color.svg | 12,111 B | **7,344 B** | 9 + outline + glow + ring + rays |
 | cherries_color.svg | 7,581 B | **5,115 B** | 9 |
 
-All are under the 12 KB target. `rewards/icons.js` went from 118,443 B to 102,910 B.
+All are under the 12 KB target. `rewards/icons.js` went from 118,443 B to 95,678 B.
 
 ## Evidence
 
@@ -83,8 +83,27 @@ All are under the 12 KB target. `rewards/icons.js` went from 118,443 B to 102,91
 - **coin**: reads as a gold coin at every size. At 16 px the star inside is a hint, much like the old bank-building glyph.
 - **star**: crisp at every size. In the HUD the level number on top of it stays legible.
 - **cherries**: reads as cherries at 16 px. The pair sits lower and the leaf is bigger than in Fluent, so the fruit is a bit smaller.
-- **gem_stone**: reads as a cut diamond from 16 px up. At reel size (60 px) the dark facets in the lower half look busier
-  than the flat Fluent gem, a little like teeth. A hand-cleaned facet layer would fix that; tracing alone can't.
-- **glowing_star**: different from `star` at every size because of the rays. On the yellow drop banner the glow vanishes
-  into the yellow and only the star and rays show, so it is a bit smaller there than the old icon.
+- **gem_stone** (fixed): the first trace had a busy lower half that looked like teeth at the 60 px reel size. `src/gemfix.py` keeps
+  the traced silhouette and crown highlight, drops the 14 small jagged traced facets and lays two crown cuts and four straight
+  pavilion facets on the blue ramp. The gem is now part traced, part hand-built. 8,687 B down to 2,057 B.
+- **glowing_star** (fixed): the old glow was a yellow radial gradient, which vanished on the yellow banner. `src/glow.py` now adds a
+  dark-gold (#8A5A00) outline around the star, a dark-gold halo ring at r 14.6 and dark-gold ray outlines, so it reads on yellow.
+  The soft gold radial glow is kept for the dark UI.
+- Recolour check: the 669c7da recolour does show in the live shots. The gem is blue (#1A4196 to #B2D0FD) and the coin and stars are gold (#B48329 to #FEF585).
+
+## Colours (fills in each file, recoloured onto the gift ramps)
+
+Ramps sampled from the D2 gift parts, dark to highlight. Blue: `#1A4196` `#2C4EA3` `#3763C9` `#247AD5` `#B2D0FD`.
+Gold: `#B48329` `#E8A31B` `#F0BD37` `#FAE350` `#FEF585`. Each traced fill was mapped onto its ramp by luminance (`src/recolor.py`).
+
+| icon | paths | fills (first use order; strokes and gradient stops included) | size |
+|---|---|---|---|
+| `coin_color.svg` | 11 | `#F0BC36` `#F7D748` `#FEF481` `#B48329` `#EDB22B` `#FEF585` `#ECAE27` `#F9DD4C` `#C99023` `#EFBB35` `#C08A26` | 6643 B |
+| `gem_stone_color.svg` | 8 | `#2D51A8` `#B2D0FD` `#3763C9` `#247AD5` `#2C4EA3` `#1A4196` | 2057 B |
+| `star_color.svg` | 9 | `#FBE557` `#EEB731` `#FEF585` `#EDB42E` `#B48329` `#ECB029` `#FBE75C` `#F6D245` | 5494 B |
+| `glowing_star_color.svg` | 11 | the star fills above plus `#FAE350` `#F0BD37` `#E8A31B` and outline `#8A5A00` | 7344 B |
+| `cherries_color.svg` | 9 | `#E54938` `#40890D` `#B01914` `#7B9025` `#42890E` `#835119` `#738720` `#718F21` `#D65335` (natural red and green, not recoloured) | 5115 B |
+
+Compare sheet with before vs after at 60 px on the reel tile, dark UI and yellow banner, plus the live shots: `icons-compare-v2.png`
+(`src/compare.mjs`). The earlier `icons-compare.png` and `icons-compare-1x.png` are kept (16 to 64 px rows).
 - The traces are flat colour, so they look flatter than the gradient-shaded Fluent icons next to them (duck, flame, trophy).
