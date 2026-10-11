@@ -343,7 +343,9 @@ try {
   });
 
   await step("SUGAR_EZ12: sugar again; the prefixed form is never remembered", async () => {
+    await page.evaluate(() => { window.__opened = false; addEventListener("drill:problem", () => { window.__opened = true; }, { once: true }); });
     await typeCode(page, "SUGAR_EZ12");
+    await page.waitForFunction(() => window.__opened && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });   // the bank's question is open: its load would close the code box under the next step (#125 CI flake)
     await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
     await page.waitForFunction(() => document.querySelectorAll("#qlist a").length === 4, null, { timeout: 8000 });
     const saved = await page.evaluate(() => localStorage.getItem("stem-codes") || "");
