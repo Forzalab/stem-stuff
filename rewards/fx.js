@@ -20,31 +20,50 @@
   const popKF = (s, o = 0) => [{ transform: 'scale(1)', opacity: 1 }, { transform: `scale(${s})`, opacity: 1, offset: .4 }, { transform: 'scale(1)', opacity: o || 1 }];
   const enterKF = (from) => [{ transform: `scale(${from})`, opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }];
   const COLORS = ['#ff8a1f', '#ffd36b', '#d63fa8', '#fff3b0', '#ffb347'];
-  const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 }, CONF = { small: 24, medium: 40, large: 70 };
+  const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 };
   const wait = ms => new Promise(r => setTimeout(r, ms));
+  const done = a => a.finished.catch(() => {});
   const D = 200;                                                    // one slot = STYLE.md --d-move
 
-  /* ONE BLINK (20261010-B2; STYLE.md §1.6 / §2.8, palette §10): one group moves at a time. Every effect is a job on one lane and runs
-     only after the job before it has finished, so a right answer plays in slots of 200 ms, in the order app.js calls them:
-     answer pop 0 → stars (confetti) 200 → ribbon ("+N XP") 400 → button (coins into the HUD strip, the one tap target) 600 → the HUD
-     itself (bar, level, coin pill shine) → the ribbon fades out. A drop / burst / banner waits for the lane. While the lane is busy,
-     html.fx-busy pauses the Cluck chip's wiggle (rewards.css). Triggers, odds, XP and when app.js pays are unchanged: choreography only. */
-  let lane = Promise.resolve(), jobs = 0, tails = [];
+  /* ONE BLINK (20261010-B2; STYLE.md §1.6 / §2.8, palette §10): one group moves at a time. Everything runs on one lane, one job after
+     the other: a beat (below), then a drop's reels, a burst, the banner. While the lane is busy, html.fx-busy pauses the Cluck chip's
+     wiggle (rewards.css). Triggers, odds, XP and when app.js pays are unchanged: choreography only. */
+  let lane = Promise.resolve(), jobs = 0;
   const root = document.documentElement;
   function queue(job) {
     jobs++; root.classList.add('fx-busy');
-    const p = lane.then(job).catch(() => {}).then(() => {
-      if (--jobs) return;
-      if (tails.length) { const t = tails; tails = []; t.forEach(queue); }
-      else root.classList.remove('fx-busy');
-    });
-    return (lane = p);
+    return (lane = lane.then(job).catch(() => {}).then(() => { if (!--jobs) root.classList.remove('fx-busy'); }));
   }
-  // a scene (slots, burst, banner) first lets the beat before it settle: the HUD catches up, the "+N XP" fades out
-  function scene(job) { if (tails.length) { const t = tails; tails = []; t.forEach(queue); } return queue(job); }
+
+  /* the beat: what app.js asks for in one go (rewardShow, rewardTick) is one lane job. Each part gets a slot in palette order, answer →
+     stars → ribbon ("+N XP") → button (the coins into the HUD strip), and every start is set up front as a WAAPI delay 200 ms apart, so
+     a busy main thread cannot push two parts together. The answer's slot also waits for the page's own lock-in fades (app.css, ≤ 400 ms).
+     Then the HUD catches up in its own slot, then the ribbon fades out. A right answer is still by about 1.2 s. */
+  const ORDER = ['answer', 'stars', 'ribbon', 'coins'];
+  let parts = null;
+  const settle = () => Math.min(2 * D, Math.max(0, ...document.getAnimations().map(a => {
+    const t = a.playState === 'running' && a.effect && a.effect.getComputedTiming();
+    return t && isFinite(t.endTime) && !(a.effect.target && a.effect.target.closest && a.effect.target.closest('.rw-skin')) ? t.endTime - (t.localTime || 0) : 0;
+  })));
+  function beat() {
+    if (parts) return parts;
+    const ps = parts = [], gathered = Promise.resolve().then(() => { parts = null; });
+    hold();
+    queue(async () => {
+      await gathered;
+      ps.sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
+      let at = 0;
+      const runs = ps.map((p, i) => { if (i) at += i === 1 && ps[0].kind === 'answer' ? Math.max(D, settle()) : D; return Promise.resolve(p.play(at)).then(p.ok, p.ok); });
+      await Promise.all(runs);
+      await release();
+      await floatsOut();
+    });
+    return ps;
+  }
+  const part = (kind, play) => new Promise(ok => beat().push({ kind, play, ok }));
 
   /* the HUD strip holds its old bar / flame / level while the beat plays (engine.js renders at app.js's 450 ms; nothing moves then)
-     and catches up in its own slot near the end. Reduced motion: nothing to hold (the HUD changes at once). */
+     and catches up in its own slot after the coins. Reduced motion: nothing to hold (the HUD changes at once). */
   let held = null, hudShine = null, hudPop = null;
   function hold() {
     const h = document.querySelector('.rw-hud');
@@ -54,28 +73,28 @@
     h.style.setProperty('--rw-fs0', (fl && fl.style.getPropertyValue('--fs')) || '1');
     h.classList.add('rw-hold');
     held = h;
-    tails.unshift(release);
-    if (!jobs) queue(() => {});                                     // the lane always drains, so the strip always lets go
   }
   async function release() {
     const h = held, sh = hudShine, pp = hudPop; held = hudShine = hudPop = null;
     if (!h) return;
     h.classList.remove('rw-hold');                                  // bar + flame ease to the new value, a level-up pulses (rewards.css)
-    if (pp && pp.isConnected) pp.animate(popKF(1.15), { duration: D, easing: 'ease-out' });
+    const all = [];
+    if (pp && pp.isConnected) all.push(pp.animate(popKF(1.15), { duration: D, easing: 'ease-out' }));
     if (sh && sh.isConnected) {
       sh.classList.remove('rw-shine'); void sh.offsetWidth; sh.classList.add('rw-shine');
       sh.addEventListener('animationend', () => sh.classList.remove('rw-shine'), { once: true });
     }
-    await wait(D + 20);
+    if (h.isConnected) all.push(...h.getAnimations({ subtree: true }).filter(a => isFinite(a.effect.getComputedTiming().endTime)));   // flushes style: the transitions start now
+    await Promise.all(all.map(done));
   }
-  // the "+N XP" ribbons leave together, after the HUD has caught up
+  // the "+N XP" ribbons leave together, after the HUD has caught up. Reduced motion: they stay a moment, then go at once (no second fade)
   let floats = [];
   async function floatsOut() {
     const f = floats; floats = [];
-    if (still()) { f.forEach(n => n.remove()); return; }           // reduced motion: one fade in, then gone at once
+    if (!f.length) return;
+    if (still()) { await wait(4 * D); f.forEach(n => n.remove()); return; }
     await Promise.all(f.map(n => run(n, [{ opacity: 1 }, { opacity: 0 }], { duration: D, easing: 'ease-out' })));
   }
-
 
   // shared fixed particle layer (never causes page overflow)
   let L;
@@ -91,17 +110,17 @@
   }
 
   // CSS particle burst at (x,y) inside par
-  function spray(par, x, y, n, dist) {                            // one slot: every spark is gone after D ms
+  function spray(par, x, y, n, dist, delay = 0) {                 // one slot: every spark is gone D ms after its start
     const all = [];
     for (let i = 0; i < n; i++) {
       const s = par.appendChild(mk('i', 'fx-sp fx-sp' + (i % 4)));
-      s.style.cssText = `left:${x}px;top:${y}px;--c:${pick(COLORS)}`;
+      s.style.cssText = `left:${x}px;top:${y}px;--c:${pick(COLORS)};opacity:0`;   // unseen until its slot
       const a = i / n * 360 + rnd(-12, 12), d = dist * rnd(.6, 1.2), r = `rotate(${a}deg) translateX`;
       all.push(run(s, [
         { transform: `${r}(0) scale(.3)`, opacity: 1 },
         { transform: `${r}(${d * .75}px) scale(1)`, opacity: 1, offset: .35 },
         { transform: `${r}(${d}px) scale(0)`, opacity: 0 }
-      ], { duration: D, easing: 'cubic-bezier(.1,.7,.3,1)' }));
+      ], { duration: D, delay, easing: 'cubic-bezier(.1,.7,.3,1)' }));
     }
     return Promise.all(all);
   }
@@ -109,38 +128,27 @@
   // slot 0, the answer: one 200 ms pop. It takes over app.css's two-beat .opt.pop pulse on this answer, so the answer is done by 200 ms
   function pop(el) {
     if (!el || still()) return;
-    hold();
     for (const a of el.getAnimations()) if (a.animationName === 'opt-pop') a.finish();
-    queue(() => el.isConnected && el.animate(popKF(1.06), { duration: D, easing: 'ease-out' }).finished.catch(() => {}));
+    part('answer', at => el.isConnected ? done(el.animate(popKF(1.06), { duration: D, delay: at, easing: 'ease-out' })) : null);
   }
 
-  // slot 1, the stars: one short confetti burst from the answer (Tony, Oct 4: confetti on every correct); its canvas goes with it.
-  // No confetti library: the CSS sparks instead (never both: two bursts from one point were two groups)
+  /* slot 1, the stars: one short spark burst from the answer, 200 ms (Tony, Oct 4: confetti on every correct). CSS sparks only: the
+     canvas-confetti library draws from requestAnimationFrame for ~2 s, so it could not be held to one slot (it was the long tail) */
   function sparks(el, tier) {
     if (!el || still()) return;
-    hold();
     tier = COUNT[tier] ? tier : 'small';
-    queue(async () => {
-      if (!el.isConnected) return;
-      const p = mid(el), f = confettiIn(layer());
-      if (!f) return spray(layer(), p.x, p.y, COUNT[tier], DIST[tier]);
-      f({ particleCount: CONF[tier] + COUNT[tier], spread: 80, startVelocity: 32, decay: .86, ticks: 12, scalar: .9, colors: COLORS,
-        shapes: ['star', 'circle'], origin: { x: p.x / innerWidth, y: p.y / innerHeight } });
-      await wait(D);
-      f.reset(); f.canvas.remove();
-    });
+    part('stars', at => { if (!el.isConnected) return null; const p = mid(el); return spray(layer(), p.x, p.y, COUNT[tier], DIST[tier], at); });
   }
 
-  // slot 3, the button: the coins fly into the HUD strip together; the strip answers in its own slot (release)
+  // slot 3, the button: the coins fly into the HUD strip together, all landed 200 ms after the slot starts; the strip answers in its own slot
   function coinFly(fromEl, toEl, n) {
     toEl = toEl || document.getElementById('coinPill');
     n = n || 5;
     if (!fromEl || !toEl || still()) return Promise.resolve();
-    hold();
-    return queue(() => {
-      if (!fromEl.isConnected || !toEl.isConnected) return;
-      const a = mid(fromEl), b = mid(toEl), Ly = layer();
-      hudPop = toEl;
+    hudPop = toEl;
+    return part('coins', at => {
+      if (!fromEl.isConnected || !toEl.isConnected) return null;
+      const a = mid(fromEl), b = mid(toEl), Ly = layer(), lag = n > 1 ? 40 / (n - 1) : 0;
       return Promise.all(Array.from({ length: n }, (_, i) => {
         const c = Ly.appendChild(mk('img', 'fx-fly'));
         c.src = src('coin_color'); c.alt = ''; c.draggable = false;
@@ -152,14 +160,14 @@
           const x = u * u * p0.x + 2 * u * t * p1.x + t * t * b.x - 11, y = u * u * p0.y + 2 * u * t * p1.y + t * t * b.y - 11;
           kf.push({ transform: `translate(${x}px,${y}px) scale(${1 + .4 * Math.sin(Math.PI * t) - .35 * t}) rotate(${t * 300}deg)`, opacity: k ? 1 : 0 });
         }
-        return run(c, kf, { duration: 300, delay: i * 20, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'backwards' });
+        return run(c, kf, { duration: D - 40, delay: at + i * lag, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'backwards' });
       }));
     });
   }
 
   let tHost, cur, tTimer;
   function toast(text, sub) {                                     // the drop banner: never takes a tap (pointer-events: none in rewards.css)
-    return scene(async () => {
+    return queue(async () => {
       if (!tHost || !tHost.isConnected) tHost = host('fx-toast-host');
       clearTimeout(tTimer);
       if (cur) cur.remove();
@@ -211,7 +219,7 @@
   // paylines pop, the label comes in, the sparks fly, then it holds and fades out. Reduced motion: fade in, the result, fade out
   function slots(tier) {
     const T = TIER[tier] ? tier : 'common', [win, label, size] = TIER[T], calm = still();
-    return scene(async () => {
+    return queue(async () => {
       let landed = false, reels = [], hold = 500;
       const ov = overlay('fx-slots-ov', () => (landed ? ov.close() : land(350)));
       const p = ov.el.appendChild(mk('div', 'fx-slots fx-t-' + T,
@@ -307,7 +315,7 @@
   function burst(kind, o) {
     o = o || {};
     if (!KIND[kind]) kind = 'levelup';
-    return scene(async () => {
+    return queue(async () => {
       const K = KIND[kind], calm = still(), title = o.title || K.t, sub = o.sub != null ? o.sub : K.s, t0 = performance.now();
       const ov = overlay('fx-burst fx-' + kind, () => ov.close());
       ov.el.innerHTML = '<div class="fx-rays"></div><div class="fx-dots"></div>';
@@ -332,26 +340,24 @@
   }
 
   // slot 2, the ribbon: "+10 XP" rises off the answer on every correct and stays still until the HUD has caught up, then fades out.
-  // cls "fx-float-sm" = a wrong try's quiet "+1". Reduced motion: one opacity fade, no movement
+  // cls "fx-float-sm" = a wrong try's quiet "+1". Reduced motion: one opacity fade in, no movement, then gone at once
   function float(el, text, cls) {
     if (!el) return;
-    hold();
-    queue(() => {
-      if (!el.isConnected) return;
+    part('ribbon', at => {
+      if (!el.isConnected) return null;
       const p = mid(el), f = layer().appendChild(txt('div', 'fx-float' + (cls ? ' ' + cls : ''), text));
       f.style.cssText = `left:${p.x}px;top:${p.y}px;transform:translate(-50%,-110%)`;
       floats.push(f);
-      if (!tails.includes(floatsOut)) tails.push(floatsOut);
-      return f.animate(still() ? [{ opacity: 0 }, { opacity: 1 }]
+      return done(f.animate(still() ? [{ opacity: 0 }, { opacity: 1 }]
         : [{ transform: 'translate(-50%,-50%)', opacity: 0 }, { transform: 'translate(-50%,-110%)', opacity: 1 }],
-      { duration: D, easing: 'ease-out' }).finished.catch(() => {});
+      { duration: D, delay: at, fill: 'both', easing: 'ease-out' }));
     });
   }
 
   // one light sweep across the HUD coin pill (rewards.css .rw-shine), in the HUD's own slot
   function shine(el) {
     if (!el || still()) return;
-    hold();
+    beat();
     hudShine = el;
   }
 
