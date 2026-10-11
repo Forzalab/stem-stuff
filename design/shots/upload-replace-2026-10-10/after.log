@@ -1,3 +1,4 @@
+# AFTER: branch ccr-0726030c-ifug2i-upload-replaces, Chromium 393x852, repro = B1/repro.mjs, port 8873
 =========== S1: A then B (different codes), different file names
 --- s1_after_A
 {
@@ -19,9 +20,9 @@
  "shown": "CALC1_ZA1",
  "label": "A.json",
  "listRows": [
+  "#CALC1_ZA3",
   "#CALC1_ZA2",
-  "#CALC1_ZA1",
-  "#CALC1_ZA3"
+  "#CALC1_ZA1"
  ],
  "idb": [
   {
@@ -92,9 +93,9 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZB1 label B.json
  "shown": "CALC1_ZA1",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA3",
+  "#CALC1_ZA1",
   "#CALC1_ZA2",
-  "#CALC1_ZA1"
+  "#CALC1_ZA3"
  ],
  "idb": [
   {
@@ -124,12 +125,12 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZB1 label B.json
   "CALC1_ZA3": "A.json",
   "CALC1_ZA4": "A.json"
  },
- "shown": "CALC1_ZA3",
+ "shown": "CALC1_ZA4",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA3",
+  "#CALC1_ZA4",
   "#CALC1_ZA1",
-  "#CALC1_ZA4"
+  "#CALC1_ZA3"
  ],
  "idb": [
   {
@@ -142,7 +143,7 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZB1 label B.json
   }
  ]
 }
-S2 Next sequence: ["CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1"]
+S2 Next sequence: ["CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1"]
 =========== S3a: reload after S2
 --- s3a_after_reload_S2
 {
@@ -164,9 +165,9 @@ S2 Next sequence: ["CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","
  "shown": "CALC1_ZA3",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA3",
+  "#CALC1_ZA4",
   "#CALC1_ZA1",
-  "#CALC1_ZA4"
+  "#CALC1_ZA3"
  ],
  "idb": [
   {
@@ -199,12 +200,12 @@ S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA1 | entryMsg: CALC1_ZA2 n
   "CALC1_ZB2": "B.json",
   "CALC1_ZB3": "B.json"
  },
- "shown": "CALC1_ZB1",
+ "shown": "CALC1_ZB3",
  "label": "B.json",
  "listRows": [
-  "#CALC1_ZB1",
+  "#CALC1_ZB3",
   "#CALC1_ZB2",
-  "#CALC1_ZB3"
+  "#CALC1_ZB1"
  ],
  "idb": [
   {
@@ -217,7 +218,7 @@ S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA1 | entryMsg: CALC1_ZA2 n
   }
  ]
 }
-S3b Next before reload: ["CALC1_ZB1","CALC1_ZB2","CALC1_ZB3","CALC1_ZB1","CALC1_ZB2","CALC1_ZB3","CALC1_ZB1"]
+S3b Next before reload: ["CALC1_ZB3","CALC1_ZB2","CALC1_ZB1","CALC1_ZB3","CALC1_ZB2","CALC1_ZB1","CALC1_ZB3"]
 --- s3b_after_reload
 {
  "inMemory": [
@@ -238,9 +239,9 @@ S3b Next before reload: ["CALC1_ZB1","CALC1_ZB2","CALC1_ZB3","CALC1_ZB1","CALC1_
  "shown": "CALC1_ZB3",
  "label": "B.json",
  "listRows": [
-  "#CALC1_ZB1",
+  "#CALC1_ZB3",
   "#CALC1_ZB2",
-  "#CALC1_ZB3"
+  "#CALC1_ZB1"
  ],
  "idb": [
   {
@@ -288,3 +289,21 @@ before upload PSY_DAA page text:  PSY_DAA Question PSY_DAA Term: An evaluation o
 after upload PSY_DAA page text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te
 PSY_DAB (not uploaded) still hosted: PSY_DAB  PSY_DAB Question PSY_DAB Term: A 
 after reload PSY_DAA text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te
+
+# AFTER: tests/upload-replace.pw.mjs on the branch, port 8874
+ok   393: A then B: only B is left in codes, list, Next; a reload gives the same
+ok   393: A then A' (a code removed, one edited, one added): the removed code is gone at once; a reload gives the same
+ok   393: a file with no valid problem wipes nothing (not JSON, no problems, a bad code, a custom prefix without a flag, not .json)
+ok   393: several files in one pick add up to each other; the next pick replaces them all; a reload gives the same
+ok   393: the dialog that waits for a code: a file without it says so and keeps asking; the right file answers
+ok   393: an upload that reuses a hosted code still overrides it, before and after a reload; a later upload without it gives the hosted copy back
+ok   393: done marks are untouched by a replace: they come back when the same problem is uploaded again
+ok   1280: A then B: only B is left in codes, list, Next; a reload gives the same
+ok   1280: A then A' (a code removed, one edited, one added): the removed code is gone at once; a reload gives the same
+ok   1280: a file with no valid problem wipes nothing (not JSON, no problems, a bad code, a custom prefix without a flag, not .json)
+ok   1280: several files in one pick add up to each other; the next pick replaces them all; a reload gives the same
+ok   1280: the dialog that waits for a code: a file without it says so and keeps asking; the right file answers
+ok   1280: an upload that reuses a hosted code still overrides it, before and after a reload; a later upload without it gives the hosted copy back
+ok   1280: done marks are untouched by a replace: they come back when the same problem is uploaded again
+
+all passed

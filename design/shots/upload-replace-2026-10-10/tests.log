@@ -1,14 +1,6 @@
+# bash tests/run-all.sh on the branch (python3 = venv with sympy first on PATH; cd tests && npm ci done first)
 ok   unittest
-FAIL npm
-       name: 'AssertionError'
-       expected: true
-       actual: false
-       operator: '=='
-     --
-       name: 'AssertionError'
-       expected: 0
-       actual: 1
-       operator: 'strictEqual'
+ok   npm
 ok   autosave
 ok   bank
 ok   bar
@@ -20,18 +12,7 @@ ok   disabled
 ok   done
 ok   easy
 ok   fab
-FAIL flow
-     FAIL 390x844 the thin bar: tap = an anchor (the hug ends); a drag follows the finger and snaps 
-           collapse closes
-     
-     true !== false
-     --
-     FAIL 390x844 drag the Scratchpad button: snaps to the left edge, a drag is not a tap, kept after reload 
-           Cannot read properties of null (reading 'x')
-     ok   390x844 no page errors
-     ok   375x667 fix box: the long how fits (wraps above the box), never clipped
-     --
-     2 FAIL
+ok   flow
 ok   font
 ok   katex-wrap
 ok   mcclick
@@ -54,5 +35,5 @@ ok   update
 ok   upload-replace
 ok   ux-flows
 
-2 FAILED (logs: /tmp/tmp.l6S8jjzwzK)
-RUN_RC=1
+ALL GREEN
+RUN_RC=0

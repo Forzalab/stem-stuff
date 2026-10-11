@@ -1,55 +1,32 @@
 # B1: an upload replaces the old upload
 
-Task 20261010-B1. Date: 2026-10-10.
+Task 20261010-B1. Date: 2026-10-10. Branch ccr-0726030c-ifug2i-upload-replaces (origin/main 2febaba merged in).
 
-## Problem
+## What changed
 
-A new upload did not replace the old one in memory. It was added to it.
+- `offline.js` `ingest()`: parse all picked files first and keep the valid problems. When `save` is true and the pick has at least one valid problem, clear `local` and `names` once (no `await` in the swap), then add this pick's problems. Memory = what `saveBank` stores.
+- Same function: a `restore()` (`save` false) that lost the race to a fresh upload adds nothing, so it can not bring the old files back.
+- Not changed: `emit(first(got))`, hosted-code override (`local.has` first), done keys, `banks/`.
+- `design/RELOAD.md`: one line (memory and IndexedDB both hold only the last upload).
+- `tests/upload-replace.pw.mjs`: new, 7 rows at 393 and at 1280 width (own server, temp banks). 12 of 14 fail on the old code, 14 of 14 pass now.
 
-- After upload A and then upload B, the page held the questions of A and B.
-- After upload A and then a changed A, a question that was removed from the file stayed in memory.
-- IndexedDB kept only the last upload. After a reload, the page held only the last upload.
-- The list and the Next button changed on their own after a reload.
+## Fail-if line to evidence
 
-## Change
-
-File `offline.js`, function `ingest()`.
-
-- `ingest()` first reads all the picked files. It keeps the valid problems in a local list.
-- When `save` is true (a real upload) and the pick has at least one valid problem, `ingest()` clears `local` and `names` one time. Then it adds the problems of this pick.
-- All the files of one pick add up to each other.
-- A pick with no valid problem changes nothing.
-- `restore()` (`save` is false) works as before. It fills an empty store.
-- Memory is now the same set that `saveBank` writes to IndexedDB.
-- `emit(first(got))`, the uploadMsg lines and the hosted-code override are not changed.
-- The done keys and `banks/` are not changed.
-
-File `design/RELOAD.md`: one line changed.
-
-## Proof
-
-| File | What it shows |
+| Fail-if | Evidence |
 | --- | --- |
-| `repro-before.log` | The B1 repro on the old code. Memory holds A and B. Next gives A codes. |
-| `repro-after.log` | The same repro on the new code. Memory holds only the last upload. A code that was removed does not open. |
-| `tests.log` | Full `tests/run-all.sh`. The last line is `RUN_RC=0`. |
-| `chromium-393x852-A-then-B.png` | Chromium 393x852. The question list after upload A and then upload B. Only B shows. |
-| `webkit-393x659-A-then-B.png` | WebKitGTK 393x659 (iOS Safari model). The same steps. Only B shows. |
+| After A then B, codes / list rows / 20 Next presses hold an A code | `after.log` S1: Next only ZB1-3; test row "A then B" ok. `before.log` shows the bug (6 codes, ZA served). |
+| After A then A' a removed code is in codes, list, Next, or opens by `#code` | `after.log` S2: ZA1, ZA3, ZA4 only; test row "A then A'" ok (also checks `has()` and `#CALC1_ZA2`). |
+| List/codes/Next differ before vs after a reload | `after.log` S3a/S3b; test compares the full snapshot before vs after a reload in every row; shots 2 vs 3 and 4 vs 5 are identical. |
+| A bad file wipes the previous upload | test row "a file with no valid problem wipes nothing" (5 kinds of bad file) and the all-bad dialog pick: ok. |
+| An upload reusing a hosted code stops overriding | `after.log` S4 (PSY_DAA overridden before and after a reload, PSY_DAB still hosted); test hosted row ok. |
+| Any test in run-all.sh red | `tests.log`: ALL GREEN, RUN_RC=0, no re-runs needed. |
+| Diff touches files outside the named ones | `git diff origin/main --stat`: offline.js, design/RELOAD.md, tests/upload-replace.pw.mjs, this folder. |
 
-New test: `tests/upload-replace.pw.mjs`. It runs at 393 and at 1280 width. It starts its own `serve.py` with temporary banks. It uploads with `setInputFiles`. Each row checks codes, IndexedDB, list rows and 20 Next presses, before and after a reload.
+## Files here
 
-| Row | Check |
-| --- | --- |
-| A then B | No A code is left anywhere. |
-| A then changed A | The removed code is gone at once and does not open by `#code`. The edited text is new. |
-| Bad files after A | Not JSON, no problems, bad code, custom prefix with no flag, not .json: nothing changes. |
-| Many files in one pick | The files add up to each other. The next pick replaces all of them. A pick of bad files changes nothing. |
-| Dialog that waits for a code | A file without the code says so and the wait stays open. The right file answers. Memory is only that file. |
-| Hosted code override | An upload with a hosted code still overrides it, before and after a reload. |
-| Done marks | A done mark comes back when the same problem is uploaded again. |
+- `before.log`: repro and the new test run against origin/main code (the bug).
+- `after.log`: the same on the branch.
+- `tests.log`: full `tests/run-all.sh`, ends `RUN_RC=0`.
+- `393x852-1..5-*.png`: Chromium 393x852, question list: after A; after A then B (before and after a reload); after A then edited A (before and after a reload).
 
-The new test fails on the old `offline.js` (6 of 7 rows at each width). It passes on the new one.
-
-## Note
-
-The upload button takes one file. Several files in one pick are possible only with the dialog (`openPicker`). The test uses the dialog for that row.
+The upload button takes one file. Several files in one pick go through the dialog (`openPicker`), which the test uses.

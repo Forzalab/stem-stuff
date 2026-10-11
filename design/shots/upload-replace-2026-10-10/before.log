@@ -1,3 +1,4 @@
+# BEFORE: origin/main 2febaba (offline.js without the fix), Chromium 393x852, repro = B1/repro.mjs, port 8871
 =========== S1: A then B (different codes), different file names
 --- s1_after_A
 {
@@ -19,8 +20,8 @@
  "shown": "CALC1_ZA1",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA2",
   "#CALC1_ZA1",
+  "#CALC1_ZA2",
   "#CALC1_ZA3"
  ],
  "idb": [
@@ -63,12 +64,12 @@
  "shown": "CALC1_ZB1",
  "label": "B.json",
  "listRows": [
-  "#CALC1_ZA2",
   "#CALC1_ZA1",
-  "#CALC1_ZB1",
+  "#CALC1_ZA2",
   "#CALC1_ZB2",
+  "#CALC1_ZB3",
   "#CALC1_ZA3",
-  "#CALC1_ZB3"
+  "#CALC1_ZB1"
  ],
  "idb": [
   {
@@ -81,7 +82,7 @@
   }
  ]
 }
-S1 Next sequence after B: ["CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZA3","CALC1_ZB3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZA3","CALC1_ZB3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2"]
+S1 Next sequence after B: ["CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZB3","CALC1_ZA3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2","CALC1_ZB3","CALC1_ZA3","CALC1_ZA1","CALC1_ZB1","CALC1_ZA2","CALC1_ZB2"]
 S1 deep link #CALC1_ZA2 shows: CALC1_ZA2 label A.json
 =========== S2: A then A' (same filename A.json; A_02 removed, A_03 changed, A_04 added)
 --- s2_after_A
@@ -104,9 +105,9 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZA2 label A.json
  "shown": "CALC1_ZA1",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA2",
   "#CALC1_ZA3",
-  "#CALC1_ZA1"
+  "#CALC1_ZA1",
+  "#CALC1_ZA2"
  ],
  "idb": [
   {
@@ -139,13 +140,13 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZA2 label A.json
   "CALC1_ZA3": "A.json",
   "CALC1_ZA4": "A.json"
  },
- "shown": "CALC1_ZA1",
+ "shown": "CALC1_ZA3",
  "label": "A.json",
  "listRows": [
-  "#CALC1_ZA2",
   "#CALC1_ZA3",
+  "#CALC1_ZA4",
   "#CALC1_ZA1",
-  "#CALC1_ZA4"
+  "#CALC1_ZA2"
  ],
  "idb": [
   {
@@ -158,7 +159,7 @@ S1 deep link #CALC1_ZA2 shows: CALC1_ZA2 label A.json
   }
  ]
 }
-S2 Next sequence: ["CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA2","CALC1_ZA3"]
+S2 Next sequence: ["CALC1_ZA3","CALC1_ZA4","CALC1_ZA2","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA2","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA2","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA2"]
 =========== S3a: reload after S2
 --- s3a_after_reload_S2
 {
@@ -181,8 +182,8 @@ S2 Next sequence: ["CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","
  "label": "A.json",
  "listRows": [
   "#CALC1_ZA3",
-  "#CALC1_ZA1",
-  "#CALC1_ZA4"
+  "#CALC1_ZA4",
+  "#CALC1_ZA1"
  ],
  "idb": [
   {
@@ -195,8 +196,8 @@ S2 Next sequence: ["CALC1_ZA1","CALC1_ZA2","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","
   }
  ]
 }
-S3a Next after reload: ["CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4","CALC1_ZA3","CALC1_ZA1","CALC1_ZA4"]
-S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA4 | entryMsg: CALC1_ZA2 not found.
+S3a Next after reload: ["CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1","CALC1_ZA3","CALC1_ZA4","CALC1_ZA1"]
+S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA1 | entryMsg: CALC1_ZA2 not found.
 =========== S3b: A, B, reload
 --- s3b_before_reload
 {
@@ -224,15 +225,15 @@ S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA4 | entryMsg: CALC1_ZA2 n
   "CALC1_ZB2": "B.json",
   "CALC1_ZB3": "B.json"
  },
- "shown": "CALC1_ZB1",
+ "shown": "CALC1_ZB3",
  "label": "B.json",
  "listRows": [
-  "#CALC1_ZB1",
-  "#CALC1_ZA3",
   "#CALC1_ZB3",
   "#CALC1_ZA2",
+  "#CALC1_ZA1",
   "#CALC1_ZB2",
-  "#CALC1_ZA1"
+  "#CALC1_ZA3",
+  "#CALC1_ZB1"
  ],
  "idb": [
   {
@@ -245,7 +246,7 @@ S3a deep link removed #CALC1_ZA2 after reload: CALC1_ZA4 | entryMsg: CALC1_ZA2 n
   }
  ]
 }
-S3b Next before reload: ["CALC1_ZB1","CALC1_ZA3","CALC1_ZB3","CALC1_ZA2","CALC1_ZB2","CALC1_ZA1","CALC1_ZB1"]
+S3b Next before reload: ["CALC1_ZB3","CALC1_ZA2","CALC1_ZB2","CALC1_ZA3","CALC1_ZB1","CALC1_ZA1","CALC1_ZB3"]
 --- s3b_after_reload
 {
  "inMemory": [
@@ -266,9 +267,9 @@ S3b Next before reload: ["CALC1_ZB1","CALC1_ZA3","CALC1_ZB3","CALC1_ZA2","CALC1_
  "shown": "CALC1_ZB3",
  "label": "B.json",
  "listRows": [
-  "#CALC1_ZB1",
   "#CALC1_ZB3",
-  "#CALC1_ZB2"
+  "#CALC1_ZB2",
+  "#CALC1_ZB1"
  ],
  "idb": [
   {
@@ -316,3 +317,165 @@ before upload PSY_DAA page text:  PSY_DAA Question PSY_DAA Term: An evaluation o
 after upload PSY_DAA page text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te
 PSY_DAB (not uploaded) still hosted: PSY_DAB  PSY_DAB Question PSY_DAB Term: A 
 after reload PSY_DAA text:  PSY_DAA Question PSY_DAA UPLOADED OVERRIDEUPLOADED-OVERRIDE-TEXT Which te
+
+# BEFORE: tests/upload-replace.pw.mjs run against the origin/main code, port 8872
+FAIL 393: A then B: only B is left in codes, list, Next; a reload gives the same 
+      after B: codes()
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3'
+  ]
+
+FAIL 393: A then A' (a code removed, one edited, one added): the removed code is gone at once; a reload gives the same 
+      after A': codes()
++ actual - expected
+
+  [
+    'CALC1_ZA1',
++   'CALC1_ZA2',
+    'CALC1_ZA3',
+    'CALC1_ZA4'
+  ]
+
+ok   393: a file with no valid problem wipes nothing (not JSON, no problems, a bad code, a custom prefix without a flag, not .json)
+FAIL 393: several files in one pick add up to each other; the next pick replaces them all; a reload gives the same 
+      after B+C: codes()
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3',
+    'CALC1_ZC1',
+    'CALC1_ZC2'
+
+FAIL 393: the dialog that waits for a code: a file without it says so and keeps asking; the right file answers 
+      memory = the last pick (B)
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3',
++   'CALC1_ZC1',
++   'CALC1_ZC2'
+  ]
+
+FAIL 393: an upload that reuses a hosted code still overrides it, before and after a reload; a later upload without it gives the hosted copy back 
+      memory = the override file only
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'PHYS_H01',
+    'PHYS_H09'
+  ]
+
+FAIL 393: done marks are untouched by a replace: they come back when the same problem is uploaded again 
+      Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'CALC1_ZA1',
+    'CALC1_ZA2',
+    'CALC1_ZA3',
++   'CALC1_ZB1',
++   'CALC1_ZB2',
++   'CALC1_ZB3'
+  ]
+
+FAIL 1280: A then B: only B is left in codes, list, Next; a reload gives the same 
+      after B: codes()
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3'
+  ]
+
+FAIL 1280: A then A' (a code removed, one edited, one added): the removed code is gone at once; a reload gives the same 
+      after A': codes()
++ actual - expected
+
+  [
+    'CALC1_ZA1',
++   'CALC1_ZA2',
+    'CALC1_ZA3',
+    'CALC1_ZA4'
+  ]
+
+ok   1280: a file with no valid problem wipes nothing (not JSON, no problems, a bad code, a custom prefix without a flag, not .json)
+FAIL 1280: several files in one pick add up to each other; the next pick replaces them all; a reload gives the same 
+      after B+C: codes()
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3',
+    'CALC1_ZC1',
+    'CALC1_ZC2'
+
+FAIL 1280: the dialog that waits for a code: a file without it says so and keeps asking; the right file answers 
+      memory = the last pick (B)
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'CALC1_ZB1',
+    'CALC1_ZB2',
+    'CALC1_ZB3',
++   'CALC1_ZC1',
++   'CALC1_ZC2'
+  ]
+
+FAIL 1280: an upload that reuses a hosted code still overrides it, before and after a reload; a later upload without it gives the hosted copy back 
+      memory = the override file only
++ actual - expected
+
+  [
++   'CALC1_ZA1',
++   'CALC1_ZA2',
++   'CALC1_ZA3',
+    'PHYS_H01',
+    'PHYS_H09'
+  ]
+
+FAIL 1280: done marks are untouched by a replace: they come back when the same problem is uploaded again 
+      Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    'CALC1_ZA1',
+    'CALC1_ZA2',
+    'CALC1_ZA3',
++   'CALC1_ZB1',
++   'CALC1_ZB2',
++   'CALC1_ZB3'
+  ]
+
+
+12 failing
