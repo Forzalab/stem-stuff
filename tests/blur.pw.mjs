@@ -10,7 +10,7 @@ let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/li
 const BASE = process.argv[2] || "http://localhost:8812";
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const page = await (await b.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true })).newPage();
-await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "networkidle" });
+await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
 await page.waitForSelector("#scratch");
 await page.tap("#scratch");
 assert.equal(await page.evaluate(() => document.activeElement.id), "scratch");

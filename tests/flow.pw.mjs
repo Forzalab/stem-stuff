@@ -51,7 +51,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     return { ok: r.height > 0 && r.top >= -0.5 && r.bottom <= bottom + 0.5, top: Math.round(r.top), bottom: Math.round(r.bottom), vh: Math.round(bottom) };
   }, sel);
 
-  await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
   await page.waitForTimeout(300);
   await page.evaluate(t => { const ta = document.querySelector("#scratch"); ta.value = t; ta.dispatchEvent(new Event("input", { bubbles: true })); }, PAD);
@@ -226,7 +226,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
   const toastText = () => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });
   await step("390 onboarding: new device only, once each (button, then q | a)", async () => {
-    await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "networkidle" }); await page.waitForTimeout(1200);
+    await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1200);
     assert.equal(await toastText(), "Tap here to write notes.");
     assert.ok(await page.evaluate(() => document.querySelector("#toast").classList.contains("up")), "the caret points down at the button");
     await page.locator("#padFab").tap(); await page.waitForTimeout(900);
@@ -250,7 +250,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const page = await ctx.newPage();
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
   await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
-  await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
   await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "CALC1_T6B", null, { timeout: 8000 });
   await page.waitForTimeout(300);
   const geo = () => page.evaluate(() => { const f = document.querySelector("#freeze").getBoundingClientRect(), w = document.querySelector("#work").getBoundingClientRect(), q = document.querySelector("#q").getBoundingClientRect();
