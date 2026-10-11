@@ -2,11 +2,13 @@
    Layout decisions for the frozen problem: design/FREEZE.md. Payload: copy/COPY-PAYLOAD.md. */
 import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
-import { suggest, remember, isBank, normalize, entry } from "./suggest.mjs";
+import * as codes from "./codes.mjs";
+import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
 import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
+window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
    tests and the offline file never ask for /_vercel/insights/script.js, which only Vercel has. sw.js never caches it. */
@@ -25,7 +27,6 @@ try {
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
-const CODE_RE = /^(CALC1|CSCI26|PHYS|PSY)_[A-Z0-9]{3,6}$/;
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
@@ -80,10 +81,17 @@ function toast(text, at) {
   t.textContent = text; toastAt = at; t.classList.add("on");
   placeToast(); armToast(2000);
 }
+/* the entry line (#entryMsg): every upload / open outcome ends here. tone: bad (red, the default) | warn | ok. The class is reset
+   each time, so a green line never colours the next red one. */
+function entryMsg(text, tone = "bad") {
+  const m = $("#entryMsg");
+  m.textContent = text;
+  m.className = "entry-msg" + (text && tone !== "bad" ? " " + tone : "");
+}
 /* a press that cannot move says why (nav.js "drill:note", load()): a toast under Next, else the entry line */
 function note(text) {
   const at = $("#qnext");
-  if (at && !at.hidden && at.getClientRects().length) toast(text, at); else $("#entryMsg").textContent = text;
+  if (at && !at.hidden && at.getClientRects().length) toast(text, at); else entryMsg(text);
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
 $("#toast")?.addEventListener("click", hideToast);
@@ -267,7 +275,8 @@ let swapOn = false, lostAt = 0, mtOpen = false, mtTile = "q", lastEdit = null;  
 /* the box is empty while a problem is open (its code is the placeholder); empty = Paste button, text = submit arrow */
 const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
-codeIn.addEventListener("input", () => { $("#entryMsg").textContent = ""; syncCode(); sugShow(); });
+/* typing keeps the box up: clearing the message below must not hide a dock that only the message was holding open (focus would be lost) */
+codeIn.addEventListener("input", () => { entryMsg(""); root.classList.add("entry-open"); syncCode(); sugShow(); });
 function putCode(code) { if (code) barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
 /* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
@@ -284,6 +293,9 @@ function knownCodes() {
   const off = window.stemOffline, live = bank ? [bank.code, ...bank.codes] : [];
   return [...recent(), ...live, ...(off && off.codes ? off.codes() : [])];
 }
+/* the prefixes of those codes: a custom prefix seen on this device is "known" (a paste into any other field may take it; a dead
+   link then says "not found", not "needs BANK_X") */
+const knownPrefixes = () => new Set(knownCodes().filter(c => !isBank(c)).map(codes.prefixOf));
 function sugShow() {
   sugList = suggest(codeIn.value, knownCodes());
   sugAt = -1;
@@ -322,16 +334,16 @@ codeIn.addEventListener("blur", () => sugHide());
 document.addEventListener("paste", e => {
   const t = e.target;
   if (t === codeIn || !(t instanceof HTMLElement) || !t.matches("input:not([type=file]), textarea")) return;
-  const n = normalize((e.clipboardData && e.clipboardData.getData("text")) || "");
+  const n = normalize((e.clipboardData && e.clipboardData.getData("text")) || "", knownPrefixes());   // a custom prefix only when known: "max_val" stays text
   if (!n) return;
   e.preventDefault();
-  putCode(n.code); $("#entryMsg").textContent = ""; root.classList.add("entry-open"); codeIn.focus();   // a resting box (C2 / C7 / C8) comes out for it
+  putCode(n.code); entryMsg(""); root.classList.add("entry-open"); codeIn.focus();   // a resting box (C2 / C7 / C8) comes out for it
 });
 codePaste.addEventListener("click", async () => {
   let n = null;
-  try { n = normalize(await navigator.clipboard.readText()); } catch { /* plain http or denied: paste by hand */ }
+  try { n = normalize(await navigator.clipboard.readText(), codes.ANY); } catch { /* plain http or denied: paste by hand */ }
   if (!n) { codeIn.focus(); return; }
-  putCode(n.code); $("#entryMsg").textContent = ""; codeGo.focus();
+  putCode(n.code); entryMsg(""); codeGo.focus();
 });
 $("#entry").addEventListener("submit", e => {
   e.preventDefault();
@@ -339,7 +351,7 @@ $("#entry").addEventListener("submit", e => {
   const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
-  if (!n) { $("#entryMsg").textContent = "Not a code. Try CALC1_T6B."; codeIn.focus(); return; }
+  if (!n) { entryMsg("Not a code. Try CALC1_T6B."); codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
   if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Original questions on." : "Easy questions on."); });
@@ -352,16 +364,19 @@ window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c)
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
 $("#upload").addEventListener("click", async () => {
   const off = window.stemOffline;
-  if (!off || !off.pickFile) { $("#entryMsg").textContent = "Can't open files here."; return; }
+  if (!off || !off.pickFile) { entryMsg("Can't open files here."); return; }
   const r = await off.pickFile();
-  if (r && r.error) $("#entryMsg").textContent = r.error;
+  if (r && r.error) entryMsg(r.error, r.tone);
 });
 addEventListener("DOMContentLoaded", () => {
   /* offline.js loads after this module; take over its "file loaded" event */
-  if (window.stemOffline) window.stemOffline.onProblemLoaded(p => {
-    const typed = normalize(codeIn.value), off = window.stemOffline;
+  if (window.stemOffline) window.stemOffline.onProblemLoaded(async p => {
+    const typed = normalize(codeIn.value, codes.ANY), off = window.stemOffline;
     leaveBank();                                                     // an upload is the live list now
-    load(typed && off.has(typed.code) ? typed.code : p.code);
+    await load(typed && off.has(typed.code) ? typed.code : p.code);
+    /* load() clears the line when it succeeds, so the upload's own line (offline.js report) is written after it, and only once */
+    const r = off.report; off.report = null;
+    if (r && !$("#entryMsg").textContent) entryMsg(r.text, r.tone);
   });
 });
 
@@ -408,19 +423,19 @@ async function openBank(code, { go = true, quiet = false } = {}) {
     if (r.ok) b = await r.json(); else r.text().catch(() => {});
   } catch (e) {
     if (!quiet) {
-      $("#entryMsg").textContent = timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
+      entryMsg(timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.");
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
   }
-  if (!b || !b.problems.length) { if (!quiet) $("#entryMsg").textContent = `${code} not found.`; return false; }
+  if (!b || !b.problems.length) { if (!quiet) entryMsg(`${code} not found.`); return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
   src(b.code);
   remembered(b.code);
   bankChanged();
   if (!go) return true;
   const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // resume where you were, else the queue's pick (nav.js)
-  if (S && S.code === to && !modeFlip) { putCode(""); $("#entryMsg").textContent = ""; } else await load(to);
+  if (S && S.code === to && !modeFlip) { putCode(""); entryMsg(""); } else await load(to);
   return true;
 }
 /* ================= problem state ================= */
@@ -437,23 +452,29 @@ async function getProblem(code) {
   r.text().catch(() => {});   // drain the 404 body so the request completes
   const e = new Error("not found"); e.status = r.status; throw e;
 }
+/* a 404 on a code: a custom prefix this device has never seen names its bank ("BEAR_QAA needs BANK_BEAR", a shared link on a
+   fresh device); a prefix it knows (a bank with it is open or uploaded) or a built-in one is a typo: "not found" */
+const deadCode = code => {
+  const pre = codes.prefixOf(code);
+  return codes.isCustomPrefix(pre) && !knownPrefixes().has(pre) ? codes.needsBank(code) : `${code} not found.`;
+};
 async function load(code) {
-  if (!CODE_RE.test(code)) { note(`Can't open ${code}.`); return; }   // T16: said, not silent (the pattern itself is T15)
+  if (!codes.isCode(code)) { note(`Can't open ${code}.`); return; }   // T16: said, not silent
   let prob;
   retryLoad.hidden = true;
   try {
     prob = await getProblem(code);
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
-      if (modeHidden(prob, modeOf())) { $("#entryMsg").textContent = `Can't open ${code} here.`; return; }
+      if (modeHidden(prob, modeOf())) { entryMsg(`Can't open ${code} here.`); return; }
       prob = modeView(prob, modeOf());
     }
   }
   catch (e) {
-    $("#entryMsg").textContent = e.status === 404 ? `${code} not found.` : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.";
+    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.");
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
-  $("#entryMsg").textContent = "";
+  entryMsg("");
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
@@ -2225,7 +2246,7 @@ addEventListener("pageshow", e => {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
 /* ================= boot ================= */
-const hashCode = () => location.hash.length > 1 ? normalize(decodeURIComponent(location.hash.slice(1))) : null;
+const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURIComponent(location.hash.slice(1))) : null;
 const fromHash = () => {
   const n = hashCode();
   if (!n) { if (location.hash.length > 1) note(`Can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)

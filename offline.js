@@ -9,7 +9,8 @@
   const FILE = location.protocol === "file:";
   const CAN_SW = !FILE && "serviceWorker" in navigator && window.isSecureContext;
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-  const CODE = /^[A-Z][A-Z0-9]*_[A-Z0-9]{2,}$/;
+  const C = window.stemCodes;   // codes.mjs, set by app.js (it runs before this script, index.html): the one place that knows prefixes
+  /* a URL router, on purpose a superset of what codes.mjs accepts (same as serve.py CODE_PATH): the server and load() decide, not this */
   const PATH = /(?:^|\/)p\/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$/;
   const MAX = 8 * 1024 * 1024;
 
@@ -31,6 +32,7 @@
     loadProblem,
     validate,
     restore: () => restore(),
+    report: null,                       // { text, tone }: the last upload's one-line result (codes.uploadMsg); app.js shows it, then clears it
     ready: null
   };
   const TIMEOUT = 8000;
@@ -160,7 +162,11 @@
 
   function validate(p) {
     if (!p || typeof p !== "object" || Array.isArray(p)) return "not a problem file";
-    if (typeof p.code !== "string" || !CODE.test(p.code)) return "no problem code";
+    if (typeof p.code !== "string" || !C.isCode(p.code)) return "no problem code";
+    return shapeErr(p);
+  }
+  /* validate() minus the code test (codes.mjs screenBank tells a bad prefix from a bad shape) */
+  function shapeErr(p) {
     if (typeof p.type !== "string") return "no type";
     if (!Array.isArray(p.body) || !p.body.length || !p.body.every(b => b && typeof b.type === "string")) return "no body";
     return null;
@@ -227,7 +233,7 @@
 .so-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .so-x{position:absolute;top:.75rem;right:.75rem}
 .so-msg{min-height:1.5em;margin:.9rem 0 0;font-size:.95rem;color:var(--so-muted)}
-.so-msg.bad{color:var(--so-bad)}.so-msg.ok{color:var(--so-ok)}
+.so-msg.bad{color:var(--so-bad)}.so-msg.ok{color:var(--so-ok)}.so-msg.warn{color:var(--so-ink)}
 @media (max-width:480px){.so{align-items:flex-end;padding:0}.so-card{max-width:none;border-radius:14px 14px 0 0;padding-bottom:calc(1.25rem + env(safe-area-inset-bottom))}}
 @media (prefers-reduced-motion:no-preference){.so-card{animation:so-in .16s ease-out}@keyframes so-in{from{transform:translateY(8px);opacity:0}}}`;
 
@@ -303,34 +309,43 @@
 
   // Parse picked problems.json file(s) into the in-memory store. Shared by the dialog and by pickFile().
   const names = new Map();      // code -> file name it came from
+  /* A file's decision depends on its text only, never its name (restore() re-runs this on every page load and must agree with the upload).
+     The name is kept as a label when the file has no valid "bank" flag. report: totals for codes.uploadMsg. */
   async function ingest(list, save = true) {
-    const files = [...(list || [])].filter(f => /\.json$/i.test(f.name));
-    const got = [], bad = [], keep = [];
+    const all = [...(list || [])], files = all.filter(f => /\.json$/i.test(f.name));
+    const got = [], bad = [], keep = [], report = C.emptyReport();
+    report.notjson = all.length - files.length;
     for (const f of files) {
       try {
-        if (f.size > MAX) throw 0;
-        const text = await f.text(), bank = JSON.parse(text);
-        const ps = bank && Array.isArray(bank.problems) ? bank.problems.filter(p => !validate(p)) : [];
-        if (!ps.length) throw 0;
-        for (const p of ps) { local.set(p.code, p); names.set(p.code, f.name); got.push(p); }
+        if (f.size > MAX) { report.big++; bad.push(f.name); continue; }
+        const text = await f.text();
+        let doc;
+        try { doc = JSON.parse(text); } catch (e) { console.warn("bank file is not JSON:", e && e.message); report.json++; bad.push(f.name); continue; }
+        const s = C.screenBank(doc, shapeErr);
+        if (s.fatal) { report.notbank++; bad.push(f.name); continue; }
+        for (const k in s.skipped) report[k] += s.skipped[k];
+        if (!s.kept.length) { bad.push(f.name); continue; }
+        for (const p of s.kept) { local.set(p.code, p); names.set(p.code, s.flag || f.name); got.push(p); }
+        report.kept += s.kept.length;
         keep.push({ name: f.name, text });
-      } catch (e) { bad.push(f.name); }
+      } catch (e) { report.json++; bad.push(f.name); }
     }
     if (save && keep.length) await saveBank(keep);
-    return { files, got, bad };
+    return { files, got, bad, report };
   }
 
   async function read(list) {
-    const { files, got, bad } = await ingest(list);
-    if (!files.length) { say("No problem files there.", "bad"); return; }
-    if (!got.length) { say(bad.length === 1 ? bad[0] + " is the wrong file." : "Wrong files.", "bad"); return; }
+    const { got, report } = await ingest(list);
+    const msg = C.uploadMsg(report);
+    if (!got.length) { say(msg.text, msg.tone); return; }
     if (waiting) {
       const hit = local.get(waiting.code);
-      if (!hit) { say(waiting.code + " is not in these files.", "bad"); return; }
+      if (!hit) { say(C.notInFile(waiting.code), "bad"); return; }
       const w = waiting; waiting = null; close(false); w.resolve(hit);
       return;
     }
     close(false);
+    api.report = msg;
     emit(first(got));
   }
 
@@ -342,7 +357,7 @@
   }
 
   // Direct upload (the page's upload button): the OS file dialog, no modal. Loads every problem in the file.
-  // Resolves { problem, name, count } (and emits the first problem), { error } otherwise, null if cancelled.
+  // Resolves { problem, name, count } (and emits the first problem), { error, tone } otherwise, null if cancelled.
   let upInput = null;
   function pickFile() {
     if (!upInput) {
@@ -352,11 +367,12 @@
     }
     return new Promise(resolve => {
       upInput.onchange = async () => {
-        const { files, got, bad } = await ingest(upInput.files);
+        const { got, report } = await ingest(upInput.files);
         upInput.value = "";
-        if (!files.length) return resolve({ error: "No problem file there." });
-        if (!got.length) return resolve({ error: (bad[0] || "That file") + " is the wrong file." });
+        const msg = C.uploadMsg(report);
+        if (!got.length) return resolve({ error: msg.text, tone: msg.tone });
         const p = first(got);
+        api.report = msg;                       // app.js shows it after the first problem has opened (load() clears the line)
         emit(p);
         resolve({ problem: p, name: names.get(p.code), count: got.length });
       };
