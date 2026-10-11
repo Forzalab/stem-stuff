@@ -45,7 +45,7 @@ async function run(browserType, label, opts = {}) {
     const open = async code => {
       await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
     await page.goto("about:blank");
-      await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
+      await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
     };
     /* phones since round 3b: the pad is off the page; the Scratchpad button opens the pad page (design/MULTITASK.md) */
@@ -54,7 +54,7 @@ async function run(browserType, label, opts = {}) {
 
     for (const code of CODES) {
       await step(`${label} ${vname} ${code}: renders TeX, no raw TeX visible`, async () => {
-        await page.goto(`${BASE}/#${code}`, { waitUntil: "networkidle" });
+        await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
         await page.waitForSelector("#blocks > *", { timeout: 8000 });
         await page.waitForTimeout(300);
         const n = await page.locator("#freeze .katex").count();

@@ -12,7 +12,7 @@ const MATH = "=<>()[]{}^_|&!~.,:;'\"%$#@?\\→←↔⇒⇔∧∨¬⊕≠≤≥±
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const page = await b.newPage();
-await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "networkidle" });
+await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
 await page.waitForSelector("#scratch");
 const r = await page.evaluate(async ({ GRID, MATH }) => {
   const els = ["#scratch", ".ff input"].map(s => document.querySelector(s)).filter(Boolean);

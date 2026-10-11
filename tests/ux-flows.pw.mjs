@@ -801,7 +801,7 @@ flow(47, "swap-keyboard", async (page, w) => {
 }, { noFinalShot393: true });
 
 flow(48, "onboarding-toasts", async (page, w) => {
-  await page.goto(`${BASE}/#${C.single}`, { waitUntil: "networkidle" }); await page.waitForTimeout(1300);
+  await page.goto(`${BASE}/#${C.single}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1300);
   const t1 = await toastText(page);
   if (w === 1280 && !t1) return skip("desktop: no notes button toast (padFab is phone-only); nothing to assert");
   assert.equal(t1, "Tap here to write notes.");
