@@ -41,6 +41,8 @@ const msg = page => page.evaluate(() => document.querySelector("#entryMsg").text
 const waitMsg = (page, text) => page.waitForFunction(t => document.querySelector("#entryMsg").textContent === t, text, { timeout: 6000 })
   .catch(async () => { throw new Error(`entryMsg is ${JSON.stringify(await msg(page))}, wanted ${JSON.stringify(text)}`); });
 /* the computed colour of #entryMsg against a token */
+/* Q11 = b: a clean upload writes nothing extra; give the (async) upload line time to appear, then it must still be empty */
+const quiet = async page => { await page.waitForTimeout(700); assert.equal(await msg(page), "", "a clean upload shows no line"); };
 const toneIs = (page, token) => page.evaluate(t => {
   const probe = document.createElement("i"); probe.style.color = `var(${t})`; document.body.appendChild(probe);
   const want = getComputedStyle(probe).color; probe.remove();
@@ -72,8 +74,7 @@ try {
       const { ctx, page } = await fresh(browser, vp);
       await upload(page, file("x.json", { v: 1, bank: "BANK_BEAR", problems: BEAR }));
       await openedAny(page, ["BEAR_QAA", "BEAR_QAB"]);
-      await waitMsg(page, "Loaded 2 problems");
-      assert.ok(await toneIs(page, "--ok"), "ok is green");
+      await quiet(page);
       assert.equal(await label(page), "BANK_BEAR", "the label is the flag, not x.json");
       await page.goto("about:blank"); await page.goto(BASE + "/#BEAR_QAA"); await opened(page, "BEAR_QAA");
       assert.equal(await label(page), "BANK_BEAR", "after a reload (restore)");
@@ -82,7 +83,7 @@ try {
       await typeCode(page, "bear qaa"); await opened(page, "BEAR_QAA");
       await upload(page, file("y (1).json", { v: 1, bank: "BANK_BEAR", problems: BEAR }));
       await openedAny(page, ["BEAR_QAA", "BEAR_QAB"]);
-      await waitMsg(page, "Loaded 2 problems");
+      await quiet(page);
       assert.equal(await label(page), "BANK_BEAR", "same text, other file name, same result");
       await ctx.close();
     });
@@ -115,12 +116,24 @@ try {
       await ctx.close();
     });
 
+    await step(`${V}: a warn line after a partial upload may open the dock: it is on screen, whole, and the page still works`, async () => {
+      const { ctx, page } = await fresh(browser, { width: vp.width, height: vp.width < 600 ? 659 : vp.height });
+      await upload(page, json({ v: 1, problems: [num("PSY_ABC", "1", "Psy one"), ...BEAR] }));
+      await opened(page, "PSY_ABC"); await waitMsg(page, "Bank flag missing");
+      const r = await page.evaluate(() => {
+        const e = document.querySelector("#entryMsg"), b = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        return { w: innerWidth, h: innerHeight, x: b.left, y: b.top, r: b.right, b: b.bottom, vis: cs.visibility !== "hidden" && cs.display !== "none" && b.height > 0, clipped: e.scrollWidth > e.clientWidth + 1, op: cs.opacity };
+      });
+      assert.ok(r.vis && r.x >= 0 && r.r <= r.w && r.y >= 0 && r.b <= r.h && !r.clipped && r.op === "1", "line on screen: " + JSON.stringify(r));
+      await ctx.close();
+    });
+
     await step(`${V}: built-ins unchanged: an upload overrides the hosted copy (Q4), BANK_P2X and #CALC1_T6B still open`, async () => {
       const { ctx, page } = await fresh(browser, vp);
       await upload(page, file("mine.json", { v: 1, problems: [num("PHYS_P01", "9", "UPLOADED OVERRIDE")] }));
       await opened(page, "PHYS_P01");
       assert.match(await page.textContent("#blocks"), /UPLOADED OVERRIDE/, "the upload won");
-      await waitMsg(page, "Loaded 1 problem");
+      await quiet(page);
       assert.equal(await label(page), "mine.json", "no flag: the file name labels it");
       await page.goto("about:blank"); await page.goto(BASE + "/#BANK_P2X"); await page.waitForFunction(() => /^PHYS_P0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
       await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_T6B"); await opened(page, "CALC1_T6B");

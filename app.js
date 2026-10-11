@@ -376,7 +376,7 @@ addEventListener("DOMContentLoaded", () => {
     await load(typed && off.has(typed.code) ? typed.code : p.code);
     /* load() clears the line when it succeeds, so the upload's own line (offline.js report) is written after it, and only once */
     const r = off.report; off.report = null;
-    if (r && !$("#entryMsg").textContent) entryMsg(r.text, r.tone);
+    if (r && r.text && !$("#entryMsg").textContent) entryMsg(r.text, r.tone);   // a clean upload has no text: nothing extra (Q11 = b)
   });
 });
 

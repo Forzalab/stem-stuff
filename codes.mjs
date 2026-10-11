@@ -86,7 +86,7 @@ export function screenBank(doc, shapeErr) {
 
 /* ---------- T14a: the one line an upload ends in (#entryMsg, and the offline dialog) ----------
    report: totals over every picked file: { kept, shape, noflag, badflag, mismatch, reserved, json, big, notbank, notjson }.
-   Counts and ids only; never a file name or problem text. 4 words at most. tone: ok | warn | bad */
+   Counts and ids only; never a file name or problem text. 4 words at most. tone: warn | bad; a clean upload is { text: "" } (nothing is shown) */
 export const emptyReport = () => ({ kept: 0, shape: 0, noflag: 0, badflag: 0, mismatch: 0, reserved: 0, json: 0, big: 0, notbank: 0, notjson: 0 });
 const FLAG_ROWS = [["badflag", "Bank flag invalid"], ["noflag", "Bank flag missing"], ["mismatch", "Prefix must match flag"], ["reserved", "Prefix is reserved"]];
 const FILE_ROWS = [["json", "Broken JSON file"], ["big", "File too big"], ["notbank", "Not a bank file"], ["notjson", "Not a JSON file"]];
@@ -99,5 +99,5 @@ export function uploadMsg(r) {
   for (const [k, t] of FLAG_ROWS) if (r[k] > 0) return { text: t, tone: "warn" };
   const lost = r.shape + r.json + r.big + r.notbank;
   if (lost > 0) return { text: `Loaded ${r.kept}, skipped ${lost}`, tone: "warn" };
-  return { text: `Loaded ${r.kept} ${r.kept === 1 ? "problem" : "problems"}`, tone: "ok" };
+  return { text: "", tone: "ok" };   // Q11 = b: a clean upload says nothing (the opened question and the bank label are the proof)
 }

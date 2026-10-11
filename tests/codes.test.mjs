@@ -95,8 +95,8 @@ test("screenBank: the file name is not an input", () => {
 const words = t => t.trim().split(/\s+/).length;
 const rep = o => ({ ...C.emptyReport(), ...o });
 const ROWS = [
-  [rep({ kept: 28 }), "Loaded 28 problems", "ok"],
-  [rep({ kept: 1 }), "Loaded 1 problem", "ok"],
+  [rep({ kept: 28 }), "", "ok"],
+  [rep({ kept: 1 }), "", "ok"],
   [rep({ kept: 25, shape: 3 }), "Loaded 25, skipped 3", "warn"],
   [rep({ kept: 4, noflag: 2 }), "Bank flag missing", "warn"],
   [rep({ noflag: 2 }), "Bank flag missing", "bad"],
