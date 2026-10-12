@@ -231,7 +231,9 @@ try {
     assert.equal(st.wrong, 2);
     await sp.reload(); await opened(sp, "CALC1_X2P");
     const s = await qstate(sp);
-    assert.ok(s.finished); assert.deepEqual(s.right, []); assert.doesNotMatch(s.fb, /Out of tries|comes back around/);
+    assert.ok(s.finished); assert.doesNotMatch(s.fb, /Out of tries|comes back around/);
+    await sp.waitForSelector("#q .opt.reveal", { timeout: 6000 });   // T19: sugar, out of tries: /state hands the answer back after a reload
+    assert.deepEqual((await qstate(sp)).right, ["b"]);
     await sp.waitForTimeout(500);
     assert.ok((await qstate(sp)).finished, "still locked after /state");
   });
@@ -263,7 +265,9 @@ try {
     await go(op, "CALC1_X2P");
     await op.waitForFunction(() => window.__drill.state.finished, null, { timeout: 9000 });
     const s = await qstate(op);
-    assert.doesNotMatch(s.fb, /Out of tries|comes back around/); assert.deepEqual(s.right, []);
+    assert.doesNotMatch(s.fb, /Out of tries|comes back around/);
+    await op.waitForSelector("#q .opt.reveal", { timeout: 6000 });   // T19: the server (sugar) hands the answer back with the lockout state
+    assert.deepEqual((await qstate(op)).right, ["b"]);
     await other.close();
   });
 

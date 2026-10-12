@@ -7,11 +7,11 @@ import { evaluate, compile } from "mathjs";
 
 const src = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const cut = (a, b) => src.slice(src.indexOf(a), src.indexOf(b));
-const code = `const MAX_TRIES = 2; const localState = new Map();
+const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sugar"; const modeOf = () => MODE;
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
 ${cut("function shown(p) {", "/* One row of pills")}
-return { maxTries, gradeLocal, shown };`;
-const { maxTries, gradeLocal, shown } = new Function("math", code)({ compile, evaluate, number: Number });
+return { maxTries, gradeLocal, shown, setMode: m => { MODE = m; } };`;
+const { maxTries, gradeLocal, shown, setMode } = new Function("math", code)({ compile, evaluate, number: Number });
 
 const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Array.from({ length: n }, (_, i) => ({ id: "abcdefgh"[i], md: "x" })), correct: "a",
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
@@ -129,4 +129,25 @@ test("prove: wrong set strikes first; a wrong fix names its row; repeat is free;
   assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "QUACK. You found the false ones. One fix is wrong. Redo its math."]);
   assert.equal(gradeLocal(q, { choices: ["c", "a"], fixes: { d: "15.0", b: "6" } }).repeat, true);   // same values: a repeat
   assert.equal(gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6.000", d: "15.588" } }).verdict, "correct");
+});
+
+test("T19: gradeLocal sends `correct` only once shut, and only in sugar (twin of serve.py answer_of)", () => {
+  const p = mk("mc", 3, { code: "T_rev3" });
+  assert.ok(!("correct" in gradeLocal(p, { choice: "b" })), "a try left: nothing");
+  const r = gradeLocal(p, { choice: "c" });
+  assert.deepEqual([r.verdict, r.triesLeft, r.correct], ["wrong", 0, "a"]);
+  assert.equal(gradeLocal(p, { choice: "a" }).correct, "a", "locked later: still told");
+  const n = { type: "num", code: "T_revn", answer: "2*1.01", wrong: [] };
+  assert.ok(!("correct" in gradeLocal(n, { answer: "5" })));
+  assert.equal(gradeLocal(n, { answer: "6" }).correct, "2.02");
+  const big = { type: "num", code: "T_revb", answer: "1.07*10^14" };
+  gradeLocal(big, { answer: "1" });
+  assert.equal(gradeLocal(big, { answer: "2" }).correct, "1.07 × 10^14", "serve.py format(.4g) twin");
+  setMode("diet");
+  try {
+    const d = mk("mc", 3, { code: "T_revd" });
+    gradeLocal(d, { choice: "b" });
+    const dr = gradeLocal(d, { choice: "c" });
+    assert.ok(!("correct" in dr) && !("correct" in gradeLocal(d, { choice: "a" })), "diet never");
+  } finally { setMode("sugar"); }
 });

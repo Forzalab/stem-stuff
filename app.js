@@ -215,6 +215,21 @@ function unitHit(u, t, g) {                               // re entries first, t
   return w.find(x => x.re && new RegExp(x.re, "i").test(t))
     || w.find(x => { try { return x.match != null && same(g, unitSig(u, x.match), u.tol ?? 1e-6); } catch { return false; } });
 }
+/* T19 sugar reveal (Tony, Oct 12): mirror of serve.py answer_of(). The answer of one unit, only ever handed out once the unit is shut out of tries */
+const g4 = v => {                                         // Python's format(v, ".4g"), exponent as x 10^n
+  if (!Number.isFinite(v)) return String(v);
+  if (v === 0) return "0";
+  const e = Math.floor(Math.log10(Math.abs(+v.toPrecision(4))));
+  if (e < -4 || e >= 4) { const [m, x] = v.toExponential(3).split("e"); return `${+m} \u00d7 10^${+x}`; }
+  return String(+v.toPrecision(4));
+};
+function answerOf(u) {
+  if (u.type === "mc") return all(u) ? [].concat(u.correct).sort() : u.correct;
+  const a = String(u.answer);
+  if (a === "dne") return "does not exist";
+  if (u.type !== "num") return a;
+  try { return g4(unitSig(u, a)); } catch { return a; }
+}
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
   const multi = key.type === "multi", idx = answer.part;
   if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
@@ -222,7 +237,8 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   localState.set(sk, st);
   const R = o => multi ? { ...o, part: idx } : o;
   const left = () => maxTries(key) - st.wrong.length;
-  if (st.done || left() <= 0) return R({ verdict: "locked", triesLeft: 0 });
+  const shut = o => modeOf() === "sugar" && !st.done ? { ...o, correct: answerOf(multi ? key.parts[idx] : key) } : o;   // T19: sugar only, only once shut
+  if (st.done || left() <= 0) return R(shut({ verdict: "locked", triesLeft: 0 }));
   let hit = null, correct, sig;
   if (all(key)) {                                         // { choices: [ids] }; hint = first ticked distractor in shown (authored) order, else miss
     /* prove mode (key.fix): + fixes { id: text } for exactly the un-ticked, unlocked rows; a right set then grades each fix like a part */
@@ -266,7 +282,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
   if (repeat) out.repeat = true;
-  return R(out);
+  return R(left() <= 0 ? shut(out) : out);
 }
 
 /* ================= entry box: code bar + upload ================= */
@@ -918,7 +934,7 @@ async function submitPart(i) {
     if (r.verdict !== "invalid") record({ a: v, part: i }, r);
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
-    else if (spent) { shutPart(i, false); partFeedback(i, r, v); }
+    else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
     else { partFeedback(i, r, v); if (r.verdict === "wrong") pips(r, partEls(i).box, "afterend"); }
     if (mine.parts.every(x => x.shut)) { settle(); rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && document.activeElement === document.body) partEls(nxt).inp.focus(); }
@@ -1078,10 +1094,12 @@ async function syncServer(mine) {
       }
     } else if (u.gen !== su.gen) { u.gen = su.gen; quiet = true; }
   });
-  if (!shown && !quiet) return;
+  const showRev = () => { if (S === mine && modeOf() === "sugar") ss.forEach((su, i) => { if (su.correct != null && !su.done) reveal({ verdict: "wrong", correct: su.correct, part: i }, i); }); };   // T19: a reload gets the answer again (never stored here)
+  if (!shown && !quiet) { showRev(); return; }
   const rec = wrapRec(us, tries, hints);
   if (!rec.x && rec.done === "open" && !tries.length) st.doneDrop(mine.code); else st.donePut(mine.code, rec);
   if (shown) repaint(rec.x || rec.done !== "open" || tries.length ? rec : null);
+  showRev();
 }
 /* answered or out of tries: every answer control is off and looks it (dimmed, not-allowed, no hover); the right one keeps its ok look.
    Answer boxes are disabled, not just read-only, so a tap doesn't focus them (no focus ring, no keyboard) */
@@ -1149,6 +1167,34 @@ function cueNext() {
 }
 /* the held Enter that sent Check auto-repeats onto Next once it has focus: a repeat never presses Next (not a shortcut: it only drops repeats) */
 addEventListener("keydown", e => { if (e.repeat && (e.key === "Enter" || e.key === " ") && e.target.matches?.("#q .nx")) e.preventDefault(); }, true);
+/* ---------- T19 SUGAR REVEAL (Tony, Oct 12): out of tries in sugar shows the right answer ----------
+   The server sends `correct` only with the lockout and only in sugar (serve.py answer_of; a reload gets it from /state).
+   mc: the right row turns green with a check (class right + reveal), the picked wrong rows stay struck with their x.
+   Typed: an "Answer 2.02" line in the preview's room (a multi: the part's hint slot). Cluck's why is the wish already
+   streaming for the wrong try (/explain). A reveal pays no XP and stays a miss (rewardTry). Diet never has r.correct. */
+function reveal(r, part) {
+  if (modeOf() !== "sugar" || !S || r.correct == null || r.verdict === "correct") return "";
+  const p = S.prob, c = r.correct;
+  if (p.type === "mc") {
+    const ids = [].concat(c);
+    for (const o of opts()) {
+      if (ids.includes(o.dataset.id)) {
+        if (all(p)) mark(o, "on");
+        o.classList.remove("wrong"); o.classList.add("right", "reveal"); o.querySelector(".badge").innerHTML = icon("i-ok");
+      } else if (all(p) && markOf(o) === "on" && !o.classList.contains("wrong")) strike(o);      // a ticked wrong row: struck, x
+    }
+    return "The right answer: " + opts().filter(o => ids.includes(o.dataset.id)).map(o => o.querySelector(".txt").textContent.trim()).join(", ") + ".";
+  }
+  const multi = p.type === "multi", i = multi ? (part ?? r.part) : 0, u = multi ? p.parts[i] : p;
+  const host = multi ? partEls(i).hint : $("#preview"); if (!host) return "";
+  let val = esc(c);
+  if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(String(c)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
+  host.querySelector(".ansl")?.remove();
+  if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b></p>`);
+  if (multi) host.parentElement.classList.add("hinted");
+  return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
+}
 /* the duck chip (sugar, questions with Cluck's key only): right = "Compare with Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
@@ -1156,7 +1202,7 @@ function cueChip(still) {
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
   wishPaint();
 }
-const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right") || $("#ff.ok"));
+const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right:not(.reveal)") || $("#ff.ok"));   // a revealed row is the answer, not the student's pick
 /* the calm nod (r5 BRIEF reward rule 4): the first 3 rights of a PT day nod, then about 1 in 3, never twice in a row, and always on a
    first-try right after a miss. One small record in this browser; blocked storage = no nod */
 const ptDay = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
@@ -1200,7 +1246,8 @@ function feedback(r, typed) {
   if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
-  say((verdictWords(r) + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
+  const rev = reveal(r);
+  say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   if (r.verdict === "wrong") wishOnWrong();
   window.stemBrainrot?.sync();
@@ -1555,7 +1602,8 @@ function rewardTry(a, r) {
   const p = S.prob, multi = p.type === "multi";
   if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
   const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
-  rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0 });
+  rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0,
+    reveal: r.verdict !== "correct" && r.correct != null });                    // T19: the answer was shown = 0 XP, still a miss
 }
 function rewardMulti(mine) {
   if (!rewardOn() || S !== mine || !S.solved) return;
@@ -1563,7 +1611,7 @@ function rewardMulti(mine) {
 }
 function rewardGo(mine, o) {
   const p = mine.prob;
-  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
+  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
   const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right

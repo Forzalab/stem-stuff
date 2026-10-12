@@ -1,5 +1,6 @@
 """serve.py: evaluator, grading, HTTP. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import contextlib
+import hashlib
 import io
 import json
 import math
@@ -326,6 +327,74 @@ class Grade(unittest.TestCase):
             for u in pub["parts"]:
                 self.assertFalse({"answer", "accept", "points", "tol", "wrong"} & set(u), p["code"])
             self.assertEqual(pub["body"], p["body"])
+
+
+class SugarReveal(unittest.TestCase):
+    """T19 (Tony, Oct 12): in sugar the server sends `correct` once a question is out of tries, never before; diet never."""
+    SUGAR, DIET = "", "stem-mode=diet; stem-mode-v=2"
+    sid = staticmethod(lambda name: hashlib.md5(name.encode()).hexdigest())   # the server accepts only a 32-hex sid
+
+    def post(self, mode, sid, **body):
+        st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid(sid)}; {mode}" if mode else f"sid={self.sid(sid)}", json.dumps(body).encode())
+        self.assertEqual(st, 200)
+        return json.loads(raw)
+
+    def state(self, mode, sid, code):
+        st, _, raw = serve.dispatch("GET", f"/state/{code}", f"sid={self.sid(sid)}; {mode}" if mode else f"sid={self.sid(sid)}")
+        self.assertEqual(st, 200)
+        return json.loads(raw)
+
+    def test_no_correct_before_lockout(self):                                   # (1)
+        for code, p in BANK.items():
+            body = {"choice": next(c["id"] for c in p["choices"] if c["id"] != p["correct"])} if p["type"] == "mc" and p.get("pick") != "all" \
+                else {"choices": []} if p["type"] == "mc" else {"part": 0, "answer": "98765"} if p["type"] == "multi" else {"answer": "98765"}
+            r = self.post(self.SUGAR, "pre-" + code, code=code, **body)
+            if r["verdict"] == "wrong" and r["triesLeft"] > 0:
+                self.assertNotIn("correct", r, code)
+                self.assertNotIn("correct", self.state(self.SUGAR, "pre-" + code, code), code)
+        r = self.post(self.SUGAR, "pre-t6b", code="CALC1_T6B", answer="5")     # a try left: no answer, and /state has none either
+        self.assertEqual((r["verdict"], r["triesLeft"], "correct" in r), ("wrong", 1, False))
+        self.assertNotIn("correct", self.state(self.SUGAR, "pre-t6b", "CALC1_T6B"))
+
+    def test_diet_never_gets_it(self):                                          # (2)
+        for code, bodies in (("CALC1_T6B", [{"answer": "5"}, {"answer": "6"}, {"answer": "7"}]),
+                             ("CSCI26_TF3", [{"choice": "f"}, {"choice": "f"}]), ("CALC1_X2P", [{"choice": "a"}, {"choice": "c"}, {"choice": "d"}]),
+                             ("CSCI26_A7K", [{"choices": ["b"]}, {"choices": ["d"]}, {"choices": ["b"]}]),
+                             ("CSCI26_M5V", [{"part": 0, "answer": "98"}, {"part": 0, "answer": "99"}, {"part": 0, "answer": "97"}])):
+            if BANK[code].get("sugar_only"):
+                continue
+            for i, b in enumerate(bodies):
+                r = self.post(self.DIET, "d1-" + code, code=code, **b)
+                self.assertNotIn("correct", r, (code, i))
+            self.assertIn(r["verdict"], ("locked", "wrong"), code)
+            self.assertEqual(r["triesLeft"], 0, code)
+            self.assertNotIn("correct", self.state(self.DIET, "d1-" + code, code), code)
+            self.assertNotIn("12", json.dumps(r) if code == "CALC1_T6B" else "", code)
+
+    def test_sugar_after_lockout_gets_it(self):                                 # (3)
+        r = self.post(self.SUGAR, "s1", code="CALC1_T6B", answer="5")
+        self.assertNotIn("correct", r)
+        r = self.post(self.SUGAR, "s1", code="CALC1_T6B", answer="6")          # the reply that shuts it
+        self.assertEqual((r["verdict"], r["triesLeft"], r["correct"]), ("wrong", 0, "12"))
+        self.assertEqual(self.post(self.SUGAR, "s1", code="CALC1_T6B", answer="12")["correct"], "12")   # later: locked, still told
+        self.assertEqual(self.state(self.SUGAR, "s1", "CALC1_T6B")["correct"], "12")                   # a reload asks /state
+        r = self.post(self.SUGAR, "s2", code="CSCI26_TF3", choice="f")          # a 2-choice mc has one try
+        self.assertEqual((r["verdict"], r["correct"]), ("wrong", "t"))
+        self.post(self.SUGAR, "s3", code="CALC1_X2P", choice="a")
+        self.assertEqual(self.post(self.SUGAR, "s3", code="CALC1_X2P", choice="c")["correct"], "b")
+        self.post(self.SUGAR, "s4", code="CSCI26_A7K", choices=["b"])
+        r = self.post(self.SUGAR, "s4", code="CSCI26_A7K", choices=["d"])
+        self.assertEqual((r["verdict"], r["correct"]), ("wrong", ["a", "c"]))                              # pick all: the ids
+        self.post(self.SUGAR, "s5", code="CSCI26_Q8C", answer="p")
+        self.assertEqual(self.post(self.SUGAR, "s5", code="CSCI26_Q8C", answer="q")["correct"], "~q -> ~p")
+        self.post(self.SUGAR, "s6", code="CSCI26_M5V", part=0, answer="98")
+        r = self.post(self.SUGAR, "s6", code="CSCI26_M5V", part=0, answer="99")
+        self.assertEqual((r["part"], r["correct"]), (0, "14"))
+        self.assertNotIn("correct", self.post(self.SUGAR, "s6", code="CSCI26_M5V", part=1, answer="98"))   # part b has its own tries
+        self.assertEqual(self.state(self.SUGAR, "s6", "CSCI26_M5V")["parts"][0]["correct"], "14")
+        self.assertNotIn("correct", self.state(self.SUGAR, "s6", "CSCI26_M5V")["parts"][1])
+        self.assertNotIn("correct", self.post(self.SUGAR, "s7", code="CALC1_T6B", answer="12"))     # a right answer needs no reveal
+        self.assertNotIn("correct", self.post(self.SUGAR, "s7", code="CALC1_T6B", answer="5"))      # locked after right: nothing to show
 
 
 class Http(unittest.TestCase):
