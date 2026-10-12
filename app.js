@@ -1579,7 +1579,7 @@ async function rewardShow(mine, res) {
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
   if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
-  setTimeout(() => RW().render(res.xp + held), 450);                           // the +1s held back on earlier wrong tries count up with it
+  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 450);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
   if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); return; }
   await wait(600);

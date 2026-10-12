@@ -71,10 +71,15 @@ const PROBE = () => {
   };
   const what = a => a.animationName || (a.transitionProperty ? "transition:" + a.transitionProperty + "@" + (a.effect?.target?.className || "").toString().split(" ")[0] : "waapi:" + [...new Set((a.effect?.getKeyframes() || []).flatMap(k => Object.keys(k)).filter(k => !["offset", "easing", "composite", "computedOffset"].includes(k)))].join("+"));
   function sample(ms) {
-    const t0 = performance.now(), out = [], seen = new Map(), loops = new Set();
+    const t0 = performance.now(), out = [], seen = new Map(), loops = new Set(), num = () => document.querySelector("#rwHud .rw-num")?.textContent;
+    let n0 = num(), nt = -1e9;
     return new Promise(r => {
       const iv = setInterval(() => {
-        const t = performance.now() - t0, g = new Set();
+        const t = performance.now() - t0, g = new Set(), n1 = num();
+        if (n1 !== n0) {                                                        // engine.js countUp ticks the text (not WAAPI): a change within
+          if (t - nt < 150) { g.add("hud"); if (!seen.has("count")) seen.set("count", { k: "hud", what: "count-up (text)", t: Math.round(t) }); }   // 150 ms of the last
+          n0 = n1; nt = t;                                                      // one is a count-up; a lone change is an instant set
+        }
         for (const a of document.getAnimations()) {
           if (a.playState !== "running" || a.effect?.getComputedTiming().currentIteration == null) continue;   // moving = in its active phase (not a delay)
           const k = top(a.effect && a.effect.target);
@@ -197,28 +202,58 @@ try {
     await quiet(page);
   });
 
-  if (SHOTS) await step(`shots (${TAG}): 0/200/400/600/1000 ms after Check and after the burst opens`, async () => {
-    mkdirSync(SHOTS, { recursive: true });
-    await go(page, "CALC1_B04");
-    await unCap(page); await page.waitForTimeout(1100); await rig(page, [0, 0, 0, 0]);
-    const marks = [0, 200, 400, 600, 1000];
-    const frames = async (name, t0) => {
-      for (const m of marks) {
-        await page.evaluate(([t0, m]) => new Promise(r => { const w = () => performance.now() - t0 >= m ? r() : requestAnimationFrame(w); w(); }), [t0, m]);
-        const at = Math.round(await page.evaluate(t0 => performance.now() - t0, t0));
-        await page.screenshot({ path: join(SHOTS, `${TAG}-chromium-${name}-${String(m).padStart(4, "0")}.png`) });
-        log(`   shot ${TAG} chromium ${name} +${m} ms (taken at +${at})`);
-      }
-    };
-    await page.click('#q .opt[data-id="a"]');
-    const t0 = await page.evaluate(() => performance.now());
-    await page.click('#q .ch[data-id="a"] .send');
-    await frames("check", t0);
-    await page.waitForSelector(".fx-ov.fx-burst", { timeout: 9000 });
-    await frames("burst", await page.evaluate(() => performance.now()));
-    await quiet(page);
-  });
   await ctx.close();
+
+  await step("a level up, then a right answer on the next question ~1 s later: the level-up burst still plays (the cap is spent), then the new FX", async () => {
+    const { ctx: lc, page: lp } = await phone();
+    await lp.evaluate(() => window.__bf.wrapConf());
+    await lp.waitForTimeout(1100); await rig(lp, [0.99, 0.99]);                 // 16 XP, no drop
+    await pick(lp, "a");
+    await lp.waitForFunction(() => !document.documentElement.classList.contains("fx-busy"), null, { timeout: 10000 });
+    await go(lp, "CALC1_B02"); await lp.waitForTimeout(1100); await rig(lp, [0.5, 0.99]);   // 14 XP: 30, level 2
+    await lp.evaluate(() => { window.__lvl = false; new MutationObserver(() => { if (document.querySelector(".fx-ov.fx-levelup")) window.__lvl = true; }).observe(document.body, { childList: true, subtree: true }); });
+    await pick(lp, "a");
+    await lp.waitForTimeout(1000);
+    await go(lp, "CALC1_B03"); await rig(lp, [0.5, 0.99]);
+    const r = await sampled(lp, "a", 7000);
+    report("level up, then the next question right ~1 s later", r);
+    check(await lp.evaluate(() => window.__lvl), "the level-up burst played");
+    check(r.peak <= 1, `peak ${r.peak} groups at once`);
+    await lc.close();
+  });
+
+  /* exact frames: a fresh page per frame; at the mark (from Check, or from the overlay's first frame) every animation pauses and rAF and
+     timers stop, then the shot (no capture skew). 393x852 and 1920x1080, colour + -grey twins (written by the README's PIL step) */
+  if (SHOTS) await step(`shots (${TAG}): frozen frames at 0/200/400/600/1000 ms after Check and after the burst opens, + the slots at 600 ms`, async () => {
+    mkdirSync(SHOTS, { recursive: true });
+    const jobs = [];
+    for (const [W, H] of [[393, 852], [1920, 1080]]) {
+      for (const m of [0, 200, 400, 600, 1000]) jobs.push([W, H, "check", m], [W, H, "burst", m]);
+      jobs.push([W, H, "slots", 600]);
+    }
+    const one = async ([W, H, mode, m]) => {
+      const c = await browser.newContext({ viewport: { width: W, height: H }, serviceWorkers: "block" });
+      await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+      const p = await c.newPage();
+      await p.goto(BASE + "/#CALC1_B01"); await opened(p, "CALC1_B01");
+      await p.waitForSelector("#rwHud:not([hidden])", { timeout: 6000 });
+      await p.waitForTimeout(1100); await rig(p, [0, 0, 0, 0]);               // 12 XP, a drop, common: slots + WIN burst
+      await p.click('#q .opt[data-id="a"]');
+      await p.evaluate(([mode, m]) => {
+        const T = window.setTimeout.bind(window), sel = { burst: ".fx-ov.fx-burst", slots: ".fx-ov.fx-slots-ov" }[mode];
+        const freeze = () => { document.getAnimations().forEach(a => { try { a.pause(); } catch { /* */ } }); window.requestAnimationFrame = () => 0; window.setTimeout = () => 0; window.setInterval = () => 0; window.__frozen = true; };
+        if (sel) { const mo = new MutationObserver(() => { if (document.querySelector(sel)) { mo.disconnect(); T(freeze, m); } }); mo.observe(document.body, { childList: true, subtree: true }); }
+        document.querySelector('#q .ch[data-id="a"] .send').click();
+        if (!sel) T(freeze, m);
+      }, [mode, m]);
+      await p.waitForFunction(() => window.__frozen, null, { timeout: 15000 });
+      const f = `${TAG}-chromium-${W}-${mode}-${String(m).padStart(4, "0")}.png`;
+      await p.screenshot({ path: join(SHOTS, f) });
+      await c.close();
+      return f;
+    };
+    for (let i = 0; i < jobs.length; i += 4) for (const f of await Promise.all(jobs.slice(i, i + 4).map(one))) log("   shot " + f);
+  });
 
   await step("reduced motion: a drop + burst is one fade, nothing else moves", async () => {
     const { ctx: rc, page: rp } = await phone("reduce");

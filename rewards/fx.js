@@ -30,7 +30,7 @@
      and a Cluck chip's ad wiggle stops (.fx-busy). Reduced motion: the whole sequence gets one fade (the first overlay or banner); the
      rest is instant. Triggers, odds, XP and payouts are rewards/engine.js's and app.js's; this only orders what is drawn. */
   const Q = [], ROOT = document.documentElement, CAP = 5000, GRACE = 400;
-  let busy = false, lastEnd = -1e9, fadeLeft = true, pinned = null;
+  let busy = false, lastEnd = -1e9, fadeLeft = true, pinned = null, snap = false;
   const fin = a => a.finished.then(() => {}, () => {});
   const finite = a => a.playState === 'running' && a.effect && a.effect.getComputedTiming().endTime !== Infinity;
   const moving = (root, skip) => (root ? (root === document ? document.getAnimations() : root.getAnimations({ subtree: true })) : [])
@@ -42,6 +42,11 @@
       const b = document.querySelector('#rwHud .rw-bar i');
       if (b && !pinned) { const t = getComputedStyle(b).transform; b.style.transition = 'none'; b.style.transform = t; pinned = b; }   // the bar keeps its length until the HUD step
       ROOT.classList.add('fx-hold');
+    } else if (snap) {                                                        // its HUD step was dropped (flush): catch up without motion
+      snap = false;
+      document.querySelectorAll('#rwHud .rw-lvl.rw-pulse').forEach(e => e.getAnimations().forEach(a => a.finish()));
+      if (pinned) { pinned.style.transform = ''; void pinned.offsetWidth; pinned.style.transition = ''; pinned = null; }
+      ROOT.classList.remove('fx-hold');
     } else {
       ROOT.classList.remove('fx-hold');
       if (pinned) { pinned.style.transition = pinned.style.transform = ''; pinned = null; }   // its .5 s fill now plays, alone
@@ -62,17 +67,21 @@
     if (!s) { busy = false; lastEnd = performance.now(); hold(false); ROOT.classList.remove('fx-busy'); return; }
     if (s.group === 'hud') hold(false);
     const ps = s.fns.map(([fn, res]) => { let p; try { p = Promise.resolve(fn()); } catch (e) { p = Promise.resolve(); } p.then(res, res); return p.then(() => {}, () => {}); });
-    const tail = s.group === 'answer' ? settle(document, '.rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 1200)
-      : s.group === 'hud' ? settle(document.getElementById('rwHud'), null, 1500) : null;
+    const tail = s.group === 'answer' ? settle(document, '.rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 800)
+      : s.group === 'hud' ? Promise.all([settle(document.getElementById('rwHud'), null, 1500), new Promise(r => setTimeout(r, still() ? 0 : 650))])   // + engine.js's 600 ms count-up (text, not WAAPI)
+      : null;
     Promise.race([Promise.all(ps.concat(tail || [])), new Promise(r => setTimeout(r, CAP))]).then(next);
   }
-  // a new answer while the last one still plays: its queued steps are dropped (their promises resolve) and what runs is skipped, never stacked
+  // a new answer or a new question while the last answer still plays: its queued answer / FX-layer / HUD steps are dropped (their promises
+  // resolve; the HUD's numbers catch up on the next render) and the FX layer still moving finishes. Its slots, burst and banner stay queued
+  // and play first: the engine already spent the burst cap on them (engine.js answer()), so they are never dropped or clicked away.
+  const SKIP = { answer: 1, layer: 1, hud: 1 };
   function flush() {
-    for (const s of Q.splice(0)) s.fns.forEach(([, res]) => res());
-    document.querySelectorAll('.fx-ov').forEach(o => o.click());
+    for (let i = Q.length - 1; i >= 0; i--) if (SKIP[Q[i].group]) { const s = Q.splice(i, 1)[0]; if (s.group === 'hud') snap = true; s.fns.forEach(([, res]) => res()); }
     if (L) L.querySelectorAll(':scope > :not(canvas)').forEach(n => n.getAnimations().forEach(a => a.finish()));
     if (layerConfetti && layerConfetti.reset) layerConfetti.reset();
   }
+  addEventListener('hashchange', () => { if (busy) flush(); });             // the next question: a queued drop shows at once
   function seq(group, fn) {
     if (group === 'answer' && busy) flush();
     return new Promise(res => {
@@ -131,7 +140,7 @@
     if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());   // confetti on every correct (Tony, Oct 4)
     const c = layerConfetti && layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 70, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
       origin: { x: p.x / innerWidth, y: p.y / innerHeight } });   // 70 ticks (~1.2 s, was 120): the FX layer's step ends with it
-    return Promise.all([s, c && Promise.race([c, new Promise(r => setTimeout(r, 1100))]).then(() => layerConfetti.reset && layerConfetti.reset())]);   // time-boxed: slow frames never stretch the step
+    return Promise.all([s, c && Promise.race([c, new Promise(r => setTimeout(r, 900))]).then(() => layerConfetti.reset && layerConfetti.reset())]);   // time-boxed: slow frames never stretch the step
   }
 
   function coinFly(fromEl, toEl, n) {
@@ -348,6 +357,7 @@
     float: (el, text, cls) => seq('layer', () => float(el, text, cls)),
     coinFly: (fromEl, toEl, n) => seq('layer', () => coinFly(fromEl, toEl, n)),
     shine: el => seq('hud', () => shine(el)),
+    hud: fn => seq('hud', fn),                                              // app.js: the HUD's render (count-up, bar) in the HUD step
     slots: tier => seq('slots', () => slots(tier)),
     burst: (kind, o) => seq('burst', () => burst(kind, o)),
     toast: (text, sub) => seq('toast', () => toast(text, sub))
