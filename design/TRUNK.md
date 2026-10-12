@@ -4,7 +4,7 @@ Decided Oct 3, 2026 (Tony: "prune all stale branches … trunk style dev. how?")
 already merged.
 
 ## The rules
-- `main` is the trunk and is always deployable. `tests/run-all.sh` is green on it.
+- `main` is the trunk and is always deployable. `tests/run-all.sh` is green on it (CI runs it as 2 parallel shards; the required check `all` needs both).
 - Every change = one short-lived branch → PR → CI `tests / all` green → merge the same day → the branch is deleted.
 - One change per branch. Never add commits to a branch whose PR is merged; check the PR state first (#35 lost its redirect
   code that way). Never reuse a merged branch: start again from `origin/main`.
