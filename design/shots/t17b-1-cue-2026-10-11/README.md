@@ -39,6 +39,15 @@ Extra (needed for "card moves 0px", found by the WebKit smoke): on the closing t
 
 impeccable static (app.css + index.html): 0 anti-patterns, the same 1 advisory as main (repeating-stripes in index.html).
 
+## Audit of the 6 edited existing tests (merged head, vs origin/main cef5647)
+
+- `choose-all.pw.mjs`: "comes back around" presence → absence of the whole out-of-tries line (Scope 7 / Q13 removes it). Strengthened in the audit: also no right row revealed, and the labelled Next must take the Check row whenever the list is on.
+- `disabled.pw.mjs`: `waitFb` also accepts `#q.closed` (a wait, not an assert): the last wrong try no longer prints a `#fb .verdict` line; every dead-control assert is unchanged.
+- `done.pw.mjs`: 4 x "comes back around" presence → absence of `Out of tries|comes back around` (Q13); the lock icon, read-only, no-reveal asserts all kept. Strengthened: a reopened out-of-tries MC must show Next when the list is on. That assert caught a real bug (first page load of a closed upload question: `#qnav` came on after `paint()`, so no Next) → fixed in app.js (`load`: still Next after `drill:problem`).
+- `easy.pw.mjs`: merged with #126's wait-for-question-open fix (auto-merge, both kept); the T17b-1 line waits for the duck chip "Ask Cluck" with `aria-expanded=true` instead of the old "Hide Cluck's steps" chip text (Scope 4 renames the chip); same strength (sheet open, no focus taken, text shows).
+- `rewards.pw.mjs`: "right pick pulses" → "closing right pick does NOT pulse" (Scope 5: only Next moves after Check); the wrong-pick shake and the reduced-motion "nothing moves" asserts kept. Spec, not weakening: the old positive is now a must-not.
+- `ux-flows.pw.mjs` #14: the wait on the out-of-tries sentence → closed + no live row + asserts no out-of-tries line and no `.opt.right` reveal (stricter than before).
+
 ## Known / not done
 
 - B2 (live sugar reward FX = many groups at once on reward questions) untouched, as scoped.

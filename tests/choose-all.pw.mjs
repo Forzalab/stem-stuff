@@ -129,9 +129,10 @@ try {
     await step(`${name}: subset of correct = miss, out of tries, closed`, async () => {
       await tap(row(page, "d")); await check(page);
       const s = await st(page);
-      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.doesNotMatch(s.fb, /Out of tries/);   // T17b-1 / Q13: no out-of-tries line
-      assert.deepEqual(s.wrong, ["b"]);
+      assert.equal(s.finished, true); assert.match(s.fb, /Every tick you made is right/); assert.doesNotMatch(s.fb, /Out of tries|comes back around/);   // T17b-1 / Q13: no out-of-tries line
+      assert.deepEqual(s.wrong, ["b"]); assert.deepEqual(s.right, [], "out of tries reveals no right row");
       assert.equal(await page.isVisible("#mcGo"), false);
+      assert.equal(await page.isVisible("#q .chk .nx"), await page.isVisible("#qnav"), "closed: the labelled Next takes the Check slot (whenever the list is on)");
     });
     await ctx.close();
 
