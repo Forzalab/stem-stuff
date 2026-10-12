@@ -7,7 +7,7 @@ on:
 jobs:
   all:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40   # the full suite outgrew 25 (Oct 12: ALL GREEN at 25m09s, then cancelled)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
