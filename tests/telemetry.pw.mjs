@@ -24,8 +24,9 @@ const STUB = `window.posthog = { init(k, o) { window.__ph = { key: k, opts: o, e
   capture(n, p, x) { window.__ph.ev.push({ n, p, x }); } };`;
 
 /* a context: env = { dnt, gpc } (navigator overrides), key = stamp a fake key into index.html */
-async function open({ dnt = false, gpc = false, off = false, key = false, hash = "" } = {}) {
+async function open({ dnt = false, gpc = false, off = false, key = false, hash = "", cookies = [] } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: "block" });
+  if (cookies.length) await ctx.addCookies(cookies.map(c => ({ ...c, url: BASE })));
   await ctx.addInitScript(([dnt, gpc, off]) => {
     if (off) localStorage.setItem("stem-t-off", "1");
     if (dnt) Object.defineProperty(Navigator.prototype, "doNotTrack", { get: () => "1", configurable: true });
@@ -121,6 +122,19 @@ await step("a key: libraries load only after the first question shows; app_load,
   console.log("     events:", [...names].join(", "));
   await ctx.close();
 });
+
+for (const [mode, cookies] of [["sugar", []], ["diet", [{ name: "stem-mode", value: "diet" }, { name: "stem-mode-v", value: "2" }]]]) {
+  await step(`q_open carries mode=${mode} (the stem-mode cookie)`, async () => {
+    const { ctx, page, errors } = await open({ key: true, hash: "#" + CODE, cookies });
+    await firstQ(page);
+    await page.waitForFunction(() => window.__ph && window.__ph.ev.some(e => e.n === "q_open"), null, { timeout: 8000 });
+    const q = await page.evaluate(() => window.__ph.ev.find(e => e.n === "q_open").p);
+    assert.equal(q.mode, mode, "q_open.mode");
+    assert.equal(q.code, CODE);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+}
 
 await step("footer: a real 'privacy' link to privacy.html; the page has 3 plain lines", async () => {
   const { ctx, page } = await open({});
