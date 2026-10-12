@@ -280,12 +280,20 @@ for (const mode of ["sugar", "diet"]) {
   for (const [type, code] of [["num", "PHYS_WNM"], ["mc", "PHYS_TMC"], ["multi", "PHYS_TMU"]]) {
     const page = await pageFor(browser, O, code);
     await step(`${mode} reduced motion ${type}: g-next-fade only, no nod, no other motion`, async () => {
-      await page.evaluate(() => { window.__rm = new Set(); const t = setInterval(() => document.getAnimations().forEach(a => window.__rm.add(a.animationName || ("transition:" + a.transitionProperty))), 10); window.__rmt = t; });
+      /* a random reward drop (rewards/fx.js overlay, wish questions only) is the live reward FX = task B2, out of this scope: it is kept
+         apart, and under reduced motion it may only fade (opacity keyframes, nothing moves). Everything else: g-next-fade only */
+      await page.evaluate(() => { window.__rm = new Set(); window.__fx = new Set(); const t = setInterval(() => document.getAnimations().forEach(a => {
+        const tg = a.effect && a.effect.target, n = a.animationName || ("transition:" + a.transitionProperty);
+        if (tg && tg.closest && tg.closest(".fx-ov")) window.__fx.add(n + "[" + [...new Set((a.effect.getKeyframes?.() || []).flatMap(k => Object.keys(k).filter(x => !["offset", "easing", "composite", "computedOffset"].includes(x))))].join(",") + "]");
+        else window.__rm.add(n);
+      }), 10); window.__rmt = t; });
       await close(page, type, "right", { code });
       await page.waitForSelector("#q .nx"); await page.waitForTimeout(900);
-      const names = await page.evaluate(() => { clearInterval(window.__rmt); return [...window.__rm]; });
+      const [names, fx] = await page.evaluate(() => { clearInterval(window.__rmt); return [[...window.__rm], [...window.__fx]]; });
       assert.deepEqual(names.filter(n => n !== "g-next-fade"), [], "motion besides the fade: " + names);
       assert.ok(names.includes("g-next-fade"), "no g-next-fade: " + names);
+      assert.ok(fx.every(n => /\[opacity\]$/.test(n)), "reduced motion: a reward overlay moves (B2): " + fx);
+      if (fx.length) console.log("      note (B2): reward drop overlay faded in under reduced motion: " + fx.join(" "));
     });
     await page.ctx.close();
   }

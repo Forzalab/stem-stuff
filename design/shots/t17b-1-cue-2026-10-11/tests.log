@@ -1,4 +1,51 @@
 ok   unittest
 ok   npm
-Terminated
-RUN_RC=143
+ok   autosave
+ok   bank
+ok   bar
+ok   blind
+ok   blur
+FAIL choose-all-spam
+     FAIL desktop: right set spammed = one request, correct, one try 
+           Cannot read properties of undefined (reading 'verdict')
+     1 FAILED
+ok   choose-all
+ok   disabled
+ok   done
+ok   easy
+ok   fab
+ok   flow
+ok   font
+ok   katex-wrap
+ok   mcclick
+ok   mode-reset
+ok   nav-stable
+FAIL next-cue
+     FAIL sugar reduced motion num: g-next-fade only, no nod, no other motion 
+           motion besides the fade: g-next-fade,transition:undefined
+     + actual - expected
+     
+     --
+     1 FAILED
+ok   next-dead
+ok   polish
+ok   prefix
+ok   privacy-reach
+ok   queue-walk
+ok   reload
+ok   render
+ok   rewards
+ok   splash
+ok   swap
+ok   telemetry
+ok   ticker
+FAIL try-tries
+     FAIL 390 rm: correct: a static yellow pill "+6 XP", no animation, no flying chip; the total after ~2 s 
+           still there at 1.4 s
+     
+     '38' !== '+6'
+     --
+     1 FAILED
+ok   update
+ok   upload-replace
+RUN_RC=124
