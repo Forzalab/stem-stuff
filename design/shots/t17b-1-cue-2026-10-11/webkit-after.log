@@ -1,0 +1,19 @@
+ok   wk-merged-sugar-num-right-659  Check [343, 232, 391, 280] Next [295, 232, 391, 280] h 48.0 dcard 0 dy 0 focus True ring True chip None
+ok   wk-merged-sugar-num-out-659  Check [343, 232, 391, 280] Next [295, 232, 391, 280] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-sugar-text-right-659  Check [343, 232, 391, 280] Next [295, 232, 391, 280] h 48.0 dcard 0 dy 0 focus True ring True chip None
+ok   wk-merged-sugar-text-out-659  Check [343, 232, 391, 280] Next [295, 232, 391, 280] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-sugar-mc-right-659  Check [339, 230, 387, 278] Next [291, 230, 387, 278] h 48.0 dcard 0 dy 0 focus True ring True chip None
+ok   wk-merged-sugar-mc-out-659  Check [339, 416, 387, 464] Next [291, 416, 387, 464] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-sugar-multi-right-659  Check [323, 348, 371, 396] Next [275, 348, 371, 396] h 48.0 dcard 0 dy 0 focus True ring True chip None
+ok   wk-merged-sugar-multi-out-659  Check [323, 348, 371, 396] Next [275, 348, 371, 396] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-num-right-659  Check [343, 198, 391, 246] Next [295, 198, 391, 246] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-num-out-659  Check [343, 198, 391, 246] Next [295, 198, 391, 246] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-text-right-659  Check [343, 198, 391, 246] Next [295, 198, 391, 246] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-text-out-659  Check [343, 198, 391, 246] Next [295, 198, 391, 246] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-mc-right-659  Check [343, 196, 391, 244] Next [295, 196, 391, 244] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-mc-out-659  Check [343, 382, 391, 430] Next [295, 382, 391, 430] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-multi-right-659  Check [323, 314, 371, 362] Next [275, 314, 371, 362] h 48.0 dcard 0 dy 0 focus True ring False chip None
+ok   wk-merged-diet-multi-out-659  Check [323, 314, 371, 362] Next [275, 314, 371, 362] h 48.0 dcard 0 dy 0 focus True ring False chip None
+
+16/16 WebKit cases pass
+WK_RC=0

@@ -601,8 +601,10 @@ flow(13, "mc-wrong-try-left", async (page, w) => {
 flow(14, "mc-lockout", async (page, w) => {
   await go(page, C.single);
   for (let i = 0; i < 6 && (await page.$("#q .opt:not(:disabled)")); i++) await answerKey(page, C.single, false);
-  await page.waitForFunction(() => /Out of tries for now\. This one comes back around\./.test(document.querySelector("#q")?.textContent + document.querySelector("#fb")?.textContent), null, { timeout: 4000 });
-  return "'Out of tries for now. This one comes back around.'";
+  await page.waitForFunction(() => document.querySelector("#q.closed") && !document.querySelector("#q .opt:not(:disabled)"), null, { timeout: 4000 });   // T17b-1 / Q13: no out-of-tries line
+  assert.ok(!/Out of tries/.test(await page.evaluate(() => document.querySelector("#q").textContent + document.querySelector("#fb").textContent)), "an out-of-tries line");
+  assert.ok(!(await page.$("#q .opt.right")), "out of tries revealed the right choice");
+  return "closed, every row struck or dimmed, no out-of-tries line, no reveal";
 });
 
 flow(15, "choose-all", async (page, w) => {

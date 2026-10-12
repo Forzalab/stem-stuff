@@ -489,6 +489,7 @@ async function load(code) {
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
+  if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   rwSync();
   origRender();
@@ -786,9 +787,9 @@ async function submitMC() {
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
   const send = o.parentElement.querySelector(".send");
-  if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); nudge(o, "pop"); finish(); }
+  if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); finish(); }   // no pop: Next is the one motion after Check (T17b-1)
   else if (r.verdict === "wrong") {
-    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); nudge(o, "jolt");
+    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
     if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
@@ -812,13 +813,13 @@ async function submitAll() {
   if (r.verdict !== "invalid") record({ a: S.prob.fix ? { tick, fix: Object.fromEntries(xs.map(o => [o.dataset.l, f[o.dataset.id]])) } : tick, c, l: on.map(o => o.dataset.l),
     ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}) }, r);
   if (r.verdict === "correct") {
-    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); nudge(o, "pop"); }
+    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }   // no pop: Next is the one motion (T17b-1)
     for (const o of xs) fixOf(o).classList.add("ok", "done");
     finish();
   } else if (r.verdict === "wrong") {
     const o = r.struck && opts().find(x => x.dataset.id === r.struck), was = document.activeElement;
     const bad = r.fixWrong && opts().find(x => x.dataset.id === r.fixWrong); if (bad && fixOf(bad)) fixOf(bad).classList.add("bad");
-    strike(o); nudge(o, "jolt"); syncTicks();
+    strike(o); if (r.triesLeft > 0) nudge(o, "jolt"); syncTicks();
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
@@ -859,7 +860,8 @@ async function submitFF() {
     const mine = S, r = await check(S.code, { answer: vals[0] });
     if (S !== mine) return;
     if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
-    if (r.verdict !== "invalid") { record({ a: t }, r); if ($("#preview")) $("#preview").innerHTML = ""; }
+    const closes = r.verdict === "correct" || r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
+    if (r.verdict !== "invalid") { record({ a: t }, r); const pv = $("#preview"); if (pv) { if (closes) pv.classList.add("spent"); else pv.innerHTML = ""; } }   // closing: the preview hides but keeps its room (nothing moves, T17b-1)
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     else if (r.verdict === "wrong") pips(r, ...pipsAt());
@@ -929,8 +931,8 @@ function settle() {
   S.solved = right === n;
   finish();
   $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
-    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p><p class="verdict lock">${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span></p>`;
-  say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim());
+    : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p>`;   // no out-of-tries line (Q13): the shut boxes + Next say it
+  say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim() + " Out of tries.");
 }
 
 /* ---------- attempts, feedback ---------- */
@@ -982,12 +984,11 @@ function saveDone(r) {
 function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
-    const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur();
+    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx")) a.blur();   // Next in the Check slot keeps focus (T17b-1)
     if (mtOpen) closeMT(false);
     if (swapOn) setSwap(false);
     root.classList.remove("dock-away", "bar-off");
-    if (root.classList.contains("qnav-on") && root.classList.contains("dock-bottom"))
-      scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    /* no scroll to the top any more (A1 audit): Next sits in the Check slot where the eye already is, and the card never moves after Check */
   }, 900);
 }
 /* upload mode: gradeLocal picks up where it was */
@@ -997,6 +998,10 @@ function seedLocal(code, rec, p) {
 /* show a record on the freshly rendered question: struck wrong choices, the student's right one, their last typed answer;
    closed = read-only. The right choice is never marked unless the student picked it. */
 function paint(rec) {
+  painting = true;                                          // a restore: Next shows still (no g-next-in), no focus, no nod
+  try { paintRec(rec); } finally { painting = false; }
+}
+function paintRec(rec) {
   const p = S.prob, max = maxTries(p), us = units(rec, p);
   S.tries = (rec.tries || []).slice(); S.hints = (rec.hints || []).slice();
   if (p.type === "multi") {
@@ -1094,11 +1099,77 @@ function pips(r, el, pos) {
 const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
 function finish() {
   S.finished = true;
-  document.querySelectorAll("#q .pips").forEach(x => x.remove());
+  document.querySelectorAll("#q .pips").forEach(x => x.classList.add("spent"));   // hidden, its room kept: a closing tap never moves the page (T17b-1)
   $("#q").classList.add("closed");
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
+  cueNext();
+  const mine = S, still = painting;
+  queueMicrotask(() => { if (S === mine) cueChip(still); });   // after feedback(): a wrong last try makes its own wish first (wishOnWrong)
 }
+/* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, the R3 REC set): a labelled Next lands in the Check slot of the last try ----------
+   Every answer type: the mc row's own arrow slot, the num / expr / text box, the multi part's box, the pick-all Check row. The Check rect
+   lies inside Next (96x48, right edges flush), so nothing moves and the card stays put. Focus goes to Next (no scroll); a held Enter
+   (e.repeat) never skips a question. Live: g-next-in (app.css) lands it once; a restored question shows it still. No list (#qnav hidden)
+   = nowhere to go, so no Next. */
+let painting = false;
+function cueCarrier() {
+  const p = S.prob, t = S.tries.at(-1) || {};
+  if (all(p)) return { box: $("#q .chk"), send: $("#mcGo") };
+  if (p.type === "mc") {
+    const id = t.c ?? S.selected ?? $("#q .opt.right")?.dataset.id;
+    const box = (id != null && [...document.querySelectorAll("#q .ch")].find(c => c.dataset.id === String(id))) || $("#q .ch");
+    return { box, send: box && box.querySelector(".send") };
+  }
+  if (p.type === "multi") { const e = partEls(typeof t.part === "number" ? t.part : p.parts.length - 1); return { box: e.box, send: e.go }; }
+  return { box: $("#ff"), send: $("#ansGo") };
+}
+function cueNext() {
+  document.querySelectorAll("#q .nx").forEach(x => x.remove());
+  document.querySelectorAll("#q .cue").forEach(x => x.classList.remove("cue"));
+  const nav = $("#qnav");
+  if (!S || !nav || nav.hidden) return;
+  const { box, send } = cueCarrier();
+  if (!box || !send) return;
+  const h0 = box.matches(".ch") ? box.offsetHeight : 0;                         // a row whose text rewraps round Next keeps Next on Check's old spot
+  box.classList.add("cue");
+  send.insertAdjacentHTML("afterend", `<button type="button" class="nx${painting ? "" : " g-next"}" aria-label="Next question"><span class="nf"><span>Next</span>${icon("i-tri")}</span></button>`);
+  const nx = send.nextElementSibling;
+  if (h0 && Math.abs(box.offsetHeight - h0) > 0.5) nx.style.top = h0 / 2 + "px";
+  nx.addEventListener("click", e => {
+    e.stopPropagation();
+    const n = $("#qnext");
+    if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No other question to open here." } })); return; }
+    n.click();                                                                   // nav.js go(1): the same queue as the bar's Next
+  });
+  const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
+  if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
+  if (!painting) nx.focus({ preventScroll: true });
+  if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
+}
+/* the held Enter that sent Check auto-repeats onto Next once it has focus: a repeat never presses Next (not a shortcut: it only drops repeats) */
+addEventListener("keydown", e => { if (e.repeat && (e.key === "Enter" || e.key === " ") && e.target.matches?.("#q .nx")) e.preventDefault(); }, true);
+/* the duck chip (sugar, questions with Cluck's key only): right = "Compare with Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
+function cueChip(still) {
+  if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
+  if (!wish || wish.code !== S.code) wish = Object.assign(newWish(), { started: false });
+  if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
+  wishPaint();
+}
+const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right") || $("#ff.ok"));
+/* the calm nod (r5 BRIEF reward rule 4): the first 3 rights of a PT day nod, then about 1 in 3, never twice in a row, and always on a
+   first-try right after a miss. One small record in this browser; blocked storage = no nod */
+const ptDay = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+const nodGet = () => { try { return JSON.parse(localStorage.getItem("stem-nod")) || null; } catch { return null; } };
+function nodGate() {
+  const day = ptDay(), first = !S.tries.some(t => t.v === "wrong");
+  let st = nodGet();
+  if (!st || st.day !== day) st = { day, n: 0, last: false, miss: !!(st && st.miss) };
+  const n = st.n + 1, yes = n <= 3 || (first && st.miss) || (!st.last && n % 3 === 0);
+  try { localStorage.setItem("stem-nod", JSON.stringify({ day, n, last: yes, miss: !first })); } catch { return false; }
+  return yes;
+}
+function nodMiss() { const st = nodGet() || { day: ptDay(), n: 0, last: false }; st.miss = true; try { localStorage.setItem("stem-nod", JSON.stringify(st)); } catch { /* blocked */ } }
 function feedback(r, typed) {
   const fb = $("#fb");
   let h = "";
@@ -1110,8 +1181,7 @@ function feedback(r, typed) {
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
-  if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))
-    h += `<p class="verdict lock">${icon("i-lock")}<span>Out of tries for now. This one comes back around.</span></p>`;
+  /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
   let quackHtml = "";
   if (r.hint) {
     const hintWithQuack = quackHint(r.hint, S.code + ":" + S.tries.length);
@@ -1155,10 +1225,11 @@ function wishReset() {
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
   clReset();
 }
+const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
   if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
-  wish = { code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false };
+  wish = newWish();
   const w = wish;
   const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
   if (wishLog().length >= WISH_AUTO) w.started = false;                   // past the cap: "Ask Cluck" does it (no auto-open)
@@ -1292,8 +1363,17 @@ function wishPaint() {
   }
   el.hidden = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
     : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Similar solution steps" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
-  const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
-  el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
+  const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
+  if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
+  el.classList.toggle("cue", cue);
+  if (cue) {
+    const ok = cueRight(), nod = w.nod && !w.nodded;                        // the nod plays once, after Next has landed (app.css g-nod delay)
+    if (nod) w.nodded = true;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+  } else {
+    const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
+  }
   el.querySelector(".wchip").addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started || w.failed) wishRetry(w);
@@ -2157,7 +2237,7 @@ function fabPlace({ avoid } = {}) {
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
-  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
   /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
   const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
   for (let n = 0; avoid && n < 6; n++) {

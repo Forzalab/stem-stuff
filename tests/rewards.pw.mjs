@@ -305,7 +305,7 @@ try {
     await ph.close();
   });
 
-  await step("a wrong pick shakes once, a right pick pulses; reduced motion: neither moves (Tony, Oct 6 TK1)", async () => {
+  await step("a wrong pick with a try left shakes once; the closing right pick does not pulse (T17b-1 one blink); reduced motion: nothing moves (Tony, Oct 6 TK1)", async () => {
     for (const rmode of ["no-preference", "reduce"]) {
       const cx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: rmode, serviceWorkers: "block" });
       await cx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
@@ -321,10 +321,10 @@ try {
       const n = await p5.evaluate(() => window.__nudge);
       const first = c => n.find(x => x[1] === c);
       assert.ok(first("jolt") && first("jolt")[0] === "c", `wrong pick c got the shake (${rmode}): ${JSON.stringify(n)}`);
-      assert.ok(first("pop") && first("pop")[0] === "a", `right pick a got the pulse (${rmode}): ${JSON.stringify(n)}`);
+      assert.ok(!first("pop"), `the closing right pick pulses (${rmode}): ${JSON.stringify(n)}`);   // T17b-1 one blink: the labelled Next landing is the one motion after Check
       const names = n.map(x => x[2]);
       if (rmode === "reduce") assert.ok(names.every(x => x === "none"), `reduced motion: no animation (${names})`);
-      else assert.ok(names.includes("opt-jolt") && names.includes("opt-pop"), `animations play (${names})`);
+      else assert.ok(names.includes("opt-jolt"), `the shake plays (${names})`);
       await cx.close();
     }
   });

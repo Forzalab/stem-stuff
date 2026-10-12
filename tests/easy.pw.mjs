@@ -201,7 +201,7 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Hide Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });   // a row has Cluck too; desktop: the sheet opens by itself
+    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish .cue-chip")?.textContent || "") && document.querySelector("#wish .cue-chip").getAttribute("aria-expanded") === "true", null, { timeout: 6000 });   // a row has Cluck too; desktop: the sheet opens by itself. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
     assert.equal(await page.isVisible("#cluck #clTabEP"), true, "Cluck's text shows");
     assert.equal(await page.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
