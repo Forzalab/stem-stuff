@@ -1,0 +1,23 @@
+     right: peak 6 group(s) (fine 9: answer,coins,confetti,float,hud:rw-coin,ring,sparks), moving 23..2505 ms = 2482 ms, >1 group for 660 ms; order answer > answer+coins+hud+ribbon+ring+stars > answer+coins+hud+ribbon+stars > coins+hud+ribbon+stars > coins+hud > hud+stars > stars; starts {"answer":-18,"hud":132,"ring":132,"stars":132,"ribbon":132,"coins":132}
+FAIL sugar right answer, 393x852: the reward FX move one group at a time (peak 1), stars → ribbon → coins 200 ms apart, all still by 2 s 
+      peak 6 at 102 ms: ["answer","coins","confetti","float","hud:rw-coin","ring","sparks"]
+
+6 !== 1
+
+     drop: peak 6 group(s) (fine 13: answer,coins,confetti,float,hud:rw-coin,ring,sparks), moving 21..6321 ms = 6300 ms, >1 group for 2100 ms; order answer > answer+coins+hud+ribbon+ring+stars > answer+coins+hud+ribbon+stars > coins+hud+ribbon+stars > coins+hud+overlay+ribbon+stars > coins+hud+overlay+stars > hud+overlay+stars > overlay+stars > overlay > banner; starts {"answer":-9,"hud":108,"ring":108,"stars":108,"ribbon":108,"coins":108,"overlay":808,"banner":3924}
+FAIL a right answer with a drop: the slot reels, then the WIN burst, one group at a time 
+      peak 6 at 100 ms: ["answer","coins","confetti","float","hud:rw-coin","ring","sparks"]
+
+6 !== 1
+
+FAIL the Cluck chip wiggles at most 2 times, then stays still 
+      iterations {"n":"infinite","d":"6s","delay":"1.2s"}
+     right-with-chip: peak 7 group(s) (fine 11: answer,chip,coins,confetti,float,hud:rw-coin,ring,sparks), moving 21..2060 ms = 2039 ms, >1 group for 1940 ms; order answer+chip > answer+chip+coins+hud+ribbon+ring+stars > answer+chip+coins+hud+ribbon+stars > answer+banner+chip+coins+hud+ribbon+stars > banner+chip+coins+hud+ribbon+stars > banner+chip+hud+ribbon+stars > chip+hud+ribbon+stars > chip+hud+stars > chip+stars; starts {"answer":-17,"chip":-167,"hud":116,"ring":116,"stars":116,"ribbon":116,"coins":116,"banner":766}
+FAIL while a reward plays, a wiggling chip pauses (html.fx-busy), so it is never a second group 
+      peak 7 at 21 ms: ["answer","chip","coins","confetti","float","hud:rw-coin","ring","sparks"]
+
+7 !== 1
+
+     right-rm: peak 0 group(s) (fine 0: ), moving null..null ms = 0 ms, >1 group for 0 ms; order ; starts {}
+ok   reduced motion: a right answer is one fade (one group, opacity only, no transform)
+4 FAIL

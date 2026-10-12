@@ -1,0 +1,10 @@
+     right: peak 1 group(s) (fine 4: answer), moving 22..1376 ms = 1354 ms, >1 group for 0 ms; order answer > stars > ribbon > coins > hud > ribbon; starts {"answer":-9,"stars":324,"ribbon":524,"coins":724,"hud":991}
+ok   sugar right answer, 393x852: the reward FX move one group at a time (peak 1), stars → ribbon → coins 200 ms apart, all still by 2 s
+     drop: peak 1 group(s) (fine 5: answer), moving 21..5580 ms = 5559 ms, >1 group for 0 ms; order answer > stars > ribbon > coins > hud > ribbon > overlay > banner; starts {"answer":1,"stars":284,"ribbon":484,"coins":684,"hud":900,"overlay":1367,"banner":5384}
+ok   a right answer with a drop: the slot reels, then the WIN burst, one group at a time
+ok   the Cluck chip wiggles at most 2 times, then stays still
+     right-with-chip: peak 1 group(s) (fine 4: answer), moving 21..1541 ms = 1520 ms, >1 group for 0 ms; order answer > stars > ribbon > coins > hud > ribbon > banner; starts {"answer":-3,"stars":297,"ribbon":497,"coins":697,"hud":897,"banner":1330}
+ok   while a reward plays, a wiggling chip pauses (html.fx-busy), so it is never a second group
+     right-rm: peak 1 group(s) (fine 1: float), moving 71..281 ms = 210 ms, >1 group for 0 ms; order ribbon; starts {"ribbon":76}
+ok   reduced motion: a right answer is one fade (one group, opacity only, no transform)
+all ok

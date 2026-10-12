@@ -1,0 +1,98 @@
+[
+ {
+  "f": "shots/after-chromium-0000.png",
+  "t": 0,
+  "froze": 0,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-rm-0000.png",
+  "t": 0,
+  "froze": 33,
+  "rm": true
+ },
+ {
+  "f": "shots/after-chromium-0150.png",
+  "t": 150,
+  "froze": 67,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-rm-0150.png",
+  "t": 150,
+  "froze": 0,
+  "rm": true
+ },
+ {
+  "f": "shots/after-chromium-0300.png",
+  "t": 300,
+  "froze": 83,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-rm-0300.png",
+  "t": 300,
+  "froze": 0,
+  "rm": true
+ },
+ {
+  "f": "shots/after-chromium-0400.png",
+  "t": 400,
+  "froze": 150,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-rm-0400.png",
+  "t": 400,
+  "froze": 17,
+  "rm": true
+ },
+ {
+  "f": "shots/after-chromium-0500.png",
+  "t": 500,
+  "froze": 0,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-rm-0500.png",
+  "t": 500,
+  "froze": 100,
+  "rm": true
+ },
+ {
+  "f": "shots/after-chromium-0650.png",
+  "t": 650,
+  "froze": 67,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-0850.png",
+  "t": 850,
+  "froze": 83,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-1050.png",
+  "t": 1050,
+  "froze": 17,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-1250.png",
+  "t": 1250,
+  "froze": 17,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-1600.png",
+  "t": 1600,
+  "froze": 17,
+  "rm": false
+ },
+ {
+  "f": "shots/after-chromium-2200.png",
+  "t": 2200,
+  "froze": 17,
+  "rm": false
+ }
+]
