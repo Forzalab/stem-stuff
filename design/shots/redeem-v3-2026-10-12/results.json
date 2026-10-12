@@ -1,0 +1,86 @@
+{
+ "text-idle": {
+  "rcoin": "+3",
+  "fbVisible": 0,
+  "fbSr": "",
+  "coins": "12",
+  "bump": false,
+  "burst": false,
+  "say": 0
+ },
+ "text-right-landed": {
+  "rcoin": "",
+  "fbVisible": 0,
+  "fbSr": "+3 coins",
+  "coins": "15",
+  "bump": false,
+  "burst": false,
+  "say": 0
+ },
+ "text-wrong": {
+  "rcoin": "",
+  "fbVisible": 0,
+  "fbSr": "Comes back later",
+  "coins": "12",
+  "bump": false,
+  "burst": false,
+  "say": 0
+ },
+ "land": {
+  "dx": 0,
+  "dy": 0,
+  "dw": 0,
+  "dh": 0,
+  "countAtArrival": "12"
+ },
+ "samples": 46,
+ "peakGroups": 1,
+ "groupNames": [
+  "rd-fly"
+ ],
+ "countBeforeArrival": [
+  "12"
+ ],
+ "firstTickAt": 400,
+ "arrivalSampleAt": 380,
+ "final": {
+  "coins": "15",
+  "fliers": 0,
+  "rcoinGone": true,
+  "fb": "+3 coins"
+ },
+ "infinite": false,
+ "flySamples": 28,
+ "strip": [
+  "0ms:12",
+  "47ms:12",
+  "93ms:12",
+  "140ms:12",
+  "188ms:12",
+  "235ms:12",
+  "282ms:12",
+  "320ms:12L",
+  "320ms:14L",
+  "320ms:15L",
+  "320ms:15L",
+  "320ms:15L"
+ ],
+ "rm-media": {
+  "flyers": 0,
+  "peakGroups": 1,
+  "groups": [
+   "rd-fly"
+  ],
+  "final": "15",
+  "fadeSamples": 11
+ },
+ "rm-param": {
+  "flyers": 0,
+  "peakGroups": 1,
+  "groups": [
+   "rd-fly"
+  ],
+  "final": "15",
+  "fadeSamples": 12
+ }
+}

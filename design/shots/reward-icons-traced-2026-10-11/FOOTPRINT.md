@@ -74,3 +74,32 @@ Worktree: scratchpad wt124 (from /home/user/stem-stuff, branch claude/reward-ico
 - `tests/run-all.sh --quick`: ALL GREEN (unittest, npm).
 - `tests/rewards.pw.mjs 8872`: all ok (13 steps). `tests/nav-stable.pw.mjs`: all ok. `tests/ux-flows.pw.mjs`: 108 checks, 102 ok, 0 FAIL, 6 SKIP.
   `tests/try-tries.pw.mjs`: all ok.
+
+## 2026-10-12: T25 Redeem v3 (Tony's pick) on try/genui-redeem.* (second commit on this branch)
+Evidence: `design/shots/redeem-v3-2026-10-12/` (board-redeem-v3.png, strip-redeem-v3.png, v3-*.png stills, redeem-v3-fly.webm, results.json, src/).
+
+### Done
+- Files: `try/genui-redeem.js` + `try/genui-redeem.css` only. v1/v2 unchanged (checked: same text, bump, burst and count as before; 0 page errors).
+- v3: no narration. "+3 waiting" / "+3 is yours" / "Still yours. Comes back later." and every visible `.rd-say` in #fb are gone; #fb keeps aria-live
+  with one visually hidden line ("+3 coins" on arrival / "Comes back later" on wrong; always present, so the layout never shifts).
+- The coin beside Check is the duck coin (`rewards/icons/coin24_color.svg`, same art as the HUD coin, which is also the duck coin in v3) + "+3".
+- Wrong: the coin stays, dimmed (opacity .45), no text. Right: `fly()`, a port of the T24 flyDuck (brain r5/FX/d2v2/d2v2.html) and fx.js coinFly:
+  one WAAPI group `rd-fly`: the coin + 3 light discs (gift glow #e4f0ff, white core) on one quadratic arc, 320 ms cubic-bezier(.45,0,.75,1),
+  scale 32 -> 20 px (transform-origin 0 0, last keyframe = the HUD coin's rect); then the arrival tick, 220 ms: the coin fades into the HUD coin,
+  which pops once (1.28), and the count goes 12 -> 15 on the same curve. The instant `.hud.bump` and the `.rd-burst` are gone in v3.
+- Reduced motion (media or ?rm=1): no flight, one 200 ms fade of the waiting coin, then the count updates.
+- NAMES v3 lead: one plain line.
+
+### Checks (393x852, Chromium; results.json)
+- Landing offset (getBoundingClientRect, flier vs HUD .coin): dx 0, dy 0, dw 0, dh 0 px.
+- Count: "12" in every sample before arrival; arrival seen at 380 ms, first tick at 400 ms; final 15; count at arrival 12.
+- One-blink: 46 samples at 20 ms, peak 1 group (`rd-fly`). No infinite animations (sampled + diff grep: the only match is a comment).
+- Reduced motion: 0 fliers (media) / 0 (?rm=1), peak 1 group (the fade), count 15.
+- Visible narration lines: idle 0, right 0, wrong 0.
+
+### Left / not done
+- `_drift/...alt-claim` note lives in the brain repo: not touched (this agent must not edit brain).
+- The `.why` paragraph in genui-redeem.html still speaks of a "+3 burst" for all three (the HTML was out of scope).
+
+### Last test run seen (after the T25 change)
+- `tests/run-all.sh --quick`: ALL GREEN. No .pw test touches try/genui-redeem.

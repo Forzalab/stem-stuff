@@ -30,3 +30,15 @@ html.rm .rd-burst.on-row { transform: translateY(calc(-50% - 6px)); }
 /* v1: the +3 rises beside the chip, never into the row above */
 .rd-slot .rd-burst { left: calc(100% + var(--s2)); bottom: auto; top: 50%; transform: translateY(-50%); animation-name: rd-rise-row; }
 html.rm .rd-slot .rd-burst { transform: translateY(calc(-50% - 6px)); }
+/* v3 (T25, Oct 12): no words. The duck coin (rewards/icons/coin24_color.svg, the same art as the HUD coin) + "+3" beside Check.
+   Wrong: it stays, dimmed. Right: genui-redeem.js fly() moves it into the HUD coin (WAAPI, one group, no CSS keyframes, nothing infinite). */
+.rd-v3 .coin { background: url("../rewards/icons/coin24_color.svg") center / contain no-repeat; box-shadow: none; border-radius: 0; }
+.rd-v3 .rd-coin { gap: var(--s1); color: var(--rw-sun); }
+.rd-v3 .rd-coin .coin { width: 2rem; height: 2rem; }
+.rd-v3 .rd-coin.wrong { opacity: .45; }
+.rd-v3 .rd-coin.gone { visibility: hidden; }
+.rd-fly { position: fixed; left: 0; top: 0; z-index: 151; pointer-events: none; transform-origin: 0 0; background: url("../rewards/icons/coin24_color.svg") center / contain no-repeat; }
+.rd-fly.ghost { z-index: 150; background: none; }
+/* the trail is light, not dirt (T24 fix 6): a small soft disc in the gift glow (#e4f0ff) with a white core, never a faded copy of the coin */
+.rd-fly.ghost i { position: absolute; left: 28%; top: 28%; width: 44%; height: 44%; border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / .95) 0 22%, rgb(228 240 255 / .75) 45%, rgb(228 240 255 / 0) 72%); }
