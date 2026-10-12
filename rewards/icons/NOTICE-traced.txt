@@ -1,0 +1,28 @@
+Reward icons that are not Microsoft Fluent Emoji (updated 2026-10-12)
+
+OUR OWN ART (hand-drawn, no tracing, no third-party source):
+
+  coin_color.svg          the T24 duck coin (duck-coin.svg, 160-unit artboard; used where it renders > 32 px: the common slot tier)
+  coin24_color.svg        its 24 px cut (duck-coin-24.svg: heavier outline, no catchlight or groove; used <= 32 px: HUD balance,
+                          coinFly, the coin shower)
+
+  Drawn by hand in code (T24 stage 2, work/coin.py in the brain repo's r5/FX/giftbox/v2/stage2/) as part of this project. The only
+  change from the source files is width/height 160 -> 32 (viewBox unchanged), to match the other icons' intrinsic size.
+
+TRACED, licence UNKNOWN: flat colour SVGs vector-traced (vtracer 0.6.15) from isolated transparent PNG parts:
+
+  gem_stone_color.svg     <- 04-sym-diamond      (blue cut diamond)
+  star_color.svg          <- 01-gold-star        (gold star)
+  cherries_color.svg      <- 04-sym-cherry       (cherry pair with leaf)
+  glowing_star_color.svg  <- 01-gold-star        (the traced star above, plus a hand-written vector glow and 5 rays)
+
+  (coin_color.svg was traced from 06-gold-coin-icon until 2026-10-12; that trace is gone, replaced by the duck coin above.)
+
+The traces are RECOLOURED onto the gift-box palette (blue #1A4196 to #B2D0FD for the gem, gold #B48329 to #FEF585 for the stars;
+cherries keep natural colours). The gem was further simplified by hand (clean facets) and the glowing star has a hand-made outline, halo and rays.
+
+Traced from owner-supplied reference art (via image-model isolation); licence of the source art is still UNKNOWN. Do not ship to
+production until cleared: Tony decides before merge.
+
+The other icons here (duck_color.svg, fire_color.svg, trophy_color.svg) are still Microsoft Fluent Emoji Color, MIT License:
+see LICENSE-fluentui-emoji.txt. Settings, sizes and before/after evidence: design/shots/reward-icons-traced-2026-10-11/README.md.

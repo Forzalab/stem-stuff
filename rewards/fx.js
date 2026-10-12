@@ -1,5 +1,5 @@
 /* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, slot reels, full-screen bursts). Port of design/rewards/fx.js
-   for the app (design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js, Fluent Emoji, MIT), canvas-confetti from
+   for the app (design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js; per-file licence in rewards/icons/NOTICE-traced.txt), canvas-confetti from
    vendor/ (ISC). Every node it adds is aria-hidden (app.js says the words once) and carries .rw-skin (rewards/rewards.css tokens).
    Nothing runs until app.js calls a function: diet never does. */
 (function () {
@@ -80,7 +80,7 @@
     const a = mid(fromEl), b = mid(toEl), Ly = layer();
     return Promise.all(Array.from({ length: n }, (_, i) => {
       const c = Ly.appendChild(mk('img', 'fx-fly'));
-      c.src = src('coin_color'); c.alt = ''; c.draggable = false;
+      c.src = src('coin24_color'); c.alt = ''; c.draggable = false;   // 22 px: the duck coin's 24 px cut
       const p0 = { x: a.x + rnd(-18, 18), y: a.y + rnd(-10, 10) };
       const p1 = { x: (a.x + b.x) / 2 + rnd(-50, 50), y: Math.min(a.y, b.y) - rnd(70, 140) };
       const kf = [];
@@ -224,7 +224,7 @@
     const H = innerHeight + 80;
     for (let i = 0; i < n; i++) {
       const c = par.appendChild(mk('img', 'fx-rain'));
-      c.src = src('coin_color'); c.alt = '';
+      c.src = src('coin24_color'); c.alt = '';   // 18 to 34 px: the duck coin's 24 px cut
       const s = rnd(18, 34), r = rnd(-540, 540);
       c.style.cssText = `left:${rnd(0, 100)}%;width:${s}px;height:${s}px`;
       run(c, [0, .25, .5, .75, 1].map((t, k) => ({
