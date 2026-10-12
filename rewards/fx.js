@@ -62,8 +62,9 @@
     hold(true);
     hush();                                                                   // the answer is in: the ad stops
   }
+  let now = null;                                                             // the step now playing
   function next() {
-    const s = Q.shift();
+    const s = now = Q.shift() || null;
     if (!s) { busy = false; lastEnd = performance.now(); hold(false); ROOT.classList.remove('fx-busy'); return; }
     if (s.group === 'hud') hold(false);
     const ps = s.fns.map(([fn, res]) => { let p; try { p = Promise.resolve(fn()); } catch (e) { p = Promise.resolve(); } p.then(res, res); return p.then(() => {}, () => {}); });
@@ -75,7 +76,7 @@
   // a new answer or a new question while the last answer still plays: its queued answer / FX-layer / HUD steps are dropped (their promises
   // resolve; the HUD's numbers catch up on the next render) and the FX layer still moving finishes. Its slots, burst and banner stay queued
   // and play first: the engine already spent the burst cap on them (engine.js answer()), so they are never dropped or clicked away.
-  const SKIP = { answer: 1, layer: 1, hud: 1 };
+  const SKIP = { answer: 1, layer: 1, hud: 1, chip: 1 };
   function flush() {
     for (let i = Q.length - 1; i >= 0; i--) if (SKIP[Q[i].group]) { const s = Q.splice(i, 1)[0]; if (s.group === 'hud') snap = true; s.fns.forEach(([, res]) => res()); }
     if (L) L.querySelectorAll(':scope > :not(canvas)').forEach(n => n.getAnimations().forEach(a => a.finish()));
@@ -90,6 +91,30 @@
       else Q.push({ group, fns: [[fn, res]] });
       if (!busy) { begin(); next(); }
     });
+  }
+  /* the calm nod on the duck chip (app.js T17b-1, BRIEF calm-nod rule): its own step, right after this tap's answer step (which waits for
+     Next's g-next-in to land), before the FX layer; never with another group. One frame late, so the same tap's pop (rewardGo's rAF,
+     queued before the chip's microtask) is in the queue first. No answer step (a paid-out code) = it runs at once, still after Next lands.
+     get() returns the chip's img or null (a new question: nothing nods). Reduced motion: .g-nod is animation: none (app.css) */
+  function nod(get) {
+    return new Promise(res => requestAnimationFrame(() => {
+      const step = { group: 'chip', fns: [[() => {
+        const el = get();
+        if (!el || !el.isConnected) return;
+        return settle(document, '#wish, .rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 800).then(() => {   // Next has landed
+          if (!el.isConnected) return;
+          el.classList.add('g-nod');                                            // app.css's 320 ms delay waits for Next; here the queue did,
+          const as = el.getAnimations();                                        // so it starts at its active phase (no still gap in the queue)
+          as.forEach(a => { const d = a.effect && a.effect.getTiming().delay; if (d > 0 && (a.currentTime || 0) < d) a.currentTime = d; });
+          return Promise.all(as.map(fin));
+        });
+      }, res]] };
+      let i = -1;
+      for (let k = Q.length - 1; k >= 0; k--) if (Q[k].group === 'answer') { i = k; break; }
+      if (i >= 0) Q.splice(i + 1, 0, step);                                    // after the queued answer step
+      else if (busy && now && now.group === 'answer') Q.unshift(step);         // the answer step is playing: next
+      else { Q.push(step); if (!busy) { begin(); next(); } }
+    }));
   }
   // the one fade under reduced motion; with motion every enter animates
   const fadeIn = (el, ms) => { if (still()) { if (!fadeLeft) return; fadeLeft = false; } el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms, easing: 'ease-out' }); };
@@ -360,6 +385,7 @@
     hud: fn => seq('hud', fn),                                              // app.js: the HUD's render (count-up, bar) in the HUD step
     slots: tier => seq('slots', () => slots(tier)),
     burst: (kind, o) => seq('burst', () => burst(kind, o)),
-    toast: (text, sub) => seq('toast', () => toast(text, sub))
+    toast: (text, sub) => seq('toast', () => toast(text, sub)),
+    nod                                                                     // app.js: the duck chip's calm nod, its own step after the answer's
   };
 })();

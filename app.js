@@ -1367,9 +1367,10 @@ function wishPaint() {
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
   el.classList.toggle("cue", cue);
   if (cue) {
-    const ok = cueRight(), nod = w.nod && !w.nodded;                        // the nod plays once, after Next has landed (app.css g-nod delay)
-    if (nod) w.nodded = true;
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
+    if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
   } else {
     const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
