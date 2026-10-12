@@ -3,7 +3,8 @@
 // nothing on the reward UI loops for ever; the Cluck chip wiggles at most twice; reduced motion = one fade, nothing else.
 // Starts its own serve.py (throwaway banks/ + tries.json) and a stub OpenRouter for the chip:
 //   node tests/blink-fx.pw.mjs [port] [--measure] [--log file] [--shots dir --tag before|after] [--serve-only]
-// --measure logs the numbers without asserting (the "before" run); --serve-only keeps the servers up for the WebKitGTK shots.
+// --measure logs the numbers without asserting (the "before" run); --serve-only keeps the servers up for the WebKitGTK shots;
+// BF_W / BF_H (env) change the 393x852 viewport. "Moving" = a running animation in its active phase (a delay or a fill is still).
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
@@ -52,7 +53,7 @@ if (SERVE_ONLY) {
 const PROBE = () => {
   const ids = new WeakMap(); let n = 0;
   const id = e => { if (!ids.has(e)) ids.set(e, ++n); return ids.get(e); };
-  const TOP = [[".fx-layer", "fx-layer"], [".fx-toast-host", "banner"], ["#rwHud", "hud"], ["#wish", "chip"], ["#qnext", "next"], ["#q", "answer"],
+  const TOP = [[".fx-layer", "fx-layer"], [".fx-toast-host", "banner"], ["#rwHud", "hud"], ["#wish", "chip"], ["#qnext", "next"], ["#q", "answer"], ["#fb", "answer"],
     ["#toast", "toast"], ["#cluck", "cluck"], ["#orig", "hint"]];
   const top = t => {
     if (!t || !t.closest) return "doc";
@@ -68,14 +69,14 @@ const PROBE = () => {
     C.create = (c, o) => { const f = cr(c, o); const g = (...a) => { const p = f(...a); if (p && p.then) { live.push(c); p.then(() => live.splice(live.indexOf(c), 1)); } return p; }; g.reset = f.reset; return g; };
     C.__bf = 1;
   };
-  const what = a => a.animationName || (a.transitionProperty ? "transition:" + a.transitionProperty : "waapi:" + [...new Set((a.effect?.getKeyframes() || []).flatMap(k => Object.keys(k)).filter(k => !["offset", "easing", "composite", "computedOffset"].includes(k)))].join("+"));
+  const what = a => a.animationName || (a.transitionProperty ? "transition:" + a.transitionProperty + "@" + (a.effect?.target?.className || "").toString().split(" ")[0] : "waapi:" + [...new Set((a.effect?.getKeyframes() || []).flatMap(k => Object.keys(k)).filter(k => !["offset", "easing", "composite", "computedOffset"].includes(k)))].join("+"));
   function sample(ms) {
     const t0 = performance.now(), out = [], seen = new Map(), loops = new Set();
     return new Promise(r => {
       const iv = setInterval(() => {
         const t = performance.now() - t0, g = new Set();
         for (const a of document.getAnimations()) {
-          if (a.playState !== "running") continue;
+          if (a.playState !== "running" || a.effect?.getComputedTiming().currentIteration == null) continue;   // moving = in its active phase (not a delay)
           const k = top(a.effect && a.effect.target);
           g.add(k);
           if (!seen.has(a)) seen.set(a, { k, what: what(a), t: Math.round(t) });
@@ -149,7 +150,7 @@ const check = (ok, msg) => { if (MEASURE) { if (!ok) log("   (would fail) " + ms
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const phone = async rm => {
-  const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, reducedMotion: rm || "no-preference", serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: +(process.env.BF_W || 393), height: +(process.env.BF_H || 852) }, reducedMotion: rm || "no-preference", serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   await ctx.addInitScript(PROBE);
   const page = await ctx.newPage();
@@ -164,7 +165,7 @@ try {
   await step("a wrong try, then a right one with a drop (slots + WIN burst) while the Cluck chip is up: one group at a time", async () => {
     await pick(page, "b");
     await page.waitForSelector("#wish:not([hidden]) .wchip", { timeout: 6000 });
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1500);                                            // re-picked while the chip may still shake: the tap settles it
     await unCap(page); await rig(page, [0, 0, 0, 0]);                          // 6 XP (try 2), a drop, common
     const r = await sampled(page, "a", 7000);
     report("wrong, then right + drop (chip up)", r);
@@ -186,7 +187,7 @@ try {
   });
 
   await step("a first-try right with a level up (the bells + LEVEL UP burst): one group at a time", async () => {
-    await go(page, "CALC1_B03");
+    await go(page, "CALC1_B03"); await page.waitForTimeout(800);               // the question has opened (the HUD's own catch-up has played)
     await rig(page, [0.5, 0.99]);                                               // 14 XP, no drop; crosses level 2
     const r = await sampled(page, "a", 6000);
     report("first-try right + level up", r);

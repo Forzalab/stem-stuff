@@ -1,7 +1,8 @@
 /* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, slot reels, full-screen bursts). Port of design/rewards/fx.js
    for the app (design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js, Fluent Emoji, MIT), canvas-confetti from
    vendor/ (ISC). Every node it adds is aria-hidden (app.js says the words once) and carries .rw-skin (rewards/rewards.css tokens).
-   Nothing runs until app.js calls a function: diet never does. */
+   Nothing runs until app.js calls a function (diet never does), except one passive pointerdown listener that only settles a wiggling
+   sugar Cluck chip (.rw-chip; diet has none). */
 (function () {
   'use strict';
   const MQ = matchMedia('(prefers-reduced-motion: reduce)');
@@ -22,9 +23,71 @@
   const COLORS = ['#ff8a1f', '#ffd36b', '#d63fa8', '#fff3b0', '#ffb347'];
   const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 }, CONF = { small: 24, medium: 40, large: 70 };
 
+  /* ---------- one blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12) ----------
+     Every call app.js makes joins ONE queue; a step starts only when the one before has finished, so at most one group moves at a time:
+     the answer's own pulse -> sparks, "+N XP" and coins (the FX layer) -> the HUD (shine, bar, level pulse) -> slots -> burst -> banner.
+     Calls for the same group made before their step starts share it. While the queue runs the HUD bar and level pulse wait (.fx-hold)
+     and a Cluck chip's ad wiggle stops (.fx-busy). Reduced motion: the whole sequence gets one fade (the first overlay or banner); the
+     rest is instant. Triggers, odds, XP and payouts are rewards/engine.js's and app.js's; this only orders what is drawn. */
+  const Q = [], ROOT = document.documentElement, CAP = 5000, GRACE = 400;
+  let busy = false, lastEnd = -1e9, fadeLeft = true, pinned = null;
+  const fin = a => a.finished.then(() => {}, () => {});
+  const finite = a => a.playState === 'running' && a.effect && a.effect.getComputedTiming().endTime !== Infinity;
+  const moving = (root, skip) => (root ? (root === document ? document.getAnimations() : root.getAnimations({ subtree: true })) : [])
+    .filter(a => finite(a) && !(skip && a.effect.target && a.effect.target.closest && a.effect.target.closest(skip)));
+  // wait until nothing (finite) moves in root; skip = what is not this step's (chip, FX nodes, HUD)
+  const settle = (root, skip, max) => Promise.race([Promise.all(moving(root, skip).map(fin)), new Promise(r => setTimeout(r, max || CAP))]);
+  function hold(on) {
+    if (on) {
+      const b = document.querySelector('#rwHud .rw-bar i');
+      if (b && !pinned) { const t = getComputedStyle(b).transform; b.style.transition = 'none'; b.style.transform = t; pinned = b; }   // the bar keeps its length until the HUD step
+      ROOT.classList.add('fx-hold');
+    } else {
+      ROOT.classList.remove('fx-hold');
+      if (pinned) { pinned.style.transition = pinned.style.transform = ''; pinned = null; }   // its .5 s fill now plays, alone
+    }
+  }
+  const hush = () => document.querySelectorAll('.rw-chip.rw-wiggle').forEach(c => c.getAnimations().forEach(a => { try { a.finish(); } catch (e) { a.cancel(); } }));
+  // a tap anywhere but the chip settles its wiggle at once (the student is answering: the ad never runs over Check). No chip = no work.
+  document.addEventListener('pointerdown', e => { if (!(e.target.closest && e.target.closest('.rw-chip'))) hush(); }, { capture: true, passive: true });
+  function begin() {
+    busy = true;
+    if (performance.now() - lastEnd > GRACE) fadeLeft = true;                 // a new reward: reduced motion gets its one fade again
+    ROOT.classList.add('fx-busy');
+    hold(true);
+    hush();                                                                   // the answer is in: the ad stops
+  }
+  function next() {
+    const s = Q.shift();
+    if (!s) { busy = false; lastEnd = performance.now(); hold(false); ROOT.classList.remove('fx-busy'); return; }
+    if (s.group === 'hud') hold(false);
+    const ps = s.fns.map(([fn, res]) => { let p; try { p = Promise.resolve(fn()); } catch (e) { p = Promise.resolve(); } p.then(res, res); return p.then(() => {}, () => {}); });
+    const tail = s.group === 'answer' ? settle(document, '.rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 1200)
+      : s.group === 'hud' ? settle(document.getElementById('rwHud'), null, 1500) : null;
+    Promise.race([Promise.all(ps.concat(tail || [])), new Promise(r => setTimeout(r, CAP))]).then(next);
+  }
+  // a new answer while the last one still plays: its queued steps are dropped (their promises resolve) and what runs is skipped, never stacked
+  function flush() {
+    for (const s of Q.splice(0)) s.fns.forEach(([, res]) => res());
+    document.querySelectorAll('.fx-ov').forEach(o => o.click());
+    if (L) L.querySelectorAll(':scope > :not(canvas)').forEach(n => n.getAnimations().forEach(a => a.finish()));
+    if (layerConfetti && layerConfetti.reset) layerConfetti.reset();
+  }
+  function seq(group, fn) {
+    if (group === 'answer' && busy) flush();
+    return new Promise(res => {
+      const last = Q[Q.length - 1];
+      if (last && last.group === group) last.fns.push([fn, res]);
+      else Q.push({ group, fns: [[fn, res]] });
+      if (!busy) { begin(); next(); }
+    });
+  }
+  // the one fade under reduced motion; with motion every enter animates
+  const fadeIn = (el, ms) => { if (still()) { if (!fadeLeft) return; fadeLeft = false; } el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms, easing: 'ease-out' }); };
+
 
   // shared fixed particle layer (never causes page overflow)
-  let L;
+  let L, layerConfetti;
   const layer = () => (L && L.isConnected) ? L : (L = host('fx-layer'));
 
   // canvas-confetti bound to a canvas inside `par` (so it stacks with our overlays)
@@ -38,39 +101,37 @@
 
   // CSS particle burst at (x,y) inside par
   function spray(par, x, y, n, dist) {
-    const f = par.appendChild(mk('i', 'fx-flash'));
+    const f = par.appendChild(mk('i', 'fx-flash')), all = [];
     f.style.cssText = `left:${x}px;top:${y}px`;
-    run(f, [{ transform: 'scale(.2)', opacity: 1 }, { transform: `scale(${dist / 40})`, opacity: 0 }], { duration: 380, easing: 'ease-out' });
+    all.push(run(f, [{ transform: 'scale(.2)', opacity: 1 }, { transform: `scale(${dist / 40})`, opacity: 0 }], { duration: 380, easing: 'ease-out' }));
     for (let i = 0; i < n; i++) {
       const s = par.appendChild(mk('i', 'fx-sp fx-sp' + (i % 4)));
       s.style.cssText = `left:${x}px;top:${y}px;--c:${pick(COLORS)}`;
       const a = i / n * 360 + rnd(-12, 12), d = dist * rnd(.6, 1.2), r = `rotate(${a}deg) translateX`;
-      run(s, [
+      all.push(run(s, [
         { transform: `${r}(0) scale(.3)`, opacity: 1 },
         { transform: `${r}(${d * .75}px) scale(1)`, opacity: 1, offset: .35 },
         { transform: `${r}(${d}px) scale(0)`, opacity: 0 }
-      ], { duration: rnd(520, 820), delay: rnd(0, 40), easing: 'cubic-bezier(.1,.7,.3,1)' });
+      ], { duration: rnd(520, 820), delay: rnd(0, 40), easing: 'cubic-bezier(.1,.7,.3,1)' }));
     }
+    return Promise.all(all);
   }
 
+  // the answer's one pulse: app.css's .opt.pop when it runs (a right pick), else ours; the ring is gone (it was a second group)
   function pop(el) {
-    if (!el || still()) return;
-    el.animate(popKF(1.12), { duration: 350, easing: EASE.pop });
-    const r = el.getBoundingClientRect(), ring = layer().appendChild(mk('div', 'fx-ring'));
-    Object.assign(ring.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: getComputedStyle(el).borderRadius });
-    run(ring, [{ transform: 'scale(1)', opacity: .95 }, { transform: `scale(${(r.width + 48) / r.width},${(r.height + 48) / r.height})`, opacity: 0 }],
-      { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    if (!el || still() || el.getAnimations().some(finite)) return;
+    return el.animate(popKF(1.12), { duration: 350, easing: EASE.pop }).finished.catch(() => {});
   }
 
-  let layerConfetti;
   function sparks(el, tier) {
     if (!el || still()) return;
     tier = COUNT[tier] ? tier : 'small';
     const p = mid(el);
-    spray(layer(), p.x, p.y, COUNT[tier], DIST[tier]);
+    const s = spray(layer(), p.x, p.y, COUNT[tier], DIST[tier]);
     if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());   // confetti on every correct (Tony, Oct 4)
-    if (layerConfetti) layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 120, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
-      origin: { x: p.x / innerWidth, y: p.y / innerHeight } });
+    const c = layerConfetti && layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 70, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
+      origin: { x: p.x / innerWidth, y: p.y / innerHeight } });   // 70 ticks (~1.2 s, was 120): the FX layer's step ends with it
+    return Promise.all([s, c && Promise.race([c, new Promise(r => setTimeout(r, 1100))]).then(() => layerConfetti.reset && layerConfetti.reset())]);   // time-boxed: slow frames never stretch the step
   }
 
   function coinFly(fromEl, toEl, n) {
@@ -90,9 +151,7 @@
         kf.push({ transform: `translate(${x}px,${y}px) scale(${1 + .4 * Math.sin(Math.PI * t) - .35 * t}) rotate(${t * 300}deg)`, opacity: k ? 1 : 0 });
       }
       return c.animate(kf, { duration: 600, delay: i * 70, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'backwards' }).finished.catch(() => {}).then(() => {
-        c.remove();
-        toEl.animate(popKF(1.15), { duration: 220, easing: 'ease-out' });
-        if (i === n - 1) spray(Ly, b.x, b.y, 8, 40);
+        c.remove();                                               // one blink: the pill's answer is the HUD step's shine (no pop / spray here)
       });
     })).then(() => {});
   }
@@ -106,15 +165,16 @@
     const b = t.appendChild(mk('div', 'fx-toast-b'));
     b.append(txt('div', 'fx-toast-t', text));
     if (sub) b.append(txt('div', 'fx-toast-s', sub));
-    t.animate(still() ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 0, transform: 'translateY(-16px) scale(.96)' }, { opacity: 1, transform: 'none' }],
-      { duration: 200, easing: 'ease-out' });
+    if (still()) fadeIn(t, 200);
+    else t.animate([{ opacity: 0, transform: 'translateY(-16px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'ease-out' });
     const hide = () => {
       if (t !== cur) return;
       cur = null; clearTimeout(tTimer);
-      run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
+      if (still()) t.remove(); else run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
     };
     t.addEventListener('click', hide);
     tTimer = setTimeout(hide, 2200);
+    return t.getAnimations()[0] && t.getAnimations()[0].finished.catch(() => {});   // the queue moves on once it has landed
   }
 
   // full-screen overlay shell: tap / Escape -> skip(); close() fades 200ms and removes
@@ -128,11 +188,12 @@
       closed = true;
       document.removeEventListener('keydown', key);
       el.style.pointerEvents = 'none';
-      run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).then(done);
+      if (still()) { el.remove(); done(); }                                   // reduced motion: out at once (its one fade was the way in)
+      else run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).then(done);
     };
     el.addEventListener('click', skip);
     document.addEventListener('keydown', key);
-    el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+    fadeIn(el, 180);
     return { el, close, done: p };
   }
 
@@ -214,7 +275,7 @@
         { transform: 'scale(0) rotate(-40deg)', opacity: 0 },
         { transform: 'scale(1.3) rotate(8deg)', opacity: 1, offset: .6 },
         { transform: 'scale(1) rotate(0)', opacity: 1 }
-      ], { duration: 380, delay: 140 + i * 100, easing: EASE.out, fill: 'backwards' });
+      ], { duration: 380, delay: i * 80, easing: EASE.out, fill: 'backwards' });   // stars first (0 / 80 / 160 ms)
     });
     return w;
   }
@@ -250,15 +311,15 @@
     const s = sub ? c.appendChild(txt('div', kind === 'levelup' ? 'fx-plate' : 'fx-sub', sub)) : null;
     if (!calm) {
       t.animate([{ transform: 'scale(.6)', opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }],
-        { duration: 450, easing: EASE.out });
+        { duration: 400, delay: 200, easing: EASE.out, fill: 'backwards' });   // then the title ribbon (200 ms)
       if (s) s.animate([{ transform: 'translateY(14px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 300, delay: 300, easing: EASE.pop, fill: 'backwards' });
+        { duration: 300, delay: 400, easing: EASE.pop, fill: 'backwards' });   // then the plate (400 ms)
       if (duck) {
         duck.animate([{ transform: 'scale(0) rotate(-30deg)', opacity: 0 }, { transform: 'scale(1.15) rotate(6deg)', opacity: 1, offset: .65 }, { transform: 'scale(1) rotate(0)', opacity: 1 }],
           { duration: 520, easing: EASE.out });
         shower(ov.el, 26);
       }
-      setTimeout(() => { const m = mid(t); spray(ov.el, m.x, m.y, kind === 'legend' ? 30 : 22, 150); }, 220);
+      setTimeout(() => { const m = mid(t); spray(ov.el, m.x, m.y, kind === 'legend' ? 30 : 22, 150); }, 600);   // the sparks last (600 ms)
     }
     timer = setTimeout(ov.close, K.d);
     return ov.done;
@@ -269,7 +330,7 @@
     if (!el || still()) return;
     const p = mid(el), f = layer().appendChild(txt('div', 'fx-float' + (cls ? ' ' + cls : ''), text));
     f.style.cssText = `left:${p.x}px;top:${p.y}px`;
-    run(f, [{ transform: 'translate(-50%,-50%) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-110%) scale(1)', opacity: 1, offset: .25 },
+    return run(f, [{ transform: 'translate(-50%,-50%) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-110%) scale(1)', opacity: 1, offset: .25 },
       { transform: 'translate(-50%,-220%) scale(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' });
   }
 
@@ -280,5 +341,15 @@
     el.addEventListener('animationend', () => el.classList.remove('rw-shine'), { once: true });
   }
 
-  window.FX = { pop, sparks, coinFly, toast, slots, burst, float, shine };
+  // every entry point joins the one queue (seq); the step's promise resolves when its part is done (slots / burst: when the overlay is gone)
+  window.FX = {
+    pop: el => seq('answer', () => pop(el)),
+    sparks: (el, tier) => seq('layer', () => sparks(el, tier)),
+    float: (el, text, cls) => seq('layer', () => float(el, text, cls)),
+    coinFly: (fromEl, toEl, n) => seq('layer', () => coinFly(fromEl, toEl, n)),
+    shine: el => seq('hud', () => shine(el)),
+    slots: tier => seq('slots', () => slots(tier)),
+    burst: (kind, o) => seq('burst', () => burst(kind, o)),
+    toast: (text, sub) => seq('toast', () => toast(text, sub))
+  };
 })();
