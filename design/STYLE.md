@@ -295,6 +295,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 - Exceptions to this file, inside that scope only: violet and sun fills with solid bevels, colour icons (Fluent Emoji images, MIT), the Press Start 2P title on LEVEL UP / BONUS (OFL, vendored), radii 12/20/28/pill, its own shadow scale.
 - The drop banner is not a second toast: it shows only after a correct answer, hides `#toast` first, takes no taps (`pointer-events: none`) and is `aria-hidden` (app.js says the words once through `#sr`).
 - A wrong answer never gets an FX node, a sound or reward words. Reduced motion: no particles, no reels spinning, text-only bursts.
+- One blink (Oct 12): the reward FX play as one queue (`rewards/fx.js` seq): answer pulse, then sparks + coins, then the HUD, then slots, burst, banner; one group moves at a time, nothing loops (`tests/blink-fx.pw.mjs`). Reduced motion: one fade per reward.
 - z ladder: stage 15, dock 20, brainrot 30, Scratchpad button 40, `#toast` 50, drop banner 55, update bar 60, splash 100, FX overlays 140, FX particles 150.
 
 ---
