@@ -178,7 +178,7 @@ const md = t => String(t).split("$").map((s, i) => i % 2 ? katex.renderToString(
 $("#blocks p").innerHTML = md($("#blocks p").textContent);
 const icon = id => `<svg class="ico" aria-hidden="true"><use href="#${id}"/></svg>`;
 const img = n => `<img src="${(window.RW_ICONS || {})[n] || ""}" alt="" draggable="false">`;
-$("#coinIc").innerHTML = img("coin"); $("#starIc").insertAdjacentHTML("afterbegin", img("star")); $("#fireIc").innerHTML = img("fire");
+$("#coinIc").innerHTML = img("coin24"); $("#starIc").insertAdjacentHTML("afterbegin", img("star")); $("#fireIc").innerHTML = img("fire");
 
 /* ---------- the HUD numbers (engine.js render, simplified) ---------- */
 function hud(xp = S.xp) {

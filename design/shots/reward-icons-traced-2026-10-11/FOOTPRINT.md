@@ -1,4 +1,4 @@
-# FOOTPRINT: reward icons traced (WIP, NOT verified), 2026-10-11
+# FOOTPRINT: reward icons traced + duck coin, 2026-10-11 / 2026-10-12
 
 Branch `claude/reward-icons-traced` (from origin/main 2febaba). Not pushed.
 
@@ -42,3 +42,35 @@ Traced from owner-supplied reference art (via image-model isolation); licence of
 3. Look at icons-compare.png, icons-compare-1x.png and every after-*.png (live.mjs needs serve.py on 8891 with STEM_BANKS holding BANK_RVW from the r5/R/mkbank.py script).
 4. Add the hue table to README.md, update the NOTICE ("recoloured to the gift palette"), re-run `PATH=/tmp/claude-0/venv-sympy/bin:$PATH bash tests/run-all.sh` and save tests.log.
 5. Squash or reword the WIP commit.
+
+## 2026-10-12: T24 task 2, the duck coin is the HUD + reward coin (resume from here)
+Worktree: scratchpad wt124 (from /home/user/stem-stuff, branch claude/reward-icons-traced). Ports used: 8871 (own serve.py), 8872/8873 (tests).
+
+### Done
+- `rewards/icons/coin_color.svg` = T24 `duck-coin.svg` (full; > 32 px: the common slot tier at 60 px).
+- `rewards/icons/coin24_color.svg` (new) = T24 `duck-coin-24.svg` (<= 32 px: HUD 28 px in engine.js, coinFly 22 px and the shower 18 to 34 px
+  in fx.js, the `try/tries.html` HUD). Only edit: width/height 160 -> 32. Colours: the duck coin's own lemon gold (coordinator: keep it, one family).
+- `rewards/icons/NOTICE-traced.txt`: coin + coin24 = our own art; gem / star / glowing star / cherries still UNKNOWN -> Tony decides before merge.
+- `tools/rw_icons.py` header + `rewards/icons.js` regenerated (`--check` 0). fx.js header licence line fixed.
+- Board `board-hud-coin-old-vs-new.png` (live HUD with Fluent / traced / duck coin, 24 + 48 px on dark, light, reel white, greyscale, reel + fly).
+- Live after-shots re-taken (00, 00b, 01-hud, 02-toast, 03-coinfly, 05-slots-common) on a throwaway sugar bank BANK_RVW (scripts in `src/duck-coin/`).
+  `01-hud` reports the HUD img = `coin24` at 28 px; all 6 coinFly images = `coin24`.
+
+### Checks (Chromium 1x, Rec.601 luma; `src/duck-coin/checks.json`)
+- Readable 24/48 px, dark + light: face-feature dL (eyes/beak vs face) duck24@24 93.1, duck@48 84.4 (traced 44.0 / 52.9, Fluent 22.1 / 26.7). PASS.
+- Greyscale, mean luma over the disc: @48 duck 192.5 > traced 191.2 > Fluent 185.9 PASS; @24 duck24 190.1 vs traced 191.6 (-1.5, below) / Fluent 185.3.
+  So among coins the full duck coin is brightest; the 24 px cut is 1.5 below the old trace (eye/beak strokes are heavier). Star 202.8 is brighter but not a disc.
+- Contrast vs the background (best of disc mean / darker outer edge): HUD well #0d0903 11.38, dark #0a1322 10.66 PASS.
+  White reel tile (#fff, common tier 60 px) 2.47 FAIL < 3:1 (traced 3.31, Fluent 1.85). Light sky #aedffe 1.72 (no app surface uses it).
+  The face inside (eyes #141014) is far above 3:1 on any background; it is the rim that is close to white.
+- Animation: 0 `infinite` added (git diff grep). No new animation.
+
+### Left
+- White reel tile contrast 2.47: not changed (Tony's T24 pick says "no coin outline"). Possible fix if wanted: a 1 px drop-shadow in the coin's own
+  edge colour #A85E10 on the reel cell only (about 5:1 vs white). Tony to decide.
+- Licence of the 4 traced icons (gem, star, glowing star, cherries) still UNKNOWN. PR stays "do not merge".
+
+### Last test run seen (2026-10-12, sympy venv on PATH)
+- `tests/run-all.sh --quick`: ALL GREEN (unittest, npm).
+- `tests/rewards.pw.mjs 8872`: all ok (13 steps). `tests/nav-stable.pw.mjs`: all ok. `tests/ux-flows.pw.mjs`: 108 checks, 102 ok, 0 FAIL, 6 SKIP.
+  `tests/try-tries.pw.mjs`: all ok.

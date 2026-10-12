@@ -113,7 +113,7 @@
     if (!el) return null;
     el.className = 'rw-hud rw-skin';
     el.setAttribute('role', 'group');
-    el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin') + '</span><b class="rw-num">0</b></span>' +
+    el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin24') + '</span><b class="rw-num">0</b></span>' +
       '<span class="rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
       '<span class="rw-lvl-body"><span class="rw-bar"><i></i></span><span class="rw-to"></span></span></span>' +
       '<span class="rw-streak"><span class="rw-flame">' + img('fire') + '</span><b>0</b></span>' +

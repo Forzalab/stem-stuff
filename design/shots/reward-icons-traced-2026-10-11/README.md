@@ -1,7 +1,8 @@
 # Reward icons: traced SVGs replace five Fluent icons (2026-10-11)
 
-> **Licence caveat.** The five new icons are traced from owner-supplied reference art (via image-model isolation).
-> The licence of the source art is UNKNOWN. **Do not ship to production until cleared.** See `rewards/icons/NOTICE-traced.txt`.
+> **Licence caveat (updated 2026-10-12).** The coin is now the T24 **duck coin**: our own hand-drawn art, no third-party licence.
+> The other four new icons (gem, star, glowing star, cherries) are traced from owner-supplied reference art (via image-model isolation);
+> their source licence is still UNKNOWN. **Do not merge or ship until Tony decides on them.** See `rewards/icons/NOTICE-traced.txt`.
 
 Same filenames in `rewards/icons/`, so no code changed; `rewards/icons.js` was regenerated with `python3 tools/rw_icons.py`.
 The duck, fire and trophy icons are unchanged and are still Microsoft Fluent Emoji (MIT, `rewards/icons/LICENSE-fluentui-emoji.txt`).
@@ -10,7 +11,8 @@ The duck, fire and trophy icons are unchanged and are still Microsoft Fluent Emo
 
 | icon (file) | used for | new source part | result |
 |---|---|---|---|
-| `coin_color.svg` | HUD coin window, common slot tier, coinFly | `06-gold-coin-icon` (gold coin with a star) | traced |
+| `coin_color.svg` | common slot tier (60 px) | T24 `duck-coin.svg` (hand-drawn) | **duck coin, our own art** (was traced from `06-gold-coin-icon` until 2026-10-12) |
+| `coin24_color.svg` (new) | HUD coin window (28 px), coinFly (22 px), coin shower (18 to 34 px), `try/tries.html` HUD | T24 `duck-coin-24.svg` (the 24 px cut) | **duck coin, our own art** |
 | `gem_stone_color.svg` | rare slot tier | `04-sym-diamond` (blue cut diamond) | traced |
 | `star_color.svg` | HUD level star, level popover, reel filler | `01-gold-star` | traced |
 | `glowing_star_color.svg` | drop-banner (toast) icon, reel filler | `01-gold-star` (the traced star, scaled to 76%) + vector glow + 5 rays | traced + hand-made glow |
@@ -57,7 +59,7 @@ noisy at 16 px. Going below k = 7 (6 for the coin) flattened the coin's rim and 
 
 | icon | old Fluent | new traced | paths |
 |---|---|---|---|
-| coin_color.svg | 11,772 B | **6,643 B** | 11 |
+| coin_color.svg (traced; replaced by the duck coin 2026-10-12, see the end) | 11,772 B | **6,643 B** | 11 |
 | gem_stone_color.svg | 4,669 B | **2,057 B** | 8 (simplified, see below) |
 | star_color.svg | 7,684 B | **5,494 B** | 9 |
 | glowing_star_color.svg | 12,111 B | **7,344 B** | 9 + outline + glow + ring + rays |
@@ -80,7 +82,7 @@ All are under the 12 KB target. `rewards/icons.js` went from 118,443 B to 95,678
 
 ## What reads well and what doesn't
 
-- **coin**: reads as a gold coin at every size. At 16 px the star inside is a hint, much like the old bank-building glyph.
+- **coin** (traced, replaced 2026-10-12 by the duck coin): reads as a gold coin at every size. At 16 px the star inside is a hint, much like the old bank-building glyph.
 - **star**: crisp at every size. In the HUD the level number on top of it stays legible.
 - **cherries**: reads as cherries at 16 px. The pair sits lower and the leaf is bigger than in Fluent, so the fruit is a bit smaller.
 - **gem_stone** (fixed): the first trace had a busy lower half that looked like teeth at the 60 px reel size. `src/gemfix.py` keeps
@@ -98,7 +100,7 @@ Gold: `#B48329` `#E8A31B` `#F0BD37` `#FAE350` `#FEF585`. Each traced fill was ma
 
 | icon | paths | fills (first use order; strokes and gradient stops included) | size |
 |---|---|---|---|
-| `coin_color.svg` | 11 | `#F0BC36` `#F7D748` `#FEF481` `#B48329` `#EDB22B` `#FEF585` `#ECAE27` `#F9DD4C` `#C99023` `#EFBB35` `#C08A26` | 6643 B |
+| `coin_color.svg` (traced, replaced 2026-10-12) | 11 | `#F0BC36` `#F7D748` `#FEF481` `#B48329` `#EDB22B` `#FEF585` `#ECAE27` `#F9DD4C` `#C99023` `#EFBB35` `#C08A26` | 6643 B |
 | `gem_stone_color.svg` | 8 | `#2D51A8` `#B2D0FD` `#3763C9` `#247AD5` `#2C4EA3` `#1A4196` | 2057 B |
 | `star_color.svg` | 9 | `#FBE557` `#EEB731` `#FEF585` `#EDB42E` `#B48329` `#ECB029` `#FBE75C` `#F6D245` | 5494 B |
 | `glowing_star_color.svg` | 11 | the star fills above plus `#FAE350` `#F0BD37` `#E8A31B` and outline `#8A5A00` | 7344 B |
@@ -107,3 +109,21 @@ Gold: `#B48329` `#E8A31B` `#F0BD37` `#FAE350` `#FEF585`. Each traced fill was ma
 Compare sheet with before vs after at 60 px on the reel tile, dark UI and yellow banner, plus the live shots: `icons-compare-v2.png`
 (`src/compare.mjs`). The earlier `icons-compare.png` and `icons-compare-1x.png` are kept (16 to 64 px rows).
 - The traces are flat colour, so they look flatter than the gradient-shaded Fluent icons next to them (duck, flame, trophy).
+
+## 2026-10-12: the duck coin replaces the traced coin (T24 task 2)
+
+The HUD coin and the reward coin are now one family: the T24 duck coin (brain `r5/FX/giftbox/v2/stage2/duck-coin.svg` and
+`duck-coin-24.svg`, hand-drawn in code, no tracing). The only edit is `width`/`height` 160 -> 32 (viewBox unchanged) so the intrinsic size
+matches the other icons. Its colours are its own lemon gold (#FFF2AE..#F0B238 rim, #FFF8CF..#FAD35C face, duck #FFE34F..#F9BE00, beak
+#F26A0E..#D24C06); no new colours, the gift blue/gold tokens are untouched. Rule: the 24 px cut (`coin24`, heavier outline, no catchlight)
+wherever the coin renders at 32 px or less; the full coin above that.
+
+| file | used for | size |
+|---|---|---|
+| `coin_color.svg` | common slot tier, 60 px | 3,672 B (traced was 6,643 B) |
+| `coin24_color.svg` | HUD 28 px (`rewards/engine.js`), coinFly 22 px and shower 18 to 34 px (`rewards/fx.js`), `try/tries.html` HUD | 2,739 B |
+
+`rewards/icons.js` is 95,467 B. Checks (numbers in FOOTPRINT.md, raw in `src/duck-coin/checks.json`), board: `board-hud-coin-old-vs-new.png`
+(live HUD with each coin: `hud-{fluent,traced,duck}.png`). Re-taken live shots (`after-00*`, `01-hud`, `02-toast`, `03-coinfly`,
+`05-slots-common`) use a throwaway sugar bank `BANK_RVW` (3 mc rows, `src/duck-coin/live2.mjs`); the older `after-01-hud.png` had no HUD
+in frame, the new one does.
