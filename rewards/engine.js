@@ -9,7 +9,7 @@
    The streak never halves: a wrong try only pauses it; any correct adds one. A wrong try never rolls (no loss dressed up as a win). */
 (function (g) {
   'use strict';
-  var PRE = 'stem-rw:', CAP_MS = 15000, cfg = { minDwell: 1000 };
+  var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000 };
   var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
     "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You did not guess that. Nice.",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
@@ -31,6 +31,8 @@
   }
   function save() { try { ls().setItem(PRE + key, JSON.stringify(s)); } catch (e) { /* blocked: this page only */ } }
   /* the bank (or file, or "solo") whose state is live; switching re-reads it */
+  /* T22: the bank's burst_gap_s (SCHEMA.md, 60-600 s) is the minimum gap between full-screen bursts; absent or invalid = 15 s, as before */
+  function gap(v) { capMs = typeof v === 'number' && isFinite(v) && v >= 60 && v <= 600 ? v * 1000 : CAP_DEF; return capMs; }
   function use(k) { k = String(k || 'solo'); if (k !== key) { key = k; s = load(); shownLvl = null; } else s = load(); render(0); return k; }
   function on() { return key !== null; }
 
@@ -91,7 +93,7 @@
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;
     var now = Date.now();
     if (r.levelUp && !r.tick) { r.burst = 'levelup'; s.lastBurst = now; }    // a level up beats the cap (a +1 for trying stays quiet)
-    else if (big && now - s.lastBurst >= CAP_MS) { r.burst = big; s.lastBurst = now; }
+    else if (big && now - s.lastBurst >= capMs) { r.burst = big; s.lastBurst = now; }
     r.toast = !!r.drop && r.burst !== big;                                   // a capped drop becomes a toast
     r.streak = s.streak;
     save();
@@ -182,6 +184,6 @@
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
-  g.Rewards = { use: use, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
+  g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
     origSolved: origSolved, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND };
 })(typeof window !== 'undefined' ? window : globalThis);

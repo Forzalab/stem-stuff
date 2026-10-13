@@ -31,6 +31,8 @@ A bank file may add a `"profile"` (optional): `subject` (physics.mechanics | phy
 who the students are; it replaces the default Fresno physics line in Cluck's prompts), `skill_domains` (["algebra"]), `kits` (visual
 kits that fit: author/kits/). No profile = today's behavior.
 
+A bank file may add a `"burst_gap_s"` (optional, top level next to `profile`): a number, 60 to 600, the minimum seconds between two full-screen reward bursts in that bank (sugar mode; a level up always bursts). Absent = 15 s, today's behavior. Anything else (a string, a number outside 60-600) is ignored as if absent. Dead-easy items (`saccharine.dead`) never burst and never touch the gap. serve.py sends it in `GET /b/<code>.json` only when set; app.js passes it to `Rewards.gap()`.
+
 Keep problems in any order: the page shuffles the list per browser (design/NAV.md), so file order is never shown. Codes must be unique (tests enforce it).
 
 ## Content rule (Tony, standing)
@@ -286,6 +288,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
   "additionalProperties": false,
   "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
     "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
+    "burst_gap_s": {"type": "number", "minimum": 60, "maximum": 600, "description": "optional, per bank file (T22): minimum seconds between two reward bursts; absent = 15"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
       "properties": {"subject": {"enum": ["physics.mechanics", "physics.em", "discrete", "cs"]},
         "audience": {"type": "string", "minLength": 10, "maxLength": 300},

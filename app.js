@@ -445,7 +445,7 @@ async function openBank(code, { go = true, quiet = false } = {}) {
     return false;
   }
   if (!b || !b.problems.length) { if (!quiet) entryMsg(`${code} not found.`); return false; }
-  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {} };
+  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s };
   src(b.code);
   remembered(b.code);
   bankChanged();
@@ -1608,6 +1608,7 @@ let rwHud = null;
 function rwSync() {
   const on = rewardOn();
   if (on) {
+    RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
     RW().use(rwKey());
     if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
     else RW().render(0);

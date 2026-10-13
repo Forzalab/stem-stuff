@@ -87,6 +87,8 @@ def _read(path):
             doc = json.load(f)
         ps = [p for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
+        g = doc.get("burst_gap_s")
+        _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
         print(f"loaded {len(ps)} problems from {path}", file=sys.stderr)
     except Exception as e:  # noqa: BLE001
         print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
@@ -95,6 +97,7 @@ def _read(path):
     return ps
 
 
+_gaps = {}                                   # bank path -> its valid "burst_gap_s" (SCHEMA.md) or None
 _profiles = {}                               # bank path -> its "profile" (SCHEMA.md: subject, audience, skill_domains, kits) or None
 
 
@@ -126,6 +129,7 @@ def _index():
         sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]))
         if sig != _bank["sig"]:
             by_code, prof = {}, {}
+            gaps = {c: _gaps.get(p) for c, p in bf.items()}
             for path, ps in zip([BANK, *bf.values()], lists):
                 for p in ps:
                     if p["code"] not in by_code:
@@ -133,7 +137,7 @@ def _index():
                         prof[p["code"]] = _profiles.get(path)
                     elif by_code[p["code"]] != p:
                         print(f"{p['code']} is in two files with different content: the first one wins", file=sys.stderr)
-            _bank.update(sig=sig, by_code=by_code, prof=prof, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
+            _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
         return _bank
 
 
@@ -694,7 +698,11 @@ def bank_payload(code, sid, mode="sugar"):
             me["bank"] = code
             _save_tries()
     live = {p["code"] for p in ps}
-    return {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in live else None}
+    out = {"code": code, "problems": [public(p, sid) for p in ps], "marks": marks, "at": at if at in live else None}
+    gap = _index()["gaps"].get(code)
+    if gap is not None:
+        out["burst_gap_s"] = gap                 # T22: only when the bank sets it
+    return out
 
 
 def seen(code, sid):
