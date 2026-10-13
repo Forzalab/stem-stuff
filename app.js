@@ -501,7 +501,7 @@ async function load(code) {
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
   render();
-  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type });   // telemetry (design/plans/TELEMETRY.md)
+  window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf() });   // telemetry (design/plans/TELEMETRY.md)
   if (rec) paint(rec);
   if (!off()) syncServer(S);
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
