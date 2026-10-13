@@ -42,7 +42,7 @@ async function open(w, h, touch, q = "") {
   await step("hub: try/index.html lists every try page, every link 200", async () => {
     const r = await page.goto(`${BASE}/try/index.html`); assert.equal(r.status(), 200);
     const hrefs = await page.$$eval("#tries a", a => a.map(x => x.href));
-    for (const need of ["tries.html", "ticker.html", "live-scene.html", "redo-variants.html"]) assert.ok(hrefs.some(h => h.endsWith("/try/" + need)), need);
+    for (const need of ["tries.html", "ticker.html", "live-scene.html", "notes-variants.html", "next-cue-variants.html"]) assert.ok(hrefs.some(h => h.endsWith("/try/" + need)), need);
     for (const h of hrefs) { const res = await page.request.get(h); assert.equal(res.status(), 200, h); }
     const dir = await page.request.get(`${BASE}/try/`); assert.equal(dir.status(), 200, "/try/ serves the hub");
   });
