@@ -109,3 +109,14 @@ test("Don't record me (stem-t-off=1) with a key: stays a no-op", () => {
   assert.equal(T.userOff({ getItem: () => null }), false);
   assert.equal(T.userOff({ getItem: () => { throw new Error("blocked"); } }), false);
 });
+
+test("dead_tap context: x/y as viewport %, stage, tries_left, txt (20 chars); missing -> null, never throws", () => {
+  const T = run().win.__stemTelemetry;
+  const d = T.deadProps({ textContent: "  Hello world, this is a long caption  " }, "div.fig", 150, 600, 300, 800, "wrong", "A1", 2);
+  assert.deepEqual({ ...d }, { el: "div.fig", code: "A1", x: 50, y: 75, stage: "wrong", tries_left: 2, txt: "Hello world, this is" });
+  assert.equal(d.txt.length, 20);
+  const m = T.deadProps(null, "div.fig", undefined, 5, 0, 800, undefined, null, null);
+  assert.deepEqual({ ...m }, { el: "div.fig", code: null, x: null, y: 1, stage: null, tries_left: null, txt: null });
+  assert.doesNotThrow(() => T.deadProps({ get textContent() { throw new Error("x"); } }, "", 1, 1, 1, 1));
+  assert.equal(T.deadProps({ textContent: "z" }, "e", 9999, -5, 100, 100).x, 100);
+});
