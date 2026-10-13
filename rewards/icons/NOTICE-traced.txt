@@ -6,8 +6,10 @@ OUR OWN ART (hand-drawn, no tracing, no third-party source):
   coin24_color.svg        its 24 px cut (duck-coin-24.svg: heavier outline, no catchlight or groove; used <= 32 px: HUD balance,
                           coinFly, the coin shower)
 
-  Drawn by hand in code (T24 stage 2, work/coin.py in the brain repo's r5/FX/giftbox/v2/stage2/) as part of this project. The only
-  change from the source files is width/height 160 -> 32 (viewBox unchanged), to match the other icons' intrinsic size.
+  Drawn by hand in code (T24 stage 2, work/coin.py in the brain repo's r5/FX/giftbox/v2/stage2/) as part of this project. Changes from
+  the source files: width/height 160 -> 32 (viewBox unchanged), to match the other icons' intrinsic size; and (2026-10-13, Tony: "thin
+  coin edge") a thin edge in the coin's own #A85E10: a 2 px non-scaling stroke clipped to the disc, so 1 CSS px inside the rim at any size.
+  These files supersede the brain's stage2 duck-coin.svg / duck-coin-24.svg.
 
 TRACED, licence UNKNOWN: flat colour SVGs vector-traced (vtracer 0.6.15) from isolated transparent PNG parts:
 

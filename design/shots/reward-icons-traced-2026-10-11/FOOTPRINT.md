@@ -103,3 +103,64 @@ Evidence: `design/shots/redeem-v3-2026-10-12/` (board-redeem-v3.png, strip-redee
 
 ### Last test run seen (after the T25 change)
 - `tests/run-all.sh --quick`: ALL GREEN. No .pw test touches try/genui-redeem.
+
+## 2026-10-13: thin coin edge, one HUD coin, 3:1 everywhere (Tony's post-exam answers)
+#124 was merged on 2026-10-12, so this work is on `ccr-425fcb14-lttpnk` (from main 676f587, on top of #127 and #129 to #132).
+Evidence: `design/shots/coin-edge-2026-10-13/` (board-hud-coin-edge.png, strip-redeem-v3-edge.png, board-redeem-v3-edge.png,
+table-3to1.json, surfaces.json, src/).
+
+### Done
+- Edge: `coin_color.svg` + `coin24_color.svg` have a thin edge in the coin's own #A85E10. It is a 2 px stroke with
+  `vector-effect="non-scaling-stroke"`, clipped to the disc (r 74), so it is 1 CSS px inside the rim at every size. Nothing else in the art
+  changed. `rewards/icons.js` is regenerated and `--check` passes. These files supersede brain stage2 duck-coin*.svg.
+- One HUD coin: `try/genui-ui.css` `.coin` (the kit rule behind every try-page `.hud .coin`, the genui-ui bet pile and genui-redeem)
+  is now `url(../rewards/icons/coin24_color.svg)`, not the yellow CSS disc. The duplicate `.rd-v3 .coin` rule is removed.
+  `try/tries.html` and the app HUD already used coin24. `design/mockups` and `design/rewards` were left alone.
+- 3:1 fixes beyond the edge:
+  - `.fx-rain` (legend-burst coin shower) gets a solid 1 px outline in rgb(60 20 0), the colour its shadow already uses: four 0-blur drop-shadows before that shadow.
+  - redeem v3 wrong dimmed opacity .45 -> .5.
+  - genui-ui v2 "not bet" pile opacity .25 -> .5. It is now close to "lost" (.6).
+
+### 3:1 table
+Contrast is the better of (disc mean vs bg) and (edge vs bg). Edge = the median over 360 rays of the darkest pixel within 2 px of the rim.
+Each surface was rebuilt 1:1 from the live size, opacity, filter and the background colour beside the coin (src/surfaces.mjs), at DPR 1 and 2.
+**Min on a real surface: 3.20, the genui-ui v2 bet pile "not bet" (dimmed .5) on #16243a.** Min in the app: 3.71, the coin shower at 18 px on
+the dark tangerine rim of the legend burst. The white reel tile is 4.10 (was 2.54).
+
+| surface | coin | background | opacity | before (no edge) | now, min of 1x/2x |
+|---|---|---|---|---|---|
+| app HUD balance (and try/tries.html HUD) | coin24 28 px | `#0d0903` | 1 | 11.35 | **11.35** |
+| app coinFly over the page | coin24 22 px | `#08111f` | 1 | 10.72 | **10.72** |
+| app slot reel tile, common tier | coin 60 px | `#ffffff` | 1 | 2.54 | **4.10** |
+| app coin shower 18px, legend burst: cream centre | coin24 18 px | `#fff3a6` | 1 | 13.81 | **14.04** |
+| app coin shower 34px, legend burst: cream centre | coin24 34 px | `#fff3a6` | 1 | 14.03 | **14.41** |
+| app coin shower 18px, legend burst: tangerine | coin24 18 px | `#ff9a3c` | 1 | 7.37 | **7.50** |
+| app coin shower 34px, legend burst: tangerine | coin24 34 px | `#ff9a3c` | 1 | 7.53 | **7.69** |
+| app coin shower 18px, legend burst: dark tangerine rim | coin24 18 px | `#c25e0f` | 1 | 3.66 | **3.71** |
+| app coin shower 34px, legend burst: dark tangerine rim | coin24 34 px | `#c25e0f` | 1 | 3.74 | **3.79** |
+| toast banner (n/a: the banner shows the glowing star) | coin24 32 px | `#ffe14d` | 1 | 1.76 | **3.21** |
+| light sky (n/a: the app has no light theme) | coin24 24 px | `#aedffe` | 1 | 1.63 | **3.08** |
+| light sky 48 (n/a) | coin 48 px | `#aedffe` | 1 | 1.75 | **3.04** |
+| try genui-ui / genui-redeem HUD | coin24 20 px | `#08111f` | 1 | 10.65 | **10.65** |
+| try redeem v3 coin by Check | coin24 32 px | `#0f1d30` | 1 | 9.78 | **9.78** |
+| try redeem v3 wrong, dimmed | coin24 32 px | `#0f1d30` | 0.5 | 3.37 | **3.37** |
+| try genui-ui v2 bet pile, on | coin24 20 px | `#16243a` | 1 | 8.77 | **8.77** |
+| try genui-ui v2 bet pile, lost | coin24 20 px | `#16243a` | 0.6 | 4.00 | **4.00** |
+| try genui-ui v2 bet pile, not bet (dimmed) | coin24 20 px | `#16243a` | 0.5 | 3.20 | **3.20** |
+
+n/a rows: the coin does not sit on these surfaces today (the toast banner shows the glowing star; the app has no light theme). They were measured anyway and are all >= 3.0.
+
+### Greyscale (Rec.601, coin alone at 1x; src/grey.py)
+- Inside the edge (d <= R - 1.5 px), the face is still the brightest coin disc: duck@48 195.2, duck24@48 191.3, duck24@24 189.7.
+  The Fluent coin is 184.5 / 178.9. The old traced coin, which is no longer shipped, was 196.3 / 195.5.
+- Counting the 1 px edge, the whole-disc mean drops: duck@48 187.7 > Fluent 185.9, but duck24@24 is **176.9 < Fluent 185.3**. At 24 px the edge is
+  about 18% of the disc. No other disc sits in the HUD (the star is a star, and the count icon is a tick), so the coin is still the brightest disc there.
+
+### Redeem v3 re-check (redeem-v3-results.json, 393x852)
+- Landing 0 / 0 / 0 / 0 px. The count stays "12" until arrival, the first tick is at 400 ms, and the final count is 15.
+- One-blink: peak 1 group (rd-fly). No infinite animations. Reduced motion: 0 fliers (media and ?rm=1).
+
+### Last test run seen (2026-10-13, sympy venv on PATH)
+- `tests/run-all.sh --quick`: ALL GREEN.
+- `rewards.pw.mjs`, `try-tries`, `ticker`, `render` (chromium; firefox not installed, skipped) and `blink-fx`: all ok.
+- `ux-flows`: 108 checks, 102 ok, 0 FAIL, 6 SKIP.
