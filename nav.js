@@ -5,7 +5,7 @@
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest } from "./shuffle.mjs";
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest, deadOpen, deadLead } from "./shuffle.mjs";
 const MAX = 60;
 const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -91,8 +91,9 @@ function init() {
   /* sugar snacks ride right before their real (design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
   const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
   const snack = c => { const p = off() && off().get(c); return !!p && !!(p.snack || (p.saccharine && p.saccharine.snack)); };
+  const dead = c => { const p = off() && off().get(c); return !!p && !!(p.dead || (p.saccharine && p.saccharine.dead)); };   // T28 dead-easy: a sugar warm-up, placed by shuffle.mjs deadOpen / deadLead
   const all = () => { const o = off(); return (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))); };
-  const pool = () => all().filter(c => !snack(c));                   // the queue plays the reals; a snack rides in front of its real
+  const pool = () => all().filter(c => !snack(c) && !dead(c));                 // the queue plays the reals; a snack rides in front of its real
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
@@ -135,6 +136,8 @@ function init() {
     const st = Q();
     const fw = hop(st, 1);
     if (fw >= 0) return { e: st.hist[fw], step: fw };
+    const deads = all().filter(dead), od = deadOpen(st, deads);       // T28 P2: a fresh bank opens with 1-2 dead-easy
+    if (od) return { e: { c: od, r: 0, redeem: false } };
     const live = new Set(pool());
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
@@ -142,8 +145,11 @@ function init() {
       const p = qPick(st, [...live], topicOf);
       if (!p) return null;
       code = p.code; redeem = p.redeem;
-      const sn = all().find(c => snack(c) && beforeOf(c) === code && !st.seen[c]);   // a snack goes once, before its real's first showing
-      if (sn && !(st.seen[code] && st.seen[code].n) && !(window.stemSkipSnack && window.stemSkipSnack())) { st.then = code; return { e: { c: sn, r: 0, redeem: false } }; }
+    }
+    const sn = all().find(c => snack(c) && beforeOf(c) === code && !st.seen[c]);   // a snack goes once, before its real's first showing
+    if (sn && !(st.seen[code] && st.seen[code].n) && !(window.stemSkipSnack && window.stemSkipSnack())) {
+      st.then = code;                                                 // T28 P1: at random a dead-easy first (not twice in a row: cur is then the dead-easy), the snack next
+      return { e: { c: (!dead(cur) && deadLead(st, deads, sn)) || sn, r: 0, redeem: false } };
     }
     const again = !!(st.seen[code] && st.seen[code].n);           // any re-showing is a fresh round: never a closed card (rewards never pay twice)
     return { e: { c: code, r: again && code !== cur ? Math.floor(Date.now() / 1000) : 0, redeem } };
@@ -151,9 +157,10 @@ function init() {
   /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick, but a fresh queue (nothing
      shown or saved yet) starts where the author starts, the first real question of the file */
   window.stemOrder = list => {
-    const live = list.filter(c => !snack(c) && !(window.stemHidden && window.stemHidden(c)));
+    const live = list.filter(c => !snack(c) && !dead(c) && !(window.stemHidden && window.stemHidden(c)));
     const st = Q(), fresh = st.pos === 0 && !Object.keys(st.seen).length;
-    const p = !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
+    const od = deadOpen(st, list.filter(c => dead(c) && !(window.stemHidden && window.stemHidden(c))));   // T28 P2: a fresh queue starts on a dead-easy
+    const p = od ? { code: od } : !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
   /* the list (a jump index, not the queue): one fixed per-bank order that never moves under you (salted, so a row's position

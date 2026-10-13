@@ -1,0 +1,149 @@
+{
+  "v": 1,
+  "problems": [
+    {
+      "code": "PHYS_ZDA",
+      "title": "Warm-up: unit of work",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "What is the SI unit of work?" }],
+      "choices": [
+        { "id": "a", "md": "$\\text{J}$" },
+        { "id": "b", "md": "$\\text{N}$" },
+        { "id": "c", "md": "$\\text{m/s}$" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "units", "hint": "QUACK. That one measures a force. Work is force times distance: what unit does that make?" },
+        { "choice": "c", "error": "units", "hint": "QUACK. That one measures a speed. Work is force times distance: what unit does that make?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Work and energy share one unit.",
+        "key": "W = Fd, so the unit is N·m, which is the joule, J.",
+        "slip": { "b": "the unit of force, not work", "c": "the unit of speed, not work" },
+        "narration": "Work is force times distance. A newton times a meter is a joule. So work is measured in joules."
+      }
+    },
+    {
+      "code": "PHYS_ZDB",
+      "title": "Warm-up: circular motion",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "A car goes around a circle at constant speed. Which way does its acceleration point?" }],
+      "choices": [
+        { "id": "a", "md": "Toward the center" },
+        { "id": "b", "md": "Away from the center" },
+        { "id": "c", "md": "Straight down" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "sign", "hint": "QUACK. The car keeps turning inward. Which way must the push on it point?" },
+        { "choice": "c", "error": "components", "hint": "QUACK. The circle is flat. Which way does the car keep turning?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Centripetal means center-seeking.",
+        "key": "In uniform circular motion a = v^2/r points toward the center (centripetal).",
+        "slip": { "b": "the outward 'centrifugal' feel, not the acceleration", "c": "gravity's direction, not the turning acceleration" },
+        "narration": "Centripetal means center seeking. The car keeps turning inward, so its acceleration points toward the center of the circle."
+      }
+    },
+    {
+      "code": "PHYS_ZDC",
+      "title": "Warm-up: law of gravitation",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "Which is Newton's law of gravitation?" }],
+      "choices": [
+        { "id": "a", "md": "$F = \\dfrac{G m_1 m_2}{r^2}$" },
+        { "id": "b", "md": "$F = G m_1 m_2\\, r^2$" },
+        { "id": "c", "md": "$F = \\dfrac{m_1 m_2}{G r}$" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "off-by-factor", "hint": "QUACK. Move the masses farther apart. Should the pull get stronger or weaker?" },
+        { "choice": "c", "error": "off-by-factor", "hint": "QUACK. Bigger G means stronger gravity. Is G on top or on the bottom?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Gravity weakens with distance squared.",
+        "key": "F = G m1 m2 / r^2: the inverse-square law.",
+        "slip": { "b": "r^2 on top: the pull would grow with distance", "c": "G on the bottom and r not squared" },
+        "narration": "Gravity is G times the two masses, divided by the distance squared. Farther apart means a weaker pull."
+      }
+    },
+    {
+      "code": "PHYS_ZDD",
+      "title": "Warm-up: momentum",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "A $2\\ \\text{kg}$ puck moves at $3\\ \\text{m/s}$. Use $p = mv$. Find its momentum, in $\\text{kg}\\cdot\\text{m/s}$." }],
+      "choices": [
+        { "id": "a", "md": "$6$" },
+        { "id": "b", "md": "$5$" },
+        { "id": "c", "md": "$1.5$" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "op-swap", "hint": "QUACK. $mv$ means $m$ times $v$. Which operation did you use?" },
+        { "choice": "c", "error": "op-swap", "hint": "QUACK. $mv$ means $m$ times $v$. Which operation did you use?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Multiply mass by speed.",
+        "key": "p = mv = (2)(3) = 6 kg·m/s.",
+        "slip": { "b": "added m + v", "c": "divided v / m" },
+        "narration": "Momentum is mass times velocity. Two kilograms times three meters per second is six kilogram meters per second."
+      }
+    },
+    {
+      "code": "PHYS_ZDE",
+      "title": "Warm-up: work",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "A $10\\ \\text{N}$ push moves a box $4\\ \\text{m}$ in the direction of the push. Use $W = Fd$. Find the work, in $\\text{J}$." }],
+      "choices": [
+        { "id": "a", "md": "$40$" },
+        { "id": "b", "md": "$14$" },
+        { "id": "c", "md": "$2.5$" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "op-swap", "hint": "QUACK. $Fd$ means $F$ times $d$. Which operation did you use?" },
+        { "choice": "c", "error": "op-swap", "hint": "QUACK. $Fd$ means $F$ times $d$. Which operation did you use?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Multiply force by distance.",
+        "key": "W = Fd = (10)(4) = 40 J.",
+        "slip": { "b": "added F + d", "c": "divided F / d" },
+        "narration": "Work is force times distance. Ten newtons times four meters is forty joules."
+      }
+    },
+    {
+      "code": "PHYS_ZDF",
+      "title": "Warm-up: power",
+      "type": "mc",
+      "body": [{ "type": "text", "md": "A motor does $60\\ \\text{J}$ of work in $3\\ \\text{s}$. Use $P = W/t$. Find the power, in $\\text{W}$." }],
+      "choices": [
+        { "id": "a", "md": "$20$" },
+        { "id": "b", "md": "$180$" },
+        { "id": "c", "md": "$57$" }
+      ],
+      "correct": "a",
+      "wrong": [
+        { "choice": "b", "error": "op-swap", "hint": "QUACK. $W/t$ means $W$ divided by $t$. Which operation did you use?" },
+        { "choice": "c", "error": "op-swap", "hint": "QUACK. $W/t$ means $W$ divided by $t$. Which operation did you use?" }
+      ],
+      "sugar_only": true,
+      "saccharine": {
+        "dead": true,
+        "tip": "Divide work by time.",
+        "key": "P = W/t = 60/3 = 20 W.",
+        "slip": { "b": "multiplied W t", "c": "subtracted W - t" },
+        "narration": "Power is work divided by time. Sixty joules over three seconds is twenty watts."
+      }
+    }
+  ]
+}

@@ -688,6 +688,21 @@ class Banks(unittest.TestCase):
         self.assertFalse({"answer", "correct", "wrong", "key", "slip", "narration", "saccharine", "sugar_only"} & set(pub), pub)
         self.assertNotIn("snack", json.loads(serve.dispatch("GET", "/p/CALC1_T6B.json", "")[2]))   # a real has none of it
 
+    def test_dead_easy(self):                                                   # T28: sugar only, one try, "dead" travels, nothing else leaks
+        deads = json.load(open(os.path.join(ROOT, "tests", "fixtures", "dead-easy.json")))["problems"]
+        self.write("BANK_DE1", {"v": 1, "problems": [deads[0], BANK["CALC1_T6B"], deads[1]]})
+        diet = "stem-mode=diet; stem-mode-v=2"
+        self.assertEqual([p["code"] for p in serve.bank_payload("BANK_DE1", "d1", "diet")["problems"]], ["CALC1_T6B"])   # diet never sees them
+        for call in (("GET", "/p/PHYS_ZDA.json", diet, b""), ("POST", "/check", diet, json.dumps({"code": "PHYS_ZDA", "choice": "a"}).encode())):
+            self.assertEqual(serve.dispatch(*call)[0], 404)
+        ps = serve.bank_payload("BANK_DE1", "s1", "sugar")["problems"]
+        self.assertEqual([p["code"] for p in ps], ["PHYS_ZDA", "CALC1_T6B", "PHYS_ZDB"])
+        self.assertEqual([(p.get("dead"), p.get("tries"), len(p["choices"])) for p in ps if p["code"] != "CALC1_T6B"], [(True, 1, 3)] * 2)
+        self.assertNotIn("dead", ps[1])
+        self.assertFalse({"answer", "correct", "wrong", "key", "slip", "narration", "saccharine", "sugar_only", "snack"} & set(ps[0]), ps[0])
+        r = json.loads(serve.dispatch("POST", "/check", "", json.dumps({"code": "PHYS_ZDA", "choice": "b"}).encode())[2])
+        self.assertEqual((r["verdict"], r["triesLeft"], r["correct"]), ("wrong", 0, "a"))     # one try, then the T19 reveal names the right pill
+
     def test_payload(self):
         b = serve.bank_payload("BANK_AB12", "s1")
         self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_T6B", "CALC1_A9R", "CALC1_X2P", "CALC1_ZB1"])

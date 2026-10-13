@@ -22,7 +22,7 @@
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
   var img = function (n) { return '<img src="' + icon(n) + '" alt="" draggable="false">'; };
-  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, hist: [], paid: {}, missed: {}, orig: {} }; }
+  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {} }; }
   function ls() { try { return g.localStorage || null; } catch (e) { return null; } }
   function load() {
     var d = fresh();
@@ -50,7 +50,7 @@
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
   function skipSnack() { if (!s) return false; s = load(); return s.hist.length >= 10 && rate() > 0.9; }
 
-  /* o: { code, correct, firstTry, reveal (T19: out of tries, the answer was shown: 0 XP, still a miss), snack, tf (2-choice True/False row), peeked, dwellMs } -> what to show */
+  /* o: { code, correct, firstTry, reveal (T19: out of tries, the answer was shown: 0 XP, still a miss), snack, dead (T28 dead-easy), tf (2-choice True/False row), peeked, dwellMs } -> what to show */
   function answer(o) {
     o = o || {};
     var r = { xp: 0, levelUp: false, level: 1, drop: null, line: null, sub: null, streakNote: null, burst: null, toast: false, streak: 0, paid: false, tick: false };
@@ -59,6 +59,13 @@
     var code = o.code || '', first = !!o.firstTry, L0 = levelOf(s.xp), big = null;
     r.level = L0; r.streak = s.streak;
     if (code && s.paid[code]) return r;                            // a code pays once (reload, a reset by Tony, two tabs)
+    if (o.dead) {                                                  // T28 dead-easy: 3 XP right, +1 wrong (even with the T19 reveal); one try, no hist / streak / drop / burst (lastBurst untouched)
+      if (o.correct) { s.paid[code] = 1; r.paid = true; s.dead++; r.xp = 3; }
+      else { s.missed[code] = 1; r.xp = 1; r.tick = true; }
+      s.xp += r.xp; r.level = levelOf(s.xp); r.levelUp = r.level > L0;
+      save();
+      return r;
+    }
     if (first) { s.hist.push(o.correct ? 1 : 0); if (s.hist.length > 10) s.hist.shift(); }
     if (!o.correct) {
       if (code) s.missed[code] = 1;

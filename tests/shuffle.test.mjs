@@ -208,3 +208,32 @@ test("glue: each snack right before its real, after any shuffle; a lost target l
   const g = glue(big, c => c.startsWith("PHYS_S") ? "PHYS_R" + (+c.slice(6) + 1) : null);
   for (const [i, c] of g.entries()) if (c.startsWith("PHYS_S")) assert.equal(g[i + 1], "PHYS_R" + (+c.slice(6) + 1));
 });
+
+test("dead-easy (T28) P2: a fresh queue opens with 1-2 of them, then nothing; a returner (a real first) gets none", async () => {
+  const { deadOpen, qNew, qShow } = await import("../shuffle.mjs");
+  const deads = ["PHYS_ZDA", "PHYS_ZDB", "PHYS_ZDC"], seen = new Set();
+  for (const salt of ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+    const st = qNew(salt), run = [];
+    for (let i = 0; i < 4; i++) { const d = deadOpen(st, deads); if (!d) break; run.push(d); qShow(st, d); st.hist.push({ c: d }); }
+    assert.deepEqual(run, deads.slice(0, run.length), "in file order");
+    assert.ok(run.length === 1 || run.length === 2, salt + ": " + run);
+    seen.add(run.length);
+  }
+  assert.deepEqual([...seen].sort(), [1, 2], "both lengths occur across salts");
+  const back = qNew("a"); qShow(back, "PHYS_R1"); back.hist.push({ c: "PHYS_R1" });
+  assert.equal(deadOpen(back, deads), null);
+  assert.equal(deadOpen(qNew("a"), []), null, "a bank with none opens as before");
+});
+
+test("dead-easy (T28) P1: before SOME snacks, same answer every time for one snack and salt; each dead-easy once", async () => {
+  const { deadLead, qNew, qShow, DEAD_LEAD } = await import("../shuffle.mjs");
+  const deads = ["PHYS_ZDA", "PHYS_ZDB"], st = qNew("s1");
+  const hit = Array.from({ length: 200 }, (_, i) => deadLead(st, deads, "PHYS_S" + i) !== null);
+  assert.deepEqual(hit, Array.from({ length: 200 }, (_, i) => deadLead(st, deads, "PHYS_S" + i) !== null), "deterministic");
+  const k = hit.filter(Boolean).length;
+  assert.ok(k > 200 * DEAD_LEAD / 100 - 40 && k < 200 * DEAD_LEAD / 100 + 40, "about " + DEAD_LEAD + "%, not every snack: " + k);
+  const yes = "PHYS_S" + hit.indexOf(true);
+  assert.equal(deadLead(st, deads, yes), "PHYS_ZDA");
+  qShow(st, "PHYS_ZDA"); assert.equal(deadLead(st, deads, yes), "PHYS_ZDB");
+  qShow(st, "PHYS_ZDB"); assert.equal(deadLead(st, deads, yes), null, "the pool is spent");
+});

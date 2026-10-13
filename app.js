@@ -1582,7 +1582,7 @@ async function clSend(msg) {
    an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
    quiet +1 (a small "+1" by the coin, no sound, no words: Cluck and the "one more try" toast own a wrong answer). State per bank. */
 const RW = () => window.Rewards || null, FXL = () => window.FX || {};
-const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack) && !!RW();
+const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack || S.prob.dead) && !!RW();
 const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
 const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
 window.stemSkipSnack = () => modeOf() === "sugar" && !!RW() && RW().on() && RW().skipSnack();   // nav.js: Next steps over a snack while cruising
@@ -1611,7 +1611,7 @@ function rewardMulti(mine) {
 }
 function rewardGo(mine, o) {
   const p = mine.prob;
-  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, tf: rwTF(p), peeked: !!mine.rwPeek,
+  const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, dead: !!p.dead, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
   const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right
@@ -1702,7 +1702,7 @@ async function rewardShow(mine, res) {
   const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
   fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
-  fx.sparks && fx.sparks(at, mine.prob.snack ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
+  fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
   fx.float && fx.float(at, `+${res.xp} XP`);
   const coin = $("#rwCoin");
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it

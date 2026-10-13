@@ -112,6 +112,16 @@ export function qLoad(bank, store = globalThis.localStorage) {
   return null;
 }
 export function qSave(bank, st, store = globalThis.localStorage) { try { store.setItem(qKey(bank), JSON.stringify(st)); } catch { /* blocked: this page only */ } }
+/* dead-easy (T28, sugar; saccharine.dead): P2, a fresh bank opens with 1-2 of them; P1, one goes before SOME snacks (DEAD_LEAD %, a fixed
+   draw per snack and queue salt, so a reload agrees). Each returns the next unseen dead-easy code in deads, or null. */
+export const DEAD_LEAD = 40;
+export function deadOpen(st, deads) {
+  const k = 1 + (hash(st.salt + ":open") & 1), fresh = st.pos === 0 && !Object.keys(st.seen).length;
+  return st.pos < k && (fresh || deads.includes(st.hist[0]?.c)) ? deads.find(c => !st.seen[c]) || null : null;
+}
+export function deadLead(st, deads, snack) {
+  return hash(st.salt + ":lead:" + snack) % 100 < DEAD_LEAD ? deads.find(c => !st.seen[c]) || null : null;
+}
 /* snacks (sugar, design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
    (beforeOf(code) -> that code, or null for a real). Several snacks with one target keep their order; a snack whose target is not in
    the list stays where it is. The question list runs it, so a snack row sits right above its real. */
