@@ -164,7 +164,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 - States: hover `--raised` fill; active 1px down; keyboard focus `--ring` (2px) `--focus` outline at 2px offset; disabled 45% opacity, no hover, no press.
 - Variants: `.btn-go` (primary: `--c1` fill, `--field` icon, `--c1-hi` hover) is the only filled button. `.btn-label` adds one short word after the icon, same height. `.btn-tgl` is the two-state switch (today: q | a).
 - Do: one `.btn-go` visible per field. Put the arrow flush inside its field.
-- Don't: text-only buttons, a "→" after a word, a second filled color, round or pill buttons (named exceptions: the start field's buttons, the q | a switch, the Scratchpad button).
+- Don't: text-only buttons, a "→" after a word (the labelled **Next ▶** in the Check slot is the one named exception: a filled button with the `i-tri` sprite icon, never a typed arrow), a second filled color, round or pill buttons (named exceptions: the start field's buttons, the q | a switch, the Scratchpad button).
 
 ### Code box (`.code-box`) and suggestions
 

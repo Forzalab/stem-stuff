@@ -14,7 +14,7 @@ phone sheet (app.css `html:not(.side) .cl`), "Tap here to write notes." (app.js:
 
 | Pain (AUDIT-FRUSTRATED top 10) | On this surface? | Fixed here how |
 |---|---|---|
-| #1 "No tries left. Ask Tony" lock, loop never closed | yes | `state=out`: "Out of tries for now. This one comes back around." + L3 steps open + [Next] [Try a twin]; the right row is shown in `--ok` |
+| #1 "No tries left. Ask Tony" lock, loop never closed | yes | `state=out`: "Out of tries for now. This one comes back around." + L3 steps open + [Next] [Try a twin]; the right row is shown in `--ok` (mock only. Shipped T17b-1: no out-of-tries text line, no reveal of the right row; a sugar-only reveal comes later with T19) |
 | #2 joke as Cluck's first line | yes | L1 = wise feedback / normalize, no joke, no QUACK, no value; the one joke sits on its own line in the affirm |
 | #3 red X + line-through on her pick | yes | `.opt.mine`: 1px dashed `--edge`, dashed badge, quiet "your pick"; no red, no strike, no X anywhere |
 | #4 15 s "writing…" + 35 cps typewriter | yes | first sentence renders at once (≤140 ms per sentence, whole sentences, no typewriter); the visual slot is reserved so nothing reflows |

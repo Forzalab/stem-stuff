@@ -39,8 +39,8 @@ Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column
 | app.js:1773 | onboarding toast 3 (on pad button) | Drag the button anywhere. | Drag to move this button. | says what you get |
 | app.js:78 | toast, wrong answer, try left | One more try, so choose wisely. | KEEP (Tony) · alt: Wrong. 1 try left. | Tony's pick (design/TOAST.md) |
 | app.js:89 | sr, verdict | Correct. | = (same) |  |
-| app.js:89 | sr, verdict | Out of tries. | No tries left. | plain; matches lock line |
-| app.js:90 | sr, verdict | Not quite. One more try. | Wrong. 1 try left. | plain, numeric |
+| app.js:114 | sr, verdict | Out of tries. | Out of tries for now. This one comes back around. | true and forgiving (shipped; the on-screen line is gone) |
+| app.js:115 | sr, verdict | Not quite. One more try. | Not yet. 1 try left. | plain, numeric (shipped) |
 | app.js:322 | entry msg, bad code | Codes look like CALC1_T6B. Banks: just P2X. | Not a code. Try CALC1_T6B. | drop "Banks" jargon |
 | app.js:325 | sr, after DIET_/SUGAR_ prefix | Diet mode on. / Sugar mode on. | Original questions on. / Easy questions on. | diet/sugar is jargon (unsure) |
 | app.js:335 | entry msg, no file picker | Can't open files here. | = (same) |  |
@@ -70,7 +70,7 @@ Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column
 | app.js:802 | part hint line, check timed out | The server took too long. It didn't count. | Too slow. Tap Try again. | same key as timeout |
 | app.js:802 | aria+title (retry icon in verdict; 2x) | Try again | = · label: **Try again** | icon needs word |
 | app.js:834 | #fb, multi finished | {right} of {n} right. | = (same) |  |
-| app.js:834,1001 | #fb lock line (also settle()) | Ask Tony about {code}. | No tries left. Ask Tony about {code}. | says why first |
+| app.js:834,1001 | #fb lock line (also settle()) | Ask Tony about {code}. | REMOVED (T17b-1, Q13): no out-of-tries text line; the lock icon + the labelled Next carry it | the sr string above still says it |
 | app.js:1105 | Cluck chip, not asked yet | Ask Cluck | Explain my mistake | Tony's handout |
 | app.js:1105 | Cluck chip, failed | The lamp flickered. Ask again | Didn't load. Tap to try again | no metaphor |
 | app.js:1105 | Cluck chip, done | Cluck has your wish | Show Cluck's steps / Hide Cluck's steps | verb+object; needs w.open branch |
@@ -113,11 +113,7 @@ Status (alt, Oct 4 ~17:00 PT): **3a done** = every word swap in the "new" column
 | offline.js:229 | file / folder buttons (text is sr-only) | Open file / Open folder | = · make text visible | icon needs word |
 | offline.js:263 | dialog title | Offline copy / Server offline | Open your file / Can't reach the site | says what to do / what broke |
 | offline.js:265 | dialog text | Open problems.json (it has {code}) from your files. / Open problems.json from your files. | = (same) |  |
-| offline.js:301 | dialog msg | No .json files there. | No problem files there. | ".json" is jargon |
-| offline.js:302 | dialog msg | {name} is not a problems.json. / Those files are not a problems.json. | {name} is the wrong file. / Wrong files. | plain |
-| offline.js:305 | dialog msg | Loaded {n}, but no {code} in them. | {code} is not in these files. | plain |
-| offline.js:333 | entry msg (upload) | No .json file there. | No problem file there. | ".json" is jargon |
-| offline.js:334 | entry msg (upload) | {name} is not a problems.json. | {name} is the wrong file. | plain |
+| codes.mjs:93 + offline.js:read | dialog / entry msg (upload, T14a) | No .json files there. / {name} is not a problems.json. / Loaded {n}, but no {code} in them. | Broken JSON file / File too big / Not a bank file / Not a JSON file / Bank flag invalid · missing / Prefix must match flag / Prefix is reserved / No problems found / Loaded {n}, skipped {k} / {code} not in file | counts and ids only, 4 words at most; a clean upload says nothing (Q11 = b) |
 | rewards/engine.js:114 | HUD coin (number only) | {xp} | label: **XP** · first time: "XP (points)" | icon needs word; explain XP once |
 | rewards/engine.js:115,120 | HUD level star (number only) | {level} | label: **Level** | icon needs word |
 | rewards/engine.js:143 | HUD under bar | {n} XP to level {n+1} | = (same) |  |
