@@ -54,7 +54,14 @@
   }
   /* the viewer's own switch (privacy.html "Don't record me"): DNT/GPC never fire on iOS Safari, so this is the real opt-out */
   function userOff(ls) { try { return ls.getItem("stem-t-off") === "1"; } catch (e) { return false; } }
-  W.__stemTelemetry = { optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  /* dead_tap context: where (% of viewport), which stage, tries left on this item, first 20 chars of the tapped text. Missing -> null, never throws. */
+  function deadProps(tg, el, x, y, vw, vh, stage, code, tries) {
+    var pct = function (v, m) { return typeof v === "number" && m > 0 ? Math.max(0, Math.min(100, Math.round(v / m * 100))) : null; };
+    var txt = null;
+    try { txt = String(tg.textContent || "").trim().slice(0, 20) || null; } catch (e) { /* ignore */ }
+    return { el: el, code: code, x: pct(x, vw), y: pct(y, vh), stage: stage || null, tries_left: typeof tries === "number" ? tries : null, txt: txt };
+  }
+  W.__stemTelemetry = { deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -62,7 +69,7 @@
 
   /* ---- state ---- */
   var queue = [], ph = null, loading = false, bailed = false;
-  var st = { stage: "start", code: null, openAt: 0, picks: [], taps: [], askAt: 0, tokAt: 0, clAt: 0, clPct: 0 };
+  var st = { stage: "start", code: null, openAt: 0, picks: [], taps: [], askAt: 0, tokAt: 0, clAt: 0, clPct: 0, tries: null };
   var restored = false;
   try { restored = !!(localStorage.getItem("stem-src") || localStorage.getItem("stem-codes")); } catch (e) { /* storage blocked */ }
   var did;   // our anonymous id, shared with PostHog (bootstrap) so an early bail and later events are one person
@@ -98,8 +105,9 @@
         case "_ask": st.askAt = t; st.tokAt = 0; return;                                     // Cluck's stream asked
         case "_tok": if (!st.tokAt) st.tokAt = t; return;                                    // a chunk arrived
         case "q_open":
-          st.code = p.code || null; st.openAt = t; st.picks = []; st.stage = "open"; break;
+          st.code = p.code || null; st.openAt = t; st.picks = []; st.tries = null; st.stage = "open"; break;
         case "pick":
+          st.tries = typeof p.tries_left === "number" ? p.tries_left : null;
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
           if (p.verdict === "correct" || p.verdict === "wrong") {
@@ -148,7 +156,7 @@
     try {
       if (rageCheck(st.taps, now(), e.clientX, e.clientY)) send("rage_tap", { el: label(e.target), stage: st.stage, code: st.code });
       var tg = e.target && e.target.closest ? e.target : null;
-      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) send("dead_tap", { el: label(tg.closest(DEAD)), code: st.code });
+      if (tg && tg.closest(DEAD) && !tg.closest(LIVE)) send("dead_tap", deadProps(tg, label(tg.closest(DEAD)), e.clientX, e.clientY, W.innerWidth, W.innerHeight, st.stage, st.code, st.tries));
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
   D.addEventListener("click", function (e) {
