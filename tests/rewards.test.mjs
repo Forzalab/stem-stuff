@@ -29,9 +29,9 @@ test("inert until use(): no state, answer() pays nothing", () => {
 
 const one = (code, x, scr) => { fresh(); script = scr; return ok(code, x); };   // a fresh bank: no pity carried over
 
-test("XP: real 12-16, True/False row 8-10, snack 6, peeked 2; second try 6 (snack 3); a wrong try +1", () => {
+test("XP: real 14-18, True/False row 8-10, snack 6, peeked 2; second try 6 (snack 3); a wrong try +1", () => {
   for (let i = 0; i < 40; i++) {
-    const r = one("R", {}, [i / 40, 0.99]); assert.ok(r.xp >= 12 && r.xp <= 16, r.xp);
+    const r = one("R", {}, [i / 40, 0.99]); assert.ok(r.xp >= 14 && r.xp <= 18, r.xp);
     const t = one("T", { tf: true }, [i / 40, 0.99]); assert.ok(t.xp >= 8 && t.xp <= 10, t.xp);
   }
   assert.equal(one("S", { snack: true }, [0.99]).xp, 6);
@@ -45,8 +45,8 @@ test("XP: real 12-16, True/False row 8-10, snack 6, peeked 2; second try 6 (snac
 });
 
 test("levels: 20, 50 XP (each level costs 10 more)", () => {
-  script = [0, 0.99]; ok("A");                                         // 12 XP, no drop
-  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [12, 1, 20]);
+  script = [0, 0.99]; ok("A");                                         // 14 XP, no drop
+  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [14, 1, 20]);
   script = [0, 0.99]; const r = ok("B");
   assert.equal(r.levelUp, true); assert.equal(r.burst, "levelup"); assert.equal(R.state().level, 2); assert.equal(R.state().next, 50);
 });
@@ -75,8 +75,8 @@ test("a wrong try: +1 for trying, no roll, no toast, no burst; the streak waits"
   assert.equal(R.state().streak, 4);
   R.answer({ code: "E", correct: false, firstTry: false });
   assert.equal(R.state().streak, 4, "a second wrong try on E does not touch it");
-  fresh(); script = [0]; ok("F", { dwellMs: 0 });                       // 12 XP
-  for (let i = 0; i < 7; i++) no("G" + i);                              // 19 XP
+  fresh(); script = [0]; ok("F", { dwellMs: 0 });                       // 14 XP
+  for (let i = 0; i < 5; i++) no("G" + i);                              // 19 XP
   const q = no("H");
   assert.deepEqual([q.levelUp, q.burst], [true, null], "a level reached by a +1 stays quiet");
 });
@@ -92,7 +92,7 @@ test("a code pays once; state is per bank", () => {
 
 test("burst cap 15 s: a second drop inside it becomes a toast; a common drop bursts as WIN", () => {
   script = [0, 0, 0.9]; const a = ok("A"); assert.equal(a.burst, "bonus"); assert.equal(a.toast, false);
-  script = [0, 0.9]; const b = ok("B", { snack: true }); assert.equal(b.drop, "rare"); assert.equal(b.burst, null); assert.equal(b.toast, true);
+  script = [0, 0.9]; const b = ok("B", { snack: true, firstTry: false }); assert.equal(b.drop, "rare"); assert.equal(b.burst, null); assert.equal(b.toast, true);
   const c = one("C", {}, [0, 0, 0.5]); assert.equal(c.drop, "common"); assert.equal(c.burst, "win"); assert.equal(c.toast, false);
 });
 
@@ -134,7 +134,7 @@ test("dead-easy (T28): 3 XP right, +1 wrong (even revealed), once per code; no d
 });
 
 test("dead-easy (T28): a run of them never cruises skipSnack and never eats the burst cap", () => {
-  for (let i = 0; i < 12; i++) ok("DE" + i, { dead: true });
+  for (let i = 0; i < 11; i++) ok("DE" + i, { dead: true });
   assert.equal(R.skipSnack(), false);
   script = [0, 0, 0.9]; assert.equal(ok("A").burst, "bonus");              // a real win right after: the cap is untouched
 });

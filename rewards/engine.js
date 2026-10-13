@@ -2,7 +2,7 @@
    mock and research: design/rewards/, design/REWARDS.md). Sets window.Rewards. Inert until app.js calls Rewards.use(key) in sugar mode:
    no DOM, no listeners, no storage before that, so diet is untouched.
    State: localStorage "stem-rw:<bank code | file:name | solo>", one per bank, per device. Every access in try/catch.
-   Dead easy, a participation trophy (Tony, Oct 4). XP: real first try 12-16, a 2-choice True/False row 8-10, snack 6, peeked at the
+   Dead easy, a participation trophy (Tony, Oct 4). XP: real first try 14-18, a 2-choice True/False row 8-10, snack 6, peeked at the
    original 2; a second-try correct 6 (snack 3); a wrong try +1 "for trying". Each code's correct pays once.
    Drop roll on every correct held >= 1 s (a peek at the original still rolls none): p = 0.6 real, 0.5 True/False, 0.45 snack; pity after
    2 dry; common 70 / rare 25 / legend 5.
@@ -75,7 +75,7 @@
       r.paid = true;
       if (o.snack) s.snacks++; else s.real++;
       s.streak++;
-      r.xp = !first ? (o.snack ? 3 : 6) : o.peeked ? 2 : o.snack ? 6 : o.tf ? ri(8, 10) : ri(12, 16);
+      r.xp = !first ? (o.snack ? 3 : 6) : o.peeked ? 2 : o.snack ? 6 : o.tf ? ri(8, 10) : ri(14, 18);
       var p = o.snack ? 0.45 : o.tf ? 0.5 : 0.6;
       if (!o.peeked && (o.dwellMs || 0) >= cfg.minDwell && (s.dry >= 2 || Math.random() < p)) {
         var q = Math.random() * 100;

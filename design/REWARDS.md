@@ -6,7 +6,7 @@ toast, 3-reel slots, LEVEL UP / BONUS / legend bursts). State: localStorage `ste
 
 ## Dead easy (Tony, Oct 4; newest, beats the numbers below and in REWARDS-WIRING.md)
 [stated] "make the points and animation and bells VERY EASY TO OBTAIN. like dead easy. participation trophy." "bells, as in whistles and bells".
-- XP: real first try 12–16, True/False row 8–10, snack 6, peeked 2; second-try correct 6 (snack 3); a wrong try +1 "for trying".
+- XP: real first try 14–18, True/False row 8–10, snack 6, peeked 2; second-try correct 6 (snack 3); a wrong try +1 "for trying".
 - Levels cost 20, 30, 40 … XP. Drop roll on every correct held 1 s+ (no roll after a peek): p 0.6 real / 0.5 T/F / 0.45 snack,
   pity after 2 dry, rarity 70 / 25 / 5. Burst cap 15 s. The streak never halves: a wrong try pauses it, any correct adds one.
 - Bells (visual, no sound, sugar only, none under reduced motion): every correct = pop + sparks + confetti + "+N XP" float + coins
