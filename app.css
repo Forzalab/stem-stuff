@@ -5,6 +5,10 @@
   --qbox: #0f1d30;   /* the question box: one clear step up from --paper (Tony, Oct 3; Oct 5: "undistinguished") */
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
   --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
+  /* T23 (Tony, Oct 12: "green and red of the original, the rest stays as is"): the right / wrong answer states only (mc rows, answer boxes).
+     Right = the dark-quiz ref's green rim + check glyph, plus a faint green fill (#10b981 10% into --sheet: grey 46, the old --raised step; rim 3.2:1 on it).
+     Wrong = the ref's fill + x; its rim lifted from the ref's #832839 (1.87:1) to 3.4:1 on the fill, >= 3:1 on every surround. Verdict text, pips, the ticker keep --ok / --bad */
+  --ok-rim: #118d66; --ok-ico: #10b981; --ok-fill: #153341; --bad-fill: #2d161d; --bad-rim: #c83d57; --bad-ico: #fb7185;
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
   --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(15 29 48 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
@@ -284,11 +288,11 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
-.opt.wrong { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); padding: calc(var(--s2) - var(--bw-up)) calc(var(--btn) + 8px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
-.opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 2px; }
-.opt.wrong .badge { border-color: var(--bad); color: var(--bad); }
-.opt.right { border-color: var(--ok); background: var(--raised); }
-.opt.right .badge { background: var(--ok); border-color: var(--ok); color: var(--field); }
+.opt.wrong { border: var(--bw-alarm) dashed var(--bad-rim); background: var(--bad-fill); color: var(--muted); padding: calc(var(--s2) - var(--bw-up)) calc(var(--btn) + 8px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
+.opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad-ico); text-decoration-thickness: 2px; }
+.opt.wrong .badge { border-color: var(--bad-rim); color: var(--bad-ico); }
+.opt.right { border-color: var(--ok-rim); background: var(--ok-fill); }
+.opt.right .badge { background: none; border-color: var(--ok-rim); color: var(--ok-ico); }   /* the ref: a green check glyph in the slot, no filled disc */
 /* one-shot feedback (Tony, Oct 6 TK1; app.js nudge): a wrong pick shakes once, a right one pulses twice. Transform only: nothing
    around it moves. Reduced motion: still (the colour and the icon already say it) */
 @keyframes opt-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
@@ -306,7 +310,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.all .opt .badge .ico { width: 1rem; height: 1rem; }
 .choices.all .opt[aria-checked="false"]:not(.wrong):not([data-mark="x"]) .badge .ico { visibility: hidden; }
 .choices.all .opt .lt { flex: none; margin-left: calc(-1 * var(--s1)); color: var(--muted); font-weight: 700; font-size: var(--t-sm); }
-.choices.all .opt.wrong .lt { color: var(--bad); }
+.choices.all .opt.wrong .lt { color: var(--bad-ico); }
 /* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
 .choices.all .opt[data-mark="x"] .badge { border-color: var(--bad); color: var(--bad); }
 .choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
@@ -335,7 +339,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
 .choices.inline .opt .badge { display: none; }
 .choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) * 2 + 8px); }   /* T17b-1: the selected pill keeps Next's room (96px) from the start, so its Check rect is where Next lands */
-.choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok); }
+.choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok-ico); }
 
 .ff {
   position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw-up));   /* the arrow's room is always reserved (it sits --bw-up inside the border) */
@@ -350,14 +354,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
-.ff.ok { border-color: var(--ok); }
-.ff.done input { color: var(--ok); }
+.ff.ok { border-color: var(--ok-rim); background: var(--ok-fill); }
+.ff.done input { color: var(--ok-ico); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
 .q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.cue) { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay.
    Out of tries, every mc row dims (untried ones too, L2). The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
 .q.closed .ff:hover { border-color: var(--edge); }
-.q.closed .ff.ok { border-color: var(--ok); }
+.q.closed .ff.ok { border-color: var(--ok-rim); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
@@ -386,8 +390,8 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
 .ff .vk { position: absolute; right: var(--bw-up); top: var(--bw-up); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
 .ff .vk .ico { width: var(--ico); height: var(--ico); }
-.ff .vk[data-v="i-ok"] { color: var(--ok); }
-.ff .vk[data-v="i-x"] { color: var(--bad); }
+.ff .vk[data-v="i-ok"] { color: var(--ok-ico); }
+.ff .vk[data-v="i-x"] { color: var(--bad-ico); }
 .ff .vk[data-v="i-lock"] { color: var(--muted); }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
@@ -398,13 +402,13 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
-.ff.bad { border: var(--bw-alarm) dashed var(--bad); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
+.ff.bad { border: var(--bw-alarm) dashed var(--bad-rim); background: var(--bad-fill); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
 .ff.bad :is(.send, .vk) { right: 0; top: 0; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
 .ff.shut:not(.cue) { opacity: 0.5; }   /* right ones too: closed = looks disabled (the one with Next: not dimmed, T17b-1) */
 .ff.shut:hover { border-color: var(--edge); }
-.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok); }
+.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok-rim); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
    96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. A light-blue filled
@@ -427,7 +431,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw-up)); }
 .ff.cue .vk { right: calc(var(--nxw) + var(--bw-up)); }
 .q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
-.q .ff.cue.ok:focus-within { border-color: var(--ok); }
+.q .ff.cue.ok:focus-within { border-color: var(--ok-rim); }
 .ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
 .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
 .choices.inline .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 8px - var(--bw-up)); }
@@ -435,9 +439,9 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
 .q.closed :is(.ch, .opt) { transition: none; }
 html:has(#q.closed) :is(#work, #fb) { transition: none; }
-/* fix A (sugar right row / box only): a 10% --ok wash (#11242b), a 2px --ok rim, and a 3px --field ring round a 44px face, so the blue
-   face never touches the green rim. Sugar moves the mc slot 4px in from the rim (Check too, so its rect stays inside Next). Diet: none */
-html.sugar .ch.cue .opt.right, html.sugar .ff.cue.ok { background: color-mix(in srgb, var(--ok) 10%, var(--paper)); border: var(--bw-alarm) solid var(--ok); }
+/* fix A (sugar right row / box only): the --ok-fill (T23: the same faint green as diet; the 10% --ok wash #11242b went with it), a 2px --ok-rim, and a 3px --field ring round a 44px face, so the blue
+   face never touches the green rim. Sugar moves the mc slot 4px in from the rim (Check too, so its rect stays inside Next). Diet: 1px rim, no ring */
+html.sugar .ch.cue .opt.right, html.sugar .ff.cue.ok { background: var(--ok-fill); border: var(--bw-alarm) solid var(--ok-rim); }
 html.sugar .ch :is(.send, .nx) { right: 6px; }
 html.sugar .ch.cue .opt, html.sugar .choices.inline .opt[aria-checked="true"], html.sugar .choices.inline .probe .opt { padding-right: calc(var(--nxw) + 12px); }
 html.sugar .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 12px - var(--bw-up)); }
@@ -473,8 +477,8 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* T19 sugar reveal (r4 mock, palette §3 "sugar answer reveal"): out of tries in sugar shows the answer. mc: the right row is the green .opt.right
    (+ .reveal: the answer, not the student's pick). Typed: this line, in the preview's room (a multi: the part's hint slot). The check and the word say it, never the hue alone */
 .ansl { margin: 0; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
-.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--ok); }
-.ansl b { color: var(--ok); font-family: var(--mono); overflow-wrap: anywhere; }
+.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--ok-ico); }   /* T23: the reveal's green = the right row's green */
+.ansl b { color: var(--ok-ico); font-family: var(--mono); overflow-wrap: anywhere; }
 .preview:has(.ansl) { color: var(--ink); }
 
 /* feedback */

@@ -249,7 +249,7 @@ for (const [W, H] of SIZES) {
     await page.locator('.ch[data-id="f"] .send').click();
     await page.waitForSelector(".opt.wrong"); await page.waitForTimeout(250);
     const w = await page.evaluate(() => { const o = document.querySelector(".opt.wrong"), c = getComputedStyle(o), t = getComputedStyle(o.querySelector(".txt")); return { dis: o.disabled, bs: c.borderStyle, td: t.textDecorationLine, col: c.borderColor, aria: o.getAttribute("aria-disabled") }; });
-    assert.ok(w.dis && w.bs === "dashed" && /line-through/.test(w.td) && w.col === "rgb(255, 122, 122)", JSON.stringify(w));
+    assert.ok(w.dis && w.bs === "dashed" && /line-through/.test(w.td) && w.col === "rgb(200, 61, 87)", JSON.stringify(w));
     assert.equal(await page.locator(".opt:not([disabled])").count(), 0, "2-choice mc: one wrong answer must lock every choice");
     await shot("mc-row-tf-wrong");
     await open("CSCI26_TFM");                                            // keys + arrows + roving (order is shuffled: follow the DOM)
@@ -272,7 +272,7 @@ for (const [W, H] of SIZES) {
     await page.locator('.ch[data-id="m"] .send').click();
     await page.waitForSelector(".opt.right"); await page.waitForTimeout(250);
     const r = await page.evaluate(() => { const o = document.querySelector(".opt.right"), b = o.querySelector(".badge").getBoundingClientRect(), r = o.getBoundingClientRect(), t = o.querySelector(".txt").getBoundingClientRect(); return { br: b.right, or: r.right, bl: b.left, tr: t.right, col: getComputedStyle(o).borderColor, bd: getComputedStyle(o.querySelector(".badge")).display }; });
-    assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(95, 211, 148)", JSON.stringify(r));
+    assert.ok(r.bd !== "none" && r.br <= r.or && r.bl >= r.tr - 0.5 && r.col === "rgb(17, 141, 102)", JSON.stringify(r));
     await shot("mc-row-tf-right");
   });
   await step(`${T} mc row: falls back when the width shrinks, returns when it grows (measured, not guessed)`, async () => {
