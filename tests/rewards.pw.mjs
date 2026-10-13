@@ -94,14 +94,14 @@ try {
     await page.waitForSelector("#rwPop:not(:popover-open)", { state: "attached", timeout: 2000 });
   });
 
-  await step("a first-try correct pays 12-16 XP with the bells (float, coins, coin-pill shine); #toast stays off", async () => {
+  await step("a first-try correct pays 14-18 XP with the bells (float, coins, coin-pill shine); #toast stays off", async () => {
     await watchFx(page);
-    await rig(page, [0.5, 0.99]);                                               // 14 XP, no drop
+    await rig(page, [0.5, 0.99]);                                               // 16 XP, no drop
     await pick(page, "a");
     await page.waitForSelector("#rwCoin.rw-shine", { state: "attached", timeout: 3000 });
     await page.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
     const x = await xp(page);
-    assert.equal(x, 14);
+    assert.equal(x, 16);
     const c = await page.evaluate(() => window.__fxc);
     for (const k of ["fx-float", "fx-fly"]) assert.ok(c.some(n => n.split(" ").includes(k)), k + " in " + c.join(","));
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
@@ -129,13 +129,13 @@ try {
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
       .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
-    await quiet(page);                                                          // 21 XP: the level-up burst
+    await quiet(page);                                                          // 23 XP: the level-up burst
   });
 
   await step("a common drop (held 1 s+): slots, then the WIN burst with stars, out of the 15 s cap; #toast never shows with it", async () => {
     await go(page, "CALC1_R03");
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.lastBurst = 0; s.dry = 0; localStorage.setItem(k, JSON.stringify(s)); });
-    await rig(page, [0, 0, 0, 0]);                                              // 12 XP, a drop, common, line 1
+    await rig(page, [0, 0, 0, 0]);                                              // 14 XP, a drop, common, line 1
     await page.waitForTimeout(1100);
     await pick(page, "a");
     await page.waitForSelector(".fx-slots-ov", { timeout: 4000 });
