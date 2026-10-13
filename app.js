@@ -1359,9 +1359,25 @@ function wishCut(t, n, done) {                                            // n c
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
   if (done && n >= t.length) return n;                                    // the whole text: show it, even with a pair the model never closed
-  if ((t.slice(0, n).match(/\$/g) || []).length % 2) { const e = t.indexOf("$", n); n = e < 0 ? Math.max(0, t.lastIndexOf("$", n - 1)) : e + 1; }
+  const open = [...t.slice(0, n).matchAll(/\$\$?/g)];                      // $ and $$ each open or close one formula (a $$ pair may span lines)
+  if (open.length % 2) { const c = /\$\$?/g; c.lastIndex = n; const e = c.exec(t); n = e ? e.index + e[0].length : open.at(-1).index; }
   if (t.slice(0, n).split("**").length % 2 === 0) { const e = t.indexOf("**", n); n = e < 0 ? Math.max(0, t.lastIndexOf("**", n - 1)) : e + 2; }
   return n;
+}
+/* a /chat reply types out the same way as the steps (a chunk may be a whole line): one word at a time, a formula whole; resolves when all is shown */
+function wishType(el, s) {
+  return new Promise(res => {
+    let last = performance.now(), drawn = -1;
+    const f = now => {
+      if (!el.isConnected || s.off) return res();
+      s.pos = reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
+      s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
+      const end = s.done && s.shown >= s.text.length;
+      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown)) + (end ? "" : WCARET); drawn = s.shown; }
+      end ? res() : requestAnimationFrame(f);
+    };
+    requestAnimationFrame(f);
+  });
 }
 let wishRaf = 0;
 function wishText() { if (!wishRaf) wishRaf = requestAnimationFrame(wishFrame); }
@@ -1550,6 +1566,7 @@ async function clSend(msg) {
   re.scrollIntoView({ block: "nearest" });
   w.ctl = w.ctl || new AbortController();
   let text = "", err = "";
+  const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
   try {
     const r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", signal: w.ctl.signal,
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
@@ -1560,18 +1577,19 @@ async function clSend(msg) {
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
         text += dec.decode(value, { stream: true });
-        if (wish === w) re.innerHTML = wishHTML(text) + WCARET;
+        ty.text = text;
       }
       if (!text.trim()) err = "fail";
     }
   } catch { if (w.ctl.signal.aborted) return; err = "fail"; }
   if (wish !== w) return;
+  if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
   w.busy = false;
   if (err) {
     w.chat.pop();                                                          // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
     else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
-  } else { w.chat.push({ role: "assistant", content: text }); re.innerHTML = wishHTML(text); say(speakable(text)); }
+  } else { w.chat.push({ role: "assistant", content: text }); say(speakable(text)); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
   if (!w.out) cl.el.querySelector(".ask input")?.focus();
