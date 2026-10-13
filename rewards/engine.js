@@ -49,7 +49,7 @@
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
   function skipSnack() { if (!s) return false; s = load(); return s.hist.length >= 10 && rate() > 0.9; }
 
-  /* o: { code, correct, firstTry, snack, tf (2-choice True/False row), peeked, dwellMs } -> what to show */
+  /* o: { code, correct, firstTry, reveal (T19: out of tries, the answer was shown: 0 XP, still a miss), snack, tf (2-choice True/False row), peeked, dwellMs } -> what to show */
   function answer(o) {
     o = o || {};
     var r = { xp: 0, levelUp: false, level: 1, drop: null, line: null, sub: null, streakNote: null, burst: null, toast: false, streak: 0, paid: false, tick: false };
@@ -61,7 +61,7 @@
     if (first) { s.hist.push(o.correct ? 1 : 0); if (s.hist.length > 10) s.hist.shift(); }
     if (!o.correct) {
       if (code) s.missed[code] = 1;
-      r.xp = 1; r.tick = true;                                      // "for trying": tiny, no fanfare, the streak just waits
+      if (!o.reveal) { r.xp = 1; r.tick = true; }                   // "for trying": tiny, no fanfare, the streak just waits. T19: a revealed answer (sugar, out of tries) pays 0 and stays a miss
     } else {
       if (code) s.paid[code] = 1;
       r.paid = true;

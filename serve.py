@@ -617,9 +617,9 @@ def _entry(key):
     return st
 
 
-def state(p, sid):
+def state(p, sid, reveal=False):
     """{wrong, done, gen} for one browser and problem ({parts: [...]} for a multi). No entry: nothing tried yet, gen = the
-    one it would get."""
+    one it would get. reveal (sugar, T19): a unit that is out of tries also carries `correct` (a reload shows the answer again)."""
     with _tries_lock:
         _load_tries()
 
@@ -627,7 +627,10 @@ def state(p, sid):
             st = _tries.get(key)
             if st is None:
                 return {"wrong": 0, "done": False, "gen": _gen["n"] + 1}
-            return {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
+            o = {"wrong": len(st["wrong"]), "done": st["done"], "gen": st["gen"]}
+            if reveal and not st["done"] and len(st["wrong"]) >= max_tries(p):
+                o["correct"] = answer_of(p["parts"][key[2]] if p["type"] == "multi" else p)
+            return o
         if p["type"] == "multi":
             return {"parts": [one((sid, p["code"], i)) for i in range(len(p["parts"]))]}
         return one((sid, p["code"]))
@@ -705,9 +708,29 @@ def seen(code, sid):
             _save_tries()
 
 
-def grade(p, sid, body):
+def answer_of(u):
+    """T19 (sugar only): the answer of one unit (a problem or one multi part) as the student may read it once it is shut.
+    mc: the right choice id (pick all: the sorted ids); num: the value to 4 figures; dne; expr / text: the authored answer."""
+    if u["type"] == "mc":
+        return sorted(rights(u)) if u.get("pick") == "all" else u["correct"]
+    a = str(u["answer"])
+    if a == "dne":
+        return "does not exist"
+    if u["type"] != "num":
+        return a
+    try:
+        t = f"{signature(u, a):.4g}"
+    except UNREADABLE:
+        return a
+    m, _, e = t.partition("e")
+    return f"{m} \u00d7 10^{int(e)}" if e else t
+
+
+def grade(p, sid, body, reveal=False):
     """body: {choice} (mc) | {choices: [ids]} (mc pick all) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
-    Reply {verdict, triesLeft, gen, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply."""
+    Reply {verdict, triesLeft, gen, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply, except
+    (T19, Tony Oct 12) `correct` on the reply that shuts the question out of tries, and on a later "locked" one: reveal=True,
+    which dispatch() sets in sugar mode only. Diet (the default calm mode) never gets it."""
     multi = p["type"] == "multi"
     idx = body.get("part")
     if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
@@ -723,15 +746,15 @@ def grade(p, sid, body):
             for k in [k for k in _tries if k[0].startswith(old) and k[0] != sid]:   # one round per browser: KV stays small
                 del _tries[k]
         key = (sid, p["code"], idx) if multi else (sid, p["code"])
-        out = _grade(p, _entry(key), body, multi, idx)
+        out = _grade(p, _entry(key), body, multi, idx, reveal)
         out["gen"] = _tries[key]["gen"]
         if out["verdict"] in ("correct", "wrong"):
             _save_tries()
         return out
 
 
-def _grade(p, st, body, multi, idx):
-    """One try on entry st (the caller holds _tries_lock)."""
+def _grade(p, st, body, multi, idx, reveal=False):
+    """One try on entry st (the caller holds _tries_lock). reveal: add `correct` once the unit is shut out of tries (T19, sugar)."""
 
     def left():
         return max_tries(p) - len(st["wrong"])
@@ -739,8 +762,11 @@ def _grade(p, st, body, multi, idx):
     def reply(o):
         return {**o, "part": idx} if multi else o
 
+    def shut(o):                                             # T19: the answer travels only with a lockout, only when reveal (sugar)
+        return {**o, "correct": answer_of(p["parts"][idx] if multi else p)} if reveal and not st["done"] else o
+
     if st["done"] or left() <= 0:
-        return reply({"verdict": "locked", "triesLeft": 0})
+        return reply(shut({"verdict": "locked", "triesLeft": 0}))
     hit = None
     if p["type"] == "mc" and p.get("pick") == "all":         # design/CHOOSE-ALL.md §3: grade the ticked set, all or nothing
         ids, sh = body.get("choices"), shown(p)
@@ -802,7 +828,7 @@ def _grade(p, st, body, multi, idx):
         out.update({k: hit[k] for k in ("error", "struck", "fixWrong") if k in hit})
     if repeat:
         out["repeat"] = True
-    return reply(out)
+    return reply(shut(out) if left() <= 0 else out)
 
 
 # ---------------- HTTP ----------------
@@ -1290,7 +1316,7 @@ def dispatch(method, path, cookie_header="", body=b""):
             return _json(200, {"text": text or ""}, cookie)   # none written: empty, not an error
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
-        return _json(200, grade(view(p, mode), sid, b), cookie)
+        return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
     m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path)
     if not m:
         return None
@@ -1305,7 +1331,7 @@ def dispatch(method, path, cookie_header="", body=b""):
     if p is None:
         return _json(404, {"error": "not found"}, cookie)
     if m.re is STATE_PATH:
-        return _json(200, state(view(p, mode), sid), cookie)
+        return _json(200, state(view(p, mode), sid, reveal=mode == "sugar"), cookie)
     if hidden(p, mode):
         return _json(404, {"error": "not in sugar mode"}, cookie)
     out = _json(200, public(view(p, mode), sid), cookie)

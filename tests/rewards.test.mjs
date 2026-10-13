@@ -113,3 +113,12 @@ test("the fading original: full, then the last line hidden, folded after a first
   assert.equal(R.origLevel(5, "S2"), 3);
   assert.equal(R.origLevel(6, "S9"), 1);
 });
+
+test("T19: a revealed answer (out of tries, sugar) pays 0 XP, rolls nothing, stays a miss", () => {
+  const xp0 = R.state().xp;
+  const w = no("REV", { reveal: true });
+  assert.deepEqual([w.xp, w.tick, w.drop, w.toast, w.burst, w.line, w.paid], [0, false, null, false, null, null, false], "no XP pill, no tier");
+  assert.equal(R.state().xp, xp0, "the XP total does not move");
+  assert.equal([...mem.values()].map(v => JSON.parse(v)).find(x => x && x.missed && x.missed.REV).missed.REV, 1, "still a miss: it comes back around");
+  script = [0.999]; assert.ok(ok("REV").xp > 0, "the redo that is right still pays once");
+});

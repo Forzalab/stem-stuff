@@ -470,6 +470,12 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .boxed .p { border-radius: 10px 10px 0 0; padding-bottom: var(--s2); }
 .boxed .q { margin-top: 0; padding: var(--s1) 1.25rem var(--s4); background: var(--qbox); border-radius: 0 0 10px 10px; }
 .preview { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }
+/* T19 sugar reveal (r4 mock, palette §3 "sugar answer reveal"): out of tries in sugar shows the answer. mc: the right row is the green .opt.right
+   (+ .reveal: the answer, not the student's pick). Typed: this line, in the preview's room (a multi: the part's hint slot). The check and the word say it, never the hue alone */
+.ansl { margin: 0; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
+.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--ok); }
+.ansl b { color: var(--ok); font-family: var(--mono); overflow-wrap: anywhere; }
+.preview:has(.ansl) { color: var(--ink); }
 
 /* feedback */
 .fb:empty { display: none; }

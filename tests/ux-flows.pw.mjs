@@ -598,13 +598,27 @@ flow(13, "mc-wrong-try-left", async (page, w) => {
   return `wrong, row struck, try left; hint "${hint.slice(0, 60)}"`;
 });
 
-flow(14, "mc-lockout", async (page, w) => {
-  await go(page, C.single);
-  for (let i = 0; i < 6 && (await page.$("#q .opt:not(:disabled)")); i++) await answerKey(page, C.single, false);
+const lockout = async (page, code) => {
+  await go(page, code);
+  for (let i = 0; i < 6 && (await page.$("#q .opt:not(:disabled)")); i++) await answerKey(page, code, false);
   await page.waitForFunction(() => document.querySelector("#q.closed") && !document.querySelector("#q .opt:not(:disabled)"), null, { timeout: 4000 });   // T17b-1 / Q13: no out-of-tries line
   assert.ok(!/Out of tries/.test(await page.evaluate(() => document.querySelector("#q").textContent + document.querySelector("#fb").textContent)), "an out-of-tries line");
-  assert.ok(!(await page.$("#q .opt.right")), "out of tries revealed the right choice");
-  return "closed, every row struck or dimmed, no out-of-tries line, no reveal";
+};
+flow(14, "mc-lockout", async (page, w, ctx) => {
+  /* SUGAR (the default), T19: out of tries shows the right row (green .opt.right + reveal, a check); it pays no XP on the closing pick */
+  const x0 = await (async () => { await go(page, C.single); return xp(page); })();
+  await lockout(page, C.single);
+  const rows = await page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use")?.getAttribute("href") || "" })));
+  const right = rows.filter(r => /\bright\b/.test(r.cls));
+  assert.deepEqual(right.map(r => [r.id, /\breveal\b/.test(r.cls), /i-ok$/.test(r.badge)]), [[KEY.get(C.single).correct, true, true]], "sugar: out of tries shows the right row, green + check");
+  assert.ok(rows.filter(r => /\bwrong\b/.test(r.cls)).every(r => /i-x$/.test(r.badge)), "picked rows stay x'd");
+  await page.waitForTimeout(800);
+  assert.ok(await xp(page) - x0 <= 1, "the revealed pick pays 0 XP (only a try's +1 before it)");
+  /* DIET twin: same flow, no reveal, no answer line (diet cookie + the v2 flag, as mode.mjs sets them) */
+  await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
+  await lockout(page, C.single2);
+  assert.equal(await page.$$eval("#q .opt.right, #q .opt.reveal, #q .ansl", e => e.length), 0, "diet: out of tries revealed the right choice");
+  return "sugar: closed, right row green + check, picked rows x'd, no out-of-tries line, 0 XP; diet: closed, no reveal";
 });
 
 flow(15, "choose-all", async (page, w) => {
