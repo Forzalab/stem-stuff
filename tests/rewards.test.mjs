@@ -122,3 +122,19 @@ test("T19: a revealed answer (out of tries, sugar) pays 0 XP, rolls nothing, sta
   assert.equal([...mem.values()].map(v => JSON.parse(v)).find(x => x && x.missed && x.missed.REV).missed.REV, 1, "still a miss: it comes back around");
   script = [0.999]; assert.ok(ok("REV").xp > 0, "the redo that is right still pays once");
 });
+
+test("dead-easy (T28): 3 XP right, +1 wrong (even revealed), once per code; no drop, burst, streak or hist; own counter", () => {
+  script = [0, 0.999]; const a = ok("D1", { dead: true });                // a roll that would win a drop: none happens
+  assert.deepEqual([a.xp, a.drop, a.burst, a.toast, a.streakNote, a.paid], [3, null, null, false, null, true]);
+  const w = no("D2", { dead: true, reveal: true });                       // one try, then the T19 reveal: still "+1 for trying"
+  assert.deepEqual([w.xp, w.tick, w.drop, w.burst], [1, true, null, null]);
+  assert.equal(ok("D1", { dead: true }).xp, 0);                           // paid once
+  const s = JSON.parse(mem.get("stem-rw:T" + (n - 1)));
+  assert.deepEqual([s.hist, s.streak, s.lastBurst, s.snacks, s.real, s.dead, s.dry, s.xp], [[], 0, 0, 0, 0, 1, 0, 4]);
+});
+
+test("dead-easy (T28): a run of them never cruises skipSnack and never eats the burst cap", () => {
+  for (let i = 0; i < 12; i++) ok("DE" + i, { dead: true });
+  assert.equal(R.skipSnack(), false);
+  script = [0, 0, 0.9]; assert.equal(ok("A").burst, "bonus");              // a real win right after: the cap is untouched
+});

@@ -53,7 +53,7 @@ async function assertDead(page, keep, op = "1") {
   if (keep) {   // the right answer keeps its --ok edge; a right MC choice stays bright, a right box dims like every closed box (Tony, Oct 2)
     const o = await page.$eval(keep, e => { const s = getComputedStyle(e); return { op: s.opacity, bc: s.borderColor }; });
     assert.equal(o.op, op, "correct one's opacity");
-    assert.equal(o.bc, "rgb(95, 211, 148)", "correct one keeps --ok border");
+    assert.equal(o.bc, "rgb(17, 141, 102)", "correct one keeps --ok-rim border");
   }
 }
 

@@ -417,6 +417,7 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
                 "tip": {"type": "string", "minLength": 3, "maxLength": 200},
                 "narration": {"type": "string", "minLength": 3, "maxLength": 700}}}},
             "snack": {"type": "boolean", "description": "a very easy twin of a Practice Exam question (design/REWARDS-WIRING.md); goes with top-level sugar_only"},
+            "dead": {"type": "boolean", "description": "a dead-easy warm-up (T28): Bloom 1 fact pick or one-step plug-in, 3 obvious choices (L0); goes with top-level sugar_only"},
             "before": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,7}$", "description": "snack: the code (or split sub code) it is served right before"},
             "original": {"type": "object", "required": ["body"], "additionalProperties": false, "description": "snack: the original question and its worked solution, shown beside it (sugar side panel)",
               "properties": {"q": {"type": "integer", "minimum": 1}, "body": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/block"}},

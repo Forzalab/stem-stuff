@@ -344,3 +344,10 @@ test("codes unique, suffixes unique across subjects", () => {
     assert.ok(!validate(withSkills(["shape_area", "shape_area"])));
   });
 }
+test("saccharine.dead (T28): the 6 dead-easy fixtures validate; a non-boolean or a typo does not", () => {
+  const fx = JSON.parse(readFileSync(new URL("fixtures/dead-easy.json", import.meta.url), "utf8"));
+  assert.ok(validate({ ...B, problems: fx.problems }), JSON.stringify(validate.errors, null, 1));
+  const one = (k, v) => ({ ...B, problems: [{ ...fx.problems[0], saccharine: { ...fx.problems[0].saccharine, [k]: v } }] });
+  assert.ok(!validate(one("dead", "yes")));
+  assert.ok(!validate(one("deed", true)));
+});
