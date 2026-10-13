@@ -24,7 +24,7 @@
 }
 
 /* ---------- HUD B: one gold-rimmed strip in the top bar's gap (Tony, Oct 5 pick; design/mockups/hud.html ?v=B) ----------
-   [balance window: coin + XP] [level star + bar + "N XP to level M"] [flame + streak]. Gold and tangerine only; purple is the LEVEL UP
+   [balance window: coin + XP] [level star + bar + "N XP to level M"] [tick + right-answer count]. Gold and tangerine only; purple is the LEVEL UP
    burst's (rare = special). As tall as the bar's buttons. A narrow gap drops the words, then the bar. app.js mounts it; never fixed. */
 .rw-hud {
   container-type: inline-size; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--btn, 48px);
@@ -49,7 +49,8 @@ html.start .rw-hud { display: none; }
   background: linear-gradient(105deg, transparent, rgb(255 255 255 / .45), transparent); transform: translateX(-120%); animation: rw-shine .6s ease-out; }
 @keyframes rw-shine { to { transform: translateX(300%); } }
 .rw-coin-ic { width: 28px; height: 28px; flex: none; }
-.rw-coin-ic img, .rw-flame img { width: 100%; height: 100%; display: block; }
+.rw-coin-ic img, .rw-flame img, .rw-flame svg { width: 100%; height: 100%; display: block; }
+.rw-flame svg { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .rw-num { font: 700 22px/1 var(--rw-font); color: var(--rw-sun); font-variant-numeric: tabular-nums; }
 .rw-lvl { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .rw-star { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
@@ -71,7 +72,7 @@ html.start .rw-hud { display: none; }
 .rw-flame { width: 26px; height: 26px; display: block; transform: scale(var(--fs, 1)); transform-origin: 50% 90%; transition: transform .3s; opacity: .6; filter: grayscale(.7); }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
 .rw-counts { display: none; }
-.rw-hud.rw-z-xp .rw-coin, .rw-hud.rw-z-st .rw-streak { display: none; }   /* C1: a 0 balance / 0 streak stays hidden until the first reward */   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
+.rw-hud.rw-z-xp .rw-coin, .rw-hud.rw-z-st .rw-streak { display: none; }   /* C1: a 0 balance / 0 count stays hidden until the first reward */   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
 @container (max-width: 470px) { .rw-to { display: none; } }
 @container (max-width: 250px) { .rw-lvl-body { display: none; } .rw-lvl { flex: none; } }
 @container (max-width: 160px) { .rw-lvl { display: none; } }

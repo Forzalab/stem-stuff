@@ -11,7 +11,7 @@
   'use strict';
   var PRE = 'stem-rw:', CAP_MS = 15000, cfg = { minDwell: 1000 };
   var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
-    "Formula fed. Duck fed.", "Physics is scared of you.", "Streak sauce added.", "You did not guess that. Nice.",
+    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You did not guess that. Nice.",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
     "Friction cannot stop you.", "Net force: forward.", "Quack quack, combo pack.", "Golden feather incoming…",
     "Torque? More like talk less, solve more.", "Spring loaded. Released.", "Centripetal? Central to the win.",
@@ -20,6 +20,7 @@
   var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0;
 
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
+  var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
   var img = function (n) { return '<img src="' + icon(n) + '" alt="" draggable="false">'; };
   function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, hist: [], paid: {}, missed: {}, orig: {} }; }
   function ls() { try { return g.localStorage || null; } catch (e) { return null; } }
@@ -77,7 +78,7 @@
       if (r.drop === 'common') { r.line = commonLine(); big = 'win'; }
       else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
-      if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' in a row';
+      if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;
@@ -107,8 +108,8 @@
   }
   function origSolved(q) { if (!s || q == null) return; s = load(); (s.orig[q] = s.orig[q] || { codes: [], solved: false }).solved = true; save(); }
 
-  /* one strip in the page flow (app.js puts it in the top bar's gap; HUD B, Tony Oct 5): XP balance, level star + bar + words, streak
-     flame. One button over the strip opens "your progress" (a native popover: Escape and an outside tap close it, no key handler). */
+  /* one strip in the page flow (app.js puts it in the top bar's gap; HUD B, Tony Oct 5): XP balance, level star + bar + words, the
+     right-answer count with a tick. One button over the strip opens "your progress" (a native popover: Escape and an outside tap close it, no key handler). */
   function mountHUD(el) {
     if (!el) return null;
     el.className = 'rw-hud rw-skin';
@@ -116,7 +117,7 @@
     el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin24') + '</span><b class="rw-num">0</b></span>' +
       '<span class="rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
       '<span class="rw-lvl-body"><span class="rw-bar"><i></i></span><span class="rw-to"></span></span></span>' +
-      '<span class="rw-streak"><span class="rw-flame">' + img('fire') + '</span><b>0</b></span>' +
+      '<span class="rw-streak"><span class="rw-flame">' + TICK + '</span><b>0</b></span>' +
       '<span class="rw-counts"></span>' +
       '<button type="button" class="rw-tap" aria-label="Your progress" popovertarget="rwPop"></button>';
     var pop = document.getElementById('rwPop');
@@ -161,17 +162,16 @@
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
     ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
-    ui.flame.style.setProperty('--fs', 1 + Math.min(st.streak, 10) * 0.04);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
     ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
       '<span class="rw-bar"><i></i></span><dl>' +
       '<dt>Next level</dt><dd>' + st.toNext + ' XP to go</dd><dt>Points</dt><dd>' + st.xp + ' XP</dd>' +
-      '<dt>Streak</dt><dd>' + st.streak + ' right in a row</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
+      '<dt>Cracked</dt><dd>' + st.streak + ' right answers</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
       '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>';
     ui.pop.querySelector('.rw-bar i').style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
-      ', ' + st.streak + ' in a row, ' + st.real + ' exam and ' + st.snacks + ' easy solved');
+      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved');
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 

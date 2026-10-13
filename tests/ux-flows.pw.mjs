@@ -347,7 +347,7 @@ flow(27, "redeem-showing", async (page, w) => {
 
 flow(28, "comeback-toast", async (page, w) => {
   /* rewards run only on sugar questions with a layer (BANK_QW5 has none: Rewards.state() is null there), so walk the BANK_UXS fixture.
-     Two walks: streak 0, then a fresh state with the streak seeded to 4 so the right Redeem itself is "5 in a row" (a streak note wants
+     Two walks: streak 0, then a fresh state with the streak seeded to 4 so the right Redeem itself is "5 cracked" (a count note wants
      the toast slot on that very answer; go() sets minDwell 1e12, so no drop competes). Comeback must still show. */
   const a = await walk28(page, 0);
   await page.evaluate(() => localStorage.clear()); await page.goto("about:blank");   // a real reload: same-hash goto would keep the old queue
@@ -379,7 +379,7 @@ async function walk28(page, seed) {
       await page.waitForTimeout(300);
       const x1 = await xp(page);
       /* XP: app.js:1446 pays a never-paid code's first right as usual (+ the toast); "no XP" is only for a code already paid (!res.xp) */
-      if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} in a row" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
+      if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} cracked" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
       return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> toast "Comeback!"; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
     }
     await dwell(page); if (await page.$("#q .opt:not(:disabled)")) await answerKey(page, code, false);   // wrong: the streak stays 0
