@@ -192,10 +192,10 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
       if (mode === "sugar" && outcome === "right" && !got.all) {   // pick all: Next sits in the Check row under the list, not on a green row
         assert.equal(got.ring, "3px " + field, "sugar right: no 3px --field ring round the face: " + got.ring);
         assert.ok(Math.abs(got.nf.height - 44) <= 0.5, `face ${got.nf.height} (44)`);
-        assert.equal(got.wash, "rgb(17, 36, 43)", "sugar right wash (#11242b)");
-        assert.match(got.rim, /^2px rgb\(95, 211, 148\)/, "sugar right rim: " + got.rim);
+        assert.equal(got.wash, "rgb(21, 51, 65)", "sugar right fill (--ok-fill #153341)");
+        assert.match(got.rim, /^2px rgb\(17, 141, 102\)/, "sugar right rim: " + got.rim);
       } else assert.equal(got.ring, "none", "a ring outside the sugar right row: " + got.ring);
-      if (mode === "diet") assert.notEqual(got.wash, "rgb(17, 36, 43)", "diet has the sugar wash");
+      if (mode === "diet" && outcome === "right" && !got.all) assert.match(got.rim, /^1px rgb\(17, 141, 102\)/, "diet right rim (1px --ok-rim; T23: the fill is the same in both modes, the 2px rim + ring are sugar's): " + got.rim);
       if (outcome === "out") {
         assert.equal(got.rightShown, false, "a reveal: the right row is marked");
         if (type === "mc") assert.ok(got.untried.length && got.untried.every(o => o === "0.5"), "untried mc rows not dimmed: " + got.untried);
