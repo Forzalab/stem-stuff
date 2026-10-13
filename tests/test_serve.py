@@ -902,6 +902,29 @@ class Explain(unittest.TestCase):
         os.utime(path, (time.time() + 10, time.time() + 10))
         self.assertEqual(serve.system_for(serve.CLUCK_CHAT, serve.problems()["CALC1_XP1"]), serve.CLUCK_CHAT)
 
+    def test_burst_gap_s_travels_in_the_bank_payload_only_when_valid(self):
+        """T22: a bank's burst_gap_s (60-600) rides GET /b/<code>.json; absent or invalid = no key (the engine's 15 s)"""
+        path = os.path.join(serve.BANKS, "BANK_XP12.json")
+        with open(path) as f:
+            doc = json.load(f)
+        bump = [time.time()]
+        for val, want in ((None, None), (60, 60), (300.5, 300.5), (59, None), (601, None), ("60", None), (True, None), (120, 120)):
+            if val is None:
+                doc.pop("burst_gap_s", None)
+            else:
+                doc["burst_gap_s"] = val
+            with open(path, "w") as f:
+                json.dump(doc, f)
+            bump[0] += 5
+            os.utime(path, (bump[0], bump[0]))                           # a new mtime: the bank reloads
+            out = serve.bank_payload("BANK_XP12", "g1", "sugar")
+            self.assertEqual(out.get("burst_gap_s"), want, val)
+            self.assertEqual("burst_gap_s" in out, want is not None, val)
+        doc.pop("burst_gap_s")
+        with open(path, "w") as f:
+            json.dump(doc, f)
+        os.utime(path, (bump[0] + 5, bump[0] + 5))
+
     def test_chat_streams_with_the_box_as_cluck_turn(self):
         status, head, text = self.chat(2)
         self.assertEqual((status, text), (200, "POOF! **Use:** $v$\n- step one\nYour pick: sign."))

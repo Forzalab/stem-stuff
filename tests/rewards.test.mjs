@@ -16,7 +16,7 @@ const ok = (code, x = {}) => R.answer({ code, correct: true, firstTry: true, dwe
 const no = (code, x = {}) => R.answer({ code, correct: false, firstTry: true, dwellMs: 5000, ...x });
 let n = 0;
 const fresh = () => R.use("T" + n++);
-beforeEach(() => { script = []; mem.clear(); fresh(); });
+beforeEach(() => { script = []; mem.clear(); R.gap(); fresh(); });
 
 test("inert until use(): no state, answer() pays nothing", () => {
   const src2 = readFileSync(new URL("../rewards/engine.js", import.meta.url), "utf8");
@@ -137,4 +137,35 @@ test("dead-easy (T28): a run of them never cruises skipSnack and never eats the 
   for (let i = 0; i < 12; i++) ok("DE" + i, { dead: true });
   assert.equal(R.skipSnack(), false);
   script = [0, 0, 0.9]; assert.equal(ok("A").burst, "bonus");              // a real win right after: the cap is untouched
+});
+
+/* T22: a bank's burst_gap_s replaces the flat 15 s burst cap */
+const realNow = Date.now;
+const burstAt = (code, t) => { Date.now = () => t; script = [0, 0]; return ok(code, { snack: true }).burst; };   // a snack (6 XP: three stay under level 2) whose roll always wins a common drop
+test("burst_gap_s (T22): absent = 15 s, as today", () => {
+  try {
+    assert.equal(R.gap(), 15000);
+    assert.equal(burstAt("A", 1e9), "win");
+    assert.equal(burstAt("B", 1e9 + 14000), null);                          // inside 15 s: capped (a toast)
+    assert.equal(burstAt("C", 1e9 + 15000), "win");
+  } finally { Date.now = realNow; }
+});
+test("burst_gap_s (T22): 60 caps at 60 s", () => {
+  try {
+    assert.equal(R.gap(60), 60000);
+    assert.equal(burstAt("A", 1e9), "win");
+    assert.equal(burstAt("B", 1e9 + 59000), null);
+    assert.equal(burstAt("C", 1e9 + 60000), "win");
+  } finally { Date.now = realNow; R.gap(); }
+});
+test("burst_gap_s (T22): invalid values are ignored (15 s)", () => {
+  for (const v of [undefined, null, "60", 0, 59, 601, -5, NaN, Infinity, true, [], {}]) assert.equal(R.gap(v), 15000, String(v));
+  assert.equal(R.gap(600), 600000);
+  R.gap();
+});
+test("burst_gap_s (T22): dead-easy never touches lastBurst, whatever the gap", () => {
+  R.gap(120);
+  ok("D1", { dead: true }); no("D2", { dead: true });
+  assert.equal(JSON.parse(mem.get("stem-rw:T" + (n - 1))).lastBurst, 0);
+  R.gap();
 });
