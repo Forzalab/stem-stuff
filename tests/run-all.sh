@@ -8,7 +8,7 @@
 #                so two shards can run side by side. (--quick with shard 2 has nothing to run.)
 #   --list       print what this run would run (one name per line) and run nothing
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo / blink-fx / reveal, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo / blink-fx / reveal / next-reset, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -92,7 +92,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
   for name in "${specs[@]}"; do
     f="tests/$name.pw.mjs"
     case "$name" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal) run "$name" node "$f" "$(free_port)" ;;
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
   done
