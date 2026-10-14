@@ -1530,7 +1530,7 @@ function clClose() {
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
-  if (cl.from && back) $(cl.from)?.focus({ preventScroll: true });
+  if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
 }
 /* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
    sits over the question there), then the sheet's top sits two lines below the question text's first line (at most 45% down: the chat keeps room) */

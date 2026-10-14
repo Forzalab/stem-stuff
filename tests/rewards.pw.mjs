@@ -250,14 +250,14 @@ try {
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "phone: folded");
     await p.click("#origHd");
     assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "the tap opens it");
-    assert.equal(await p.isVisible("#cluck .cl-bar"), true, "phone: the orange head bar (Tony's image 1)");
+    assert.equal(await p.isVisible("#cluck .cl-bar"), true, "phone: the H3a header (Lane 2)");
     assert.equal(await p.isHidden("#cluck .cl-x2"), true);
-    assert.deepEqual(await p.$eval("#cluck", e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width]; }), [0, 0, 390], "phone: full screen");
+    assert.deepEqual(await p.$eval("#cluck", e => { const r = e.getBoundingClientRect(), q = document.querySelector("#blocks > :not(.ptitle)").getBoundingClientRect(); return [r.left, r.width, r.top > q.top && r.top < innerHeight / 2, getComputedStyle(e).borderTopLeftRadius]; }), [0, 390, true, "10px"], "phone: popup K1 under the question's first lines, P3 squircle");
     await p.click("#cluck .cl-bar .cl-x"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "false", "the X closes it");
     await p.click("#orig .rw-free"); assert.equal(await p.getAttribute("#origHd", "aria-expanded"), "true", "a tap on the FREE sticker works the card too");
     assert.equal(await p.isVisible("#cluck .orig-sol"), true);
     assert.equal(await p.evaluate(() => document.documentElement.scrollWidth), 390, "no sideways scroll");
-    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps", "phone: the head bar says what the card said (TODO C)");
+    assert.equal(await p.textContent("#cluck .cl-title"), "Cluck", "phone: H3a names Cluck (Lane 2)");
     await p.click("#cluck .cl-bar .cl-x");
     await p.route("**/explain", r => r.fulfill({ contentType: "text/plain", body: "QUACK. Pick a." }));   // Cluck's live stream, stubbed
     const told = p.waitForResponse(r => r.url().endsWith("/explain"));
@@ -265,7 +265,7 @@ try {
     assert.equal(await p.isHidden("#wish"), true, "phone + a snack, after a miss: no Cluck chip, the card is the one way in (TODO C)");
     await p.click("#origHd");
     await p.waitForFunction(() => /Pick a/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
-    assert.equal(await p.textContent("#cluck .cl-title"), "Similar solution steps");
+    assert.equal(await p.textContent("#cluck .cl-title"), "Cluck");
     assert.equal(await p.isVisible("#cluck .orig-sol"), true, "Cluck on top, the steps under him");
     await pc.close();
   });

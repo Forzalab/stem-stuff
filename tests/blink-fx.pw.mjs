@@ -169,7 +169,7 @@ try {
 
   await step("a wrong try, then a right one with a drop (slots + WIN burst) while the Cluck chip is up: one group at a time", async () => {
     await pick(page, "b");
-    await page.waitForSelector("#wish:not([hidden]) .wchip", { timeout: 6000 });
+    await page.waitForSelector("#wish:not([hidden]) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
     await page.waitForTimeout(1500);                                            // re-picked while the chip may still shake: the tap settles it
     await unCap(page); await rig(page, [0, 0, 0, 0]);                          // 6 XP (try 2), a drop, common
     const r = await sampled(page, "a", 7000);
@@ -180,14 +180,14 @@ try {
     await quiet(page);
   });
 
-  await step("the Cluck chip wiggles at most twice, then stops (15 s)", async () => {
+  await step("the Cluck chip / CTA wiggles at most twice, then stops (15 s)", async () => {
     await go(page, "CALC1_B02");
     await page.evaluate(() => { window.__bfChip = window.__bf.chipRuns(15000); });
     await pick(page, "b");
-    await page.waitForSelector("#wish:not([hidden]) .wchip", { timeout: 6000 });
+    await page.waitForSelector("#wish:not([hidden]) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
     const c = await page.evaluate(() => window.__bfChip);
     log(`== chip wiggle over 15 s: ${c.runs} runs on ${c.elements} chip element(s), infinite: ${c.infinite}, still running at 15 s: ${c.runningAtEnd}`);
-    check(c.runs >= 1 && c.runs <= 2, `wiggle runs ${c.runs} (want 1-2)`);
+    check(c.runs <= 2, `wiggle runs ${c.runs} (want 0-2: the E1 CTA has no wiggle, Lane 2)`);
     check(!c.infinite && !c.runningAtEnd, "the wiggle stops");
   });
 
