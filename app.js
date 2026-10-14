@@ -1958,6 +1958,10 @@ const onView = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(la
 if (vv) { vv.addEventListener("resize", onView); vv.addEventListener("scroll", onView); }
 addEventListener("resize", onView);
 addEventListener("scroll", () => stuck(), { passive: true });
+/* html.scrolled: content has moved up under the pinned phone top bar, so its scroll-edge fade shows (app.css "scroll edges").
+   A class, not a scroll-driven animation: that one never ends, and rewards/fx.js waits for the page's animations to finish */
+const edge = () => root.classList.toggle("scrolled", scrollY > 0);
+addEventListener("scroll", edge, { passive: true }); edge();
 document.addEventListener("focusin", onView);
 document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
 freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
