@@ -157,7 +157,7 @@ async function cluckOpen(page, w) {
 }
 
 /* ---------- the flows ---------- */
-// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly } }
+// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly, padPhone (393 runs in diet: phone sugar has no pad, Tony Oct 14) } }
 const F = [];
 const flow = (n, slug, run, opts = {}) => F.push({ n, slug, run, opts });
 
@@ -475,7 +475,7 @@ flow(46, "copy-my-work", async (page, w) => {
   assert.ok(done, "the button shows the copied tick");
   assert.ok(got.includes(C.single) && got.includes("F = ma, so a = 2"), "payload has the code and the notes: " + got.slice(0, 160));
   return `payload ${got.length} chars, has code + notes; button ticked`;
-});
+}, { padPhone: true });
 
 flow(50, "record-again", async (page, w) => {
   await page.goto(`${BASE}/privacy.html`);
@@ -791,7 +791,7 @@ flow(44, "notes-pad", async (page, w) => {
   if (w === 393) { assert.ok(await vis(page, "#padFab"), "the notes button"); await page.click("#padFab"); await page.waitForTimeout(500); }
   await page.waitForSelector("#scratch", { state: "visible", timeout: 3000 });
   return w === 393 ? "button -> pad page" : "pad beside the question";
-});
+}, { padPhone: true });
 
 flow(45, "notes-autosave", async (page, w) => {
   await go(page, C.single);
@@ -802,7 +802,7 @@ flow(45, "notes-autosave", async (page, w) => {
   if (w === 393) { await page.click("#padFab"); await page.waitForTimeout(500); }
   assert.equal(await page.inputValue("#scratch"), "draft 45");
   return "draft back after reload";
-});
+}, { padPhone: true });
 
 flow(47, "swap-keyboard", async (page, w) => {
   if (w === 1280) skip("phone-only (keyboard up); shot is the desktop free-form view");
@@ -814,7 +814,7 @@ flow(47, "swap-keyboard", async (page, w) => {
   await page.screenshot({ path: join(OUT, `47-swap-keyboard-393-chromium.png`) });
   await page.setViewportSize({ width: 393, height: 852 }); await page.waitForTimeout(450);
   return "keyboard up (viewport 55%): problem pane + pad peek (shot at keyboard-up size)";
-}, { noFinalShot393: true });
+}, { padPhone: true, noFinalShot393: true });
 
 flow(48, "onboarding-toasts", async (page, w) => {
   await page.goto(`${BASE}/#${C.single}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1300);
@@ -826,7 +826,7 @@ flow(48, "onboarding-toasts", async (page, w) => {
   const t2 = await toastText(page);
   assert.equal(t2, "Tap to switch question / answer.");
   return `'${t1}' (shot -first) then '${t2}'`;
-}, { ob: true });
+}, { padPhone: true, ob: true });
 
 flow(51, "telemetry-off", async (page, w, ctx) => {
   const ext = []; page.on("request", r => { if (/posthog|clarity\.ms/.test(r.url())) ext.push(r.url()); });
@@ -877,6 +877,7 @@ try {
       serviceWorkers: f.opts.sw ? "allow" : "block", permissions: f.opts.perms || [], extraHTTPHeaders: f.opts.gpc ? { "Sec-GPC": "1", DNT: "1" } : undefined });
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
     if (!f.opts.ob) await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    if (f.opts.padPhone && phone) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     if (f.opts.gpc) await ctx.addInitScript(() => { try { Object.defineProperty(navigator, "globalPrivacyControl", { value: true }); } catch { /* */ } });
     const page = await ctx.newPage();
     const errs = []; page.on("pageerror", e => errs.push(String(e).slice(0, 120)));

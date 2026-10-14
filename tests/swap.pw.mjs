@@ -31,6 +31,7 @@ const FIX = {
   CSCI26_LQ1: { code: "CSCI26_LQ1", type: "num", body: [{ type: "text", md: lorem(8) }, { type: "text", md: "Find the total, in $\\text{kg}$." }], how: "A whole number." },
 };
 
+const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of SIZES) {
   const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
@@ -47,6 +48,7 @@ for (const [W, H] of SIZES) {
   const open = async code => {
     await page.setViewportSize({ width: W, height: H });
     await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
+    await page.context().addCookies(DIET);
     await page.goto("about:blank");
     await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });

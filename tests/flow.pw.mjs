@@ -26,10 +26,12 @@ const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: 
   fix: { how: "Type increases or decreases" } };
 const PAD = "N = mg cos30 = 33.9\nf = 0.20 N = 6.79\nF = 19.6 - 6.79";
 
+const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+  await ctx.addCookies(DIET);
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });   // onboarding has its own check below
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
@@ -222,6 +224,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
 /* onboarding (new device = no stem-* key) and the pointy toast on an MC row, phone 390 */
 {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+  await ctx.addCookies(DIET);
   const page = await ctx.newPage(); page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
   const toastText = () => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });

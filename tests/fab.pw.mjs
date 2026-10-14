@@ -21,10 +21,13 @@ const CA = { code: "CSCI26_FB1", type: "mc", pick: "all", shuffle: false, body: 
   choices: ["a", "b", "c", "d", "e", "f"].map(id => ({ id, md: `Option ${id}: raising the angle changes the force on the block by some amount` })).concat([{ id: "g", md: "None of these", lock: true }]) };
 
 const URL_BAR = 56;
+/* the button is diet's on phones: phone sugar has no pad at all (Tony, Oct 14; the last block below) */
+const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+  await ctx.addCookies(DIET);
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
@@ -168,6 +171,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     choices: ["a", "b", "c", "d", "e"].map(id => ({ id, md: `Option ${id}: raising the angle changes the force on the block by some amount` })) };
   const W = 393, H = 852;
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
+  await ctx.addCookies(DIET);
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
@@ -208,6 +212,44 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     assert.ok(Math.abs(after - before) <= 2, `place not kept after reload: ${after} vs dropped ${before}`);
   });
   await step(`${W}x${H} no page errors`, async () => assert.deepEqual(errors, []));
+  await ctx.close();
+}
+/* phone sugar: no scratchpad (Tony, Oct 14: "HIDE THE SCRATCHPAD ON MOBILE SUGAR MODE"). No button, no pad, no peek, no room kept for
+   them, no sideways scroll at 360px, no pad peek above the keyboard. Desktop sugar keeps its pad on a plain question. */
+for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: phone ? 2 : 1, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+  const page = await ctx.newPage();
+  page.setDefaultTimeout(6000);
+  const errors = []; page.on("pageerror", e => errors.push(String(e)));
+  await page.route(`**/p/${CA.code}.json`, r => r.fulfill({ json: CA }));
+  await page.goto(`${BASE}/#${CA.code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
+  await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, CA.code, { timeout: 8000 });
+  await page.waitForTimeout(700);
+  const g = () => page.evaluate(() => { const shown = s => { const e = document.querySelector(s); return !!e && !e.hidden && e.getClientRects().length > 0; };
+    return { fab: shown("#padFab"), work: shown("#work"), peek: shown("#padPeek"), scratch: shown("#scratch"), fabOn: document.documentElement.classList.contains("fab-on"),
+      sideways: document.documentElement.scrollWidth - innerWidth }; });
+  if (phone) {
+    await step(`${W}x${H} sugar: no Scratchpad button, no pad, no room kept for the button, no sideways scroll`, async () => {
+      const r = await g();
+      assert.deepEqual({ fab: r.fab, work: r.work, scratch: r.scratch, fabOn: r.fabOn }, { fab: false, work: false, scratch: false, fabOn: false });
+      assert.ok(r.sideways <= 0, `scrolls sideways by ${r.sideways}px`);
+    });
+    await step(`${W}x${H} sugar: the pad page cannot be opened, and the keyboard-up problem pane has no pad peek`, async () => {
+      await page.evaluate(() => document.querySelector("#padFab").click());
+      await page.waitForTimeout(200);
+      assert.equal(await page.evaluate(() => document.documentElement.classList.contains("mt")), false, "the pad page opened");
+      await page.evaluate(() => { const root = document.documentElement; root.classList.add("swap", "swap-problem"); });   // the keyboard-up PROBLEM pane, as CSS sees it
+      assert.equal((await g()).peek, false, "pad peek shown");
+      await page.evaluate(() => document.documentElement.classList.remove("swap", "swap-problem"));
+    });
+  } else {
+    await step(`${W}x${H} desktop sugar, plain question: the pad is still there`, async () => {
+      const r = await g();
+      assert.equal(r.scratch, true, "no pad on desktop sugar");
+    });
+  }
+  await step(`${W}x${H} sugar: no page errors`, async () => assert.deepEqual(errors, []));
   await ctx.close();
 }
 await browser.close();
