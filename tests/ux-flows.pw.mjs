@@ -146,10 +146,10 @@ async function stubCluck(page, { explain = 200, chat = 200, chatBody } = {}) {
 async function cluckOpen(page, w) {
   await go(page, C.single);
   assert.equal(await answerKey(page, C.single, false), "wrong");
-  await page.waitForFunction(() => !!document.querySelector("#wish .wchip"), null, { timeout: 6000 });
+  await page.waitForFunction(() => !!document.querySelector("#wish .wchip, .cl-peek .cl-cta, #cluck:not([hidden])"), null, { timeout: 6000 });
   if (w === 393) {
-    await page.waitForFunction(() => /Show Cluck's steps|Cluck is writing/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
-    await page.click("#wish .wchip");
+    await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
+    await page.click(".cl-peek .cl-cta");
   }
   await page.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 6000 });
   await page.click("#cluck .wtext").catch(() => {});             // a tap skips the typing
@@ -214,14 +214,14 @@ flow(21, "cluck-sheet", async (page, w) => {
   await stubCluck(page);
   await cluckOpen(page, w);
   const r = await page.$eval("#cluck", e => { const b = e.getBoundingClientRect(); return { l: Math.round(b.left), w: Math.round(b.width), h: Math.round(b.height), cls: document.documentElement.classList.contains("cl-open") }; });
-  if (w === 393) assert.ok(r.l === 0 && r.w >= 390 && r.h >= 600 && r.cls, `phone: full-screen sheet, html.cl-open: ${JSON.stringify(r)}`);
+  if (w === 393) assert.ok(r.l === 0 && r.w >= 390 && r.h >= 400 && r.cls, `phone: popup K1 (full width, docked under the question's first lines), html.cl-open: ${JSON.stringify(r)}`);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no sideways scroll with the sheet open");
   await page.screenshot({ path: join(OUT, `21-cluck-sheet-${w}-chromium.png`) });
   /* Esc closes (focus goes back to the chip), the chip reopens, the X closes */
   await page.keyboard.press("Escape"); await closed().catch(() => { throw new Error("Escape did not close the sheet"); });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-open")), false, "html.cl-open cleared on close");
-  await page.waitForFunction(() => /Show Cluck's steps/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 3000 });
-  await page.click("#wish .wchip"); await opened_();
+  await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
+  await page.click(".cl-peek .cl-cta"); await opened_();
   await page.click("#cluck .wtext").catch(() => {}); await page.waitForTimeout(300);
   await page.click(w === 393 ? "#cluck .cl-bar .cl-x" : "#cluck .cl-x2"); await closed();
   /* fold: a snack carries the original's worked solution under Cluck's text ("See reference solution") */
@@ -246,7 +246,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   await page.keyboard.press("Escape"); await closed();
   await page.click("#origHd"); await opened_();     // reopen for the final shot
   await page.waitForTimeout(300);
-  return `${w === 393 ? `phone full-screen ${r.w}x${r.h}, html.cl-open; ` : "desktop: sheet in the notes column; "}Esc closes, chip reopens, X closes; snack: fold ${start === "true" ? "starts open from the card" : "starts shut"}, toggles both ways, Esc closes`;
+  return `${w === 393 ? `phone popup K1 ${r.w}x${r.h}, html.cl-open; ` : "desktop: sheet in the notes column; "}Esc closes, chip reopens, X closes; snack: fold ${start === "true" ? "starts open from the card" : "starts shut"}, toggles both ways, Esc closes`;
 });
 
 flow(23, "cluck-errors", async (page, w) => {
