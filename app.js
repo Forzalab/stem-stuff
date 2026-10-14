@@ -1270,12 +1270,14 @@ function wishReset() {
   if (wish && wish.ctl) wish.ctl.abort();
   wish = null;
   const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
+  document.querySelectorAll(".cl-peek").forEach(p => p.remove());
   clReset();
 }
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
-  if (modeOf() !== "sugar" || !S || !S.prob.wish || (wish && wish.code === S.code)) return;   // only questions with a presolved key
+  if (modeOf() !== "sugar" || !S || !S.prob.wish) return;                   // only questions with a presolved key
+  if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
   wish = newWish();
   const w = wish;
   const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
@@ -1300,6 +1302,7 @@ async function wishStart(auto) {
         w.text += dec.decode(value, { stream: true });
         window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
+        if (wish === w) peekText();
       }
     }
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
@@ -1417,15 +1420,31 @@ function wishFrame(now) {
   if (!w.said) { w.said = true; say("Cluck's steps are open."); clAsk(); }   // no voice (Tony, Oct 5: "remove the voice option"): the screen reader hears this line
 }
 const wishTyped = w => w.done && w.text && w.shown >= w.text.length;
+/* the peek: only the start of the steps (the rest is under the fade); wishCut never splits a $..$ */
+const peekHTML = w => wishHTML(w.text.slice(0, wishCut(w.text, 600, w.done)));
+let peekRaf = 0;
+function peekText() {                                                       // the stream fills the peek, one draw a frame
+  if (!peekRaf) peekRaf = requestAnimationFrame(() => {
+    peekRaf = 0;
+    const s = $(".cl-peek .cl-steps"); if (!s || !wish) return;
+    const h = s.offsetHeight; s.innerHTML = peekHTML(wish);
+    if (s.offsetHeight !== h) layoutFreeze();
+  });
+}
+/* E1 LOCKED (Tony, Oct 13: T2, "ok but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
+   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --ai and the duck tilts once. T35 may host it in an AI preview card */
+const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
   const el = wishEl(), w = wish;
+  document.querySelectorAll(".cl-peek").forEach(p => p.remove());
   if (!w || [404, 503].includes(w.failed)) {
     el.hidden = true;
     if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
     return;
   }
-  el.hidden = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
+  const off = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
     : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Similar solution steps" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
+  el.hidden = off;
   const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
   el.classList.toggle("cue", cue);
@@ -1434,15 +1453,21 @@ function wishPaint() {
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
+  } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
+    const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
+    el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
+    if (!off) (host || el.querySelector(".cluck > div")).insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("ok but how?", w.open)}</div>`);
+    el.hidden = off || !!host;
   } else {
-    const label = !w.started ? "Explain my mistake" : w.failed ? "Didn't load. Tap to try again" : w.done ? (w.open ? "Hide Cluck's steps" : "Show Cluck's steps") : "Cluck is writing the steps…";
+    const label = !w.started ? "Explain my mistake" : "Didn't load. Tap to try again";
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
   }
-  el.querySelector(".wchip").addEventListener("click", () => {
+  const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
+  btn?.addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started || w.failed) wishRetry(w);
     else if (w.open) { clClose(); return; }
-    clOpen("explain", "#wish .wchip");
+    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
@@ -1458,7 +1483,7 @@ function clEl() {
   if (cl) return cl.el;
   const el = document.createElement("aside");
   el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Explain");
-  el.innerHTML = `<div class="cl-bar rw-skin rw-hint"><span class="rw-hint-coin" aria-hidden="true">${icon("i-duck")}</span><span class="rw-hint-tx"><span class="rw-hint-t cl-title"></span></span><button type="button" class="rw-hint-chev cl-x" aria-label="Close">${icon("i-x")}</button></div>
+  el.innerHTML = `<div class="cl-bar"><span class="cl-avw" role="img" aria-label="Cluck, online"><span class="cl-av">${icon("i-duck")}</span><i class="cl-dot"></i></span><span class="cl-title">Cluck</span><span class="tag">TUTOR</span><button type="button" class="cl-x" aria-label="Close">${icon("i-x")}</button></div>
     <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
     <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
@@ -1470,6 +1495,13 @@ function clEl() {
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
   el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
+  cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
+  document.body.append(cl.dim);
+  const bar = el.querySelector(".cl-bar"); let y0 = null;                   // K1: a swipe down on the header closes it
+  bar.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; }, { passive: true });
+  bar.addEventListener("touchmove", e => { if (y0 != null) el.style.transform = `translateY(${Math.max(0, e.touches[0].clientY - y0)}px)`; }, { passive: true });
+  const drop = e => { const dy = y0 == null ? 0 : e.changedTouches[0].clientY - y0; y0 = null; el.style.transform = ""; if (dy > 64) clClose(); };
+  bar.addEventListener("touchend", drop); bar.addEventListener("touchcancel", drop);
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
   return el;
@@ -1484,8 +1516,9 @@ function clPlace() {                                                        // s
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
   window.stemT?.("cluck_open", { tab, auto: !!auto });   // telemetry
-  clEl(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
-  clPlace(); clAsk(true); clTab(tab, !auto); padRule();
+  clEl(); if (!cl.open) cl.y = scrollY;
+  cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
+  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
   if (sideMQ.matches && !auto) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
 }
@@ -1496,7 +1529,17 @@ function clClose() {
   cl.open = false; cl.el.hidden = true;
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
-  if (cl.from && back) $(cl.from)?.focus();
+  if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
+  if (cl.from && back) $(cl.from)?.focus({ preventScroll: true });
+}
+/* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
+   sits over the question there), then the sheet's top sits two lines below the question text's first line (at most 45% down: the chat keeps room) */
+function clTop() {
+  if (sideMQ.matches) return;
+  scrollTo({ top: 0, behavior: "instant" });
+  const t = $("#blocks > :not(.ptitle)") || $("#problem"); if (!t) return;
+  const lh = parseFloat(getComputedStyle(t).lineHeight) || 28;
+  cl.el.style.setProperty("--cl-top", Math.round(Math.min(Math.max(t.getBoundingClientRect().top + 2 * lh + 2, 48), innerHeight * 0.45)) + "px");
 }
 function clTab(tab, focus) {
   const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
@@ -1509,7 +1552,6 @@ function clTab(tab, focus) {
   fold.querySelector(".cl-fold-n").textContent = n ? `${n} step${n > 1 ? "s" : ""}` : "";
   cl.el.querySelector("#clTabSP").hidden = !has.steps || !cl.fold;
   cl.el.querySelector(".cl-ft").hidden = !has.explain;
-  cl.el.querySelector(".cl-title").textContent = has.steps ? "Similar solution steps" : "Cluck";   // the phone head bar: the card's name when the card opened it
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: typed again from the top
@@ -1522,17 +1564,14 @@ function clTab(tab, focus) {
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
   if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
 }
-/* the thread reads like a chat (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar, name, Cluck's TUTOR tag, the time */
-const clNow = () => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-function clWho(me) {
-  return `<span class="av${me ? " me" : ""}" aria-hidden="true">${icon(me ? "i-me" : "i-duck")}</span><div class="who"><span class="name">${me ? "You" : "Cluck"}</span>`
-    + `${me ? "" : '<span class="tag">TUTOR</span>'}<span class="time">${clNow()}</span></div>`;
-}
+/* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
+   the student's words in a bubble. The speaker's name stays for screen readers */
+const clWho = me => me ? '<span class="sr-only">You: </span>' : `<span class="av" aria-hidden="true">${icon("i-duck")}</span><span class="sr-only">Cluck: </span>`;
 function clReset() {                                                        // a new question: close, empty, a fresh ask field
   cl?.el.querySelector("#clTabEP .cl-quack")?.remove();                     // D72: the next explanation picks its own QUACK
   if (!cl) return;
+  cl.y = null;                                                              // a new question: no scroll back to the old one
   clClose();
-  cl.el.querySelector("#clTabEP .time").textContent = clNow();              // the first message's time: this question's
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
   cl.el.querySelector(".cl-ft").innerHTML = "";
@@ -2305,7 +2344,7 @@ function fabPlace({ avoid } = {}) {
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
-  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .cl-cta")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
   /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
   const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
   for (let n = 0; avoid && n < 6; n++) {
