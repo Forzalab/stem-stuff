@@ -156,6 +156,21 @@ html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; ma
   background: var(--paper); box-shadow: 0 -10px 24px -8px rgb(0 0 0 / 0.55);
 }
 .dock-bottom .dock > * { margin-left: auto; margin-right: auto; max-width: 30rem; }
+/* scroll edges (STYLE.md "Fades and glows"; Tony, Oct 14): what scrolls under a pinned bar fades into the bar's own --paper over --s5
+   instead of a hard cut. Outside the bar's box, static, taps pass through: nothing moves, nothing is blocked. The dock's lies on empty
+   page at the end (the dock's room under the last line). The top bar's would soften the question box's top edge at rest, so it comes in
+   with the first --s5 of scroll (scroll-linked, not timed: no motion to reduce); without scroll timelines it stays off.
+   Not while the list's dim is up (it would lift the dimmed page) */
+.dock-bottom .dock::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: var(--s5); pointer-events: none;
+  background: linear-gradient(transparent, var(--paper)); }
+@supports (animation-timeline: scroll()) {
+  html.dock-bottom:not(.start):not(.side):not(.ql-open) .top::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--s5); pointer-events: none;
+    background: linear-gradient(var(--paper), transparent);
+    animation: edge-in linear both; animation-timeline: scroll(root); animation-range: 0 var(--s5); }
+}
+@keyframes edge-in { from { opacity: 0; } }
 .dock-bottom.dock-away .dock { display: none; }
 /* C8 (Tony, Oct 5 clutter pass): phones, a bank open: no code bar and no strip; it comes up with the list (app.js drill:qlist), or with a load error */
 .dock-bottom.qnav-on:not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .dock { display: none; }

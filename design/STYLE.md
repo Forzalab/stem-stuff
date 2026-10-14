@@ -138,7 +138,14 @@ A shadow means "this floats over content". Allowed only on:
 | code suggestions (floats over the page) | `--shadow-3` |
 | start page field | `--shadow-1` at rest, `--shadow-3` on hover / focus (Tony: "popping, like Google"; the only thing on that page) |
 
-Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The start field and the Scratchpad button are the two named exceptions among controls.
+Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows outside "Fades and glows" below. The start field and the Scratchpad button are the two named exceptions among controls.
+
+#### Fades and glows
+
+Tony, Oct 14: "allow fade (not overt, but for UI smoothness) + subtle glows like on the cluck box to be in our design language". Both are for smoothness, never decoration: if you can see a band or a halo as a shape of its own, it is too much.
+
+- **Fades** smooth an edge where content meets something that does not scroll with it. Allowed: scroll edges under a pinned bar (the phone top bar, the phone bottom dock: `app.css` "scroll edges"), and overflow / peek fades on a box that scrolls inside (the freeze strip's `.clipped` mask, the Swap peek's bottom fade, a hint steps peek). The fade goes from the bar's own background token (exactly; never a near colour) to transparent, on the edge that faces the content: `--s3` to `--s5` (12-24px) for a scroll edge, up to 2.5rem for an overflow mask. It sits outside the bar's box with `pointer-events: none` (nothing moves, every tap passes through) and is invisible at rest: it lies on empty page, or comes in with the first scroll (scroll-linked, not timed). Never a gradient band as a divider or a background, never a gradient fill on a button or text.
+- **Glows** only on a floating AI surface (Cluck's sheet: `--ai-glow` from the top, brighter while Cluck types). Soft and warm, in that surface's own accent, blending into its background: a radial gradient fading to transparent by 70% of its size, or a blur of 24-64px with no spread. Peak alpha 0.3 at the source (`--ai-glow`), about 0.2 at rest (it rests at 60%). One glow per screen. No hard-edged, neon or coloured-ring glow, and none on flow content, cards, buttons or focus states (focus is the one `--focus` ring).
 
 ### 2.8 Motion
 
@@ -201,7 +208,7 @@ Nothing in the flow gets a shadow: no cards, no buttons, no list. No glows. The 
 
 - Do: show the verdict icon in the arrow slot, so the result sits where the eye already is. Keep the box the same size in every state.
 - Next (T17b-1, app.js `cueNext`): once a question closes, the last try's Check slot (box, mc row, multi part, pick-all Check row) gets a labelled Next. The Check rect lies inside it (right edges flush), so nothing moves; focus goes to it; a held Enter (`e.repeat`) never presses it. It lands once with `g-next-in` (200ms, 120ms delay; reduced motion `g-next-fade`). The filled ▶ (`i-tri`) is only on this filled Next; the nav bar Next and every ghost / text button keep the thin chevron `i-next`. Sugar adds the duck chip under the answer ("Compare with Cluck's steps" / "Ask Cluck", no XP); diet has no chip, duck or wash.
-- Don't: put the verdict in a new line that pushes content; show a glow; use both a colored border and a focus outline (one ring).
+- Don't: put the verdict in a new line that pushes content; show a glow (glows are for Cluck's sheet only: §2.7 "Fades and glows"); use both a colored border and a focus outline (one ring).
 
 ### Multiple-choice choice (`.opt`)
 
@@ -283,7 +290,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
   Contrast: `--ai` on `--sheet` 7.0:1, on `--ai-sheet` 7.7:1.
 - **Cluck's box is its own service on the site** (Tony, Oct 4: "cluck box should be also orange (think ... like a diff service on the same website). the button explanation + next should stay blue of our site"). `.ai-box` remaps the base tokens inside it (`--sheet`, `--field`, `--ink`, `--muted`, `--hint`, `--line`, `--edge`) to the `--ai-*` set, so buttons, fields and text follow without new rules. The student's bubble stays `--raised` (navy: the student is the site's side).
 - The site's own actions stay site blue everywhere, in or out of the box: "Explanation" (outline `--c1`) and "Next question" (`.btn-go`). Only Cluck's own controls are tangerine (send button, tabs, turns left).
-- One accent per surface. No glow, no gradient, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
+- One accent per surface. No glow beyond the sheet's own ember (`--ai-glow`, §2.7 "Fades and glows"), no gradient fill, no side stripe (§6.2); the casino look stays on the hint card's header and the Explain chip only.
 - Math: inline `$..$` stays in the sentence; a step's equations go in a **callout**: centred display math, one equation per line, `--ai-tint` fill, 1px `--ai-line` edge, 10px radius, `--s3`/`--s4` padding. Problem scenes in it stay pure ink (DESIGN-LANGUAGE.md §3).
 - Text: one renderer for Cluck's explanation AND the similar-steps card, so the two look like one family (Tony, Oct 4: "make the LOOK between AI box and the similar explanation section look unified").
 - Steps (Gemini steps widget, Tony, Oct 4: "for EACH STEP, format it similar to gemini's app design ... add a bit more text to increase legibility and top down approachability"; ref: brain `projects/calc/_files/ref-ui/gemini-steps-ref.jpg`): an intro sentence with the key words in bold, then numbered steps. Each step: a 28px circle (1px `--ai` edge, `--ai-tint` fill, `--ai` digit), a 2px dotted `--ai-line` connector down to the next circle, a bold title (`--t-md`), an italic mono subtitle (`--t-xs`, `--muted`), 1-3 short bullets, then that step's equations in one callout. After the last step, a 1px `--line` rule and the answer sentence ("So the answer is **B, 2.0 m/s**." plus, after a wrong pick, one line on why that pick was tempting). Short follow-up replies skip the steps: 1-3 plain lines, a callout only when they show math.
@@ -336,7 +343,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 
 From Anthropic's frontend-design skill, Claude Design, Impeccable, and Refactoring UI, adapted here:
 
-1. A second filled color, gradient buttons, gradient text, or glows.
+1. A second filled color, gradient buttons, gradient text, gradient bands as decoration, or glows outside §2.7 "Fades and glows".
 2. Colored side stripes (left-border accents) on cards, rows or toasts.
 3. Cards inside cards; the same card + soft grey shadow on everything.
 4. Shadows on things in the flow.
