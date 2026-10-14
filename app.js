@@ -422,9 +422,11 @@ window.stemRedo = {
   has(code) { const r = this.get(); return !!r && r.codes.includes(code); },
   set(code, n, redeem = true) {                                          // nav.js, before it opens code; redeem = it owes a miss
     if (!bank) return;
-    const old = this.get();
     try { localStorage.setItem(REDO, JSON.stringify({ bank: bank.code, n, codes: [code], redeem: !!redeem })); } catch { return; }
-    if (!old || old.n !== n || !old.codes.includes(code)) doneStore()?.doneDrop(code);   // an older showing's "r:" record
+    /* T41: drop the "r:" record only when it is an older showing's. Prev / Next back to this showing (a step through an r = 0 item
+       cleared the redo key on the way) keeps its own round's work; saveDone tags the record with its round */
+    const st = doneStore(), rec = st && st.doneGet(code);
+    if (rec && rec.round !== n) st.doneDrop(code);
   },
   clear() { try { localStorage.removeItem(REDO); } catch { /* blocked */ } }
 };
@@ -992,6 +994,7 @@ function saveDone(r) {
   if (typeof r.gen === "number") u.gen = r.gen;
   if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
   const rec = wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice());
+  if (window.stemRedo.has(S.code)) rec.round = window.stemRedo.get().n;   // a re-showing's record names its round (stemRedo.set, T41)
   st.donePut(S.code, rec);
   if (rec.done === "correct") doneExit(S);
 }

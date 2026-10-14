@@ -135,6 +135,8 @@ try {
       await page.reload(); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, snap.R.code); await settle(page);
       await same(page, snap.R, "a reload");
       await arrow(page, "#qnext"); await same(page, snap.D, "the bar Next");
+      const fresh = await page.evaluate(([c, r]) => { window.stemRedo.set(c, r + 1); const x = window.stemOffline.doneGet(c); window.stemRedo.clear(); return x; }, [snap.R.code, item.r]);
+      assert.equal(fresh, null, "a NEW showing of it (another round) still starts blank");
     });
     await step(`${mode}: no page errors`, async () => assert.deepEqual(errors, []));
     await ctx.close();
