@@ -42,8 +42,10 @@ async function run(browserType, label, opts = {}) {
     page.on("response", r => { if (r.status() >= 400 && !/offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
-    const open = async code => {
+    /* pad: phones run it in diet, where the pad lives (phone sugar has none: Tony, Oct 14) */
+    const open = async (code, pad) => {
       await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
+      if (pad && vname === "phone") await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     await page.goto("about:blank");
       await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
@@ -154,7 +156,7 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} freeze: problem + question stay on top while scratchpad scrolls`, async () => {
-      await open(`PHYS_S2K`);
+      await open(`PHYS_S2K`, true);
       await page.waitForSelector(".fig svg");
       await padPage();
       const ta = page.locator("#scratch");
@@ -387,7 +389,7 @@ async function run(browserType, label, opts = {}) {
     });
 
     await step(`${label} ${vname} copy button inside the scratchpad: text never runs under it`, async () => {
-      await open("CALC1_T6B");
+      await open("CALC1_T6B", true);
       await padPage();
       const ta = page.locator("#scratch");
       // no line box of the text (laid out exactly like the textarea, with its current padding) may touch the button
@@ -549,7 +551,7 @@ async function run(browserType, label, opts = {}) {
     if (label === "chromium" && vname === "phone") {
       await step(`${label} ${vname} scratchpad stops at the visible bottom and scrolls; Cut all copies then clears`, async () => {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
-        await open("CALC1_T6B");
+        await open("CALC1_T6B", true);
         await padPage();
         const ta = page.locator("#scratch");
         await ta.click();

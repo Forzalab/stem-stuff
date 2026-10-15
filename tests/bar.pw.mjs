@@ -29,10 +29,12 @@ const LONG = { code: "PHYS_ZZ1", type: "num", body: [
   ...Array.from({ length: 14 }, (_, i) => i + 1).map(i => ({ type: "text", md: `Part ${i} of the setup: the ramp is fixed, the block starts from rest, and air drag is small enough to ignore.` })),
   { type: "text", md: "Find the acceleration, in $\\text{m/s}^2$." }] };
 
+const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // the phone pad is diet's: phone sugar has none (Tony, Oct 14)
 for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   const phone = W < 1000;
   const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
+  if (phone) await ctx.addCookies(DIET);
   const page = await ctx.newPage();
   await page.route("**/p/PHYS_ZZ1.json", r => r.fulfill({ json: LONG }));
   const shot = async n => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/bar-${n}-${W}.png` }); };

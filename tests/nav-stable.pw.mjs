@@ -106,6 +106,7 @@ try {
 
   await step("all correct with the pad page open: the pad closes and the question row (Next) comes back", async () => {
     const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
+    await c2.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // the phone pad is diet's (Tony, Oct 14)
     await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
     const pg = await c2.newPage();
     await pg.goto(BASE + "/#BANK_NV34");

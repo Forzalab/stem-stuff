@@ -15,11 +15,13 @@ async function step(name, fn) {
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden, code, { timeout: 8000 });
 /* phones (round 3b): the pad is hidden behind the Scratchpad button; open the pad page before typing in it */
 const pad = async page => { if (await page.isVisible("#padFab")) { await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt")); } };
+const DIET = [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }];   // phone sugar has no pad (Tony, Oct 14): the pad is diet's there
 const status = page => page.$eval("#xbSave", e => ({ t: e.textContent, c: e.className, anim: getComputedStyle(e).animationName }));
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 for (const [w, h] of [[390, 844], [1920, 1080]]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h } });
+  await ctx.addCookies(DIET);
   const page = await ctx.newPage();
   await step(`${w} status: nothing, then saving (sweep) at 3 s, saved, gone 2 s later`, async () => {
     await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);
@@ -58,6 +60,7 @@ for (const [w, h] of [[390, 844], [1920, 1080]]) {
 }
 await step("reduced motion: saving is static", async () => {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  await ctx.addCookies(DIET);
   const page = await ctx.newPage();
   await page.goto(BASE + "/#CALC1_X2P"); await opened(page, "CALC1_X2P"); await pad(page);
   await page.fill("#scratch", "a");

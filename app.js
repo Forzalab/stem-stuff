@@ -2124,7 +2124,7 @@ function padPeekText() {
 padPeek.hidden = false;                                                         // CSS shows it only in the PROBLEM pane
 for (const ev of ["pointerdown", "mousedown"]) padPeek.addEventListener(ev, e => e.preventDefault());
 padPeek.addEventListener("click", () => {
-  if (!S || !S.box) return;
+  if (!S || !S.box || padGone()) return;
   if (root.classList.contains("pad-off")) openMT();                              // phones: the pad lives on the pad page
   const ta = S.box.el, n = ta.value.length;
   ta.focus({ preventScroll: true }); ta.setSelectionRange(n, n); ta.scrollTop = ta.scrollHeight;
@@ -2164,10 +2164,12 @@ const nextDown = (k, r) => { const a = ANCH[k], i = a.indexOf(near(k, r)); retur
 const anchorName = (k, r) => r === 0 ? (k === "desk" ? "question folded" : "answer only") : "question " + ANAME(r);
 let dragR = null, mtFit = true;                                                  // mtFit: the tile hugs its content until the handle is used
 /* desktop sugar: the notes pad steps aside while Cluck has something to show (the hint card, or the sheet open); else the pad is the default
-   (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad. */
+   (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad.
+   Phone sugar: no pad at all, so no Scratchpad button, no pad page, no pad peek (Tony, Oct 14: "HIDE THE SCRATCHPAD ON MOBILE SUGAR MODE"). */
 function padRule() {
-  root.classList.toggle("no-pad", sideMQ.matches && !!S && modeOf() === "sugar" && (!!origEl || !!(cl && cl.open)));
+  root.classList.toggle("no-pad", !!S && modeOf() === "sugar" && (!sideMQ.matches || !!origEl || !!(cl && cl.open)));
 }
+const padGone = () => !sideMQ.matches && root.classList.contains("no-pad");   // phone sugar: the pad has no way in
 function applyMT() {
   const side = sideMQ.matches && !!S, k = mtKind();
   if (sideMQ.matches || !S) mtOpen = false;
@@ -2243,7 +2245,7 @@ function setTile(t, animate = true) {
   if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
 }
 function openMT() {
-  if (mtOpen || !S || sideMQ.matches) return;
+  if (mtOpen || !S || sideMQ.matches || padGone()) return;
   swapY = scrollY;
   root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
   if (swapOn) setSwap(false);
@@ -2325,7 +2327,7 @@ let fabDrag = null, fabMoved = false, fabSeen = false;
 function fabSync() {
   window.stemBrainrot?.sync();
   const a = document.activeElement, typing = !!a && editing() && $("#q").contains(a);
-  const show = root.classList.contains("pad-off") && !typing;
+  const show = root.classList.contains("pad-off") && !typing && !padGone();
   root.classList.toggle("fab-on", show);
   if (fab.hidden === !show) return;
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
