@@ -1,10 +1,11 @@
 /* quack.mjs: Generate randomized "QUACK" prefixes with warm kaomoji for hint feedback.
    Deterministic from seed; never returns the same string as the previous prefix. */
 
-// Kaomoji emotes: warm/goofy, never sad/mocking/crying/angry
+// Kaomoji emotes: warm/goofy, never sad/mocking/crying/angry.
+// Safe glyphs only (T42): no combining accents, Canadian Syllabics, Arabic or emoji-prone symbols.
 const EMOTES = [
-  "(•̀ᴗ•́)و", "(｀・ω・´)", "ヽ(•‿•)ノ", "(ﾉ◕ヮ◕)ﾉ", "( ˘▽˘)っ", "ᕕ( ᐛ )ᕗ", "(•ө•)", "(๑•́ ω •̀๑)",
-  "ヽ(´▽`)/", "(´∀｀)ノ", "٩(ˊᗜˋ)و", "(ง •̀ω•́)ง", "( ˙▿˙ )", "ʕ•ᴥ•ʔ", "(っ˘ω˘ς )",
+  "(•ᴗ•)ノ", "(｀・ω・´)", "ヽ(•‿•)ノ", "(ﾉ◕ヮ◕)ﾉ", "( ˘▽˘)っ", "┗(＾o＾)┓", "(•ө•)", "(˘ω˘)",
+  "ヽ(´▽`)/", "(´∀｀)ノ", "ヽ(・∀・)ノ", "(•ω•)9", "( ˙▿˙ )", "ʕ•ᴥ•ʔ", "(っ˘ω˘ς )",
 ];
 
 // QUACK word variations: different lengths, shapes, and punctuation
