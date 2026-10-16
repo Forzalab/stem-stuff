@@ -1061,3 +1061,54 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: 700; color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
+
+/* ---------- Cluck's duck + sky (peek.js window.stemDuck; T45 idle peek, design/IDLE-PEEK.md) ----------
+   One duck, one sky, for every Cluck rise. V3 "sky first" (Tony, Oct 15): the sky warms slowly (0.6-4.4 s), the duck peeks, eyes only
+   (4.6 s), holds, comes up (6.2-6.8 s), then the line. Each rise replays the same run; down = duck out 300 ms, sky out 400 ms. The sun core
+   sits under the duck (--sun-x from peek.js); the sky fades out past its column's edges, never a hard cut. Colours: --ai only, mixed with
+   transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
+.ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 7.2s; }
+.ck-rise[hidden] { display: none; }
+.ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+.ck-sky i { position: absolute; inset: 0 0 -16px; opacity: 0; }
+.ck-sky .l1 { background: radial-gradient(150% 80% at var(--sun-x, 50%) 110%, color-mix(in srgb, var(--ai) 6%, transparent) 0%, color-mix(in srgb, var(--ai) 2.5%, transparent) 50%, transparent 75%); }
+.ck-sky .l2 { background: radial-gradient(70% 60% at var(--sun-x, 50%) 108%, color-mix(in srgb, var(--ai) 18%, transparent) 0%, color-mix(in srgb, var(--ai) 7%, transparent) 45%, transparent 72%); }
+.ck-sky .l3 { background: radial-gradient(38% 30% at var(--sun-x, 50%) 104%, color-mix(in srgb, var(--ai) 14%, transparent) 0%, color-mix(in srgb, var(--ai) 5%, transparent) 55%, transparent 80%); }
+/* the duck: a button, a clip window; the art grows from the window's bottom edge. 44px+ target at the peek (eyes need ~42 / 52px: AMA 12) */
+.ck-peek { position: absolute; left: calc(var(--cx, 50%) - var(--dw) / 2); bottom: env(safe-area-inset-bottom, 0px); width: var(--dw); height: var(--vis);
+  overflow: hidden; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+.ck-peek:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ck-duck { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 122 / 128; transform: translateY(var(--vis));
+  background: url(rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
+  filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--ai-sheet)) drop-shadow(-2px 0 0 var(--ai-sheet)) drop-shadow(0 2px 0 var(--ai-sheet)) drop-shadow(0 -2px 0 var(--ai-sheet)); }
+.ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
+  color: var(--ai-muted); font-size: var(--t-sm); font-weight: 700; line-height: 1.3; white-space: nowrap; opacity: 0; }
+@media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
+.ck-rise.on .l1 { animation: ck-l1 var(--d-sky) both; }
+.ck-rise.on .l2 { animation: ck-l2 var(--d-sky) both; }
+.ck-rise.on .l3 { animation: ck-l3 var(--d-sky) both; }
+.ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
+.ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
+.ck-rise.out .ck-sky { opacity: 0; transition: opacity .4s ease-in; }
+.ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .3s ease-in; }
+.ck-rise.out .ck-peek { pointer-events: none; }
+/* 7.2 s: l1 0.6 → 3.0 → 4.4 s; l2 1.0 → 3.2 → 4.4 s; l3 2.0 → 4.4 s; the sky layers rise 4 / 8 / 14px (§2.8 cap) */
+@keyframes ck-l1 { 0%, 8.3% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 41.7% { opacity: .8; transform: translateY(-2px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-4px); } }
+@keyframes ck-l2 { 0%, 13.9% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 44.4% { opacity: .8; transform: translateY(-4px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-8px); } }
+@keyframes ck-l3 { 0%, 27.8% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-14px); } }
+/* the duck: peek 4.6 → 5.1 s (eyes only), hold, up 6.2 → 6.8 s; the line 6.8 → 7.1 s */
+@keyframes ck-duck { 0%, 63.9% { transform: translateY(var(--vis)); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 70.8%, 86.1% { transform: translateY(calc(var(--vis) - var(--pk))); animation-timing-function: cubic-bezier(.2, .8, .2, 1); } 94.4%, 100% { transform: translateY(0); } }
+@keyframes ck-say { 0%, 94.4% { opacity: 0; } 98.6%, 100% { opacity: 1; } }
+/* reduced motion: no movement. The same phases as opacity only: the duck at its rest place, 45% at the peek, 100% up */
+@media (prefers-reduced-motion: reduce) {
+  .ck-rise.on .l1 { animation-name: ck-rl1; } .ck-rise.on .l2 { animation-name: ck-rl2; } .ck-rise.on .l3 { animation-name: ck-rl3; }
+  .ck-rise.on .ck-duck { animation-name: ck-rduck; }
+  .ck-duck { transform: none; opacity: 0; }
+  .ck-sky i { transform: none; }
+}
+@keyframes ck-rl1 { 0%, 8.3% { opacity: 0; } 41.7% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rl2 { 0%, 13.9% { opacity: 0; } 44.4% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rl3 { 0%, 27.8% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
+@keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
