@@ -68,7 +68,8 @@ const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.to
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off");
+    for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // T37 tips seen: this page tests the bells
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   await typeCode(page, "BANK_RW12");
@@ -327,6 +328,40 @@ try {
       else assert.ok(names.includes("opt-jolt"), `the shake plays (${names})`);
       await cx.close();
     }
+  });
+
+  await step("T37 onboarding: one toast per first event (right on the coin, a closed miss on the count, plain then humor, 3 in a row on the level star), per device", async () => {
+    const oc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+    await oc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    const o = await oc.newPage();
+    const tip = async (text, at) => {
+      await o.waitForFunction(t => { const e = document.querySelector("#toast"); return e?.classList.contains("on") && e.textContent === t; }, text, { timeout: 8000 })
+        .catch(async e => { throw new Error(e.message + " | want " + text + " | got " + await o.$eval("#toast", t => t.className + " " + t.textContent)); });
+      const [t, a] = await rects(o, ["#toast", at]);
+      const mid = await o.$eval("#toast", t => parseFloat(t.style.left) + parseFloat(getComputedStyle(t).getPropertyValue("--px")));
+      assert.ok(Math.abs(mid - (a.left + a.width / 2)) < 2 && t.top >= a.bottom, "caret on " + at + " " + JSON.stringify([t, a, mid]));
+      await o.click("#toast");                                                  // tap closes it (STYLE §3)
+    };
+    const seen = b => o.evaluate(b => localStorage.getItem("stem-ob-rw-" + b), b);
+    await o.goto(BASE + "/"); await typeCode(o, "BANK_RW12");
+    await o.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await go(o, "CALC1_R01"); await rig(o, [0.5, 0.99]); await pick(o, "a");
+    await tip("Points always go up and never let you down.", "#rwCoin");
+    assert.equal(await seen("right"), "1");
+    await go(o, "CALC1_R02"); await pick(o, "b");
+    await o.waitForTimeout(1200);
+    assert.equal(await o.$eval("#toast", t => t.classList.contains("on")), false, "a try left: nothing up there (C12)");
+    await pick(o, "c");
+    await tip("First time? Keep your progress.", "#rwHud .rw-streak");
+    await go(o, "CALC1_S01"); await pick(o, "b"); await pick(o, "c");
+    await tip("Third time's the charm.", "#rwHud .rw-streak");
+    assert.equal(await seen("miss"), "2");
+    await o.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.streak = 2; s.lastBurst = Date.now(); localStorage.setItem(k, JSON.stringify(s)); });
+    await go(o, "CALC1_R03"); await rig(o, [0.5, 0.99]); await pick(o, "a");
+    await tip("Yay, 3 ducks in a row! See your progress here.", "#rwHud .rw-star");
+    assert.equal(await o.$$eval(".fx-toast", e => e.length), 0, "the onboarding line replaces the 3 cracked note");
+    assert.equal(await seen("three"), "1");
+    await oc.close();
   });
 
   await step("reduced motion: a correct answer pays but makes no particles", async () => {

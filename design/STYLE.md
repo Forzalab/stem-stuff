@@ -220,6 +220,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 ### Toast (`#toast`)
 
 - Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
+- Sugar reward onboarding (T37, Tony, Oct 15; `rwTip()` in app.js, keys `stem-ob-rw-<beat>` = times shown): the HUD explains itself with this same toast, caret on the piece. First right answer, on the coin: "Points always go up and never let you down." A closed miss, on the count: "First time? Keep your progress.", then twice "Third time's the charm." Third right in a row, on the level star: "Yay, 3 ducks in a row! See your progress here." (it replaces that one "3 cracked" note). Sugar only; never stacks; a piece not on screen waits.
 - Anatomy: page `--paper`, `--bw` `--line` border (was 1.5px; unified Oct 3), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
 - Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
 - Timing: in `--d-move`, stays 2 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
@@ -330,7 +331,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 - Errors say what happened and what to do. No apology, no blame.
 - No exclamation marks, no "Oops", no "Great job!". Calm, not cheerful.
 - **Cluck's voice** ("QUACK." then one short question or nudge) appears only inside the Cluck hint. Never in buttons, toasts or errors.
-- **Humour lives in content and easter eggs** (Cluck, a bank's own lines, the scratchpad placeholder "Paste GPT answer here, but me be sad...", lowercase where it is a wink). Never in chrome: buttons, toasts, errors, labels. The wrong-answer toast's "choose wisely" is the only edge it has.
+- **Humour lives in content and easter eggs** (Cluck, a bank's own lines, the scratchpad placeholder "Paste GPT answer here, but me be sad...", lowercase where it is a wink). Never in chrome: buttons, toasts, errors, labels. The wrong-answer toast's "choose wisely" is the only edge it has. Scoped exception (Tony, Oct 15, mock protocol rule 8: humour only with his approval, sparse): the sugar reward onboarding toasts in §3, word for word, including their one exclamation mark. Sugar only; nothing else gets humour from this line.
 
 ### Keyboard
 

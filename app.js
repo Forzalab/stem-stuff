@@ -1675,6 +1675,7 @@ function rewardGo(mine, o) {
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, dead: !!p.dead, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
+  if (!o.correct && !o.open && !p.dead) setTimeout(() => rwTip("miss", $("#rwHud .rw-streak")), 700);   // T37: a closed miss (often a T19 reveal, 0 XP); the count waits. Dead-easy has no count
   const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right
   if (!res.xp) { RW().render(0); if (back) comeback(); return; }                 // a done code: the numbers change, nothing moves
   if (back) mine.rwBack = true;
@@ -1771,7 +1772,7 @@ async function rewardShow(mine, res) {
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 450);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); return; }
+  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 700); return; }
   await wait(600);
   if (res.drop && fx.slots) await fx.slots(res.drop);
   if (res.burst && fx.burst) {
@@ -1781,7 +1782,22 @@ async function rewardShow(mine, res) {
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
   if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
+  else if (line === res.streakNote && res.streak === 3 && rwTip("three", $("#rwHud .rw-star"))) { /* T37: the onboarding line says "3 cracked" itself */ }
   else if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+  else if (!mine.prob.dead) rwTip("right", $("#rwCoin"));
+}
+/* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first
+   time each piece matters, in the plain toast (STYLE.md §3) with its caret on that piece. Per device (stem-ob-rw-<beat> = times shown).
+   The miss beat says it 3 times: the plain line once, then the humor line twice (Tony: "as we got used to ui already"), then never again.
+   It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
+   waits too, uncounted. */
+const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
+  miss: ["First time? Keep your progress.", "Third time's the charm.", "Third time's the charm."] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+function rwTip(beat, at) {
+  if (!rewardOn() || toastAt || !rwSeen(at)) return false;
+  const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
+  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at); return true; }
+  catch { return false; }                                                        // blocked storage: no way to keep it once, so never
 }
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {
