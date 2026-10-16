@@ -355,7 +355,9 @@ try {
     await tip("First time? Keep your progress.", "#rwHud .rw-streak");
     await go(o, "CALC1_S01"); await pick(o, "b"); await pick(o, "c");
     await tip("Third time's the charm.", "#rwHud .rw-streak");
-    assert.equal(await seen("miss"), "2");
+    await go(o, "CALC1_S02"); await pick(o, "b"); await pick(o, "c");
+    await tip("Triple kill?", "#rwHud .rw-streak");
+    assert.equal(await seen("miss"), "3");
     await o.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.streak = 2; s.lastBurst = Date.now(); localStorage.setItem(k, JSON.stringify(s)); });
     await go(o, "CALC1_R03"); await rig(o, [0.5, 0.99]); await pick(o, "a");
     await tip("Yay, 3 ducks in a row! See your progress here.", "#rwHud .rw-star");

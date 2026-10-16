@@ -1788,11 +1788,11 @@ async function rewardShow(mine, res) {
 }
 /* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first
    time each piece matters, in the plain toast (STYLE.md §3) with its caret on that piece. Per device (stem-ob-rw-<beat> = times shown).
-   The miss beat says it 3 times: the plain line once, then the humor line twice (Tony: "as we got used to ui already"), then never again.
+   The miss beat speaks 3 times: the plain line, then two humor lines (Tony: "as we got used to ui already"), then never again.
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["First time? Keep your progress.", "Third time's the charm.", "Third time's the charm."] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  miss: ["First time? Keep your progress.", "Third time's the charm.", "Triple kill?"] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
 function rwTip(beat, at) {
   if (!rewardOn() || toastAt || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
