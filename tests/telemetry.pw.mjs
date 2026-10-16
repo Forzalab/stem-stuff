@@ -21,7 +21,7 @@ const exe = (() => { try { return require("node:fs").readdirSync("/opt/pw-browse
 const browser = await pw.chromium.launch(exe ? { executablePath: exe } : {});
 const HOSTS = /posthog\.com|clarity\.ms/;
 const STUB = `window.posthog = { init(k, o) { window.__ph = { key: k, opts: o, ev: [] }; this.__loaded = true; o.loaded && o.loaded(this); },
-  capture(n, p, x) { window.__ph.ev.push({ n, p, x }); } };`;
+  capture(n, p, x) { window.__ph.ev.push({ n, p, x }); }, register(o) { window.__ph.reg = o; } };`;
 
 /* a context: env = { dnt, gpc } (navigator overrides), key = stamp a fake key into index.html */
 async function open({ dnt = false, gpc = false, off = false, key = false, hash = "", cookies = [] } = {}) {
@@ -120,6 +120,35 @@ await step("a key: libraries load only after the first question shows; app_load,
   assert.equal(bail.x && bail.x.transport, "sendBeacon", "bail without the beacon transport");
   assert.deepEqual(errors, []);
   console.log("     events:", [...names].join(", "));
+  await ctx.close();
+});
+
+await step("T40: app_load carries the device fields + tier, fps_probe arrives once, the tier is registered on every event", async () => {
+  const { ctx, page, errors } = await open({ key: true, hash: "#" + CODE });
+  await firstQ(page);
+  await page.waitForFunction(() => window.__ph && window.__ph.ev.some(e => e.n === "fps_probe"), null, { timeout: 15000 });
+  const ev = await page.evaluate(() => window.__ph.ev), reg = await page.evaluate(() => window.__ph.reg);
+  const al = ev.find(e => e.n === "app_load").p;
+  for (const k of ["hw_cores", "dev_mem", "dpr", "save_data", "eff_type", "reduced_motion", "reduced_transparency", "contrast", "ios_ver", "webview", "blur_supported", "gpu", "device_tier", "fx", "fx_why"])
+    assert.ok(k in al, "app_load." + k);
+  assert.ok(["weak", "strong"].includes(al.device_tier)); assert.ok(["blur", "dim"].includes(al.fx));
+  assert.deepEqual(al.$set, { device_tier: al.device_tier });
+  assert.deepEqual(reg, { device_tier: al.device_tier, fx: al.fx });
+  const fp = ev.filter(e => e.n === "fps_probe");
+  assert.equal(fp.length, 1);
+  for (const k of ["fps_med", "frame_p95_ms", "dropped_pct", "slow", "fx"]) assert.ok(k in fp[0].p, "fps_probe." + k);
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains("fx-" + window.stemFx.fx)), true);
+  assert.deepEqual(errors, []);
+  console.log("     device:", JSON.stringify({ tier: al.device_tier, fx: al.fx, why: al.fx_why, cores: al.hw_cores, gpu: al.gpu, fps: fp[0].p }));
+  await ctx.close();
+});
+
+await step("T40: the blur gate works with telemetry off (DNT): html.fx-* set, nothing sent", async () => {
+  const { ctx, page, hits, errors } = await open({ dnt: true, key: true, hash: "#" + CODE });
+  await firstQ(page);
+  assert.equal(await page.evaluate(() => /fx-(blur|dim)/.test(document.documentElement.className)), true);
+  assert.equal(hits.length, 0);
+  assert.deepEqual(errors, []);
   await ctx.close();
 });
 
