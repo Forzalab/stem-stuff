@@ -28,7 +28,7 @@ let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addCookies(DIET);
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
@@ -172,7 +172,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const W = 393, H = 852;
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addCookies(DIET);
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
@@ -218,7 +218,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
    them, no sideways scroll at 360px, no pad peek above the keyboard. Desktop sugar keeps its pad on a plain question. */
 for (const [W, H, phone] of [[360, 740, true], [1280, 800, false]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: phone ? 2 : 1, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
   const errors = []; page.on("pageerror", e => errors.push(String(e)));
