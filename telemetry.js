@@ -61,7 +61,24 @@
     try { txt = String(tg.textContent || "").trim().slice(0, 20) || null; } catch (e) { /* ignore */ }
     return { el: el, code: code, x: pct(x, vw), y: pct(y, vh), stage: stage || null, tries_left: typeof tries === "number" ? tries : null, txt: txt };
   }
-  W.__stemTelemetry = { deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  /* WebGL renderer string (T40): one throwaway context; Safari masks it ("Apple GPU"), still a signal on Android/Windows */
+  function gpu(doc) {
+    try {
+      var gl = doc.createElement("canvas").getContext("webgl");
+      if (!gl) return null;
+      var x = gl.getExtension("WEBGL_debug_renderer_info");
+      var r = String(gl.getParameter(x ? x.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || "").slice(0, 80) || null;
+      var lose = gl.getExtension("WEBGL_lose_context"); if (lose) lose.loseContext();
+      return r;
+    } catch (e) { return null; }
+  }
+  /* long tasks (T40): [{s: startTime, d: duration}] → count + total ms of the ones that started in [a, b) */
+  function ltSum(list, a, b) {
+    var n = 0, ms = 0;
+    for (var i = 0; i < list.length; i++) if (list[i].s >= a && list[i].s < b) { n++; ms += list[i].d; }
+    return { n: n, ms: Math.round(ms) };
+  }
+  W.__stemTelemetry = { gpu: gpu, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -70,6 +87,14 @@
   /* ---- state ---- */
   var queue = [], ph = null, loading = false, bailed = false;
   var st = { stage: "start", code: null, openAt: 0, picks: [], taps: [], askAt: 0, tokAt: 0, clAt: 0, clPct: 0, tries: null };
+  var lt = null;   // long tasks seen so far (null = the browser has no longtask timing, e.g. Safari)
+  try {
+    if (W.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).indexOf("longtask") >= 0) {
+      lt = [];
+      new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { if (lt.length < 300) lt.push({ s: e.startTime, d: e.duration }); }); })
+        .observe({ type: "longtask", buffered: true });
+    }
+  } catch (e) { lt = null; }
   var restored = false;
   try { restored = !!(localStorage.getItem("stem-src") || localStorage.getItem("stem-codes")); } catch (e) { /* storage blocked */ }
   var did;   // our anonymous id, shared with PostHog (bootstrap) so an early bail and later events are one person
@@ -121,6 +146,7 @@
         case "cluck_open": st.stage = "cluck"; st.clAt = t; st.clPct = 0; break;
         case "cluck_stream":
           if (p.first_token_ms == null) p.first_token_ms = st.askAt && st.tokAt ? Math.round(st.tokAt - st.askAt) : null;
+          if (lt && st.askAt) { var ls = ltSum(lt, st.askAt, t); p.lt_n = ls.n; p.lt_ms = ls.ms; }   // long tasks while Cluck streamed
           st.askAt = 0; break;
         case "cluck_dwell":
           if (!st.clAt) return;
@@ -184,13 +210,26 @@
       var nav = W.performance && performance.getEntriesByType ? performance.getEntriesByType("navigation")[0] : null;
       var mq = function (q) { try { return matchMedia(q).matches; } catch (e) { return false; } };
       var s = null; try { s = new URLSearchParams(location.search).get("s"); } catch (e) { /* old browser */ }
-      stemT("app_load", {
+      var p = {
         ms_to_first_q: Math.round(now()), nav_type: nav ? nav.type : null, restored_progress: restored, s: s,
         display_mode: N.standalone || mq("(display-mode: standalone)") ? "standalone" : "browser",
         prefers_color_scheme: mq("(prefers-color-scheme: light)") ? "light" : "dark", has_code: !!st.code
-      });
+      };
+      var fx = W.stemFx;   // fx.js: device fields + the blur gate's verdict (T40)
+      if (fx) {
+        for (var k in fx.info) p[k] = fx.info[k];
+        p.gpu = gpu(D); p.device_tier = fx.tier; p.fx = fx.fx; p.fx_why = fx.why.join(",") || null;
+        p.$set = { device_tier: fx.tier };
+      }
+      stemT("app_load", p);
     } catch (e) { /* ignore */ }
   }
+
+  /* fx.js's once-per-session frame probe, and long tasks in the first 10 s */
+  function fpsSend(r) { if (r && !st.fpsSent) { st.fpsSent = true; var q = {}; for (var k in r) if (k !== "bad") q[k] = r[k]; q.slow = r.bad; send("fps_probe", q); } }
+  W.addEventListener("stem-fx-probe", function (e) { fpsSend(e.detail); });
+  if (W.stemFx && W.stemFx.fps) fpsSend(W.stemFx.fps);
+  setTimeout(function () { if (lt) { var l = ltSum(lt, 0, 10000); send("long_tasks", { phase: "load", n: l.n, ms: l.ms }); } }, 10000);
 
   /* ---- loaders (after the first question is on screen, when the browser is idle) ---- */
   function loadPostHog() {
@@ -213,6 +252,7 @@
           session_recording: { maskAllInputs: true, maskInputFn: function (t) { return blankPII(t); }, maskTextSelector: "*", maskTextFn: function (t) { return blankPII(t); } },
           loaded: function (inst) {
             ph = inst;
+            if (W.stemFx) try { inst.register({ device_tier: W.stemFx.tier, fx: W.stemFx.fx }); } catch (e) { /* old lib */ }   // on every event (T40)
             var q = queue.splice(0);
             for (var i = 0; i < q.length; i++) { try { inst.capture(q[i].event, q[i].properties, { timestamp: new Date(q[i].timestamp) }); } catch (e) { /* skip */ } }
           }

@@ -120,3 +120,11 @@ test("dead_tap context: x/y as viewport %, stage, tries_left, txt (20 chars); mi
   assert.doesNotThrow(() => T.deadProps({ get textContent() { throw new Error("x"); } }, "", 1, 1, 1, 1));
   assert.equal(T.deadProps({ textContent: "z" }, "e", 9999, -5, 100, 100).x, 100);
 });
+
+test("T40 ltSum: long tasks inside a window", () => {
+  const T = run().win.__stemTelemetry;
+  const l = [{ s: 100, d: 60 }, { s: 9000, d: 120.4 }, { s: 12000, d: 80 }];
+  assert.deepEqual({ ...T.ltSum(l, 0, 10000) }, { n: 2, ms: 180 });
+  assert.deepEqual({ ...T.ltSum(l, 10000, 20000) }, { n: 1, ms: 80 });
+  assert.equal(T.gpu({ createElement: () => ({ getContext: () => null }) }), null, "no WebGL: null, no throw");
+});
