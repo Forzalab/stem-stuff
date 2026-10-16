@@ -81,7 +81,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   for (const mode of ["sugar", "diet"]) {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* blocked */ } });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* blocked */ } });
     await ctx.addCookies(mode === "diet" ? [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }] : [{ name: "stem-mode-v", value: "2", url: BASE }]);
     const page = await ctx.newPage();
     page.setDefaultTimeout(10000);
