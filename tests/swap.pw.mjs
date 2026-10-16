@@ -36,7 +36,7 @@ for (const [W, H] of SIZES) {
   const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });   // onboarding: flow.pw checks it
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // onboarding: flow.pw checks it
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(String(e)));

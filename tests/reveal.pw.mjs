@@ -64,7 +64,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const mk = async (diet) => {
     const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block" });
-    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     if (diet) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     const page = await ctx.newPage(), log = watch(page);
     await openBank(page);

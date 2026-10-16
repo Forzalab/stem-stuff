@@ -59,7 +59,7 @@ async function upload(page, f) {
 async function fresh(browser, vp) {
   const phone = vp.width < 600;
   const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
-  await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); } catch { /* blocked */ } });
+  await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   const page = await ctx.newPage();
   await page.goto(BASE + "/"); await page.waitForTimeout(500);
   return { ctx, page };

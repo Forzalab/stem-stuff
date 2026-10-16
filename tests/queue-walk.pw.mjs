@@ -72,7 +72,7 @@ const browser = await pw[ENGINE].launch(ENGINE === "chromium" ? { args: ["--no-s
 const errors = [];
 try {
   const ctx = await browser.newContext({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: ENGINE === "chromium", serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   const page = await ctx.newPage();
   page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
   page.on("pageerror", e => errors.push(String(e)));
