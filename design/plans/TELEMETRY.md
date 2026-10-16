@@ -46,18 +46,22 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 
 | event | props | where |
 |---|---|---|
-| `app_load` | ms_to_first_q, nav_type, restored_progress (had `stem-src`/`stem-codes` before boot), s (`?s=` share channel), display_mode (standalone/browser), prefers_color_scheme, has_code | telemetry.js, when `stemFirst` resolves |
+| `app_load` | ms_to_first_q, nav_type, restored_progress (had `stem-src`/`stem-codes` before boot), s (`?s=` share channel), display_mode (standalone/browser), prefers_color_scheme, has_code; device (T40, from fx.js): hw_cores, dev_mem, dpr, save_data, eff_type, reduced_motion, reduced_transparency, contrast, ios_ver, webview, blur_supported, gpu (WebGL renderer), device_tier (weak/strong, also `$set` + registered on every event), fx (blur/dim), fx_why | telemetry.js, when `stemFirst` resolves |
 | `q_open` | code, bank, type, mode (sugar/diet, the cookie) | app.js `load()` after `render()` |
 | `pick` | code, choice, part, right, verdict, tries_left, ms_since_open (since q_open), sure (null until the bet, D52) | app.js `record()` (MC, pick-all, typed, parts) |
 | `guess_spam` | code, why (`fast` = pick <2 s after open, `burst` = 3rd pick in 10 s), ms_since_open, picks_10s | telemetry.js, on a graded pick |
 | `cluck_open` | tab, auto, code | app.js `clOpen()` |
-| `cluck_stream` | code, chars, failed, auto, first_token_ms | app.js `wishStart()` end; `_ask` / `_tok` marks (not sent) time the first chunk |
+| `cluck_stream` | code, chars, failed, auto, first_token_ms, lt_n + lt_ms (long tasks while it streamed; absent where the browser has no longtask timing) | app.js `wishStart()` end; `_ask` / `_tok` marks (not sent) time the first chunk |
 | `cluck_dwell` | ms, scrolled_pct, code | app.js `clClose()`; also on bail while open. Scroll measured on `#cluck .cl-bd` |
 | `tab_away` | during (stream/question/start), stage, code | telemetry.js, `visibilitychange` → hidden / `pagehide` |
 | `rage_tap` | el, stage, code | telemetry.js: ≥3 taps in 700 ms within 30 px |
 | `dead_tap` | el, code | telemetry.js: tap on `.fig .katex .md .pcode .ptitle .chg-chip` not inside a control |
 | `bail` | stage (start/open/wrong/right/cluck/next), via (hidden/pagehide), ms_on_page, code | telemetry.js, `transport: sendBeacon` + `send_instantly`; raw beacon if not loaded |
 | `next` | code | telemetry.js, click on `#qnext` (capture; nav.js untouched) |
+| `fps_probe` | fps_med, frame_p95_ms, dropped_pct, slow (p95 > 24 ms or median > 20 ms), fx (gate state during the sample) | fx.js: 2 s rAF sample once per session, after the first question, on idle |
+| `long_tasks` | phase (`load`), n, ms (long tasks that started in the first 10 s) | telemetry.js, 10 s after start; not sent without longtask timing (Safari) |
+
+Blur gate (T40, `fx.js`, brain analytics-2026-10-13/DEVICES.md): `html.fx-dim` instead of `fx-blur` when reduced transparency, Save-Data, no backdrop-filter, iOS < 17, deviceMemory ≤ 4, cores ≤ 4 (only when deviceMemory is unknown and not iOS), or a slow `fps_probe` (latched: localStorage `stem-fx=dim`). Runs with telemetry off too (it is app behaviour); only telemetry sends the result. CSS hook: `.glass` in app.css.
 
 Plus PostHog `$pageview`, `$pageleave` (with PostHog's own browser / device / referrer properties). NOT on: autocapture and session replay (`autocapture: false, disable_session_recording: true`, bench 2026-10-07: both on = +202 ms TBT); Clarity (build flag, above).
 

@@ -638,6 +638,10 @@ body { --cl-edge: var(--edge); }   /* the site's edge: inside the sheet .ai-box 
 html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }
 html.cl-open body { overflow: hidden; }
 .cl-dim { display: none; }
+/* blur gate (20261013-T40, fx.js): a .glass surface blurs only on html.fx-blur, and minimally (Tony: "blur minimally").
+   html.fx-dim (weak device, reduced transparency, Save-Data, no backdrop-filter) gets a plain dim instead: no backdrop-filter at all */
+html.fx-blur .glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+html.fx-dim .glass { background-color: color-mix(in srgb, var(--paper) 86%, transparent); }   /* nearly opaque --paper */
 html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }   /* a tap above the sheet closes it */
 /* header H3a (Tony, Oct 13): 48px duck avatar, a solid green dot cut out of it by a 4px gap ring, the PEACH name at 21px, TUTOR, the X in a 10px squircle */
 .cl-bar { flex: none; display: flex; align-items: center; gap: var(--s3); width: auto; min-height: 68px; padding: var(--s2) var(--s2) var(--s2) var(--cl-in); }
