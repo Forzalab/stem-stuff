@@ -1665,6 +1665,20 @@ function rewardTry(a, r) {
   const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
   rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0,
     reveal: r.verdict !== "correct" && r.correct != null });                    // T19: the answer was shown = 0 XP, still a miss
+  if (r.verdict === "wrong" && !(r.triesLeft > 0)) { const mine = S; requestAnimationFrame(() => rwTip("miss", $("#rwHud .rw-streak"), mine)); }   // T37: a final miss only (C12)
+}
+/* T37 sugar onboarding (Tony, Oct 15: V1 toast trail): the HUD explains itself one beat at a time, the moment each piece moves, in #toast
+   with the caret on that piece. Per device, its own keys (stem-ob-rw-<beat> = times shown), so a device that knew the app before rewards
+   still meets the HUD once. The miss beat comes back twice more with the duck's line (the student knows the UI by then); the others
+   show once. A wrong-answer note or a drop banner owns the slot; an anchor off screen or hidden (C1) waits for the next time. No dead-easy. */
+const RW_TIPS = { right: ["Points. They only ever go up."], three: ["3 cracked. Tap for your progress."],
+  miss: ["A miss pauses it. It never resets.", "Missed? It waits. The duck saw nothing.", "Missed? It waits. The duck saw nothing."] };
+function rwTip(beat, at, mine = S) {
+  if (S !== mine || mine.prob.dead || toastAt || !rwSeen(at)) return false;
+  const k = "stem-ob-rw-" + beat;
+  try { const n = +localStorage.getItem(k) || 0; if (n >= RW_TIPS[beat].length) return false; localStorage.setItem(k, String(n + 1)); toast(RW_TIPS[beat][n], at); }
+  catch { return false; }
+  return true;
 }
 function rewardMulti(mine) {
   if (!rewardOn() || S !== mine || !S.solved) return;
@@ -1769,9 +1783,9 @@ async function rewardShow(mine, res) {
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
   if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
-  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 450);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
+  const hudDone = fx.hud ? fx.hud(() => RW().render(res.xp + held)) : wait(450).then(() => RW().render(res.xp + held));   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); return; }
+  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else Promise.resolve(hudDone).then(() => rwTip("right", coin, mine)); return; }   // T37: the coin, once it shows
   await wait(600);
   if (res.drop && fx.slots) await fx.slots(res.drop);
   if (res.burst && fx.burst) {
@@ -1781,7 +1795,7 @@ async function rewardShow(mine, res) {
   }
   const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
   if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
-  else if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+  else if (line && fx.toast) { hideToast(); if (line !== "3 cracked" || res.toast || !rwTip("three", rwHud, mine)) fx.toast(line, res.toast ? res.sub || res.streakNote : null); }   // T37: the first "3 cracked" is the HUD's beat
 }
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {

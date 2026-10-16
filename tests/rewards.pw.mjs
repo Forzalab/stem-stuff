@@ -65,10 +65,13 @@ const watchFx = async page => { await page.waitForFunction(() => !document.query
 const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().toJSON() : null; }), sels);
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
+/* every context but the onboarding step's: the new-device notes and the HUD's (T37) are already seen, so "#toast stays off" stays true */
+const obDone = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+  await ctx.addInitScript(obDone);
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   await typeCode(page, "BANK_RW12");
@@ -172,7 +175,7 @@ try {
 
   await step("a snack marks what it changed: the chip, its number, and the original's number in the question and the steps (TODO A)", async () => {
     const cc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-    await cc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await cc.addInitScript(obDone);
     const d = await cc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");
     assert.equal(await d.textContent("#blocks .chg-chip"), "Changed: 2 → 4 N/m");
@@ -187,7 +190,7 @@ try {
 
   await step("the original beside a snack fades: whole solution, then the last line behind Peek (2 XP), then folded", async () => {
     const dc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-    await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await dc.addInitScript(obDone);
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
@@ -243,7 +246,7 @@ try {
     assert.equal(await d.$$eval("#orig .rw-free", f => f.length), 0, "no FREE at level 3: looking again before answering is a peek");
     await dc.close();
     const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-    await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await pc.addInitScript(obDone);
     const p = await pc.newPage();
     await p.goto(BASE + "/#CALC1_S01"); await opened(p, "CALC1_S01");
     assert.equal(await p.$eval("#orig", e => e.parentElement.id), "freezeIn", "phone: on top of the problem");
@@ -290,7 +293,7 @@ try {
 
   await step("phone 390x844: the HUD is its own row under the nav, clear of the nav, the code bar and the Scratchpad button", async () => {
     const ph = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-    await ph.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await ph.addInitScript(obDone);
     const p2 = await ph.newPage();
     await p2.goto(BASE + "/");
     await typeCode(p2, "BANK_RW12");
@@ -308,7 +311,7 @@ try {
   await step("a wrong pick with a try left shakes once; the closing right pick does not pulse (T17b-1 one blink); reduced motion: nothing moves (Tony, Oct 6 TK1)", async () => {
     for (const rmode of ["no-preference", "reduce"]) {
       const cx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: rmode, serviceWorkers: "block" });
-      await cx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+      await cx.addInitScript(obDone);
       const p5 = await cx.newPage();
       await p5.goto(BASE + "/#CALC1_R03"); await opened(p5, "CALC1_R03");
       await p5.evaluate(() => { window.__nudge = []; new MutationObserver(ms => { for (const m of ms) { const t = m.target; if (t.classList && t.classList.contains("opt"))
@@ -331,7 +334,7 @@ try {
 
   await step("reduced motion: a correct answer pays but makes no particles", async () => {
     const rm = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
-    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await rm.addInitScript(obDone);
     const p3 = await rm.newPage();
     await p3.goto(BASE + "/#CALC1_R02"); await opened(p3, "CALC1_R02");
     await watchFx(p3);
@@ -344,7 +347,7 @@ try {
 
   await step("reduced motion: the players still show, muted and playing, and the link hides / shows them (Tony, Oct 6: it was a dead click)", async () => {
     const rm = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
-    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await rm.addInitScript(obDone);
     const p4 = await rm.newPage();
     await p4.goto(BASE + "/#CALC1_S01"); await opened(p4, "CALC1_S01");
     await p4.waitForSelector("#work > #rot.docked:not([hidden])", { timeout: 4000 });
@@ -356,6 +359,33 @@ try {
     await p4.click("#rot .rot-link");
     assert.deepEqual(await st(), [false, "Hide curated brainrot"], "Show works");
     await rm.close();
+  });
+  await step("T37 onboarding (a device that never saw the HUD): the coin's beat at the first right, the count's at a final miss (then the duck's line), 3 cracked on the HUD", async () => {
+    const oc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+    await oc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    const po = await oc.newPage(), seen = { right: [], miss: [], three: [] };
+    const tip = async (text, beat) => {
+      await po.waitForFunction(t => { const e = document.querySelector("#toast"); return e.classList.contains("on") && e.textContent === t; }, text, { timeout: 6000 })
+        .catch(async e => { throw new Error(e.message + " | " + text + " | " + JSON.stringify(await po.evaluate(() => [document.querySelector("#toast").className, document.querySelector("#toast").textContent]))); });
+      const [t, at] = await rects(po, ["#toast", { right: "#rwCoin", miss: "#rwHud .rw-streak", three: "#rwHud" }[beat]]);
+      assert.ok(t.top >= at.bottom && t.left < at.right && t.right > at.left, beat + ": under its anchor " + JSON.stringify([t, at]));
+      seen[beat].push(await po.evaluate(b => localStorage.getItem("stem-ob-rw-" + b), beat));
+      await po.click("#toast"); await po.waitForSelector("#toast:not(.on)", { state: "attached" });
+    };
+    const miss = async code => {
+      await go(po, code); await pick(po, "b");
+      await po.waitForTimeout(400); if (await po.isVisible("#toast.on")) await po.click("#toast");   // a "one more try" note owns the slot: close it
+      await pick(po, "c");
+    };
+    await po.goto(BASE + "/#CALC1_R01"); await opened(po, "CALC1_R01");
+    await rig(po, [0.5, 0.99]); await pick(po, "a");
+    await tip("Points. They only ever go up.", "right"); await quiet(po);
+    await miss("CALC1_R02"); await tip("A miss pauses it. It never resets.", "miss");
+    await miss("CALC1_R03"); await tip("Missed? It waits. The duck saw nothing.", "miss");
+    for (const c of ["CALC1_S01", "CALC1_S02"]) { await quiet(po); await go(po, c); await rig(po, Array(8).fill(0.99)); await pick(po, "a"); }
+    await tip("3 cracked. Tap for your progress.", "three");
+    assert.deepEqual(seen, { right: ["1"], miss: ["1", "2"], three: ["1"] });
+    await oc.close();
   });
 } finally {
   await browser.close();

@@ -220,6 +220,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 ### Toast (`#toast`)
 
 - Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
+- Sugar onboarding (T37, Oct 15, V1 toast trail): the reward HUD explains itself in this toast, one beat the first time each piece moves, caret on that piece. Per device (`stem-ob-rw-<beat>` = times shown; a device that knew the app before rewards still sees them). "Points. They only ever go up." (first right answer, on the coin, 1×) · "A miss pauses it. It never resets." (a final miss, never while a try is left, on the count) then "Missed? It waits. The duck saw nothing." the next 2 times · "3 cracked. Tap for your progress." (replaces the first "3 cracked" banner, on the HUD, 1×). No dead-easy item; a hidden or off-screen anchor waits for the next time.
 - Anatomy: page `--paper`, `--bw` `--line` border (was 1.5px; unified Oct 3), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
 - Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
 - Timing: in `--d-move`, stays 2 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
@@ -330,7 +331,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 - Errors say what happened and what to do. No apology, no blame.
 - No exclamation marks, no "Oops", no "Great job!". Calm, not cheerful.
 - **Cluck's voice** ("QUACK." then one short question or nudge) appears only inside the Cluck hint. Never in buttons, toasts or errors.
-- **Humour lives in content and easter eggs** (Cluck, a bank's own lines, the scratchpad placeholder "Paste GPT answer here, but me be sad...", lowercase where it is a wink). Never in chrome: buttons, toasts, errors, labels. The wrong-answer toast's "choose wisely" is the only edge it has.
+- **Humour lives in content and easter eggs** (Cluck, a bank's own lines, the scratchpad placeholder "Paste GPT answer here, but me be sad...", lowercase where it is a wink). Never in chrome: buttons, toasts, errors, labels. The wrong-answer toast's "choose wisely" is the only edge it has. One exception (Tony, Oct 15): the sugar miss beat's repeats, "Missed? It waits. The duck saw nothing." (the joke is on the duck, never the student).
 
 ### Keyboard
 
