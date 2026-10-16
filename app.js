@@ -1535,6 +1535,16 @@ function clClose() {
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
 }
+/* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
+   (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
+   his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
+window.stemCluckOpen = () => !!cl && cl.open;
+window.stemIdleTap = () => {
+  const said = !!wish && wish.started && !wish.failed;
+  if (said || origEl) { clOpen(said ? "explain" : "steps", null); return; }
+  const b = [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
+  if (b) { b.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
+};
 /* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
    sits over the question there), then the sheet's top sits two lines below the question text's first line (at most 45% down: the chat keeps room) */
 function clTop() {
