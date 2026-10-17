@@ -74,14 +74,14 @@
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
      the idle one (ok()): sugar, a bank, Cluck's sheet closed, nothing else over the page, one duck. Plus a cooldown since the last peek. It
      does not use up the idle peeks (n). Not retried: if it is busy at that moment, this question gets none. */
-  var WRONG_MS = 700, COOL = 120000, wt = 0, wrongDone = {}, lastRise = -COOL;
+  var WRONG_MS = 700, CALM_MS = 2500, COOL = 120000, wt = 0, calm = 0, wrongDone = {}, lastRise = -COOL;
   function wrong(code) {
     if (!code || wrongDone[code]) return;
     wrongDone[code] = 1; clearTimeout(wt);
     wt = setTimeout(function () {
       wt = 0;
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
-      mine = true; lastRise = performance.now();
+      mine = true; lastRise = performance.now(); calm = lastRise + CALM_MS;
       rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
         onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
     }, WRONG_MS);
@@ -96,6 +96,7 @@
   }
   function move(e) {                                                        // a resting hand jitters: count travel, not events
     if (mx == null) { mx = e.clientX; my = e.clientY; return; }
+    if (mine && performance.now() < calm) return;                           // the wrong-answer peek: a hand on the mouse right after a pick must not put it away (2.5 s); taps, keys, wheel still do
     if (Math.hypot(e.clientX - mx, e.clientY - my) >= MOVE) input(e);
   }
   var opt = { capture: true, passive: true };

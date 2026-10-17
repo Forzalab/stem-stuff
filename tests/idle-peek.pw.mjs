@@ -253,6 +253,30 @@ for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["d
   });
 }
 
+await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up (2.5 s calm), a click puts him away; after the calm a move does", async () => {
+  const page = await open({ vp: { width: 1440, height: 900 } });
+  await wrongPick(page);
+  await page.mouse.move(700, 400);
+  await idle(page, 1600);                                              // 0.7 s wait + 0.9 s up
+  assert.equal(await up(page), true, "up");
+  await page.mouse.move(800, 500); await page.mouse.move(900, 450);
+  await idle(page, 100);
+  assert.equal(await up(page), true, "a 100px move in the calm does not dismiss");
+  await nudge(page);
+  await idle(page, 800);
+  assert.equal(await up(page), false, "a click puts him away");
+  await page.context().close();
+  const p2 = await open({ vp: { width: 1440, height: 900 } });
+  await wrongPick(p2);
+  await p2.mouse.move(700, 400);
+  await idle(p2, 1600);
+  await idle(p2, 2000);                                                // past the calm
+  await p2.mouse.move(900, 500); await p2.mouse.move(700, 300);
+  await idle(p2, 800);
+  assert.equal(await up(p2), false, "after the calm a move dismisses as before");
+  await p2.context().close();
+});
+
 await step("a wrong answer: no peek while Cluck's sheet is open, none in diet; an input in the 0.7 s cancels it", async () => {
   const page = await open({});
   await page.evaluate(() => { window.__open = true; const f = window.stemCluckOpen; window.stemCluckOpen = () => window.__open || f(); });
