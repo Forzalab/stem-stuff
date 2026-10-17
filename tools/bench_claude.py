@@ -76,7 +76,7 @@ PROBLEMS = [
 CHAT_Q = {"BENCH_CART": "why doesnt the first cart just keep going 3?", "BENCH_POW": "why divide by time and not multiply?",
           "BENCH_WORK": "why is it negative if the box moved?", "BENCH_SLOPE": "isnt slope just plugging in x?"}
 GENIE_MAX, CHAT_MAX = 450, 250                       # the server's max_tokens for /explain and /chat
-GENIE_WORDS, CHAT_WORDS = 260, 110                   # word budget the checker allows
+GENIE_WORDS, CHAT_WORDS = 140, 90                    # word budget the checker allows (the short GPT-shape prompt; was 260, 110)
 
 
 def cases():
