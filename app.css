@@ -501,6 +501,8 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
 .q.closed :is(.ch, .opt) { transition: none; }
 html:has(#q.closed) :is(#work, #fb) { transition: none; }
+/* a reward overlay is up (a burst still playing when the next answer comes in): the page behind it does not tween, so the tap is not a second moving group (one blink) */
+html:has(.fx-ov) :is(.ch, .opt, .btn, #problem, #work, #fb) { transition: none; }
 /* fix A (sugar right row / box): the row is V1's, as in diet; a 3px --field ring round a 44px Next face keeps the green face off the green ring.
    Sugar moves the mc slot 4px in from the ring (Check too, so its rect stays inside Next) */
 html.sugar .ch :is(.send, .nx) { right: 6px; }
