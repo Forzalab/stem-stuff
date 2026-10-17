@@ -154,6 +154,14 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 - **Fades** smooth an edge where content meets something that does not scroll with it. Allowed: scroll edges under a pinned bar (the phone top bar, the phone bottom dock: `app.css` "scroll edges"), and overflow / peek fades on a box that scrolls inside (the freeze strip's `.clipped` mask, the Swap peek's bottom fade, a hint steps peek). The fade goes from the bar's own background token (exactly; never a near colour) to transparent, on the edge that faces the content: `--s3` to `--s5` (12-24px) for a scroll edge, up to 2.5rem for an overflow mask. It sits outside the bar's box with `pointer-events: none` (nothing moves, every tap passes through) and is invisible at rest: it lies on empty page, or shows only once the page has scrolled (a class, `html.scrolled`; never a scroll-driven or looping animation: `rewards/fx.js` waits for the page's animations to end). Never a gradient band as a divider or a background, never a gradient fill on a button or text.
 - **Glows** only on a floating AI surface (Cluck's sheet: `--ai-glow` from the top, brighter while Cluck types). Soft and warm, in that surface's own accent, blending into its background: a radial gradient fading to transparent by 70% of its size, or a blur of 24-64px with no spread. Peak alpha 0.3 at the source (`--ai-glow`), about 0.2 at rest (it rests at 60%). One glow per screen. No hard-edged, neon or coloured-ring glow, and none on flow content, cards, buttons or focus states (focus is the one `--focus` ring).
 
+#### Question box height (phones)
+
+Rule: on a phone, the top of the first answer choice peeks above the fold when a question loads. Prefer a shorter card over a scroller, in this order:
+
+1. **Figures** are capped at 28svh (`graph.js`): a taller one is redrawn narrower and centred (never below 60% of the width), so labels keep their size and place. Spacing uses the usual tokens.
+2. Phones show the whole problem in the page (a locked rule, tests/bar and fab): no cap, no inner scroller on the card text.
+3. Tablet and desktop are unchanged. Not on the Cluck chat, hint panel, or choices.
+
 ### 2.8 Motion
 
 | token (proposed) | value | for |
