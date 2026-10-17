@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 KINDS = {"cartesian": {"fn", "shade", "vline", "hline", "point", "seg", "arrow", "arc", "poly", "text"},
          "scene": {"body", "spring", "pulley", "rope", "surface", "incline", "force", "pivot", "point", "seg", "arrow", "arc", "text"},
          "bars": set(), "network": set()}
-MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX_PTS, MAX_ALT = 3000, 12, 6, 8, 16, 3, 4, 12, 200
+MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX_PTS, MAX_ALT = 3000, 12, 6, 12, 30, 3, 4, 12, 200
 GEOM_MAX = 1e4                     # any number in the figure: finite, |v| <= this
 # Fields whose numbers are DATA (shown, or drawn from as a value): they must come from the givens and never be the answer.
 # Every other number is free layout geometry (positions, sizes, axis ranges), only capped.
@@ -136,7 +136,7 @@ class Ctx:
 def context(code, question, key, answer_values, more=""):
     """givens = numbers in the question text, `more` (shown choices, sheet formulas) and the KEY's work, plus 0-10; answers = the hidden
     unknown's value(s) (and a \\boxed{} in the KEY) that the question text itself does not already show"""
-    q = nums(question)
+    q = nums(question) + [float(WORD_NUMS[w]) for w in re.findall(r"[a-z]+", str(question).lower()) if w in WORD_NUMS]   # "five miles" is given
     boxed = [n for b in re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", str(key)) for n in nums(b)]
     ans = [abs(a) for a in [*answer_values, *boxed] if math.isfinite(a) and a != 0 and not any(_eq(abs(a), g) for g in q)]
     ans += [a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10]   # the unknown in another unit / power of ten: 23.3 -> 2.33
@@ -158,6 +158,10 @@ def _walk(v, key, out):
     return out
 
 
+STEP_RE = re.compile(r"^\d{1,2}$")
+WORD_NUMS = {w: i for i, w in enumerate("zero one two three four five six seven eight nine ten eleven twelve".split())}
+
+
 def _labels(g):
     n = 0
     for m in g.get("marks", []):
@@ -168,7 +172,7 @@ def _labels(g):
     for gr in g.get("groups", []):
         n += 1 + len(gr.get("bars") or [])
     n += sum(1 for x in g.get("nodes", []) if isinstance(x, dict) and "label" in x)
-    n += sum(1 for e in g.get("edges", []) if "label" in e)
+    n += sum(1 for e in g.get("edges", []) if "label" in e and not STEP_RE.match(str(e["label"])))   # "1", "2": the step order, free
     return n
 
 
@@ -306,11 +310,17 @@ def weave(system):
 
 
 RULE = """
-FIGURE (the one exception to "no code" in Format: this fence is allowed): most replies carry ONE figure (never two) whenever a picture helps: a free-body diagram, a graph, energy bars, a network, an orbit. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON.
+FIGURE (the one exception to "no code" in Format: this fence is allowed): draw ONE figure (never two) in every reply unless the reply is pure arithmetic with nothing to picture. Read the intent and match the kind to the subject:
+- graphs and trees (MST, Kruskal, Prim, shortest path, Dijkstra, coloring, BFS/DFS): "network" with the question's vertices and weighted edges ("w"); the edges chosen so far get "color":"c1" and "label" "1", "2", ... in the order chosen (the step-by-step picture); a coloring colors the nodes.
+- forces, free-body, incline, spring, pulley: "scene" with the body and every force arrow.
+- motion over time, F-x, PV, work as an area: "cartesian", the area shaded.
+- energy before/after, an energy split: "bars".
+- orbits: "scene": a disk for the planet, a dot for the satellite, an arc for the orbit, the force arrow toward the center, radii as seg.
+Physics never uses "network"; a graph-theory question always does. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON.
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
 - "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}.
 - "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text.
 - "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
-- "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b"}].
+- "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 12 nodes, 30 edges).
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.
 The figure shows the SETUP: the objects, the forces or the given values, and the steps' inputs. Numbers in labels, text, values and expressions: copy them exactly as the QUESTION or the KEY writes them, never round or compute a new one; when unsure, use a symbol ("$mg$", "$d$") instead. Never the answer or the unknown's value, not even in another unit: label the unknown with its symbol and "?" ("$k = ?$")."""

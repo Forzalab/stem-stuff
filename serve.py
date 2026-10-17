@@ -973,10 +973,21 @@ def skill_ideas(p):
     return [_skills[i] for i in (sugar(p).get("skills") or []) if i in _skills]
 
 
+def network_data(b):
+    """a network block's vertices and edges as text (" Vertices: A B. Edges: A-B 4, ..."), "" for any other figure: Cluck redraws the
+    graph step by step in a live figure, so he needs the edges and weights, not only the alt"""
+    if b.get("kind") != "network" or not b.get("nodes"):
+        return ""
+    ids = [n if isinstance(n, str) else n.get("id", "") for n in b["nodes"]]
+    es = [f"{e['from']}{'->' if b.get('directed') else '-'}{e['to']}" + (f" {e['w']:g}" if isinstance(e.get("w"), (int, float)) else "")
+          for e in b.get("edges", [])]
+    return " Vertices: " + " ".join(ids) + ". Edges: " + ", ".join(es) + "."
+
+
 def explain_prompt(p, answer):
     """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
     text = "\n".join("\n".join(m) if isinstance(m, list) else m for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))   # md may be a list of lines
-    figs = "\n".join("Figure: " + b["alt"] for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
+    figs = "\n".join("Figure: " + b["alt"] + network_data(b) for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
     lines = [f"QUESTION:\n{text}", figs]
     if p.get("type") == "mc":
         lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
@@ -1130,7 +1141,17 @@ def claude_ok():
 
 # Counters Claude's habits; appended to the shared base prompt on the Claude path only (FORMAT and VOICE stay the rule).
 CLAUDE_DELTA = """
-Plain talk: start with the idea itself, never "Great question" or praise. No caveats, no hedging ("it might be", "generally"), no recap at the end. No # headers and no bullet lists beyond the "- " lines FORMAT allows. Say it once, short, and stop."""
+Plain talk: never "Great question" or praise, no caveats, no hedging, no recap. No # headers.
+SHORT WINS (this replaces the Order's steps, the --- line and the pun above). A wish is only this, 40 to 60 words of prose in all, one line each:
+QUACK line: a QUACK and one (action), nothing else.
+What their pick assumed, one sentence in their move's words.
+When a figure rule follows, the figure goes right here: short replies still draw.
+The move that fixes it, one sentence.
+Two or three lines, each ONE $$...$$ equation with the given numbers plugged in.
+$$\\boxed{...}$$ with the unit.
+"Pick <letter>." alone on the last line ("Pick b and d." for several; a question in parts: the boxed values, then stop).
+No numbered steps, no "- " lines, no --- line, no pun, never a paragraph over 2 sentences.
+A chat reply: 2 or 3 short sentences (under 50 words of prose) and at most two $$ lines: the gut idea, the math that settles it, what their question assumed."""
 
 
 # Thinking off or least, per model (claude-api skill): Haiku 5.5 takes disabled (effort <= high); Sonnet 5.5 400s on disabled, its
@@ -1254,7 +1275,8 @@ def fig_ctx(p, answer, chat=False):
         hidden_vals = [n for u in p.get("parts", []) for n in livefig.nums(u.get("answer", ""))]
     else:
         hidden_vals = livefig.nums(p.get("answer", ""))
-    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet)
+    nets = " ".join(network_data(b) for b in p.get("body", []) if b.get("type") == "graph")   # edge weights are givens
+    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets)
 
 
 def _stream_head(cookie_header):
