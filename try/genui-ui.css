@@ -68,7 +68,7 @@ body { padding: 0 0 var(--s7); overflow-x: hidden; }
 .table { display: flex; align-items: center; gap: var(--s3); margin: var(--s3) 0 0; min-height: var(--btn); padding: 0 var(--s3); border-radius: 8px; background: var(--sheet); }
 .table .pile { display: inline-flex; gap: var(--s1); min-width: 2.75rem; }
 .table .pile .coin { opacity: 0.5; }   /* not bet yet: dimmed, still >= 3:1 on the table (0.25 was 1.75) */
-.table.on .pile .coin { opacity: 1; animation: coin-in .2s ease-out both; }
+.table.on .pile .coin { opacity: 1; animation: coin-in .3s ease-out both; }
 .table .say { flex: 1 1 auto; font-size: var(--t-sm); color: var(--muted); }
 .table button { min-height: 44px; padding: 0 var(--s3); border-radius: 8px; border: var(--bw) solid var(--edge); background: transparent; color: var(--ink); font-weight: 700; font-size: var(--t-sm); }
 .table.lost .pile .coin { opacity: 0.6; }
@@ -83,7 +83,7 @@ body { padding: 0 0 var(--s7); overflow-x: hidden; }
 
 /* #fb: affirm + lock line */
 .fb { margin: var(--s4) 0 0; }
-.affirm { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--s3); align-items: center; background: var(--sheet); border-radius: 10px; padding: var(--s3); animation: fade-in .2s ease-out both; }
+.affirm { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--s3); align-items: center; background: var(--sheet); border-radius: 10px; padding: var(--s3); animation: fade-in .3s ease-out both; }
 .affirm .thumb { min-height: 0; margin: 0; }
 .affirm p { margin: 0; }
 .affirm .joke { color: var(--muted); font-size: var(--t-sm); margin-top: var(--s1); }
@@ -122,11 +122,11 @@ body { padding: 0 0 var(--s7); overflow-x: hidden; }
 .clk .ask input::placeholder { color: var(--help-muted); opacity: 1; }
 .clk .ask input:focus { outline: var(--ring) solid var(--help); outline-offset: 0; }
 .clk .ask .send { width: var(--btn); height: var(--btn); border-radius: 50%; border: 0; background: var(--help); color: var(--help-ink); display: grid; place-items: center; }
-.clk .chunk { animation: fade-in .12s ease-out both; }
+.clk .chunk { animation: fade-in .18s ease-out both; }
 
 /* v1 + v2: the partial sheet (RUNTIME §2 proposal; the real rule would be html:not(.side) .cl.part) */
 .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: min(45svh, 420px); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-4);
-  padding: 0 var(--gut) calc(var(--s4) + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; transform: translateY(0); animation: sheet-up .2s ease-out both; }
+  padding: 0 var(--gut) calc(var(--s4) + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; transform: translateY(0); animation: sheet-up .3s ease-out both; }
 .sheet .grab { display: flex; justify-content: center; align-items: center; height: var(--s5); margin: 0 calc(-1 * var(--gut)); border: 0; width: calc(100% + 2 * var(--gut)); background: transparent; }
 .sheet .grab span { width: 2.5rem; height: 4px; border-radius: 2px; background: var(--help-muted); }
 .sheet.full { height: min(88svh, 760px); }
@@ -142,13 +142,13 @@ body.has-sheet .app { padding-bottom: calc(min(45svh, 420px) + var(--s4)); }   /
 body.has-peek .app { padding-bottom: calc(var(--s7) + var(--s5)); }
 
 /* v3: Cluck in flow under the choices + the strip fixed in the thumb zone */
-.inline { border-radius: 10px; padding: 0 var(--s4) var(--s4); margin: var(--s4) 0 0; animation: fade-in .2s ease-out both; }
+.inline { border-radius: 10px; padding: 0 var(--s4) var(--s4); margin: var(--s4) 0 0; animation: fade-in .3s ease-out both; }
 .thumb-strip { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: var(--s2) var(--gut) calc(var(--s2) + env(safe-area-inset-bottom)); background: var(--paper); box-shadow: 0 -10px 24px -6px rgb(0 0 0 / 0.55); }
 .thumb-strip .strip { max-width: var(--col); margin: 0 auto; }
 body.has-strip .app { padding-bottom: calc(var(--btn) + var(--s6)); }
 
 /* ghost (graph.js change #6: opacity in, no movement) */
-.fig .ghosted { animation: fade-in .2s ease-out both; }
+.fig .ghosted { animation: fade-in .3s ease-out both; }
 
 /* reduced motion forced by ?rm=1 (WebKitGTK/ios-sim --rm do the media query) */
 html.rm *, html.rm *::before, html.rm *::after { animation: none !important; transition: none !important; }

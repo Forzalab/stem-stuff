@@ -106,6 +106,7 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 |---|---|
 | 16px | the Scratchpad button (M3 FAB) |
 | 10px | surfaces that hold content: problem card, list card, Cluck (desktop side column; the phone dock is 30px, running to 0 at full: CHATBOX PICK r2), toast, pane tiles |
+| 12px | the Cluck box (`.cluck`, in the hint area and the sugar skin; Tony, Oct 17: rounder) |
 | 8px | controls: `.btn`, fields (`.ff`, code box, scratchpad), choices, list rows |
 | 6px | something inside a control (the q | a switch's active pill, Paste / Go inside the code box, a suggestion row) |
 | pill / 50% | the start page's field and the round buttons inside it (nested: outer radius minus the 4px gap) |
@@ -154,6 +155,14 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 - **Fades** smooth an edge where content meets something that does not scroll with it. Allowed: scroll edges under a pinned bar (the phone top bar, the phone bottom dock: `app.css` "scroll edges"), and overflow / peek fades on a box that scrolls inside (the freeze strip's `.clipped` mask, the Swap peek's bottom fade, a hint steps peek). The fade goes from the bar's own background token (exactly; never a near colour) to transparent, on the edge that faces the content: `--s3` to `--s5` (12-24px) for a scroll edge, up to 2.5rem for an overflow mask. It sits outside the bar's box with `pointer-events: none` (nothing moves, every tap passes through) and is invisible at rest: it lies on empty page, or shows only once the page has scrolled (a class, `html.scrolled`; never a scroll-driven or looping animation: `rewards/fx.js` waits for the page's animations to end). Never a gradient band as a divider or a background, never a gradient fill on a button or text.
 - **Glows** only on a floating AI surface (Cluck's sheet: `--ai-glow` from the top, brighter while Cluck types). Soft and warm, in that surface's own accent, blending into its background: a radial gradient fading to transparent by 70% of its size, or a blur of 24-64px with no spread. Peak alpha 0.3 at the source (`--ai-glow`), about 0.2 at rest (it rests at 60%). One glow per screen. No hard-edged, neon or coloured-ring glow, and none on flow content, cards, buttons or focus states (focus is the one `--focus` ring).
 
+#### Question box height (phones)
+
+Rule: on a phone, the top of the first answer choice peeks above the fold when a question loads. Prefer a shorter card over a scroller, in this order:
+
+1. **Figures** are capped at 28svh (`graph.js`): a taller one is redrawn narrower and centred (never below 60% of the width), so labels keep their size and place. Spacing uses the usual tokens.
+2. Phones show the whole problem in the page (a locked rule, tests/bar and fab): no cap, no inner scroller on the card text.
+3. Tablet and desktop are unchanged. Not on the Cluck chat, hint panel, or choices.
+
 ### 2.8 Motion
 
 | token (proposed) | value | for |
@@ -185,6 +194,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 - Anatomy: in the bar, the same height (`--btn`), surface (`--sheet`) and 8px radius as the buttons beside it, with a `--bw` `--edge` border (a field), so tops and bottoms line up. Text: the bar's label text (`--t-sm` bold, Atkinson Hyperlegible, uppercase because codes are). Paste (empty box) or the Go arrow (typed) sits flush inside the border: `--btn` minus 4px, 6px radius. Paste is an icon button (transparent, `--muted` icon, `--raised` + `--ink` on hover); Go is the one filled control.
 - Focus: the field rule (§2.6): border `--focus` + 1px inset = 2px. No outline around it.
 - Suggestions (`suggest.mjs`): while typing, the codes this browser knows (opened here before, newest first; the live bank and its list; an uploaded file) that contain the typed text. **Banks first, then questions**, order kept inside each group. A `--sheet` card, 10px, `--shadow-3`, floating under the bar (above it when the bar is the phone dock). Rows `--btn` tall: `i-list` for a bank, `i-doc` for a question, the code in `--t-sm` bold; hover / marked row `--raised`. Combobox keys: ArrowDown / ArrowUp, Enter, Escape. The browser's own form history is off (no `name`).
+- Suggestions and the keyboard (phones; Tony, Oct 17): the list is a popup bounded by the **visual** viewport, never by `vh` (on Android Chrome `vh` stays the large viewport while the keyboard is up, so a `50vh` cap ran past the top and over the field). `app.js sugFit` sets `--sug-max` = the room between the bar's top edge (or the sticky top bar) and the field, at most about half the visible height so the question stays in sight, re-run on `visualViewport` resize / scroll; CSS caps with `min(22rem, 50dvh, var(--sug-max))`. The list scrolls inside itself (`overscroll-behavior: contain`, `scroll-padding`), so no row is cut off unreachable, and it never overlaps the field. Nothing is moved or scrolled on focus, so nothing is left shifted when the keyboard closes. Desktop and tablet keep the CSS cap.
 
 ### Start page (`html.start`: no problem open)
 
@@ -227,7 +237,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 ### Toast (`#toast`)
 
 - Two jobs, one look: the wrong-answer note ("One more try, so choose wisely.") and the new-device onboarding notes (under 10 words each, once per device).
-- Sugar reward onboarding (T37, Tony, Oct 15; `rwTip()` in app.js, keys `stem-ob-rw-<beat>` = times shown): the HUD explains itself with this same toast, caret on the piece. First right answer, on the coin: "Points always go up and never let you down." A closed miss, on the count: "First time? Keep your progress.", then "Third time's the charm.", then "Triple kill?" Third right in a row, on the level star: "Yay, 3 ducks in a row! See your progress here." (it replaces that one "3 cracked" note). Sugar only; never stacks; a piece not on screen waits.
+- Sugar reward onboarding (T37, Tony, Oct 15; `rwTip()` in app.js, keys `stem-ob-rw-<beat>` = times shown): the HUD explains itself with this same toast, caret on the piece. First right answer, on the coin: "Points always go up and never let you down." A closed miss, on the count: "Got it wrong first time? Keep your progress.", then "Third time's the charm.", then "Triple kill?" Third right in a row, on the level star: "Yay, 3 ducks in a row! See your progress here." (it replaces that one "3 cracked" note). Sugar only; never stacks; a piece not on screen waits.
 - Anatomy: page `--paper`, `--bw` `--line` border (was 1.5px; unified Oct 3), `--shadow-1`, 10px radius, `--t-md` weight 400 in `--ink`, centred, one line where it fits (up to the column minus 2 × `--s4`), and a 14px caret that points at the thing it is about. No icon, no emoji, no yellow, no bold. `role="status"`, `aria-live="polite"`.
 - Placement: `fixed`, next to its anchor, so nothing moves. Under the box: caret up. Above the anchor (the Scratchpad button): caret on the bottom edge. MC row: it lies on the struck choice's text (dead text) with the caret pointing at the X badge. Never cover a live control.
 - Timing: in `--d-move`, stays 2 s, closes on tap or Esc. History: [TOAST.md](TOAST.md).
@@ -415,7 +425,6 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | # | where | what | fix |
 |---|---|---|---|
 | 3 | `design/explain-box.css` textarea | Radius 6px; every other field is 8px. | 8px. |
-| 4 | `app.css` `.cluck` | 8px radius; surfaces are 10px. | 10px. |
 | 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |
 | 6 | `app.css`, `nav.css` transitions | Durations .12 .15 .2 .22 .25 .3 s, two easings. | Add `--d-fast` 120ms, `--d-move` 200ms, `--d-dim` 300ms, `ease-out`. |
 | 7 | `app.css` `.dock-bottom .dock` | Raw upward shadow. | Token `--shadow-up`. |

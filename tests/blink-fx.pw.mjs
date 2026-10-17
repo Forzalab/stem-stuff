@@ -215,7 +215,7 @@ try {
     await pick(lp, "a");
     await lp.waitForTimeout(1000);
     await go(lp, "CALC1_B03"); await rig(lp, [0.5, 0.99]);
-    const r = await sampled(lp, "a", 7000);
+    const r = await sampled(lp, "a", 10500);
     report("level up, then the next question right ~1 s later", r);
     check(await lp.evaluate(() => window.__lvl), "the level-up burst played");
     check(r.peak <= 1, `peak ${r.peak} groups at once`);

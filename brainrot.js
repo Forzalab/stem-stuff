@@ -57,7 +57,10 @@
     if (m !== null) store("stem-slow", m ? "1" : "0");
     return (slowV = m !== null ? m : store("stem-slow") === "1");
   }
-  const off = () => !!sess("stem-rot-off") || slow();                   // ✕ for this session, or a slow link
+  /* phones get none of it (Tony, Oct 17): no corner, no players, no request to YouTube, so nothing buffers. "Phone" is the repo's phone
+     width, max-width 700px (app.js dockMQ, the same break NAV D75 "bottom bar, phones only" uses); a tablet and a desktop keep it. */
+  const PHONE = matchMedia("(max-width: 700px)");
+  const off = () => !!sess("stem-rot-off") || PHONE.matches || slow();   // ✕ for this session, a phone, or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
     + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
 
@@ -194,6 +197,7 @@
   function sheet() { if (on) place(false); }
   window.stemBrainrot = { sync, warmUp, sheet, cats: CATS };
   addEventListener("resize", () => { if (on) place(false); });
+  PHONE.addEventListener("change", () => { if (window.stemBrainrot) sync(); });   // a window dragged across the phone width: hide it, or bring it in
   document.addEventListener("focusin", () => setTimeout(sync, 0));
   document.addEventListener("focusout", () => setTimeout(sync, 0));
 })();
