@@ -999,6 +999,7 @@ function record(a, r) {
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
   rewardTry(a, r);
+  if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
 }
 
 /* ---------- done questions: kept per bank + code across reloads (design/DONE.md) ----------

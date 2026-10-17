@@ -212,6 +212,68 @@ await step("diet, the start page, a lone question: no peek", async () => {
   }
 });
 
+/* the first wrong answer of a question starts the same sunrise ~0.7 s after the feedback (Tony, Oct 17): once per question, sugar only,
+   never over Cluck's sheet, a cooldown between peeks, and the 3 min idle peek still comes */
+const wrongPick = async (page, id = "b") => {
+  const n = await page.evaluate(() => window.__drill.state.tries.length);
+  await page.click(`.opt[data-id="${id}"]`);
+  await page.click(`.ch[data-id="${id}"] .send`);
+  await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
+};
+for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["desktop", { width: 1440, height: 900 }, false], ["desktop reduce", { width: 1440, height: 900 }, true]]) {
+  await step(`${name}: the first wrong answer starts the sunrise in ~0.7 s, once per question, then the 3 min idle peek still comes`, async () => {
+    const page = await open({ vp, rm, touch: name === "phone" });
+    await idle(page, 5000);
+    await wrongPick(page);
+    await idle(page, 300);
+    assert.equal(await up(page), false, "not yet (the feedback settles first)");
+    await idle(page, 900);
+    assert.equal(await up(page), true, "up ~0.7 s after the wrong answer");
+    await settle(page);
+    const L = await look(page);
+    assert.ok(Math.abs(L.sunX - L.cx) < 1, "sun core under the duck");
+    assert.equal(L.label, "Cluck: want a hint?");
+    if (rm) assert.equal(L.duckTf, "none", "reduce: the duck never moves");
+    assert.equal(await page.evaluate(() => document.querySelectorAll(".ck-rise").length), 1, "one duck");
+    await nudge(page);                                                  // input puts him away
+    await idle(page, 800);
+    assert.equal(await up(page), false, "input puts him away");
+    await wrongPick(page, "c");                                         // the second wrong on the same question: no new peek
+    await idle(page, 3000);
+    assert.equal(await up(page), false, "once per question");
+    await page.evaluate(() => { location.hash = "#CALC1_T45M2"; });    // another question, inside the cooldown: none
+    await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T45M2");
+    await wrongPick(page);
+    await idle(page, 3000);
+    assert.equal(await up(page), false, "cooldown between peeks");
+    await idle(page, 3 * MIN + 1000);
+    assert.equal(await up(page), true, "the idle peek still comes after 3 min");
+    assert.deepEqual(page.errs, [], "no console errors");
+    await page.context().close();
+  });
+}
+
+await step("a wrong answer: no peek while Cluck's sheet is open, none in diet; an input in the 0.7 s cancels it", async () => {
+  const page = await open({});
+  await page.evaluate(() => { window.__open = true; const f = window.stemCluckOpen; window.stemCluckOpen = () => window.__open || f(); });
+  await wrongPick(page);
+  await idle(page, 2000);
+  assert.equal(await up(page), false, "Cluck open: no duck, no second glow");
+  await page.context().close();
+  const d = await open({ diet: true });
+  await wrongPick(d);
+  await idle(d, 2000);
+  assert.equal(await up(d), false, "diet: none");
+  await d.context().close();
+  const c = await open({});
+  await wrongPick(c);
+  await idle(c, 300);
+  await c.keyboard.press("Shift");
+  await idle(c, 2000);
+  assert.equal(await up(c), false, "typing inside the 0.7 s cancels it");
+  await c.context().close();
+});
+
 await browser.close(); srv.kill();
 console.log(failures ? `${failures} FAIL` : "all ok", "· shots:", tmp);
 process.exit(failures ? 1 : 0);
