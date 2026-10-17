@@ -16,7 +16,7 @@ const KATEX_FONTS = ["AMS-Regular", "Caligraphic-Bold", "Caligraphic-Regular", "
 const BASE = ["./", "index.html", "app.js", "app.css", "nav.js", "nav.css", "offline.js", "brainrot.js", "peek.js", "graph.js", "fx.js", "telemetry.js", "copy/payload.mjs", "shuffle.mjs", "suggest.mjs", "codes.mjs", "mode.mjs", "quack.mjs", "speak.mjs", "chg.mjs", "design/explain-box.css", "design/explain-box.js",
   "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
   "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2",
-  "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-mono-latin-700-normal.woff2", "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2",
+  "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2",
   "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.

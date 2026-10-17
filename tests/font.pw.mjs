@@ -1,4 +1,5 @@
-// Typed text uses Atkinson Hyperlegible Mono: every column character must have the same advance width.
+// The scratchpad uses Atkinson Hyperlegible Mono (every column character the same advance width); a typed answer is the text face with
+// tabular figures (TYPE-DECISION v3.1: mono only in the scratchpad and pre-formatted tables).
 // Also lists which common phone-typed math symbols fall back to another font.
 // usage: node tests/font.pw.mjs http://localhost:8812
 import { createRequire } from "node:module";
@@ -15,8 +16,8 @@ const page = await b.newPage();
 await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
 await page.waitForSelector("#scratch");
 const r = await page.evaluate(async ({ GRID, MATH }) => {
-  const els = ["#scratch", ".ff input"].map(s => document.querySelector(s)).filter(Boolean);
-  const fams = els.map(e => getComputedStyle(e).fontFamily);
+  const fams = [getComputedStyle(document.querySelector("#scratch")).fontFamily];
+  const ans = document.querySelector(".ff input"), ansFam = ans && getComputedStyle(ans).fontFamily, ansNum = ans && getComputedStyle(ans).fontVariantNumeric;
   const codeFam = getComputedStyle(document.querySelector("#code")).fontFamily;   // code box: Atkinson Hyperlegible, not Mono (Tony)
   await document.fonts.load('400 18px "Atkinson Hyperlegible Mono"');
   const loaded = document.fonts.check('400 18px "Atkinson Hyperlegible Mono"');
@@ -26,12 +27,13 @@ const r = await page.evaluate(async ({ GRID, MATH }) => {
   const widths = [...GRID].map(ch => [ch, w(ch, mono + ", monospace")]);
   // a glyph missing from the mono font falls back: its width then depends on the fallback stack
   const fallback = [...MATH].filter(ch => w(ch, mono + ", serif") !== w(ch, mono + ", monospace"));
-  return { fams, codeFam, loaded, widths, fallback };
+  return { fams, ansFam, ansNum, codeFam, loaded, widths, fallback };
 }, { GRID, MATH });
 await b.close();
 
 assert.ok(r.loaded, "Atkinson Hyperlegible Mono did not load");
 for (const f of r.fams) assert.match(f, /Atkinson Hyperlegible Mono/, f);
+if (r.ansFam) { assert.doesNotMatch(r.ansFam, /Mono/, "typed answer: the text face, " + r.ansFam); assert.match(r.ansNum, /tabular-nums/, "typed answer: tabular figures"); }
 assert.match(r.codeFam, /Atkinson Hyperlegible/, r.codeFam);
 assert.doesNotMatch(r.codeFam, /Mono/, "code box must not use the Mono: " + r.codeFam);
 const ws = new Set(r.widths.map(([, v]) => v.toFixed(3)));

@@ -66,19 +66,24 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 
 ### 2.2 Type
 
-- Families: **Atkinson Hyperlegible** (UI and prose) and **Atkinson Hyperlegible Mono** (`--mono`: typed text where columns line up: answers, scratchpad, gutter). The code box uses the proportional face (Tony). KaTeX for math. No third family. The q | a switch letters are KaTeX_Math italic at 1.5rem (a math face, not a UI family; Tony's pick, MULTITASK.md Round 3b).
-- Scale (phones; desktop raises all three):
+Source: chat-redesign round 5 TYPE-DECISION v3.1 (brain), Tony's round 7 PICKER 5–7.
+- Families: one text stack, `--font`. **Atkinson Hyperlegible** everywhere by default; WebKit alone (`@supports (font: -apple-system-body)`) puts **SF** (`-apple-system`) first, so iPhones get the system voice and every other browser gets the same vendored face. KaTeX for math. Two named exceptions: `--mono` (`ui-monospace`, Atkinson Hyperlegible Mono) only in the scratchpad and pre-formatted tables (`.wtext .tbl`); Press Start 2P only on the burst title (`.fx-title`). Typed answers, verdict values and markdown `code` are the text face with `tabular-nums`. The q | a switch letters are the UI face, `--t-lg` 600, upright (PICKER 7).
+- `.katex` sets its own size, `--kx`: math at the text face's x-height (Atkinson 1.15em, measured; SF 1.2em, provisional until measured on a device). No other KaTeX multiplier. No `font-size-adjust` (every `font:` shorthand resets it).
+- Scale (phones; desktop steps all five tokens per breakpoint, never a sixth size):
 
-| token | px | for |
-|---|---|---|
-| `--t-md` | 18 | problem text, choices, typed answers, toast (weight 400) |
-| `--t-sm` | 16 | labels, how line, scratchpad, list button, error line |
-| `--t-xs` | 14 | status only (autosave) |
-| `--t-lg` | 28 (desktop 36) | the start page's title only |
+| token | px | line height | for |
+|---|---|---|---|
+| `--t-xs` | 13 | `--lh-xs` 1.38 | status, figure ticks, tags ("TUTOR"), counters. Only `--ink` / `--muted` / the Cluck peach, never an accent |
+| `--t-sm` | 15 | `--lh-ui` 1.33 | buttons, chips, labels, how line, figure labels |
+| `--t-md` | 17 | `--lh` 1.41 | problem text, choices, typed answers, Cluck's text |
+| `--t-lg` | 20 | `--lh-title` 1.25 | titles, HUD numerals, q | a letters. Cluck's name stays 21px (H3a, PICKER 5) |
+| `--t-xl` | 28 (desktop 36) | `--lh-title` | the start page's title only |
 
-  Figure labels are fixed at 16 / 14 px (DESIGN-LANGUAGE.md). Line height `--lh` 1.55 for prose, 1.4 for controls, 1 for single-line inputs.
-- Weights: 400 and 700 only. Bold means "a name or a state": verdict words, labels, list numbers, the code. Never bold a word inside a sentence for emphasis.
-- Fields are at least 16px (iOS zoom). Prose is at most 65ch wide.
+  Single-line inputs keep `line-height: 1`. A field is never under 16px (iOS zooms on focus): the code box uses `max(1rem, var(--t-sm))`.
+- Weights: 400 and 600 (`--w-em`) only. Atkinson has no 600, so it renders its 700 (CSS font matching); `font-synthesis: none` stops any faux weight or oblique. 600 = a name, a state, a title, emphasis. In tutor markdown `**b**` and `*i*` both render 600 in the running ink: emphasis is weight, never colour, never italic.
+- Italic: none outside `$..$`.
+- Tracking: 0 on sentence case; `0.05em` only on uppercase strings (the code box, the TUTOR tag).
+- Prose is at most 65ch wide.
 - Sentence case everywhere. No all-caps labels, no letter-spaced eyebrows. Problem codes are uppercase because they are codes.
 
 ### 2.3 Spacing

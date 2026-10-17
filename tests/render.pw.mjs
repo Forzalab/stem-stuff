@@ -480,7 +480,7 @@ async function run(browserType, label, opts = {}) {
       if (vname === "phone") assert.ok(rows[0].box >= rows[0].ptxt - 1, "phone: box under its prompt");
       else assert.ok(rows[0].boxL >= rows[0].prR - 1 && Math.abs(rows[0].box - rows[0].pr) < 20, "wide: box beside its prompt");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll");
-      assert.match(await boxes.nth(0).evaluate(e => getComputedStyle(e).fontFamily), /Atkinson Hyperlegible Mono/);
+      assert.match(await boxes.nth(0).evaluate(e => getComputedStyle(e).fontVariantNumeric), /tabular-nums/, "typed answer: the text face, tabular figures");
       assert.match(await boxes.nth(1).getAttribute("aria-labelledby"), /mk1 pr1/);
       const arrows = () => page.locator("#q .part .send:visible").count();
       assert.equal(await arrows(), 0, "no arrow in an empty box");

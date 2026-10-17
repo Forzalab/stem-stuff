@@ -1,6 +1,6 @@
 /* Explanation box. Tokens from calc1 (see DESIGN-LANGUAGE.md); --edge added for a 3:1 input boundary. */
 .xb { display: block; margin: 0.75rem 0 0; }
-.xb-label { display: block; font-weight: 700; font-size: 1rem; margin: 0 0 0.35rem; color: var(--ink); }
+.xb-label { display: block; font-weight: 600; font-size: 1rem; margin: 0 0 0.35rem; color: var(--ink); }
 .xb-hint { display: block; font-size: 0.95rem; color: var(--muted); margin: 0.35rem 0 0; }
 .xb textarea {
   display: block;

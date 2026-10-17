@@ -1,6 +1,10 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
-  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;   /* typed text: scratchpad, gutter, answers (columns line up); not the code box */
+  /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
+     Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad and pre-formatted tables only */
+  --font: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
+  --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Navy: page + 2 surfaces + 1 line (Tony: "count how many blues"). Every colour is a role */
   --page: #050c16; --card: #101c2c; --float: #1b2b40; --line: #394a61; --ink: #e8edf5; --muted: #a7b7cd;
@@ -23,10 +27,13 @@
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
-  /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
-     --t-md 18px problem text, choices, typed answers; --t-sm 16px secondary (labels, code, how line, scratchpad text); --t-xs 14px status */
-  --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --lh: 1.55;
-  --t-lg: 1.75rem;   /* one display size: the start page's title only (STYLE.md 2.2) */
+  /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
+     · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
+  --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
+  --lh: 1.41; --lh-ui: 1.33; --lh-title: 1.25; --lh-xs: 1.38;
+  /* KaTeX at x-height parity with the text face: Atkinson .496 / KaTeX_Main .431 = 1.15em (measured); SF ~.52 -> 1.2em (provisional:
+     measure on a device, then pin). It replaces the stacked 1.08 / 1.1 multipliers. No font-size-adjust: every `font:` shorthand resets it */
+  --kx: 1.15em;
   /* spacing scale (px): 4 8 12 16 24 32 48 */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
@@ -41,6 +48,10 @@
   --shadow-4: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 3px 6px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
+@supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
+  :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
+}
+.katex { font-size: var(--kx); }   /* after vendor/katex (index.html): replaces its 1.21em */
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--freeze-h, 0px) + var(--s4)); }
 /* scrollbars (Tony, Oct 6): the page's own is gone (wheel, touch and keys still scroll); every inner one is thin, an --edge thumb on
@@ -55,7 +66,7 @@ body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
   background: var(--paper); color: var(--ink);
-  font: 400 var(--t-md)/var(--lh) "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  font: 400 var(--t-md)/var(--lh) var(--font); font-synthesis: none;   /* no faux bold or oblique, ever */
   -webkit-tap-highlight-color: transparent;
 }
 /* No overflow on any ancestor of .freeze: it would become the sticky scroller (Safari and everyone else). */
@@ -85,7 +96,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .code-box:focus-within { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
 .code-box input {
   flex: 1 1 auto; min-width: 3.5rem; width: 100%; height: 100%; padding: 0 var(--s2) 0 1px; margin: 0;
-  font-family: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* Atkinson Hyperlegible: Tony found the Mono "hideous" here */
+  font-family: inherit; font-size: max(1rem, var(--t-sm)); font-weight: var(--w-em); line-height: 1; letter-spacing: 0.05em; text-transform: uppercase;   /* the text face (Tony found the Mono "hideous" here); a field: never under 16px (iOS zooms on focus) */
   color: var(--ink); background: transparent; border: 0; border-radius: 0; caret-color: var(--focus);
 }
 .code-box input:focus { outline: none; }
@@ -109,7 +120,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .dock-bottom .dock:has(.code-sug:not([hidden])) { z-index: 31; }
 .code-sug li {
   display: flex; align-items: center; gap: var(--s3); min-height: var(--btn); padding: 0 var(--s3); border-radius: 6px; cursor: pointer;
-  font-size: var(--t-sm); font-weight: 700; line-height: 1; color: var(--ink);
+  font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; color: var(--ink);
 }
 .code-sug li .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .code-sug li:hover, .code-sug li[aria-selected="true"] { background: var(--raised); }
@@ -125,7 +136,7 @@ html.start .top {
 html.start .dock { width: 100%; max-width: calc(40rem + 2 * var(--gut)); padding: 0 var(--gut) var(--s7); }
 html.start .start-title {
   display: block; margin: 0 auto var(--s5); text-align: center;   /* auto: centred like the entry under it in the bottom dock */ text-wrap: balance;
-  font-size: var(--t-lg); font-weight: 700; line-height: 1.25; color: var(--ink);
+  font-size: var(--t-xl); font-weight: var(--w-em); line-height: var(--lh-title); color: var(--ink);
 }
 html.start .entry {
   gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
@@ -260,28 +271,30 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .more:hover::before { background: var(--muted); }
 
 .p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
-.pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: var(--w-em); color: var(--muted); }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
 .md p, .md ul, .md ol { margin: 0 0 var(--s3); max-width: 65ch; }
 .md li + li { margin-top: var(--s1); }
-.md .katex { font-size: 1.08em; }
 .mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
 .md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 .tbl { overflow-x: auto; margin: 0 0 var(--s3); }
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
-.md th { color: var(--muted); font-weight: 700; border-bottom: var(--bw) solid var(--edge); }
-.md code { font-size: 0.95em; background: var(--field); padding: 0 var(--s1); border-radius: 4px; }
+.md th { color: var(--muted); font-weight: var(--w-em); border-bottom: var(--bw) solid var(--edge); }
+.md code { font-family: var(--font); font-size: 1em; font-variant-numeric: tabular-nums; background: var(--field); padding: 0 var(--s1); border-radius: 4px; }
+/* emphasis = weight only (TD2): 600 in the running ink, never colour, never italic; headings in markdown stay on the ladder */
+.md :is(b, strong, em) { font-weight: var(--w-em); font-style: normal; color: inherit; }
+.md :is(h1, h2, h3) { margin: 0 0 var(--s3); font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
+.md blockquote { margin: 0 0 var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
 
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
-.lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: 16px; line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
-.lbl .katex { font-size: 1.1em; }
-.lbl.tick { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
+.lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* ---------- question ---------- */
 .q { margin-top: var(--s3); }
@@ -296,7 +309,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 .opt .badge {
   flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
-  border: var(--bw) solid var(--line); color: var(--muted); font-weight: 700; font-size: var(--t-md);
+  border: var(--bw) solid var(--line); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-md); line-height: 1; letter-spacing: 0; text-transform: uppercase;   /* TR12: never changes with state */
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
@@ -343,7 +356,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.all .opt .badge { width: 1.5rem; height: 1.5rem; border-radius: 4px; }
 .choices.all .opt .badge .ico { width: 1rem; height: 1rem; }
 .choices.all .opt[aria-checked="false"]:not(.wrong):not([data-mark="x"]) .badge .ico { visibility: hidden; }
-.choices.all .opt .lt { flex: none; margin-left: calc(-1 * var(--s1)); color: var(--muted); font-weight: 700; font-size: var(--t-sm); }
+.choices.all .opt .lt { flex: none; margin-left: calc(-1 * var(--s1)); color: var(--muted); font-weight: var(--w-em); font-size: var(--t-sm); }
 .choices.all .opt.wrong .lt { color: var(--wrong); }
 /* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
 .choices.all .opt[data-mark="x"] .badge { border-color: var(--wrong); color: var(--wrong); }
@@ -387,7 +400,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ff .lead { color: var(--muted); white-space: nowrap; margin-right: var(--s2); }
 .ff input {
   flex: 1 1 auto; min-width: 0; height: var(--btn); margin: 0; padding: 0 var(--s2) 0 0;
-  font-family: var(--mono); font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+  font-family: inherit; font-variant-numeric: tabular-nums; font-size: var(--t-md); font-weight: 400; line-height: 1; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
@@ -401,7 +414,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
-.ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, design/EASY.md) */
+.ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.
    The same mark sits on the original's numbers in "See reference solution", so the eye links the pair. */
 mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2px var(--help); text-underline-offset: 0.2em; text-decoration-skip-ink: none; }
@@ -419,7 +432,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
 .mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
-.mparts .mk { grid-area: mk; font-weight: 700; color: var(--c1); }
+.mparts .mk { grid-area: mk; font-weight: var(--w-em); color: var(--c1); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
 .mparts .ff { grid-area: bx; }
 .ff .send { position: absolute; right: var(--bw-up); top: var(--bw-up); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
@@ -451,7 +464,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
    answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
 :root { --d-fast: 120ms; --d-move: 200ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
 .nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
-  color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
   padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw-hair) solid var(--line); color: var(--ink); }
 :is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
@@ -500,7 +513,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* the duck chip (sugar; app.js wishPaint on a closed question): the official 48px pose + the word, the live label-button look. No wiggle */
 .wish.cue { margin-top: var(--s3); }
 .cue-chip { box-sizing: border-box; height: var(--btn); margin: 0; display: inline-flex; align-items: center; gap: var(--s2); padding: 0 var(--s4) 0 var(--s1);
-  background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--edge); border-radius: 8px; font: inherit; font-size: var(--t-sm); font-weight: 700;
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--edge); border-radius: 8px; font: inherit; font-size: var(--t-sm); font-weight: var(--w-em);
   line-height: 1; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
 .cue-chip:hover { background: var(--raised); }
 .cue-chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
@@ -512,13 +525,13 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
    (+ .reveal: the answer, not the student's pick). Typed: this line, in the preview's room (a multi: the part's hint slot). The check and the word say it, never the hue alone */
 .ansl { margin: 0; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
 .ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--correct); }   /* T23: the reveal's green = the right row's green */
-.ansl b { color: var(--correct); font-family: var(--mono); overflow-wrap: anywhere; }
+.ansl b { color: var(--correct); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .preview:has(.ansl) { color: var(--ink); }
 
 /* feedback */
 .fb:empty { display: none; }
 .fb { margin-top: var(--s3); display: grid; gap: var(--s2); }
-.verdict { display: flex; align-items: center; gap: var(--s2); font-weight: 700; margin: 0; }
+.verdict { display: flex; align-items: center; gap: var(--s2); font-weight: var(--w-em); margin: 0; }
 .verdict.ok { color: var(--correct); }
 .verdict.bad { color: var(--wrong); }
 .verdict.wait, .verdict.lock { color: var(--muted); font-weight: 400; }
@@ -537,7 +550,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .cl-steps::after { content: ""; position: absolute; inset: auto 0 0; height: calc(1.8 * var(--lh) * 1em); pointer-events: none; background: linear-gradient(to bottom, transparent, var(--sheet)); }
 /* E1 = T2 (app.js ctaHTML): duck + label + chevron, one 48px row 8px wider than the text each side, no fill at rest or pressed */
 .cl-cta { display: flex; align-items: center; gap: var(--s2); width: calc(100% + 2 * var(--s2)); min-height: var(--btn); margin: 0 calc(-1 * var(--s2)) calc(-1 * var(--s2)); padding: 0 var(--s2);
-  border: 0; border-radius: 10px; background: none; color: var(--help); font: inherit; font-size: var(--t-md); font-weight: 700; line-height: 1.2; text-align: left; cursor: pointer;
+  border: 0; border-radius: 10px; background: none; color: var(--help); font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: 1.2; text-align: left; cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: color .12s ease-out; }
 .cl-cta .ico { flex: none; width: 24px; height: 24px; transition: transform .12s ease-out; }
 .cl-cta .ico:first-child { transform-origin: 50% 80%; }
@@ -595,10 +608,10 @@ html.side .rot-hd .xb-label { margin-bottom: 0; }                          /* th
 .orig { position: relative; margin: var(--s2) 0 var(--s3); border-radius: 10px; background: var(--sheet); }   /* the header is the casino hint card: .rw-hint in rewards/rewards.css (T1) */
 .orig-body { font-size: var(--t-md); line-height: var(--lh); }               /* in Cluck's sheet ("Similar steps"): the steps look of Cluck's own text */
 .orig-body .md { color: var(--ai-text); }
-.orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-text); font-weight: 700; }
+.orig-h { margin: var(--s5) 0 var(--s3); color: var(--ai-text); font-weight: var(--w-em); }
 .orig-sol { list-style: none; margin: 0; padding: 0; counter-reset: os; color: var(--ai-text); }
 .orig-sol li { position: relative; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: var(--s3); margin-top: var(--s3); counter-increment: os; }
-.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: 700; line-height: 1; }
+.orig-sol li::before { content: counter(os); display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
 .orig-sol li:has(+ li:not([hidden]))::after { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--help); }
 .orig-sol li > * { min-width: 0; }
 .orig-sol li[hidden] { display: none; }
@@ -611,7 +624,7 @@ html.side #work > .orig { margin: 0; }
 .fcard { --fc-tint: color-mix(in srgb, var(--c1) 10%, var(--paper));
   position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--c1); border-radius: 10px; background: var(--fc-tint); }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
-  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: 700; line-height: 1.4; }
+  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
 .fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
@@ -677,8 +690,8 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
           mask: radial-gradient(circle 9px at calc(100% - 8px) calc(100% - 8px), transparent 98%, #000 100%); }
 .cl-av .ico { width: 32px; height: 32px; }
 .cl-dot { position: absolute; right: 3px; bottom: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--online); }   /* 9.9:1 on the sheet */
-.cl-title { font-size: 1.3125rem; font-weight: 700; line-height: 1.15; color: var(--help-on); }
-.cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: 0.75rem; font-weight: 700; letter-spacing: .04em; line-height: 1.4; }
+.cl-title { font-size: 1.3125rem; font-weight: var(--w-em); line-height: var(--lh-title); color: var(--help-on); }
+.cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: 0.05em; line-height: var(--lh-xs); }
 .cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
 .cl-bar .cl-x .ico { width: 24px; height: 24px; }
 html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
@@ -699,7 +712,7 @@ html .cl .msg.me { display: block; align-self: flex-end; max-width: 80%; margin:
 .cl .msg.me .md { margin: 0; color: var(--help-on); line-height: 1.4; overflow-wrap: anywhere; }
 /* "See reference solution": the original's steps, folded under Cluck's text after a miss (Tony's wording) */
 .cl-fold { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s5); padding: 0; border: 0; border-top: 1px solid var(--help-rule);
-  background: none; color: var(--ai-text); font: inherit; font-weight: 700; font-size: var(--t-sm); text-align: left; cursor: pointer; }
+  background: none; color: var(--ai-text); font: inherit; font-weight: var(--w-em); font-size: var(--t-sm); text-align: left; cursor: pointer; }
 .cl-fold[hidden] { display: none; }
 #clTabEP[hidden] + .cl-fold { margin-top: 0; border-top: 0; }               /* no text above it: the fold is the sheet's first line */
 .cl-fold-t { flex: 1; }
@@ -734,7 +747,7 @@ html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* roo
 .ask:focus-within { box-shadow: inset 0 0 0 1px var(--help); }
 .ask .ff input { font-family: inherit; color: var(--ai-text); }            /* talk, not an answer: the sans, not the answers' mono */
 .ask .ff input::placeholder { color: var(--help-muted); }
-.ask .left { flex: none; font-size: var(--t-xs); font-weight: 700; color: var(--help-on); white-space: nowrap; }
+.ask .left { flex: none; font-size: var(--t-xs); font-weight: var(--w-em); color: var(--help-on); white-space: nowrap; }
 .ask .send { flex: none; display: grid; place-items: center; width: var(--btn); height: var(--btn); border: 0; border-radius: 8px; background: var(--help); color: var(--help-ink); cursor: pointer; }
 .ask .send .ico { width: 26px; height: 26px; }
 .ask .send:hover { filter: brightness(1.08); }
@@ -752,7 +765,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }
-.wtext b { font-weight: 700; color: var(--ai-text); }
+.wtext b { font-weight: var(--w-em); color: var(--ai-text); }
 .wtext .wmath { margin: 20px 0; text-align: center; overflow-x: auto; overflow-y: hidden; }   /* NO NESTED BOX (Tony, Oct 13): no well, no padding; V3: 20 around an equation */
 .wtext .weq + .weq { margin-top: 12px; }                                   /* V3: 12 between stacked equations */
 .wtext .wmath.wans { background: none; border-color: transparent; padding: 0; }
@@ -769,9 +782,9 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 /* steps (Gemini's widget, alt's mock): a numbered circle, a dotted line down to the next step, a bold title, a small mono subtitle */
 .wtext .wstep { position: relative; display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--s3); margin-top: var(--s3); }
 .wtext .wstep:has(+ .wstep)::before { content: ""; position: absolute; left: calc(1.75rem / 2); top: 2rem; bottom: calc(-1 * var(--s3) + var(--s1)); border-left: 1px dotted var(--help); }
-.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: 700; line-height: 1; }
-.wtext .wstitle { font-weight: 700; color: var(--ai-text); }
-.wtext .wssub { font-family: var(--mono); font-style: italic; font-size: var(--t-xs); color: var(--help-muted); }
+.wtext .wnum { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
+.wtext .wstitle { font-weight: var(--w-em); color: var(--ai-text); }
+.wtext .wssub { font-size: var(--t-xs); color: var(--help-muted); }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
@@ -782,7 +795,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .work { margin-top: var(--s1); }
 .work .xb { margin-top: 0; }
 .freeze:has(.more:not([hidden])) ~ .work { margin-top: var(--s5); }   /* clears the handle's pill; the rest of its touch area lies over the title */
-.xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: 700; }
+.xb-label { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--t-sm); font-weight: var(--w-em); }
 .xb-label .ico { width: 1.25rem; height: 1.25rem; }
 /* autosave status: small, muted; "saving" sweeps a light band through solid text (moving alpha mask, not gradient text) */
 .xb-save { margin-left: var(--s1); font-size: var(--t-xs); font-weight: 400; color: var(--hint); }
@@ -807,7 +820,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .xb-copy { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
 #copy.done { color: var(--correct); border-color: var(--correct); }
 /* C9 (Tony, Oct 5): the joke stays, in the body font; typed notes keep the mono */
-.xb-field textarea::placeholder { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
+.xb-field textarea::placeholder { font-family: var(--font); }
 
 @media (max-width: 34rem) {
   :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }
@@ -897,11 +910,10 @@ html.swap-scratch .xb-field textarea, html.swap-scratch .xb-field textarea.xb-fr
 .pad-peek { display: none; }
 html.swap-problem .pad-peek {
   display: flex; flex: none; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s1); margin-top: calc(-1 * var(--s1));
-  color: var(--hint); font: 400 var(--t-sm)/1.3 var(--mono); cursor: pointer; touch-action: manipulation;
+  color: var(--hint); font: 400 var(--t-sm)/1.3 var(--font); font-variant-numeric: tabular-nums; cursor: pointer; touch-action: manipulation;
 }
 html.swap-problem .pad-peek .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .pad-peek span { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pad-peek.empty span { font-family: inherit; font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
 html.swap-problem .stage { padding-bottom: 0; }
 /* keyboard up: no expand icon, no pill, no toggle; switching is closing the keyboard, tapping the question, or the pad peek */
 html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }   /* the pad page keeps q | a with the keyboard up (Tony, Oct 3); it never takes focus */
@@ -956,8 +968,8 @@ html.mt #scratch { min-height: var(--pad-max, 8rem); }
 /* round 3b: the tile shows the problem (q) or the answer control (a), never both */
 html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
 html.mt.mt-a #problem { display: none; }
-.mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-family: KaTeX_Math, "Atkinson Hyperlegible", serif; font-style: italic;
-  font-size: 1.5rem; line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters */
+.mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-weight: var(--w-em);
+  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
 /* phones: the pad is off the page until the Scratchpad button opens the pad page */
 html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
@@ -968,7 +980,7 @@ html.fab-on:has(#padFab:not(.left)) main { padding-bottom: calc(var(--dock-h, 0p
 .pad-fab {
   position: fixed; z-index: 40; right: max(var(--s4), env(safe-area-inset-right)); bottom: 0; height: 56px; padding: 0 var(--s5) 0 var(--s4);
   display: inline-flex; align-items: center; gap: var(--s2); border: 0; border-radius: 10px; background: var(--raised); color: var(--ink);
-  box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; touch-action: none;
+  box-shadow: var(--shadow-3); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; touch-action: none;
   user-select: none; -webkit-user-select: none;
 }
 .pad-fab.left { right: auto; left: max(var(--s4), env(safe-area-inset-left)); }
@@ -1018,7 +1030,7 @@ html.side #scratch { min-height: min(var(--pad-max, 60vh), 48rem); }   /* fills 
 html.side.mt-r0 .freeze-in { display: none; }
 html.side .pstrip {
   display: grid; place-items: center; width: 52px; min-height: min(60vh, 32rem); padding: var(--s3) 0; border: 0; border-radius: 10px;
-  background: var(--qbox); color: var(--muted); font-size: var(--t-sm); font-weight: 700; letter-spacing: 0.04em;
+  background: var(--qbox); color: var(--muted); font-size: var(--t-sm); font-weight: var(--w-em);
 }
 html.side .pstrip[hidden] { display: none; }
 html.side .pstrip:hover { background: var(--raised); color: var(--ink); }
@@ -1031,17 +1043,17 @@ html.side .pstrip span { writing-mode: vertical-rl; }
    No top offset over a question (C13, Tony Oct 5: ~90px of nothing at 1920); the start page centres its entry itself (html.start). */
 @media (min-width: 700.02px) and (pointer: fine) {
   :root {
-    --t-md: 1.1875rem; --t-sm: 1.0625rem; --t-xs: 0.9375rem; --t-lg: 2.25rem;
+    --t-md: 1.125rem; --t-sm: 1rem; --t-xs: 0.875rem; --t-lg: 1.3125rem; --t-xl: 2.25rem;
     --btn: 50px; --ico: 25px;
     --col: clamp(52rem, 42.3rem + 21.4vw, 68rem);     /* 1024: 56rem, 1366: 60.5rem, 1920: 68rem (gutters included) */
   }
   .xb-field textarea { font-size: var(--t-sm); }       /* explain-box.css sets it in rem, not inherited */
 }
 @media (min-width: 700.02px) and (min-height: 56rem) and (pointer: fine) {
-  :root { --t-md: 1.25rem; --t-sm: 1.125rem; --btn: 52px; --ico: 26px; }
+  :root { --t-md: 1.1875rem; --t-sm: 1.0625rem; --btn: 52px; --ico: 26px; }
 }
 @media (min-width: 100rem) and (min-height: 56rem) and (pointer: fine) {
-  :root { --t-md: 1.375rem; --t-sm: 1.25rem; --t-xs: 1.0625rem; --btn: 56px; --ico: 28px; }
+  :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
 }
 
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
@@ -1076,7 +1088,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   position: fixed; z-index: 60; top: max(var(--s3), env(safe-area-inset-top)); left: 0; right: 0; margin: 0 auto;   /* not translate: toast-in animates transform */
   width: max-content; max-width: calc(100vw - 2 * var(--gut)); min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
   background: var(--raised); color: var(--ink); border: var(--bw) solid var(--muted); border-radius: 10px; box-shadow: var(--shadow-1);
-  font: inherit; font-size: var(--t-md); font-weight: 700; line-height: var(--lh); text-align: center; cursor: pointer;
+  font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: var(--lh); text-align: center; cursor: pointer;
   touch-action: manipulation; animation: toast-in .2s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }
@@ -1086,7 +1098,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #ver::after { content: attr(data-v); }
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
 
-.cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: 700; color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
+.cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
 
 /* ---------- Cluck's duck + sky (peek.js window.stemDuck; T45 idle peek, design/IDLE-PEEK.md) ----------
    One duck, one sky, for every Cluck rise. V3 "sky first" (Tony, Oct 15): the sky warms slowly (0.6-4.4 s), the duck peeks, eyes only
@@ -1110,7 +1122,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   background: url(rewards/icons/duck-ask-hmm-128.webp) center / contain no-repeat; pointer-events: none;
   filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
 .ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
-  color: var(--help-muted); font-size: var(--t-sm); font-weight: 700; line-height: 1.3; white-space: nowrap; opacity: 0; }
+  color: var(--help-muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.3; white-space: nowrap; opacity: 0; }
 @media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
 .ck-rise.on .l1 { animation: ck-l1 var(--d-sky) both; }
 .ck-rise.on .l2 { animation: ck-l2 var(--d-sky) both; }
