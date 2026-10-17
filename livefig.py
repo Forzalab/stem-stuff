@@ -25,6 +25,11 @@ DATA_KEYS = {"label", "text", "alt", "unit", "value", "w", "y", "f", "g", "of"}
 EXPR_KEYS = {"y", "f", "g", "of"}     # math.js strings (cartesian fn / shade)
 NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 FENCE_MAX = 4000                   # a fence longer than this is dropped unread
+# Which kinds a figure may be, from the bank's profile.subject (its first dotted part). Tony, Oct 17: "the figure MUST MATCH whatever
+# topic it is" (a network graph showed up on a physics ramp). Unknown or missing subject: the physics-ish set, never a network.
+SUBJECT_KINDS = {"physics": ("scene", "cartesian", "bars"), "cs": ("network",), "discrete": ("network",),
+                 "math": ("cartesian",), "calc": ("cartesian",)}
+DEFAULT_KINDS = ("scene", "cartesian", "bars")
 
 
 def on():
@@ -127,13 +132,30 @@ def _sig3(a, b):
     return b != 0 and abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 2) * (1 + 1e-9) or a == b == 0
 
 
+def kinds_for(subject):
+    """the kinds a figure may be for this subject (fail closed: anything unknown gets DEFAULT_KINDS)"""
+    return SUBJECT_KINDS.get(subject.split(".")[0].lower(), DEFAULT_KINDS) if isinstance(subject, str) else DEFAULT_KINDS
+
+
+def vertices(body):
+    """the question's vertex labels: the node ids and labels of its bank network figure, else its lone capital letters (A, B, ...)"""
+    out = set()
+    for b in body:
+        if isinstance(b, dict) and b.get("kind") == "network":
+            for x in b.get("nodes", []):
+                out |= {x} if isinstance(x, str) else {x.get("id"), x.get("label")} - {None}
+    text = " ".join(str(b.get("md", "")) for b in body if isinstance(b, dict))
+    return {v.strip("$ ") for v in out} if out else set(re.findall(r"(?<![A-Za-z\\])[A-Z](?![A-Za-z])", text))
+
+
 class Ctx:
-    """one reply's figure context: the numbers it may show (givens) and the ones it must not (the hidden unknown)"""
-    def __init__(self, code, givens, answers):
-        self.code, self.givens, self.answers = code, givens, answers
+    """one reply's figure context: the numbers it may show (givens) and the ones it must not (the hidden unknown), the kinds this
+    subject allows and the question's vertex labels (a network may only name those)"""
+    def __init__(self, code, givens, answers, kinds=DEFAULT_KINDS, verts=()):
+        self.code, self.givens, self.answers, self.kinds, self.verts = code, givens, answers, kinds, set(verts)
 
 
-def context(code, question, key, answer_values, more=""):
+def context(code, question, key, answer_values, more="", subject=None, verts=()):
     """givens = numbers in the question text, `more` (shown choices, sheet formulas) and the KEY's work, plus 0-10; answers = the hidden
     unknown's value(s) (and a \\boxed{} in the KEY) that the question text itself does not already show"""
     q = nums(question)
@@ -141,7 +163,7 @@ def context(code, question, key, answer_values, more=""):
     ans = [abs(a) for a in [*answer_values, *boxed] if math.isfinite(a) and a != 0 and not any(_eq(abs(a), g) for g in q)]
     ans += [a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10]   # the unknown in another unit / power of ten: 23.3 -> 2.33
     givens = set(q) | set(nums(more)) | set(nums(key)) | set(range(0, 11))
-    return Ctx(code, givens, sorted(set(ans)))
+    return Ctx(code, givens, sorted(set(ans)), kinds_for(subject), verts)
 
 
 # ---------------- the gate ----------------
@@ -179,6 +201,8 @@ def check(g, ctx):
         return "no-schema"
     if not isinstance(g, dict) or g.get("type") != "graph" or g.get("kind") not in KINDS:
         return "kind"
+    if g["kind"] not in ctx.kinds:
+        return "subject"                     # a network on a physics question, a scene on a graph-theory one
     if len(json.dumps(g)) > MAX_JSON:
         return "size"
     if not valid(g, s["$defs"]["graph"], s):
@@ -201,6 +225,8 @@ def check(g, ctx):
                 or (g.get("layout") == "free" and not all(isinstance(x, dict) and "at" in x for x in g["nodes"])) \
                 or (g.get("layout") == "tree" and g.get("root") not in ids):
             return "network"
+        if any((x if isinstance(x, str) else x.get("label", x["id"])).strip("$ ") not in ctx.verts for x in g["nodes"]):
+            return "vertex"                  # nodes are the question's own vertices (A, B, ...), never invented ones
     for k, v in _walk(g, None, []):
         if isinstance(v, bool):
             continue
@@ -216,6 +242,8 @@ def check(g, ctx):
                 return f"leak:{k}={x:g}"         # the field and the number only: never the model's text
             if not any(_eq(abs(x), n) for n in ctx.givens):
                 return f"not-given:{k}={x:g}"
+    if kind == "scene" and not any(m.get("mark") == "force" and tuple(m["at"]) in bodies for m in marks):
+        return "no-force"                    # a physics scene is the forces on a body: at least one
     return None
 
 
@@ -305,8 +333,28 @@ def weave(system):
     return "\n".join(out)
 
 
+EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kinds this question allows
+    "scene": '{"type":"graph","kind":"scene","alt":"Forces on the block on the ramp.","marks":[{"mark":"incline","at":[-2,0],"base":4,"angle":30},{"mark":"body","at":[0,1.2],"shape":"box","w":0.8,"h":0.5,"angle":30},{"mark":"force","at":[0,1.2],"angle":270,"len":1.4,"label":"$mg$"},{"mark":"force","at":[0,1.2],"angle":120,"len":1.2,"label":"$F_N$"}]}',
+    "cartesian": '{"type":"graph","kind":"cartesian","alt":"The line y = 2x + 1.","x":{"min":0,"max":4,"label":"$x$"},"y":{"min":0,"max":10,"label":"$y$"},"marks":[{"mark":"fn","y":"2*x+1"}]}',
+    "bars": '{"type":"graph","kind":"bars","alt":"Energy before and after.","unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]},{"label":"after","bars":[{"label":"$U$","value":8}]}]}',
+    "network": '{"type":"graph","kind":"network","alt":"The graph on A, B, C.","nodes":["A","B","C"],"edges":[{"from":"A","to":"B"},{"from":"B","to":"C"}]}',
+}
+
+
+def rule(ctx):
+    """RULE for this question: the kinds it allows, one tiny example each, and (network) the vertex labels it may use"""
+    ks = [k for k in ("scene", "cartesian", "bars", "network") if k in ctx.kinds]
+    out = RULE + "\nTHIS question allows ONLY these kinds: " + ", ".join(ks) + ". Any other kind is dropped. One tiny valid example each:"
+    out += "".join(f"\n- {k}: {EXAMPLE[k]}" for k in ks)
+    if "scene" in ks:
+        out += "\nA scene is the forces on a body: at least one force arrow drawn at the body's own point."
+    if "network" in ks:
+        out += "\nNetwork nodes are the question's own vertex labels" + (" (" + ", ".join(sorted(ctx.verts)) + ")" if ctx.verts else "") + ", never new names."
+    return out
+
+
 RULE = """
-FIGURE (the one exception to "no code" in Format: this fence is allowed): most replies carry ONE figure (never two) whenever a picture helps: a free-body diagram, a graph, energy bars, a network, an orbit. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON.
+FIGURE (the one exception to "no code" in Format: this fence is allowed): most replies carry ONE figure (never two) whenever a picture helps: a free-body diagram, a graph, energy bars, a network, an orbit. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON. The line right before the fence names what is drawn ("Forces on the block:", "The graph on A to D:").
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
 - "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}.
 - "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text.

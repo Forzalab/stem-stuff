@@ -180,31 +180,6 @@
      "label": "$24.4\\ \\text{J}$"
     }
    ]
-  },
-  {
-   "type": "graph",
-   "kind": "network",
-   "alt": "Energy flows from the push to three places.",
-   "nodes": [
-    "push",
-    "heat",
-    "height",
-    "spring"
-   ],
-   "edges": [
-    {
-     "from": "push",
-     "to": "heat"
-    },
-    {
-     "from": "push",
-     "to": "height"
-    },
-    {
-     "from": "push",
-     "to": "spring"
-    }
-   ]
   }
  ],
  "invalid": [
@@ -240,6 +215,66 @@
     "outputs": [
      {
       "from": "g"
+     }
+    ]
+   }
+  },
+  {
+   "name": "a network on a physics question",
+   "why": "subject",
+   "fig": {
+    "type": "graph",
+    "kind": "network",
+    "alt": "Energy flows from the push to three places.",
+    "nodes": [
+     "push",
+     "heat",
+     "height",
+     "spring"
+    ],
+    "edges": [
+     {
+      "from": "push",
+      "to": "heat"
+     },
+     {
+      "from": "push",
+      "to": "height"
+     },
+     {
+      "from": "push",
+      "to": "spring"
+     }
+    ]
+   }
+  },
+  {
+   "name": "a scene with no force on the body",
+   "why": "no-force",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "The block on the ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
      }
     ]
    }
@@ -792,5 +827,58 @@
     2
    ]
   }
- ]
+ ],
+ "network": {
+  "subject": "discrete",
+  "body": [
+   {
+    "type": "text",
+    "md": "In the graph on vertices $A$, $B$, $C$, $D$ with edges $AB$, $BC$, $CD$, $DA$, how many edges does a spanning tree have?"
+   }
+  ],
+  "valid": {
+   "type": "graph",
+   "kind": "network",
+   "alt": "The cycle on A, B, C, D.",
+   "nodes": [
+    "A",
+    "B",
+    "C",
+    "D"
+   ],
+   "edges": [
+    {
+     "from": "A",
+     "to": "B"
+    },
+    {
+     "from": "B",
+     "to": "C"
+    },
+    {
+     "from": "C",
+     "to": "D"
+    },
+    {
+     "from": "D",
+     "to": "A"
+    }
+   ]
+  },
+  "wrong_labels": {
+   "type": "graph",
+   "kind": "network",
+   "alt": "A made-up graph.",
+   "nodes": [
+    "push",
+    "heat"
+   ],
+   "edges": [
+    {
+     "from": "push",
+     "to": "heat"
+    }
+   ]
+  }
+ }
 }
