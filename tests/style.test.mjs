@@ -72,9 +72,9 @@ test("§2.6 keyboard ring: one width (--ring)", () => {
   assert.deepEqual(bad.map(fmt), [], "outline: var(--ring) solid var(--focus) (STYLE.md §2.6)");
 });
 
-test("§2.2 type: Atkinson, Atkinson Mono or KaTeX only", () => {
+test("§2.2 type: the text stack (Atkinson / SF), mono or KaTeX only", () => {
   const first = v => v.split(",")[0].trim().replace(/["']/g, "");
-  const OK = v => ["inherit", "var(--mono)", "Atkinson Hyperlegible", "Atkinson Hyperlegible Mono"].includes(first(v)) || /^KaTeX_/.test(first(v));
+  const OK = v => ["inherit", "var(--font)", "var(--mono)", "Atkinson Hyperlegible", "Atkinson Hyperlegible Mono"].includes(first(v)) || /^KaTeX_/.test(first(v));
   const bad = ALL.filter(d => d.prop === "font-family" && !OK(d.value));
   assert.deepEqual(bad.map(fmt), [], "no third family (STYLE.md §2.2)");
 });
@@ -85,6 +85,15 @@ test("§2.1 retired colour tokens stay gone (PALETTE-v3 §1: one warm family, un
   const hits = ["app.css", "nav.css", "rewards/rewards.css", "rewards/fx.js", "offline.js"].flatMap(f => code(f).split("\n").map((l, i) => [f, i + 1, l]))
     .filter(([, , l]) => RETIRED.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
   assert.deepEqual(hits, [], "use the v5 role (app.css :root)");
+});
+test("§2.2 weights: 400 and 600 (--w-em), nothing else", () => {
+  const w = v => (v.match(/^(?:font-weight:)?\s*(\d{3})/) || [])[1];
+  const bad = ALL.filter(d => (d.prop === "font-weight" && !["400", "600", "var(--w-em)", "inherit", "normal"].includes(d.value)) || (d.prop === "font" && w(d.value) && !["400", "600"].includes(w(d.value))));
+  assert.deepEqual(bad.map(fmt), [], "two weights (STYLE.md §2.2)");
+});
+test("§2.2 no italic outside math", () => {
+  const bad = ALL.filter(d => d.prop === "font-style" && d.value === "italic" && !/katex/i.test(d.sel));
+  assert.deepEqual(bad.map(fmt), [], "italic lives in $..$ only (STYLE.md §2.2)");
 });
 
 test("§4 no colour emoji in the UI", () => {

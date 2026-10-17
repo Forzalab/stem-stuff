@@ -1,7 +1,7 @@
 /* rewards/rewards.css: the sugar reward skin, Quiz Pop dark (Tony, Oct 4; port of design/rewards/themes/quizpop.css over the shared
    hud.css + fx.css). Scoped (design/REWARDS-WIRING.md §7): it styles only the HUD row (.rw-*) and the FX layers (.fx-*), every token
    lives on .rw-skin (never :root) and is named --rw-*, so the question UI keeps STYLE.md. tests/style.test.mjs checks the scope.
-   Fonts: Atkinson Hyperlegible 700 (vendored); Press Start 2P (vendor/fonts, OFL) for the burst title only. No CDN.
+   Fonts: the app's text face (var(--font), app.css: Atkinson, SF on WebKit) at 400 / 600 on app.css's size ladder; Press Start 2P (vendor/fonts, OFL) for the burst title only. No CDN.
    z ladder (app.css): stage 15 · dock 20 · brainrot 30 · Scratchpad button 40 · #toast 50 · drop banner 55 · update bar 60 ·
    splash 100 · FX overlays 140 · FX particles 150. */
 /* impeccable-disable radial-halo: the burst's speed lines live only inside the 1.2-2 s overlay, never on the resting page */
@@ -11,7 +11,7 @@
   --rw-sh4: 0 12px 24px -6px rgb(0 0 0 / .6), 0 2px 4px rgb(0 0 0 / .4);
   --rw-sh5: 0 20px 40px -8px rgb(0 0 0 / .7), 0 4px 8px rgb(0 0 0 / .4);
   --rw-r-s: 12px; --rw-r-m: 20px; --rw-r-l: 28px; --rw-pill: 999px;
-  --rw-font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --rw-font: var(--font, "Atkinson Hyperlegible", system-ui, sans-serif);
   --rw-pixel: "Press Start 2P", "Atkinson Hyperlegible Mono", monospace;
 }
 
@@ -21,7 +21,7 @@
 .rw-hud {
   container-type: inline-size; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; height: var(--btn, 48px);
   padding: 0; border-radius: 14px;   /* no gold frame (Tony, Oct 5 clutter pass C1): it was the loudest thing on the page */
-  font-family: var(--rw-font); font-weight: 700; color: var(--ink); user-select: none; -webkit-user-select: none;
+  font-family: var(--rw-font); font-weight: 600; color: var(--ink); user-select: none; -webkit-user-select: none;
 }
 .qnav-on:not(.dock-bottom):not(.start) .rw-hud { grid-row: 1; grid-column: 3; justify-self: stretch; }
 /* no question list (a question opened by link): the HUD lines up with the content under it, not the window's edge */
@@ -43,23 +43,23 @@ html.start .rw-hud { display: none; }
 .rw-coin-ic { width: 28px; height: 28px; flex: none; }
 .rw-coin-ic img, .rw-flame img, .rw-flame svg { width: 100%; height: 100%; display: block; }
 .rw-flame svg { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
-.rw-num { font: 700 22px/1 var(--rw-font); color: var(--reward); font-variant-numeric: tabular-nums; }
+.rw-num { font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font); color: var(--reward); font-variant-numeric: tabular-nums; }
 .rw-lvl { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .rw-star { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
 .rw-star img { position: absolute; inset: 0; width: 100%; height: 100%; filter: var(--goldify); }
-.rw-star b { position: relative; margin-top: 3px; font: 700 16px/1 var(--rw-font); color: var(--help-ink); }
+.rw-star b { position: relative; margin-top: 3px; font: 600 var(--t-sm, 0.9375rem)/1 var(--rw-font); color: var(--help-ink); }
 .rw-lvl-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
 .rw-bar { flex: 1; min-width: 0; display: block; height: 6px; border-radius: var(--rw-pill); overflow: hidden; background: var(--page); }
 .rw-bar i {
   display: block; height: 100%; width: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left;
   background: var(--reward); transition: transform .5s cubic-bezier(.16, 1, .3, 1);
 }
-.rw-to { flex: none; font: 700 18px/1.1 var(--rw-font); color: var(--muted); white-space: nowrap; }
+.rw-to { flex: none; font: 600 var(--t-md, 1.0625rem)/1.1 var(--rw-font); color: var(--muted); white-space: nowrap; }
 .rw-to b { color: var(--reward); }
 .rw-lvl.rw-pulse { animation: rw-pulse .7s ease-out; }
 .rw-streak {
   flex: none; display: flex; align-items: center; gap: 6px; height: calc(100% - 12px); padding: 0 12px 0 8px; border-radius: 10px;
-  background: var(--help-fill); border: 1px solid var(--help-line); color: var(--reward); font: 700 22px/1 var(--rw-font);
+  background: var(--help-fill); border: 1px solid var(--help-line); color: var(--reward); font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font);
 }
 .rw-flame { width: 26px; height: 26px; display: block; transform: scale(var(--fs, 1)); transform-origin: 50% 90%; transition: transform .3s; opacity: .6; filter: grayscale(.7); }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
@@ -74,15 +74,15 @@ html.start .rw-hud { display: none; }
 .rw-pop {
   position: fixed; inset: auto; margin: 0; box-sizing: border-box; padding: 16px; border-radius: 14px;
   background: var(--card); border: 1px solid var(--line); color: var(--ink);   /* a navy card, not a warm one (PALETTE-v3 §3) */
-  box-shadow: 0 16px 36px -8px rgb(0 0 0 / .6), 0 3px 6px rgb(0 0 0 / .25); font: 400 17px/1.4 var(--rw-font);
+  box-shadow: 0 16px 36px -8px rgb(0 0 0 / .6), 0 3px 6px rgb(0 0 0 / .25); font: 400 var(--t-md, 1.0625rem)/var(--lh, 1.41) var(--rw-font);
 }
-.rw-pop .rw-pop-h { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; }
+.rw-pop .rw-pop-h { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: var(--t-lg, 1.25rem); }
 .rw-pop .rw-star { width: 36px; height: 36px; }
-.rw-pop .rw-star b { font-size: 15px; }
+.rw-pop .rw-star b { font-size: var(--t-sm, 0.9375rem); }
 .rw-pop .rw-bar { height: 12px; margin: 0 0 12px; }
 .rw-pop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
 .rw-pop dt { color: var(--muted); }
-.rw-pop dd { margin: 0; font-weight: 700; }
+.rw-pop dd { margin: 0; font-weight: 600; }
 
 /* ---------- the Cluck chip, "Explain my mistake" (T4; Tony, Oct 4: "ask ai button should shake like an ad button") ----------
    The slot / red-gold kit pill, redrawn as our own CSS (no pixels copied): dark outline, thick gold rim, red-orange body, light top
@@ -92,7 +92,7 @@ html.start .rw-hud { display: none; }
 /* impeccable waiver: casino-themed (Tony, Oct 4) */
 .rw-chip {   /* PALETTE-v3 §3: one flat --help face, --help-ink label (7.67:1), no bevel; pressed = the same face, darker, 1px down */
   position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 20px 6px 4px;
-  font: 700 var(--t-sm, 1rem)/1.15 var(--rw-font); color: var(--help-ink); text-align: left;
+  font: 600 var(--t-sm, 1rem)/1.15 var(--rw-font); color: var(--help-ink); text-align: left;
   border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer; background: var(--help) padding-box;   /* the old rim's 3px kept clear: the chip keeps its box, nothing around it moves */
   transform-origin: 50% 60%;
 }
@@ -126,13 +126,13 @@ html.start .rw-hud { display: none; }
 .rw-hint-coin { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--reward); }
 .rw-hint-coin svg { width: 32px; height: 32px; display: block; }
 .rw-hint-tx { flex: 1; min-width: 0; }
-.rw-hint-t { font: 700 1.25rem/1.2 var(--rw-font); }
+.rw-hint-t { font: 600 1.25rem/1.2 var(--rw-font); }
 .rw-hint-chev { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; color: var(--help-on); background: var(--help-deep); }
 .rw-hint-chev svg { width: 26px; height: 26px; transition: transform .2s ease-out; }
 .rw-hint[aria-expanded="true"] .rw-hint-chev svg { transform: rotate(180deg); }
 .rw-free {   /* the slot-kit sticker over the chevron corner: after the button in the DOM + z-index, so it sits on top and covers no words */
   position: absolute; z-index: 3; top: -12px; right: 2px; padding: 3px 10px 4px; border-radius: 6px; cursor: pointer;   /* a tap on it opens the card (app.js) */
-  font: 700 0.875rem/1.1 var(--rw-font); letter-spacing: .04em; color: var(--help-ink); background: var(--reward); border: 2px solid var(--page);
+  font: 600 var(--t-xs, 0.8125rem)/1.1 var(--rw-font); letter-spacing: 0; color: var(--help-ink); background: var(--reward); border: 2px solid var(--page);
   transform: rotate(-6deg); box-shadow: 0 2px 0 var(--help-line);
 }
 .rw-hint::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-120%) skewX(-18deg);
@@ -158,8 +158,8 @@ html.start .rw-hud { display: none; }
 .fx-sp2 { width: 10px; height: 10px; margin: -5px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
 .fx-sp3 { width: 14px; height: 14px; margin: -7px; border-radius: 0; clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
 .fx-fly { position: absolute; left: 0; top: 0; width: 22px; height: 22px; filter: drop-shadow(0 2px 2px rgb(0 0 0 / .45)); }
-.fx-float { position: absolute; font: 700 22px/1 var(--rw-font); color: var(--reward); text-shadow: 0 2px 0 var(--page); white-space: nowrap; }
-.fx-float-sm { font-size: 14px; color: var(--help-on); }                 /* a wrong try's +1: small, no gold */
+.fx-float { position: absolute; font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font); color: var(--reward); text-shadow: 0 2px 0 var(--page); white-space: nowrap; }
+.fx-float-sm { font-size: var(--t-xs, 0.8125rem); color: var(--help-on); }                 /* a wrong try's +1: small, no gold */
 
 /* ---------- drop banner (FX.toast): a sticker under the top edge; never takes a tap, never with #toast (app.js hides that first) ---------- */
 .fx-toast-host {
@@ -173,8 +173,8 @@ html.start .rw-hud { display: none; }
 }
 .fx-toast-i { width: 32px; height: 32px; flex: none; }
 .fx-toast-b { min-width: 0; }
-.fx-toast-t { font: 700 19px/1.15 var(--rw-font); }
-.fx-toast-s { font: 700 14px/1.3 var(--rw-font); color: var(--help-ink); }
+.fx-toast-t { font: 600 var(--t-lg, 1.25rem)/1.15 var(--rw-font); }
+.fx-toast-s { font: 600 var(--t-xs, 0.8125rem)/1.3 var(--rw-font); color: var(--help-ink); }
 
 /* ---------- slots: a sticker card on a violet scrim ---------- */
 .fx-slots-ov { background: rgb(5 12 22 / .86); }
@@ -194,7 +194,7 @@ html.start .rw-hud { display: none; }
 .fx-cell { height: var(--cell); display: flex; align-items: center; justify-content: center; }
 .fx-cell img { width: 60px; height: 60px; display: block; }
 .fx-slots.win .fx-reel { box-shadow: inset 0 0 0 3px var(--reward); }
-.fx-slabel { margin-top: 12px; text-align: center; opacity: 0; font: 700 28px/1 var(--rw-font); letter-spacing: .04em; color: var(--reward); text-shadow: 0 3px 0 var(--page); }
+.fx-slabel { margin-top: 12px; text-align: center; opacity: 0; font: 600 var(--t-xl, 1.75rem)/1 var(--rw-font); letter-spacing: 0; color: var(--reward); text-shadow: 0 3px 0 var(--page); }
 .fx-slots.win .fx-slabel { opacity: 1; }
 .fx-t-rare .fx-slabel { color: var(--action); }
 .fx-t-legend .fx-slabel { color: var(--help-on); text-shadow: 0 3px 0 var(--help-deep); }
@@ -232,10 +232,10 @@ html.start .rw-hud { display: none; }
 .fx-star-m img { width: 74px; height: 74px; }
 .fx-plate {
   margin-top: 16px; padding: 8px 24px; border-radius: var(--rw-pill); border: 3px solid var(--page); background: var(--reward); color: var(--help-ink);
-  font: 700 24px/1 var(--rw-font); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4);
+  font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4);
 }
-.fx-sub { margin-top: 16px; font: 700 24px/1.15 var(--rw-font); color: var(--ink); text-shadow: 0 3px 0 var(--page); }
-.fx-legend .fx-sub { font-size: 34px; color: var(--help-ink); text-shadow: 0 3px 0 var(--help-on); }
+.fx-sub { margin-top: 16px; font: 600 var(--t-lg, 1.25rem)/1.15 var(--rw-font); color: var(--ink); text-shadow: 0 3px 0 var(--page); }
+.fx-legend .fx-sub { font-size: var(--t-xl, 1.75rem); color: var(--help-ink); text-shadow: 0 3px 0 var(--help-on); }
 .fx-duck { position: relative; width: min(44vw, 180px); margin-bottom: 8px; }
 .fx-duck img { position: relative; display: block; width: 100%; height: auto; filter: var(--duckgold) drop-shadow(0 6px 0 rgb(90 40 0 / .55)); animation: fx-bob 1.1s ease-in-out 2 alternate; }
 .fx-rain { position: absolute; top: 0; filter: drop-shadow(1px 0 0 rgb(54 25 0)) drop-shadow(-1px 0 0 rgb(54 25 0)) drop-shadow(0 1px 0 rgb(54 25 0)) drop-shadow(0 -1px 0 rgb(54 25 0))

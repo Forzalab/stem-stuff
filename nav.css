@@ -3,7 +3,7 @@
 /* .btn with a word: same 48px height, border, radius, hover and focus; width follows the label */
 .btn-label {
   width: auto; padding: 0 var(--s4) 0 var(--s3); display: inline-flex; align-items: center; gap: var(--s2);
-  font-size: var(--t-sm); font-weight: 700; line-height: 1; white-space: nowrap;
+  font-size: var(--t-sm); font-weight: 600; line-height: 1; white-space: nowrap;
 }
 .qnav { display: flex; gap: var(--s2); }
 .qnav .btn:disabled { opacity: 0.45; cursor: default; }
@@ -62,7 +62,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 }
 .qlist a:hover { background: var(--raised); }
 .qlist a:focus-visible { outline-offset: -3px; }
-.qlist .qn { flex: none; min-width: 2ch; text-align: right; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.qlist .qn { flex: none; min-width: 2ch; text-align: right; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .qlist .qt { min-width: 0; overflow-wrap: anywhere; }
 .qlist a[aria-current] { background: var(--raised); }
 .qlist a[aria-current] .qn { color: var(--c1); }
