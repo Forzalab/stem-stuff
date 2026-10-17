@@ -26,6 +26,7 @@
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
+  --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
@@ -692,6 +693,17 @@ html.cl-open body { overflow: hidden; }
 html.fx-blur .glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 html.fx-dim .glass { background-color: color-mix(in srgb, var(--paper) 86%, transparent); }   /* nearly opaque --paper */
 html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }   /* a tap above the sheet closes it */
+/* the phone sheet drags (app.js clDrag, sheet.mjs; Tony's CHATBOX PICK r2): a grab handle on top, the header drags too; up = full screen with the corners
+   going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
+html:not(.side) .cl { border-top-left-radius: var(--rr, 10px); border-top-right-radius: var(--rr, 10px); }
+html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, 0); }
+html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 28px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+html:not(.side) .cl-grab i { position: absolute; top: 8px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--help-muted); opacity: .7; }
+html:not(.side) .cl-grab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; border-radius: 8px; }
+html:not(.side) .cl-bar { padding-top: 22px; touch-action: none; cursor: grab; }
+html:not(.side) .cl-bd { overscroll-behavior: contain; }
+html.side .cl-grab { display: none; }
+html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 /* header H3a (Tony, Oct 13): 48px duck avatar, a solid green dot cut out of it by a 4px gap ring, the PEACH name at 21px, TUTOR, the X in a 10px squircle */
 .cl-bar { flex: none; display: flex; align-items: center; gap: var(--s3); width: auto; min-height: 68px; padding: var(--s2) var(--s2) var(--s2) var(--cl-in); }
 .cl-avw { position: relative; flex: none; width: 48px; height: 48px; }
