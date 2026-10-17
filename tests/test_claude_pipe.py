@@ -1,5 +1,6 @@
 """Cluck's Claude pipe (serve._cluck_stream): Claude first when CLAUDE_API is set and the budget allows, else / on any
 trouble before the first word the OpenRouter chain. urllib is mocked: no network."""
+import calendar
 import io
 import json
 import os
@@ -43,11 +44,11 @@ class ClaudePipe(unittest.TestCase):
         self.calls, self.claude = [], lambda: Resp(sse_claude(["Hi there.\n", "**Push** is shared."]))
         self.env = mock.patch.dict(os.environ, {"CLAUDE_API": "sk-ant-test"})
         self.env.start()
-        for k in ("CLAUDE_BUDGET_USD", "CLAUDE_RESERVE_USD", "CLAUDE_PRICE_IN", "CLAUDE_PRICE_OUT"):
+        for k in ("CLAUDE_BUDGET_USD", "CLAUDE_RESERVE_USD", "CLAUDE_PRICE_IN", "CLAUDE_PRICE_OUT", "CLAUDE_CYCLE_DAY"):
             os.environ.pop(k, None)
         self.kv = mock.patch.object(serve, "KV", (None, None))
         self.kv.start()
-        serve._claude_spent["usd"] = 0.0
+        serve._claude_spent.clear()
         self.url = mock.patch("urllib.request.urlopen", side_effect=self.fake)
         self.url.start()
 
@@ -85,7 +86,7 @@ class ClaudePipe(unittest.TestCase):
         self.assertEqual(body["system"], "BASE PROMPT" + serve.CLAUDE_DELTA)
         self.assertEqual(body["messages"], MSGS[1:])
         pi, po = serve.claude_price(serve.CLAUDE_MODEL)
-        self.assertAlmostEqual(serve._claude_spent["usd"], (100 * pi + 50 * po) / 1e6)
+        self.assertAlmostEqual(serve.claude_spent(), (100 * pi + 50 * po) / 1e6)
 
     def test_billing_and_overload_errors_fall_back(self):
         for code, etype in ((402, "billing_error"), (400, "invalid_request_error"), (401, "authentication_error"),
@@ -114,7 +115,7 @@ class ClaudePipe(unittest.TestCase):
         self.assertEqual(self.hosts(), ["claude"])
 
     def test_budget_hit_skips_claude(self):
-        serve._claude_spent["usd"] = 15.0                                     # 20 - 5 reserve
+        serve._claude_spent[serve.claude_cycle()] = 95.0                     # 100 - 5 reserve
         self.assertEqual(self.run_it(), "OR words.")
         self.assertEqual(self.hosts(), ["or"])
         os.environ["CLAUDE_BUDGET_USD"] = "200"
@@ -122,15 +123,37 @@ class ClaudePipe(unittest.TestCase):
         self.assertEqual(self.run_it(), "Hi there.\n**Push** is shared.")
 
     def test_budget_reads_upstash(self):
-        with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", return_value="19.5") as kv:
+        with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", return_value="99.5") as kv:
             self.assertEqual(self.run_it(), "OR words.")
-            kv.assert_called_with("GET", serve.CLAUDE_SPEND_KEY)
+            kv.assert_called_with("GET", serve.claude_cycle())
         self.assertEqual(self.hosts(), ["or"])
 
     def test_spend_written_to_upstash(self):
         with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", return_value="0") as kv:
             self.run_it()
-            self.assertEqual(kv.call_args_list[-1][0][:2], ("INCRBYFLOAT", serve.CLAUDE_SPEND_KEY))
+            k = serve.claude_cycle()
+            self.assertEqual([c[0][:2] for c in kv.call_args_list[-2:]], [("INCRBYFLOAT", k), ("EXPIRE", k)])
+            self.assertEqual(kv.call_args_list[-1][0][2], 40 * 86400)                # old cycles clean themselves up
+
+    def test_cycle_key(self):
+        day = lambda y, m, d: calendar.timegm((y, m, d, 12, 0, 0))                       # noon UTC
+        self.assertEqual(serve.claude_cycle(day(2026, 10, 1)), "stem:claude_usd:2026-10")
+        os.environ["CLAUDE_CYCLE_DAY"] = "15"                                  # billed on the 15th
+        self.assertEqual(serve.claude_cycle(day(2026, 10, 14)), "stem:claude_usd:2026-09")
+        self.assertEqual(serve.claude_cycle(day(2026, 10, 15)), "stem:claude_usd:2026-10")
+        self.assertEqual(serve.claude_cycle(day(2026, 1, 3)), "stem:claude_usd:2025-12")
+        os.environ["CLAUDE_CYCLE_DAY"] = "31"                                  # capped at 28: every month has one
+        self.assertEqual(serve.claude_cycle(day(2026, 2, 28)), "stem:claude_usd:2026-02")
+
+    def test_last_cycle_spend_does_not_block_this_cycle(self):
+        serve._claude_spent["stem:claude_usd:1999-12"] = 1000.0                # last cycle blew the budget
+        self.assertEqual(self.run_it(), "Hi there.\n**Push** is shared.")
+        self.assertEqual(self.hosts(), ["claude"])
+        store = {"stem:claude_usd:1999-12": "1000"}                            # same with Upstash: only this cycle's key is read
+        with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", side_effect=lambda *c: store.get(c[1])):
+            self.calls.clear()
+            self.assertEqual(self.run_it(), "Hi there.\n**Push** is shared.")
+        self.assertEqual(self.hosts(), ["claude"])
 
     def test_no_key_is_openrouter_only(self):
         os.environ.pop("CLAUDE_API")
@@ -155,7 +178,7 @@ class ClaudePipe(unittest.TestCase):
     def test_price_env_override(self):
         os.environ.update(CLAUDE_PRICE_IN="1", CLAUDE_PRICE_OUT="2")
         self.run_it()
-        self.assertAlmostEqual(serve._claude_spent["usd"], (100 * 1 + 50 * 2) / 1e6)
+        self.assertAlmostEqual(serve.claude_spent(), (100 * 1 + 50 * 2) / 1e6)
 
 
 if __name__ == "__main__":

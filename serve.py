@@ -1087,8 +1087,11 @@ CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip(
 # then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply). CLAUDE_MODEL=claude-haiku-5-5 for speed.
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $/MTok in, out
-CLAUDE_SPEND_KEY = "stem:claude_usd"
-_claude_spent = {"usd": 0.0}                 # no Upstash: this process only
+# Spend is per billing cycle (Max API credits expire each cycle, no rollover): key stem:claude_usd:YYYY-MM, the month the current cycle
+# started in, counted from CLAUDE_CYCLE_DAY (1-28, default 1, UTC). Each key expires after 40 days, so old cycles clean themselves up.
+CLAUDE_SPEND_KEY = "stem:claude_usd:"
+CLAUDE_SPEND_TTL = 40 * 86400
+_claude_spent = {}                           # cycle key -> $; no Upstash: this process only
 
 
 def _fenv(name, default):
@@ -1104,28 +1107,40 @@ def claude_price(model):
     return _fenv("CLAUDE_PRICE_IN", i), _fenv("CLAUDE_PRICE_OUT", o)
 
 
+def claude_cycle(now=None):
+    """this billing cycle's spend key: before CLAUDE_CYCLE_DAY the cycle is still last month's"""
+    t = time.gmtime(now)
+    y, m = t.tm_year, t.tm_mon
+    if t.tm_mday < min(max(int(_fenv("CLAUDE_CYCLE_DAY", 1)), 1), 28):
+        y, m = (y, m - 1) if m > 1 else (y - 1, 12)
+    return f"{CLAUDE_SPEND_KEY}{y:04d}-{m:02d}"
+
+
 def claude_spent():
-    """estimated $ spent on Claude: the Upstash key (shared by every instance), else this process's counter"""
+    """estimated $ spent on Claude this cycle: the Upstash key (shared by every instance), else this process's counter"""
+    k = claude_cycle()
     if all(KV):
         try:
-            return float(_kv("GET", CLAUDE_SPEND_KEY) or 0)
+            return float(_kv("GET", k) or 0)
         except (OSError, ValueError, TypeError):
             pass
-    return _claude_spent["usd"]
+    return _claude_spent.get(k, 0.0)
 
 
 def claude_add(usd):
-    _claude_spent["usd"] += usd
+    k = claude_cycle()
+    _claude_spent[k] = _claude_spent.get(k, 0.0) + usd
     if all(KV):
         try:
-            _kv("INCRBYFLOAT", CLAUDE_SPEND_KEY, f"{usd:.8f}")
+            _kv("INCRBYFLOAT", k, f"{usd:.8f}")
+            _kv("EXPIRE", k, CLAUDE_SPEND_TTL)
         except (OSError, ValueError) as e:
             print("claude spend not saved to KV:", e, file=sys.stderr)
 
 
 def claude_ok():
-    """a key, and spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 20 - 5)"""
-    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 20.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
+    """a key, and this cycle's spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 100 - 5)"""
+    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 100.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
 
 
 # Counters Claude's habits; appended to the shared base prompt on the Claude path only (FORMAT and VOICE stay the rule).

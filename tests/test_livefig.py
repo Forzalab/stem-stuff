@@ -139,7 +139,7 @@ class Pipe(unittest.TestCase):
         for p in (mock.patch.object(serve, "KV", (None, None)), mock.patch("urllib.request.urlopen", side_effect=self.fake)):
             p.start()
             self.addCleanup(p.stop)
-        serve._claude_spent["usd"] = 0.0
+        serve._claude_spent.clear()
 
     def tearDown(self):
         self.env.stop()
