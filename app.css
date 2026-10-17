@@ -272,6 +272,16 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 
 .p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: var(--w-em); color: var(--muted); }
+/* the retry tag (app.js retryTag; round 7 PICKER 9 = retry-tag "Agreed" on the shadcn 6px shape): 24px, a 6px corner, glyph + word.
+   Only sugar's Second chance wears a ring, --reward; a right answer turns it --correct in place (Redeemed). Every other tag is bare:
+   glyph + word, no ring, pulled flush with the stem. Not a control (role=status) */
+.rtag { display: inline-flex; align-items: center; gap: var(--s1); height: var(--s5); margin: 0 0 var(--s2) calc(-6px - var(--bw)); padding: 0 var(--s2) 0 6px;
+  border: var(--bw) solid transparent; border-radius: 6px; color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; white-space: nowrap; }
+.rtag .ico { width: 1em; height: 1em; }
+.rtag:is(.rt-won, .rt-kept) { color: var(--correct); }
+html.sugar .rtag:is(.rt-owe, .rt-won) { margin-left: 0; }
+html.sugar .rtag.rt-owe { border-color: var(--reward); color: var(--reward); }
+html.sugar .rtag.rt-won { border-color: var(--correct); }
 .blocks > * + * { margin-top: var(--s3); }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }

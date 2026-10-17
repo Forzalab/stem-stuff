@@ -75,6 +75,8 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qlist a.gone .qt { color: var(--hint); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--hint); }
 .qlist a.gone .qn { color: var(--hint); }
 .qlist a.gone .mk { opacity: 0.8; }
+.qlist .mk-again .mk-x { opacity: 0.4; }   /* a re-showing: the old misses stay, faded; the history glyph leads */
+.qlist .mk-back { color: var(--muted); }
 .qlist a.gone[aria-current] .qn { color: var(--c1); }
 
 /* the open list dims everything behind it, the top bar and its XP strip too: one even scrim (Tony, Oct 7 bug shot: an undimmed

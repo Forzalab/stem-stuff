@@ -86,7 +86,8 @@ function init() {
   let codes = [], cur = null;
   function mark(c) {                                                 // this browser's record first, else the bank's server mark
     const s = window.stemOffline, rec = s && s.doneGet ? s.doneGet(c) : null, b = bank();
-    return rec || (b && !(rd() && rd().has(c)) ? b.mark(c) : null);   // a Redeem showing starts blank
+    const m = rec || (b ? b.mark(c) : null);
+    return b && rd() && rd().has(c) ? { ...m, again: true } : m;     // a re-showing: its old marks stay, faded, behind the history glyph (retry tag)
   }
   /* sugar snacks ride right before their real (design/REWARDS-WIRING.md); a bank problem carries .before, an upload saccharine.before */
   const beforeOf = c => { const p = off() && off().get(c); return !p ? null : p.before || (p.saccharine && p.saccharine.snack && p.saccharine.before) || null; };
@@ -200,6 +201,7 @@ function init() {
      Crossed out + greyed only when it can't be answered any more (correct, or out of tries); still a link. */
   const ico = (id, cls) => `<svg class="ico ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
   function marks(rec) {
+    if (rec && rec.again) return { html: `<span class="mk mk-again" aria-hidden="true">${ico("i-back", "mk-back")}${ico("i-x", "mk-x").repeat(rec.x || 0)}</span>`, gone: false, say: " Back again." };
     if (!rec || (!rec.x && rec.done === "open")) return { html: "", gone: false, say: "" };
     const html = `<span class="mk" aria-hidden="true">${ico("i-x", "mk-x").repeat(rec.x || 0)}${rec.done === "correct" ? ico("i-ok", "mk-ok") : ""}</span>`;
     const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " No tries left." : " 1 wrong, 1 try left.";

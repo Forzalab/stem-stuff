@@ -411,7 +411,7 @@ window.stemBank = {
 const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
 /* a re-showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a question back (a
    Redeem when it owes a miss), graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
-   real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. No UI yet. */
+   real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. UI: the retry tag (retryTag) + the list's faded marks (nav.js). */
 const REDO = "stem-redo";
 window.stemRedo = {
   get() {
@@ -506,6 +506,7 @@ async function load(code) {
   window.stemT?.("q_open", { code, bank: bank ? bank.code : null, type: prob.type, mode: modeOf() });   // telemetry (design/plans/TELEMETRY.md)
   if (rec) paint(rec);
   if (!off()) syncServer(S);
+  retryTag();
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
@@ -1125,6 +1126,18 @@ function pips(r, el, pos) {
   el.insertAdjacentHTML(pos, `<span class="pips" aria-hidden="true">${'<i class="used"></i>'.repeat(max - left)}${"<i></i>".repeat(left)}</span>`);
 }
 const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
+/* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
+   never reads as lost work. Owes a miss = Second chance, else Review; once closed: Redeemed / Reviewed, or Comes back later. No "+3" until
+   D60 pays it. No lockout sub-lines (Tony, Oct 17: drop). */
+const RTAG = { owe: ["Second chance", "i-back"], won: ["Redeemed", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
+function retryTag() {
+  const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
+  const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
+  const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
+  t.hidden = !k;
+  t.className = "rtag" + (k ? " rt-" + k : "");
+  t.innerHTML = k ? `${icon(RTAG[k][1])}<span>${RTAG[k][0]}</span>` : "";
+}
 function finish() {
   S.finished = true;
   document.querySelectorAll("#q .pips").forEach(x => x.classList.add("spent"));   // hidden, its room kept: a closing tap never moves the page (T17b-1)
@@ -1132,6 +1145,7 @@ function finish() {
   document.querySelectorAll("#q .opt, #q .ans, #q .send").forEach(x => { x.disabled = true; x.setAttribute("aria-disabled", "true"); });
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();
+  retryTag();
   const mine = S, still = painting;
   queueMicrotask(() => { if (S === mine) cueChip(still); });   // after feedback(): a wrong last try makes its own wish first (wishOnWrong)
 }
@@ -1816,6 +1830,7 @@ function rwTip(beat, at) {
   try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at); return true; }
   catch { return false; }                                                        // blocked storage: no way to keep it once, so never
 }
+
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {
   const fx = FXL();
