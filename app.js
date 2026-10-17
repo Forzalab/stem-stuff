@@ -321,8 +321,24 @@ function sugShow() {
   sugEl.hidden = !sugList.length;
   codeIn.setAttribute("aria-expanded", String(!!sugList.length));
   codeIn.removeAttribute("aria-activedescendant");
+  sugFit();
 }
+/* the list must fit what the VISUAL viewport leaves (keyboard up): vh / vw units stay the large viewport on Android Chrome, so
+   a CSS cap alone let it run past the top and over the field. Phones only; --sug-max feeds app.css .code-sug max-height. */
+function sugFit() {
+  const vv = window.visualViewport;
+  if (sugEl.hidden || !vv || !dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
+  const e = $("#entry").getBoundingClientRect(), gap = 16;
+  const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
+  const top = Math.max(vv.offsetTop, above ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
+  const room = above ? e.top - top - gap : vv.offsetTop + vv.height - e.bottom - gap;
+  const cap = Math.floor(vv.height * (above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it
+  root.style.setProperty("--sug-max", Math.max(96, Math.min(cap, Math.floor(room))) + "px");
+}
+if (window.visualViewport) for (const ev of ["resize", "scroll"]) window.visualViewport.addEventListener(ev, () => sugFit());
+addEventListener("resize", () => sugFit());
 function sugHide() {
+  root.style.removeProperty("--sug-max");
   sugList = []; sugAt = -1; sugEl.hidden = true; sugEl.innerHTML = "";
   codeIn.setAttribute("aria-expanded", "false"); codeIn.removeAttribute("aria-activedescendant");
 }
@@ -1788,7 +1804,7 @@ function rewardGo(mine, o) {
   const res = RW().answer({ code: mine.code, correct: o.correct, firstTry: o.firstTry, reveal: !!o.reveal, snack: !!p.snack, dead: !!p.dead, tf: rwTF(p), peeked: !!mine.rwPeek,
     dwellMs: Date.now() - mine.start });
   if (o.correct && o.firstTry && p.snack && p.original) RW().origSolved(p.original.q);
-  if (!o.correct && !o.open && !p.dead) setTimeout(() => rwTip("miss", $("#rwHud .rw-streak")), 700);   // T37: a closed miss (often a T19 reveal, 0 XP); the count waits. Dead-easy has no count
+  if (!o.correct && !o.open && !p.dead) setTimeout(() => rwTip("miss", $("#rwHud .rw-streak")), 1050);   // T37: a closed miss (often a T19 reveal, 0 XP); the count waits. Dead-easy has no count
   const back = o.correct && window.stemRedo.has(mine.code) && window.stemRedo.get().redeem !== false;   // a past miss (a Redeem), now right
   if (!res.xp) { RW().render(0); if (back) comeback(); return; }                 // a done code: the numbers change, nothing moves
   if (back) mine.rwBack = true;
@@ -1846,7 +1862,7 @@ function hintNudge(btn) {
   if (!btn || seen || reduceMQ.matches || !("IntersectionObserver" in window)) return;
   new IntersectionObserver((es, io) => {
     if (!es[0].isIntersecting) return; io.disconnect();
-    setTimeout(() => { btn.classList.add("rw-nudge"); try { sessionStorage.setItem("stem-hint-nudged", "1"); } catch { /* */ } }, 900);
+    setTimeout(() => { btn.classList.add("rw-nudge"); try { sessionStorage.setItem("stem-hint-nudged", "1"); } catch { /* */ } }, 1350);
   }, { threshold: 0.9 }).observe(btn);
 }
 function origPeeked() {
@@ -1883,9 +1899,9 @@ async function rewardShow(mine, res) {
   rwHud?.classList.remove("rw-z-xp");                                            // C1: the 0 balance was hidden; the first reward brings it in, coins fly to it
   if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
-  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 450);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
+  fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 700); return; }
+  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
   await wait(600);
   if (res.drop && fx.slots) await fx.slots(res.drop);
   if (res.burst && fx.burst) {
@@ -1905,7 +1921,7 @@ async function rewardShow(mine, res) {
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["First time? Keep your progress.", "Third time's the charm.", "Triple kill?"] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
 function rwTip(beat, at) {
   if (!rewardOn() || toastAt || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];

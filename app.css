@@ -90,7 +90,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .code-box {
   flex: 1 1 auto; min-width: 0; height: var(--btn); display: flex; align-items: center;
   background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 8px; padding-left: var(--s3);
-  transition: background-color .12s ease-out, border-color .12s ease-out, box-shadow .12s ease-out;
+  transition: background-color .18s ease-out, border-color .18s ease-out, box-shadow .18s ease-out;
 }
 .code-box:hover { border-color: var(--muted); }
 /* field focus, everywhere (STYLE.md 2.6): the border turns --focus and a 1px inset doubles it to 2px. No outer ring */
@@ -111,7 +111,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
    (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
 .code-sug {
   position: absolute; z-index: 31; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;   /* 31: over an open question list (nav.css, z 30), or a tap on a suggestion lands on the list (G2c row 06) */
-  max-height: min(22rem, 50vh); overflow-y: auto; overscroll-behavior: contain;
+  max-height: min(22rem, 50vh, var(--sug-max, 100vh)); max-height: min(22rem, 50dvh, var(--sug-max, 100dvh)); overflow-y: auto; overscroll-behavior: contain; scroll-padding: var(--s1);   /* --sug-max: the room the visual viewport leaves (app.js sugFit); the list scrolls inside itself */
   background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
 }
 .dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
@@ -143,7 +143,7 @@ html.start .entry {
   gap: 0; height: calc(var(--btn) + var(--s2) + 4px); padding: 0 var(--s1);   /* 4px around each 48px button */
   background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 10px;
   box-shadow: var(--shadow-1);
-  transition: border-color .12s ease-out, box-shadow .2s ease-out;
+  transition: border-color .18s ease-out, box-shadow .3s ease-out;
 }
 html.start .entry:hover { border-color: var(--muted); box-shadow: var(--shadow-3); }
 html.start .entry:focus-within { border-color: var(--focus); box-shadow: var(--shadow-3), inset 0 0 0 1px var(--focus); }
@@ -165,7 +165,7 @@ html.start.dock-bottom .dock {
   background: var(--paper); box-shadow: none;
 }
 html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
-html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh); }
+html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh, var(--sug-max, 100vh)); max-height: min(16rem, 40dvh, var(--sug-max, 100dvh)); }
 .entry-msg { margin: var(--s2) 0 0; color: var(--wrong); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
 .entry-msg.ok { color: var(--correct); }
@@ -205,7 +205,7 @@ html.bar-mini .bar-tab {
   display: grid; place-items: center; width: 100%; max-width: none !important; height: 44px; padding: 0; margin: 0;   /* 44: HIG tap target */
   background: none; border: 0; color: var(--muted); touch-action: none;
 }
-html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .2s ease; }
+html.bar-mini .bar-tab .ico { width: 20px; height: 20px; transform: rotate(180deg); transition: transform .3s ease; }
 html.bar-mini:not(.bar-open) .dock { padding: 0 var(--gut) env(safe-area-inset-bottom); }
 html.bar-mini:not(.bar-open) .dock > :not(.bar-tab) { display: none; }
 html.bar-mini.bar-open .dock { padding-top: 0; }
@@ -225,7 +225,7 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
   display: inline-grid; place-items: center;
   background: var(--sheet); color: var(--ink); border: var(--bw) solid transparent; border-radius: 8px;   /* fill-first: the fill carries a button, no idle line (Tony, Oct 3) */
   cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
-  transition: background-color .12s ease-out, border-color .12s ease-out;
+  transition: background-color .18s ease-out, border-color .18s ease-out;
 }
 .btn .ico, .btn > svg { width: var(--ico); height: var(--ico); }
 .btn:hover { background: var(--raised); }
@@ -247,7 +247,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
   position: -webkit-sticky; position: sticky; top: var(--kb-top, 0px); z-index: 10;
   margin: 0 calc(-1 * var(--gut)); padding: var(--s2) var(--gut) var(--s3);
   background: var(--paper);
-  transition: box-shadow .15s ease-out;
+  transition: box-shadow .225s ease-out;
 }
 .freeze.stuck { box-shadow: var(--shadow-3); border-bottom: 1px solid var(--line); padding-top: max(var(--s2), env(safe-area-inset-top)); }
 .freeze-in {
@@ -268,7 +268,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
   position: absolute; left: 50%; top: 100%; width: 88px; height: 44px; margin-left: -44px; z-index: 3;
   display: grid; place-items: start center; padding: var(--s2) 0 0; background: none; border: 0; border-radius: 8px; touch-action: none;
 }
-.more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .12s ease-out; }
+.more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .18s ease-out; }
 .more:hover::before { background: var(--muted); }
 
 .p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
@@ -315,7 +315,7 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
   background: var(--sheet); border: var(--bw-hair) solid var(--line); border-radius: 8px; color: var(--ink);   /* PICKER 1: a 0.5px --line hairline at rest */
-  transition: border-color .12s ease-out, background-color .12s ease-out;
+  transition: border-color .18s ease-out, background-color .18s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 .opt .badge {
@@ -333,7 +333,7 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
-.ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
+.ch, .top, #problem, #work, #fb { transition: opacity .375s ease-out, filter .45s ease-out; }
 /* V1 thin light (PALETTE-v3-THINLIGHT §2): right / wrong = a 1px ring in the state colour + its glyph at the row's right end (.vg, app.js glyph());
    no fill, the badge keeps its rest look. The 1px ring takes its extra half pixel back from the padding: nothing moves */
 .opt:is(.right, .wrong) { border-width: var(--bw); padding: calc(var(--s2) - var(--bw-sel)) calc(var(--btn) + 8px - var(--bw-sel)) calc(var(--s2) - var(--bw-sel)) calc(var(--s3) - var(--bw-sel)); }
@@ -352,8 +352,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
    around it moves. Reduced motion: still (the colour and the icon already say it) */
 @keyframes opt-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
 @keyframes opt-pop { 0%, 100% { transform: none; } 50% { transform: scale(1.025); } }
-.opt.jolt { animation: opt-jolt .36s ease-out; }
-.opt.pop { animation: opt-pop .28s ease-out 2; }
+.opt.jolt { animation: opt-jolt .54s ease-out; }
+.opt.pop { animation: opt-pop .42s ease-out 2; }
 @media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
 .opt.pend { border-color: var(--c1); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
@@ -473,7 +473,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
    96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
    answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
-:root { --d-fast: 120ms; --d-move: 200ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
+:root { --d-fast: 180ms; --d-move: 300ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
 .nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
   color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
@@ -502,6 +502,8 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
 .q.closed :is(.ch, .opt) { transition: none; }
 html:has(#q.closed) :is(#work, #fb) { transition: none; }
+/* a reward overlay is up (a burst still playing when the next answer comes in): the page behind it does not tween, so the tap is not a second moving group (one blink) */
+html:has(.fx-ov) :is(.ch, .opt, .btn, #problem, #work, #fb) { transition: none; }
 /* fix A (sugar right row / box): the row is V1's, as in diet; a 3px --field ring round a 44px Next face keeps the green face off the green ring.
    Sugar moves the mc slot 4px in from the ring (Check too, so its rect stays inside Next) */
 html.sugar .ch :is(.send, .nx) { right: 6px; }
@@ -519,7 +521,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 @keyframes g-next-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 @keyframes g-next-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes g-nod { 0%, 100% { transform: none; } 45% { transform: rotate(-8deg) translateY(2px); } }
-.g-nod { transform-origin: 40% 95%; animation: g-nod 360ms ease-out calc(var(--d-fast) + var(--d-move)) 1 both; }
+.g-nod { transform-origin: 40% 95%; animation: g-nod 540ms ease-out calc(var(--d-fast) + var(--d-move)) 1 both; }
 @media (prefers-reduced-motion: reduce) { .g-next { animation: g-next-fade var(--d-move) linear both; } .g-nod { animation: none; } }
 /* the duck chip (sugar; app.js wishPaint on a closed question): the official 48px pose + the word, the live label-button look. No wiggle */
 .wish.cue { margin-top: var(--s3); }
@@ -549,7 +551,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .verdict .ico { width: 1.25rem; height: 1.25rem; }
 .verdict .btn { margin-left: auto; flex: none; }
 .verdict .btn .ico { width: var(--ico); height: var(--ico); }
-.cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 8px; padding: var(--s3) var(--s4); }
+.cluck { display: flex; gap: var(--s3); align-items: flex-start; background: var(--sheet); border-radius: 12px; padding: var(--s3) var(--s4); }
 .cluck > .ico { color: var(--help); width: 1.75rem; height: 1.75rem; margin-top: 2px; }
 .cluck .md p { margin: 0; }
 .cluck, .cl { --cl-in: 20px; }   /* INNER MARGIN (Tony, Oct 13, i20): Cluck's text, math and controls sit 20px in from the side */
@@ -562,8 +564,8 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* E1 = T2 (app.js ctaHTML): duck + label + chevron, one 48px row 8px wider than the text each side, no fill at rest or pressed */
 .cl-cta { display: flex; align-items: center; gap: var(--s2); width: calc(100% + 2 * var(--s2)); min-height: var(--btn); margin: 0 calc(-1 * var(--s2)) calc(-1 * var(--s2)); padding: 0 var(--s2);
   border: 0; border-radius: 10px; background: none; color: var(--help); font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: 1.2; text-align: left; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: color .12s ease-out; }
-.cl-cta .ico { flex: none; width: 24px; height: 24px; transition: transform .12s ease-out; }
+  -webkit-tap-highlight-color: transparent; transition: color .18s ease-out; }
+.cl-cta .ico { flex: none; width: 24px; height: 24px; transition: transform .18s ease-out; }
 .cl-cta .ico:first-child { transform-origin: 50% 80%; }
 .cl-cta .ico:last-child { width: 20px; height: 20px; }
 .cl-cta:active { color: var(--help); }
@@ -574,14 +576,14 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* the brainrot corner (brainrot.js, design/FORMULA-CARD.md round 2 pick 1): two bare videos, iOS picture-in-picture plain */
 .rot { position: fixed; z-index: 30; left: 0; top: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
 .rot[hidden] { display: none; }
-.rot.snap { transition: transform .2s ease-out; }
+.rot.snap { transition: transform .3s ease-out; }
 .rot .duo { position: relative; display: grid; gap: var(--s2); width: var(--w, 176px); }
 .rot.stashed .duo { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }   /* still playing, out of sight */
 .rot .vid { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; background: var(--field); box-shadow: var(--shadow-3); }
 .rot.drag .vid { box-shadow: var(--shadow-4); }
 .rot .vid iframe { position: absolute; left: -18%; top: -18%; width: 136%; height: 136%; border: 0; pointer-events: none; }   /* the whole duo drags; the oversize crops YouTube's title strip and logo */
 .rot.parked { transform: translate(-300vw, 0) !important; pointer-events: none; }   /* warmed, out of sight */
-.rot .ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }
+.rot .ctl { position: absolute; z-index: 1; top: var(--s1); right: var(--s1); display: flex; gap: var(--s1); opacity: 0; pointer-events: none; transition: opacity .3s ease-out; }
 .rot:hover .ctl, .rot.show .ctl, .rot:focus-within .ctl { opacity: 1; pointer-events: auto; }
 @media (hover: none) { .rot:hover:not(.show) .ctl { opacity: 0; pointer-events: none; } }
 .rot .ctl button, .rot .rtab { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: var(--ink);
@@ -668,7 +670,7 @@ html.side #work > .orig { margin: 0; }
   --line: var(--help-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
 /* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
 .cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
-.cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .6s ease-out;   /* ref 1's ember light, top only */
+.cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .9s ease-out;   /* ref 1's ember light, top only */
   background: radial-gradient(90% 100% at 50% -30%, var(--ai-glow), transparent 70%); }
 .cl:has(.wrun)::before, .cl.wbusy::before { opacity: 1; }                   /* brighter while Cluck thinks and types */
 @media (prefers-reduced-motion: no-preference) {                            /* and it breathes, subtly (Tony, Oct 5); still under reduced motion */
@@ -744,7 +746,7 @@ html .cl .msg.me { display: block; align-self: flex-end; max-width: 80%; margin:
 #clTabEP[hidden] + .cl-fold { margin-top: 0; border-top: 0; }               /* no text above it: the fold is the sheet's first line */
 .cl-fold-t { flex: 1; }
 .cl-fold-n { color: var(--help-muted); font-weight: 400; font-size: var(--t-xs); }
-.cl-fold .ico { width: 20px; height: 20px; color: var(--help-muted); transition: transform .2s ease-out; }
+.cl-fold .ico { width: 20px; height: 20px; color: var(--help-muted); transition: transform .3s ease-out; }
 .cl-fold[aria-expanded="true"] .ico { transform: rotate(180deg); }
 .cl-fold:hover .cl-fold-t { text-decoration: underline; text-decoration-color: var(--help); text-underline-offset: 4px; }
 .cl-fold:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
@@ -765,7 +767,7 @@ html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* roo
 @property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 .ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s5); border-radius: 10px; border: 1.5px solid transparent;   /* square-ish like the code box (Tony, Oct 5: only the Cluck chip stays a pill); RM3 tonal fill; the rim (the one listed --bw exception, STYLE.md 2.6) shows only while Cluck types */
   background: var(--ai-pill) padding-box; }
-.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 2.4s linear infinite;
+.cl:has(.wtext.wrun) .ask, .cl.wbusy .ask { animation: wspin 3.6s linear infinite;
   background: linear-gradient(var(--ai-pill), var(--ai-pill)) padding-box,
     conic-gradient(from calc(270deg + var(--wang)), var(--help), var(--c2) 15%, var(--c3) 32%, var(--c1) 50%, var(--c3) 72%, var(--help)) border-box; }
 @keyframes wspin { to { --wang: 360deg; } }
@@ -830,7 +832,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
   color: var(--ink);
   -webkit-mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
   mask: linear-gradient(90deg, rgb(0 0 0 / 0.55) 40%, #000 50%, rgb(0 0 0 / 0.55) 60%) 0 0 / 300% 100%;
-  animation: xb-sweep 1.4s linear infinite;
+  animation: xb-sweep 2.1s linear infinite;
 }
 @keyframes xb-sweep { from { -webkit-mask-position: 100% 0; mask-position: 100% 0; } to { -webkit-mask-position: 0 0; mask-position: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .xb-save.saving { animation: none; -webkit-mask: none; mask: none; color: var(--hint); } }
@@ -859,10 +861,10 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
    Phones and touch (the entry box is the bottom dock there, so the top bar is the nav row): the nav row slides up and fades. It keeps
    its space, so nothing below it moves under the finger. Swap's toggle is in <main>, so it is never inside the hidden bar.
    Not on desktop: there the bar holds the entry box, which a mouse has to reach while the scratchpad still has focus. */
-.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .2s ease, opacity .2s ease, visibility 0s; }
+.dock-bottom .qnav, .dock-bottom .qlist { transition: transform .3s ease, opacity .3s ease, visibility 0s; }
 html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
   transform: translateY(-100%); opacity: 0; visibility: hidden; pointer-events: none;
-  transition: transform .2s ease, opacity .2s ease, visibility 0s .2s;
+  transition: transform .3s ease, opacity .3s ease, visibility 0s .3s;
 }
 
 /* ---------- Swap: keyboard up = one pane above the keyboard (design/SWAP.md) ----------
@@ -873,10 +875,10 @@ html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
 .btn-tgl { width: auto; display: inline-flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); }
 .btn-tgl::before {                       /* the active side's pill */
   content: ""; position: absolute; top: 4px; bottom: 4px; left: 6px; width: 36px; border-radius: 6px; background: var(--raised);
-  transition: transform .22s ease;
+  transition: transform .33s ease;
 }
 .btn-tgl:hover { background: var(--sheet); }
-.btn-tgl .ico { position: relative; color: var(--muted); transition: color .22s ease, transform .22s ease; }
+.btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s ease, transform .33s ease; }
 .btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--c1); }
 .btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
 
@@ -996,7 +998,7 @@ html.mt #scratch { min-height: var(--pad-max, 8rem); }
 html.mt.mt-q #q, html.mt.mt-q #fb { display: none; }
 html.mt.mt-a #problem { display: none; }
 .mt-mode .qa-l { position: relative; width: 24px; text-align: center; font-weight: var(--w-em);
-  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .22s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
+  font-size: var(--t-lg); line-height: 1; color: var(--muted); transition: color .33s ease; }   /* STYLE.md §2.2: the q | a letters, UI face 20/600 upright (PICKER 7) */
 /* phones: the pad is off the page until the Scratchpad button opens the pad page */
 html.pad-off #work, html.pad-off #sash { display: none; }
 html.pad-off .freeze { position: relative; top: auto; }                        /* no strip: the problem and its answer read as one page */
@@ -1083,7 +1085,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   :root { --t-md: 1.3125rem; --t-sm: 1.1875rem; --t-xs: 1rem; --t-lg: 1.375rem; --btn: 56px; --ico: 28px; }
 }
 
-::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .33s; animation-timing-function: ease; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -1099,7 +1101,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   font-size: var(--t-md); font-weight: 400; line-height: var(--lh); text-align: center; text-wrap: balance; cursor: pointer;
   user-select: none; -webkit-user-select: none; touch-action: manipulation; visibility: hidden;
 }
-#toast.on { visibility: visible; animation: toast-in .2s ease-out both; }
+#toast.on { visibility: visible; animation: toast-in .3s ease-out both; }
 #toast::before {
   content: ""; position: absolute; top: -8px; left: calc(var(--px, 50%) - 7px); width: 14px; height: 14px; transform: rotate(45deg);
   background: inherit; border: inherit; border-right: 0; border-bottom: 0; border-radius: 3px 0 0 0;
@@ -1116,7 +1118,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
   width: max-content; max-width: calc(100vw - 2 * var(--gut)); min-height: 52px; padding: var(--s3) var(--s4); box-sizing: border-box;
   background: var(--raised); color: var(--ink); border: var(--bw) solid var(--muted); border-radius: 10px; box-shadow: var(--shadow-1);
   font: inherit; font-size: var(--t-md); font-weight: var(--w-em); line-height: var(--lh); text-align: center; cursor: pointer;
-  touch-action: manipulation; animation: toast-in .2s ease-out both;
+  touch-action: manipulation; animation: toast-in .3s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) { #updateBar { animation: toast-fade .2s linear both; } }
 /* which deploy this is (offline.js showVer: the PR, tools/version.sh). Quiet chrome: smallest type, the lowest text colour (--hint, 5.7:1 on --paper), never in the way */
@@ -1132,7 +1134,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
    (4.6 s), holds, comes up (6.2-6.8 s), then the line. Each rise replays the same run; down = duck out 300 ms, sky out 400 ms. The sun core
    sits under the duck (--sun-x from peek.js); the sky fades out past its column's edges, never a hard cut. Colours: --help only, mixed with
    transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
-.ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 7.2s; }
+.ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
 .ck-rise[hidden] { display: none; }
 .ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
@@ -1156,8 +1158,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 .ck-rise.on .l3 { animation: ck-l3 var(--d-sky) both; }
 .ck-rise.on .ck-duck { animation: ck-duck var(--d-sky) both; }
 .ck-rise.on .ck-say { animation: ck-say var(--d-sky) both; }
-.ck-rise.out .ck-sky { opacity: 0; transition: opacity .4s ease-in; }
-.ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .3s ease-in; }
+.ck-rise.out .ck-sky { opacity: 0; transition: opacity .6s ease-in; }
+.ck-rise.out :is(.ck-peek, .ck-say) { opacity: 0; transition: opacity .45s ease-in; }
 .ck-rise.out .ck-peek { pointer-events: none; }
 /* 7.2 s: l1 0.6 → 3.0 → 4.4 s; l2 1.0 → 3.2 → 4.4 s; l3 2.0 → 4.4 s; the sky layers rise 4 / 8 / 14px (§2.8 cap) */
 @keyframes ck-l1 { 0%, 8.3% { opacity: 0; transform: none; animation-timing-function: ease-in-out; } 41.7% { opacity: .8; transform: translateY(-2px); animation-timing-function: ease-in-out; } 61.1%, 100% { opacity: 1; transform: translateY(-4px); } }
