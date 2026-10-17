@@ -453,6 +453,11 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff .vk[data-v="i-ok"] { color: var(--correct); }
 .ff .vk[data-v="i-x"] { color: var(--wrong); }
 .ff .vk[data-v="i-lock"] { color: var(--muted); }
+.mparts .pips { grid-area: pp; margin-top: 0; }   /* the try dots sit under the box (r9: with no area they auto-placed into the empty cell left of the hint, over the duck) */
+.mparts .part:has(> .pips) { grid-template-areas: "mk pr" ". bx" ". pp"; }
+.mparts .part:has(> .pips).hinted { grid-template-areas: "mk pr" ". bx" ". pp" ". ht"; }
+.mparts .part.nopr:has(> .pips) { grid-template-areas: "mk bx" ". pp"; }
+.mparts .part.nopr:has(> .pips).hinted { grid-template-areas: "mk bx" ". pp" ". ht"; }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
 @media (min-width: 40rem) {
@@ -460,6 +465,10 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr { grid-template-areas: "mk bx bx"; }
   .mparts .part.hinted { grid-template-areas: "mk pr bx" ". ht ht"; }
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
+  .mparts .part:has(> .pips) { grid-template-areas: "mk pr bx" ". . pp"; }
+  .mparts .part:has(> .pips).hinted { grid-template-areas: "mk pr bx" ". . pp" ". ht ht"; }
+  .mparts .part.nopr:has(> .pips) { grid-template-areas: "mk bx bx" ". . pp"; }
+  .mparts .part.nopr:has(> .pips).hinted { grid-template-areas: "mk bx bx" ". . pp" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
 .ff.bad { border: var(--bw-alarm) dashed var(--wrong-rim); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
@@ -1046,7 +1055,9 @@ html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
 html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: min(60vh, 48rem); cursor: col-resize; }
-html.side .sash::before { position: sticky; display: block; top: min(40vh, 16rem);   /* zoomed far out, the handle stays by the content (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 36px; margin: 0 auto; }
+html.side .sash { background: linear-gradient(var(--line), var(--line)) 50% 0 / 1px 100% no-repeat; }   /* a 1px rail the full height of the gap: the handle reads as the divider between the panes (r9: it was a lone short bar floating at the top) */
+html.side .sash::before { position: sticky; display: block; top: calc(50dvh - 24px);   /* the grip stays centred in the window, also scrolled or zoomed far out (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted);  }
+html.side .sash:hover::before, html.side.mt-drag .sash::before { background: var(--ink); }
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; }
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }

@@ -67,13 +67,30 @@
     var idle = performance.now() - last;
     if (idle < wait()) return arm(wait() - idle);                           // input came since: wait out the rest
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
-    mine = true; n++;
+    mine = true; n++; lastRise = performance.now();
     rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
       onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
   }
+  /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
+     the idle one (ok()): sugar, a bank, Cluck's sheet closed, nothing else over the page, one duck. Plus a cooldown since the last peek. It
+     does not use up the idle peeks (n). Not retried: if it is busy at that moment, this question gets none. */
+  var WRONG_MS = 700, COOL = 120000, wt = 0, wrongDone = {}, lastRise = -COOL;
+  function wrong(code) {
+    if (!code || wrongDone[code]) return;
+    wrongDone[code] = 1; clearTimeout(wt);
+    wt = setTimeout(function () {
+      wt = 0;
+      if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
+      mine = true; lastRise = performance.now();
+      rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
+        onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
+    }, WRONG_MS);
+  }
+  window.stemDuck.wrong = wrong;
   function input(e) {
     if (box && e && e.target && box.contains(e.target)) return;             // the duck's own tap / key is its action, not "idle over"
     last = performance.now(); mx = null;
+    clearTimeout(wt); wt = 0;                                               // a try typed before the wrong-answer peek: no peek
     if (mine) { mine = false; down(); }                                     // AMA 14: it stays until any input
     if (!t && n < IDLE.length) arm(wait());
   }
@@ -89,7 +106,7 @@
     else if (rest != null) { last = performance.now() - (wait() - rest); arm(rest); rest = null; }
   });
   addEventListener("drill:bank", function () {                               // a bank opened or left: a new bank session
-    n = 0; last = performance.now(); mx = null;
+    n = 0; last = performance.now(); mx = null; wrongDone = {}; clearTimeout(wt); wt = 0;
     if (mine) { mine = false; down(); }
     arm(wait());
   });
