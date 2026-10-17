@@ -58,7 +58,7 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 | `--wrong` #eb596e | wrong | X glyph, a wrong row's 1px ring, the strike on a wrong choice, used try pips, list X marks, the entry error line. `--wrong-rim` #d14a5f: only the typed box's 2px dashed edge | hover, delete buttons, emphasis, a fill under a row |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no warning color. The warm family is never a warning and never a figure series. `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
+There is no warning color. The warm family is never a warning and never a figure series on the page; the one exception is a live figure inside Cluck (below). `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
 
 Source for `--action`, `--correct`, `--wrong`: chat-redesign round 5 PALETTE-v3.1 + THINLIGHT (brain), Tony's round 7 PICKER 1–2. `--online` #5fd394 is Cluck's status dot only.
 
@@ -286,6 +286,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 - The figure sits straight on the card: no frame, border, background or shadow of its own. Full column width; prose next to it stays 65ch.
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
 - **Live figure in Cluck's message (`.wtext .wfig`, Claude path only; SCHEMA.md "Live figures").** The same `.fig` drawn by `Graph.render`, inline in the reply where Cluck put it, `--s3` above and below, no frame. At most one per reply; never in the peek. While its fence streams nothing shows (no raw JSON, no placeholder); it appears whole once closed, so the typing skips over it. A render error shows the alt sentence in `--muted` (`fig-off`). Reduced motion: drawn at once like the text. `role=img` + the alt as its label.
+- **Cluck figures are warm (Tony, Oct 17: blue on the brown sheet clashed).** Colour has one owner: graph.js reads `--c1`/`--c2`/`--c3`/`--c1-hi`/`--body` from the cascade, and app.css remaps them on `.ai-box .fig, .cluck .fig` only: `--c1` = `--help`, `--c2` and `--c1-hi` = `--help-on`, `--c3` = 55% `--help` / 45% `--help-on`, `--body` = `--help-sheet`; ink, muted, grid and knockout already follow `.ai-box`. Fills are the series at graph.js's 22% alpha. Question-card figures keep the page tokens. Contrast on `--help-sheet` #17130f: `--help` 8.75, `--help-on` 14.3, c3 10.9, `--ai-text` 14.9, `--help-muted` 6.9 (labels need 4.5, strokes 3). `--ok`/`--bad` stay green/red (they carry meaning). Never hardcode a hex in graph.js; a new series colour is a new token here.
 
 ### Cluck's surfaces (`.ai-*`, sugar only)
 

@@ -677,6 +677,10 @@ html.side #work > .orig { margin: 0; }
 /* Cluck's box = its own service on the site: the base tokens remap inside it, so .btn, .ff and the text follow */
 .ai-box { --sheet: var(--help-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--help-muted); --hint: var(--help-muted);
   --line: var(--help-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
+/* live figures inside Cluck (Tony, Oct 17: "all BLUE" on the warm sheet): graph.js reads --c1/--c2/--c3/--c1-hi/--body from the cascade, so the
+   remap lives here, on Cluck's figures only; question-card figures keep the page tokens. Series = the --help ramp, fills (graph.js FILL .22) are
+   those at low alpha, the sheet shows through the node fill. No new hex; --ink/--muted/--grid/--knock are already remapped by .ai-box */
+.ai-box .fig, .cluck .fig { --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); --bg: var(--help-sheet); }
 /* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
 .cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .9s ease-out;   /* ref 1's ember light, top only */
