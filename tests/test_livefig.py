@@ -19,7 +19,12 @@ MSGS = [{"role": "system", "content": "BASE"}, {"role": "user", "content": "Q"}]
 
 
 def ctx():
-    return livefig.context(P["code"], P["body"][0]["md"], P["saccharine"]["key"], [375.0])
+    return livefig.context(P["code"], P["body"][0]["md"], P["saccharine"]["key"], [375.0], subject="physics.mechanics")
+
+
+def net_ctx(subject=None):
+    n = FIX["network"]
+    return livefig.context("CEQ", n["body"][0]["md"], "", [3.0], subject=subject or n["subject"], verts=livefig.vertices(n["body"]))
 
 
 def fence(g):
@@ -68,6 +73,31 @@ class Gate(unittest.TestCase):
         c = livefig.context("X", "Run the sun for 2.0 us.", "bill = $2.33 \\times 10^{13}$ dollars = $\\boxed{23.3}$ trillion", [23.3])
         bars = {"type": "graph", "kind": "bars", "alt": "Where the bill comes from.", "groups": [{"label": "bill", "bars": [{"label": "$", "value": 2.33}]}]}
         self.assertEqual(livefig.check(bars, c), "leak:value=2.33")     # live Haiku, Oct 17: the answer's mantissa as a bar
+
+    def test_the_figure_matches_the_subject(self):
+        net = next(c["fig"] for c in FIX["invalid"] if c["why"] == "subject")
+        self.assertEqual(livefig.check(net, ctx()), "subject")                       # physics + network: dropped
+        self.assertIsNone(livefig.check(FIX["valid"][0], ctx()))                     # physics + FBD: kept
+        self.assertEqual(livefig.check(FIX["valid"][0], net_ctx("cs")), "subject")   # graph theory + scene: dropped
+        self.assertIsNone(livefig.check(FIX["network"]["valid"], net_ctx()))
+        self.assertEqual(livefig.check(FIX["network"]["wrong_labels"], net_ctx()), "vertex")   # not the question's A-D: dropped
+        self.assertEqual(livefig.check(FIX["network"]["valid"], livefig.context("X", "", "", [])), "subject")   # no subject: no network
+
+    def test_vertices_from_the_bank_figure_or_the_text(self):
+        self.assertEqual(livefig.vertices(FIX["network"]["body"]), {"A", "B", "C", "D"})
+        self.assertEqual(livefig.vertices([{"type": "graph", "kind": "network", "nodes": ["a", {"id": "b", "label": "$q$"}]}]), {"a", "b", "q"})
+
+    def test_rule_names_the_allowed_kinds_with_an_example_each(self):
+        r = livefig.rule(ctx())
+        self.assertIn("ONLY these kinds: scene, cartesian, bars.", r)
+        self.assertNotIn('"kind":"network","alt"', r)
+        r = livefig.rule(net_ctx())
+        self.assertIn("ONLY these kinds: network.", r)
+        self.assertIn("(A, B, C, D)", r)
+        for k, ex in livefig.EXAMPLE.items():    # every example passes its own gate
+            c = net_ctx() if k == "network" else livefig.context("X", "", "", [])
+            c.verts = {"A", "B", "C"} if k == "network" else c.verts
+            self.assertIsNone(livefig.check(json.loads(ex), c), k)
 
     def test_given_answer_numbers(self):
         c = ctx()
@@ -154,7 +184,7 @@ class Pipe(unittest.TestCase):
     def test_claude_path_gets_the_rule_and_shows_the_figure(self):
         out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
         self.assertIn("FIGURE (", self.sent[0][1]["system"])
-        self.assertEqual(self.sent[0][1]["max_tokens"], 450 + serve.FIG_TOKENS)
+        self.assertEqual(self.sent[0][1]["max_tokens"], serve.claude_params(serve.CLAUDE_MODEL, 450 + serve.FIG_TOKENS)["max_tokens"])   # the model's own room (same fix as #164)
         self.assertEqual(out.count("```fig\n"), 1)
 
     def test_kill_switch(self):
