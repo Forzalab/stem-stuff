@@ -1217,14 +1217,14 @@ def _claude_one(messages, max_tokens, extra=""):
 
 def _cluck_stream(messages, key, max_tokens, fig=None):
     """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
-    fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.RULE and its fences go through the
+    fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.rule(fig) and its fences go through the
     gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only)."""
     if claude_ok():
         said, live = False, fig is not None and livefig.on()
         gate = livefig.Fence(fig if live else None)
         try:
             msgs = [dict(messages[0], content=livefig.weave(messages[0]["content"]))] + messages[1:] if live else messages
-            for t in _claude_one(msgs, max_tokens + (FIG_TOKENS if live else 0), livefig.RULE if live else ""):
+            for t in _claude_one(msgs, max_tokens + (FIG_TOKENS if live else 0), livefig.rule(fig) if live else ""):
                 said = True
                 out = gate.feed(t)
                 if out:
@@ -1276,7 +1276,8 @@ def fig_ctx(p, answer, chat=False):
     else:
         hidden_vals = livefig.nums(p.get("answer", ""))
     nets = " ".join(network_data(b) for b in p.get("body", []) if b.get("type") == "graph")   # edge weights are givens
-    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets)
+    subject = (_index().get("prof", {}).get(p.get("code")) or {}).get("subject")   # the kinds a figure may be (fail closed)
+    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets, subject, livefig.vertices(p.get("body", [])))
 
 
 def _stream_head(cookie_header):

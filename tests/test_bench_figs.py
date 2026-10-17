@@ -61,7 +61,7 @@ class Shape(unittest.TestCase):
 
 class Figs(unittest.TestCase):
     def ctx(self):
-        return livefig.context("T", "From home, five miles, the ford; two miles to the mill", "3 1 2 2 4 6", [5, 8])
+        return livefig.context("T", "From home, five miles, the ford; two miles to the mill", "3 1 2 2 4 6", [5, 8], subject="cs", verts=NET["nodes"])   # a graph-theory bank: network only, its own vertex labels (#166)
 
     def test_step_labels_and_spelled_givens_pass_the_gate(self):
         shown, fi = b.fig_info("QUACK.\n```fig\n" + json.dumps(NET) + "\n```\nPick c.", self.ctx())
