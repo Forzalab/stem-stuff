@@ -105,7 +105,8 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 | radius | for |
 |---|---|
 | 16px | the Scratchpad button (M3 FAB) |
-| 10px | surfaces that hold content: problem card, list card, Cluck, toast, pane tiles |
+| 12px | the Cluck box (`.cluck`, in the hint area and the sugar skin; Tony, Oct 17: rounder) |
+| 10px | surfaces that hold content: problem card, list card, toast, pane tiles, Cluck's sheet (`.cl`) |
 | 8px | controls: `.btn`, fields (`.ff`, code box, scratchpad), choices, list rows |
 | 6px | something inside a control (the q | a switch's active pill, Paste / Go inside the code box, a suggestion row) |
 | pill / 50% | the start page's field and the round buttons inside it (nested: outer radius minus the 4px gap) |
@@ -413,7 +414,6 @@ Re-find by selector (line numbers drift). Remove a row in the commit that fixes 
 | # | where | what | fix |
 |---|---|---|---|
 | 3 | `design/explain-box.css` textarea | Radius 6px; every other field is 8px. | 8px. |
-| 4 | `app.css` `.cluck` | 8px radius; surfaces are 10px. | 10px. |
 | 5 | `app.css` `.q.closed`, `.ff.shut`; `nav.css` `.qnav .btn:disabled` | Disabled is 0.45 for buttons, 0.5 for closed answers; nav.css copies the button rule. | One `.btn:disabled` rule (0.45); closed answers 0.45; delete the nav.css copy. |
 | 6 | `app.css`, `nav.css` transitions | Durations .12 .15 .2 .22 .25 .3 s, two easings. | Add `--d-fast` 120ms, `--d-move` 200ms, `--d-dim` 300ms, `ease-out`. |
 | 7 | `app.css` `.dock-bottom .dock` | Raw upward shadow. | Token `--shadow-up`. |
