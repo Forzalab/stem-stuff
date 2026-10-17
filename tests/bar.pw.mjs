@@ -111,6 +111,34 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
       await shot("pad-page-typing");
     });
   }
+  if (phone && W === 390) {
+    await step(`search mode: card hidden while the code field has focus, list inside the visual viewport (${W})`, async () => {
+      await page.goto(BASE + "/#PHYS_ZZ1"); await opened(page, "PHYS_ZZ1");
+      await page.evaluate(() => { localStorage.setItem("stem-codes", JSON.stringify(["PHYS_ZZ1", "PHYS_ZZ2", "PHYC_MCQ", "PHYC_AAA", "PHYC_BBB", "PHYC_CCC", ...Array.from({ length: 14 }, (_, i) => "PHYX_" + String.fromCharCode(65 + i))])); });
+      const y0 = await page.evaluate(() => { scrollTo(0, 120); return scrollY; });
+      await page.click("#barTab").catch(() => {});
+      await page.focus("#code");
+      await page.setViewportSize({ width: 390, height: 450 });
+      await page.fill("#code", "PHY");
+      await page.waitForTimeout(300);
+      const g = await page.evaluate(() => {
+        const vis = sel => getComputedStyle(document.querySelector(sel)).visibility, v = visualViewport, r = document.querySelector("#codeSug").getBoundingClientRect();
+        const cx = r.left + r.width / 2, hit = document.elementsFromPoint(cx, r.top + 4)[0];
+        return { coding: document.documentElement.classList.contains("coding"), problem: vis("#problem"), qnav: vis("#qnav"), hud: document.querySelector(".rw-hud") ? vis(".rw-hud") : "hidden", main: vis("#main"), n: document.querySelectorAll("#codeSug li").length,
+          top: r.top, bottom: r.bottom, vtop: v.offsetTop, vb: v.offsetTop + v.height, hit: hit && (hit.closest("#codeSug") ? "list" : hit.id || hit.tagName) };
+      });
+      await shot("search-mode");
+      assert.ok(g.coding && g.problem === "hidden" && g.main === "hidden" && g.qnav === "hidden" && g.hud === "hidden", `card not hidden: ${JSON.stringify(g)}`);
+      assert.ok(g.n > 0 && g.top >= g.vtop - 0.5 && g.bottom <= g.vb + 0.5, `list outside the visual viewport: ${JSON.stringify(g)}`);
+      assert.ok(g.top - g.vtop <= 12, `list top not at the viewport top: ${JSON.stringify(g)}`);
+      assert.equal(g.hit, "list", `something over the list: ${JSON.stringify(g)}`);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.evaluate(() => document.activeElement.blur());
+      await page.waitForTimeout(200);
+      const e = await page.evaluate(() => ({ coding: document.documentElement.classList.contains("coding"), problem: getComputedStyle(document.querySelector("#problem")).visibility, y: scrollY }));
+      assert.ok(!e.coding && e.problem === "visible" && Math.abs(e.y - y0) <= 1, `not restored: ${JSON.stringify(e)} y0=${y0}`);
+    });
+  }
   await b.close();
 }
 console.log(failures ? `${failures} failed` : "all ok");

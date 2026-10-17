@@ -330,9 +330,10 @@ function sugFit() {
   if (sugEl.hidden || !vv || !dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
   const e = $("#entry").getBoundingClientRect(), gap = 16;
   const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
-  const top = Math.max(vv.offsetTop, above ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
-  const room = above ? e.top - top - gap : vv.offsetTop + vv.height - e.bottom - gap;
-  const cap = Math.floor(vv.height * (above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it
+  const coding = root.classList.contains("coding");   // search mode hides the top bar + HUD: the list may rise to the top of the visual viewport
+  const top = Math.max(vv.offsetTop, above && !coding ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
+  const room = above ? e.top - top - (coding ? 8 : gap) : vv.offsetTop + vv.height - e.bottom - gap;
+  const cap = Math.floor(vv.height * (coding ? 1 : above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it (search mode hides it, so the list takes all the room)
   root.style.setProperty("--sug-max", Math.max(96, Math.min(cap, Math.floor(room))) + "px");
 }
 if (window.visualViewport) for (const ev of ["resize", "scroll"]) window.visualViewport.addEventListener(ev, () => sugFit());
@@ -363,7 +364,22 @@ codeIn.addEventListener("keydown", e => {
 });
 sugEl.addEventListener("pointerdown", e => e.preventDefault());   // keep the focus (and the phone keyboard) in the box
 sugEl.addEventListener("click", e => { const li = e.target.closest("li[data-code]"); if (li) sugPick(li.dataset.code); });
-codeIn.addEventListener("blur", () => sugHide());
+codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
+/* search mode (phones; Tony, Oct 17): while the code field has focus the page behind it (question, choices, pad, FAB) is visibility:hidden
+   (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
+let codingY = null;
+function codingOn() {
+  if (!dockMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;
+  codingY = scrollY; root.classList.add("coding"); sugFit();
+}
+function codingOff() {
+  if (!root.classList.contains("coding")) return;
+  root.classList.remove("coding");
+  if (codingY !== null && Math.abs(scrollY - codingY) > 1) scrollTo(0, codingY);
+  codingY = null;
+}
+codeIn.addEventListener("focus", codingOn);
+addEventListener("resize", () => { if (!dockMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
