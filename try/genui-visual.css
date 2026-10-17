@@ -7,7 +7,7 @@ main { max-width: 40rem; margin: 0 auto; }
 .vname { min-width: 0; }
 .score { display: inline-flex; align-items: center; gap: var(--s1); color: var(--ink); font-variant-numeric: tabular-nums; flex: none; }
 .star { color: var(--mark); }
-.seg-loss { margin-left: var(--s1); padding: 0 var(--s1); border-radius: 4px; color: var(--paper); background: var(--bad); font-weight: 700; font-size: var(--t-xs); }
+.seg-loss { margin-left: var(--s1); padding: 0 var(--s1); border-radius: 4px; color: var(--paper); background: var(--wrong); font-weight: 700; font-size: var(--t-xs); }
 .gain { margin-left: var(--s1); color: var(--mark); font-weight: 700; animation: gain .6s ease-out both; }
 @keyframes gain { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
@@ -47,7 +47,7 @@ html.home-sticky.vcl-open .figwrap { position: sticky; top: 0; z-index: 3; backg
 .vopt[aria-checked="true"] { border-color: var(--focus); background: var(--sheet); }
 .vopt.mine { border-style: dashed; border-color: var(--muted); }
 .vopt.mine::after { content: "your pick"; margin-left: auto; font-size: var(--t-xs); color: var(--muted); }
-.vopt.right { border: var(--bw-alarm) solid var(--ok); padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
+.vopt.right { border: var(--bw-alarm) solid var(--correct); padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
 .vopt:disabled { cursor: default; }
 .sure { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-height: 44px; font-size: var(--t-sm); cursor: pointer; }
 .sure input { width: 22px; height: 22px; accent-color: var(--mark); margin: 0; }

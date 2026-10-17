@@ -53,14 +53,14 @@ test("§2.5 radius: only the listed radii", () => {
   assert.deepEqual(bad.map(fmt), [], "radius follows size (STYLE.md §2.5)");
 });
 
-test("§2.6 borders: one weight (--bw), only a wrong answer is heavier (--bw-alarm)", () => {
+test("§2.6 borders: one weight (--bw), answer rows rest on --bw-hair, only a wrong typed answer is heavier (--bw-alarm)", () => {
   const ok = d => {
-    const v = d.value.replace(/var\(--bw(-alarm)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
+    const v = d.value.replace(/var\(--bw(-alarm|-hair)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
     const px = v.match(/\d*\.?\d+px/g) || [];
     return px.every(p => p === "1px" || (p === "1.5px" && d.sel === ".ask"));                  // 1px dividers; Cluck's ask rim (Tony's image 3) is the listed exception
   };
   const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
-  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
+  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-hair), var(--bw-alarm), 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
 });
 test("§2.6 field focus: the 2px edge, never an outline too", () => {
   const field = s => /:focus-within|textarea:focus/.test(s) && !/\.btn\b/.test(s);

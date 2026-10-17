@@ -45,7 +45,7 @@
   .big { font-size: var(--t-md); font-weight: 700; color: var(--ink); white-space: nowrap; }
   .tk { flex: 0 1 auto; min-width: 0; overflow: hidden; display: inline-flex; justify-content: flex-end; align-items: baseline; column-gap: var(--s3); font-size: var(--t-sm); font-weight: 700; }   /* too long for a phone: the oldest text slides off the left edge, the newest stays by W */
   .run { white-space: nowrap; transition: opacity .4s ease-out; }
-  .run.up { color: var(--ok); } .run.dn { color: var(--bad); }
+  .run.up { color: var(--correct); } .run.dn { color: var(--wrong); }
   .run.out { opacity: 0; }
   .tape.rev { flex-wrap: wrap; }
   .tape.rev .tk { display: none; }
@@ -53,8 +53,8 @@
   .tape.rev .total { display: inline-flex; }
   .chips { display: inline-flex; flex-wrap: wrap; gap: var(--s2); }
   .chip { display: inline-flex; align-items: center; padding: 0 var(--s2); border-radius: 6px; font-weight: 700; font-size: var(--t-sm); border: var(--bw) solid; }
-  .chip.up { color: var(--ok); border-color: var(--ok); background: rgb(95 211 148 / .1); }
-  .chip.dn { color: var(--bad); border-color: var(--bad); background: rgb(255 122 122 / .1); }
+  .chip.up { color: var(--correct); border-color: var(--correct); background: rgb(95 211 148 / .1); }
+  .chip.dn { color: var(--wrong); border-color: var(--wrong); background: rgb(255 122 122 / .1); }
   .gr { font-size: var(--t-xs); color: var(--muted); }
   .tape.rm .run { transition: none; }
   @media (prefers-reduced-motion: reduce) { .run { transition: none !important; } }
@@ -69,7 +69,7 @@
   .qq { display: flex; align-items: center; min-width: 0; overflow: hidden; font-variant-numeric: tabular-nums; font-weight: 700; font-size: var(--t-sm); }
   .qi { flex: none; display: inline-flex; align-items: center; white-space: nowrap; max-width: 6rem; overflow: hidden;
     transition: max-width .3s ease-out, opacity .3s ease-out, margin .3s ease-out; }
-  .qi.up { color: var(--ok); } .qi.dn { color: var(--bad); }
+  .qi.up { color: var(--correct); } .qi.dn { color: var(--wrong); }
   .qi.in { animation: qin .25s ease-out both; }
   .qi.gone { max-width: 0; opacity: 0; margin: 0 !important; padding-left: 0; padding-right: 0; border-width: 0; }
   @keyframes qin { from { opacity: 0; transform: translateX(.75rem); } to { opacity: 1; transform: none; } }
@@ -80,7 +80,7 @@
   /* B, chips: the entries are the reveal chips themselves, at most 3 */
   .tape[data-v="b"] .qq { gap: var(--s2); }
   .tape[data-v="b"] .qi { min-height: 28px; padding: 0 var(--s2); border-radius: 6px; border: var(--bw) solid; }
-  .tape[data-v="b"] .qi.up { border-color: var(--ok); background: rgb(95 211 148 / .1); } .tape[data-v="b"] .qi.dn { border-color: var(--bad); background: rgb(255 122 122 / .1); }
+  .tape[data-v="b"] .qi.up { border-color: var(--correct); background: rgb(95 211 148 / .1); } .tape[data-v="b"] .qi.dn { border-color: var(--wrong); background: rgb(255 122 122 / .1); }
   .tape[data-v="b"] .wb { background: transparent; border: var(--bw) solid var(--edge); min-height: 28px; font-size: var(--t-sm); padding: 0 var(--s2); border-radius: 6px; }
   /* C, ledger: W on top, the last 3 entries as a short column under it, newest first, older ones fainter */
   .tape[data-v="c"] { flex-direction: column; align-items: flex-start; row-gap: var(--s2); min-height: 0; }
@@ -95,7 +95,7 @@
   .gl table { border-collapse: collapse; width: 100%; }
   .gl th, .gl td { padding: var(--s1) var(--s2); text-align: right; white-space: nowrap; }
   .gl th { color: var(--muted); font-weight: 700; font-size: var(--t-xs); text-align: left; }
-  .gl .up { color: var(--ok); font-weight: 700; } .gl .dn { color: var(--bad); font-weight: 700; }
+  .gl .up { color: var(--correct); font-weight: 700; } .gl .dn { color: var(--wrong); font-weight: 700; }
   .gl .sum { border-top: var(--bw) solid var(--line); }
   .gl .w { color: var(--ink); font-weight: 700; }
   .gl .scroll { overflow-x: auto; }

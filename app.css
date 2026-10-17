@@ -4,11 +4,15 @@
   --paper: #08111f; --sheet: #16243a; --field: #0a1322; --raised: #20304a;   /* Oct 5: darker, toward Tony's GPT ref (page #031125, cards #0f1d30, pills #15263b) */
   --qbox: #0f1d30;   /* the question box: one clear step up from --paper (Tony, Oct 3; Oct 5: "undistinguished") */
   --ink: #e7edf6; --muted: #a2b3cb; --line: #34445d; --edge: #6b7f9e; --hint: #7d8ea8;
-  --focus: #8fb0ff; --mark: #ffd84a; --ok: #5fd394; --bad: #ff7a7a;
-  /* T23 (Tony, Oct 12: "green and red of the original, the rest stays as is"): the right / wrong answer states only (mc rows, answer boxes).
-     Right = the dark-quiz ref's green rim + check glyph, plus a faint green fill (#10b981 10% into --sheet: grey 46, the old --raised step; rim 3.2:1 on it).
-     Wrong = the ref's fill + x; its rim lifted from the ref's #832839 (1.87:1) to 3.4:1 on the fill, >= 3:1 on every surround. Verdict text, pips, the ticker keep --ok / --bad */
-  --ok-rim: #118d66; --ok-ico: #10b981; --ok-fill: #153341; --bad-fill: #2d161d; --bad-rim: #c83d57; --bad-ico: #fb7185;
+  --mark: #ffd84a;
+  /* PALETTE-v3.1 meaning roles (round 5 colour owner; Tony's round 7 PICKER: 1 rest rows 0.5px hairline, 2 V1 thin light + green Next).
+     Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
+     A state is a 1px line + a trailing glyph in the solid colour on the unchanged row: no fill, the letter badge never changes.
+     On a card: correct 10.8:1, wrong 5.1:1, action 9.2:1; Next's label --correct-ink on --correct 9.9:1, on --correct-press 6.8:1 */
+  --action: #92c0ff; --action-ink: #0c223e; --focus: var(--action);
+  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #042519;   /* --correct-fill: a tint under a short label only (the retry tag), never a row */
+  --wrong: #eb596e; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 2px dashed "re-type here" edge */
+  --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: #7ab8ff; --c1-hi: #a3cdff; --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);
   --body: var(--qbox); --ramp: var(--qbox); --knock: rgb(15 29 48 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* type scale (Refactoring UI: a few hand-picked sizes, used everywhere, the same in every view):
@@ -19,8 +23,9 @@
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
   /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
-  --bw: 1px; --bw-alarm: 2px; --ring: 2px;   /* borders (STYLE.md 2.6): one line weight; only a wrong answer is heavier; one keyboard ring */
+  --bw: 1px; --bw-alarm: 2px; --bw-hair: 0.5px; --ring: 2px;   /* borders (STYLE.md 2.6): one line weight; only a wrong typed answer is heavier; answer rows rest on a hairline; one keyboard ring */
   --bw-up: calc(var(--bw-alarm) - var(--bw));   /* what a wrong border adds: taken back from the padding / offsets, so nothing inside moves */
+  --bw-sel: calc(var(--bw) - var(--bw-hair));   /* the same for an answer row: its 1px state ring over the 0.5px rest hairline */
   --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
   /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
@@ -141,9 +146,9 @@ html.start.dock-bottom .dock {
 }
 html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
 html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh); }
-.entry-msg { margin: var(--s2) 0 0; color: var(--bad); font-size: var(--t-sm); }
+.entry-msg { margin: var(--s2) 0 0; color: var(--wrong); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
-.entry-msg.ok { color: var(--ok); }
+.entry-msg.ok { color: var(--correct); }
 /* upload results (app.js entryMsg): the words carry the state too. STYLE.md 2.1: there is no warning colour and --mark is never a
    warning (tests/style.test.mjs), so a partial result is plain ink between the green and the red */
 .entry-msg.warn { color: var(--ink); }
@@ -277,31 +282,40 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt {
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
-  background: var(--sheet); border: var(--bw) solid var(--edge); border-radius: 8px; color: var(--ink);   /* --edge like a field: 3:1 */
+  background: var(--sheet); border: var(--bw-hair) solid var(--line); border-radius: 8px; color: var(--ink);   /* PICKER 1: a 0.5px --line hairline at rest */
   transition: border-color .12s ease-out, background-color .12s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
 .opt .badge {
   flex: none; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border-radius: 50%;   /* Tony, Oct 5: the letters read small */
-  border: var(--bw) solid var(--edge); color: var(--muted); font-weight: 700; font-size: var(--t-md);
+  border: var(--bw) solid var(--line); color: var(--muted); font-weight: 700; font-size: var(--t-md);
 }
 .opt .badge .ico { width: 1.1rem; height: 1.1rem; }
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
 .opt .txt .katex { white-space: nowrap; }                          /* a choice's formula is one unit: "d =" never alone on a line; app.js fitMath shrinks it to fit */
 .opt .txt .kx-scroll { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; scrollbar-width: thin; }   /* app.js fitMath: too wide even at 85% */
-.opt[aria-checked="true"] { border-color: var(--c1); background: var(--raised); }
-.opt[aria-checked="true"] .badge { background: var(--c1); border-color: var(--c1); color: var(--field); }
+.opt[aria-checked="true"] { border: var(--bw) solid var(--action); padding: calc(var(--s2) - var(--bw-sel)) calc(var(--btn) + 8px - var(--bw-sel)) calc(var(--s2) - var(--bw-sel)) calc(var(--s3) - var(--bw-sel)); }
+.opt[aria-checked="true"] .badge { background: var(--action); border-color: var(--action); color: var(--action-ink); }
 /* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */
 /* only while open; never the question or the top bar. Picking also hides the code bar and the grab handle (Tony, Oct 2) */
 .q:not(.closed) .choices:not(.all):has(.opt[aria-checked="true"]) .ch:not(:has(.opt[aria-checked="true"])) { opacity: .35; }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#work, #fb) { filter: brightness(.55); }
 html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock, #more) { visibility: hidden; }
 .ch, .top, #problem, #work, #fb { transition: opacity .25s ease-out, filter .3s ease-out; }
-.opt.wrong { border: var(--bw-alarm) dashed var(--bad-rim); background: var(--bad-fill); color: var(--muted); padding: calc(var(--s2) - var(--bw-up)) calc(var(--btn) + 8px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
-.opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--bad-ico); text-decoration-thickness: 2px; }
-.opt.wrong .badge { border-color: var(--bad-rim); color: var(--bad-ico); }
-.opt.right { border-color: var(--ok-rim); background: var(--ok-fill); }
-.opt.right .badge { background: none; border-color: var(--ok-rim); color: var(--ok-ico); }   /* the ref: a green check glyph in the slot, no filled disc */
+/* V1 thin light (PALETTE-v3-THINLIGHT §2): right / wrong = a 1px ring in the state colour + its glyph at the row's right end (.vg, app.js glyph());
+   no fill, the badge keeps its rest look. The 1px ring takes its extra half pixel back from the padding: nothing moves */
+.opt:is(.right, .wrong) { border-width: var(--bw); padding: calc(var(--s2) - var(--bw-sel)) calc(var(--btn) + 8px - var(--bw-sel)) calc(var(--s2) - var(--bw-sel)) calc(var(--s3) - var(--bw-sel)); }
+.opt.wrong { border-color: var(--wrong); color: var(--muted); }
+.opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
+.opt.right { border-color: var(--correct); }
+.opt.right.reveal { border-style: dashed; }   /* the right row the student missed */
+.opt :is(.badge, .badge .ico) { transition: none; }
+.opt[aria-checked="true"]:is(.right, .wrong) .badge { background: none; border-color: var(--line); color: var(--muted); }   /* the verdict replaces the selected look */
+.ch .vg { position: absolute; right: 16px; top: 50%; margin-top: -10px; width: 20px; height: 20px; pointer-events: none; }   /* centred in the arrow's 48px slot */
+.ch .vg .ico { width: 20px; height: 20px; }
+.opt.right .vg { color: var(--correct); }
+.opt.wrong .vg { color: var(--wrong); }
+.ch.cue .vg { right: calc(var(--nxw) + 10px); }   /* 8px left of Next */
 /* one-shot feedback (Tony, Oct 6 TK1; app.js nudge): a wrong pick shakes once, a right one pulses twice. Transform only: nothing
    around it moves. Reduced motion: still (the colour and the icon already say it) */
 @keyframes opt-jolt { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
@@ -314,14 +328,17 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 /* pick all (design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
    one Check under the list. Never one row, no lock-in dimming (many rows can be ticked). */
 .choices.all .opt { padding-right: var(--s3); }
-.choices.all .opt.wrong { padding-right: calc(var(--s3) - var(--bw-up)); }
+.choices.all .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--s3) - var(--bw-sel)); }
+.choices.all .opt.right .badge { background: none; border-color: var(--correct); color: var(--correct); }   /* pick-all: the square is the glyph slot */
+.choices.all .opt.right.reveal .badge { border-style: dashed; }
+.choices.all .opt.wrong .badge { background: none; border-color: var(--wrong); color: var(--wrong); }
 .choices.all .opt .badge { width: 1.5rem; height: 1.5rem; border-radius: 4px; }
 .choices.all .opt .badge .ico { width: 1rem; height: 1rem; }
 .choices.all .opt[aria-checked="false"]:not(.wrong):not([data-mark="x"]) .badge .ico { visibility: hidden; }
 .choices.all .opt .lt { flex: none; margin-left: calc(-1 * var(--s1)); color: var(--muted); font-weight: 700; font-size: var(--t-sm); }
-.choices.all .opt.wrong .lt { color: var(--bad-ico); }
+.choices.all .opt.wrong .lt { color: var(--wrong); }
 /* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
-.choices.all .opt[data-mark="x"] .badge { border-color: var(--bad); color: var(--bad); }
+.choices.all .opt[data-mark="x"] .badge { border-color: var(--wrong); color: var(--wrong); }
 .choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
 .ch .fix { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); }
 .ch .fix[hidden] { display: none; }
@@ -332,8 +349,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .chk:not(.cue) { display: none; }   /* closed: the Check row goes, unless it carries Next (T17b-1) */
 /* try pips (app.js pips; Tony, Oct 5: they replace the "One more try" toast): one dot per try after a wrong one; used = filled --bad, left = hollow */
 .pips { flex: none; display: inline-flex; align-items: center; gap: var(--s1); }
-.pips i { width: 10px; height: 10px; border-radius: 50%; border: var(--bw) solid var(--muted); }
-.pips i.used { background: var(--bad); border-color: var(--bad); }
+.pips i { width: 8px; height: 8px; border-radius: 50%; border: var(--bw) solid var(--line); }   /* filled vs hollow is the cue, never hue alone */
+.pips i.used { background: var(--wrong); border-color: var(--wrong); }
 .pips.spent, .preview.spent { visibility: hidden; }   /* the question closed: the dots go, their room stays (T17b-1: nothing moves after Check) */
 .choices + .pips, .ff + .pips { display: flex; justify-content: flex-end; margin-top: var(--s2); }   /* no Check beside them: right-aligned under the rows / the box */
 
@@ -344,11 +361,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline { display: flex; gap: var(--s2); }
 .choices.inline .ch { flex: 1 1 auto; min-width: 3rem; }
 .choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
-.choices.inline .opt.wrong { padding: calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }   /* the wrong edge takes its 1px back: nothing moves */
+.choices.inline .opt:is(.right, .wrong, [aria-checked="true"]) { padding-left: calc(var(--s3) - var(--bw-sel)); padding-top: calc(var(--s2) - var(--bw-sel)); padding-bottom: calc(var(--s2) - var(--bw-sel)); }   /* the state ring takes its half pixel back: nothing moves */
+.choices.inline .opt:is(.right, .wrong):not([aria-checked="true"]) { padding-right: calc(var(--s3) - var(--bw-sel)); }
+.choices.inline .opt.right { color: var(--correct); }   /* pills: no badge, the label carries the state colour (10.8:1) */
+.choices.inline .opt.wrong { color: var(--wrong); }   /* 5.1:1, bold-free 18px: AA */
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
 .choices.inline .opt .badge { display: none; }
 .choices.inline .opt[aria-checked="true"], .choices.inline .probe .opt { padding-right: calc(var(--btn) * 2 + 8px); }   /* T17b-1: the selected pill keeps Next's room (96px) from the start, so its Check rect is where Next lands */
-.choices.inline .opt.right .badge { display: grid; position: absolute; right: 8px; top: 50%; margin-top: -1rem; background: none; border-color: transparent; color: var(--ok-ico); }
+.choices.inline .vg { right: 14px; }
 
 .ff {
   position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw-up));   /* the arrow's room is always reserved (it sits --bw-up inside the border) */
@@ -363,14 +383,13 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 }
 .ff input:focus { outline: none; }
 .ff input::placeholder { color: var(--hint); opacity: 1; }
-.ff.ok { border-color: var(--ok-rim); background: var(--ok-fill); }
-.ff.done input { color: var(--ok-ico); }
+.ff.ok { border-color: var(--correct); }   /* V1: a 1px --correct edge, no fill */
+.ff.done input { color: var(--correct); }
 /* closed (answered, or out of tries): dimmed, not-allowed, no hover. The right choice / right answer keeps its ok look, undimmed */
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
-.q.closed:not(:has(.opt.right)) .opt, .q.closed .ff:not(.cue) { opacity: 0.5; }   /* solved MC: nothing dims; a closed box dims even when right (Tony, Oct 2), its green edge + check stay.
-   Out of tries, every mc row dims (untried ones too, L2). The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
+.q.closed .ff:not(.cue) { opacity: 0.5; }   /* mc rows never dim (V1 thin light: the rings and the strike tell the story); a closed box dims even when right (Tony, Oct 2), its green edge + check stay. The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
 .q.closed .ff:hover { border-color: var(--edge); }
-.q.closed .ff.ok { border-color: var(--ok-rim); }
+.q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 .preview:empty { display: none; }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
@@ -399,8 +418,8 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 /* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
 .ff .vk { position: absolute; right: var(--bw-up); top: var(--bw-up); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
 .ff .vk .ico { width: var(--ico); height: var(--ico); }
-.ff .vk[data-v="i-ok"] { color: var(--ok-ico); }
-.ff .vk[data-v="i-x"] { color: var(--bad-ico); }
+.ff .vk[data-v="i-ok"] { color: var(--correct); }
+.ff .vk[data-v="i-x"] { color: var(--wrong); }
 .ff .vk[data-v="i-lock"] { color: var(--muted); }
 .mparts .phint { grid-area: ht; min-width: 0; display: grid; gap: var(--s2); }
 .phint:empty { display: none; }
@@ -411,23 +430,25 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr.hinted { grid-template-areas: "mk bx bx" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
-.ff.bad { border: var(--bw-alarm) dashed var(--bad-rim); background: var(--bad-fill); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
+.ff.bad { border: var(--bw-alarm) dashed var(--wrong-rim); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
 .ff.bad :is(.send, .vk) { right: 0; top: 0; }
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
 .ff.shut:not(.cue) { opacity: 0.5; }   /* right ones too: closed = looks disabled (the one with Next: not dimmed, T17b-1) */
 .ff.shut:hover { border-color: var(--edge); }
-.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--ok-rim); }
+.ff.shut.ok, .ff.shut.ok:hover { border-color: var(--correct); }
 .ff.shut input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 /* ---------- T17b-1 DEFAULT CUE (r5/B cue3.html, R3 REC set; palette §9): a labelled Next in the Check slot of the last try (app.js cueNext) ----------
-   96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. A light-blue filled
-   face, the word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
-:root { --d-fast: 120ms; --d-move: 200ms; --nxw: calc(var(--btn) * 2); }
-.nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 0; border: 0; border-radius: 8px; background: transparent;
-  color: var(--field); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+   96x48 (2 x --btn), right-aligned where Check was: the Check rect lies inside it, right edges flush, so nothing moves. PALETTE-v3 §6: after a right
+   answer a --correct face (the row's ring and Next are one colour); out of tries a neutral --raised face (a fail is never praised). The word + the filled ▶ (i-tri lives only here: the nav bar Next and every ghost / text button keep the thin chevron i-next). */
+:root { --d-fast: 120ms; --d-move: 200ms; --nxw: calc(var(--btn) * 2); --vgw: 28px; }
+.nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
+  color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: 700; line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
-  padding: 0 var(--s2) 0 var(--s3); border-radius: 8px; background: var(--c1); color: var(--field); }
-.nx:hover .nf { background: var(--c1-hi); }
+  padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw-hair) solid var(--line); color: var(--ink); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal)) .chk.cue) .nx:active .nf { background: var(--correct-press); border-color: var(--correct-press); }
+.nx:active .nf { transform: translateY(1px); }
 .nx:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .nx .ico { width: 20px; height: 20px; }
 .q.closed .nx { cursor: pointer; }
@@ -436,32 +457,28 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .ff.bad .nx { right: 0; top: 0; }
 /* the carrier makes room: its text stops short of Next, the verdict icon moves to the left of Next */
 .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
-.ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 8px - var(--bw-up)); }
+.ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 8px - var(--bw-sel)); }
+.ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 8px + var(--vgw) - var(--bw-sel)); }   /* + the glyph left of Next */
 .ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw-up)); }
 .ff.cue .vk { right: calc(var(--nxw) + var(--bw-up)); }
 .q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
-.q .ff.cue.ok:focus-within { border-color: var(--ok-rim); }
+.q .ff.cue.ok:focus-within { border-color: var(--correct); }
 .ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
 .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
-.choices.inline .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 8px - var(--bw-up)); }
-.choices.inline .ch.cue .opt.right .badge { display: none; }   /* the pill's check would sit under Next: the green rim says it (no reflow, the pill keeps its width) */
+.choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 8px - var(--bw-sel)); }
+.choices.inline .ch.cue .vg { display: none; }   /* the pill's check would sit under Next: the green ring says it (no reflow, the pill keeps its width) */
 /* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
 .q.closed :is(.ch, .opt) { transition: none; }
 html:has(#q.closed) :is(#work, #fb) { transition: none; }
-/* fix A (sugar right row / box only): the --ok-fill (T23: the same faint green as diet; the 10% --ok wash #11242b went with it), a 2px --ok-rim, and a 3px --field ring round a 44px face, so the blue
-   face never touches the green rim. Sugar moves the mc slot 4px in from the rim (Check too, so its rect stays inside Next). Diet: 1px rim, no ring */
-html.sugar .ch.cue .opt.right, html.sugar .ff.cue.ok { background: var(--ok-fill); border: var(--bw-alarm) solid var(--ok-rim); }
+/* fix A (sugar right row / box): the row is V1's, as in diet; a 3px --field ring round a 44px Next face keeps the green face off the green ring.
+   Sugar moves the mc slot 4px in from the ring (Check too, so its rect stays inside Next) */
 html.sugar .ch :is(.send, .nx) { right: 6px; }
 html.sugar .ch.cue .opt, html.sugar .choices.inline .opt[aria-checked="true"], html.sugar .choices.inline .probe .opt { padding-right: calc(var(--nxw) + 12px); }
-html.sugar .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 12px - var(--bw-up)); }
+html.sugar .ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 12px - var(--bw-sel)); }
+html.sugar .ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 12px + var(--vgw) - var(--bw-sel)); }
+html.sugar .ch.cue .vg { right: calc(var(--nxw) + 14px); }
 html.sugar .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 12px); }
-html.sugar .choices.inline .ch.cue .opt.wrong { padding-right: calc(var(--nxw) + 12px - var(--bw-up)); }
-html.sugar .ch.cue .opt.right { padding: calc(var(--s2) - var(--bw-up)) calc(var(--nxw) + 12px - var(--bw-up)) calc(var(--s2) - var(--bw-up)) calc(var(--s3) - var(--bw-up)); }
-html.sugar .ff.cue.ok { padding-left: calc(var(--s3) - var(--bw-up)); padding-right: calc(var(--btn) * 3); }
-html.sugar .ff.cue.ok :is(.nx, .vk) { top: 0; }
-html.sugar .ff.cue.ok .nx { right: 0; }
-html.sugar .ff.cue.ok .vk { right: var(--nxw); }
-html.sugar .ch.cue:has(.opt.right) .nx, html.sugar .ff.cue.ok .nx { padding: 2px; }
+html.sugar .choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 12px - var(--bw-sel)); }
 html.sugar .ch.cue:has(.opt.right) .nx .nf, html.sugar .ff.cue.ok .nx .nf { position: relative; border-radius: 6px; padding: 0 6px 0 10px; }
 /* the ring: a --field plate 1px outside Next's 96x48 box, under the face (2px in) = 3px of --field all round. Not a shadow (STYLE §2.7), not an outline (that is the keyboard ring) */
 html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::before { content: ""; position: absolute; inset: -1px; border-radius: calc(6px + 3px); background: var(--field); }   /* the face radius + the ring */
@@ -486,16 +503,16 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* T19 sugar reveal (r4 mock, palette §3 "sugar answer reveal"): out of tries in sugar shows the answer. mc: the right row is the green .opt.right
    (+ .reveal: the answer, not the student's pick). Typed: this line, in the preview's room (a multi: the part's hint slot). The check and the word say it, never the hue alone */
 .ansl { margin: 0; display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
-.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--ok-ico); }   /* T23: the reveal's green = the right row's green */
-.ansl b { color: var(--ok-ico); font-family: var(--mono); overflow-wrap: anywhere; }
+.ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--correct); }   /* T23: the reveal's green = the right row's green */
+.ansl b { color: var(--correct); font-family: var(--mono); overflow-wrap: anywhere; }
 .preview:has(.ansl) { color: var(--ink); }
 
 /* feedback */
 .fb:empty { display: none; }
 .fb { margin-top: var(--s3); display: grid; gap: var(--s2); }
 .verdict { display: flex; align-items: center; gap: var(--s2); font-weight: 700; margin: 0; }
-.verdict.ok { color: var(--ok); }
-.verdict.bad { color: var(--bad); }
+.verdict.ok { color: var(--correct); }
+.verdict.bad { color: var(--wrong); }
 .verdict.wait, .verdict.lock { color: var(--muted); font-weight: 400; }
 .verdict .ico { width: 1.25rem; height: 1.25rem; }
 .verdict .btn { margin-left: auto; flex: none; }
@@ -650,7 +667,7 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
   -webkit-mask: radial-gradient(circle 9px at calc(100% - 8px) calc(100% - 8px), transparent 98%, #000 100%);
           mask: radial-gradient(circle 9px at calc(100% - 8px) calc(100% - 8px), transparent 98%, #000 100%); }
 .cl-av .ico { width: 32px; height: 32px; }
-.cl-dot { position: absolute; right: 3px; bottom: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); }   /* #5fd394, 9.9:1 on the sheet */
+.cl-dot { position: absolute; right: 3px; bottom: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--online); }   /* 9.9:1 on the sheet */
 .cl-title { font-size: 1.3125rem; font-weight: 700; line-height: 1.15; color: var(--ai-on-ct); }
 .cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--ai-on-ct); font-size: 0.75rem; font-weight: 700; letter-spacing: .04em; line-height: 1.4; }
 .cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
@@ -779,7 +796,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .xb-field textarea:focus, .xb-field textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
 .xb-field textarea.xb-free { padding-bottom: 1.875rem; }
 .xb-copy { position: absolute; right: calc(6px + var(--xb-sb, 0px)); bottom: 6px; }   /* --xb-sb: classic scrollbar width, set by reserveCorner */
-#copy.done { color: var(--ok); border-color: var(--ok); }
+#copy.done { color: var(--correct); border-color: var(--correct); }
 /* C9 (Tony, Oct 5): the joke stays, in the body font; typed notes keep the mono */
 .xb-field textarea::placeholder { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
 

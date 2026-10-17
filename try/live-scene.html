@@ -29,10 +29,10 @@
   .choices { display: grid; gap: var(--s2); margin: var(--s3) 0; }
   .choice { text-align: left; background: var(--field); }
   .choice[aria-pressed="true"] { border-color: var(--c1); }
-  .choice.ok { border: var(--bw-alarm) solid var(--ok); }
-  .choice.no { border: var(--bw-alarm) dashed var(--bad); color: var(--muted); }
+  .choice.ok { border: var(--bw-alarm) solid var(--correct); }
+  .choice.no { border: var(--bw-alarm) dashed var(--wrong); color: var(--muted); }
   .verdict { min-height: 1.5em; font-size: var(--t-sm); margin: 0; }
-  .verdict.ok { color: var(--ok); } .verdict.no { color: var(--bad); }
+  .verdict.ok { color: var(--correct); } .verdict.no { color: var(--wrong); }
   .knobs { display: grid; gap: var(--s2); margin: var(--s2) 0 0; }
   .knob { display: grid; grid-template-columns: 7.5rem 1fr 5.5rem; align-items: center; gap: var(--s3); font-size: var(--t-sm); }
   .knob label { color: var(--muted); }
