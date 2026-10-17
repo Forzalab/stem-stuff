@@ -159,7 +159,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 Rule: on a phone, the top of the first answer choice peeks above the fold when a question loads. Prefer a shorter card over a scroller, in this order:
 
 1. **Figures** are capped at 28svh (`graph.js`): a taller one is redrawn narrower and centred (never below 60% of the width), so labels keep their size and place. Spacing uses the usual tokens.
-2. **Text** that is still too long: `#blocks` gets `max-height: calc(100svh - 22rem)` (room for the nav row, ~1 choice and the Show all row), only with the pad off. `overscroll-behavior-y: auto`: a swipe chains to the page at the card's ends, never trapped. A bottom fade (§2.7 "Fades and glows", 2.5rem mask) goes when the text is scrolled to its end. "Show all" lifts the cap for that question. The scroller is `tabindex=0`, `role=region`, with an `aria-label`.
+2. Phones show the whole problem in the page (a locked rule, tests/bar and fab): no cap, no inner scroller on the card text.
 3. Tablet and desktop are unchanged. Not on the Cluck chat, hint panel, or choices.
 
 ### 2.8 Motion
