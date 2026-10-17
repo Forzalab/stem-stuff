@@ -143,7 +143,7 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 900, false]]) {
     assert.equal(await R.page.$eval("#rwCoin", e => e.dataset.flash), "static");
     assert.ok(await R.page.$eval("#rwCoin", e => e.classList.contains("cf-static")));
     assert.equal(await R.xp(), "+6");
-    const bg = await R.page.$eval("#rwCoin", e => getComputedStyle(e).backgroundColor); assert.equal(bg, "rgb(255, 225, 77)");
+    const bg = await R.page.$eval("#rwCoin", e => getComputedStyle(e).backgroundColor); assert.equal(bg, "rgb(255, 205, 148)");   // --reward (unified v5)
     assert.equal(await R.page.$$eval(".cf-chip, .cf-tag, .fx-float", e => e.length), 0);
     assert.equal(await R.page.evaluate(() => ["#rwHud", "#ctr"].reduce((n, q) => n + document.querySelector(q).getAnimations({ subtree: true }).length, 0)), 0, "nothing moves in the HUD or the counter");
     await sleep(400); await R.shot("rm-flash");

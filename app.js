@@ -1442,7 +1442,7 @@ function peekText() {                                                       // t
   });
 }
 /* E1 LOCKED (Tony, Oct 13: T2, "ok but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
-   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --ai and the duck tilts once. T35 may host it in an AI preview card */
+   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --help and the duck tilts once. T35 may host it in an AI preview card */
 const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
   const el = wishEl(), w = wish;

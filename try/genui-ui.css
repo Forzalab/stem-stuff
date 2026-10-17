@@ -95,12 +95,12 @@ body { padding: 0 0 var(--s7); overflow-x: hidden; }
 @media (prefers-reduced-motion: reduce) { @keyframes fade-in { from { opacity: 1; } to { opacity: 1; } } }
 
 /* ---------- Cluck box (FABLE-1 C3): line -> visual slot -> strip -> steps fold -> affirm -> ask ---------- */
-.clk { background: var(--ai-sheet); color: var(--ai-text); }
-.clk .hd { display: flex; align-items: center; gap: var(--s2); min-height: var(--btn); font-weight: 700; font-size: var(--t-sm); color: var(--ai); }
+.clk { background: var(--help-sheet); color: var(--ai-text); }
+.clk .hd { display: flex; align-items: center; gap: var(--s2); min-height: var(--btn); font-weight: 700; font-size: var(--t-sm); color: var(--help); }
 .clk .hd > .ico { color: var(--mark); }
-.clk .hd .x { margin-left: auto; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--ai-muted); }
+.clk .hd .x { margin-left: auto; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--help-muted); }
 .clk .line { margin: 0 0 var(--s3); max-width: 58ch; }
-.clk .line.wait { color: var(--ai-muted); }
+.clk .line.wait { color: var(--help-muted); }
 .clk .slot { min-height: var(--slot, 0px); margin: 0 0 var(--s3); }
 .clk .chip { display: inline-flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3); border-radius: 8px; background: var(--ai-tint); font-size: var(--t-md); }
 .clk .chip .miss { color: var(--mark); }
@@ -115,20 +115,20 @@ body { padding: 0 0 var(--s7); overflow-x: hidden; }
 .clk details[open] summary::before { transform: rotate(45deg); }
 .clk ol { margin: 0; padding-left: var(--s5); }
 .clk ol li { margin: 0 0 var(--s3); }
-.clk .boxed { display: inline-block; padding: 0 var(--s2); border-radius: 6px; background: var(--ai-ct); color: var(--ai-on-ct); font-weight: 700; }
-.clk .disc { font-size: var(--t-sm); color: var(--ai-muted); margin: 0 0 var(--s3); }
+.clk .boxed { display: inline-block; padding: 0 var(--s2); border-radius: 6px; background: var(--ai-ct); color: var(--help-on); font-weight: 700; }
+.clk .disc { font-size: var(--t-sm); color: var(--help-muted); margin: 0 0 var(--s3); }
 .clk .ask { display: flex; gap: var(--s2); align-items: center; }
 .clk .ask input { flex: 1 1 auto; min-width: 0; height: var(--btn); border-radius: 999px; border: 0; padding: 0 var(--s4); background: var(--ai-pill); color: var(--ai-text); font: inherit; font-size: var(--t-sm); }
-.clk .ask input::placeholder { color: var(--ai-muted); opacity: 1; }
-.clk .ask input:focus { outline: var(--ring) solid var(--ai); outline-offset: 0; }
-.clk .ask .send { width: var(--btn); height: var(--btn); border-radius: 50%; border: 0; background: var(--ai-send); color: var(--ai-send-ink); display: grid; place-items: center; }
+.clk .ask input::placeholder { color: var(--help-muted); opacity: 1; }
+.clk .ask input:focus { outline: var(--ring) solid var(--help); outline-offset: 0; }
+.clk .ask .send { width: var(--btn); height: var(--btn); border-radius: 50%; border: 0; background: var(--help); color: var(--help-ink); display: grid; place-items: center; }
 .clk .chunk { animation: fade-in .12s ease-out both; }
 
 /* v1 + v2: the partial sheet (RUNTIME §2 proposal; the real rule would be html:not(.side) .cl.part) */
 .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: min(45svh, 420px); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-4);
   padding: 0 var(--gut) calc(var(--s4) + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; transform: translateY(0); animation: sheet-up .2s ease-out both; }
 .sheet .grab { display: flex; justify-content: center; align-items: center; height: var(--s5); margin: 0 calc(-1 * var(--gut)); border: 0; width: calc(100% + 2 * var(--gut)); background: transparent; }
-.sheet .grab span { width: 2.5rem; height: 4px; border-radius: 2px; background: var(--ai-muted); }
+.sheet .grab span { width: 2.5rem; height: 4px; border-radius: 2px; background: var(--help-muted); }
 .sheet.full { height: min(88svh, 760px); }
 .sheet.peek { height: auto; }
 .sheet.peek > :not(.peekbar) { display: none; }

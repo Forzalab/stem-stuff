@@ -35,21 +35,20 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 
 ### 2.1 Color
 
+Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder; Tony's round 7 PICKER 1, 2, 4, 8). Hard cap per frame: page + 2 surfaces + 1 line colour (Tony: "count how many blues"), plus the help surface when a hint or Cluck is open.
+
 | token | hex | role |
 |---|---|---|
-| `--paper` | #151d2b | page background, the dock, the freeze strip, toast |
-| `--qbox` | #192232 | the question box, everywhere (card, pad-page tile, keyboard-up card, desktop strip): halfway between `--paper` and `--sheet` (Tony, Oct 3) |
-| `--sheet` | #1d2839 | surfaces: list card, Cluck, outline buttons, the q \| a switch |
-| `--field` | #111826 | inside text fields; ink on filled buttons |
-| `--raised` | #243149 | hover, selected, current row, open state, the Scratchpad button |
-| `--ink` | #e7edf6 | body text, icons in buttons |
-| `--muted` | #a2b3cb | secondary text, hover border, locked state |
-| `--hint` | #7d8ea8 | placeholder, autosave status, "gone" list rows (lowest text) |
-| `--line` | #34445d | dividers and grid only. Never a control boundary (1.5:1) |
-| `--edge` | #6b7f9e | the boundary of every control and field (3.64:1 on sheet) |
-| `--action` / `--focus` | #92c0ff | the commit colour: the selected choice (1px ring + filled badge, `--action-ink` letter), focus ring, focused field border, caret |
-| `--c1` / `--c1-hi` | #7ab8ff / #a3cdff | the primary action fill and its hover; current item; forces in figures |
-| `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only (and Cluck's beak). Not for UI state |
+| `--page` | #050c16 | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
+| `--card` | #101c2c | the one card fill: question box, every choice, list card (`--qbox`, `--sheet`) |
+| `--float` | #1b2b40 | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
+| `--line` | #394a61 | the one line colour: dividers, control edges, the 0.5px row hairline (`--edge`) |
+| `--ink` | #e8edf5 | body text, icons in buttons |
+| `--muted` | #a7b7cd | secondary text, placeholders, locked state (`--hint`) |
+| `--action` / `--focus` | #92c0ff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` letter), focus ring, caret (`--c1`) |
+| `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only. Not for UI state |
+
+**The warm family** (one hue band, 55–70°; lightness is the role, PALETTE-v3 §1): `--help` #ff9a3e is Cluck, hints, the bulb and send; `--reward` #ffcd94 is the HUD (XP bar, numerals, star), the +XP float, the toast and the bursts only, never in a help surface, a CTA or a chip; `--help-on` #ffdcc0 Cluck's name and card titles; `--help-deep` #b05a00 burst fields, rims, outlines (never under text); `--help-line`, `--help-fill`, `--help-sheet`, `--help-rule`, `--help-muted`, `--help-ink` (ink on any warm solid); `--glow` #ff8204 at alpha only. Bursts use three slots of this ramp (rarer = lighter): 0 purples, 0 magentas, 0 whites. The reward rasters land on the ramp through `--goldify` (the gold star) and `--duckgold` (the natural-colour duck), measured at OKLCH hue 62–70.
 
 **Status colors.** Each one means one thing. Use them on icons, borders and short words; never as a large fill.
 
@@ -57,10 +56,9 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 |---|---|---|---|
 | `--correct` #4ee6af | right | check glyph, a right row's 1px ring, a right box's edge, the green Next face (`--correct-ink` label, `--correct-press` pressed), right answer text, Copy done | decoration, "success" toasts for routine saves, a fill under a row |
 | `--wrong` #eb596e | wrong | X glyph, a wrong row's 1px ring, the strike on a wrong choice, used try pips, list X marks, the entry error line. `--wrong-rim` #d14a5f: only the typed box's 2px dashed edge | hover, delete buttons, emphasis, a fill under a row |
-| `--mark` | look here | Cluck's duck; figure highlight; a snack's changed number (`.chg`, an underline only) | a warning, a toast, a second series next to `--c2`, a full-surface fill |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange, with one scoped exception: `--ai` (tangerine) on Cluck's surfaces only (see "Cluck's surfaces" below; Tony, Oct 4). It is never a warning and never in a figure.
+There is no warning color. The warm family is never a warning and never a figure series. `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
 
 Source for `--action`, `--correct`, `--wrong`: chat-redesign round 5 PALETTE-v3.1 + THINLIGHT (brain), Tony's round 7 PICKER 1–2. `--online` #5fd394 is Cluck's status dot only.
 
@@ -232,7 +230,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 
 ### Cluck hint (`.cluck`)
 
-- Anatomy: `--sheet` panel, 10px radius, `--s3`/`--s4` padding, the duck (`i-duck`, 28px, `--mark`) at the top left, then the hint text. No title, no border, no side stripe.
+- Anatomy: `--sheet` panel, 10px radius, `--s3`/`--s4` padding, the duck (`i-duck`, 28px, `--help`) at the top left, then the hint text. No title, no border, no side stripe.
 - When: after a wrong answer, and again when a question with used tries is reopened.
 - Voice: the only place for "QUACK." (see Copy voice).
 
@@ -274,6 +272,8 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
 
 ### Cluck's surfaces (`.ai-*`, sugar only)
+
+**Current (unified v5, Oct 17; newest wins over the history below):** the `.ai-skin` aliases that duplicated the warm family folded into `:root` (PALETTE-v3 §3): `--ai`, `--ai-soft`, `--ai-send`, `--ai-edge` → `--help`; `--ai-ink`, `--ai-send-ink` → `--help-ink`; `--ai-on-ct` → `--help-on`; `--ai-sheet` → `--help-sheet`; `--ai-muted` → `--help-muted`; `--ai-rule` → `--help-rule`; `--ai-strong` → `--ai-text` (no white inside a help surface). `.ai-skin` keeps only the sheet's own pair and wells: `--ai-ct`, `--ai-pill`, `--ai-text`, `--ai-tint`, `--ai-field`, the glow (`--glow` at .26) and the soft-UI shadows. The tables below are history.
 
 Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwise a NEW accent color? devise design language based on our style guidelines" (picked: warm tangerine). Everything Cluck says or shows: the explanation, the follow-up chat, the hint card's open solution. "AI = warm" across the app: the same family as the hint card and the Explain chip.
 

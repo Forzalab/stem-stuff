@@ -71,7 +71,7 @@ async function run(browserType, label, opts = {}) {
         // locked rule: every force arrow is one blue (c1 #7ab8ff); only velocity/acceleration differ
         const forces = await page.evaluate(() => [...document.querySelectorAll('#freeze [data-mark="force"][data-kind="force"] polyline, #freeze [data-mark="force"][data-kind="force"] polygon')]
           .map(e => getComputedStyle(e).stroke));
-        for (const st of forces) assert.equal(st, "rgb(122, 184, 255)", `force stroke ${st} in ${code}`);
+        for (const st of forces) assert.equal(st, "rgb(146, 192, 255)", `force stroke ${st} in ${code}`);
         if (/^PHYS-(F3N|S2K)$/.test(code)) {
           assert.ok(forces.length >= 3, `expected force arrows in ${code}`);
           assert.equal(await page.locator('#freeze [data-kind="kin"]').count(), 0, `non-blue force in ${code}`);
