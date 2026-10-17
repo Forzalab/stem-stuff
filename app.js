@@ -540,7 +540,9 @@ function render() {
       f._block = b; blocks.append(f);
     }
   }
+  blocks.classList.remove("qfull");
   drawFigures();
+  qCap();
   renderQuestion();
   $("#fb").innerHTML = "";
   mountBox();
@@ -557,6 +559,22 @@ function snackChg() {
   if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return null;
   return p._chg ??= changes(p.body, o.body);
 }
+/* question box height (design/STYLE.md): on a phone with the pad off, #blocks is capped by CSS; this only reports whether the text
+   overflows the cap (fade, focusable scroller, "Show all"). The cap never traps a swipe: overscroll-behavior stays auto. */
+function qCap() {
+  const b = $("#blocks"), m = $("#qmore");
+  if (!b || !m) return;
+  const capped = root.classList.contains("pad-off") && !b.classList.contains("qfull") && getComputedStyle(b).overflowY === "auto";
+  const over = capped && b.scrollHeight > b.clientHeight + 2;
+  b.classList.toggle("qover", over);
+  b.classList.toggle("qend", over && b.scrollTop + b.clientHeight >= b.scrollHeight - 2);
+  m.hidden = !over;
+  if (over) { b.tabIndex = 0; b.setAttribute("role", "region"); b.setAttribute("aria-label", "Question text, scrollable"); }
+  else { b.removeAttribute("tabindex"); b.removeAttribute("role"); b.removeAttribute("aria-label"); }
+}
+$("#blocks").addEventListener("scroll", qCap, { passive: true });
+$("#qmore").addEventListener("click", () => { const b = $("#blocks"); b.classList.add("qfull"); qCap(); b.tabIndex = -1; b.focus({ preventScroll: true }); });
+addEventListener("resize", () => { if (S) qCap(); });
 function drawFigures() {
   document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
@@ -1999,6 +2017,7 @@ new ResizeObserver(() => layoutDock()).observe(dock);
 
 function layoutFreeze() {
   layoutDock();
+  qCap();
   if (!S || freeze.hidden) return;
   if (swapOn) { layoutSwap(); return; }
   if (mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes

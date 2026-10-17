@@ -302,6 +302,14 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+/* ---------- question box height on a phone (STYLE.md "Question box height") ----------
+   The first choice must peek above the fold. Figures are capped in graph.js (28svh). Text that is still too long gets a cap here:
+   phones with the pad off only, a scroller that chains to the page at both ends (overscroll auto), a bottom fade that goes at the end, "Show all" lifts the cap. */
+html.pad-off:not(.swap):not(.mt) #blocks:not(.qfull) { max-height: calc(100vh - 22rem); max-height: calc(100svh - 22rem); overflow-y: auto; overscroll-behavior-y: auto; }
+html.pad-off:not(.swap):not(.mt) #blocks.qover:not(.qend) { -webkit-mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); mask-image: linear-gradient(#000 calc(100% - 2.5rem), transparent); }
+.qmore { display: block; width: 100%; min-height: 2.75rem; margin: 0; padding: var(--s1) 0 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+.qmore[hidden] { display: none; }
+.qmore:hover { color: var(--ink); }
 .fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
 .lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }

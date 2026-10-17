@@ -764,7 +764,20 @@
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
     const g = el._g;
-    mount(el, g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g));
+    const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
+    el.style.maxWidth = ""; el.style.marginInline = "";
+    mount(el, build);
+    /* phones: a figure never takes more than 28svh, so the first choice peeks above the fold (design/STYLE.md "Question box height").
+       Redrawn narrower and centred (not scaled), so labels keep their size and sit where they were placed; never below 60% of the width. */
+    const cap = window.matchMedia && matchMedia("(max-width: 34rem)").matches ? 0.28 * innerHeight : 0, W0 = el.clientWidth;
+    for (let i = 0; i < 2 && cap && W0; i++) {
+      const H = parseFloat(el.style.height);
+      if (!(H > cap + 1)) break;
+      const w = Math.max(0.6 * W0, Math.floor((el.clientWidth || W0) * cap / H));
+      if (w >= el.clientWidth) break;
+      el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
+      mount(el, build);
+    }
   }
 
   root.Graph = { render, tex };
