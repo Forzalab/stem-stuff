@@ -59,7 +59,7 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   Prod key guardrail (OpenRouter dashboard, Workspace > Guardrails): daily budget, model allowlist (OPENROUTER_MODELS +
   OPENROUTER_NOTE_MODELS), ZDR on all groups, Security on. Its Security check is regex only, so the NOTE's on_topic stays; the code keeps
   `provider.zdr` too, so a key without the guardrail is still private. Known gap: the browser sends the history, so a forged Cluck turn is not checked.
-- Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Drag it anywhere; it snaps to the nearest
+- Brainrot corner (`brainrot.js`, design/FORMULA-CARD.md round 2): two muted looping players. Not on phones (`max-width: 700px`): no videos load at all. Drag it anywhere; it snaps to the nearest
   corner and a drop is the user's choice (kept per device, `stem-rot` + `stem-rot-pick`, never stepped off; Tony, Oct 3: "i cannot drag
   the thing down"). Before the first drag it steps off answer controls. At rest it is anchored by CSS left/right + top/bottom (a bottom corner rides
   Firefox Android's sliding toolbar). Warmed off screen only on the start page or a question with a layer.

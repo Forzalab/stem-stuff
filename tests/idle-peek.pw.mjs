@@ -47,10 +47,23 @@ async function open(o = {}) {
   await page.goto(BASE + "/" + (o.hash ?? "#BANK_T45"));
   await page.clock.runFor(3000);
   await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
+  /* the idle clock starts when the bank opens (peek.js drill:bank) and the fake clock keeps ticking in real time until then: wait for the
+     bank (and the question in it) so every runFor below counts from a fixed start, not from a network-timed one (the 2:59 / 3:00 flake) */
+  if (o.hash === undefined) await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   return page;
 }
 const up = page => page.evaluate(() => window.stemDuck.up);
-const idle = (page, ms) => page.clock.runFor(ms);
+/* runFor can be dropped when it lands while the page is busy (seen ~1 run in 10: the clock moved only by real time): check the page's own
+   clock moved by ms and run what is missing, so every wait below really is the minutes it says */
+async function idle(page, ms) {
+  const t0 = await page.evaluate(() => performance.now());
+  await page.clock.runFor(ms);
+  for (let k = 0; k < 5; k++) {
+    const left = ms - ((await page.evaluate(() => performance.now())) - t0);
+    if (left < 500) return;
+    await page.clock.runFor(Math.ceil(left));
+  }
+}
 const settle = page => page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) a.finish(); }));
 const nudge = page => page.mouse.click(5, 300);                      // a tap on empty page: input, no control
 /* the end state of a rise: geometry + styles */
@@ -111,7 +124,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
 await step("reduce, mid-run: the peek is the duck at 45%, in place", async () => {
   const page = await open({ rm: true });
   await idle(page, 3 * MIN + 1000);
-  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 5500; } }));
+  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 8250; } }));
   const L = await look(page);
   assert.equal(L.duckOp, 0.45); assert.equal(L.duckTf, "none");
   await page.context().close();
@@ -120,7 +133,7 @@ await step("reduce, mid-run: the peek is the duck at 45%, in place", async () =>
 await step("motion, mid-run: the peek shows the eyes only (42px of 64)", async () => {
   const page = await open({});
   await idle(page, 3 * MIN + 1000);
-  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 5500; } }));
+  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 8250; } }));
   const L = await look(page);
   assert.equal(L.duckTf, "matrix(1, 0, 0, 1, 0, 22)");
   await page.context().close();
@@ -134,7 +147,7 @@ await step("any input puts him away; a 10px mouse jitter does not, a 30px move d
   assert.equal(await up(page), true, "jitter is not input");
   await page.mouse.move(640, 600);
   assert.equal(await up(page), false, "a real move is");
-  await idle(page, 500);
+  await idle(page, 800);
   assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "gone (out of the tab order)");
   await idle(page, 3 * MIN);
   assert.equal(await up(page), false, "the second one waits 10 more min");

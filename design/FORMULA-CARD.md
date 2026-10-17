@@ -60,6 +60,8 @@ Runner-up: 1, if Tony wants the card separate from the question.
 
 ### Brainrot corner: stacked duo
 
+**Phones get no corner** (Tony, Oct 17). At `max-width: 700px` (the same phone width as `dockMQ` in app.js and NAV D75 "phones only") `brainrot.js` builds nothing and loads no video, so nothing buffers and YouTube is never contacted. Tablet and desktop keep it.
+
 Tony asked mid-round for a plain look, like iOS picture-in-picture YouTube: no frame, card, border, tab bar or labels. So all five
 are the same 2 bare videos (Subway on top, parkour under). Each video has 10px corners and `--shadow-3`, with an 8px gap between them.
 Collapse (–) and close (✕) are 44px see-through overlays on the video (72% `--field`). They show on hover, on keyboard focus, or for

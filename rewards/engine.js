@@ -153,7 +153,7 @@
     if (!gain || reduced()) { ui.xp.textContent = to; return; }
     var from = to - gain, t0 = performance.now();
     (function step(t) {
-      var k = Math.min(1, Math.max(0, (t - t0) / 600));
+      var k = Math.min(1, Math.max(0, (t - t0) / 900));
       ui.xp.textContent = Math.round(from + gain * (1 - Math.pow(1 - k, 3)));
       if (k < 1) raf = requestAnimationFrame(step);
     })(t0);

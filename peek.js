@@ -45,7 +45,7 @@
   function down() {
     if (!up()) return;
     box.classList.add("out");                                               // duck 300 ms, sky 400 ms (app.css), then night again
-    outT = setTimeout(function () { box.hidden = true; box.classList.remove("on", "out"); }, 420);
+    outT = setTimeout(function () { box.hidden = true; box.classList.remove("on", "out"); }, 630);
   }
   window.stemDuck = { rise: rise, down: down, get up() { return up(); } };
 
