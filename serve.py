@@ -1028,7 +1028,7 @@ def system_for(base, p):
 def explain_stream(p, answer, key, scratch=""):
     """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection. The NOTE call goes first."""
     n = note(p, answer, None, key, scratch=scratch)
-    yield from _or_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450)
+    yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450)
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -1073,6 +1073,138 @@ def _or_stream(messages, key, max_tokens):
         print(f"model {m}: empty reply", file=sys.stderr)
     if err:
         raise err
+
+
+
+# ---------------- Claude API pipe (default when CLAUDE_API is set): Cluck's genie + chat streams; gate and NOTE stay on OpenRouter ----------------
+# No CLAUDE_API = the OpenRouter path above, unchanged. Any Claude trouble before the first word (error, 4xx/5xx, billing, 429/529,
+# an empty reply) falls back to OPENROUTER_MODELS with their own params; once words flow, it stays on Claude.
+CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip("/")
+# claude-haiku-5-5: the fastest first token of the current models, and thinking can be switched off (Opus 5.5 can't).
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
+CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $/MTok in, out
+CLAUDE_SPEND_KEY = "stem:claude_usd"
+_claude_spent = {"usd": 0.0}                 # no Upstash: this process only
+
+
+def _fenv(name, default):
+    try:
+        return float(os.environ.get(name, ""))
+    except ValueError:
+        return default
+
+
+def claude_price(model):
+    """($ per MTok in, out): CLAUDE_PRICE_IN / CLAUDE_PRICE_OUT win, else the table, else Opus-tier (overestimate, never under)"""
+    i, o = CLAUDE_PRICES.get(model, (4.0, 20.0))
+    return _fenv("CLAUDE_PRICE_IN", i), _fenv("CLAUDE_PRICE_OUT", o)
+
+
+def claude_spent():
+    """estimated $ spent on Claude: the Upstash key (shared by every instance), else this process's counter"""
+    if all(KV):
+        try:
+            return float(_kv("GET", CLAUDE_SPEND_KEY) or 0)
+        except (OSError, ValueError, TypeError):
+            pass
+    return _claude_spent["usd"]
+
+
+def claude_add(usd):
+    _claude_spent["usd"] += usd
+    if all(KV):
+        try:
+            _kv("INCRBYFLOAT", CLAUDE_SPEND_KEY, f"{usd:.8f}")
+        except (OSError, ValueError) as e:
+            print("claude spend not saved to KV:", e, file=sys.stderr)
+
+
+def claude_ok():
+    """a key, and spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 100 - 5)"""
+    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 100.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
+
+
+# Counters Claude's habits; appended to the shared base prompt on the Claude path only (FORMAT and VOICE stay the rule).
+CLAUDE_DELTA = """
+Plain talk: start with the idea itself, never "Great question" or praise. No caveats, no hedging ("it might be", "generally"), no recap at the end. No # headers and no bullet lists beyond the "- " lines FORMAT allows. Say it once, short, and stop."""
+
+
+# Thinking off or least, per model (claude-api skill): Haiku 5.5 takes disabled (effort <= high); Sonnet 5.5 400s on disabled, its
+# off switch is between_tools; Opus 5.5 can't turn thinking off at all, so it gets effort low and more room (thinking spends max_tokens).
+CLAUDE_THINKING = {"claude-haiku-5-5": ({"type": "disabled"}, 1), "claude-sonnet-5-5": ({"type": "between_tools"}, 1),
+                   "claude-opus-5-5": (None, 4)}
+
+
+def claude_params(model, max_tokens):
+    """{"model", "max_tokens", "thinking"?, "output_config"}: thinking off where the model allows it, effort low"""
+    t, more = CLAUDE_THINKING.get(model, (None, 4))
+    return dict({"model": model, "max_tokens": max_tokens * more, "output_config": {"effort": "low"}}, **({"thinking": t} if t else {}))
+
+
+def _claude_one(messages, max_tokens):
+    """one streamed Claude call; yields text (Plain), holds until the first newline and cuts a leading NOTE line. Counts the spend."""
+    payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=messages[0]["content"] + CLAUDE_DELTA, messages=messages[1:])
+    req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
+                                 headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
+                                          "content-type": "application/json"})
+    plain, head, held, used = Plain(), True, "", {"in": 0, "out": 0}
+    try:
+        with urllib.request.urlopen(req, timeout=25) as r:
+            for raw in r:
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    ev = json.loads(line[5:].strip())
+                except ValueError:
+                    continue
+                kind = ev.get("type")
+                if kind == "error":
+                    raise OSError("claude stream error: " + str((ev.get("error") or {}).get("type")))
+                if kind == "message_start":
+                    u = (ev.get("message") or {}).get("usage") or {}
+                    used["in"] = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+                elif kind == "message_delta":
+                    used["out"] = int((ev.get("usage") or {}).get("output_tokens") or used["out"])
+                elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
+                    t = ev["delta"].get("text") or ""
+                    if head:                                   # hold to the first newline: a NOTE line there is never shown
+                        held += t
+                        if "\n" not in held:
+                            continue
+                        first, _, t = held.partition("\n")
+                        head, t = False, (t if first.lstrip().startswith("NOTE:") else first + "\n" + t)
+                    text = plain.feed(t)
+                    if text:
+                        yield text
+                elif kind == "message_stop":
+                    break
+            if head and held and not held.lstrip().startswith("NOTE:"):   # a one-line reply
+                text = plain.feed(held)
+                if text:
+                    yield text
+    finally:
+        pi, po = claude_price(CLAUDE_MODEL)
+        if used["in"] or used["out"]:
+            claude_add((used["in"] * pi + used["out"] * po) / 1e6)
+
+
+def _cluck_stream(messages, key, max_tokens):
+    """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params"""
+    if claude_ok():
+        said = False
+        try:
+            for t in _claude_one(messages, max_tokens):
+                said = True
+                yield t
+            if said:
+                return
+            print(f"claude {CLAUDE_MODEL}: empty reply", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001
+            if said:
+                raise
+            print(f"claude {CLAUDE_MODEL}: {e}", file=sys.stderr)
+    yield from _or_stream(messages, key, max_tokens)
 
 
 def _stream_head(cookie_header):
@@ -1291,7 +1423,7 @@ def chat(cookie_header, body):
         context = [{"role": "system", "content": system_for(CLUCK_CHAT, p)}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
         turns = [dict(t, content=wrap(t["content"], tag)) if t["role"] == "user" else t for t in history]
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
-        yield from _or_stream(context + turns, key, 250)
+        yield from _cluck_stream(context + turns, key, 250)
     return 200, head, _relay(p, chunks, "chat")
 
 
