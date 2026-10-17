@@ -1357,7 +1357,7 @@ async function wishStart(auto) {
     }
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
   w.done = true;
-  window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, failed: w.failed || 0, auto: !!auto });   // telemetry
+  window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
   wishPaint();
@@ -1374,7 +1374,25 @@ function wishRetry(w) {                                                    // th
 const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
 const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
 const wishLine = l => esc(l).replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>") || "&nbsp;";
-const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;                                // "1. Find the momentum before — only one cart moves"
+const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
+/* live figures (serve.py + livefig.py, Claude path only): the server sends at most one checked graph block per reply as
+   "\n```fig\n<json>\n```\n". wishHTML puts a .wfig placeholder in its place (an unclosed fence shows nothing: never raw JSON);
+   wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
+const WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
+const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
+const stripFigs = t => t.replace(WFIG, "\n").replace(/```[\s\S]*$/, "");
+function wishFigs(root) {
+  for (const ph of root.querySelectorAll(".wfig[data-f]")) {
+    const k = +ph.dataset.f, done = figEl[k];
+    if (done && !done.isConnected) { ph.replaceWith(done); continue; }
+    ph.removeAttribute("data-f");
+    let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
+    if (!b || b.type !== "graph") { ph.remove(); continue; }
+    ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
+    try { Graph.render(ph, b); } catch (e) { console.error(e); ph.textContent = b.alt || ""; ph.classList.add("fig-off"); }
+    if (!done) figEl[k] = ph;
+  }
+}                                // "1. Find the momentum before — only one cart moves"
 function wishHTML(t) {
   let out = "", step = null, eqs = [], li = [];
   const put = h => { if (step === null) out += h; else step += h; };
@@ -1384,9 +1402,12 @@ function wishHTML(t) {
     eqs = []; li = [];
   };
   const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
+  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
   t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
   t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
   for (const l of t.split("\n")) {
+    const fg = /^\u0001FIG(\d+)$/.exec(l);
+    if (fg) { flush(); put(`<div class="fig wfig" data-f="${fg[1]}"></div>`); continue; }
     const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
     if (s) {                                                              // a step (Gemini's steps widget): number on a dotted line, title, small subtitle
       close();
@@ -1412,6 +1433,8 @@ const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
 function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
+  const fences = t.slice(0, n).split("```").length - 1;                   // inside a live figure's fence: the whole figure at once
+  if (fences % 2) { const e = t.indexOf("```", n); n = e < 0 ? (done ? t.length : t.lastIndexOf("```", n - 1)) : e + 3; }
   if (done && n >= t.length) return n;                                    // the whole text: show it, even with a pair the model never closed
   const open = [...t.slice(0, n).matchAll(/\$\$?/g)];                      // $ and $$ each open or close one formula (a $$ pair may span lines)
   if (open.length % 2) { const c = /\$\$?/g; c.lastIndex = n; const e = c.exec(t); n = e ? e.index + e[0].length : open.at(-1).index; }
@@ -1427,7 +1450,7 @@ function wishType(el, s) {
       s.pos = reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
       s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
       const end = s.done && s.shown >= s.text.length;
-      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown)) + (end ? "" : WCARET); drawn = s.shown; }
+      if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown)) + (end ? "" : WCARET); wishFigs(el); drawn = s.shown; }
       end ? res() : requestAnimationFrame(f);
     };
     requestAnimationFrame(f);
@@ -1464,6 +1487,7 @@ function wishFrame(now) {
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
     x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
+    wishFigs(x);
     w.drawn = w.shown; w.ended = end;
   }
   x.classList.toggle("wrun", !end);                                       // the rim turns while Cluck thinks and types
@@ -1768,7 +1792,7 @@ async function clSend(msg) {
     w.chat.pop();                                                          // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
     else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
-  } else { w.chat.push({ role: "assistant", content: text }); say(speakable(text)); }
+  } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
   if (!w.out) cl.el.querySelector(".ask input")?.focus();

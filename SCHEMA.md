@@ -261,6 +261,17 @@ One shape covers every graph Rosen ch. 10–11 needs. Same shape as Graphviz / N
 - **Never color or dash the answer** (the asked path, coloring, spanning tree, matching). Color only what the problem gives.
 - Tests check: unique ids, every `from`/`to` is a node, `free` ⇒ every node has `at`, `tree` ⇒ the edges form a tree hanging off `root`.
 
+## Live figures (Cluck, Claude path only)
+Cluck's reply may carry ONE figure made live by the model, as data: a fenced block, a line ```` ```fig ````, one line of JSON, a line ```` ``` ````. The JSON is a graph block of this file, nothing else (no SVG, HTML or JS, ever). `livefig.py` checks it on the server before a byte of it reaches the page; any failure drops the block silently and the text still streams.
+- **When:** every `/explain` and `/chat` reply on the Claude path (Tony, Oct 17: live figures are Cluck's mainstay where a picture helps). An authored figure stays on the question; the live one sits in Cluck's message. The OpenRouter path never gets the instructions and strips any fence. `CLUCK_LIVE_FIGS=0` turns it off (the same strip).
+- **Schema:** valid against `#/$defs/graph` in the problems schema below (`livefig.py` reads this file at runtime; it is in the Vercel bundle; missing = no figure passes).
+- **Whitelist:** kinds `cartesian`, `scene`, `bars`, `network` (no `circuit`). Cartesian marks `fn shade vline hline point seg arrow arc poly text`; scene marks `body spring pulley rope surface incline force pivot point seg arrow arc text` (no `param`, `tangent`, `path`). `fn`/`shade` expressions: digits, letters, `+ - * / ^ ( ) . ,` only.
+- **Caps:** JSON ≤ 3000 chars, ≤ 12 marks, ≤ 6 labels (every `label`, `text`, axis label, tick, bar and group label), ≤ 12 points per poly/rope, ≤ 8 nodes, ≤ 16 edges, ≤ 3 groups of ≤ 4 bars, alt ≤ 200 chars; every number finite, |v| ≤ 10000. A force at a body's center is never dashed.
+- **Numbers (same rule as the text: only from the KEY):** a number in a `label`, `text`, `alt`, `unit`, bar `value`, edge `w` or an expression must appear in the question text, its shown choices, its sheet formulas or the KEY (0–10 always pass). Positions and sizes are free layout.
+- **No leak:** none of those numbers may equal, to 3 significant figures, the hidden unknown (`answer`, the right choice(s), a `\boxed{}` in the KEY) unless the question text itself shows it. Label the unknown with its symbol: `$v_f = ?$`.
+- **Stream:** the server holds a fence until it closes and sends the checked block whole (re-serialized, one line); only the first good one per reply. The page (`app.js` `wishHTML` / `wishFigs`) shows nothing for an open fence and draws a closed one with `Graph.render`, alt text on error.
+- Tests: `tests/test_livefig.py`, `tests/livefig.test.mjs` (Ajv agrees), `tests/livefig.pw.mjs`; fixtures `tests/fixtures/livefig.json`.
+
 ## Checklist before commit
 1. `cd tests && npm test` passes. It checks the schema, unique codes and suffixes, that answers and `match` values evaluate, that TeX renders, that graph math compiles, the label count, MC distractor coverage, and that no hint states the answer.
 2. Open `/#<CODE>` locally. The figure reads correctly, no labels overlap, and the width is fine on a phone.
