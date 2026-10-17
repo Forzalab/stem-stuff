@@ -1120,8 +1120,8 @@ def claude_add(usd):
 
 
 def claude_ok():
-    """a key, and spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 100 - 5)"""
-    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 100.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
+    """a key, and spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 20 - 5)"""
+    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 20.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
 
 
 # Counters Claude's habits; appended to the shared base prompt on the Claude path only (FORMAT and VOICE stay the rule).

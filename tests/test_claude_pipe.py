@@ -112,7 +112,7 @@ class ClaudePipe(unittest.TestCase):
         self.assertEqual(self.hosts(), ["claude"])
 
     def test_budget_hit_skips_claude(self):
-        serve._claude_spent["usd"] = 95.0                                     # 100 - 5 reserve
+        serve._claude_spent["usd"] = 15.0                                     # 20 - 5 reserve
         self.assertEqual(self.run_it(), "OR words.")
         self.assertEqual(self.hosts(), ["or"])
         os.environ["CLAUDE_BUDGET_USD"] = "200"
@@ -120,7 +120,7 @@ class ClaudePipe(unittest.TestCase):
         self.assertEqual(self.run_it(), "Hi there.\n**Push** is shared.")
 
     def test_budget_reads_upstash(self):
-        with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", return_value="99.5") as kv:
+        with mock.patch.object(serve, "KV", ("https://kv", "t")), mock.patch.object(serve, "_kv", return_value="19.5") as kv:
             self.assertEqual(self.run_it(), "OR words.")
             kv.assert_called_with("GET", serve.CLAUDE_SPEND_KEY)
         self.assertEqual(self.hosts(), ["or"])
