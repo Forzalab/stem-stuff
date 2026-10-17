@@ -1055,7 +1055,7 @@ html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
 html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: min(60vh, 48rem); cursor: col-resize; }
-html.side .sash::before { position: sticky; display: block; top: calc(50dvh - 24px);   /* the grip stays centred in the window, also scrolled or zoomed far out (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted); z-index: 1; }
+html.side .sash::before { position: sticky; display: block; top: min(calc(50dvh - 24px), 16rem);   /* the grip sits mid-window, but never more than 16rem down, so it stays by the content zoomed far out (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted); z-index: 1; }
 html.side .sash:hover::before, html.side.mt-drag .sash::before { background: var(--ink); }
 html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; box-sizing: border-box; padding: 0 23.5px; background-color: var(--line); background-clip: content-box; }   /* the touch area, whose 1px centre is the rail the full height of the gap: the handle reads as the divider between the panes (r9: it was a lone short bar floating at the top) */
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
