@@ -53,14 +53,14 @@ test("§2.5 radius: only the listed radii", () => {
   assert.deepEqual(bad.map(fmt), [], "radius follows size (STYLE.md §2.5)");
 });
 
-test("§2.6 borders: one weight (--bw), only a wrong answer is heavier (--bw-alarm)", () => {
+test("§2.6 borders: one weight (--bw), answer rows rest on --bw-hair, only a wrong typed answer is heavier (--bw-alarm)", () => {
   const ok = d => {
-    const v = d.value.replace(/var\(--bw(-alarm)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
+    const v = d.value.replace(/var\(--bw(-alarm|-hair)?(, *1px)?\)/g, "");                           // the tokens (explain-box.css has a 1px fallback)
     const px = v.match(/\d*\.?\d+px/g) || [];
     return px.every(p => p === "1px" || (p === "1.5px" && d.sel === ".ask"));                  // 1px dividers; Cluck's ask rim (Tony's image 3) is the listed exception
   };
   const bad = ALL.filter(d => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && !ok(d));
-  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-alarm), 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
+  assert.deepEqual(bad.map(fmt), [], "border widths: var(--bw), var(--bw-hair), var(--bw-alarm), 1px dividers, the ask rim's 1.5px (STYLE.md §2.6)");
 });
 test("§2.6 field focus: the 2px edge, never an outline too", () => {
   const field = s => /:focus-within|textarea:focus/.test(s) && !/\.btn\b/.test(s);
@@ -79,9 +79,12 @@ test("§2.2 type: Atkinson, Atkinson Mono or KaTeX only", () => {
   assert.deepEqual(bad.map(fmt), [], "no third family (STYLE.md §2.2)");
 });
 
-test("§2.1 --mark is Cluck and figures only, never a warning", () => {
-  const bad = ALL.filter(d => /var\(--mark\)/.test(d.value) && !/cluck|duck|fig|graph|specimen|\.chg\b/i.test(d.sel));
-  assert.deepEqual(bad.map(fmt), [], "--mark: Cluck's duck and figure highlights (STYLE.md §2.1)");
+test("§2.1 retired colour tokens stay gone (PALETTE-v3 §1: one warm family, unified v5)", () => {
+  const RETIRED = /--(mark|ok|bad|ok-(rim|ico|fill)|bad-(rim|ico|fill)|ai|ai-(soft|edge|send|send-ink|strong|sheet|muted|rule|on-ct|ink)|rw-(sun|sun-dk|tang|tang-dk|tang-ink|magenta|pink|cream|rust|floor|bar|text|soft|lav|v\d+|g-[a-z-]+|wc-[a-z-]+|goldify))\b(?!-)/;
+  const code = f => read(f).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, m => m.replace(/[^\n]/g, " "));   // comments blanked, lines kept
+  const hits = ["app.css", "nav.css", "rewards/rewards.css", "rewards/fx.js", "offline.js"].flatMap(f => code(f).split("\n").map((l, i) => [f, i + 1, l]))
+    .filter(([, , l]) => RETIRED.test(l)).map(([f, n, l]) => `${f}:${n} ${l.trim().slice(0, 90)}`);
+  assert.deepEqual(hits, [], "use the v5 role (app.css :root)");
 });
 
 test("§4 no colour emoji in the UI", () => {

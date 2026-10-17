@@ -71,7 +71,7 @@ async function run(browserType, label, opts = {}) {
         // locked rule: every force arrow is one blue (c1 #7ab8ff); only velocity/acceleration differ
         const forces = await page.evaluate(() => [...document.querySelectorAll('#freeze [data-mark="force"][data-kind="force"] polyline, #freeze [data-mark="force"][data-kind="force"] polygon')]
           .map(e => getComputedStyle(e).stroke));
-        for (const st of forces) assert.equal(st, "rgb(122, 184, 255)", `force stroke ${st} in ${code}`);
+        for (const st of forces) assert.equal(st, "rgb(146, 192, 255)", `force stroke ${st} in ${code}`);
         if (/^PHYS-(F3N|S2K)$/.test(code)) {
           assert.ok(forces.length >= 3, `expected force arrows in ${code}`);
           assert.equal(await page.locator('#freeze [data-kind="kin"]').count(), 0, `non-blue force in ${code}`);
@@ -242,7 +242,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await pasteBtn.isVisible() && await go.isHidden());
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(167, 183, 205)", "placeholder not in the hint color (--hint = --muted, unified v5)");
       assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [52, 52] : [44, 44]);   // flush inside the code box: --btn (56 on a 1920x1080 desktop, else 48) minus its 2px borders
       const hs = await page.evaluate(() => ["#upload", ".code-box"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }));
       assert.deepEqual(hs[0], hs[1], "code box and upload button: same top and bottom");

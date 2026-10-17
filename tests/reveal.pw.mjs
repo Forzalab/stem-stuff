@@ -58,7 +58,7 @@ async function typed(page, v) {
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 6000 });
 }
 const xp = page => page.evaluate(() => window.Rewards.state().xp);
-const rows = page => page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use")?.getAttribute("href") || "" })));
+const rows = page => page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use, .vg use")?.getAttribute("href") || "" })));
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {

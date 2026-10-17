@@ -55,26 +55,26 @@
   /* A: a small pill "2 tries left" */
   .ctr[data-v="A"] .w { padding: 4px 10px; border-radius: 999px; background: var(--sheet); color: #fff; border: var(--bw) solid var(--edge); }
   .ctr[data-v="A"][data-left="1"] .w { color: var(--mark); border-color: var(--mark); }
-  .ctr[data-v="A"][data-left="0"] .w { color: var(--bad); border-color: var(--bad); background: none; }
-  .ctr[data-v="A"].done .w { color: var(--ok); border-color: var(--ok); background: none; }
+  .ctr[data-v="A"][data-left="0"] .w { color: var(--wrong); border-color: var(--wrong); background: none; }
+  .ctr[data-v="A"].done .w { color: var(--correct); border-color: var(--correct); background: none; }
   /* B: pips that empty as you miss (full = a try you still have) */
   .ctr .pp { display: inline-flex; gap: 5px; }
   .ctr[data-v="B"] .pp i { width: 12px; height: 12px; border-radius: 50%; background: var(--c1); border: var(--bw) solid var(--c1); }
   .ctr[data-v="B"] .pp i.sp { background: none; border-color: var(--edge); }
-  .ctr[data-v="B"].done .pp i:not(.sp) { background: var(--ok); border-color: var(--ok); }
+  .ctr[data-v="B"].done .pp i:not(.sp) { background: var(--correct); border-color: var(--correct); }
   /* C: "Try 1 of 2" words */
   .ctr[data-v="C"] .w { color: var(--muted); font-weight: 400; }
   .ctr[data-v="C"] .w b { color: var(--ink); }
   .ctr[data-v="C"][data-left="1"] .w b { color: var(--mark); }
-  .ctr[data-v="C"][data-left="0"] .w, .ctr[data-v="C"][data-left="0"] .w b { color: var(--bad); }
-  .ctr[data-v="C"].done .w, .ctr[data-v="C"].done .w b { color: var(--ok); }
+  .ctr[data-v="C"][data-left="0"] .w, .ctr[data-v="C"][data-left="0"] .w b { color: var(--wrong); }
+  .ctr[data-v="C"].done .w, .ctr[data-v="C"].done .w b { color: var(--correct); }
   /* D: try tokens that crack on a miss (a short shake, the halves part, a dashed red ring: the struck choice's own language) */
   .ctr[data-v="D"] .pp { gap: 6px; }
   .ctr[data-v="D"] .pp i { position: relative; width: 16px; height: 16px; }
   .ctr[data-v="D"] .pp i::before, .ctr[data-v="D"] .pp i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c1); }
   .ctr[data-v="D"] .pp i::before { clip-path: polygon(0 0, 58% 0, 42% 50%, 60% 100%, 0 100%); }
   .ctr[data-v="D"] .pp i::after { clip-path: polygon(58% 0, 100% 0, 100% 100%, 60% 100%, 42% 50%); }
-  .ctr[data-v="D"] .pp i.sp::before, .ctr[data-v="D"] .pp i.sp::after { background: none; border: var(--bw-alarm) dashed var(--bad); }
+  .ctr[data-v="D"] .pp i.sp::before, .ctr[data-v="D"] .pp i.sp::after { background: none; border: var(--bw-alarm) dashed var(--wrong); }
   .ctr[data-v="D"] .pp i.sp::before { transform: translate(-2px, 1px) rotate(-10deg); }
   .ctr[data-v="D"] .pp i.sp::after { transform: translate(2px, -1px) rotate(10deg); }
   .ctr[data-v="D"] .pp i.crack { animation: crack .42s ease-out; }
@@ -82,29 +82,29 @@
   .ctr[data-v="D"] .pp i.crack::after { animation: half-r .42s cubic-bezier(.16, 1, .3, 1) both; }
   @keyframes half-l { 0%, 30% { transform: none; } }
   @keyframes half-r { 0%, 30% { transform: none; } }
-  .ctr[data-v="D"].done .pp i:not(.sp)::before, .ctr[data-v="D"].done .pp i:not(.sp)::after { background: var(--ok); }
+  .ctr[data-v="D"].done .pp i:not(.sp)::before, .ctr[data-v="D"].done .pp i:not(.sp)::after { background: var(--correct); }
   .ctr[data-v="D"] .w { color: var(--mark); }
-  .ctr[data-v="D"][data-left="0"] .w { color: var(--bad); }
-  .ctr[data-v="D"].done .w { color: var(--ok); }
+  .ctr[data-v="D"][data-left="0"] .w { color: var(--wrong); }
+  .ctr[data-v="D"].done .w { color: var(--correct); }
   @keyframes crack { 0%, 100% { transform: none; } 20% { transform: translateX(-3px) rotate(-8deg); } 45% { transform: translateX(3px) rotate(6deg); } 70% { transform: translateX(-2px); } }
   .rm .ctr *, .rm .ctr *::before, .rm .ctr *::after, .rm .rw-hud, .rm .rw-hud * { animation: none !important; transition: none !important; }   /* ?rm=1 = the OS setting (rewards.css only reads the OS) */
   .nodots .pips { display: none !important; }
 
   /* ---------- coin flash (rewards.css tokens; the floating chip rides the FX particle layer, z 150) ---------- */
   .rw-coin { transition: box-shadow .2s ease-out, border-color .2s ease-out; }
-  .rw-coin.cf-pulse { border-color: var(--rw-sun); box-shadow: 0 0 0 2px var(--rw-sun); animation: cf-pulse .7s cubic-bezier(.16, 1, .3, 1); }
+  .rw-coin.cf-pulse { border-color: var(--reward); box-shadow: 0 0 0 2px var(--reward); animation: cf-pulse .7s cubic-bezier(.16, 1, .3, 1); }
   .rw-coin.cf-pulse .rw-num { color: #fff; }
   @keyframes cf-pulse { 0% { transform: scale(1); } 30% { transform: scale(1.14); } 100% { transform: scale(1); } }
-  .cf-tag { position: fixed; z-index: 150; pointer-events: none; padding: 2px 8px; border-radius: 999px; background: var(--rw-sun); color: var(--rw-text);
-    font: 700 15px/1.2 var(--rw-font); box-shadow: 0 2px 0 var(--rw-sun-dk); white-space: nowrap; }
-  .cf-chip { position: fixed; z-index: 150; pointer-events: none; padding: 6px 14px; border-radius: 999px; border: 3px solid #fff; background: var(--rw-sun);
-    color: var(--rw-text); font: 700 20px/1 var(--rw-font); box-shadow: 0 3px 0 var(--rw-v950), var(--rw-sh3); white-space: nowrap; }
+  .cf-tag { position: fixed; z-index: 150; pointer-events: none; padding: 2px 8px; border-radius: 999px; background: var(--reward); color: var(--help-ink);
+    font: 700 15px/1.2 var(--rw-font); box-shadow: 0 2px 0 var(--help-deep); white-space: nowrap; }
+  .cf-chip { position: fixed; z-index: 150; pointer-events: none; padding: 6px 14px; border-radius: 999px; border: 3px solid #fff; background: var(--reward);
+    color: var(--help-ink); font: 700 20px/1 var(--rw-font); box-shadow: 0 3px 0 var(--page), var(--rw-sh4); white-space: nowrap; }
   /* reduced motion: no movement at all. The pill turns sun yellow and says "+N" for 2 s, then shows the new total */
-  .rw-coin.cf-static { background: var(--rw-sun); border-color: #fff; box-shadow: 0 0 0 2px var(--rw-sun-dk); transition: none; }
-  .rw-coin.cf-static .rw-num { color: var(--rw-text); }
+  .rw-coin.cf-static { background: var(--reward); border-color: #fff; box-shadow: 0 0 0 2px var(--help-deep); transition: none; }
+  .rw-coin.cf-static .rw-num { color: var(--help-ink); }
   .rw-coin.cf-static .rw-coin-ic { visibility: hidden; width: 0; }
   .rw-coin.cf-static .rw-num::after { content: " XP"; font-size: 15px; }
-  .rw-coin.cf-quiet .rw-num { color: var(--rw-cream); }
+  .rw-coin.cf-quiet .rw-num { color: var(--help-on); }
 </style>
 </head>
 <body>

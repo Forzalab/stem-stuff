@@ -20,7 +20,7 @@
   const EASE = { pop: 'cubic-bezier(.16,1,.3,1)', out: 'cubic-bezier(.2,.8,.3,1)' };
   const popKF = (s, o = 0) => [{ transform: 'scale(1)', opacity: 1 }, { transform: `scale(${s})`, opacity: 1, offset: .4 }, { transform: 'scale(1)', opacity: o || 1 }];
   const enterKF = (from) => [{ transform: `scale(${from})`, opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }];
-  const COLORS = ['#ff8a1f', '#ffd36b', '#d63fa8', '#fff3b0', '#ffb347'];
+  const COLORS = ['#ff9a3e', '#ffcd94', '#b05a00', '#ffdcc0', '#ff8204'];   // the warm ramp (PALETTE-v3 §5): help, reward, help-deep, help-on, glow
   const COUNT = { small: 10, medium: 18, large: 30 }, DIST = { small: 70, medium: 105, large: 145 }, CONF = { small: 24, medium: 40, large: 70 };
 
   /* ---------- one blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12) ----------
@@ -328,7 +328,7 @@
     }
     const f = confettiIn(par);
     if (f) f({ particleCount: 90, spread: 120, startVelocity: 38, ticks: 200, gravity: .9, scalar: 1.1, shapes: ['circle', 'star'],
-      colors: ['#ffd36b', '#ffb347', '#fff3b0', '#ff8a1f'], origin: { x: .5, y: .45 } });
+      colors: ['#ffcd94', '#ff9a3e', '#ffdcc0', '#ff8204'], origin: { x: .5, y: .45 } });
   }
 
   function burst(kind, o) {

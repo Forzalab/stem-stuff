@@ -1,19 +1,19 @@
 /* try/genui-redeem.css: Redeem chip + fixed +3 burst (agent U). Tokens only; every keyframe has a reduced-motion rule. */
 .rd-slot { position: relative; display: inline-flex; }
 .rd-chip { display: inline-flex; align-items: center; gap: var(--s1); min-height: 2rem; padding: 0 var(--s3) 0 var(--s2); border-radius: 999px; background: var(--sheet); color: var(--ink); font-size: var(--t-sm); font-weight: 700; }
-.rd-chip .ico { width: 1.25rem; height: 1.25rem; color: var(--rw-sun); }
-.rd-chip.ok .ico { color: var(--ok); }
+.rd-chip .ico { width: 1.25rem; height: 1.25rem; color: var(--reward); }
+.rd-chip.ok .ico { color: var(--correct); }
 .rd-chip.later { color: var(--muted); }
 .rd-chip.later .ico { color: var(--muted); }
 .rd-line { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); font-size: var(--t-sm); font-weight: 700; color: var(--muted); }
-.rd-line .ico { width: 1.25rem; height: 1.25rem; color: var(--rw-sun); }
+.rd-line .ico { width: 1.25rem; height: 1.25rem; color: var(--reward); }
 .rd-coin { position: relative; display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); font-weight: 700; color: var(--ink); }
 .rd-coin.wrong { color: var(--muted); }
 .rd-coin.right .coin { animation: rd-pop .28s ease-out 2; }
 .rd-say { margin: 0; }
 .rd-say.quiet { color: var(--muted); font-size: var(--t-sm); }
 /* the burst: one fixed "+3", rises 14px and fades (STYLE 2.8: transform + opacity, <=14px) */
-.rd-burst { position: absolute; left: 50%; bottom: calc(100% + var(--s1)); transform: translateX(-50%); font-weight: 700; font-size: var(--t-sm); color: var(--rw-sun); pointer-events: none; z-index: 1; animation: rd-rise .6s ease-out both; }
+.rd-burst { position: absolute; left: 50%; bottom: calc(100% + var(--s1)); transform: translateX(-50%); font-weight: 700; font-size: var(--t-sm); color: var(--reward); pointer-events: none; z-index: 1; animation: rd-rise .6s ease-out both; }
 .rd-burst.on-row { left: auto; right: var(--s4); bottom: auto; top: 50%; transform: translateY(-50%); animation-name: rd-rise-row; }
 .ch { position: relative; }
 .hud.bump .coin { animation: rd-pop .28s ease-out 2; }
@@ -32,7 +32,7 @@ html.rm .rd-burst.on-row { transform: translateY(calc(-50% - 6px)); }
 html.rm .rd-slot .rd-burst { transform: translateY(calc(-50% - 6px)); }
 /* v3 (T25, Oct 12): no words. The duck coin (genui-ui.css .coin = rewards/icons/coin24_color.svg, the same art as the HUD coin) + "+3" beside Check.
    Wrong: it stays, dimmed. Right: genui-redeem.js fly() moves it into the HUD coin (WAAPI, one group, no CSS keyframes, nothing infinite). */
-.rd-v3 .rd-coin { gap: var(--s1); color: var(--rw-sun); }
+.rd-v3 .rd-coin { gap: var(--s1); color: var(--reward); }
 .rd-v3 .rd-coin .coin { width: 2rem; height: 2rem; }
 .rd-v3 .rd-coin.wrong { opacity: .5; }   /* dimmed, still >= 3:1 on the card (.45 was 2.97) */
 .rd-v3 .rd-coin.gone { visibility: hidden; }

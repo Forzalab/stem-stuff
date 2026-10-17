@@ -783,7 +783,14 @@ function strike(o) {                                        // a wrong choice: u
   if (!o) return;
   o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true");
   mark(o, fixOf(o) ? "x" : "");
-  o.querySelector(".badge").innerHTML = icon("i-x");
+  glyph(o, "i-x");
+}
+/* the verdict glyph (V1 thin light): pick-all's square badge is the glyph slot; a single-pick row keeps its letter and shows the glyph at its right end */
+function glyph(o, id) {
+  if (o.closest(".choices.all")) { o.querySelector(".badge").innerHTML = icon(id); return; }
+  let g = o.querySelector(".vg");
+  if (!g) { g = document.createElement("span"); g.className = "vg"; g.setAttribute("aria-hidden", "true"); o.append(g); }
+  g.innerHTML = icon(id);
 }
 function roving(o) { for (const x of opts()) x.tabIndex = x === o ? 0 : -1; }
 /* one-shot feedback on a choice (Tony, Oct 6 TK1): a wrong pick shakes once, a right one pulses. CSS only animates it (app.css
@@ -805,9 +812,9 @@ async function submitMC() {
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the choice stays picked, retry resends it
   record({ a: c.md, c: c.id, l: o.dataset.l }, r);
   const send = o.parentElement.querySelector(".send");
-  if (r.verdict === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); finish(); }   // no pop: Next is the one motion after Check (T17b-1)
+  if (r.verdict === "correct") { o.classList.add("right"); glyph(o, "i-ok"); finish(); }   // no pop: Next is the one motion after Check (T17b-1)
   else if (r.verdict === "wrong") {
-    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
+    o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); glyph(o, "i-x"); if (r.triesLeft > 0) nudge(o, "jolt");   // the closing pick: no shake
     select(null);
     const next = opts().find(x => !x.disabled); if (next) { roving(next); next.focus(); }
     if (r.triesLeft <= 0) finish(); else pips(r, ...pipsAt());
@@ -831,7 +838,7 @@ async function submitAll() {
   if (r.verdict !== "invalid") record({ a: S.prob.fix ? { tick, fix: Object.fromEntries(xs.map(o => [o.dataset.l, f[o.dataset.id]])) } : tick, c, l: on.map(o => o.dataset.l),
     ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}) }, r);
   if (r.verdict === "correct") {
-    for (const o of on) { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }   // no pop: Next is the one motion (T17b-1)
+    for (const o of on) { o.classList.add("right"); glyph(o, "i-ok"); }   // no pop: Next is the one motion (T17b-1)
     for (const o of xs) fixOf(o).classList.add("ok", "done");
     finish();
   } else if (r.verdict === "wrong") {
@@ -1042,7 +1049,7 @@ function paintRec(rec) {
     if (last && Array.isArray(last.c)) for (const o of last.c.map(opt)) {
       if (!o || o.disabled) continue;
       mark(o, "on");
-      if (last.v === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+      if (last.v === "correct") { o.classList.add("right"); glyph(o, "i-ok"); }
     }
     if (last && last.f) for (const [id, v] of Object.entries(last.f)) {
       const o = opt(id), f = o && fixOf(o); if (!f) continue;
@@ -1055,8 +1062,8 @@ function paintRec(rec) {
   } else if (p.type === "mc") {
     for (const t of S.tries) {
       const o = opts().find(x => x.dataset.id === t.c); if (!o) continue;
-      if (t.v === "wrong") { o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); o.querySelector(".badge").innerHTML = icon("i-x"); }
-      else if (t.v === "correct") { o.classList.add("right"); o.querySelector(".badge").innerHTML = icon("i-ok"); }
+      if (t.v === "wrong") { o.classList.add("wrong"); o.disabled = true; o.setAttribute("aria-disabled", "true"); glyph(o, "i-x"); }
+      else if (t.v === "correct") { o.classList.add("right"); glyph(o, "i-ok"); }
     }
     const live = opts().find(x => !x.disabled); if (live) roving(live);
   } else {
@@ -1183,7 +1190,7 @@ function reveal(r, part) {
     for (const o of opts()) {
       if (ids.includes(o.dataset.id)) {
         if (all(p)) mark(o, "on");
-        o.classList.remove("wrong"); o.classList.add("right", "reveal"); o.querySelector(".badge").innerHTML = icon("i-ok");
+        o.classList.remove("wrong"); o.classList.add("right", "reveal"); glyph(o, "i-ok");
       } else if (all(p) && markOf(o) === "on" && !o.classList.contains("wrong")) strike(o);      // a ticked wrong row: struck, x
     }
     return "The right answer: " + opts().filter(o => ids.includes(o.dataset.id)).map(o => o.querySelector(".txt").textContent.trim()).join(", ") + ".";
@@ -1435,7 +1442,7 @@ function peekText() {                                                       // t
   });
 }
 /* E1 LOCKED (Tony, Oct 13: T2, "ok but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
-   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --ai and the duck tilts once. T35 may host it in an AI preview card */
+   no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --help and the duck tilts once. T35 may host it in an AI preview card */
 const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
   const el = wishEl(), w = wish;

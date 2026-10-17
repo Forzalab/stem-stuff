@@ -608,7 +608,7 @@ flow(14, "mc-lockout", async (page, w, ctx) => {
   /* SUGAR (the default), T19: out of tries shows the right row (green .opt.right + reveal, a check); it pays no XP on the closing pick */
   const x0 = await (async () => { await go(page, C.single); return xp(page); })();
   await lockout(page, C.single);
-  const rows = await page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use")?.getAttribute("href") || "" })));
+  const rows = await page.$$eval("#q .opt", os => os.map(o => ({ id: o.dataset.id, cls: o.className, badge: o.querySelector(".badge use, .vg use")?.getAttribute("href") || "" })));
   const right = rows.filter(r => /\bright\b/.test(r.cls));
   assert.deepEqual(right.map(r => [r.id, /\breveal\b/.test(r.cls), /i-ok$/.test(r.badge)]), [[KEY.get(C.single).correct, true, true]], "sugar: out of tries shows the right row, green + check");
   assert.ok(rows.filter(r => /\bwrong\b/.test(r.cls)).every(r => /i-x$/.test(r.badge)), "picked rows stay x'd");

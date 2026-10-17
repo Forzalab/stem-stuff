@@ -35,32 +35,32 @@ All values live in `app.css :root`. Use the token, never the raw value. Desktop 
 
 ### 2.1 Color
 
+Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder; Tony's round 7 PICKER 1, 2, 4, 8). Hard cap per frame: page + 2 surfaces + 1 line colour (Tony: "count how many blues"), plus the help surface when a hint or Cluck is open.
+
 | token | hex | role |
 |---|---|---|
-| `--paper` | #151d2b | page background, the dock, the freeze strip, toast |
-| `--qbox` | #192232 | the question box, everywhere (card, pad-page tile, keyboard-up card, desktop strip): halfway between `--paper` and `--sheet` (Tony, Oct 3) |
-| `--sheet` | #1d2839 | surfaces: list card, Cluck, outline buttons, the q \| a switch |
-| `--field` | #111826 | inside text fields; ink on filled buttons |
-| `--raised` | #243149 | hover, selected, current row, open state, the Scratchpad button |
-| `--ink` | #e7edf6 | body text, icons in buttons |
-| `--muted` | #a2b3cb | secondary text, hover border, locked state |
-| `--hint` | #7d8ea8 | placeholder, autosave status, "gone" list rows (lowest text) |
-| `--line` | #34445d | dividers and grid only. Never a control boundary (1.5:1) |
-| `--edge` | #6b7f9e | the boundary of every control and field (3.64:1 on sheet) |
-| `--focus` | #8fb0ff | focus ring, focused field border, caret |
-| `--c1` / `--c1-hi` | #7ab8ff / #a3cdff | the primary action fill and its hover; selected choice; current item; forces in figures |
-| `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only (and Cluck's beak). Not for UI state |
+| `--page` | #050c16 | page, bars, the dock, wells (older names on it: `--paper`, `--field`) |
+| `--card` | #101c2c | the one card fill: question box, every choice, list card (`--qbox`, `--sheet`) |
+| `--float` | #1b2b40 | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
+| `--line` | #394a61 | the one line colour: dividers, control edges, the 0.5px row hairline (`--edge`) |
+| `--ink` | #e8edf5 | body text, icons in buttons |
+| `--muted` | #a7b7cd | secondary text, placeholders, locked state (`--hint`) |
+| `--action` / `--focus` | #92c0ff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` letter), focus ring, caret (`--c1`) |
+| `--c2`, `--c3` | #ffb86b, #ff8fc8 | figure series only. Not for UI state |
+
+**The warm family** (one hue band, 55–70°; lightness is the role, PALETTE-v3 §1): `--help` #ff9a3e is Cluck, hints, the bulb and send; `--reward` #ffcd94 is the HUD (XP bar, numerals, star), the +XP float, the toast and the bursts only, never in a help surface, a CTA or a chip; `--help-on` #ffdcc0 Cluck's name and card titles; `--help-deep` #b05a00 burst fields, rims, outlines (never under text); `--help-line`, `--help-fill`, `--help-sheet`, `--help-rule`, `--help-muted`, `--help-ink` (ink on any warm solid); `--glow` #ff8204 at alpha only. Bursts use three slots of this ramp (rarer = lighter): 0 purples, 0 magentas, 0 whites. The reward rasters land on the ramp through `--goldify` (the gold star) and `--duckgold` (the natural-colour duck), measured at OKLCH hue 62–70.
 
 **Status colors.** Each one means one thing. Use them on icons, borders and short words; never as a large fill.
 
 | token | means | use it for | never |
 |---|---|---|---|
-| `--ok` | right | check icon, right choice border and badge, right answer text, Copy done | decoration, "success" toasts for routine saves |
-| `--bad` | wrong | X icon, dashed border on a wrong answer, strike on a wrong choice, list X marks, the entry error line | hover, delete buttons, emphasis |
-| `--mark` | look here | Cluck's duck; figure highlight; a snack's changed number (`.chg`, an underline only) | a warning, a toast, a second series next to `--c2`, a full-surface fill |
+| `--correct` #4ee6af | right | check glyph, a right row's 1px ring, a right box's edge, the green Next face (`--correct-ink` label, `--correct-press` pressed), right answer text, Copy done | decoration, "success" toasts for routine saves, a fill under a row |
+| `--wrong` #eb596e | wrong | X glyph, a wrong row's 1px ring, the strike on a wrong choice, used try pips, list X marks, the entry error line. `--wrong-rim` #d14a5f: only the typed box's 2px dashed edge | hover, delete buttons, emphasis, a fill under a row |
 | `--muted` | locked / waiting | lock icon (in the answer box when out of tries), checking | (see table above) |
 
-There is no warning color. `--mark` is the only yellow, and it is never a warning. Do not add yellow, amber or orange, with one scoped exception: `--ai` (tangerine) on Cluck's surfaces only (see "Cluck's surfaces" below; Tony, Oct 4). It is never a warning and never in a figure.
+There is no warning color. The warm family is never a warning and never a figure series. `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
+
+Source for `--action`, `--correct`, `--wrong`: chat-redesign round 5 PALETTE-v3.1 + THINLIGHT (brain), Tony's round 7 PICKER 1–2. `--online` #5fd394 is Cluck's status dot only.
 
 Contrast floor: text 4.5:1 on its real background (check `--raised` too), control boundaries and icons 3:1.
 
@@ -113,11 +113,12 @@ One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and dispar
 
 | what | border |
 |---|---|
-| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), choices `.opt`, badges, `.md th`, the toast | `--bw` (1px), `--edge` (toast `--line`). Hover `--muted`. Selected `--c1`. Right `--ok`. Pending `--c1` dashed |
+| Fields (`.ff`, `.code-box`, start `.entry`, `.xb textarea`), badges, `.md th`, the toast | `--bw` (1px), `--edge` (toast `--line`). Hover `--muted`. Right `--correct`. Pending `--c1` dashed |
+| Choices `.opt` | `--bw-hair` (0.5px) `--line` at rest; every state 1px (`--bw`): selected `--action`, right `--correct`, wrong `--wrong` (solid; the strike and the x carry it in grey) |
 | Buttons `.btn` | fill-first: `--bw` **transparent**, the fill carries it; hover = `--raised` fill only. `.btn-go` keeps its `--c1` edge |
 | Field focus (every field, the pad too) | border `--focus` + `inset 0 0 0 1px var(--focus)` = one 2px blue edge. **No outline** |
 | Keyboard focus (buttons, FAB, sash, anything `:focus-visible`) | `--ring` (2px) `--focus` outline at 2px offset (-3px inside a field) |
-| Wrong (`.opt.wrong`, `.ff.bad`) | `--bw-alarm` (2px) `--bad` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
+| Wrong typed box (`.ff.bad`) | `--bw-alarm` (2px) `--wrong-rim` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
 | Cluck's ask rim (`.ask`) | 1.5px, shown only while Cluck types: the one listed exception |
 
 - Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.
@@ -202,10 +203,10 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 | idle, empty | `--edge` | empty (arrow hidden) | `--hint` placeholder |
 | typed | `--edge` | `.btn-go` arrow | `--ink` |
 | focus | `--focus`, 2px (field rule) | arrow if typed | `--ink` |
-| wrong, try left | `--bad` 2px dashed | `i-x` in `--bad` | `--ink`, editable |
-| correct | `--ok` (sugar: `--ok` 2px rim + 10% `--ok` wash `#11242b`) | verdict `i-ok` in `--ok` LEFT of the slot; the slot holds the labelled **Next ▶** (96x48, right-aligned on Check; sugar: 3px `--field` ring round a 44px face) | `--ok`, read-only |
-| locked (out of tries) | `--edge`, not dimmed (it carries Next) | verdict `i-lock` in `--muted` LEFT of the slot; the slot holds the labelled **Next ▶** | `--muted`, read-only, no words under it (no out-of-tries line) |
-| closed, not the last try (multi parts) | `--edge` / `--ok`, 50% opacity | its verdict icon | read-only, not-allowed cursor |
+| wrong, try left | `--wrong-rim` 2px dashed, no fill | `i-x` in `--wrong` | `--ink`, editable |
+| correct | `--correct` 1px, no fill (both modes) | verdict `i-ok` in `--correct` LEFT of the slot; the slot holds the labelled **Next ▶** on a `--correct` face (96x48 hit, 92x44 face, right-aligned on Check; sugar: 3px `--field` ring round it) | `--correct`, read-only |
+| locked (out of tries) | `--edge`, not dimmed (it carries Next) | verdict `i-lock` in `--muted` LEFT of the slot; the slot holds the labelled **Next ▶** on a neutral `--raised` face, 0.5px `--line` (a fail is never praised) | `--muted`, read-only, no words under it (no out-of-tries line) |
+| closed, not the last try (multi parts) | `--edge` / `--correct`, 50% opacity | its verdict icon | read-only, not-allowed cursor |
 
 - Do: show the verdict icon in the arrow slot, so the result sits where the eye already is. Keep the box the same size in every state.
 - Next (T17b-1, app.js `cueNext`): once a question closes, the last try's Check slot (box, mc row, multi part, pick-all Check row) gets a labelled Next. The Check rect lies inside it (right edges flush), so nothing moves; focus goes to it; a held Enter (`e.repeat`) never presses it. It lands once with `g-next-in` (200ms, 120ms delay; reduced motion `g-next-fade`). The filled ▶ (`i-tri`) is only on this filled Next; the nav bar Next and every ghost / text button keep the thin chevron `i-next`. Sugar adds the duck chip under the answer ("Compare with Cluck's steps" / "Ask Cluck", no XP); diet has no chip, duck or wash.
@@ -213,8 +214,8 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 
 ### Multiple-choice choice (`.opt`)
 
-- Anatomy: full-width row, min 52px, `--sheet` fill, `--bw` border, 8px radius, a 2rem round letter badge, the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
-- States: idle `--edge`, hover `--muted`, selected `--c1` border + `--raised` + filled `--c1` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong `--bad` 2px dashed + struck text; right `--ok` border + filled `--ok` badge or check; pending `--c1` dashed.
+- Anatomy: full-width row, min 52px, `--sheet` fill, a 0.5px `--line` hairline (`--bw-hair`), 8px radius, a round letter badge (1px `--line` ring, `--muted` letter), the text, and the arrow room on the right. 2 choices (or 3 short ones) become one row of pills without badges (`fitChoices()`).
+- States (V1 thin light: a state is a 1px ring + a 20px glyph in one solid colour, on the unchanged row; never a fill; the letter badge never changes with right / wrong): idle hairline, hover `--muted`, selected 1px `--action` ring + filled `--action` badge + the arrow inside; others fade to 35% and the page dims (lock-in); wrong 1px `--wrong` ring + `i-x` at the row's right end + `--muted` text struck in `--wrong`; right 1px `--correct` ring + `i-ok` at the right end (8px left of Next on the row that carries it); a right row the student missed: dashed `--correct`; pending `--c1` dashed. Closed rows never dim. Pick-all: the square badge is the glyph slot (1px ring + glyph in the state colour). Pills: no badge, the label takes the state colour. Try pips: 8px, used = filled `--wrong`, left = hollow `--line`.
 - Do: tap again to deselect; keys A to E, 1 to 5, arrows (existing keys; see Keyboard in §5).
 - Don't: submit on the first tap; color the whole row red or green.
 
@@ -229,7 +230,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 
 ### Cluck hint (`.cluck`)
 
-- Anatomy: `--sheet` panel, 10px radius, `--s3`/`--s4` padding, the duck (`i-duck`, 28px, `--mark`) at the top left, then the hint text. No title, no border, no side stripe.
+- Anatomy: `--sheet` panel, 10px radius, `--s3`/`--s4` padding, the duck (`i-duck`, 28px, `--help`) at the top left, then the hint text. No title, no border, no side stripe.
 - When: after a wrong answer, and again when a question with used tries is reopened.
 - Voice: the only place for "QUACK." (see Copy voice).
 
@@ -243,7 +244,7 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 ### Scratchpad (`.xb`)
 
 - Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, `--bw` `--edge`, 8px radius, `--mono` 16px / 1.6, no line numbers. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
-- States: focus = the field rule, 2px `--focus` edge, no outline (one ring, Tony). Copy done = `--ok` icon and border.
+- States: focus = the field rule, 2px `--focus` edge, no outline (one ring, Tony). Copy done = `--correct` icon and border.
 - Don't: a resize handle, a second scroll inside the page scroll when it can grow instead.
 
 ### Multitask (`#stage`, the pad page, side by side)
@@ -271,6 +272,8 @@ Tony, Oct 13: "allow fade (not overt, but for UI smoothness) + subtle glows like
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
 
 ### Cluck's surfaces (`.ai-*`, sugar only)
+
+**Current (unified v5, Oct 17; newest wins over the history below):** the `.ai-skin` aliases that duplicated the warm family folded into `:root` (PALETTE-v3 §3): `--ai`, `--ai-soft`, `--ai-send`, `--ai-edge` → `--help`; `--ai-ink`, `--ai-send-ink` → `--help-ink`; `--ai-on-ct` → `--help-on`; `--ai-sheet` → `--help-sheet`; `--ai-muted` → `--help-muted`; `--ai-rule` → `--help-rule`; `--ai-strong` → `--ai-text` (no white inside a help surface). `.ai-skin` keeps only the sheet's own pair and wells: `--ai-ct`, `--ai-pill`, `--ai-text`, `--ai-tint`, `--ai-field`, the glow (`--glow` at .26) and the soft-UI shadows. The tables below are history.
 
 Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwise a NEW accent color? devise design language based on our style guidelines" (picked: warm tangerine). Everything Cluck says or shows: the explanation, the follow-up chat, the hint card's open solution. "AI = warm" across the app: the same family as the hint card and the Explain chip.
 
@@ -316,7 +319,7 @@ Tony, Oct 4: "is it possible to let AI + explanation box... orange/warm/otherwis
 - **Sprite only.** Every icon is a `<symbol>` in the `index.html` sprite, used with `<svg class="ico"><use href="#i-..."/></svg>`. No icon fonts, no inline one-off paths, no Unicode glyphs (✓ ✗ → ⚠) as icons.
 - Drawing: 24×24 viewBox, 2px stroke, round caps and joins, no fill, `currentColor`. Exceptions: `i-duck` (filled character).
 - Sizes: `--ico` (24px, grows on desktop) inside buttons and the arrow slot; 20px (`1.25rem`) next to text (verdict, label, list marks); the duck at 28px. No other sizes.
-- Color is the state token of what it shows: `--ink` in buttons, `--ok` check, `--bad` X, `--muted` lock and wait, `--mark` duck, `--field` on the filled arrow.
+- Color is the state token of what it shows: `--ink` in buttons, `--correct` check, `--wrong` X, `--muted` lock and wait, `--mark` duck, `--field` on the filled arrow.
 - Icon-only buttons have `aria-label`; icons next to words are `aria-hidden`.
 - **Emoji policy.** No color emoji in the UI: they render differently on every OS, ignore the tokens, and read as AI slop. Keep the personality as drawn characters:
   - Cluck = `i-duck` in `--mark`. He is the only character.

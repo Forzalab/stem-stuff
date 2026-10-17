@@ -50,10 +50,10 @@ async function assertDead(page, keep, op = "1") {
   for (const el of await page.$$("#q .opt, #q .ans")) { await el.click({ force: true }); await page.keyboard.type("9"); await page.keyboard.press("Enter"); }
   await page.waitForTimeout(200);
   assert.equal(await snap(), s0, "clicks changed something");
-  if (keep) {   // the right answer keeps its --ok edge; a right MC choice stays bright, a right box dims like every closed box (Tony, Oct 2)
+  if (keep) {   // the right answer keeps its --correct ring; a right MC choice stays bright, a right box dims like every closed box (Tony, Oct 2)
     const o = await page.$eval(keep, e => { const s = getComputedStyle(e); return { op: s.opacity, bc: s.borderColor }; });
     assert.equal(o.op, op, "correct one's opacity");
-    assert.equal(o.bc, "rgb(17, 141, 102)", "correct one keeps --ok-rim border");
+    assert.equal(o.bc, "rgb(78, 230, 175)", "correct one keeps its --correct ring");
   }
 }
 

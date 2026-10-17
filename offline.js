@@ -219,11 +219,11 @@
   const svg = n => '<svg class="ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON[n] + "</svg>";
 
   const CSS = `
-.so{--so-ink:var(--ink,#e7edf6);--so-muted:var(--muted,#a2b3cb);--so-sheet:var(--sheet,#1d2839);--so-edge:var(--edge,#6b7f9e);--so-focus:var(--focus,#8fb0ff);--so-bad:var(--bad,#ff7a7a);--so-ok:var(--ok,#5fd394);
+.so{--so-ink:var(--ink,#e8edf5);--so-muted:var(--muted,#a7b7cd);--so-sheet:var(--card,#101c2c);--so-edge:var(--line,#394a61);--so-focus:var(--focus,#92c0ff);--so-bad:var(--wrong,#eb596e);--so-ok:var(--correct,#4ee6af);
  position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgb(10 15 24/.72);
  font:400 1.0625rem/1.5 "Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;color:var(--so-ink)}
 .so[hidden]{display:none}
-.so-card{position:relative;box-sizing:border-box;width:100%;max-width:26rem;padding:1.5rem 1.25rem 1.25rem;background:var(--so-sheet);border:1px solid #34445d;border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.45)}
+.so-card{position:relative;box-sizing:border-box;width:100%;max-width:26rem;padding:1.5rem 1.25rem 1.25rem;background:var(--so-sheet);border:1px solid var(--line,#394a61);border-radius:12px;box-shadow:0 12px 40px rgb(0 0 0/.45)}
 .so-card.drag{border-color:var(--so-focus);outline:2px dashed var(--so-focus);outline-offset:-8px}
 .so h2{margin:0 3.75rem .35rem 0;font-size:1.25rem;line-height:1.3;font-weight:700}
 .so p{margin:0 0 1.1rem;color:var(--so-muted)}

@@ -70,7 +70,7 @@ for (const [w, h, touch] of [[390, 844, true], [1366, 768, false]]) {
     assert.equal(await page.$$eval(".fl, .stack, .led", e => e.length), 0, "no cards, no pile");
     const [wb, tb] = await page.evaluate(() => ["#bigW", "#tk"].map(q => document.querySelector(q).getBoundingClientRect()).map(r => ({ l: r.left, r: r.right, t: r.top, b: r.bottom })));
     assert.ok(tb.l >= wb.r - 1 && Math.abs(tb.t - wb.t) < 12, `the ticker sits right beside W: ${JSON.stringify([wb, tb])}`);
-    assert.equal(await page.$eval("#tk .run", e => getComputedStyle(e).color), "rgb(95, 211, 148)");
+    assert.equal(await page.$eval("#tk .run", e => getComputedStyle(e).color), "rgb(78, 230, 175)");
   });
   await shot("2-streak");
   await step(`${w}: the pink pillar starts a red run right after the green one`, async () => {

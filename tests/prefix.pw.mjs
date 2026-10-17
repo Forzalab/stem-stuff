@@ -92,7 +92,7 @@ try {
       const { ctx, page } = await fresh(browser, vp);
       await upload(page, file("bear.json", { v: 1, problems: BEAR }));
       await waitMsg(page, "Bank flag missing");
-      assert.ok(await toneIs(page, "--bad"));
+      assert.ok(await toneIs(page, "--wrong"));
       assert.ok(await page.isHidden("#freeze"), "a problem opened");
       await ctx.close();
     });
@@ -112,7 +112,7 @@ try {
       await opened(page, "PSY_ABC");
       await waitMsg(page, "Bank flag missing");
       assert.ok(await toneIs(page, "--ink"), "warn is not red and not green");
-      assert.ok(!(await toneIs(page, "--bad")) && !(await toneIs(page, "--ok")));
+      assert.ok(!(await toneIs(page, "--wrong")) && !(await toneIs(page, "--correct")));
       await ctx.close();
     });
 
@@ -144,7 +144,7 @@ try {
       const { ctx, page } = await fresh(browser, vp);
       await page.goto("about:blank"); await page.goto(BASE + "/#BEAR_QAA");
       await waitMsg(page, "BEAR_QAA needs BANK_BEAR");
-      assert.ok(await toneIs(page, "--bad"));
+      assert.ok(await toneIs(page, "--wrong"));
       await page.evaluate(() => { location.hash = "CALC1_ZZZ"; }); await waitMsg(page, "CALC1_ZZZ not found.");
       await upload(page, json({ v: 1, bank: "BANK_BEAR", problems: BEAR }));
       await openedAny(page, ["BEAR_QAA", "BEAR_QAB"]);
@@ -156,7 +156,7 @@ try {
       const { ctx, page } = await fresh(browser, vp);
       const raw = (name, text) => ({ name, mimeType: "application/json", buffer: Buffer.from(text) });
       await upload(page, raw("a.json", "{ not json")); await waitMsg(page, "Broken JSON file");
-      assert.ok(await toneIs(page, "--bad"));
+      assert.ok(await toneIs(page, "--wrong"));
       await upload(page, raw("b.json", '{"v":1,"problems":[]}')); await waitMsg(page, "No problems found");
       await upload(page, raw("c.json", '{"a":1}')); await waitMsg(page, "Not a bank file");
       await upload(page, raw("d.json", '{"v":1,"problems":[],"pad":"' + "x".repeat(8 * 1024 * 1024 + 10) + '"}')); await waitMsg(page, "File too big");
@@ -173,7 +173,7 @@ try {
       assert.ok(await toneIs(page, "--ink"));
       await typeCode(page, "NOPE_ZZZ");
       await waitMsg(page, "NOPE_ZZZ needs BANK_NOPE");
-      assert.ok(await toneIs(page, "--bad"), "the red line is red after an ink one");
+      assert.ok(await toneIs(page, "--wrong"), "the red line is red after an ink one");
       await ctx.close();
     });
 
