@@ -82,10 +82,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     assert.ok(await page.locator("#padPeek").isVisible(), "pad peek");
     assert.equal((await page.locator("#padPeekTx").textContent()).trim(), "F = 19.6 - 6.79");
     const p = await page.evaluate(() => { const r = document.querySelector("#padPeek").getBoundingClientRect(), t = document.querySelector("#padPeekTx"), cs = getComputedStyle(t);
-      return { bottom: r.bottom, vh: visualViewport.height, h: r.height, ell: cs.textOverflow, ws: cs.whiteSpace, mono: /Mono/.test(getComputedStyle(document.querySelector("#padPeek")).fontFamily) }; });
+      return { bottom: r.bottom, vh: visualViewport.height, h: r.height, ell: cs.textOverflow, ws: cs.whiteSpace, mono: /Mono/.test(getComputedStyle(document.querySelector("#padPeek")).fontFamily), tnum: /tabular-nums/.test(getComputedStyle(document.querySelector("#padPeek")).fontVariantNumeric) }; });
     assert.ok(p.vh - p.bottom < 24 && p.bottom <= p.vh + 0.5, `peek pinned just above the keyboard (${p.bottom} of ${p.vh})`);
     assert.ok(p.h >= 40 && p.h <= 56, `one line (${p.h})`);
-    assert.deepEqual([p.ell, p.ws, p.mono], ["ellipsis", "nowrap", true]);
+    assert.deepEqual([p.ell, p.ws, p.mono, p.tnum], ["ellipsis", "nowrap", false, true], "one line, the text face + tabular figures (TYPE-DECISION v3.1: mono only in the pad itself)");
   });
   await shot();   // 2: keyboard up, problem pane, pad peek
 

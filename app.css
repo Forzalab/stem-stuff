@@ -914,7 +914,6 @@ html.swap-problem .pad-peek {
 }
 html.swap-problem .pad-peek .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .pad-peek span { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.pad-peek.empty span { font-family: inherit; }
 html.swap-problem .stage { padding-bottom: 0; }
 /* keyboard up: no expand icon, no pill, no toggle; switching is closing the keyboard, tapping the question, or the pad peek */
 html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display: none !important; }   /* the pad page keeps q | a with the keyboard up (Tony, Oct 3); it never takes focus */
