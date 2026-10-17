@@ -1195,3 +1195,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 @keyframes ck-rl2 { 0%, 13.9% { opacity: 0; } 44.4% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
 @keyframes ck-rl3 { 0%, 27.8% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
 @keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
+
+/* search mode (phones, app.js codingOn): the code field has focus -> the page behind it is hidden, not removed (no reflow, no keyboard jump); solid paper, nothing peeks under the suggestion list */
+html.coding.dock-bottom:not(.start) body { background: var(--paper); }
+html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
+html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */
