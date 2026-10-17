@@ -4,7 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
-import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } from "./mode.mjs";
+import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
@@ -451,7 +451,12 @@ window.stemRedo = {
 function leaveBank() { src("file"); if (bank) { bank = null; bankChanged(); } }
 /* code: BANK_XXX, or "last" (the server's pointer for this browser). go: open a question (at, else the first).
    quiet (boot): no message, no retry; a bank that is gone just leaves the page as it is. */
-async function openBank(code, { go = true, quiet = false } = {}) {
+async function openBank(code, o) {
+  const f = !modeFlip && forceSugarOnce(code);                            // FORCE_SUGAR_ONCE (mode.mjs): the open view is the old mode's
+  if (f) modeFlip = true;
+  try { return await openBankIn(code, o); } finally { if (f) modeFlip = false; }
+}
+async function openBankIn(code, { go = true, quiet = false } = {}) {
   retryLoad.hidden = true;
   let b = null;
   try {
@@ -498,8 +503,10 @@ async function load(code) {
   if (!codes.isCode(code)) { note(`Can't open ${code}.`); return; }   // T16: said, not silent
   let prob;
   retryLoad.hidden = true;
+  const f = !modeFlip && forceSugarOnce(code);                            // a question of a forced bank, opened directly
+  if (f) modeFlip = true;
   try {
-    prob = await getProblem(code);
+    try { prob = await getProblem(code); } finally { if (f) modeFlip = false; }
     if (window.stemOffline && window.stemOffline.has(code)) {             // an upload: the server's mode rules, applied here
       if (modeHidden(prob, modeOf())) { entryMsg(`Can't open ${code} here.`); return; }
       prob = modeView(prob, modeOf());

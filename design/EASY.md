@@ -9,6 +9,7 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
   reads it in `mode.mjs` (`modeOf`).
 - Code box only: `DIET_<code>` sets diet, `SUGAR_<code>` clears it (old `ADMIN_` / `UNADMIN_` still work), then `<code>` opens as usual (`modePrefix`). The prefixed
   form is never saved to `stem-codes` or suggested. `#code` maxlength 24.
+- One-time force (Oct 17): `FORCE_SUGAR_ONCE` in `mode.mjs` maps a bank to a campaign id (`BANK_CEQ: "2026-10-17"`). The first open of that bank (or one of its questions) in a browser without the cookie `stem-force-sugar-<bank>=<id>` goes through `setMode("sugar")` (cookie + v2 flag), writes the marker and refetches, so the server serves sugar. Already sugar: marker only. After that a `DIET_` switch sticks. If cookies fail to keep the marker, nothing is forced. A new id re-runs the campaign.
 - A flip reopens what is open (the bank in memory is the old mode's view).
 
 ## Both modes
