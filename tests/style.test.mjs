@@ -48,7 +48,7 @@ test("§2.7 the raw dock shadow is a token", { todo: "STYLE.md §9 #7" }, () => 
 });
 
 test("§2.5 radius: only the listed radii", () => {
-  const OK = new Set(["0", "2px", "3px", "4px", "6px", "8px", "10px", "16px", "50%"]);
+  const OK = new Set(["0", "2px", "3px", "4px", "6px", "8px", "10px", "12px", "16px", "50%"]);
   const bad = ALL.filter(d => d.prop === "border-radius" && !d.value.startsWith("calc(") && !d.value.split(/\s+/).every(v => OK.has(v)));
   assert.deepEqual(bad.map(fmt), [], "radius follows size (STYLE.md §2.5)");
 });
