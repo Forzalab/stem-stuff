@@ -1080,8 +1080,9 @@ def _or_stream(messages, key, max_tokens):
 # No CLAUDE_API = the OpenRouter path above, unchanged. Any Claude trouble before the first word (error, 4xx/5xx, billing, 429/529,
 # an empty reply) falls back to OPENROUTER_MODELS with their own params; once words flow, it stays on Claude.
 CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip("/")
-# claude-haiku-5-5: the fastest first token of the current models, and thinking can be switched off (Opus 5.5 can't).
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
+# claude-opus-5-5: tools/bench_claude.py (Oct 17, 8 cases): FORMAT adherence opus 8/8, haiku-5-5 7/8, sonnet-5-5 5/8 (adherence first,
+# then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply). CLAUDE_MODEL=claude-haiku-5-5 for speed.
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
 CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $/MTok in, out
 CLAUDE_SPEND_KEY = "stem:claude_usd"
 _claude_spent = {"usd": 0.0}                 # no Upstash: this process only

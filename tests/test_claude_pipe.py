@@ -79,11 +79,13 @@ class ClaudePipe(unittest.TestCase):
         self.assertTrue(url.endswith("/v1/messages"))
         self.assertEqual(head.get("X-api-key"), "sk-ant-test")
         self.assertEqual(head.get("Anthropic-version"), "2023-06-01")
-        self.assertEqual((body["model"], body["max_tokens"], body["stream"]), (serve.CLAUDE_MODEL, 450, True))
-        self.assertEqual(body["thinking"], {"type": "disabled"})
+        want = serve.claude_params(serve.CLAUDE_MODEL, 450)
+        self.assertEqual((body["model"], body["max_tokens"], body["stream"]), (serve.CLAUDE_MODEL, want["max_tokens"], True))
+        self.assertEqual(body.get("thinking"), want.get("thinking"))
         self.assertEqual(body["system"], "BASE PROMPT" + serve.CLAUDE_DELTA)
         self.assertEqual(body["messages"], MSGS[1:])
-        self.assertAlmostEqual(serve._claude_spent["usd"], (100 * 0.10 + 50 * 0.50) / 1e6)
+        pi, po = serve.claude_price(serve.CLAUDE_MODEL)
+        self.assertAlmostEqual(serve._claude_spent["usd"], (100 * pi + 50 * po) / 1e6)
 
     def test_billing_and_overload_errors_fall_back(self):
         for code, etype in ((402, "billing_error"), (400, "invalid_request_error"), (401, "authentication_error"),
