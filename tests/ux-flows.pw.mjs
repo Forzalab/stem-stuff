@@ -345,10 +345,10 @@ flow(27, "redeem-showing", async (page, w) => {
   throw new Error("no Redeem showing within 6 Nexts");
 });
 
-flow(28, "comeback-toast", async (page, w) => {
-  /* rewards run only on sugar questions with a layer (BANK_QW5 has none: Rewards.state() is null there), so walk the BANK_UXS fixture.
-     Two walks: streak 0, then a fresh state with the streak seeded to 4 so the right Redeem itself is "5 cracked" (a count note wants
-     the toast slot on that very answer; go() sets minDwell 1e12, so no drop competes). Comeback must still show. */
+flow(28, "retry-tag", async (page, w) => {
+  /* the retry tag (lane d, PICKER 9 "Agreed"): a Redeem showing says "Second chance" at the top of the card; right -> "Redeemed" at once,
+     and the Comeback toast still plays. Walk the BANK_UXS fixture (rewards on). Two walks: streak 0, then the streak seeded to 4 so the
+     right Redeem is "5 cracked" (a count note wants the toast slot on that answer): Comeback must still show, and the streak still counts. */
   const a = await walk28(page, 0);
   await page.evaluate(() => localStorage.clear()); await page.goto("about:blank");   // a real reload: same-hash goto would keep the old queue
   const b = await walk28(page, 4);
@@ -369,18 +369,23 @@ async function walk28(page, seed) {
     const { item } = await qstate(page), code = await page.textContent("#pcode");
     if (item && item.redeem) {
       const x0 = await xp(page);
+      const tag0 = await page.evaluate(() => { const t = document.querySelector("#rtag"); return t && !t.hidden ? t.textContent : null; });
+      assert.match(tag0 || "", /^Second chance$/, "a Redeem showing carries the Second chance tag: " + tag0);
+      assert.ok(await page.$("#qlist .mk-again .mk-back"), "the list keeps the row's marks, faded, behind the history glyph");
       await dwell(page);
       if (seed) await page.evaluate(n => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw:")) { const j = JSON.parse(localStorage.getItem(k)); if (j && "streak" in j) { j.streak = n; localStorage.setItem(k, JSON.stringify(j)); } } }, seed);   // answer() re-reads it
       while (await page.$("#q .opt:not(:disabled)")) { const v = await answerKey(page, code, true); if (v === "correct" || v === null) break; }
+      await page.waitForFunction(() => /^Redeemed$/.test(document.querySelector("#rtag:not([hidden])")?.textContent || ""), null, { timeout: 4000 })
+        .catch(async () => { throw new Error(`no "Redeemed" tag on a right Redeem of ${code}: ${await page.textContent("#rtag")}`); });
       await page.waitForFunction(() => window.__toasts.includes("Comeback!"), null, { timeout: 4000 })
-        .catch(async () => { throw new Error(`no 'Comeback!' toast on a right Redeem of ${code} (streak ${seed} before it); fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}; XP ${x0} -> ${await xp(page)}`); });
+        .catch(async () => { throw new Error(`no 'Comeback!' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });
       const st = await page.evaluate(() => window.Rewards?.state()?.streak);
       if (seed) assert.equal(st, seed + 1, "the streak still counts the Redeem");
       await page.waitForTimeout(300);
       const x1 = await xp(page);
       /* XP: app.js:1446 pays a never-paid code's first right as usual (+ the toast); "no XP" is only for a code already paid (!res.xp) */
       if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} cracked" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
-      return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> toast "Comeback!"; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
+      return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> tag "Redeemed" + toast "Comeback!"; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
     }
     await dwell(page); if (await page.$("#q .opt:not(:disabled)")) await answerKey(page, code, false);   // wrong: the streak stays 0
   }
