@@ -8,6 +8,8 @@ import { modeOf, setMode, modePrefix, view as modeView, hidden as modeHidden } f
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
+import { renumberSteps } from "./steps.mjs";
+import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
@@ -1374,6 +1376,7 @@ function wishHTML(t) {
     eqs = []; li = [];
   };
   const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
+  t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
   t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
   for (const l of t.split("\n")) {
     const s = WSTEP.exec(l), d = l.match(WDISP), b = /^\s*- (.*)$/.exec(l);
@@ -1523,7 +1526,7 @@ function clEl() {
   if (cl) return cl.el;
   const el = document.createElement("aside");
   el.id = "cluck"; el.className = "cl ai-skin ai-box"; el.hidden = true; el.setAttribute("aria-label", "Explain");
-  el.innerHTML = `<div class="cl-bar"><span class="cl-avw" role="img" aria-label="Cluck, online"><span class="cl-av">${icon("i-duck")}</span><i class="cl-dot"></i></span><span class="cl-title">Cluck</span><span class="tag">TUTOR</span><button type="button" class="cl-x" aria-label="Close">${icon("i-x")}</button></div>
+  el.innerHTML = `<button type="button" class="cl-grab" aria-label="Expand Cluck to full screen"><i></i></button><div class="cl-bar"><span class="cl-avw" role="img" aria-label="Cluck, online"><span class="cl-av">${icon("i-duck")}</span><i class="cl-dot"></i></span><span class="cl-title">Cluck</span><span class="tag">TUTOR</span><button type="button" class="cl-x" aria-label="Close">${icon("i-x")}</button></div>
     <button type="button" class="cl-x cl-x2" aria-label="Close">${icon("i-x")}</button>
     <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
@@ -1537,14 +1540,92 @@ function clEl() {
   el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
   cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
-  const bar = el.querySelector(".cl-bar"); let y0 = null;                   // K1: a swipe down on the header closes it
-  bar.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; }, { passive: true });
-  bar.addEventListener("touchmove", e => { if (y0 != null) el.style.transform = `translateY(${Math.max(0, e.touches[0].clientY - y0)}px)`; }, { passive: true });
-  const drop = e => { const dy = y0 == null ? 0 : e.changedTouches[0].clientY - y0; y0 = null; el.style.transform = ""; if (dy > 64) clClose(); };
-  bar.addEventListener("touchend", drop); bar.addEventListener("touchcancel", drop);
+  clDrag(el);
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
   return el;
+}
+/* the phone sheet drags (Tony, Oct 13 CHATBOX PICK r2: "draggable uptop, more round, round->full animation when u dragup"; mock unified-v4 frame.js).
+   One number drives it: pos = the sheet's top edge. 0 = full screen (square corners), peek = the docked top (clTop), innerHeight = gone.
+   Above the dock the sheet grows (top moves, radius and dim follow); below it, it slides down and a release past 64px closes it.
+   The grab + the header drag; the body drags only when it cannot scroll that way (scrolled to top for a pull down; not yet full for a pull up). */
+function clDrag(el) {
+  const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
+  let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null;
+  const phone = () => !sideMQ.matches;
+  const paint = () => {
+    const top = Math.min(pos, peek), down = Math.max(0, pos - peek);
+    el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
+    el.style.transform = down ? `translateY(${down}px)` : "";
+    el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
+    root.style.setProperty("--da", dimAt(pos, peek, innerHeight));
+  };
+  const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
+  const settle = to => {
+    if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
+    full = to === 0; pos = to; paint();
+    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
+    state(full ? "full" : "peek");
+  };
+  const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
+    cancelAnimationFrame(raf);
+    if (reduceMQ.matches) { settle(to); return; }
+    let vel = v0, last = performance.now(); el.dataset.state = "moving";
+    const step = now => {
+      let dt = Math.min(0.032, (now - last) / 1000); last = now;
+      while (dt > 0) { const h = Math.min(dt, 0.004); vel += (-380 * (pos - to) - 34 * vel) * h; pos += vel * h; dt -= h; }
+      if (pos < 0) { pos = 0; vel = 0; }                                    // no gap above a full sheet
+      if (Math.abs(pos - to) < 0.5 && Math.abs(vel) < 8) { settle(to); return; }
+      paint(); raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  };
+  cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
+    cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
+    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da");
+    grab.setAttribute("aria-label", "Expand Cluck to full screen");
+  };
+  const begin = y => {                                                      // a press became a drag
+    cancelAnimationFrame(raf);
+    if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
+    d = { y0: y, p0: pos, full, s: [[performance.now(), y]] }; root.classList.add("cl-drag"); el.dataset.state = "dragging";
+  };
+  const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };
+  const end = () => {
+    const was = d; d = null; root.classList.remove("cl-drag"); if (!was) return;
+    const [t0, y0] = was.s[0], [t1, y1] = was.s.at(-1), v = Math.max(-3000, Math.min(3000, t1 > t0 ? (y1 - y0) / (t1 - t0) * 1000 : 0));
+    go(snapTo(pos, peek, innerHeight, v, was.full), v);
+  };
+  const toggle = () => { if (!full) begin(0); d = null; root.classList.remove("cl-drag"); go(full ? peek : 0); };   // a tap / Enter on the grab
+  /* the grab + header: pointer events; a press is a drag only after 6px, so a tap still presses X (or toggles from the grab) */
+  let p = null;
+  const down = e => { if (!phone() || e.button > 0 || e.target.closest(".cl-x")) return; p = { id: e.pointerId, y: e.clientY, grab: !!e.target.closest(".cl-grab"), on: false }; };
+  const move = e => {
+    if (!p || e.pointerId !== p.id) return;
+    if (!p.on) { if (Math.abs(e.clientY - p.y) < 6) return; p.on = true; begin(p.y); try { e.currentTarget.setPointerCapture(e.pointerId); } catch {} }
+    e.preventDefault(); track(e.clientY);
+  };
+  const up = e => {
+    if (!p || e.pointerId !== p.id) return;
+    const q = p; p = null;
+    if (q.on) end(); else if (q.grab && e.type === "pointerup") toggle();
+  };
+  for (const t of [grab, bar]) for (const [n, f] of [["pointerdown", down], ["pointermove", move], ["pointerup", up], ["pointercancel", up]]) t.addEventListener(n, f);
+  grab.addEventListener("click", e => { if (e.detail === 0 && phone()) toggle(); });   // Enter / Space (a pointer tap already toggled)
+  /* the body: touch events (a pointer stream is cancelled once the browser starts a scroll). Pull up while not full = grow; pull down at scrollTop 0 = shrink/close */
+  let t = null;
+  bd.addEventListener("touchstart", e => { t = phone() && e.touches.length === 1 ? { y: e.touches[0].clientY, top: bd.scrollTop, on: false, native: false } : null; }, { passive: true });
+  bd.addEventListener("touchmove", e => {
+    if (!t || t.native) return;
+    const y = e.touches[0].clientY, dy = y - t.y;
+    if (!t.on) {
+      if (Math.abs(dy) < 6) return;
+      if ((dy < 0 && !full) || (dy > 0 && bd.scrollTop <= 0 && t.top <= 0)) { t.on = true; begin(y); } else { t.native = true; return; }
+    }
+    if (e.cancelable) e.preventDefault(); track(y);
+  }, { passive: false });
+  const tend = () => { if (t && t.on) end(); t = null; };
+  bd.addEventListener("touchend", tend); bd.addEventListener("touchcancel", tend);
 }
 function clPlace() {                                                        // side by side: the notes column; phone: over the page
   if (!cl) return;
@@ -1557,6 +1638,7 @@ function clPlace() {                                                        // s
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
   window.stemT?.("cluck_open", { tab, auto: !!auto });   // telemetry
   clEl(); if (!cl.open) cl.y = scrollY;
+  cl.sheetReset?.();
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
@@ -1566,7 +1648,7 @@ function clClose() {
   if (!cl || !cl.open) return;
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
-  cl.open = false; cl.el.hidden = true;
+  cl.open = false; cl.el.hidden = true; cl.sheetReset?.();
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)

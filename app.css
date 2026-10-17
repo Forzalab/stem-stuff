@@ -26,6 +26,7 @@
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
+  --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
@@ -683,7 +684,7 @@ html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; dis
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
-/* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px
+/* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
 body { --cl-edge: var(--edge); }   /* the site's edge: inside the sheet .ai-box remaps --edge */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }
@@ -694,6 +695,22 @@ html.cl-open body { overflow: hidden; }
 html.fx-blur .glass { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 html.fx-dim .glass { background-color: color-mix(in srgb, var(--paper) 86%, transparent); }   /* nearly opaque --paper */
 html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }   /* a tap above the sheet closes it */
+/* the phone sheet drags (app.js clDrag, sheet.mjs; Tony's CHATBOX PICK r2): a grab handle on top, the header drags too; up = full screen with the corners
+   going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
+html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
+  filter: drop-shadow(0 -12px 28px color-mix(in srgb, var(--glow) calc(28% * (1 - var(--pp, 0))), transparent)); }   /* the orange halo above the top edge, gone at full */
+html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
+html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
+html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+html:not(.side) .cl-grab i { position: absolute; top: 12px; left: 50%; width: 32px; height: 4px; margin-left: -16px; border-radius: 2px; background: var(--help-muted); opacity: .7; }
+html:not(.side) .cl-grab:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; }
+html:not(.side) .cl-bar { padding-top: 30px; touch-action: none; cursor: grab; }   /* 22px lower: clears the 44px grab */
+html:not(.side) .cl-bd { overscroll-behavior: contain; }
+/* the ask field floats as a rectangular pill (V3 melt): 12px in from the sheet's edges, 14px corners; both relax to the full-width bar as the sheet goes full */
+html:not(.side) .cl-ft { padding: var(--s2) calc(12px * (1 - var(--pp, 0))) calc(12px * (1 - var(--pp, 0)) + env(safe-area-inset-bottom)) ; }
+html:not(.side) .cl-ft .ask { border-radius: calc(14px * (1 - var(--pp, 0))); }
+html.side .cl-grab { display: none; }
+html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 /* header H3a (Tony, Oct 13): 48px duck avatar, a solid green dot cut out of it by a 4px gap ring, the PEACH name at 21px, TUTOR, the X in a 10px squircle */
 .cl-bar { flex: none; display: flex; align-items: center; gap: var(--s3); width: auto; min-height: 68px; padding: var(--s2) var(--s2) var(--s2) var(--cl-in); }
 .cl-avw { position: relative; flex: none; width: 48px; height: 48px; }
