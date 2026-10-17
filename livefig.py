@@ -139,6 +139,7 @@ def context(code, question, key, answer_values, more=""):
     q = nums(question)
     boxed = [n for b in re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", str(key)) for n in nums(b)]
     ans = [abs(a) for a in [*answer_values, *boxed] if math.isfinite(a) and a != 0 and not any(_eq(abs(a), g) for g in q)]
+    ans += [a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10]   # the unknown in another unit / power of ten: 23.3 -> 2.33
     givens = set(q) | set(nums(more)) | set(nums(key)) | set(range(0, 11))
     return Ctx(code, givens, sorted(set(ans)))
 
@@ -212,9 +213,9 @@ def check(g, ctx):
             continue
         for x in vals:
             if any(_sig3(abs(x), a) for a in ctx.answers):
-                return "leak"
+                return f"leak:{k}={x:g}"         # the field and the number only: never the model's text
             if not any(_eq(abs(x), n) for n in ctx.givens):
-                return "not-given"
+                return f"not-given:{k}={x:g}"
     return None
 
 
@@ -291,6 +292,19 @@ def strip(text):
     return STRIP.sub("\n", text).strip()
 
 
+
+def weave(system):
+    """the base prompt with the figure written into it (Haiku skipped a figure the add-on alone asked for, Oct 17 live test):
+    FORMAT's "no code" gets its one exception, and the genie's Order gains the figure right after the "what the pick assumed" line"""
+    system = system.replace("no code,", "no code (except the one ```fig block),", 1)
+    lines, out = system.split("\n"), []
+    for l in lines:
+        out.append(l)
+        if l.startswith("- One sentence on what the student's pick assumed"):
+            out.append("- The figure: one ```fig block (FIGURE below), the picture the steps prove: the forces on the body, energy bars, a graph.")
+    return "\n".join(out)
+
+
 RULE = """
 FIGURE (the one exception to "no code" in Format: this fence is allowed): most replies carry ONE figure (never two) whenever a picture helps: a free-body diagram, a graph, energy bars, a network, an orbit. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON.
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
@@ -299,4 +313,4 @@ The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never t
 - "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
 - "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b"}].
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.
-Numbers in labels, text, values and expressions: only numbers from the QUESTION or the KEY's givens. Never the answer or the unknown's value: label the unknown with its symbol and "?" ("$v_f = ?$")."""
+The figure shows the SETUP: the objects, the forces or the given values, and the steps' inputs. Numbers in labels, text, values and expressions: copy them exactly as the QUESTION or the KEY writes them, never round or compute a new one; when unsure, use a symbol ("$mg$", "$d$") instead. Never the answer or the unknown's value, not even in another unit: label the unknown with its symbol and "?" ("$k = ?$")."""

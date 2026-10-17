@@ -1201,7 +1201,8 @@ def _cluck_stream(messages, key, max_tokens, fig=None):
         said, live = False, fig is not None and livefig.on()
         gate = livefig.Fence(fig if live else None)
         try:
-            for t in _claude_one(messages, max_tokens + (FIG_TOKENS if live else 0), livefig.RULE if live else ""):
+            msgs = [dict(messages[0], content=livefig.weave(messages[0]["content"]))] + messages[1:] if live else messages
+            for t in _claude_one(msgs, max_tokens + (FIG_TOKENS if live else 0), livefig.RULE if live else ""):
                 said = True
                 out = gate.feed(t)
                 if out:
@@ -1228,7 +1229,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None):
     gate.report("openrouter")
 
 
-FIG_TOKENS = 400                             # room for one figure's JSON on top of the reply
+FIG_TOKENS = 600                             # room for one figure's JSON on top of the reply
 
 
 def fig_ctx(p, answer, chat=False):

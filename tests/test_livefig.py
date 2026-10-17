@@ -52,7 +52,7 @@ class Gate(unittest.TestCase):
 
     def test_every_bad_fixture_is_dropped_with_its_reason(self):
         for case in FIX["invalid"]:
-            self.assertEqual(livefig.check(case["fig"], ctx()), case["why"], case["name"])
+            self.assertEqual((livefig.check(case["fig"], ctx()) or "").split(":")[0], case["why"], case["name"])
 
     def test_the_validator_reads_schema_md(self):
         s = livefig.schema()
@@ -63,6 +63,11 @@ class Gate(unittest.TestCase):
     def test_missing_schema_fails_closed(self):
         with mock.patch.dict(livefig._schema, {"s": None}):
             self.assertEqual(livefig.check(FIX["valid"][0], ctx()), "no-schema")
+
+    def test_the_unknown_in_another_unit_is_a_leak(self):
+        c = livefig.context("X", "Run the sun for 2.0 us.", "bill = $2.33 \\times 10^{13}$ dollars = $\\boxed{23.3}$ trillion", [23.3])
+        bars = {"type": "graph", "kind": "bars", "alt": "Where the bill comes from.", "groups": [{"label": "bill", "bars": [{"label": "$", "value": 2.33}]}]}
+        self.assertEqual(livefig.check(bars, c), "leak:value=2.33")     # live Haiku, Oct 17: the answer's mantissa as a bar
 
     def test_given_answer_numbers(self):
         c = ctx()
@@ -96,13 +101,13 @@ class Stream(unittest.TestCase):
         self.assertNotIn("```", out)
         self.assertIn("A.", out)
         self.assertIn("B.", out)
-        self.assertEqual(log, [FIX["invalid"][0]["why"]])
+        self.assertEqual([x.split(":")[0] for x in log], [FIX["invalid"][0]["why"]])
 
     def test_leak_dropped(self):
         leak = next(c for c in FIX["invalid"] if c["why"] == "leak")
         out, log = self.run_fence([fence(leak["fig"])], ctx())
         self.assertNotIn("375", out)
-        self.assertEqual(log, ["leak"])
+        self.assertEqual(log, ["leak:text=375"])
 
     def test_one_figure_at_most(self):
         out, log = self.run_fence([fence(FIX["valid"][0]), "x", fence(FIX["valid"][1])], ctx())
