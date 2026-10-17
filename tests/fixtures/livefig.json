@@ -1,0 +1,796 @@
+{
+ "problem": {
+  "code": "LIVE_RMP",
+  "type": "mc",
+  "title": "Rough ramp with a push: k in numbers (live-figure fixture)",
+  "body": [
+   {
+    "type": "text",
+    "md": "A $2.5\\ \\text{kg}$ block starts at rest on a $30^\\circ$ ramp with $\\mu_k = 0.35$. A $40\\ \\text{N}$ push along the ramp moves it $1.2\\ \\text{m}$ up into a spring, which it squeezes $0.20\\ \\text{m}$ before it stops. Find the spring constant $k$."
+   }
+  ],
+  "choices": [
+   {
+    "id": "a",
+    "md": "$150\\ \\text{N/m}$"
+   },
+   {
+    "id": "b",
+    "md": "$375\\ \\text{N/m}$"
+   },
+   {
+    "id": "c",
+    "md": "$600\\ \\text{N/m}$"
+   }
+  ],
+  "correct": "b",
+  "wrong": [
+   {
+    "choice": "a",
+    "error": "sign",
+    "hint": "QUACK. Which way does friction point?"
+   },
+   {
+    "choice": "c",
+    "error": "off-by-factor",
+    "hint": "QUACK. Is it x or x squared in spring energy?"
+   }
+  ],
+  "saccharine": {
+   "key": "Work-energy: $W_{push} - W_f - \\Delta U_g = \\tfrac12 k x^2$\n$W_{push} = 40(1.2) = 48$ J\n$W_f = 0.35(2.5)(9.8)\\cos 30^\\circ (1.2) = 8.9$ J\n$\\Delta U_g = 2.5(9.8)(1.2)\\sin 30^\\circ = 14.7$ J\n$\\tfrac12 k (0.20)^2 = 24.4$, so $k = \\boxed{375\\ \\text{N/m}}$",
+   "slip": {
+    "a": "Added friction instead of subtracting it.",
+    "c": "Used x, not x squared."
+   }
+  }
+ },
+ "valid": [
+  {
+   "type": "graph",
+   "kind": "scene",
+   "alt": "Free-body diagram of the block on the 30 degree ramp.",
+   "marks": [
+    {
+     "mark": "incline",
+     "at": [
+      -2,
+      -0.3
+     ],
+     "base": 4,
+     "angle": 30
+    },
+    {
+     "mark": "body",
+     "at": [
+      0,
+      0.9
+     ],
+     "shape": "box",
+     "w": 0.8,
+     "h": 0.5,
+     "angle": 30
+    },
+    {
+     "mark": "force",
+     "at": [
+      0,
+      0.9
+     ],
+     "angle": 270,
+     "len": 1.4,
+     "label": "$mg$"
+    },
+    {
+     "mark": "force",
+     "at": [
+      0,
+      0.9
+     ],
+     "angle": 120,
+     "len": 1.2,
+     "label": "$F_N$",
+     "color": "c2"
+    },
+    {
+     "mark": "force",
+     "at": [
+      0,
+      0.9
+     ],
+     "angle": 210,
+     "len": 0.8,
+     "label": "$f_k$",
+     "color": "c3"
+    },
+    {
+     "mark": "force",
+     "at": [
+      0,
+      0.9
+     ],
+     "angle": 30,
+     "len": 1.4,
+     "label": "$40\\ \\text{N}$",
+     "color": "c1"
+    }
+   ]
+  },
+  {
+   "type": "graph",
+   "kind": "bars",
+   "alt": "Where the work of the push goes, in joules.",
+   "unit": "J",
+   "groups": [
+    {
+     "label": "in",
+     "bars": [
+      {
+       "label": "$W_{push}$",
+       "value": 48
+      }
+     ]
+    },
+    {
+     "label": "out",
+     "bars": [
+      {
+       "label": "$W_f$",
+       "value": 8.9
+      },
+      {
+       "label": "$\\Delta U_g$",
+       "value": 14.7
+      },
+      {
+       "label": "$U_s$",
+       "value": 24.4,
+       "color": "c2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "graph",
+   "kind": "cartesian",
+   "alt": "Spring energy grows with the square of the squeeze.",
+   "x": {
+    "min": 0,
+    "max": 0.3,
+    "label": "$x$"
+   },
+   "y": {
+    "min": 0,
+    "max": 30,
+    "label": "$U_s$"
+   },
+   "marks": [
+    {
+     "mark": "vline",
+     "x": 0.2,
+     "dash": true,
+     "label": "$0.20\\ \\text{m}$"
+    },
+    {
+     "mark": "point",
+     "at": [
+      0.2,
+      24.4
+     ],
+     "label": "$24.4\\ \\text{J}$"
+    }
+   ]
+  },
+  {
+   "type": "graph",
+   "kind": "network",
+   "alt": "Energy flows from the push to three places.",
+   "nodes": [
+    "push",
+    "heat",
+    "height",
+    "spring"
+   ],
+   "edges": [
+    {
+     "from": "push",
+     "to": "heat"
+    },
+    {
+     "from": "push",
+     "to": "height"
+    },
+    {
+     "from": "push",
+     "to": "spring"
+    }
+   ]
+  }
+ ],
+ "invalid": [
+  {
+   "name": "unknown kind",
+   "why": "kind",
+   "fig": {
+    "type": "graph",
+    "kind": "svg",
+    "alt": "an svg drawing here",
+    "svg": "<svg/>"
+   }
+  },
+  {
+   "name": "circuit is not whitelisted",
+   "why": "kind",
+   "fig": {
+    "type": "graph",
+    "kind": "circuit",
+    "alt": "a gate drawing here",
+    "inputs": [
+     "a"
+    ],
+    "gates": [
+     {
+      "id": "g",
+      "op": "not",
+      "in": [
+       "a"
+      ]
+     }
+    ],
+    "outputs": [
+     {
+      "from": "g"
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown mark",
+   "why": "schema",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "laser",
+      "at": [
+       0,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "schema mark not whitelisted",
+   "why": "mark",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "path",
+      "pts": [
+       [
+        0,
+        0
+       ],
+       [
+        1,
+        1
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "html in a key",
+   "why": "schema",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     }
+    ],
+    "html": "<script>x</script>"
+   }
+  },
+  {
+   "name": "too many marks",
+   "why": "mark",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     },
+     {
+      "mark": "point",
+      "at": [
+       0,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       1,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       2,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       3,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       4,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       5,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       6,
+       0
+      ]
+     },
+     {
+      "mark": "point",
+      "at": [
+       7,
+       0
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "name": "seven labels",
+   "why": "labels",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     },
+     {
+      "mark": "text",
+      "at": [
+       1,
+       1
+      ],
+      "text": "$a$"
+     },
+     {
+      "mark": "text",
+      "at": [
+       1,
+       2
+      ],
+      "text": "$b$"
+     },
+     {
+      "mark": "text",
+      "at": [
+       1,
+       3
+      ],
+      "text": "$c$"
+     }
+    ]
+   }
+  },
+  {
+   "name": "the hidden unknown",
+   "why": "leak",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "text",
+      "at": [
+       1,
+       2
+      ],
+      "text": "$k = 375\\ \\text{N/m}$"
+     }
+    ]
+   }
+  },
+  {
+   "name": "a number not in the givens",
+   "why": "not-given",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 0,
+      "len": 1,
+      "label": "$55\\ \\text{N}$"
+     }
+    ]
+   }
+  },
+  {
+   "name": "dashed force on the body",
+   "why": "dash-force",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "Free-body diagram of the block on the 30 degree ramp.",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 270,
+      "len": 1,
+      "dash": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "oversized json",
+   "why": "size",
+   "fig": {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "marks": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.9
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.9
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     }
+    ]
+   }
+  },
+  {
+   "name": "not a graph",
+   "why": "kind",
+   "fig": [
+    1,
+    2
+   ]
+  }
+ ]
+}

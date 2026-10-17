@@ -17,7 +17,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{serve.py,problems.json,skills.json,banks/**}"
+      "includeFiles": "{serve.py,livefig.py,SCHEMA.md,problems.json,skills.json,banks/**}"
     }
   },
   "rewrites": [

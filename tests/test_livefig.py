@@ -1,0 +1,188 @@
+"""Live figures (livefig.py + serve._cluck_stream / fig_ctx): one checked SCHEMA graph block per Claude reply, data only.
+urllib is mocked: no network."""
+import io
+import json
+import os
+import sys
+import unittest
+from unittest import mock
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import livefig  # noqa: E402
+import serve  # noqa: E402
+
+FIXTURE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "livefig.json")
+with open(FIXTURE, encoding="utf-8") as f:
+    FIX = json.load(f)
+P = FIX["problem"]                    # a ramp-and-spring question shaped like BANK_P2X PHYS_MQC; the answer is k = 375
+MSGS = [{"role": "system", "content": "BASE"}, {"role": "user", "content": "Q"}]
+
+
+def ctx():
+    return livefig.context(P["code"], P["body"][0]["md"], P["saccharine"]["key"], [375.0])
+
+
+def fence(g):
+    return "```fig\n" + json.dumps(g) + "\n```"
+
+
+def sse_claude(pieces):
+    ev = [{"type": "message_start", "message": {"usage": {"input_tokens": 10, "output_tokens": 1}}}]
+    ev += [{"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": p}} for p in pieces]
+    ev += [{"type": "message_delta", "usage": {"output_tokens": 5}}, {"type": "message_stop"}]
+    return b"".join(f"data: {json.dumps(e)}\n\n".encode() for e in ev)
+
+
+def sse_or(pieces):
+    return b"".join(f"data: {json.dumps({'choices': [{'delta': {'content': p}}]})}\n\n".encode() for p in pieces) + b"data: [DONE]\n\n"
+
+
+class Resp(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.close()
+
+
+class Gate(unittest.TestCase):
+    def test_every_valid_fixture_passes(self):
+        for g in FIX["valid"]:
+            self.assertIsNone(livefig.check(g, ctx()), g["kind"])
+
+    def test_every_bad_fixture_is_dropped_with_its_reason(self):
+        for case in FIX["invalid"]:
+            self.assertEqual(livefig.check(case["fig"], ctx()), case["why"], case["name"])
+
+    def test_the_validator_reads_schema_md(self):
+        s = livefig.schema()
+        self.assertIn("kind_scene", s["$defs"])
+        bad = dict(FIX["valid"][0], color="#ff0000")
+        self.assertEqual(livefig.check(bad, ctx()), "schema")         # additionalProperties: false, from SCHEMA.md
+
+    def test_missing_schema_fails_closed(self):
+        with mock.patch.dict(livefig._schema, {"s": None}):
+            self.assertEqual(livefig.check(FIX["valid"][0], ctx()), "no-schema")
+
+    def test_given_answer_numbers(self):
+        c = ctx()
+        self.assertIn(375.0, c.answers)
+        self.assertIn(2.5, c.givens)
+
+
+class Stream(unittest.TestCase):
+    def run_fence(self, pieces, c):
+        g = livefig.Fence(c)
+        out = "".join(g.feed(p) for p in pieces) + g.end()
+        return out, g.log
+
+    def test_fence_held_until_closed_and_sent_in_one_piece(self):
+        text = "Gut idea.\n" + fence(FIX["valid"][0]) + "\nThen the math."
+        pieces = [text[i:i + 7] for i in range(0, len(text), 7)]         # chunk edges everywhere, inside the backticks too
+        g, seen = livefig.Fence(ctx()), []
+        for p in pieces:
+            seen.append(g.feed(p))
+        seen.append(g.end())
+        for s in seen:
+            self.assertTrue("```fig" not in s or s.count("```") == 2, s)  # a fig only ever goes out whole
+            self.assertNotIn('{"type"', s.replace(s[s.find("```fig"):s.rfind("```") + 3], "") if "```fig" in s else s)
+        out = "".join(seen)
+        self.assertIn("Gut idea.", out)
+        self.assertIn("Then the math.", out)
+        self.assertEqual(json.loads(out.split("```fig\n")[1].split("\n```")[0]), FIX["valid"][0])
+
+    def test_invalid_dropped_text_kept(self):
+        out, log = self.run_fence(["A.\n", fence(FIX["invalid"][0]["fig"]), "\nB."], ctx())
+        self.assertNotIn("```", out)
+        self.assertIn("A.", out)
+        self.assertIn("B.", out)
+        self.assertEqual(log, [FIX["invalid"][0]["why"]])
+
+    def test_leak_dropped(self):
+        leak = next(c for c in FIX["invalid"] if c["why"] == "leak")
+        out, log = self.run_fence([fence(leak["fig"])], ctx())
+        self.assertNotIn("375", out)
+        self.assertEqual(log, ["leak"])
+
+    def test_one_figure_at_most(self):
+        out, log = self.run_fence([fence(FIX["valid"][0]), "x", fence(FIX["valid"][1])], ctx())
+        self.assertEqual(out.count("```fig"), 1)
+        self.assertEqual(log, ["ok", "second"])
+
+    def test_unclosed_fence_never_shows(self):
+        out, log = self.run_fence(["Hi.\n```fig\n{\"type\": \"graph\", \"kind\""], ctx())
+        self.assertEqual(out.strip(), "Hi.")
+        self.assertEqual(log, ["unclosed"])
+
+    def test_off_strips(self):
+        out, log = self.run_fence(["A ", fence(FIX["valid"][0]), " B"], None)
+        self.assertNotIn("```", out)
+        self.assertEqual(log, ["off"])
+
+    def test_lone_backticks_pass(self):
+        out, _ = self.run_fence(["a `b", "` c", "``"], ctx())
+        self.assertEqual(out, "a `b` c``")
+
+
+class Pipe(unittest.TestCase):
+    def setUp(self):
+        self.reply = ["POOF.\n", "Gut.\n", fence(FIX["valid"][0]), "\nDone."]
+        self.sent = []
+        self.env = mock.patch.dict(os.environ, {"CLAUDE_API": "test-key"})
+        self.env.start()
+        os.environ.pop("CLUCK_LIVE_FIGS", None)
+        for p in (mock.patch.object(serve, "KV", (None, None)), mock.patch("urllib.request.urlopen", side_effect=self.fake)):
+            p.start()
+            self.addCleanup(p.stop)
+        serve._claude_spent["usd"] = 0.0
+
+    def tearDown(self):
+        self.env.stop()
+
+    def fake(self, req, timeout=None):
+        body = json.loads(req.data)
+        self.sent.append((req.full_url, body))
+        if "anthropic" in req.full_url:
+            return Resp(sse_claude(self.reply))
+        return Resp(sse_or(self.reply))
+
+    def test_claude_path_gets_the_rule_and_shows_the_figure(self):
+        out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
+        self.assertIn("FIGURE (", self.sent[0][1]["system"])
+        self.assertEqual(self.sent[0][1]["max_tokens"], 450 + serve.FIG_TOKENS)
+        self.assertEqual(out.count("```fig\n"), 1)
+
+    def test_kill_switch(self):
+        os.environ["CLUCK_LIVE_FIGS"] = "0"
+        out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
+        self.assertNotIn("FIGURE", self.sent[0][1]["system"])
+        self.assertNotIn("```", out)
+        self.assertIsNone(serve.fig_ctx(P, "a"))
+
+    def test_openrouter_path_has_no_rule_and_strips(self):
+        os.environ.pop("CLAUDE_API")
+        out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
+        self.assertTrue(all("anthropic" not in u for u, _ in self.sent))
+        self.assertTrue(all("FIGURE" not in json.dumps(b) for _, b in self.sent))
+        self.assertNotIn("```", out)
+        self.assertIn("Done.", out)
+
+    def test_fig_ctx_from_a_problem(self):
+        c = serve.fig_ctx(P, "b")
+        self.assertIn(375.0, c.answers)                               # the correct choice's value: the hidden unknown
+        self.assertIn(0.35, c.givens)
+
+    def test_chat_history_drops_the_figure(self):
+        self.assertEqual(livefig.strip("A.\n" + fence(FIX["valid"][0]) + "\nB."), "A.\nB.")
+
+
+class Bundle(unittest.TestCase):
+    def test_vercel_function_carries_the_gate(self):
+        with open(os.path.join(serve.ROOT, "vercel.json"), encoding="utf-8") as f:
+            inc = json.load(f)["functions"]["api/index.py"]["includeFiles"]
+        self.assertIn("livefig.py", inc)
+        self.assertIn("SCHEMA.md", inc)
+
+
+if __name__ == "__main__":
+    unittest.main()

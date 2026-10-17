@@ -800,6 +800,8 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
 .wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); cursor: pointer; }   /* a tap skips the typing */
+.wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
+.cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
 .wtext .tbl { font-family: var(--mono); white-space: pre; font-size: var(--t-sm); }

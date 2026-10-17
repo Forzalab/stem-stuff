@@ -285,6 +285,7 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 
 - The figure sits straight on the card: no frame, border, background or shadow of its own. Full column width; prose next to it stays 65ch.
 - Everything else (strokes, colors, labels): [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md).
+- **Live figure in Cluck's message (`.wtext .wfig`, Claude path only; SCHEMA.md "Live figures").** The same `.fig` drawn by `Graph.render`, inline in the reply where Cluck put it, `--s3` above and below, no frame. At most one per reply; never in the peek. While its fence streams nothing shows (no raw JSON, no placeholder); it appears whole once closed, so the typing skips over it. A render error shows the alt sentence in `--muted` (`fig-off`). Reduced motion: drawn at once like the text. `role=img` + the alt as its label.
 
 ### Cluck's surfaces (`.ai-*`, sugar only)
 

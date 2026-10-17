@@ -32,6 +32,8 @@ import urllib.error
 import urllib.request
 
 import sympy
+
+import livefig
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
@@ -1028,7 +1030,8 @@ def system_for(base, p):
 def explain_stream(p, answer, key, scratch=""):
     """yields text chunks from OpenRouter (stream), markdown stripped. Raises OSError on a dead connection. The NOTE call goes first."""
     n = note(p, answer, None, key, scratch=scratch)
-    yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450)
+    yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
+                            fig_ctx(p, answer))
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -1141,9 +1144,10 @@ def claude_params(model, max_tokens):
     return dict({"model": model, "max_tokens": max_tokens * more, "output_config": {"effort": "low"}}, **({"thinking": t} if t else {}))
 
 
-def _claude_one(messages, max_tokens):
-    """one streamed Claude call; yields text (Plain), holds until the first newline and cuts a leading NOTE line. Counts the spend."""
-    payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=messages[0]["content"] + CLAUDE_DELTA, messages=messages[1:])
+def _claude_one(messages, max_tokens, extra=""):
+    """one streamed Claude call; yields text (Plain), holds until the first newline and cuts a leading NOTE line. Counts the spend.
+    extra: more system text on this path only (livefig.RULE on a gap)."""
+    payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=messages[0]["content"] + CLAUDE_DELTA + extra, messages=messages[1:])
     req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
                                           "content-type": "application/json"})
@@ -1189,22 +1193,66 @@ def _claude_one(messages, max_tokens):
             claude_add((used["in"] * pi + used["out"] * po) / 1e6)
 
 
-def _cluck_stream(messages, key, max_tokens):
-    """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params"""
+def _cluck_stream(messages, key, max_tokens, fig=None):
+    """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
+    fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.RULE and its fences go through the
+    gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only)."""
     if claude_ok():
-        said = False
+        said, live = False, fig is not None and livefig.on()
+        gate = livefig.Fence(fig if live else None)
         try:
-            for t in _claude_one(messages, max_tokens):
+            for t in _claude_one(messages, max_tokens + (FIG_TOKENS if live else 0), livefig.RULE if live else ""):
                 said = True
-                yield t
+                out = gate.feed(t)
+                if out:
+                    yield out
             if said:
+                tail = gate.end()
+                if tail:
+                    yield tail
+                gate.report("claude")
                 return
             print(f"claude {CLAUDE_MODEL}: empty reply", file=sys.stderr)
         except Exception as e:  # noqa: BLE001
             if said:
                 raise
             print(f"claude {CLAUDE_MODEL}: {e}", file=sys.stderr)
-    yield from _or_stream(messages, key, max_tokens)
+    gate = livefig.Fence(None)
+    for t in _or_stream(messages, key, max_tokens):
+        out = gate.feed(t)
+        if out:
+            yield out
+    tail = gate.end()
+    if tail:
+        yield tail
+    gate.report("openrouter")
+
+
+FIG_TOKENS = 400                             # room for one figure's JSON on top of the reply
+
+
+def fig_ctx(p, answer, chat=False):
+    """the livefig.Ctx for this reply (Tony, Oct 17: on the Claude path live figures are Cluck's mainstay, every wish and chat reply
+    may carry one; this replaces invariant 1's "gaps only" there), None with CLUCK_LIVE_FIGS=0. An authored bank figure stays on
+    the question; Cluck's figure sits in his own message. The Ctx holds the givens a figure may show and the hidden unknown it may not."""
+    if not livefig.on():
+        return None
+    sg = sugar(p)
+    body = "\n".join("\n".join(m) if isinstance(m, list) else str(m) for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))
+    choices = " ".join(c["md"] for c in shown(p) if not c.get("lock")) if p.get("type") == "mc" else ""
+    sheet = " ".join(f["tex"] for f in formulas(p.get("code"), sg.get("part")))
+    if p.get("type") == "mc":
+        hidden_vals = [n for c in p.get("choices", []) if c["id"] in rights(p) for n in livefig.nums(c["md"])]   # pick all: every right row
+    elif p.get("type") == "num":
+        try:
+            hidden_vals = [abs(signature(p, str(p["answer"])))]
+        except (UNREADABLE + (KeyError,)):
+            hidden_vals = livefig.nums(p.get("answer", ""))
+    elif p.get("type") == "multi":
+        hidden_vals = [n for u in p.get("parts", []) for n in livefig.nums(u.get("answer", ""))]
+    else:
+        hidden_vals = livefig.nums(p.get("answer", ""))
+    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet)
 
 
 def _stream_head(cookie_header):
@@ -1421,9 +1469,9 @@ def chat(cookie_header, body):
             yield random.choice(CANNED)
             return
         context = [{"role": "system", "content": system_for(CLUCK_CHAT, p)}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
-        turns = [dict(t, content=wrap(t["content"], tag)) if t["role"] == "user" else t for t in history]
+        turns = [dict(t, content=wrap(t["content"], tag)) if t["role"] == "user" else dict(t, content=livefig.strip(t["content"]) or "...") for t in history]
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
-        yield from _cluck_stream(context + turns, key, 250)
+        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True))
     return 200, head, _relay(p, chunks, "chat")
 
 
