@@ -111,7 +111,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
 await step("reduce, mid-run: the peek is the duck at 45%, in place", async () => {
   const page = await open({ rm: true });
   await idle(page, 3 * MIN + 1000);
-  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 5500; } }));
+  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 8250; } }));
   const L = await look(page);
   assert.equal(L.duckOp, 0.45); assert.equal(L.duckTf, "none");
   await page.context().close();
@@ -120,7 +120,7 @@ await step("reduce, mid-run: the peek is the duck at 45%, in place", async () =>
 await step("motion, mid-run: the peek shows the eyes only (42px of 64)", async () => {
   const page = await open({});
   await idle(page, 3 * MIN + 1000);
-  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 5500; } }));
+  await page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) { a.pause(); a.currentTime = 8250; } }));
   const L = await look(page);
   assert.equal(L.duckTf, "matrix(1, 0, 0, 1, 0, 22)");
   await page.context().close();
@@ -134,7 +134,7 @@ await step("any input puts him away; a 10px mouse jitter does not, a 30px move d
   assert.equal(await up(page), true, "jitter is not input");
   await page.mouse.move(640, 600);
   assert.equal(await up(page), false, "a real move is");
-  await idle(page, 500);
+  await idle(page, 800);
   assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "gone (out of the tab order)");
   await idle(page, 3 * MIN);
   assert.equal(await up(page), false, "the second one waits 10 more min");

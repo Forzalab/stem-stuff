@@ -52,7 +52,7 @@ async function pick(page, id) {
       document.querySelector("#fb").textContent, document.querySelector("#toast")?.textContent]))); });
 }
 const xp = page => page.evaluate(() => window.Rewards.state().xp);
-const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 });
+const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 13500 });
 /* the engine's rolls on the next answer only (confetti and the rest keep the real Math.random) */
 const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
   try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
@@ -61,7 +61,7 @@ const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.an
 const toggleList = page => page.$eval("#qlistBtn", b => b.click());
 const listOrder = page => page.$$eval("#qlist a", as => as.map(a => a.getAttribute("href").slice(1)));
 /* every .fx-* node added to the page from now on */
-const watchFx = async page => { await page.waitForFunction(() => !document.querySelector(".fx-layer > :not(canvas), .fx-ov"), null, { timeout: 6000 }); return page.evaluate(() => { window.__fx = 0; window.__fxc = []; window.__fxo?.disconnect(); (window.__fxo = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && /(^| )fx-/.test(n.className)) { window.__fx++; window.__fxc.push(n.className); } })).observe(document.body, { childList: true, subtree: true }); }); };
+const watchFx = async page => { await page.waitForFunction(() => !document.querySelector(".fx-layer > :not(canvas), .fx-ov"), null, { timeout: 9000 }); return page.evaluate(() => { window.__fx = 0; window.__fxc = []; window.__fxo?.disconnect(); (window.__fxo = new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && /(^| )fx-/.test(n.className)) { window.__fx++; window.__fxc.push(n.className); } })).observe(document.body, { childList: true, subtree: true }); }); };
 const rects = (page, sels) => page.evaluate(ss => ss.map(q => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().toJSON() : null; }), sels);
 const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
@@ -99,14 +99,14 @@ try {
     await watchFx(page);
     await rig(page, [0.5, 0.99]);                                               // 16 XP, no drop
     await pick(page, "a");
-    await page.waitForSelector("#rwCoin.rw-shine", { state: "attached", timeout: 3000 });
-    await page.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
+    await page.waitForSelector("#rwCoin.rw-shine", { state: "attached", timeout: 4500 });
+    await page.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 6000 });
     const x = await xp(page);
     assert.equal(x, 16);
     const c = await page.evaluate(() => window.__fxc);
     for (const k of ["fx-float", "fx-fly"]) assert.ok(c.some(n => n.split(" ").includes(k)), k + " in " + c.join(","));
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
-    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x, { timeout: 3000 });
+    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x, { timeout: 4500 });
     assert.match(await page.getAttribute("#rwHud", "aria-label"), new RegExp(`^${x} XP \\(points\\), level 1`));
     await quiet(page);
   });
@@ -124,10 +124,10 @@ try {
     assert.equal(await page.evaluate(() => window.Rewards.state().streak), s0, "the streak never halves");
     await rig(page, [0.99]);                                                    // no drop
     await pick(page, "a");
-    await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 3000 })
+    await page.waitForFunction(x => window.Rewards.state().xp === x, x0 + 7, { timeout: 4500 })
       .catch(async e => { throw new Error(e.message + " | x0 " + x0 + " | " + JSON.stringify(await page.evaluate(() => [window.Rewards.state(), window.__drill.state.tries]))); });
-    assert.ok(await page.waitForFunction(() => window.__fx > 1, null, { timeout: 2000 }).then(() => true, () => false), "the bells on try 2");   // the FX nodes land a frame after the XP (a race, red once in a full run)
-    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 3000 })
+    assert.ok(await page.waitForFunction(() => window.__fx > 1, null, { timeout: 3000 }).then(() => true, () => false), "the bells on try 2");   // the FX nodes land a frame after the XP (a race, red once in a full run)
+    await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 4500 })
       .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
     await quiet(page);                                                          // 23 XP: the level-up burst
@@ -139,8 +139,8 @@ try {
     await rig(page, [0, 0, 0, 0]);                                              // 14 XP, a drop, common, line 1
     await page.waitForTimeout(1100);
     await pick(page, "a");
-    await page.waitForSelector(".fx-slots-ov", { timeout: 4000 });
-    await page.waitForSelector(".fx-ov.fx-win .fx-stars", { timeout: 8000 });
+    await page.waitForSelector(".fx-slots-ov", { timeout: 6000 });
+    await page.waitForSelector(".fx-ov.fx-win .fx-stars", { timeout: 12000 });
     assert.match(await page.textContent(".fx-ov.fx-win .fx-title"), /WIN!/);
     assert.match(await page.textContent(".fx-ov.fx-win"), /QUACK! Brain \+1\./);
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
@@ -352,7 +352,7 @@ try {
     await o.waitForTimeout(1200);
     assert.equal(await o.$eval("#toast", t => t.classList.contains("on")), false, "a try left: nothing up there (C12)");
     await pick(o, "c");
-    await tip("First time? Keep your progress.", "#rwHud .rw-streak");
+    await tip("Got it wrong first time? Keep your progress.", "#rwHud .rw-streak");
     await go(o, "CALC1_S01"); await pick(o, "b"); await pick(o, "c");
     await tip("Third time's the charm.", "#rwHud .rw-streak");
     await go(o, "CALC1_S02"); await pick(o, "b"); await pick(o, "c");

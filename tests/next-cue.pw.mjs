@@ -237,7 +237,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
     const page = await pageFor(browser, O, code);
     await step(`${T}: ${mode === "sugar" ? "the duck chip, one line in the gutter, ≥44 tall, the right label; a tap pays no XP" : "no chip, no duck, no wash"}`, async () => {
       const { check } = await close(page, type, outcome, { code });
-      await page.waitForSelector("#q .nx"); await page.waitForTimeout(900); await stopSampler(page);
+      await page.waitForSelector("#q .nx"); await page.waitForTimeout(1500); await stopSampler(page);
       const g = await page.evaluate(() => {
         const c = document.querySelector("#wish:not([hidden]) .cue-chip"), s = c && c.querySelector("span"), r = c && c.getBoundingClientRect();
         return { has: !!c, any: !!document.querySelector(".cue-chip, .g-nod, #wish:not([hidden])"), label: s && s.textContent, r: r && { l: r.left, r: r.right, h: r.height },
@@ -256,7 +256,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
       assert.ok(Math.abs(g.dh - 48) <= 0.5, `duck ${g.dh}px (48)`);
       const nod = await page.evaluate(() => { const d = document.querySelector("#wish .cue-chip img.g-nod"), n = d && getComputedStyle(d);
         return d ? { name: n.animationName, delay: parseFloat(n.animationDelay) * (n.animationDelay.endsWith("ms") ? 1 : 1000), iter: n.animationIterationCount } : null; });
-      if (outcome === "right") {                                                   // a fresh browser: the first right of the day nods, once, after Next has landed (120 + 200 ms)
+      if (outcome === "right") {                                                   // a fresh browser: the first right of the day nods, once, after Next has landed (180 + 300 ms)
         assert.ok(nod && nod.name === "g-nod" && nod.iter === "1" && nod.delay >= 320, "the calm nod: " + JSON.stringify(nod));
       } else assert.equal(nod, null, "out of tries nods");
       if (SHOTS && type !== "multi") await page.screenshot({ path: `${SHOTS}/after-${mode}-chip-${type}-${outcome}-${H}.png` });

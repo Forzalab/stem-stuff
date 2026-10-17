@@ -58,7 +58,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .qlist a {
   display: flex; align-items: baseline; gap: var(--s3); min-height: var(--btn); padding: var(--s3);
   border-radius: 8px; color: var(--ink); text-decoration: none; line-height: 1.35;
-  transition: background-color .12s ease-out;
+  transition: background-color .18s ease-out;
 }
 .qlist a:hover { background: var(--raised); }
 .qlist a:focus-visible { outline-offset: -3px; }
@@ -88,16 +88,16 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 .ql-dim {
   position: fixed; inset: 0; z-index: 46; background: var(--ql-dim); opacity: 0; visibility: hidden;
   pointer-events: none;   /* closing: the tap that closed it (Prev, Next, a row) lands on what is under it, not on the fading dim */
-  transition: opacity .15s ease-out, visibility 0s linear .15s;
+  transition: opacity .225s ease-out, visibility 0s linear .225s;
 }
 :root { --ql-dim: rgb(0 0 0 / 0.55); }
-html.ql-open .ql-dim { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .15s ease-out; }
+html.ql-open .ql-dim { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .225s ease-out; }
 /* the bar stays lifted while the dim fades out (z-index steps after .15s), and its colour is always on (it is the page's) */
 .top { border-image: linear-gradient(var(--paper) 0 0) fill 0 / 0 / 0 100vw; }
 html.ql-open .top { z-index: 47; }
-.top::after { content: ""; position: absolute; z-index: 10; inset: 0; border-image: linear-gradient(var(--ql-dim) 0 0) fill 0 / 0 / 0 100vw; opacity: 0; pointer-events: none; transition: opacity .15s ease-out; }
+.top::after { content: ""; position: absolute; z-index: 10; inset: 0; border-image: linear-gradient(var(--ql-dim) 0 0) fill 0 / 0 / 0 100vw; opacity: 0; pointer-events: none; transition: opacity .225s ease-out; }
 html.ql-open .top::after { opacity: 1; }
-html:not(.ql-open) .top { z-index: auto; transition: opacity .25s ease-out, filter .3s ease-out, z-index .15s step-end; transition-behavior: allow-discrete; }
+html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
 html.dock-bottom:not(.start):not(.side):not(.ql-open):not(.mt):not(.swap) .top { z-index: 35; }

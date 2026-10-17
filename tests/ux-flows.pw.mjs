@@ -377,7 +377,7 @@ async function walk28(page, seed) {
       while (await page.$("#q .opt:not(:disabled)")) { const v = await answerKey(page, code, true); if (v === "correct" || v === null) break; }
       await page.waitForFunction(() => /^Redeemed$/.test(document.querySelector("#rtag:not([hidden])")?.textContent || ""), null, { timeout: 4000 })
         .catch(async () => { throw new Error(`no "Redeemed" tag on a right Redeem of ${code}: ${await page.textContent("#rtag")}`); });
-      await page.waitForFunction(() => window.__toasts.includes("Comeback!"), null, { timeout: 4000 })
+      await page.waitForFunction(() => window.__toasts.includes("Comeback!"), null, { timeout: 8000 })
         .catch(async () => { throw new Error(`no 'Comeback!' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });
       const st = await page.evaluate(() => window.Rewards?.state()?.streak);
       if (seed) assert.equal(st, seed + 1, "the streak still counts the Redeem");
@@ -736,6 +736,11 @@ flow(33, "key-formulas", async (page, w) => {
 
 flow(34, "brainrot-corner", async (page, w) => {
   await go(page, C.single);
+  if (w <= 700) {                                                    // phones get no corner and no video (Tony, Oct 17)
+    await page.waitForTimeout(1500);
+    assert.equal(await page.evaluate(() => [!!document.getElementById("rot"), document.querySelectorAll("iframe").length].join()), "false,0");
+    return "phone: no corner, no players";
+  }
   await page.waitForSelector("#rot:not([hidden])", { timeout: 6000 });
   const n = await page.$$eval("#rot iframe", f => f.length);
   assert.ok(n >= 1, "players");
