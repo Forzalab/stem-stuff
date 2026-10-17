@@ -21,9 +21,9 @@
   --help-on: #ffdcc0; --reward: #ffcd94; --help: #ff9a3e; --glow: #ff8204; --help-deep: #b05a00; --help-muted: #a99c8e;
   --help-line: #643d1f; --help-fill: #2d1806; --help-sheet: #17130f; --help-rule: #271f16; --help-ink: #361900;
   /* the reward rasters onto the ramp, OKLCH median hue of saturated pixels in the 62-70 gate (unified-v5 rasterhue; PICKER 8 "keep -34deg"):
-     --goldify for the already-gold star (94 -> 66.4); --duckgold for the natural-colour Fluent duck, which needs the sepia start (134 -> 67.0) */
+     --goldify for the already-gold star (94 -> 66.4). --duckgold = the pre-v5 duck tint (Tony Oct 17: "revert to the C duck"); outside the gate on purpose */
   --goldify: hue-rotate(-34deg) saturate(1.1);
-  --duckgold: sepia(1) saturate(3) hue-rotate(-34deg) brightness(1.05);
+  --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
