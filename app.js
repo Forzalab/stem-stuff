@@ -319,8 +319,24 @@ function sugShow() {
   sugEl.hidden = !sugList.length;
   codeIn.setAttribute("aria-expanded", String(!!sugList.length));
   codeIn.removeAttribute("aria-activedescendant");
+  sugFit();
 }
+/* the list must fit what the VISUAL viewport leaves (keyboard up): vh / vw units stay the large viewport on Android Chrome, so
+   a CSS cap alone let it run past the top and over the field. Phones only; --sug-max feeds app.css .code-sug max-height. */
+function sugFit() {
+  const vv = window.visualViewport;
+  if (sugEl.hidden || !vv || !dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
+  const e = $("#entry").getBoundingClientRect(), gap = 16;
+  const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
+  const top = Math.max(vv.offsetTop, above ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
+  const room = above ? e.top - top - gap : vv.offsetTop + vv.height - e.bottom - gap;
+  const cap = Math.floor(vv.height * (above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it
+  root.style.setProperty("--sug-max", Math.max(96, Math.min(cap, Math.floor(room))) + "px");
+}
+if (window.visualViewport) for (const ev of ["resize", "scroll"]) window.visualViewport.addEventListener(ev, () => sugFit());
+addEventListener("resize", () => sugFit());
 function sugHide() {
+  root.style.removeProperty("--sug-max");
   sugList = []; sugAt = -1; sugEl.hidden = true; sugEl.innerHTML = "";
   codeIn.setAttribute("aria-expanded", "false"); codeIn.removeAttribute("aria-activedescendant");
 }
