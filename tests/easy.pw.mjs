@@ -165,8 +165,11 @@ try {
     assert.deepEqual(await page.$eval("#rot .duo", d => [d.scrollWidth > d.clientWidth + 20, getComputedStyle(d).overflowX]), [true, "auto"], "3 videos in one box: the third scrolls in sideways");
   });
 
-  await step("sugar (phone width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  await step("sugar (phone width, 390): no brainrot corner, no preconnect, no request to YouTube (Tony, Oct 17)", () => noRot("/", null, { width: 390, height: 844 }));
+
+  await step("sugar (tablet width): drag the brainrot corner down; the drop stays (and is kept), anchored to the bottom", async () => {
+    await page.setViewportSize({ width: 710, height: 844 });
+    await page.evaluate(() => window.stemBrainrot.sync());
     await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body && !document.getElementById("rot").hidden, null, { timeout: 4000 })
       .catch(async () => { await page.evaluate(() => window.stemBrainrot.sync()); await page.waitForFunction(() => document.getElementById("rot")?.parentElement === document.body, null, { timeout: 3000 }); });
     await page.waitForTimeout(300);
@@ -363,8 +366,8 @@ try {
   });
 
   /* a slow link (Tony, Oct 5: 128 kbps): no corner, no preconnect, not one request to YouTube, on a question with a layer */
-  async function noRot(url, init) {
-    const c = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+  async function noRot(url, init, vp = { width: 1280, height: 900 }) {
+    const c = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
     await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     if (init) await c.addInitScript(init);
     const yt = [];

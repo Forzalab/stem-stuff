@@ -68,8 +68,8 @@
     if (!s) { busy = false; lastEnd = performance.now(); hold(false); ROOT.classList.remove('fx-busy'); return; }
     if (s.group === 'hud') hold(false);
     const ps = s.fns.map(([fn, res]) => { let p; try { p = Promise.resolve(fn()); } catch (e) { p = Promise.resolve(); } p.then(res, res); return p.then(() => {}, () => {}); });
-    const tail = s.group === 'answer' ? settle(document, '.rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 800)
-      : s.group === 'hud' ? Promise.all([settle(document.getElementById('rwHud'), null, 1500), new Promise(r => setTimeout(r, still() ? 0 : 650))])   // + engine.js's 600 ms count-up (text, not WAAPI)
+    const tail = s.group === 'answer' ? settle(document, '.rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 1200)
+      : s.group === 'hud' ? Promise.all([settle(document.getElementById('rwHud'), null, 2250), new Promise(r => setTimeout(r, still() ? 0 : 975))])   // + engine.js's 900 ms count-up (text, not WAAPI)
       : null;
     Promise.race([Promise.all(ps.concat(tail || [])), new Promise(r => setTimeout(r, CAP))]).then(next);
   }
@@ -101,7 +101,7 @@
       const step = { group: 'chip', fns: [[() => {
         const el = get();
         if (!el || !el.isConnected) return;
-        return settle(document, '#wish, .rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 800).then(() => {   // Next has landed
+        return settle(document, '#wish, .rw-chip, .fx-layer, .fx-ov, .fx-toast-host, #rwHud', 1200).then(() => {   // Next has landed
           if (!el.isConnected) return;
           el.classList.add('g-nod');                                            // app.css's 320 ms delay waits for Next; here the queue did,
           const as = el.getAnimations();                                        // so it starts at its active phase (no still gap in the queue)
@@ -137,7 +137,7 @@
   function spray(par, x, y, n, dist) {
     const f = par.appendChild(mk('i', 'fx-flash')), all = [];
     f.style.cssText = `left:${x}px;top:${y}px`;
-    all.push(run(f, [{ transform: 'scale(.2)', opacity: 1 }, { transform: `scale(${dist / 40})`, opacity: 0 }], { duration: 380, easing: 'ease-out' }));
+    all.push(run(f, [{ transform: 'scale(.2)', opacity: 1 }, { transform: `scale(${dist / 40})`, opacity: 0 }], { duration: 570, easing: 'ease-out' }));
     for (let i = 0; i < n; i++) {
       const s = par.appendChild(mk('i', 'fx-sp fx-sp' + (i % 4)));
       s.style.cssText = `left:${x}px;top:${y}px;--c:${pick(COLORS)}`;
@@ -146,7 +146,7 @@
         { transform: `${r}(0) scale(.3)`, opacity: 1 },
         { transform: `${r}(${d * .75}px) scale(1)`, opacity: 1, offset: .35 },
         { transform: `${r}(${d}px) scale(0)`, opacity: 0 }
-      ], { duration: rnd(520, 820), delay: rnd(0, 40), easing: 'cubic-bezier(.1,.7,.3,1)' }));
+      ], { duration: rnd(780, 1230), delay: rnd(0, 60), easing: 'cubic-bezier(.1,.7,.3,1)' }));
     }
     return Promise.all(all);
   }
@@ -154,7 +154,7 @@
   // the answer's one pulse: app.css's .opt.pop when it runs (a right pick), else ours; the ring is gone (it was a second group)
   function pop(el) {
     if (!el || still() || el.getAnimations().some(finite)) return;
-    return el.animate(popKF(1.12), { duration: 350, easing: EASE.pop }).finished.catch(() => {});
+    return el.animate(popKF(1.12), { duration: 525, easing: EASE.pop }).finished.catch(() => {});
   }
 
   function sparks(el, tier) {
@@ -163,9 +163,9 @@
     const p = mid(el);
     const s = spray(layer(), p.x, p.y, COUNT[tier], DIST[tier]);
     if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());   // confetti on every correct (Tony, Oct 4)
-    const c = layerConfetti && layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 70, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
+    const c = layerConfetti && layerConfetti({ particleCount: CONF[tier], spread: 80, startVelocity: 32, ticks: 105, scalar: .9, colors: COLORS, shapes: ['star', 'circle'],
       origin: { x: p.x / innerWidth, y: p.y / innerHeight } });   // 70 ticks (~1.2 s, was 120): the FX layer's step ends with it
-    return Promise.all([s, c && Promise.race([c, new Promise(r => setTimeout(r, 900))]).then(() => layerConfetti.reset && layerConfetti.reset())]);   // time-boxed: slow frames never stretch the step
+    return Promise.all([s, c && Promise.race([c, new Promise(r => setTimeout(r, 1350))]).then(() => layerConfetti.reset && layerConfetti.reset())]);   // time-boxed: slow frames never stretch the step
   }
 
   function coinFly(fromEl, toEl, n) {
@@ -184,7 +184,7 @@
         const x = u * u * p0.x + 2 * u * t * p1.x + t * t * b.x - 11, y = u * u * p0.y + 2 * u * t * p1.y + t * t * b.y - 11;
         kf.push({ transform: `translate(${x}px,${y}px) scale(${1 + .4 * Math.sin(Math.PI * t) - .35 * t}) rotate(${t * 300}deg)`, opacity: k ? 1 : 0 });
       }
-      return c.animate(kf, { duration: 600, delay: i * 70, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'backwards' }).finished.catch(() => {}).then(() => {
+      return c.animate(kf, { duration: 900, delay: i * 105, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'backwards' }).finished.catch(() => {}).then(() => {
         c.remove();                                               // one blink: the pill's answer is the HUD step's shine (no pop / spray here)
       });
     })).then(() => {});
@@ -199,12 +199,12 @@
     const b = t.appendChild(mk('div', 'fx-toast-b'));
     b.append(txt('div', 'fx-toast-t', text));
     if (sub) b.append(txt('div', 'fx-toast-s', sub));
-    if (still()) fadeIn(t, 200);
-    else t.animate([{ opacity: 0, transform: 'translateY(-16px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'ease-out' });
+    if (still()) fadeIn(t, 300);
+    else t.animate([{ opacity: 0, transform: 'translateY(-16px) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
     const hide = () => {
       if (t !== cur) return;
       cur = null; clearTimeout(tTimer);
-      if (still()) t.remove(); else run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' });
+      if (still()) t.remove(); else run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
     };
     t.addEventListener('click', hide);
     tTimer = setTimeout(hide, 2200);
@@ -223,11 +223,11 @@
       document.removeEventListener('keydown', key);
       el.style.pointerEvents = 'none';
       if (still()) { el.remove(); done(); }                                   // reduced motion: out at once (its one fade was the way in)
-      else run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards' }).then(done);
+      else run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).then(done);
     };
     el.addEventListener('click', skip);
     document.addEventListener('keydown', key);
-    fadeIn(el, 180);
+    fadeIn(el, 270);
     return { el, close, done: p };
   }
 
@@ -251,7 +251,7 @@
       for (let k = 0; k < n; k++) { let x = win; if (k !== 1) do x = pick(FILLER); while (x === icons[k - 1]); icons.push(x); }
       const reel = box.appendChild(mk('div', 'fx-reel',
         `<div class="fx-strip">${icons.map((x, k) => `<div class="fx-cell">${img(x, k === 1 ? winCls : '')}</div>`).join('')}</div>`));
-      const strip = reel.firstChild, dur = 500 + i * 200;
+      const strip = reel.firstChild, dur = 750 + i * 300;
       strip.style.transform = `translateY(${-CELL}px)`;
       if (calm) return { strip };
       strip.classList.add('spin');
@@ -270,8 +270,8 @@
       reels.forEach(r => { r.a && r.a.finish(); r.strip.classList.remove('spin'); });
       p.classList.add('win');
       if (!calm) {
-        reels.forEach((r, i) => r.strip.children[1].firstChild.animate(popKF(1.25), { duration: 420, delay: i * 70, easing: EASE.out }));
-        lab.animate(enterKF(.4), { duration: 420, easing: EASE.out });
+        reels.forEach((r, i) => r.strip.children[1].firstChild.animate(popKF(1.25), { duration: 630, delay: i * 105, easing: EASE.out }));
+        lab.animate(enterKF(.4), { duration: 630, easing: EASE.out });
         const c = mid(box);
         spray(ov.el, c.x, c.y, COUNT[size], DIST[size]);
       }
@@ -280,17 +280,17 @@
 
     if (calm) land(900);
     else {
-      p.animate(enterKF(.8), { duration: 260, easing: EASE.out });
+      p.animate(enterKF(.8), { duration: 390, easing: EASE.out });
       Promise.all(reels.map(r => r.a.finished)).then(() => land(500), () => {});
     }
     return ov.done;
   }
 
   const KIND = {
-    levelup: { t: 'LEVEL UP', d: 1200 },
-    win: { t: 'WIN!', d: 1200 },
-    bonus: { t: 'BONUS!', d: 1200 },
-    legend: { t: 'THE GOLDEN DUCK HAS NOTICED YOU.', s: '+50 XP', d: 2000 }
+    levelup: { t: 'LEVEL UP', d: 1800 },
+    win: { t: 'WIN!', d: 1800 },
+    bonus: { t: 'BONUS!', d: 1800 },
+    legend: { t: 'THE GOLDEN DUCK HAS NOTICED YOU.', s: '+50 XP', d: 3000 }
   };
 
   // pixel title: outline layer + gradient fill + shine sweep, stacked in one grid cell
@@ -309,7 +309,7 @@
         { transform: 'scale(0) rotate(-40deg)', opacity: 0 },
         { transform: 'scale(1.3) rotate(8deg)', opacity: 1, offset: .6 },
         { transform: 'scale(1) rotate(0)', opacity: 1 }
-      ], { duration: 380, delay: i * 80, easing: EASE.out, fill: 'backwards' });   // stars first (0 / 80 / 160 ms)
+      ], { duration: 570, delay: i * 120, easing: EASE.out, fill: 'backwards' });   // stars first (0 / 80 / 160 ms)
     });
     return w;
   }
@@ -324,10 +324,10 @@
       c.style.cssText = `left:${rnd(0, 100)}%;width:${s}px;height:${s}px`;
       run(c, [0, .25, .5, .75, 1].map((t, k) => ({
         transform: `translateY(${-40 + H * Math.pow(t, 1.4)}px) rotate(${r * t}deg) scaleX(${k % 2 ? .25 : 1})`, opacity: 1
-      })), { duration: rnd(1100, 1600), delay: rnd(0, 700), fill: 'backwards' });
+      })), { duration: rnd(1650, 2400), delay: rnd(0, 1050), fill: 'backwards' });
     }
     const f = confettiIn(par);
-    if (f) f({ particleCount: 90, spread: 120, startVelocity: 38, ticks: 200, gravity: .9, scalar: 1.1, shapes: ['circle', 'star'],
+    if (f) f({ particleCount: 90, spread: 120, startVelocity: 38, ticks: 300, gravity: .9, scalar: 1.1, shapes: ['circle', 'star'],
       colors: ['#ffcd94', '#ff9a3e', '#ffdcc0', '#ff8204'], origin: { x: .5, y: .45 } });
   }
 
@@ -345,15 +345,15 @@
     const s = sub ? c.appendChild(txt('div', kind === 'levelup' ? 'fx-plate' : 'fx-sub', sub)) : null;
     if (!calm) {
       t.animate([{ transform: 'scale(.6)', opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }],
-        { duration: 400, delay: 200, easing: EASE.out, fill: 'backwards' });   // then the title ribbon (200 ms)
+        { duration: 600, delay: 300, easing: EASE.out, fill: 'backwards' });   // then the title ribbon (300 ms)
       if (s) s.animate([{ transform: 'translateY(14px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }],
-        { duration: 300, delay: 400, easing: EASE.pop, fill: 'backwards' });   // then the plate (400 ms)
+        { duration: 450, delay: 600, easing: EASE.pop, fill: 'backwards' });   // then the plate (900 ms)
       if (duck) {
         duck.animate([{ transform: 'scale(0) rotate(-30deg)', opacity: 0 }, { transform: 'scale(1.15) rotate(6deg)', opacity: 1, offset: .65 }, { transform: 'scale(1) rotate(0)', opacity: 1 }],
-          { duration: 520, easing: EASE.out });
+          { duration: 780, easing: EASE.out });
         shower(ov.el, 26);
       }
-      setTimeout(() => { const m = mid(t); spray(ov.el, m.x, m.y, kind === 'legend' ? 30 : 22, 150); }, 600);   // the sparks last (600 ms)
+      setTimeout(() => { const m = mid(t); spray(ov.el, m.x, m.y, kind === 'legend' ? 30 : 22, 150); }, 900);   // the sparks last (900 ms)
     }
     timer = setTimeout(ov.close, K.d);
     return ov.done;
@@ -365,7 +365,7 @@
     const p = mid(el), f = layer().appendChild(txt('div', 'fx-float' + (cls ? ' ' + cls : ''), text));
     f.style.cssText = `left:${p.x}px;top:${p.y}px`;
     return run(f, [{ transform: 'translate(-50%,-50%) scale(.8)', opacity: 0 }, { transform: 'translate(-50%,-110%) scale(1)', opacity: 1, offset: .25 },
-      { transform: 'translate(-50%,-220%) scale(1)', opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.2,.8,.3,1)' });
+      { transform: 'translate(-50%,-220%) scale(1)', opacity: 0 }], { duration: 1350, easing: 'cubic-bezier(.2,.8,.3,1)' });
   }
 
   // one light sweep across the HUD coin pill (rewards.css .rw-shine)
