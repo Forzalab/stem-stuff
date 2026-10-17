@@ -9,7 +9,7 @@ import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
 import { renumberSteps } from "./steps.mjs";
-import { clampPos, radiusAt, dimAt, snapTo } from "./sheet.mjs";
+import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
 /* Vercel Web Analytics (design/DEPLOY.md): only where Vercel serves the page (https, not localhost). The old http server, local runs,
@@ -1535,19 +1535,20 @@ function clEl() {
    The grab + the header drag; the body drags only when it cannot scroll that way (scrolled to top for a pull down; not yet full for a pull up). */
 function clDrag(el) {
   const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
-  let pos = 0, peek = 0, r0 = 10, raf = 0, full = false, d = null;
+  let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null;
   const phone = () => !sideMQ.matches;
   const paint = () => {
     const top = Math.min(pos, peek), down = Math.max(0, pos - peek);
     el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
     el.style.transform = down ? `translateY(${down}px)` : "";
-    root.style.setProperty("--da", dimAt(pos, peek));
+    el.style.setProperty("--pp", progress(pos, peek).toFixed(3));   // the ask field, the halo: they follow the same progress
+    root.style.setProperty("--da", dimAt(pos, peek, innerHeight));
   };
   const state = s => { el.dataset.state = s; grab.setAttribute("aria-label", s === "full" ? "Shrink Cluck back down" : "Expand Cluck to full screen"); };
   const settle = to => {
     if (to >= innerHeight) { cl.sheetReset(); clClose(); return; }
     full = to === 0; pos = to; paint();
-    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
+    if (!full) { el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da"); el.style.setProperty("--cl-top", peek + "px"); }
     state(full ? "full" : "peek");
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
@@ -1565,12 +1566,12 @@ function clDrag(el) {
   };
   cl.sheetReset = () => {                                                   // opened or closed: back to the docked, round sheet
     cancelAnimationFrame(raf); full = false; d = null; delete el.dataset.state; root.classList.remove("cl-drag");
-    el.style.transform = ""; el.style.removeProperty("--rr"); root.style.removeProperty("--da");
+    el.style.transform = ""; el.style.removeProperty("--rr"); el.style.removeProperty("--pp"); root.style.removeProperty("--da");
     grab.setAttribute("aria-label", "Expand Cluck to full screen");
   };
   const begin = y => {                                                      // a press became a drag
     cancelAnimationFrame(raf);
-    if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; r0 = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 10; }
+    if (!full) { peek = parseFloat(el.style.getPropertyValue("--cl-top")) || el.getBoundingClientRect().top; pos = peek; }
     d = { y0: y, p0: pos, full, s: [[performance.now(), y]] }; root.classList.add("cl-drag"); el.dataset.state = "dragging";
   };
   const track = y => { pos = clampPos(d.p0 + y - d.y0, innerHeight); d.s.push([performance.now(), y]); if (d.s.length > 6) d.s.shift(); paint(); };

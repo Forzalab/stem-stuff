@@ -17,8 +17,10 @@ test("steps keep their title text and a ')' numbering; a '---' rule restarts the
 test("progress, radius and dim run from the dock (0) to full screen (1)", () => {
   assert.equal(progress(240, 240), 0); assert.equal(progress(0, 240), 1); assert.equal(progress(120, 240), 0.5);
   assert.equal(progress(400, 240), 0, "sliding down past the dock changes nothing");
-  assert.equal(radiusAt(240, 240, 10), 10); assert.equal(radiusAt(0, 240, 10), 0); assert.equal(radiusAt(120, 240, 10), 5);
-  assert.equal(dimAt(240, 240), 0); assert.equal(dimAt(0, 240), 0.96);
+  assert.equal(radiusAt(240, 240, 30), 30); assert.equal(radiusAt(0, 240, 30), 0); assert.equal(radiusAt(120, 240, 30), 15);
+  assert.equal(radiusAt(360, 240, 30), 30, "sliding down keeps the round corners");
+  assert.equal(dimAt(240, 240, 800), 0.8); assert.equal(dimAt(0, 240, 800), 0.96); assert.equal(dimAt(120, 240, 800), 0.88);
+  assert.equal(dimAt(800, 240, 800), 0, "gone: no dim"); assert.ok(dimAt(520, 240, 800) < 0.8 && dimAt(520, 240, 800) > 0, "fades as it slides down");
   assert.equal(clampPos(-5, 800), 0); assert.equal(clampPos(900, 800), 800);
 });
 test("release snaps: nearest point slow, one point on a fling, close after 64px down from the dock", () => {
