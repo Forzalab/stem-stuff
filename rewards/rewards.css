@@ -93,7 +93,7 @@ html.start .rw-hud { display: none; }
 .rw-chip {   /* PALETTE-v3 §3: one flat --help face, --help-ink label (7.67:1), no bevel; pressed = the same face, darker, 1px down */
   position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 20px 6px 4px;
   font: 700 var(--t-sm, 1rem)/1.15 var(--rw-font); color: var(--help-ink); text-align: left;
-  border: 0; border-radius: var(--rw-pill); cursor: pointer; background: var(--help);
+  border: 3px solid transparent; border-radius: var(--rw-pill); cursor: pointer; background: var(--help) padding-box;   /* the old rim's 3px kept clear: the chip keeps its box, nothing around it moves */
   transform-origin: 50% 60%;
 }
 .rw-chip > span { position: relative; }

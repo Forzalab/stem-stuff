@@ -242,7 +242,7 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await pasteBtn.isVisible() && await go.isHidden());
       assert.equal(await pasteBtn.getAttribute("aria-label"), "Paste code");
       assert.equal(await pasteBtn.evaluate(b => b.textContent.trim()), "", "no text on the button");
-      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(125, 142, 168)", "placeholder not in the hint color");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#code"), "::placeholder").color), "rgb(167, 183, 205)", "placeholder not in the hint color (--hint = --muted, unified v5)");
       assert.deepEqual(await pasteBtn.evaluate(b => [b.offsetWidth, b.offsetHeight]), vname === "desktop" ? [52, 52] : [44, 44]);   // flush inside the code box: --btn (56 on a 1920x1080 desktop, else 48) minus its 2px borders
       const hs = await page.evaluate(() => ["#upload", ".code-box"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; }));
       assert.deepEqual(hs[0], hs[1], "code box and upload button: same top and bottom");
