@@ -110,7 +110,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
    (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
 .code-sug {
   position: absolute; z-index: 31; left: 0; right: 0; top: calc(100% + var(--s2)); margin: 0; padding: var(--s1); list-style: none;   /* 31: over an open question list (nav.css, z 30), or a tap on a suggestion lands on the list (G2c row 06) */
-  max-height: min(22rem, 50vh); overflow-y: auto; overscroll-behavior: contain;
+  max-height: min(22rem, 50vh, var(--sug-max, 100vh)); max-height: min(22rem, 50dvh, var(--sug-max, 100dvh)); overflow-y: auto; overscroll-behavior: contain; scroll-padding: var(--s1);   /* --sug-max: the room the visual viewport leaves (app.js sugFit); the list scrolls inside itself */
   background: var(--sheet); border-radius: 10px; box-shadow: var(--shadow-3);
 }
 .dock-bottom .code-sug { top: auto; bottom: calc(100% + var(--s2)); }
@@ -164,7 +164,7 @@ html.start.dock-bottom .dock {
   background: var(--paper); box-shadow: none;
 }
 html.start.dock-bottom .dock > * { width: 100%; max-width: 40rem; }
-html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh); }
+html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; max-height: min(16rem, 40vh, var(--sug-max, 100vh)); max-height: min(16rem, 40dvh, var(--sug-max, 100dvh)); }
 .entry-msg { margin: var(--s2) 0 0; color: var(--wrong); font-size: var(--t-sm); }
 .entry-msg:empty { display: none; }
 .entry-msg.ok { color: var(--correct); }
