@@ -154,7 +154,7 @@ class Pipe(unittest.TestCase):
     def test_claude_path_gets_the_rule_and_shows_the_figure(self):
         out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
         self.assertIn("FIGURE (", self.sent[0][1]["system"])
-        self.assertEqual(self.sent[0][1]["max_tokens"], 450 + serve.FIG_TOKENS)
+        self.assertEqual(self.sent[0][1]["max_tokens"], serve.claude_params(serve.CLAUDE_MODEL, 450 + serve.FIG_TOKENS)["max_tokens"])   # the model's own room (Opus: thinking can't be off, so 4x)
         self.assertEqual(out.count("```fig\n"), 1)
 
     def test_kill_switch(self):
