@@ -682,7 +682,7 @@ html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; dis
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
-/* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px
+/* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
 body { --cl-edge: var(--edge); }   /* the site's edge: inside the sheet .ai-box remaps --edge */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }

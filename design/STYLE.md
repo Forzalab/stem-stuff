@@ -105,7 +105,7 @@ Radius follows size. Nested corners are the outer radius minus the gap.
 | radius | for |
 |---|---|
 | 16px | the Scratchpad button (M3 FAB) |
-| 10px | surfaces that hold content: problem card, list card, Cluck, toast, pane tiles |
+| 10px | surfaces that hold content: problem card, list card, Cluck (desktop side column; the phone dock is 30px, running to 0 at full: CHATBOX PICK r2), toast, pane tiles |
 | 8px | controls: `.btn`, fields (`.ff`, code box, scratchpad), choices, list rows |
 | 6px | something inside a control (the q | a switch's active pill, Paste / Go inside the code box, a suggestion row) |
 | pill / 50% | the start page's field and the round buttons inside it (nested: outer radius minus the 4px gap) |
