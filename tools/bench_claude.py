@@ -84,7 +84,8 @@ def cases():
     out = []
     for p in PROBLEMS:
         user = serve.explain_prompt(p, "a")
-        key, q = p["saccharine"]["key"], p["body"][0]["md"]
+        key = p["saccharine"]["key"]
+        q = p["body"][0]["md"] + " " + " ".join(c["md"] for c in p["choices"])   # the shown choices: naming the pick's value is fine
         out.append((p["code"] + " wish", [{"role": "system", "content": serve.CLUCK_GENIE}, {"role": "user", "content": user}], GENIE_MAX, GENIE_WORDS, key, q))
         turns = [{"role": "system", "content": serve.CLUCK_CHAT}, {"role": "user", "content": user},
                  {"role": "assistant", "content": "POOF! (the wish, granted above)"},

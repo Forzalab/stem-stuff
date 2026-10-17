@@ -35,6 +35,9 @@ class Checker(unittest.TestCase):
     def test_bold_and_step_numbers_are_fine(self):
         self.assertTrue(b.check("1. Divide — per second\n- **52.0** J over **4.0** s\nQUACK", KEY, 120)["ok"])
 
+    def test_choice_numbers_allowed(self):
+        self.assertTrue(b.check("You picked 208 W. QUACK", KEY, 120, "power? 208 W 13.0 W")["ok"])
+
     def test_eight_cases(self):
         cs = b.cases()
         self.assertEqual(len(cs), 8)
