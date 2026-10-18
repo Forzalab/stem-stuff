@@ -230,8 +230,27 @@ function init() {
      app.js puts the phone's code bar up while it is open (drill:qlist) */
   function showList(on) {
     document.documentElement.classList.toggle("ql-open", on); dispatchEvent(new CustomEvent("drill:qlist", { detail: { open: on } }));
-    if (on) document.documentElement.style.setProperty("--ql-bottom", Math.round(panel.getBoundingClientRect().bottom) + "px");   // phones: the privacy link sits under the list (index.html, G3)
+    if (on) fit();
   }
+  /* phones (bar on top, code bar at the bottom): the list starts right under the nav row, over the XP strip, and runs down to the
+     code bar's top edge (its pull-tab right under the list, no dead band), inside what the VISUAL viewport shows: the keyboard can
+     come up for the code box and the list stays, shorter, scrolling inside itself. Desktop keeps nav.css (a dropdown under the bar). */
+  const vv = window.visualViewport, dock = $(".dock");
+  function fit() {
+    if (panel.hidden) return;
+    if (!root.classList.contains("dock-bottom") || root.classList.contains("start")) { panel.style.top = panel.style.maxHeight = ""; return; }
+    const gap = 8, bar = panel.offsetParent ? panel.offsetParent.getBoundingClientRect().top : 0;
+    const top = Math.max(nav.getBoundingClientRect().bottom, vv ? vv.offsetTop : 0) + gap;
+    let bottom = vv ? vv.offsetTop + vv.height : innerHeight;
+    if (dock && dock.getClientRects().length) bottom = Math.min(bottom, dock.getBoundingClientRect().top);
+    if (!root.classList.contains("bar-mini")) bottom -= 44;           // no pull-tab row: keep the privacy link's 44px under the list, off the code box
+    panel.style.top = Math.round(top - bar) + "px";
+    panel.style.maxHeight = Math.max(96, Math.floor(bottom - top)) + "px";
+    root.style.setProperty("--ql-bottom", Math.round(panel.getBoundingClientRect().bottom) + "px");   // the privacy link sits under the list (index.html, G3)
+  }
+  const refit = () => requestAnimationFrame(fit);                   // after app.js has moved the code bar onto the keyboard (layoutDock, --kb-bottom)
+  if (vv) for (const ev of ["resize", "scroll"]) vv.addEventListener(ev, refit);
+  addEventListener("resize", refit);
   function say(t) { const sr = $("#sr"); if (!sr) return; sr.textContent = ""; setTimeout(() => { sr.textContent = t; }, 30); }
   /* a press that cannot move says why (app.js drill:note: a toast under Next); never a silent return (T16) */
   const note = text => { dispatchEvent(new CustomEvent("drill:note", { detail: { text } })); say(text); };
