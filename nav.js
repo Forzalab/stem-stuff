@@ -243,7 +243,7 @@ function init() {
     const top = Math.max(nav.getBoundingClientRect().bottom, vv ? vv.offsetTop : 0) + gap;
     let bottom = vv ? vv.offsetTop + vv.height : innerHeight;
     if (dock && dock.getClientRects().length) bottom = Math.min(bottom, dock.getBoundingClientRect().top);
-    if (!root.classList.contains("bar-mini")) bottom -= 44;           // no pull-tab row: keep the privacy link's 44px under the list, off the code box
+    bottom -= 44;                                                     // the privacy link's 44px under the list, off the code bar (its pull-tab is part of .dock)
     panel.style.top = Math.round(top - bar) + "px";
     panel.style.maxHeight = Math.max(96, Math.floor(bottom - top)) + "px";
     root.style.setProperty("--ql-bottom", Math.round(panel.getBoundingClientRect().bottom) + "px");   // the privacy link sits under the list (index.html, G3)
