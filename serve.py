@@ -1098,8 +1098,9 @@ def _or_stream(messages, key, max_tokens):
 # an empty reply) falls back to OPENROUTER_MODELS with their own params; once words flow, it stays on Claude.
 CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip("/")
 # claude-opus-5-5: tools/bench_claude.py (Oct 17, 8 cases): FORMAT adherence opus 8/8, haiku-5-5 7/8, sonnet-5-5 5/8 (adherence first,
-# then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply). CLAUDE_MODEL=claude-haiku-5-5 for speed.
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-5-5")
+# then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply).
+# Oct 18 re-bench (voice prompt, 216 replies, blind judge): haiku 7.6/7.0 = sonnet, opus 7.8/7.6 at ~55x the cost -> haiku default.
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
 CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $/MTok in, out
 # Spend is per billing cycle (Max API credits expire each cycle, no rollover): key stem:claude_usd:YYYY-MM, the month the current cycle
 # started in, counted from CLAUDE_CYCLE_DAY (1-28, default 1, UTC). Each key expires after 40 days, so old cycles clean themselves up.
