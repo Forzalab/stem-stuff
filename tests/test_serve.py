@@ -880,7 +880,7 @@ class Explain(unittest.TestCase):
         return status, head, b"".join(chunks).decode()
 
     def test_profile_audience_replaces_the_default_line(self):
-        """gen-UI step 5: a bank's profile.audience goes into both of Cluck's system prompts; no profile = the default prompt"""
+        """gen-UI step 5: a bank's profile.audience goes into both of Cluck's system prompts, as the last line; no profile = the default line"""
         path = os.path.join(serve.BANKS, "BANK_XP12.json")
         with open(path) as f:
             doc = json.load(f)
@@ -893,14 +893,14 @@ class Explain(unittest.TestCase):
             got = serve.system_for(base, p)
             self.assertIn("Audience: first-year CS majors in a data structures course.", got)
             self.assertNotIn("Fresno", got)
-            self.assertEqual(got.replace("Audience: first-year CS majors in a data structures course. Plain everyday words; explain a subject word the first time.", serve.AUDIENCE_LINE), base)
+            self.assertEqual(got, base + "\nAudience: first-year CS majors in a data structures course. Plain everyday words; explain a subject word the first time.")   # appended last (prompt cache)
         self.chat(1)
         self.assertIn("first-year CS majors", self.seen[0][1]["messages"][0]["content"])
         del doc["profile"]
         with open(path, "w") as f:
             json.dump(doc, f)
         os.utime(path, (time.time() + 10, time.time() + 10))
-        self.assertEqual(serve.system_for(serve.CLUCK_CHAT, serve.problems()["CALC1_XP1"]), serve.CLUCK_CHAT)
+        self.assertEqual(serve.system_for(serve.CLUCK_CHAT, serve.problems()["CALC1_XP1"]), serve.CLUCK_CHAT + "\n" + serve.AUDIENCE_LINE)
 
     def test_burst_gap_s_travels_in_the_bank_payload_only_when_valid(self):
         """T22: a bank's burst_gap_s (60-600) rides GET /b/<code>.json; absent or invalid = no key (the engine's 15 s)"""
@@ -933,7 +933,7 @@ class Explain(unittest.TestCase):
         self.assertEqual(req["provider"], {"zdr": True, "data_collection": "deny"})
         roles = [m["role"] for m in req["messages"]]
         self.assertEqual(roles, ["system", "user", "assistant", "user", "assistant", "user"])
-        self.assertEqual(req["messages"][0]["content"], serve.CLUCK_CHAT)
+        self.assertEqual(req["messages"][0]["content"], serve.CLUCK_CHAT + "\n" + serve.AUDIENCE_LINE)   # the audience: the last line
         self.assertIn("Answer: b) 3", req["messages"][1]["content"])                  # the KEY rides in the context turn
         self.assertIn("Dropped the sign.", req["messages"][1]["content"])
         self.assertEqual(req["messages"][2]["content"], self.BOX)

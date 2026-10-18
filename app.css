@@ -832,6 +832,9 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
+.wload { margin-inline-end: var(--s1); color: var(--muted); animation: wload-in var(--d-move) ease-out; }   /* Cluck's wait line (app.js WISH_LINES): fades in per swap */
+@keyframes wload-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wload { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask { animation: none !important; } }
 
 /* ---------- scratchpad + copy ---------- */
