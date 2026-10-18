@@ -1265,7 +1265,7 @@ function reveal(r, part) {
 /* the duck chip (sugar, questions with Cluck's key only): right = "Compare with Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
-  if (!wish || wish.code !== S.code) wish = Object.assign(newWish(), { started: false });
+  if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
   wishPaint();
 }
@@ -1328,6 +1328,22 @@ const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
 let wish = null;   // { code, text, started, done, open, failed, ctl }
+/* the reply cache (Tony, Oct 18): the finished /explain text, in this browser only (localStorage "stem-cluck"): key = code | sorted picks | build
+   (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
+   text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
+const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
+const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
+const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
+function ckPut(key, text) {
+  try { localStorage.setItem(CK, JSON.stringify(Object.fromEntries([...ckAll().filter(([k]) => k !== key), [key, { text, t: Date.now() }]].slice(-CK_MAX)))); } catch { /* blocked or full */ }
+}
+function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
+  const text = S && S.code === w.code ? ckGet(ckKey(w.code, S.tries.at(-1))) : "";
+  if (!text) return false;
+  Object.assign(w, { text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  return true;
+}
 function wishEl() {
   let el = $("#wish");
   if (!el) { el = document.createElement("div"); el.id = "wish"; el.className = "wish"; el.hidden = true; $("#fb").after(el); }
@@ -1348,13 +1364,14 @@ function wishOnWrong() {
   wish = newWish();
   const w = wish;
   const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
-  if (wishLog().length >= WISH_AUTO) w.started = false;                   // past the cap: "Ask Cluck" does it (no auto-open)
+  if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
+  if (painting || wishLog().length >= WISH_AUTO) w.started = false;       // a restore, or past the cap: the "Explain my mistake" chip does it (no auto call, no auto-open)
   wishPaint();
   if (w.started) { wishStart(true); auto(); }
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
-  const w = wish, t = S.tries.at(-1) || {};
+  const w = wish, t = S.tries.at(-1) || {}, key = ckKey(w.code, t);
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
@@ -1374,6 +1391,7 @@ async function wishStart(auto) {
     }
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
   w.done = true;
+  if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
@@ -1570,7 +1588,8 @@ function wishPaint() {
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
   btn?.addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
-    if (!w.started || w.failed) wishRetry(w);
+    if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
+    else if (!w.started || w.failed) wishRetry(w);
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
@@ -1748,7 +1767,7 @@ function clTab(tab, focus) {
   cl.el.querySelector(".cl-ft").hidden = !has.explain;
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
-  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: typed again from the top
+  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again
   if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
     S.orig.open = cl.open && has.steps && cl.fold;

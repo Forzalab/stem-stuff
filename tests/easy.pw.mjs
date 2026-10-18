@@ -245,6 +245,25 @@ try {
     assert.equal(asked, 1, "one stream: reopening reuses it");
     assert.deepEqual(await said(), [], "no voice: the voice is gone (Tony, Oct 5)");
     assert.equal(await page.$("#wish .wvoice"), null, "no voice button");
+    // B3 (Tony, Oct 18): the finished reply is kept in this browser (stem-cluck): away and back, then a reload, show it whole with no new call
+    const kept = JSON.parse(await page.evaluate(() => localStorage.getItem("stem-cluck")));
+    assert.ok(Object.keys(kept).some(k => /^CALC1_E01\|[^|]*\|dev$/.test(k)), "key = code | picks | build: " + Object.keys(kept));
+    const whole = async why => {
+      await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 4000 });
+      assert.equal(asked, 1, why + ": no new /explain");
+      assert.equal(await page.$("#cluck .wcaret"), null, why + ": no caret"); assert.equal(await page.$("#cluck .wload"), null, why + ": no wait line");
+    };
+    await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
+    await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
+    if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
+    await whole("away and back");
+    await page.reload(); await opened(page, "CALC1_E01");
+    if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
+    await whole("after a reload");
+    await page.evaluate(() => { const o = JSON.parse(localStorage.getItem("stem-cluck")); for (const k of Object.keys(o)) o[k].t = Date.now() - 8 * 864e5; localStorage.setItem("stem-cluck", JSON.stringify(o)); });
+    await page.reload(); await opened(page, "CALC1_E01");
+    await page.waitForFunction(() => document.querySelector("#wish .wchip") && /Explain my mistake/.test(document.querySelector("#wish .wchip").textContent), null, { timeout: 4000 });
+    assert.equal(asked, 1, "a 7-day-old entry is dropped, and a restore never calls by itself: the Explain my mistake chip");
     asked = 0;
   });
 
