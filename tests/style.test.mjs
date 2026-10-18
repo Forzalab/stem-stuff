@@ -146,3 +146,13 @@ test("number badges: line-height 1, so the digit sits in the middle (Tony, Oct 5
   for (const sel of [".wtext .wnum", ".orig-sol li::before"])
     assert.ok(ALL.some(d => d.sel === sel && d.prop === "line-height" && d.value === "1"), sel);
 });
+
+test("Tony, Oct 18: no :hover tint on a Cluck message; the pointer cursor is for the typing only; the sash grip has no 16rem cap, no rail", () => {
+  assert.deepEqual(ALL.filter(d => /\.msg\b[^,]*:hover/.test(d.sel)).map(fmt), [], "no :hover on .msg");
+  assert.ok(ALL.some(d => d.sel === ".wtext.wrun" && d.prop === "cursor" && d.value === "pointer"));
+  assert.ok(!ALL.some(d => d.sel === ".wtext" && d.prop === "cursor"), ".wtext itself has no cursor");
+  assert.ok(ALL.some(d => d.sel === "html.side .sash::before" && d.prop === "top" && d.value === "calc(50dvh - 24px)"));
+  assert.ok(!ALL.some(d => d.sel === "html.side .sash" && d.prop === "min-height"));
+  assert.ok(ALL.some(d => d.sel === "html.side .sash::after" && d.prop === "background" && d.value === "none"));
+  assert.ok(!ALL.some(d => d.sel === ".rot.docked .duo" && /^scrollbar-/.test(d.prop)));
+});

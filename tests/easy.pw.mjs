@@ -245,6 +245,19 @@ try {
     assert.equal(asked, 1, "one stream: reopening reuses it");
     assert.deepEqual(await said(), [], "no voice: the voice is gone (Tony, Oct 5)");
     assert.equal(await page.$("#wish .wvoice"), null, "no voice button");
+    // Tony, Oct 18 (B1): hovering a message tints nothing; the pointer cursor is for the typing only
+    await page.hover("#cluck .msg:not(.me)");
+    assert.equal(await page.$eval("#cluck .msg:not(.me)", e => getComputedStyle(e).backgroundColor), "rgba(0, 0, 0, 0)", "hovered Cluck message: no tint");
+    await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 4000 });
+    assert.notEqual(await page.$eval("#cluck .wtext", e => getComputedStyle(e).cursor), "pointer", "done typing: no pointer cursor");
+    // B2: a scrollbar thumb shows only while the pointer is over the box
+    const sbc = () => page.$eval("#cluck .cl-bd", e => getComputedStyle(e).scrollbarColor);
+    await page.mouse.move(2, 2);
+    assert.match(await sbc(), /^rgba\(0, 0, 0, 0\) rgba\(0, 0, 0, 0\)$|^auto$|transparent/, "unhovered .cl-bd: transparent thumb");
+    const idle = await sbc();
+    await page.hover("#cluck .cl-bd");
+    assert.notEqual(await sbc(), idle, "hovered .cl-bd: the thumb shows");
+    await page.mouse.move(2, 2);
     asked = 0;
   });
 
@@ -428,6 +441,24 @@ try {
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
   await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));
+  for (const [w, h] of [[1280, 720], [1920, 1080]]) await step(`divider at ${w}x${h}: grip mid-window, the sash inside the panes, no rail (Tony, Oct 18)`, async () => {
+    const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const zp = await z.newPage();
+    await zp.goto(BASE + "/#CALC1_E01");
+    await zp.waitForSelector("#sash", { state: "attached", timeout: 6000 });
+    const m = await zp.evaluate(() => {
+      const sash = document.querySelector("#sash"), r = sash.getBoundingClientRect(), kids = [...sash.parentElement.children].filter(k => k !== sash && k.getBoundingClientRect().height > 0), pane = { bottom: Math.max(...kids.map(k => k.getBoundingClientRect().bottom)) };   // the panes beside it
+      return { top: parseFloat(getComputedStyle(sash, "::before").top), bottom: r.bottom, paneBottom: pane.bottom, after: getComputedStyle(sash, "::after").backgroundColor,
+        afterImg: getComputedStyle(sash, "::after").backgroundImage, afterW: parseFloat(getComputedStyle(sash, "::after").width) };
+    });
+    await z.close();
+    assert.ok(Math.abs(m.top - Math.round(h / 2 - 24)) <= 1, `grip top ${m.top} = ${Math.round(h / 2 - 24)}`);
+    assert.ok(m.bottom <= m.paneBottom + 1, `sash bottom ${m.bottom} within the pane ${m.paneBottom}`);
+    assert.equal(m.after, "rgba(0, 0, 0, 0)", "::after: transparent (no rail)"); assert.equal(m.afterImg, "none");
+    assert.equal(m.afterW, 48, "the 48px hit area stays");
+  });
   await step("zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll, centred up-down", async () => {
     const z = await browser.newContext({ viewport: { width: 5464, height: 3600 }, serviceWorkers: "block" });   // Tony's test protocol, Oct 6
     await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
@@ -445,7 +476,7 @@ try {
     assert.equal(m.gap, 24, "variant B: 24px between the videos");
     assert.ok(m.side, "videos side by side");
     assert.ok(m.notes <= 800, `notes box capped (${m.notes}px)`);
-    assert.ok(m.handle <= 256, `divider handle near the top (${m.handle}px)`);
+    assert.ok(Math.abs(m.handle - Math.round(3600 / 2 - 24)) <= 1, `divider handle mid-window, no 16rem cap (${m.handle}px)`);
     assert.equal(m.hscroll, false, "no sideways scroll");
     assert.ok(m.above > 300 && Math.abs(m.above - m.below) <= 4, `snug in the middle up-down too (Tony, Oct 6 sketch): ${m.above}px above the bar, ${m.below}px below the page`);
   });
