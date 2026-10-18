@@ -1371,7 +1371,8 @@ def fig_ctx(p, answer, chat=False):
         hidden_vals = livefig.nums(p.get("answer", ""))
     nets = " ".join(network_data(b) for b in p.get("body", []) if b.get("type") == "graph")   # edge weights are givens
     subject = (_index().get("prof", {}).get(p.get("code")) or {}).get("subject")   # the kinds a figure may be (fail closed)
-    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets, subject, livefig.vertices(p.get("body", [])))
+    return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets, subject, livefig.vertices(p.get("body", [])),
+                           any(b.get("kind") == "network" for b in p.get("body", [])))   # drawn: its own graph is on screen
 
 
 def _stream_head(cookie_header):

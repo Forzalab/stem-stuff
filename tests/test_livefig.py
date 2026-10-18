@@ -31,6 +31,25 @@ def fence(g):
     return "```fig\n" + json.dumps(g) + "\n```"
 
 
+def colons(g):
+    return ":::fig\n" + json.dumps(g) + "\n:::"         # Opus, Oct 18: the figure fenced with ::: instead of ```
+
+
+DUCKS = ["Cluck", "Ann", "Bo", "Cy", "Dot", "Ed", "Flo", "Gus", "Hal", "Ivy"]    # the CEQ_PND coloring question: 10 ducks, its own figure
+DUCK_EDGES = [("Ann", "Dot"), ("Ann", "Ed"), ("Ann", "Ivy"), ("Bo", "Cy"), ("Bo", "Dot"), ("Bo", "Hal"), ("Cluck", "Flo"), ("Cluck", "Hal"),
+              ("Cluck", "Ivy"), ("Cy", "Gus"), ("Cy", "Ivy"), ("Dot", "Flo"), ("Ed", "Gus"), ("Ed", "Hal"), ("Flo", "Gus")]
+
+
+def duck_net(nodes, alt="Some ducks."):
+    return {"type": "graph", "kind": "network", "alt": alt, "nodes": nodes,
+            "edges": [{"from": a, "to": b} for a, b in DUCK_EDGES if a in nodes and b in nodes]}
+
+
+def duck_ctx():
+    body = [{"type": "text", "md": "Every duck gets one snack flavor; feuding ducks differ."}, duck_net(DUCKS, "Ten ducks and their feuds.")]
+    return livefig.context("CEQ_PND", body[0]["md"], "", [3.0], subject="cs", verts=livefig.vertices(body), drawn=True)
+
+
 def sse_claude(pieces):
     ev = [{"type": "message_start", "message": {"usage": {"input_tokens": 10, "output_tokens": 1}}}]
     ev += [{"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": p}} for p in pieces]
@@ -99,6 +118,21 @@ class Gate(unittest.TestCase):
             c.verts = {"A", "B", "C"} if k == "network" else c.verts
             self.assertIsNone(livefig.check(json.loads(ex), c), k)
 
+    def test_network_is_the_key_subgraph_only(self):
+        c = duck_ctx()
+        self.assertEqual(livefig.check(duck_net(DUCKS), c), "copy")                    # the whole 10-duck graph again: dropped
+        self.assertEqual(livefig.check(duck_net(DUCKS[:7]), c), "big")                 # 7 nodes: more than the key part
+        cycle = duck_net(["Ann", "Ed", "Gus", "Flo", "Dot"], "An odd cycle of five ducks.")   # Ann-Ed-Gus-Flo-Dot-Ann
+        self.assertEqual(len(cycle["edges"]), 5)
+        self.assertIsNone(livefig.check(cycle, c))                                      # the question's own labels, 5 nodes: kept
+        self.assertIsNone(livefig.check(FIX["network"]["valid"], net_ctx()))            # no bank figure (verts from the text): all of them is fine
+        self.assertIsNone(livefig.check(FIX["valid"][0], ctx()))                        # physics untouched
+
+    def test_rule_asks_for_the_key_subgraph(self):
+        self.assertIn("never redraw it", livefig.rule(duck_ctx()))
+        self.assertIn("Pick the few vertices that matter (an odd cycle, a path)", livefig.rule(duck_ctx()))
+        self.assertNotIn("Pick the few", livefig.rule(net_ctx()))                        # 4 vertices: nothing to pick
+
     def test_given_answer_numbers(self):
         c = ctx()
         self.assertIn(375.0, c.answers)
@@ -153,6 +187,30 @@ class Stream(unittest.TestCase):
         out, log = self.run_fence(["A ", fence(FIX["valid"][0]), " B"], None)
         self.assertNotIn("```", out)
         self.assertEqual(log, ["off"])
+
+    def test_colon_fence_is_a_fence(self):
+        text = "Forces:\n" + colons(FIX["valid"][0]) + "\nThen the math."
+        for n in (1, 2, 3, 7, len(text)):                              # chunk edges inside the ::: too
+            out, log = self.run_fence([text[i:i + n] for i in range(0, len(text), n)], ctx())
+            self.assertEqual(log, ["ok"], n)
+            self.assertNotIn(":::", out)
+            self.assertEqual(out.count("```fig\n"), 1)
+            self.assertEqual(json.loads(out.split("```fig\n")[1].split("\n```")[0]), FIX["valid"][0])
+            self.assertIn("Forces:", out)
+            self.assertIn("Then the math.", out)
+
+    def test_bad_colon_fence_dropped_no_raw_json(self):
+        for body in (colons(FIX["invalid"][0]["fig"]), ":::json\n{\"type\": \"graph\"\n:::", ":::\n" + json.dumps(FIX["valid"][0])):
+            out, log = self.run_fence(["A.\n", body[:5], body[5:], "\nB."], ctx())
+            self.assertNotIn('"type"', out)
+            self.assertNotIn(":::", out)
+            self.assertIn("A.", out)
+            self.assertTrue(log and log[0] != "ok", log)
+
+    def test_colons_mid_line_pass(self):
+        out, log = self.run_fence(["ratio a:", ":", "::b\n", "\n:", ": x"], ctx())
+        self.assertEqual(out, "ratio a::::b\n\n:: x")
+        self.assertEqual(log, [])
 
     def test_lone_backticks_pass(self):
         out, _ = self.run_fence(["a `b", "` c", "``"], ctx())
@@ -209,6 +267,7 @@ class Pipe(unittest.TestCase):
 
     def test_chat_history_drops_the_figure(self):
         self.assertEqual(livefig.strip("A.\n" + fence(FIX["valid"][0]) + "\nB."), "A.\nB.")
+        self.assertEqual(livefig.strip("A.\n" + colons(FIX["valid"][0]) + "\nB."), "A.\nB.")
 
 
 class Bundle(unittest.TestCase):
