@@ -1,5 +1,5 @@
 """Cluck's Claude pipe (serve._cluck_stream): Claude first when CLAUDE_API is set and the budget allows, else / on any
-trouble before the first word the OpenRouter chain. urllib is mocked: no network."""
+trouble before the first word the OpenRouter chain; a wish (edit=True) goes out as EDITOR's rewrite of the draft. urllib is mocked: no network."""
 import calendar
 import io
 import json
@@ -13,10 +13,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import serve  # noqa: E402
 
 MSGS = [{"role": "system", "content": "BASE PROMPT"}, {"role": "user", "content": "QUESTION"}]
+CACHED = {"type": "ephemeral"}
+DRAFT = ["Well, the ring is odd.\n", "$$\\chi \\ge 3$$\n", "$$\\boxed{3}$$\n", "Pick b."]
+REWRITE = ["The ring is odd.\n", "$$\\chi \\ge 3$$\n", "$$\\boxed{3}$$\n", "Pick b."]
 
 
-def sse_claude(pieces, usage_in=100, usage_out=50):
-    ev = [{"type": "message_start", "message": {"usage": {"input_tokens": usage_in, "output_tokens": 1}}},
+def sse_claude(pieces, usage_in=100, usage_out=50, write=0, read=0):
+    ev = [{"type": "message_start", "message": {"usage": {"input_tokens": usage_in, "output_tokens": 1, "cache_creation_input_tokens": write,
+                                                          "cache_read_input_tokens": read}}},
           {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}]
     ev += [{"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": p}} for p in pieces]
     ev += [{"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": usage_out}}, {"type": "message_stop"}]
@@ -70,6 +74,13 @@ class ClaudePipe(unittest.TestCase):
     def run_it(self):
         return "".join(serve._cluck_stream(MSGS, "sk-or", 450))
 
+    def run_wish(self):
+        return "".join(serve._cluck_stream(MSGS, "sk-or", 450, edit=True))
+
+    def seq(self, *rs):                                                    # one Claude response per call, in order
+        rs = list(rs)
+        return lambda: rs.pop(0)
+
     def hosts(self):
         return ["claude" if "anthropic.com" in u else "or" for u, _, _ in self.calls]
 
@@ -83,7 +94,7 @@ class ClaudePipe(unittest.TestCase):
         want = serve.claude_params(serve.CLAUDE_MODEL, 450)
         self.assertEqual((body["model"], body["max_tokens"], body["stream"]), (serve.CLAUDE_MODEL, want["max_tokens"], True))
         self.assertEqual(body.get("thinking"), want.get("thinking"))
-        self.assertEqual(body["system"], "BASE PROMPT" + serve.CLAUDE_DELTA)
+        self.assertEqual(body["system"], [{"type": "text", "text": "BASE PROMPT" + serve.CLAUDE_DELTA, "cache_control": CACHED}])
         self.assertEqual(body["messages"], MSGS[1:])
         pi, po = serve.claude_price(serve.CLAUDE_MODEL)
         self.assertAlmostEqual(serve.claude_spent(), (100 * pi + 50 * po) / 1e6)
@@ -179,6 +190,90 @@ class ClaudePipe(unittest.TestCase):
         os.environ.update(CLAUDE_PRICE_IN="1", CLAUDE_PRICE_OUT="2")
         self.run_it()
         self.assertAlmostEqual(serve.claude_spent(), (100 * 1 + 50 * 2) / 1e6)
+
+    def test_wish_sends_only_the_rewrite(self):
+        os.environ.pop("CLUCK_REWRITE", None)
+        self.claude = self.seq(Resp(sse_claude(DRAFT)), Resp(sse_claude(REWRITE, 300, 80)))
+        self.assertEqual(self.run_wish(), "".join(REWRITE))
+        self.assertEqual(self.hosts(), ["claude", "claude"])
+        draft, edit = self.calls[0][2], self.calls[1][2]
+        self.assertEqual(draft["system"], [{"type": "text", "text": "BASE PROMPT" + serve.CLAUDE_DELTA, "cache_control": CACHED}])
+        self.assertEqual(edit["system"], [{"type": "text", "text": serve.EDITOR, "cache_control": CACHED}])   # its own prompt, no CLAUDE_DELTA
+        self.assertEqual(edit["messages"], [{"role": "user", "content": "".join(DRAFT)}])
+        self.assertEqual(edit["max_tokens"], draft["max_tokens"])                 # the draft's budget
+        pi, po = serve.claude_price(serve.CLAUDE_MODEL)
+        self.assertAlmostEqual(serve.claude_spent(), (400 * pi + 130 * po) / 1e6)   # both calls counted
+
+    def test_chat_is_one_call(self):
+        self.assertEqual(self.run_it(), "Hi there.\n**Push** is shared.")
+        self.assertEqual(self.hosts(), ["claude"])
+
+    def test_rewrite_that_drops_math_sends_the_draft(self):
+        for lost in (REWRITE[:1] + REWRITE[2:], REWRITE[:2] + REWRITE[3:], REWRITE[:3], ["The ring is odd.\n", "$$\\chi > 2$$\n"] + REWRITE[2:]):
+            self.calls.clear()
+            self.claude = self.seq(Resp(sse_claude(DRAFT)), Resp(sse_claude(lost)))
+            self.assertEqual(self.run_wish(), "".join(DRAFT), lost)
+
+    def test_rewrite_error_or_empty_sends_the_draft(self):
+        for bad in (http_error(529, "overloaded_error"), Resp(sse_claude([]))):
+            self.calls.clear()
+            self.claude = self.seq(Resp(sse_claude(DRAFT)), bad)
+            self.assertEqual(self.run_wish(), "".join(DRAFT))
+            self.assertEqual(self.hosts(), ["claude", "claude"])
+
+    def test_rewrite_kill_switch(self):
+        os.environ["CLUCK_REWRITE"] = "0"
+        try:
+            self.claude = lambda: Resp(sse_claude(DRAFT))
+            self.assertEqual(self.run_wish(), "".join(DRAFT))
+            self.assertEqual(self.hosts(), ["claude"])
+        finally:
+            os.environ.pop("CLUCK_REWRITE")
+
+    def test_wish_draft_broken_midway_falls_back(self):                     # nothing reached the student yet: OpenRouter answers
+        data = sse_claude(DRAFT).split(b"event: message_delta")[0] + b'event: error\ndata: {"type":"error","error":{"type":"api_error"}}\n\n'
+        self.claude = lambda: Resp(data)
+        self.assertEqual(self.run_wish(), "OR words.")
+        self.assertEqual(self.hosts(), ["claude", "or"])
+
+    def test_cache_blocks_per_bank(self):                                  # static | the bank's audience | the per-question rule
+        sent = []
+        for aud in ("CS majors.", "Fresno physics students."):
+            self.calls.clear()
+            msgs = [dict(MSGS[0], content=serve.CLUCK_GENIE + "\nAudience: " + aud)] + MSGS[1:]
+            "".join(serve._cluck_stream(msgs, "sk-or", 450))
+            sent.append(self.calls[0][2]["system"])
+        (a1, b1), (a2, b2) = sent
+        self.assertEqual(a1, a2)                                            # byte-identical across banks: one cache entry for all
+        self.assertEqual(a1, {"type": "text", "text": serve.CLUCK_GENIE + serve.CLAUDE_DELTA, "cache_control": CACHED})
+        self.assertEqual((b1["text"], b2["text"]), ("Audience: CS majors.", "Audience: Fresno physics students."))
+        self.assertEqual(b1["cache_control"], CACHED)
+        blocks = serve.claude_system(serve.CLUCK_GENIE + "\nAudience: CS majors.", "FIGURE rule for this question")
+        self.assertEqual([b.get("cache_control") for b in blocks], [CACHED, CACHED, None])   # the rule varies per question: no breakpoint
+        self.assertEqual(blocks[2]["text"], "FIGURE rule for this question")
+
+    def test_chat_caches_the_question_turn(self):                          # follow-ups read system + question from the cache
+        hist = MSGS + [{"role": "assistant", "content": "The wish."}, {"role": "user", "content": "why?"}]
+        "".join(serve._cluck_stream(hist, "sk-or", 250))
+        self.assertEqual(self.calls[0][2]["messages"], [{"role": "user", "content": [{"type": "text", "text": "QUESTION", "cache_control": CACHED}]}] + hist[2:])
+        self.calls.clear()
+        self.run_it()                                                       # a wish: one turn with the NOTE in it, no breakpoint
+        self.assertEqual(self.calls[0][2]["messages"], MSGS[1:])
+
+    def test_cache_spend(self):                                             # writes 1.25x, reads 0.1x the input price
+        self.claude = lambda: Resp(sse_claude(["Hi.\n", "x"], usage_in=10, usage_out=50, write=2000, read=0))
+        self.run_it()
+        pi, po = serve.claude_price(serve.CLAUDE_MODEL)
+        self.assertAlmostEqual(serve.claude_spent(), (10 * pi + 2000 * pi * 1.25 + 50 * po) / 1e6)
+        serve._claude_spent.clear()
+        self.claude = lambda: Resp(sse_claude(["Hi.\n", "x"], usage_in=10, usage_out=50, write=0, read=2000))
+        self.run_it()
+        self.assertAlmostEqual(serve.claude_spent(), (10 * pi + 2000 * pi * 0.1 + 50 * po) / 1e6)
+
+    def test_no_genie_line(self):                                          # Tony's CEQ screenshot: "POOF!" opened the wish
+        for p in (serve.CLUCK_GENIE, serve.CLAUDE_DELTA, serve.EDITOR):
+            self.assertNotIn("POOF", p)
+        self.assertNotIn("make no claim", serve.NOTE_RULE)
 
 
 if __name__ == "__main__":

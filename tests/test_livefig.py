@@ -183,14 +183,14 @@ class Pipe(unittest.TestCase):
 
     def test_claude_path_gets_the_rule_and_shows_the_figure(self):
         out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
-        self.assertIn("FIGURE (", self.sent[0][1]["system"])
+        self.assertIn("FIGURE (", json.dumps(self.sent[0][1]["system"]))
         self.assertEqual(self.sent[0][1]["max_tokens"], serve.claude_params(serve.CLAUDE_MODEL, 450 + serve.FIG_TOKENS)["max_tokens"])   # the model's own room (same fix as #164)
         self.assertEqual(out.count("```fig\n"), 1)
 
     def test_kill_switch(self):
         os.environ["CLUCK_LIVE_FIGS"] = "0"
         out = "".join(serve._cluck_stream(MSGS, "k", 450, ctx()))
-        self.assertNotIn("FIGURE", self.sent[0][1]["system"])
+        self.assertNotIn("FIGURE", json.dumps(self.sent[0][1]["system"]))
         self.assertNotIn("```", out)
         self.assertIsNone(serve.fig_ctx(P, "a"))
 

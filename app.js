@@ -369,7 +369,7 @@ codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
    (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
 let codingY = null;
 function codingOn() {
-  if (!dockMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;
+  if (!dockMQ.matches || sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
   codingY = scrollY; root.classList.add("coding"); sugFit();
 }
 function codingOff() {
@@ -379,7 +379,7 @@ function codingOff() {
   codingY = null;
 }
 codeIn.addEventListener("focus", codingOn);
-addEventListener("resize", () => { if (!dockMQ.matches) codingOff(); });
+addEventListener("resize", () => { if (!dockMQ.matches || sideMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -1446,6 +1446,11 @@ function wishHTML(t) {
    no typing (the wait stays). */
 const WISH_DOTS = 900, WISH_CPS = 35;
 const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
+/* the wait (Tony, Oct 18): a wish now waits for a draft AND its rewrite (serve.py EDITOR), so until the first chunk Cluck says what he's up
+   to, one line every WISH_SWAP ms from a random start, the caret after it; each line fades in (reduced motion: swaps, no fade). The lines are
+   aria-hidden: the screen reader hears "Cluck is thinking." once. */
+const WISH_LINES = ["Making a duck omelette…", "Ducking in the pond…", "Fluffing feathers…", "Counting breadcrumbs…", "Quacking the numbers…", "Polishing the lamp…"];
+const WISH_SWAP = 1600;
 function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
@@ -1491,7 +1496,15 @@ function wishFrame(now) {
     }
     x.classList.remove("wrun"); return;
   }
-  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
+  if (now < w.at || !t) {
+    w.l0 ??= Math.random() * WISH_LINES.length | 0; w.w0 ??= now;
+    const k = t ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
+    if (w.drawn !== -1 || w.line !== k) {
+      x.innerHTML = k < 0 ? WCARET : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
+      if (k >= 0 && !w.thought) { w.thought = true; say("Cluck is thinking."); }
+      w.drawn = -1; w.line = k;
+    }
+    w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
