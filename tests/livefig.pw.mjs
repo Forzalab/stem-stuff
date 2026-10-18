@@ -46,8 +46,10 @@ const fake = createServer(async (req, res) => {
 });
 await new Promise(r => fake.listen(0, "127.0.0.1", r));   // the OS picks a free port (PORT + 1 was not checked: EADDRINUSE on CI)
 const FAKE = fake.address().port;
+/* CLUCK_REWRITE=0: the streamed path (the editor pass holds a wish whole, so no fence is ever open on the page; test_claude_pipe.py covers it) */
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
-  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://127.0.0.1:${FAKE}`, CLUCK_LIVE_FIGS: "1" }, stdio: "ignore" });
+  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://127.0.0.1:${FAKE}`, CLUCK_LIVE_FIGS: "1",
+  CLUCK_REWRITE: "0" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
