@@ -699,7 +699,7 @@ html.side #work.cl-on > #rot { flex: none; }
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
 /* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
-body { --cl-edge: var(--edge); }   /* the site's edge: inside the sheet .ai-box remaps --edge */
+html:not(.side) .cl { --cl-edge: var(--ai-line); }   /* the rim: Cluck's warm orange edge (35%), set on the sheet itself; a body-level var() froze the page's blue --edge before .ai-box could remap it (Tony, Oct 18) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }
 html.cl-open body { overflow: hidden; }
 .cl-dim { display: none; }
@@ -711,7 +711,7 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
 /* the phone sheet drags (app.js clDrag, sheet.mjs; Tony's CHATBOX PICK r2): a grab handle on top, the header drags too; up = full screen with the corners
    going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
 html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
-  filter: drop-shadow(0 -12px 28px color-mix(in srgb, var(--glow) calc(28% * (1 - var(--pp, 0))), transparent)); }   /* the orange halo above the top edge, gone at full */
+  filter: drop-shadow(0 -6px 36px color-mix(in srgb, var(--glow) calc(9% * (1 - var(--pp, 0))), transparent)); }   /* a faint, wide orange haze above the top edge (Vision Pro glass: low alpha, soft), gone at full */
 html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
 html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
 html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
