@@ -18,7 +18,8 @@
 
 /* phones and touch (entry dock at the bottom): the nav is the top bar. */
 .dock-bottom .qnav { max-width: 52rem; margin: 0 auto; padding: var(--s4) var(--gut) 0; }
-.dock-bottom .qlist { position: absolute; z-index: 30; left: 0; right: 0; width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: var(--s3) auto 0; box-shadow: var(--shadow-3); }   /* phones too: floats where it would have sat, the question stays put (Tony, Oct 6) */
+.dock-bottom .qlist { position: absolute; z-index: 30; left: 0; right: 0; width: min(100% - 2 * var(--gut), 52rem - 2 * var(--gut)); margin: 0 auto; box-shadow: var(--shadow-3); }   /* phones too: floats over the page, the question stays put (Tony, Oct 6). top / max-height: nav.js fit (right under the nav row, over the XP strip, down to the code bar) */
+html.dock-bottom.ql-open .dock::before { display: none; }   /* the code bar's scroll fade would lie over the list's last row: a clean edge instead */
 
 /* desktop: one row. Bank side first (the list), then the entry box, only as wide as a code needs; Prev/Next at the
    right edge (Tony, Sep 30 sketches). The nav and .dock unwrap (display: contents) so their buttons are grid items.

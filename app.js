@@ -370,6 +370,7 @@ codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
 let codingY = null;
 function codingOn() {
   if (!dockMQ.matches || sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
+  if (root.classList.contains("ql-open")) return;   // the question list is open: it stays up with the keyboard (it hid #qlist; nav.js fit sizes it to the visual viewport)
   codingY = scrollY; root.classList.add("coding"); sugFit();
 }
 function codingOff() {
