@@ -16,7 +16,7 @@ let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PORT = +(process.argv[2] || 8861), FAKE = PORT + 1, BASE = `http://localhost:${PORT}`;
+const PORT = +(process.argv[2] || 8861), BASE = `http://localhost:${PORT}`;
 const SHOTS = process.env.LIVEFIG_SHOTS || "";
 const FIX = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/livefig.json"), "utf8"));
 const TMP = mkdtempSync(join(tmpdir(), "livefig-")), BANKS = join(TMP, "banks");
@@ -43,9 +43,11 @@ const fake = createServer(async (req, res) => {
     await new Promise(r => setTimeout(r, 60));
   }
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
-}).listen(FAKE);
+});
+await new Promise(r => fake.listen(0, "127.0.0.1", r));   // the OS picks a free port (PORT + 1 was not checked: EADDRINUSE on CI)
+const FAKE = fake.address().port;
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
-  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://localhost:${FAKE}`, CLUCK_LIVE_FIGS: "1" }, stdio: "ignore" });
+  OPENROUTER_API_KEY: "unused", CLAUDE_API: "fake", CLAUDE_BASE: `http://127.0.0.1:${FAKE}`, CLUCK_LIVE_FIGS: "1" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
