@@ -369,7 +369,7 @@ codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
    (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
 let codingY = null;
 function codingOn() {
-  if (!dockMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;
+  if (!dockMQ.matches || sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
   codingY = scrollY; root.classList.add("coding"); sugFit();
 }
 function codingOff() {
@@ -379,7 +379,7 @@ function codingOff() {
   codingY = null;
 }
 codeIn.addEventListener("focus", codingOn);
-addEventListener("resize", () => { if (!dockMQ.matches) codingOff(); });
+addEventListener("resize", () => { if (!dockMQ.matches || sideMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
