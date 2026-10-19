@@ -232,3 +232,24 @@ test("wrapper: every stemT name is forwarded untouched (_ask / _tok / _xmark too
   assert.deepEqual({ ...args[3] }, { choice: "b" });
   assert.deepEqual([...win.stemJev().lines], ["+0.0  q_open  A mc", "+0.0  xmark  b"]);
 });
+
+test("a window blur pauses S2; a blur >= 5 s gives a fresh step on focus, a shorter one only pauses", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(70).away("blur", true); j.at(200).tick();
+  assert.equal(j.state().counts.S2, 0, "no impasse while blurred (80 s p75 passed)");
+  j.at(240).away("blur", false);
+  assert.ok(j.state().lines.includes("+240.0  away  170s via=blur"));
+  j.at(300).tick(); assert.equal(j.state().counts.S2, 0, "focus = a fresh step (60 s in)");
+  j.at(321).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "and it counts from the focus");
+  const k = session();
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(76).away("blur", true); k.at(79).away("blur", false); k.at(79.5).tick();
+  assert.equal(k.state().counts.S2, 0, "a 3 s blur: nothing logged, no reset");
+  k.at(81).tick(); assert.equal(why(k, "S2"), "depth=1 p75=80s", "the step was not reset: 81 s since the last input");
+  const m = session();
+  m.at(0).ev("q_open", { code: "A" });
+  m.at(70).away("blur", true); m.at(75).vis(true); m.at(200).tick(); assert.equal(m.state().counts.S2, 0, "blur then hide: paused");
+  m.at(260).vis(false); m.at(300).tick(); assert.equal(m.state().counts.S2, 0, "hide's return is still a fresh step");
+  m.at(341).tick(); assert.equal(m.state().counts.S2, 1);
+});

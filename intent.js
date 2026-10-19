@@ -15,6 +15,7 @@
          this device AND depth ≥ 2; Karumbaiah 2018). Past leaves live in localStorage stem-jev-q (code → count), nothing else
    J6 streak signals (log lines only, never sent): "away <s>s via=hide|blur" (back after >= 5 s), "copy stem" (a copy inside the question stem),
    "xmark <choice>" (the student's own X in prove mode), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
+   An open away episode (window blur or tab hide) pauses S2; back after >= 5 s = a fresh step (a shorter blur only paused).
    J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (peek.js
    stemDuck.say, the one seam) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
      budget  one shared budget: P_ONE = the fire chance when one trigger is on; with k of the 3 on, each live state rolls p_k once per
@@ -164,13 +165,15 @@
       if (on) { if (!aw) aw = { at: t, via: kind }; else if (kind === "hide") aw.via = "hide"; return; }
       if (!aw || (kind === "blur" && aw.via === "hide")) return;          // a focus while still hidden is not the return: the show is
       var s = (t - aw.at) / 1000, via = aw.via; aw = null;
-      if (s >= AWAY_S) log("away", Math.round(s) + "s via=" + via);
+      if (s >= AWAY_S) { log("away", Math.round(s) + "s via=" + via); if (q) { q.step = t; q.depth = 0; } }   // back from a real away: a fresh step (a short blur only paused S2)
     }
     /* called on a timer: S2 fires once per depth step; Q once per item; then a nudge may go */
     function tick() {
       if (!q || hidden) return;
       var lim = p75(hist[q.code]), d = Math.floor((now() - q.step) / 1000 / lim);
-      if (d > q.depth) { q.depth = d; if (d > q.deep) q.deep = d; hit("S2", "depth=" + d + " p75=" + lim + "s"); }
+      if (d > q.depth && !aw) {                                          // an open away episode (blur or hide) pauses S2
+        q.depth = d; if (d > q.deep) q.deep = d; hit("S2", "depth=" + d + " p75=" + lim + "s");
+      }
       if (!q.q && qRule()) { q.q = true; hit("Q", q.firstItem && !q.picks.length ? "first item, no pick" : "left before x" + quits[q.code]); }
       nudges();
     }
