@@ -43,6 +43,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <script src="design/explain-box.js" defer></script>
 <script src="graph.js" defer></script>
 <script src="telemetry.js" defer></script><!-- before app.js so window.stemT exists for its hooks; the libraries load after the first question -->
+<script src="copy/nudge-lines.js" defer></script><!-- J5 Cluck nudge lines (data only), read by intent.js -->
 <script src="intent.js" defer></script><!-- Jev J1/J2 log + rule counters, flag ?jev=1 (default off); after telemetry.js: it wraps window.stemT -->
 <script type="module" src="app.js"></script>
 <script type="module" src="nav.js"></script>
