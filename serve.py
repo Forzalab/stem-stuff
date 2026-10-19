@@ -416,7 +416,9 @@ GLOBALS = {"__builtins__": {}, "Integer": S.Integer, "Float": S.Float, "Rational
 
 
 def to_python(src, var):
-    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'."""
+    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'.
+    var: one variable name, or a tuple of names (engine/symbolic.py: several unknowns)."""
+    var = (var,) if isinstance(var, str) else tuple(var)
     s = src.strip().lower().replace("π", "pi").replace("∞", "inf").replace("·", "*").replace("×", "*")
     toks, i = [], 0
     while i < len(s):
@@ -426,7 +428,7 @@ def to_python(src, var):
                 break
             raise ValueError("bad character")
         num, name, op = m.groups()
-        if name and name not in NAMES and name != var:
+        if name and name not in NAMES and name not in var:
             raise ValueError("unknown name " + name)
         kind = "num" if num else "name" if name else op
         text = num or name or ("**" if op == "^" else op)
