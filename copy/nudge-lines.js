@@ -19,7 +19,7 @@ window.__stemNudgeLines = {
     "A hint costs nothing here.",
     "Want a second pair of eyes?",
     "I can show where to look.",
-    "Same wall twice? I can help.",
+    "Fresh eyes help. Mine are free.",
     "Asking is free, by the way.",
     "Want one clue? Just one.",
     "Two heads beat one here."
