@@ -4,7 +4,7 @@ views/prompt/all.md + views/prompt/<recipe>.md (the view-writing prompt, full an
 (gate steps, per-component checker, marks, caps) and the block between the views markers in SCHEMA.md (tables + the
 <!-- schema: views --> JSON Schema for an item's views[]).
 Fails (and --check fails) on: a broken ref; a shipping engine tool engine/ does not serve, or one it serves the registry lacks;
-a banned prop name (look props, F3; answer/key, F5); a string prop with no maxLength or a list with no maxItems (F2, F7).
+a banned prop name (look props, F3); a prop named answer/key that is no key reference (F5); a string prop with no maxLength or a list with no maxItems (F2, F7).
 usage: python3 tools/gen_views.py [--check]   (--check: write nothing, exit 1 if any output is stale)"""
 import json
 import os
@@ -87,7 +87,9 @@ def problems(reg, served=None):
                 out.append(f"{name}: required {r} is no prop")
         for p, s in c["props"].items():
             if p in reg["banned_props"]:
-                out.append(f"{name}.{p}: banned prop name (look = CSS, F3; the answer stays on the server, F5)")
+                out.append(f"{name}.{p}: banned prop name (look = CSS by cascade, F3)")
+            if p in reg["key_props"] and s.get("pattern") != reg["key_ref"]:
+                out.append(f"{name}.{p}: a prop named {p} must be a key reference (pattern {reg['key_ref']}), never a literal (F5)")
             out += schema_problems(reg, f"{name}.{p}", s)
         for p, n in c.get("cluck", {}).items():
             if p not in ("rows", "cols"):
@@ -133,6 +135,8 @@ def ts(s, caps=False):
         return " | ".join(f'"{v}"' for v in s["enum"])
     if "$ref" in s:
         return s["$ref"].removeprefix("#/$defs/")
+    if caps and s.get("pattern", "").startswith("^key\\."):
+        return "key.<id>"
     if "anyOf" in s:
         return "Component"
     t = s.get("type")
@@ -182,8 +186,12 @@ def prompt(reg, recipe=None):
               "- Caps: `string≤N` = at most N characters, `[]≤N` = at most N items. Over a cap the statement is dropped.",
               "- Nothing fits? Draw a `Doodle`. Never send a view with no visual.", "",
               "## Bank refs"]
-    lines += [f"- `{ref}.*`: {d['desc']}. Stages: {', '.join(s for s in d['stages'] if s in stages) or 'none here, never use'}."
-              for ref, d in reg["refs"].items()]
+    for ref, d in reg["refs"].items():
+        here = ", ".join(s for s in d["stages"] if s in stages)
+        server = d.get("server_props")
+        if server and server.split(".")[0] in names:
+            here = (here + "; " if here else "none here, except ") + f"as the {server} reference in any stage (the server resolves it, F5)"
+        lines.append(f"- `{ref}.*`: {d['desc']}. Stages: {here or 'none here, never use'}.")
     lines += ["", "## Engine tools (Query)"] + [f"- `{t}`" for t in tools(reg, live_only=True)]
     lines += ["", "## Components (`?` = optional)"]
     for layer, note in reg["layers"].items():
@@ -199,7 +207,7 @@ def checkers(reg):
             "components": [{"component": n, "checker": c["checker"], "ships": live[c["checker"]]}
                            for n, c in reg["components"].items() if "checker" in c],
             "refs": {ref: d["stages"] for ref, d in reg["refs"].items()},
-            "marks": reg["marks"], "banned_props": reg["banned_props"],
+            "marks": reg["marks"], "banned_props": reg["banned_props"], "key_props": reg["key_props"], "key_ref": reg["key_ref"],
             "cluck_caps": {n: c["cluck"] for n, c in reg["components"].items() if "cluck" in c}}
 
 
@@ -220,7 +228,8 @@ def schema_block(reg):
              "Outputs: `views/library.json` (shipping components only), `views/prompt/*.md`, `views/checkers.json`, this block. "
              "Args show caps: `string≤N` characters, `[]≤N` items. No look props (F3); look = CSS by cascade.", "",
              "Marks (the only state words): " + ", ".join(f"`{m}`" for m in reg["marks"]) + ". Banned prop names: "
-             + ", ".join(f"`{p}`" for p in reg["banned_props"]) + ".", "",
+             + ", ".join(f"`{p}`" for p in reg["banned_props"]) + ". A prop named " + " or ".join(f"`{p}`" for p in reg["key_props"])
+             + f" must be a key reference (`{reg['key_ref']}`), never a literal.", "",
              "| Ref | Allowed stages | What |", "|---|---|---|"]
     lines += [f"| `{r}.*` | {', '.join(d['stages'])} | {d['desc']} |" for r, d in reg["refs"].items()]
     lines += ["", "| Component | Layer | Kind | Ships | Args | Checker |", "|---|---|---|---|---|---|"]

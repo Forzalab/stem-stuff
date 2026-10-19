@@ -262,7 +262,7 @@
         ]
       },
       "Predict": {
-        "description": "Pick an answer; the pick is checked by the server, the page never holds the answer",
+        "description": "Pick an answer; the pick is posted with the answer ref to the server, the page never resolves or draws it",
         "type": "object",
         "properties": {
           "tag": {
@@ -294,11 +294,17 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 3
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 48,
+            "pattern": "^key\\.[A-Za-z0-9_.-]+$"
           }
         },
         "required": [
           "q",
-          "choices"
+          "choices",
+          "answer"
         ]
       },
       "Reveal": {
@@ -735,8 +741,8 @@
       }
     },
     "Predict": {
-      "signature": "Predict(tag?: string, q: string, choices: string[], struck?: string[], tries?: number)",
-      "description": "Pick an answer; the pick is checked by the server, the page never holds the answer",
+      "signature": "Predict(tag?: string, q: string, choices: string[], struck?: string[], tries?: number, answer: string)",
+      "description": "Pick an answer; the pick is posted with the answer ref to the server, the page never resolves or draws it",
       "layer": "L1",
       "kind": "interaction",
       "props": {
@@ -771,11 +777,17 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 3
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 48,
+            "pattern": "^key\\.[A-Za-z0-9_.-]+$"
           }
         },
         "required": [
           "q",
-          "choices"
+          "choices",
+          "answer"
         ]
       }
     },

@@ -118,8 +118,6 @@
     "k3"
   ],
   "banned_props": [
-    "answer",
-    "key",
     "color",
     "colour",
     "size",
@@ -135,6 +133,11 @@
     "theme",
     "variant"
   ],
+  "key_props": [
+    "answer",
+    "key"
+  ],
+  "key_ref": "^key\\.[A-Za-z0-9_.-]+$",
   "cluck_caps": {
     "Table": {
       "rows": 8,

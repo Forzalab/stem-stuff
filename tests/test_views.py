@@ -54,10 +54,23 @@ class Registry(unittest.TestCase):
         self.assertIn("tool graph.new: engine/ serves it but the registry does not list it", bad)
 
     def test_banned_props(self):
-        for name in ("answer", "key", "color", "size", "icon", "style"):
+        for name in ("color", "size", "icon", "style"):
             r = copy.deepcopy(REG)
             r["components"]["Predict"]["props"][name] = {"type": "string", "maxLength": 9}
             self.assertTrue(any(f"Predict.{name}: banned prop name" in line for line in gv.problems(r)), name)
+
+    def test_answer_and_key_are_key_refs_only(self):   # F5: answer=key.<id>, never a literal
+        r = copy.deepcopy(REG)
+        del r["components"]["Predict"]["props"]["answer"]["pattern"]
+        r["components"]["Answer"]["props"]["key"] = {"type": "string", "maxLength": 9}
+        bad = gv.problems(r)
+        self.assertTrue(any(line.startswith("Predict.answer: a prop named answer must be a key reference") for line in bad))
+        self.assertTrue(any(line.startswith("Answer.key: a prop named key must be a key reference") for line in bad))
+        pat = re.compile(REG["key_ref"])
+        for ok in ("key.v1", "key.chi_P", "key.a.b-2"):
+            self.assertTrue(pat.match(ok), ok)
+        for bad in ("3", "key.", "key v1", "given.m", "key.v1 "):
+            self.assertFalse(pat.match(bad), bad)
 
     def test_caps(self):   # F2 / F7: every string has maxLength, every list maxItems, nested too
         r = copy.deepcopy(REG)
@@ -76,7 +89,9 @@ class Registry(unittest.TestCase):
 
     def test_locks(self):
         c = REG["components"]
-        self.assertNotIn("answer", c["Predict"]["props"])                       # F5: the pick goes to /predict
+        self.assertEqual(list(c["Predict"]["props"]), ["tag", "q", "choices", "struck", "tries", "answer"])   # P1.1 @df716ac
+        self.assertEqual(c["Predict"]["required"], ["q", "choices", "answer"])
+        self.assertEqual(c["Predict"]["props"]["answer"]["pattern"], REG["key_ref"])            # F5: a key ref, posted with the pick
         self.assertEqual(list(c["Reveal"]["props"]), ["lock", "body"])          # F4: body = second program
         self.assertIn("Doodle", REG["base"])                                    # VISUAL-FIRST
         for r in REG["recipes"]:
@@ -133,6 +148,9 @@ class Generated(unittest.TestCase):
     def test_pre_prompt_hides_key(self):
         self.assertRegex(gv.prompt(REG, "hint-line"), r"`key\.\*`.*Stages: none here, never use")   # stages pre, wrong
         self.assertRegex(gv.prompt(REG, "answer-table"), r"`key\.\*`.*Stages: post\.")
+        pr = gv.prompt(REG, "predict-reveal")
+        self.assertRegex(pr, r"`key\.\*`.*Stages: post; as the Predict\.answer reference in any stage")
+        self.assertIn("answer: key.<id>)`", pr)
 
     def test_checkers(self):
         ch = gv.checkers(REG)

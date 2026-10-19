@@ -9,14 +9,16 @@
     "L1": "learning components: subject-blind, know data shapes only",
     "L2": "renderers of engine data: every value comes from an engine result"
   },
-  "banned_props": ["answer", "key", "color", "colour", "size", "icon", "style", "class", "className", "bg", "background", "width", "height", "font", "theme", "variant"],
+  "key_props": ["answer", "key"],
+  "key_ref": "^key\\.[A-Za-z0-9_.-]+$",
+  "banned_props": ["color", "colour", "size", "icon", "style", "class", "className", "bg", "background", "width", "height", "font", "theme", "variant"],
   "marks": ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"],
   "doodles": ["duck", "heart", "star", "spark"],
   "refs": {
     "given": {"stages": ["pre", "wrong", "post"], "desc": "item givens (given.m, given.v0)"},
     "fig": {"stages": ["pre", "wrong", "post"], "desc": "item figures (fig0, fig1)"},
     "wrong": {"stages": ["wrong", "post"], "desc": "the picked distractor: wrong.error tag, wrong.text"},
-    "key": {"stages": ["post"], "desc": "hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post"}
+    "key": {"stages": ["post"], "desc": "hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post", "server_props": "Predict.answer"}
   },
   "gate": [
     {"id": "parse", "desc": "statement parses as OpenUI Lang (profile stem: no Mutation, no Action, no timers)"},
@@ -68,10 +70,11 @@
                 "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 5}, "maxItems": 12}}, "required": ["cap"]},
     "Hints": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "A hint ladder: one hint at a time",
       "props": {"hints": {"type": "array", "items": {"type": "string", "maxLength": 200}, "maxItems": 3, "minItems": 1}}, "required": ["hints"]},
-    "Predict": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "Pick an answer; the pick is checked by the server, the page never holds the answer",
+    "Predict": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "Pick an answer; the pick is posted with the answer ref to the server, the page never resolves or draws it",
       "props": {"tag": {"type": "string", "maxLength": 24}, "q": {"type": "string", "maxLength": 140},
                 "choices": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 5, "minItems": 2},
-                "struck": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 4}, "tries": {"type": "integer", "minimum": 1, "maximum": 3}}, "required": ["q", "choices"]},
+                "struck": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 4}, "tries": {"type": "integer", "minimum": 1, "maximum": 3},
+                "answer": {"type": "string", "maxLength": 48, "pattern": "^key\\.[A-Za-z0-9_.-]+$"}}, "required": ["q", "choices", "answer"]},
     "Reveal": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "A visible locked row; its body arrives as a second program when the stage changes",
       "props": {"lock": {"type": "string", "maxLength": 80}, "body": {"type": "array", "items": {"x-any": true}, "maxItems": 4}}, "required": ["lock"]},
     "Answer": {"layer": "L1", "kind": "layout", "ships": "P1.1", "desc": "The boxed answer and one sentence",

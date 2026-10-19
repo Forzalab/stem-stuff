@@ -16,7 +16,7 @@ Recipe: ask a pick, the server marks it, the Reveal body arrives as a patch. Len
 - `given.*`: item givens (given.m, given.v0). Stages: pre, wrong, post.
 - `fig.*`: item figures (fig0, fig1). Stages: pre, wrong, post.
 - `wrong.*`: the picked distractor: wrong.error tag, wrong.text. Stages: wrong, post.
-- `key.*`: hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post. Stages: post.
+- `key.*`: hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post. Stages: post; as the Predict.answer reference in any stage (the server resolves it, F5).
 
 ## Engine tools (Query)
 - `graph.trace`
@@ -36,6 +36,6 @@ Recipe: ask a pick, the server marks it, the Reveal body arrives as a patch. Len
 - `Text(text: string≤400)`: A paragraph; **bold** is the only emphasis
 ### L1: learning components: subject-blind, know data shapes only
 - `Doodle(kind: "duck" | "heart" | "star" | "spark", text?: string≤80)`: A small drawing when nothing else fits (visual first)
-- `Predict(tag?: string≤24, q: string≤140, choices: string≤24[]≤5, struck?: string≤24[]≤4, tries?: number)`: Pick an answer; the pick is checked by the server, the page never holds the answer
+- `Predict(tag?: string≤24, q: string≤140, choices: string≤24[]≤5, struck?: string≤24[]≤4, tries?: number, answer: key.<id>)`: Pick an answer; the pick is posted with the answer ref to the server, the page never resolves or draws it
 - `Reveal(lock: string≤80, body?: Component[]≤4)`: A visible locked row; its body arrives as a second program when the stage changes
 - `Callout(tag: string≤24, text: string≤400)`: A section with a rule and a short tag ("Where it breaks"), never a box
