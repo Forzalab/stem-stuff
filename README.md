@@ -1,5 +1,7 @@
 # stem-stuff
 
+> **Render standard = the OpenUI Lang plan.** Runbook: brain `projects/calc/_files/sprint-render-v2/SPRINT.md` (plan: `projects/calc/topics/openui-render-arch-plan-2026-10-18.md`). No new view/widget format.
+
 A code-gated STEM drill site (CALC1 / PHYS / CSCI26). It's a static page plus a small Python server, `serve.py`.
 
 - **Problems: one file, `problems.json`.** Every problem, answer, wrong answer and hint. Format: `SCHEMA.md` (the only schema).

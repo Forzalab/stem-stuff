@@ -160,6 +160,7 @@
     navigator.serviceWorker.startMessages();
   }
 
+  const TYPED = ["num", "expr", "text"];   // SCHEMA.md part.type
   function validate(p) {
     if (!p || typeof p !== "object" || Array.isArray(p)) return "not a problem file";
     if (typeof p.code !== "string" || !C.isCode(p.code)) return "no problem code";
@@ -169,6 +170,8 @@
   function shapeErr(p) {
     if (typeof p.type !== "string") return "no type";
     if (!Array.isArray(p.body) || !p.body.length || !p.body.every(b => b && typeof b.type === "string")) return "no body";
+    if (p.type === "multi" && !(Array.isArray(p.parts) && p.parts.length && p.parts.every(u => u && TYPED.includes(u.type) && typeof u.answer === "string" && u.answer)))
+      return "bad parts";   // a part with no typed answer can never be graded: "Can't read" on every try
     return null;
   }
 

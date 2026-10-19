@@ -24,6 +24,7 @@ import os
 import random
 import re
 import secrets
+import string
 import socketserver
 import sys
 import threading
@@ -66,6 +67,25 @@ BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
+def unfold(p):
+    """codes.mjs unfold(): a multi with mc parts becomes one mc question per part, code + A, B, C..., the shared body + the part's prompt."""
+    parts = p.get("parts") if p.get("type") == "multi" else None
+    if not isinstance(parts, list) or not any(isinstance(u, dict) and u.get("type") == "mc" for u in parts):
+        return [p]
+    out = []
+    for i, u in enumerate(parts[:26]):
+        q = {k: v for k, v in (u if isinstance(u, dict) else {}).items() if k not in ("label", "prompt")}
+        q["code"] = p["code"] + string.ascii_uppercase[i]
+        if p.get("title"):
+            q["title"] = f"{p['title']} ({(u.get('label') if isinstance(u, dict) else None) or i + 1})"
+        if p.get("source"):
+            q["source"] = p["source"]
+        body = p.get("body") if isinstance(p.get("body"), list) else []
+        q["body"] = body + [{"type": "text", "md": u["prompt"]}] if isinstance(u, dict) and u.get("prompt") else body
+        out.append(q)
+    return out
+
+
 # ---------------- the bank: problems.json + banks/BANK_XXX.json, each re-read when it changes ----------------
 # design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
@@ -87,7 +107,7 @@ def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
-        ps = [p for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
+        ps = [q for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str) for q in unfold(p)]
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
@@ -396,7 +416,9 @@ GLOBALS = {"__builtins__": {}, "Integer": S.Integer, "Float": S.Float, "Rational
 
 
 def to_python(src, var):
-    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'."""
+    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'.
+    var: one variable name, or a tuple of names (engine/symbolic.py: several unknowns)."""
+    var = (var,) if isinstance(var, str) else tuple(var)
     s = src.strip().lower().replace("π", "pi").replace("∞", "inf").replace("·", "*").replace("×", "*")
     toks, i = [], 0
     while i < len(s):
@@ -406,7 +428,7 @@ def to_python(src, var):
                 break
             raise ValueError("bad character")
         num, name, op = m.groups()
-        if name and name not in NAMES and name != var:
+        if name and name not in NAMES and name not in var:
             raise ValueError("unknown name " + name)
         kind = "num" if num else "name" if name else op
         text = num or name or ("**" if op == "^" else op)
@@ -550,6 +572,11 @@ def unit_hit(u, text, sig):
 _tries = {}
 _last = {}                  # sid -> {"bank": BANK_XXX, "at": {BANK_XXX: CODE}}: this browser's last bank and place in each
 _gen = {"n": 0, "loaded": None}
+# (sid, code) -> [[n, reveal 0|1, "<XYZ>..</XYZ>" or "", pick], ...]: every Cluck turn this browser had on that item (wish + chat), oldest first.
+# T62: n counts the turns (REVEAL yes from the 3rd), and the rest is what was sent, so a follow-up replays old turns byte for byte (prompt cache).
+# Rides in the tries blob as "cluck"; the last CLUCK_KEEP turns are kept.
+_cluck_turns = {}
+CLUCK_KEEP = 30
 _tries_lock = threading.Lock()
 
 
@@ -577,6 +604,7 @@ def _load_tries():
         return
     _tries.clear()
     _last.clear()
+    _cluck_turns.clear()
     _gen["n"], _gen["loaded"], _gen["kv_bad"] = 0, TRIES, False
     try:
         if all(KV):
@@ -594,12 +622,20 @@ def _load_tries():
             key = (bits[0], bits[1], int(bits[2])) if len(bits) == 3 else (bits[0], bits[1])
             _tries[key] = {"wrong": [_tup(w) for w in v.get("wrong", [])], "done": bool(v.get("done")), "gen": int(v.get("gen", 0))}
         _last.update({k: v for k, v in data.get("last", {}).items() if isinstance(v, dict) and isinstance(v.get("at"), dict)})
+        for k, v in (data.get("cluck") or {}).items():
+            bits = k.split(" ")
+            if len(bits) == 2 and isinstance(v, list):
+                rows = [r for r in v if isinstance(r, list) and len(r) == 4 and isinstance(r[0], int) and isinstance(r[2], str)]
+                if rows:
+                    _cluck_turns[(bits[0], bits[1])] = rows
     except (OSError, ValueError, AttributeError, TypeError, IndexError):
         pass
 
 
 def _save_tries():
     data = {"gen": _gen["n"], "tries": {" ".join(map(str, k)): st for k, st in _tries.items()}, "last": _last}
+    if _cluck_turns:
+        data["cluck"] = {" ".join(k): rows for k, rows in _cluck_turns.items()}
     if all(KV):
         if _gen.get("kv_bad"):
             print("tries not saved: KV was unreadable on load", file=sys.stderr)
@@ -1041,12 +1077,18 @@ def system_for(base, p):
     return base + "\n" + "Audience: " + aud.strip() + " Plain everyday words; explain a subject word the first time."
 
 
-def explain_stream(p, answer, key, scratch=""):
+def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
     """yields text chunks (Claude: the editor's rewrite in one piece; OpenRouter: streamed), markdown stripped. Raises OSError on a dead
     connection. The NOTE call goes first."""
     n = note(p, answer, None, key, scratch=scratch)
+    v4 = None
+    if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
+        xyz = xyz_block(n)
+        cluck_noted(p, sid, turn[0], xyz)
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz)}], reveal=turn[1], facts=leak_facts(p),
+                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
-                            fig_ctx(p, answer), edit=True)
+                            fig_ctx(p, answer), edit=True, v4=v4)
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -1101,7 +1143,8 @@ CLAUDE_BASE = os.environ.get("CLAUDE_BASE", "https://api.anthropic.com").rstrip(
 # claude-opus-5-5: tools/bench_claude.py (Oct 17, 8 cases): FORMAT adherence opus 8/8, haiku-5-5 7/8, sonnet-5-5 5/8 (adherence first,
 # then first token: opus ~2.5 s vs ~0.6 s, then cost: ~$0.016 vs $0.0004 a reply).
 # Oct 18 re-bench (voice prompt, 216 replies, blind judge): haiku 7.6/7.0 = sonnet, opus 7.8/7.6 at ~55x the cost -> haiku default.
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
+# Oct 18 (T62, Tony): Sonnet 5.5 default with the v4 letter prompt (prompts/cluck-v4.txt): 0 leaks / 0 injections in the edge bench, ~$0.015 a reply.
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5-5")
 CLAUDE_PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0)}   # $/MTok in, out
 # Spend is per billing cycle (Max API credits expire each cycle, no rollover): key stem:claude_usd:YYYY-MM, the month the current cycle
 # started in, counted from CLAUDE_CYCLE_DAY (1-28, default 1, UTC). Each key expires after 40 days, so old cycles clean themselves up.
@@ -1244,14 +1287,14 @@ def claude_system(text, extra=""):
     return blocks + ([{"type": "text", "text": extra}] if extra else [])
 
 
-def _claude_one(system, messages, max_tokens):
+def _claude_one(system, messages, max_tokens, arm="-"):
     """one streamed Claude call (system as given, messages without it); yields text (Plain), holds until the first newline and cuts a
     leading NOTE line. Counts the spend."""
     payload = dict(claude_params(CLAUDE_MODEL, max_tokens), stream=True, system=system, messages=messages)
     req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
                                           "content-type": "application/json"})
-    plain, head, held, used = Plain(), True, "", {"input_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "out": 0}
+    plain, head, held, used = Plain(), True, "", {"input_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "out": 0, "w1h": 0}
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             for raw in r:
@@ -1268,6 +1311,7 @@ def _claude_one(system, messages, max_tokens):
                 if kind == "message_start":
                     u = (ev.get("message") or {}).get("usage") or {}
                     used.update((k, int(u.get(k) or 0)) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+                    used["w1h"] = int((u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens") or 0)   # 1h writes cost 2x (T62 system block)
                 elif kind == "message_delta":
                     used["out"] = int((ev.get("usage") or {}).get("output_tokens") or used["out"])
                 elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
@@ -1290,23 +1334,404 @@ def _claude_one(system, messages, max_tokens):
     finally:
         if any(used.values()):
             claude_add(claude_cost(used))
-            print("claude usage: in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used), file=sys.stderr)
+            print("claude usage: arm=" + arm + " in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used), file=sys.stderr)
 
 
 def claude_cost(used):
     """$ for one call's usage: fresh input at the input price, cache writes at CACHE_WRITE x, reads at CACHE_READ x, output at its own"""
     pi, po = claude_price(CLAUDE_MODEL)
-    return (used["input_tokens"] * pi + used["cache_creation_input_tokens"] * pi * CACHE_WRITE
+    w1h = min(used.get("w1h", 0), used["cache_creation_input_tokens"])
+    return (used["input_tokens"] * pi + (used["cache_creation_input_tokens"] - w1h) * pi * CACHE_WRITE + w1h * pi * 2.0
             + used["cache_read_input_tokens"] * pi * CACHE_READ + used["out"] * po) / 1e6
 
 
-def _cluck_stream(messages, key, max_tokens, fig=None, edit=False):
+# ---------------- Cluck prompt v4 (T62): Tony's letter as the system, the bench's user-turn layout, two arms, server guards ----------------
+# system = prompts/cluck-v4.txt BYTE FOR BYTE (nothing added: no bank line, no figure rule, no CLAUDE_DELTA); the same for every bank and
+# question, so it is one cache entry. Each user turn = [explain_prompt: static per question] + [XYZ note + REMINDER/REVEAL + USER QUERY: dynamic].
+# Arms: half the browsers (a hash of the cookie id) on Claude, half on DeepSeek v4.1 flash via OpenRouter; both get the same request and the
+# same guards, and each arm falls back to the other before any visible text; only if both fail does the old OpenRouter chain answer.
+def _read_prompt_v4():
+    try:
+        with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="") as f:
+            return f.read()
+    except OSError as e:
+        print("prompts/cluck-v4.txt missing:", e, file=sys.stderr)
+        return None
+
+
+PROMPT_V4 = _read_prompt_v4()
+V4_MAX = 700                                 # the bench's max_tokens (the XYZ notes spend some of it)
+WISH_QUERY = "hi cluck <3"                   # the USER QUERY of a first wish (a wrong pick, no student text)
+LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. REVEAL: "
+CLUCK_NUDGE = "quack (｀・ω・´) not yet! look at your slip one more time, the lamp says try again"
+LEAK_GUARD = {"n": 0}                        # replies the leak guard replaced or cut (this process)
+DS_MODEL = "deepseek/deepseek-v4.1-flash"
+# Pinned for prefix caching (one host keeps one cache): a ZDR endpoint of the model with cache-read pricing (GET /api/v1/endpoints/zdr). Others may
+# still answer (allow_fallbacks) but the cache goes cold then. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
+DS_PROVIDER = os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8")
+_INJECT_RE = re.compile(r"reminder\s+from\s+lamp|reveal\s*:|</?xyz\s*>", re.I)
+
+
+def clean_query(text):
+    """the student's words with every "REMINDER FROM LAMP" and "REVEAL:" (and any <XYZ> tag) cut out, case-insensitive; repeated until
+    nothing is left to cut, so "REMINDER FROM REMINDER FROM LAMPLAMP" cannot rebuild one"""
+    text = str(text)
+    while True:
+        t = _INJECT_RE.sub("", text)
+        if t == text:
+            return t.strip()
+        text = t
+
+
+def bank_block(p):
+    """SYSTEM block 2 (per BANK, T62 cache layer 2): the bank's audience line, the same text for every question of the bank and for every
+    student (system_for's own last line). No per-question or per-student text, no timestamp; mood / tone never goes here (block B only)."""
+    prof = _index().get("prof", {}).get(p.get("code")) or {}
+    aud = prof.get("audience")
+    if not isinstance(aud, str) or not aud.strip():
+        return AUDIENCE_LINE
+    return "Audience: " + aud.strip() + " Plain everyday words; explain a subject word the first time."
+
+
+def xyz_block(n):
+    """the hidden NOTE as an <XYZ> block ("" without one)"""
+    b = note_block(n)
+    return "<XYZ>\n" + b[len("\n\nNOTE:\n"):] + "\n</XYZ>" if b else ""
+
+
+def v4_dynamic(xyz, reveal, text):
+    return "\n\n" + (xyz + "\n\n" if xyz else "") + LAMP + ("yes" if reveal else "no") + "\n\nUSER QUERY: " + (clean_query(text) or "...")
+
+
+def v4_user(p, pick, text, reveal, xyz=""):
+    """one user turn as two blocks: [explain_prompt(p, pick)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
+    return [explain_prompt(p, pick), v4_dynamic(xyz, reveal, text)]
+
+
+def v4_chat_turns(p, pick, history, rows):
+    """the messages for a chat follow-up. history: chat_history() (Cluck's box text first, the student last). rows: this item's stored turns
+    (cluck_begin), the newest = this turn. Every earlier user turn is rebuilt from what it was sent with (pick, REVEAL, NOTE) so the request
+    replays byte for byte; only the newest turn carries the new REVEAL / NOTE (rows[-1]). A turn with no stored row (another instance) is
+    rebuilt without a NOTE: a cache miss, never a wrong answer."""
+    users = [t for t in history if t["role"] == "user"]
+    m, out, j = len(users), [], 0
+
+    def row(i):
+        return rows[i] if 0 <= i < len(rows) else None
+    w = row(len(rows) - m - 1)                                            # the wish turn this box came from
+    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "")})
+    for t in history:
+        if t["role"] == "assistant":
+            out.append({"role": "assistant", "content": livefig.strip(t["content"]) or "..."})
+            continue
+        r = row(len(rows) - m + j)
+        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "")})
+        j += 1
+    return out
+
+
+def tries_out(p, sid):
+    """this browser's tries on the item are used up (sugar: state() carries `correct` once a unit is shut out); a multi: every part closed, one out"""
+    st = state(p, sid, reveal=True)
+    if "parts" in st:
+        return all(u["done"] or "correct" in u for u in st["parts"]) and any("correct" in u for u in st["parts"])
+    return "correct" in st
+
+
+def cluck_begin(p, sid, pick):
+    """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
+    counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
+    used up OR this is the 3rd turn or later; else no."""
+    if not v4_on():                                          # the old path counts nothing (and writes nothing)
+        return 0, False
+    out = tries_out(p, sid)
+    key = (sid, p["code"])
+    with _tries_lock:
+        _load_tries()
+        rows = _cluck_turns.setdefault(key, [])
+        n = (rows[-1][0] + 1) if rows else 1
+        reveal = out or n >= 3
+        rows.append([n, int(reveal), "", pick])
+        del rows[:-CLUCK_KEEP]
+        _save_tries()
+    return n, reveal
+
+
+def cluck_noted(p, sid, n, xyz):
+    """the NOTE block this turn was sent with, kept for the byte-for-byte replay; returns the stored rows (newest last)"""
+    with _tries_lock:
+        _load_tries()
+        rows = _cluck_turns.setdefault((sid, p["code"]), [])
+        for r in rows:
+            if r[0] == n:
+                r[2] = xyz
+        _save_tries()
+        return [list(r) for r in rows]
+
+
+def cluck_arm(sid):
+    """"claude" or "deepseek": CLUCK_ARM=claude|deepseek|split (default split); split = a stable hash of the cookie id (the one tries.json
+    uses) mod 2, so a student stays on one provider across every question and turn"""
+    a = os.environ.get("CLUCK_ARM", "split").strip().lower()
+    if a in ("claude", "deepseek"):
+        return a
+    return "deepseek" if int(hashlib.sha256(str(sid).encode()).hexdigest(), 16) % 2 else "claude"
+
+
+def v4_on():
+    """the letter prompt runs when the Claude path is on (CLAUDE_API set) or CLUCK_ARM=deepseek asks for it; with neither, Cluck answers
+    exactly as before T62 (the OpenRouter chain), because an unset CLAUDE_API is Tony's privacy switch (NEEDS TONY: Anthropic retention)"""
+    return PROMPT_V4 is not None and (bool(os.environ.get("CLAUDE_API")) or os.environ.get("CLUCK_ARM", "").strip().lower() == "deepseek")
+
+
+def leak_facts(p):
+    """(correct letters lower-case, answer numbers) the REVEAL-no reply may not say. A number the question or a wrong choice also shows is a
+    given, not a leak, so it is skipped."""
+    letters = set()
+    for u in (p.get("parts") or [p]) if p.get("type") == "multi" else [p]:
+        if u.get("type") == "mc":
+            letters |= {str(x).lower() for x in rights(u)}
+    givens = {n for b in p.get("body", []) if b.get("type") == "text" for n in livefig.nums("\n".join(b["md"]) if isinstance(b.get("md"), list) else b.get("md", ""))}
+    givens |= {n for c in p.get("choices", []) if p.get("type") == "mc" and c["id"] not in rights(p) for n in livefig.nums(c["md"])}
+    vals = [v for v in hidden_values(p) if not any(livefig._eq(v, g) for g in givens)]
+    return letters, vals
+
+
+_PICK_RE = re.compile(r"\b(?:pick|choose|go\s+with|(?:answer|(?:correct|right)\s+(?:one|choice|letter|answer))(?:\s+is|\s*[:=]))\s+((?:\*{1,2})?[A-Za-z](?:\*{1,2})?(?:\s*(?:,|and|&|or)\s*(?:\*{1,2})?[A-Za-z](?:\*{1,2})?)*)(?![A-Za-z0-9'])", re.I)
+_TAIL_RE = re.compile(r"\s*(?:[.,!?;:)(\n*]|$)")
+
+
+def leak_kind(text, facts):
+    """"letter" when the text says "Pick <a correct letter>" ("Pick b and d", "Pick **C**"; also "choose", "go with", "the answer is",
+    "the correct one is", "answer:"), "number" when it says an answer number, else None.
+    A lower-case "a" ("pick a different one") only counts with punctuation after it."""
+    letters, vals = facts
+    for m in _PICK_RE.finditer(text):
+        for tok in re.findall(r"\b[A-Za-z]\b", m.group(1)):
+            if tok.lower() in letters and (tok.isupper() or _TAIL_RE.match(text, m.end())):
+                return "letter"
+    if vals:
+        for n in livefig.nums(text):
+            if any(livefig._eq(n, v) for v in vals):
+                return "number"
+    return None
+
+
+class Xyz:
+    """the <XYZ>...</XYZ> stripper (same idea as livefig.Fence): text passes as it comes, a possible start of a tag at the end of a chunk is HELD until
+    the next chunk shows what it is, a block's contents are never kept, a stray closing tag is dropped, an unclosed block is dropped at the end.
+    Case-insensitive. No partial tag ever comes out."""
+    OPEN, CLOSE = "<xyz>", "</xyz>"
+
+    def __init__(self):
+        self.buf, self.inside = "", False
+
+    def _hold(self, low):
+        for n in range(min(len(low), len(self.CLOSE) - 1), 0, -1):
+            if self.OPEN.startswith(low[-n:]) or self.CLOSE.startswith(low[-n:]):
+                return n
+        return 0
+
+    def feed(self, chunk):
+        self.buf += chunk
+        out = []
+        while self.buf:
+            low = self.buf.lower()
+            if self.inside:
+                j = low.find(self.CLOSE)
+                if j < 0:
+                    self.buf = self.buf[-(len(self.CLOSE) - 1):]            # contents are dropped; keep only a possible half of the close tag
+                    break
+                self.buf, self.inside = self.buf[j + len(self.CLOSE):], False
+                continue
+            i, k = low.find(self.OPEN), low.find(self.CLOSE)
+            if i < 0 and k < 0:
+                h = self._hold(low)
+                out.append(self.buf[:len(self.buf) - h])
+                self.buf = self.buf[len(self.buf) - h:]
+                break
+            if k >= 0 and (i < 0 or k < i):                                 # a closing tag with no opening one: just gone
+                out.append(self.buf[:k])
+                self.buf = self.buf[k + len(self.CLOSE):]
+                continue
+            out.append(self.buf[:i])
+            self.buf, self.inside = self.buf[i + len(self.OPEN):], True
+        return "".join(out)
+
+    def end(self):
+        """an unclosed block, or a cut-off tag start, is dropped; nothing else is left"""
+        self.buf, self.inside = "", False
+        return ""
+
+
+class LeakGuard:
+    """REVEAL no: nothing leaves before it was checked. Complete lines are checked and released one by one; the unfinished last line is held
+    to the end. A line that leaks (or the whole reply, checked once more at the end for a leak split across lines) trips it: the rest is dropped
+    and the caller sends CLUCK_NUDGE. Lines already released were clean; they stay."""
+    def __init__(self, facts):
+        self.facts, self.buf, self.sent, self.kind, self.fenced = facts, "", "", None, False   # fenced: inside a ``` block (a checked figure's JSON)
+
+    def _ok(self, text):
+        self.kind = leak_kind(text, self.facts)
+        return self.kind is None
+
+    def feed(self, text):
+        if self.kind:
+            return ""
+        self.buf += text
+        if "\n" not in self.buf:
+            return ""
+        head, _, self.buf = self.buf.rpartition("\n")
+        out = []
+        for line in (head + "\n").splitlines(True):
+            if line.lstrip().startswith("```"):                    # a figure the gate already checked: its geometry numbers are not the answer
+                self.fenced = not self.fenced
+                out.append(line)
+                continue
+            if self.fenced:
+                out.append(line)
+                continue
+            if not self._ok(line):
+                self.buf = ""
+                break
+            out.append(line)
+        self.sent += "".join(out)
+        return "".join(out)
+
+    def end(self):
+        if self.kind:
+            return ""
+        last, self.buf = self.buf, ""
+        if not self._ok(re.sub(r"```[\s\S]*?```", "", self.sent + last)):
+            return ""
+        self.sent += last
+        return last
+
+
+def v4_visible(chunks, reveal, facts, code="-", fig=None):
+    """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
+    livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), then, with
+    REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so the spend is counted, CLUCK_NUDGE sent). Nothing is yielded
+    for a reply that is only notes (the caller then treats it as empty)."""
+    xyz, fence = Xyz(), livefig.Fence(fig)
+    guard = None if reveal else LeakGuard(facts)
+    sent = False
+    for t in chunks:
+        vis = fence.feed(xyz.feed(t))
+        vis = guard.feed(vis) if guard else vis
+        if vis:
+            sent = True
+            yield vis
+    vis = fence.feed(xyz.end()) + fence.end()
+    if guard:
+        vis = guard.feed(vis) + guard.end()
+    if vis:
+        sent = True
+        yield vis
+    if guard and guard.kind:
+        LEAK_GUARD["n"] += 1
+        print(f"cluck leak_guard {code}: kind={guard.kind} partial={sent} total={LEAK_GUARD['n']}", file=sys.stderr)   # no text
+        yield ("\n" if sent else "") + CLUCK_NUDGE
+
+
+def _v4_claude_chunks(v4, max_tokens):
+    # layer 1: the letter, 1h (~12 visitors a day: 5 min goes cold); layer 2: the bank's audience line; layer 3: the question block of the first
+    # user turn; layer 4: the last assistant turn of a chat. Block B (the dynamic one) is never cached. 4 breakpoints at most.
+    system = [{"type": "text", "text": PROMPT_V4, "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+              {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
+    msgs = []
+    last_asst = max((i for i, m in enumerate(v4["turns"]) if m["role"] == "assistant"), default=-1)
+    for i, m in enumerate(v4["turns"]):
+        if m["role"] == "user":
+            st, dyn = m["content"]
+            blocks = [{"type": "text", "text": st}, {"type": "text", "text": dyn}]
+            if i == 0:
+                blocks[0]["cache_control"] = CACHE               # the question block: 5 min; every follow-up replays it
+            msgs.append({"role": "user", "content": blocks})
+        else:                                                    # always the block form, so a turn looks the same whether or not it is the marked one
+            msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
+    return _claude_one(system, msgs, max_tokens, v4["arm"])
+
+
+def _v4_deepseek_chunks(v4, key, max_tokens):
+    """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
+    msgs = [{"role": "system", "content": PROMPT_V4 + "\n\n" + v4["bank"]}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
+    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
+                   provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
+    plain, usage = Plain(), {}
+    try:
+        with _or_post(payload, key, 25) as r:
+            for raw in r:
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    j = json.loads(data)
+                except ValueError:
+                    continue
+                if isinstance(j.get("usage"), dict):
+                    usage = j["usage"]
+                try:
+                    delta = j["choices"][0]["delta"].get("content") or ""
+                except (KeyError, IndexError, TypeError, AttributeError):
+                    continue
+                text = plain.feed(delta)
+                if text:
+                    yield text
+    finally:
+        if usage:
+            print("deepseek usage: arm=%s in=%s cached=%s out=%s" % (v4["arm"], usage.get("prompt_tokens"),
+                  (usage.get("prompt_tokens_details") or {}).get("cached_tokens"), usage.get("completion_tokens")), file=sys.stderr)
+
+
+def v4_stream(v4, key):
+    """the letter-prompt request on the student's own arm, then the other arm (error, timeout, no budget, empty reply: only while nothing visible
+    went out); text already sent + a failure = the error propagates, no switch. Yields nothing when both fail (the caller runs the old chain).
+    Logs the arm that answered and whether it was a fallback; the sticky arm itself never changes."""
+    if PROMPT_V4 is None:
+        return
+    order = ["claude", "deepseek"] if v4["arm"] == "claude" else ["deepseek", "claude"]
+    for i, name in enumerate(order):
+        if name == "claude" and not claude_ok():
+            print("cluck v4: claude arm off (no key or budget)", file=sys.stderr)
+            continue
+        if name == "deepseek" and not key:
+            continue
+        sent = False
+        try:
+            chunks = _v4_claude_chunks(v4, V4_MAX) if name == "claude" else _v4_deepseek_chunks(v4, key, V4_MAX)
+            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig")):
+                sent = True
+                yield t
+            if sent:
+                print(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}", file=sys.stderr)
+                return
+            print(f"cluck v4: {name} empty reply", file=sys.stderr)
+        except Exception as e:  # noqa: BLE001
+            if sent:
+                raise
+            print(f"cluck v4: {name}: {e}", file=sys.stderr)
+
+
+def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None):
     """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
     fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.rule(fig) and its fences go through the
     gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only).
     edit: a wish: the Claude draft is held whole and EDITOR's rewrite (_edit) goes out instead; nothing reaches the student before
-    it, so a draft that breaks midway still falls back."""
-    if claude_ok():
+    it, so a draft that breaks midway still falls back.
+    v4 (T62): the letter-prompt request (v4_stream); its arms fall back to each other, and only if both fail does `messages` run the old way."""
+    if v4 is not None:
+        sent = False
+        for t in v4_stream(v4, key):
+            sent = True
+            yield t
+        if sent:
+            return
+        fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
+    elif claude_ok():
         said, live, edit, draft = False, fig is not None and livefig.on(), edit and rewrite_on(), []
         gate, budget = livefig.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
         try:
@@ -1348,6 +1773,21 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False):
 FIG_TOKENS = 600                             # room for one figure's JSON on top of the reply
 
 
+def hidden_values(p):
+    """the numbers that ARE the answer (the right choices' numbers, a num / multi / text answer's): a live figure may not show them (fig_ctx)
+    and a REVEAL-no Cluck reply may not say them (leak guard, T62)."""
+    if p.get("type") == "mc":
+        return [n for c in p.get("choices", []) if c["id"] in rights(p) for n in livefig.nums(c["md"])]   # pick all: every right row
+    if p.get("type") == "num":
+        try:
+            return [abs(signature(p, str(p["answer"])))]
+        except (UNREADABLE + (KeyError,)):
+            return livefig.nums(p.get("answer", ""))
+    if p.get("type") == "multi":
+        return [n for u in p.get("parts", []) for n in livefig.nums(u.get("answer", ""))]
+    return livefig.nums(p.get("answer", ""))
+
+
 def fig_ctx(p, answer, chat=False):
     """the livefig.Ctx for this reply (Tony, Oct 17: on the Claude path live figures are Cluck's mainstay, every wish and chat reply
     may carry one; this replaces invariant 1's "gaps only" there), None with CLUCK_LIVE_FIGS=0. An authored bank figure stays on
@@ -1358,17 +1798,7 @@ def fig_ctx(p, answer, chat=False):
     body = "\n".join("\n".join(m) if isinstance(m, list) else str(m) for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))
     choices = " ".join(c["md"] for c in shown(p) if not c.get("lock")) if p.get("type") == "mc" else ""
     sheet = " ".join(f["tex"] for f in formulas(p.get("code"), sg.get("part")))
-    if p.get("type") == "mc":
-        hidden_vals = [n for c in p.get("choices", []) if c["id"] in rights(p) for n in livefig.nums(c["md"])]   # pick all: every right row
-    elif p.get("type") == "num":
-        try:
-            hidden_vals = [abs(signature(p, str(p["answer"])))]
-        except (UNREADABLE + (KeyError,)):
-            hidden_vals = livefig.nums(p.get("answer", ""))
-    elif p.get("type") == "multi":
-        hidden_vals = [n for u in p.get("parts", []) for n in livefig.nums(u.get("answer", ""))]
-    else:
-        hidden_vals = livefig.nums(p.get("answer", ""))
+    hidden_vals = hidden_values(p)
     nets = " ".join(network_data(b) for b in p.get("body", []) if b.get("type") == "graph")   # edge weights are givens
     subject = (_index().get("prof", {}).get(p.get("code")) or {}).get("subject")   # the kinds a figure may be (fail closed)
     return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets, subject, livefig.vertices(p.get("body", [])),
@@ -1418,7 +1848,8 @@ def explain(cookie_header, body):
         return 503, head, iter([b""])
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
-    return 200, head, _relay(p, lambda: explain_stream(p, b.get("answer"), key, b.get("scratch")), "explain")
+    turn = cluck_begin(p, sid, b.get("answer"))
+    return 200, head, _relay(p, lambda: explain_stream(p, b.get("answer"), key, b.get("scratch"), sid, turn), "explain")
 
 
 # ---------------- Cluck chat (handoff 2026-10-04): follow-up questions under the genie box, CHAT_TURNS per problem per browser ----------------
@@ -1582,6 +2013,7 @@ def chat(cookie_header, body):
         with _asked_lock:
             _chats[k] -= 1
         return 429, dict(head, **{"Content-Type": "application/json"}), iter([b'{"error": "hourly"}'])
+    turn = cluck_begin(p, sid, b.get("answer"))              # T62: this browser's turn on the item (REVEAL: yes from the 3rd)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
         n = note(p, b.get("answer"), history[-1]["content"], key, tag, b.get("scratch"))
@@ -1591,7 +2023,12 @@ def chat(cookie_header, body):
         context = [{"role": "system", "content": system_for(CLUCK_CHAT, p)}, {"role": "user", "content": explain_prompt(p, b.get("answer"))}]
         turns = [dict(t, content=wrap(t["content"], tag)) if t["role"] == "user" else dict(t, content=livefig.strip(t["content"]) or "...") for t in history]
         turns[-1] = dict(turns[-1], content=turns[-1]["content"] + note_block(n))   # static first, the NOTE last: the prompt cache keeps the head
-        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True))
+        v4 = None
+        if v4_on():
+            rows = cluck_noted(p, sid, turn[0], xyz_block(n))
+            v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p), code=p["code"], arm=cluck_arm(sid),
+                      bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True))
+        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4)
     return 200, head, _relay(p, chunks, "chat")
 
 

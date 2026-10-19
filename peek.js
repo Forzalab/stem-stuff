@@ -112,4 +112,25 @@
     arm(wait());
   });
   arm(wait());
+
+  /* ---------- 3. say: Jev's Cluck nudge (J5 Tier 0, intent.js, the one seam) ----------
+     The same rise, carrying Jev's line. Jev decides when; this only checks the screen: the idle peek's rules (ok()) and no duck up now.
+     A tap = the idle peek's tap (stemIdleTap) + o.onTap; any other input puts it away = o.onAway (Jev doubles its back-off). It never
+     touches the idle / wrong-answer timers above. Returns true when it showed. */
+  var said = null;
+  function say(line, o) {
+    o = o || {};
+    if (!line || document.visibilityState === "hidden" || up() || !ok()) return false;
+    var me = said = { onAway: o.onAway };
+    rise({ line: line, label: "Cluck: " + line,
+      onTap: function () { if (said === me) said = null; if (o.onTap) o.onTap(); if (window.stemIdleTap) window.stemIdleTap(); } });
+    return true;
+  }
+  function sayAway(e) {
+    if (!said || (box && e && e.target && box.contains(e.target))) return;
+    var f = said.onAway; said = null; down(); if (f) f();
+  }
+  ["pointerdown", "keydown", "wheel", "touchstart", "input"].forEach(function (k) { document.addEventListener(k, sayAway, opt); });
+  addEventListener("drill:bank", function () { if (said) { said = null; down(); } });
+  window.stemDuck.say = say;
 })();

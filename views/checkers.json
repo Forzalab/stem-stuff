@@ -1,0 +1,146 @@
+{
+  "version": "0.2.0",
+  "gate": [
+    {
+      "id": "parse",
+      "desc": "statement parses as OpenUI Lang (profile stem: no Mutation, no Action, no timers)"
+    },
+    {
+      "id": "schema",
+      "desc": "component exists in this library; args match its props, caps included (over a cap: drop, log too-long)"
+    },
+    {
+      "id": "query",
+      "desc": "Query tool exists in the engine list; runs SERVER side; the browser gets results only"
+    },
+    {
+      "id": "checker",
+      "desc": "domain component: its checker re-runs the engine and compares"
+    },
+    {
+      "id": "leak",
+      "desc": "no key ref and no literal equal to a hidden value outside post; a Reveal body is a second program"
+    },
+    {
+      "id": "stage",
+      "desc": "recipe allows this stage; refs allowed in this stage"
+    },
+    {
+      "id": "marks",
+      "desc": "every state word in nodes / edges / marks / Legend items is one of marks"
+    },
+    {
+      "id": "one-stepper",
+      "desc": "at most one Steps or Compare per root; one figure per Steps"
+    },
+    {
+      "id": "copy",
+      "desc": "no string holds a hex colour, px, an emoji, or an all-caps word over 3 letters that is no code"
+    }
+  ],
+  "components": [
+    {
+      "component": "Math",
+      "checker": "symbolic.simplify",
+      "ships": "P0.3"
+    },
+    {
+      "component": "MatchQuiz",
+      "checker": "text.term_cards",
+      "ships": "planned"
+    },
+    {
+      "component": "ITable",
+      "checker": "logic.truth_table",
+      "ships": "planned"
+    },
+    {
+      "component": "Graph",
+      "checker": "graph.trace",
+      "ships": "P0.3"
+    },
+    {
+      "component": "FlowNet",
+      "checker": "graph.maxflow",
+      "ships": "P0.3"
+    },
+    {
+      "component": "Plot",
+      "checker": "numeric.sample",
+      "ships": "planned"
+    },
+    {
+      "component": "Riemann",
+      "checker": "numeric.riemann",
+      "ships": "planned"
+    },
+    {
+      "component": "FBD",
+      "checker": "vectors.resolve",
+      "ships": "planned"
+    },
+    {
+      "component": "Timeline",
+      "checker": "sequence.timeline",
+      "ships": "planned"
+    }
+  ],
+  "refs": {
+    "given": [
+      "pre",
+      "wrong",
+      "post"
+    ],
+    "fig": [
+      "pre",
+      "wrong",
+      "post"
+    ],
+    "wrong": [
+      "wrong",
+      "post"
+    ],
+    "key": [
+      "post"
+    ]
+  },
+  "marks": [
+    "cur",
+    "done",
+    "front",
+    "rec",
+    "idle",
+    "tree",
+    "seen",
+    "skip",
+    "k1",
+    "k2",
+    "k3"
+  ],
+  "banned_props": [
+    "color",
+    "colour",
+    "size",
+    "icon",
+    "style",
+    "class",
+    "className",
+    "bg",
+    "background",
+    "width",
+    "height",
+    "font",
+    "theme",
+    "variant"
+  ],
+  "key_ref_props": [
+    "Predict.answer"
+  ],
+  "key_ref": "^key\\.[A-Za-z0-9_.-]+$",
+  "cluck_caps": {
+    "Table": {
+      "rows": 8,
+      "cols": 4
+    }
+  }
+}
