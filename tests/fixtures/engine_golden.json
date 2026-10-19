@@ -1,0 +1,2864 @@
+{
+ "cases": {
+  "coloring C5": {
+   "chromatic": 3,
+   "colors": {
+    "A": 1,
+    "B": 2,
+    "C": 1,
+    "D": 2,
+    "E": 3
+   }
+  },
+  "coloring K33": {
+   "chromatic": 2,
+   "colors": {
+    "A": 1,
+    "B": 1,
+    "C": 1,
+    "X": 2,
+    "Y": 2,
+    "Z": 2
+   }
+  },
+  "coloring petersen": {
+   "chromatic": 3,
+   "colors": {
+    "A": 1,
+    "B": 2,
+    "C": 1,
+    "D": 2,
+    "E": 3,
+    "F": 2,
+    "G": 1,
+    "H": 3,
+    "I": 3,
+    "J": 2
+   }
+  },
+  "derivative product": {
+   "latex": "x^{2} \\left(x \\cos{\\left(x \\right)} + 3 \\sin{\\left(x \\right)}\\right)",
+   "text": "x^2*(x*cos(x) + 3*sin(x))"
+  },
+  "derivative second": {
+   "latex": "4 e^{2 t}",
+   "text": "4*exp(2*t)"
+  },
+  "integrate definite": {
+   "result": {
+    "latex": "\\frac{\\pi}{4}",
+    "text": "pi/4"
+   },
+   "steps": [
+    {
+     "integrand": "\\frac{1}{x^{2} + 1}",
+     "rule": "Arctan"
+    }
+   ]
+  },
+  "integrate parts": {
+   "result": {
+    "latex": "\\left(x - 1\\right) e^{x}",
+    "text": "(x - 1)*exp(x)"
+   },
+   "steps": [
+    {
+     "integrand": "x e^{x}",
+     "rule": "Parts"
+    },
+    {
+     "integrand": "e^{x}",
+     "rule": "Exp"
+    },
+    {
+     "integrand": "e^{x}",
+     "rule": "Exp"
+    }
+   ]
+  },
+  "integrate u-sub": {
+   "result": {
+    "latex": "\\sin{\\left(x^{2} \\right)}",
+    "text": "sin(x^2)"
+   },
+   "steps": [
+    {
+     "integrand": "2 x \\cos{\\left(x^{2} \\right)}",
+     "rule": "ConstantTimes"
+    },
+    {
+     "integrand": "x \\cos{\\left(x^{2} \\right)}",
+     "rule": "Substitution"
+    },
+    {
+     "integrand": "\\frac{\\cos{\\left(u \\right)}}{2}",
+     "rule": "ConstantTimes"
+    },
+    {
+     "integrand": "\\cos{\\left(u \\right)}",
+     "rule": "Cos"
+    }
+   ]
+  },
+  "maxflow CEG undirected": {
+   "cut": [
+    "A"
+   ],
+   "cut_edges": [
+    "A-B"
+   ],
+   "flow": {
+    "A-B": 8,
+    "B-C": 0,
+    "B-D": 0,
+    "B-F": 0,
+    "B-I": 8,
+    "C-D": 0,
+    "D-E": 0,
+    "E-F": 0,
+    "F-G": 0,
+    "F-I": 0,
+    "G-H": 3,
+    "G-I": -3,
+    "H-I": -5
+   },
+   "value": 8
+  },
+  "maxflow textbook": {
+   "cut": [
+    "s",
+    "a",
+    "b"
+   ],
+   "cut_edges": [
+    "a-t",
+    "b-t"
+   ],
+   "flow": {
+    "a-b": 5,
+    "a-t": 5,
+    "b-t": 10,
+    "s-a": 10,
+    "s-b": 5
+   },
+   "value": 15
+  },
+  "mst CEG": {
+   "connected": true,
+   "edges": [
+    "A-B",
+    "B-C",
+    "B-I",
+    "D-E",
+    "E-F",
+    "F-G",
+    "G-H",
+    "H-I"
+   ],
+   "total": 55,
+   "unique": false
+  },
+  "mst parallel": {
+   "connected": true,
+   "edges": [
+    "A-B#2",
+    "B-C"
+   ],
+   "total": 3,
+   "unique": true
+  },
+  "mst split": {
+   "connected": false,
+   "edges": [
+    "A-B",
+    "C-D"
+   ],
+   "total": 3,
+   "unique": true
+  },
+  "series geometric": {
+   "term_limit": {
+    "latex": "0",
+    "text": "0"
+   },
+   "verdict": "converges"
+  },
+  "series harmonic": {
+   "term_limit": {
+    "latex": "0",
+    "text": "0"
+   },
+   "verdict": "diverges"
+  },
+  "series p2": {
+   "term_limit": {
+    "latex": "0",
+    "text": "0"
+   },
+   "verdict": "converges"
+  },
+  "simplify rational": {
+   "latex": "x + 1",
+   "text": "x + 1"
+  },
+  "simplify trig": {
+   "latex": "2 t + 1",
+   "text": "2*t + 1"
+  },
+  "solve quadratic": {
+   "solutions": [
+    {
+     "x": {
+      "latex": "-2",
+      "text": "-2"
+     }
+    },
+    {
+     "x": {
+      "latex": "2",
+      "text": "2"
+     }
+    }
+   ]
+  },
+  "solve system": {
+   "solutions": [
+    {
+     "x": {
+      "latex": "2",
+      "text": "2"
+     },
+     "y": {
+      "latex": "1",
+      "text": "1"
+     }
+    }
+   ]
+  },
+  "trace bfs petersen": {
+   "algo": "bfs",
+   "legend": [
+    {
+     "label": "visited",
+     "state": "done"
+    },
+    {
+     "label": "in queue",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "0"
+    ],
+    [
+     "B",
+     "1"
+    ],
+    [
+     "E",
+     "1"
+    ],
+    [
+     "F",
+     "1"
+    ],
+    [
+     "C",
+     "2"
+    ],
+    [
+     "G",
+     "2"
+    ],
+    [
+     "D",
+     "2"
+    ],
+    [
+     "J",
+     "2"
+    ],
+    [
+     "H",
+     "2"
+    ],
+    [
+     "I",
+     "2"
+    ]
+   ],
+   "panel": "Depth",
+   "stages": [
+    {
+     "cap": "Visit $A$ (depth $0$). Queue: $B$, $E$, $F$.",
+     "edges": {
+      "A-B": "seen",
+      "A-F": "seen",
+      "E-A": "seen"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "front",
+      "E": "front",
+      "F": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "E": "1",
+      "F": "1"
+     }
+    },
+    {
+     "cap": "Visit $B$ (depth $1$). Queue: $E$, $F$, $C$, $G$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "seen",
+      "B-C": "seen",
+      "B-G": "seen",
+      "E-A": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur",
+      "C": "front",
+      "E": "front",
+      "F": "front",
+      "G": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2"
+     }
+    },
+    {
+     "cap": "Visit $E$ (depth $1$). Queue: $F$, $C$, $G$, $D$, $J$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "seen",
+      "B-C": "seen",
+      "B-G": "seen",
+      "D-E": "seen",
+      "E-A": "tree",
+      "E-J": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "front",
+      "D": "front",
+      "E": "cur",
+      "F": "front",
+      "G": "front",
+      "J": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $F$ (depth $1$). Queue: $C$, $G$, $D$, $J$, $H$, $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "seen",
+      "B-G": "seen",
+      "D-E": "seen",
+      "E-A": "tree",
+      "E-J": "seen",
+      "F-H": "seen",
+      "I-F": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "front",
+      "D": "front",
+      "E": "done",
+      "F": "cur",
+      "G": "front",
+      "H": "front",
+      "I": "front",
+      "J": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $C$ (depth $2$). Queue: $G$, $D$, $J$, $H$, $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "seen",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "seen",
+      "E-A": "tree",
+      "E-J": "seen",
+      "F-H": "seen",
+      "I-F": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "cur",
+      "D": "front",
+      "E": "done",
+      "F": "done",
+      "G": "front",
+      "H": "front",
+      "I": "front",
+      "J": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $G$ (depth $2$). Queue: $D$, $J$, $H$, $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "tree",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "seen",
+      "E-A": "tree",
+      "E-J": "seen",
+      "F-H": "seen",
+      "G-I": "skip",
+      "I-F": "seen",
+      "J-G": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "front",
+      "E": "done",
+      "F": "done",
+      "G": "cur",
+      "H": "front",
+      "I": "front",
+      "J": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ],
+      [
+       "G",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $D$ (depth $2$). Queue: $J$, $H$, $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "tree",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "tree",
+      "D-I": "skip",
+      "E-A": "tree",
+      "E-J": "seen",
+      "F-H": "seen",
+      "G-I": "skip",
+      "I-F": "seen",
+      "J-G": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "cur",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "front",
+      "I": "front",
+      "J": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ],
+      [
+       "G",
+       "2"
+      ],
+      [
+       "D",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $J$ (depth $2$). Queue: $H$, $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "tree",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "tree",
+      "D-I": "skip",
+      "E-A": "tree",
+      "E-J": "tree",
+      "F-H": "seen",
+      "G-I": "skip",
+      "H-J": "skip",
+      "I-F": "seen",
+      "J-G": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "front",
+      "I": "front",
+      "J": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ],
+      [
+       "G",
+       "2"
+      ],
+      [
+       "D",
+       "2"
+      ],
+      [
+       "J",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $H$ (depth $2$). Queue: $I$.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "tree",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "tree",
+      "D-I": "skip",
+      "E-A": "tree",
+      "E-J": "tree",
+      "F-H": "tree",
+      "G-I": "skip",
+      "H-J": "skip",
+      "I-F": "seen",
+      "J-G": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "cur",
+      "I": "front",
+      "J": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ],
+      [
+       "G",
+       "2"
+      ],
+      [
+       "D",
+       "2"
+      ],
+      [
+       "J",
+       "2"
+      ],
+      [
+       "H",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    },
+    {
+     "cap": "Visit $I$ (depth $2$). Queue: empty.",
+     "edges": {
+      "A-B": "tree",
+      "A-F": "tree",
+      "B-C": "tree",
+      "B-G": "tree",
+      "C-D": "skip",
+      "C-H": "skip",
+      "D-E": "tree",
+      "D-I": "skip",
+      "E-A": "tree",
+      "E-J": "tree",
+      "F-H": "tree",
+      "G-I": "skip",
+      "H-J": "skip",
+      "I-F": "tree",
+      "J-G": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "done",
+      "I": "cur",
+      "J": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ],
+      [
+       "E",
+       "1"
+      ],
+      [
+       "F",
+       "1"
+      ],
+      [
+       "C",
+       "2"
+      ],
+      [
+       "G",
+       "2"
+      ],
+      [
+       "D",
+       "2"
+      ],
+      [
+       "J",
+       "2"
+      ],
+      [
+       "H",
+       "2"
+      ],
+      [
+       "I",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1",
+      "C": "2",
+      "D": "2",
+      "E": "1",
+      "F": "1",
+      "G": "2",
+      "H": "2",
+      "I": "2",
+      "J": "2"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [],
+   "title": "BFS from A"
+  },
+  "trace dfs CEG": {
+   "algo": "dfs",
+   "legend": [
+    {
+     "label": "visited",
+     "state": "done"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "1"
+    ],
+    [
+     "B",
+     "2"
+    ],
+    [
+     "C",
+     "3"
+    ],
+    [
+     "D",
+     "4"
+    ],
+    [
+     "E",
+     "5"
+    ],
+    [
+     "F",
+     "6"
+    ],
+    [
+     "G",
+     "7"
+    ],
+    [
+     "H",
+     "8"
+    ],
+    [
+     "I",
+     "9"
+    ]
+   ],
+   "panel": "Visit order",
+   "stages": [
+    {
+     "cap": "Visit $A$ (#1).",
+     "edges": {},
+     "nodes": {
+      "A": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ]
+     ],
+     "tags": {
+      "A": "1"
+     }
+    },
+    {
+     "cap": "Visit $B$ (#2) by edge $A-B$.",
+     "edges": {
+      "A-B": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2"
+     }
+    },
+    {
+     "cap": "Visit $C$ (#3) by edge $B-C$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3"
+     }
+    },
+    {
+     "cap": "Visit $D$ (#4) by edge $C-D$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "C-D": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4"
+     }
+    },
+    {
+     "cap": "Visit $E$ (#5) by edge $D-E$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "C-D": "tree",
+      "D-E": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ],
+      [
+       "E",
+       "5"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4",
+      "E": "5"
+     }
+    },
+    {
+     "cap": "Visit $F$ (#6) by edge $E-F$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ],
+      [
+       "E",
+       "5"
+      ],
+      [
+       "F",
+       "6"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4",
+      "E": "5",
+      "F": "6"
+     }
+    },
+    {
+     "cap": "Visit $G$ (#7) by edge $F-G$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ],
+      [
+       "E",
+       "5"
+      ],
+      [
+       "F",
+       "6"
+      ],
+      [
+       "G",
+       "7"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4",
+      "E": "5",
+      "F": "6",
+      "G": "7"
+     }
+    },
+    {
+     "cap": "Visit $H$ (#8) by edge $G-H$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree",
+      "G-H": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ],
+      [
+       "E",
+       "5"
+      ],
+      [
+       "F",
+       "6"
+      ],
+      [
+       "G",
+       "7"
+      ],
+      [
+       "H",
+       "8"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4",
+      "E": "5",
+      "F": "6",
+      "G": "7",
+      "H": "8"
+     }
+    },
+    {
+     "cap": "Visit $I$ (#9) by edge $H-I$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree",
+      "G-H": "tree",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "done",
+      "I": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "1"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ],
+      [
+       "D",
+       "4"
+      ],
+      [
+       "E",
+       "5"
+      ],
+      [
+       "F",
+       "6"
+      ],
+      [
+       "G",
+       "7"
+      ],
+      [
+       "H",
+       "8"
+      ],
+      [
+       "I",
+       "9"
+      ]
+     ],
+     "tags": {
+      "A": "1",
+      "B": "2",
+      "C": "3",
+      "D": "4",
+      "E": "5",
+      "F": "6",
+      "G": "7",
+      "H": "8",
+      "I": "9"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [],
+   "title": "DFS from A"
+  },
+  "trace dijkstra CEG": {
+   "algo": "dijkstra",
+   "legend": [
+    {
+     "label": "locked",
+     "state": "done"
+    },
+    {
+     "label": "checked",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "0"
+    ],
+    [
+     "B",
+     "8"
+    ],
+    [
+     "C",
+     "15"
+    ],
+    [
+     "I",
+     "18"
+    ],
+    [
+     "D",
+     "22"
+    ],
+    [
+     "H",
+     "23"
+    ],
+    [
+     "F",
+     "28"
+    ],
+    [
+     "G",
+     "28"
+    ],
+    [
+     "E",
+     "30"
+    ]
+   ],
+   "panel": "Finalized distances",
+   "stages": [
+    {
+     "cap": "Start. $d(A)=0$. Lock $A$. Update $B$ to $8$.",
+     "edges": {
+      "A-B": "seen"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8"
+     }
+    },
+    {
+     "cap": "Lock $B$ ($8$). Update $C$ to $15$, $D$ to $22$, $F$ to $28$, $I$ to $18$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "seen",
+      "B-D": "seen",
+      "B-F": "seen",
+      "B-I": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur",
+      "C": "front",
+      "D": "front",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "F": "28",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $C$ ($15$). $D$ keeps $22$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "seen",
+      "B-F": "seen",
+      "B-I": "seen",
+      "C-D": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "cur",
+      "D": "front",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "F": "28",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $I$ ($18$). Update $G$ to $30$, $H$ to $23$. $F$ keeps $28$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "seen",
+      "B-F": "seen",
+      "B-I": "tree",
+      "C-D": "skip",
+      "F-I": "skip",
+      "G-I": "seen",
+      "H-I": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "front",
+      "F": "front",
+      "G": "front",
+      "H": "front",
+      "I": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "F": "28",
+      "G": "30",
+      "H": "23",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $D$ ($22$). Update $E$ to $30$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "tree",
+      "B-F": "seen",
+      "B-I": "tree",
+      "C-D": "skip",
+      "D-E": "seen",
+      "F-I": "skip",
+      "G-I": "seen",
+      "H-I": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "cur",
+      "E": "front",
+      "F": "front",
+      "G": "front",
+      "H": "front",
+      "I": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ],
+      [
+       "D",
+       "22"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "E": "30",
+      "F": "28",
+      "G": "30",
+      "H": "23",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $H$ ($23$). Update $G$ to $28$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "tree",
+      "B-F": "seen",
+      "B-I": "tree",
+      "C-D": "skip",
+      "D-E": "seen",
+      "F-I": "skip",
+      "G-H": "seen",
+      "G-I": "skip",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "front",
+      "F": "front",
+      "G": "front",
+      "H": "cur",
+      "I": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ],
+      [
+       "D",
+       "22"
+      ],
+      [
+       "H",
+       "23"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "E": "30",
+      "F": "28",
+      "G": "28",
+      "H": "23",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $F$ ($28$). $E$ keeps $30$, $G$ keeps $28$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "tree",
+      "B-F": "tree",
+      "B-I": "tree",
+      "C-D": "skip",
+      "D-E": "seen",
+      "E-F": "skip",
+      "F-G": "skip",
+      "F-I": "skip",
+      "G-H": "seen",
+      "G-I": "skip",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "front",
+      "F": "cur",
+      "G": "front",
+      "H": "done",
+      "I": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ],
+      [
+       "D",
+       "22"
+      ],
+      [
+       "H",
+       "23"
+      ],
+      [
+       "F",
+       "28"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "E": "30",
+      "F": "28",
+      "G": "28",
+      "H": "23",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $G$ ($28$).",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "tree",
+      "B-F": "tree",
+      "B-I": "tree",
+      "C-D": "skip",
+      "D-E": "seen",
+      "E-F": "skip",
+      "F-G": "skip",
+      "F-I": "skip",
+      "G-H": "tree",
+      "G-I": "skip",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "front",
+      "F": "done",
+      "G": "cur",
+      "H": "done",
+      "I": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ],
+      [
+       "D",
+       "22"
+      ],
+      [
+       "H",
+       "23"
+      ],
+      [
+       "F",
+       "28"
+      ],
+      [
+       "G",
+       "28"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "E": "30",
+      "F": "28",
+      "G": "28",
+      "H": "23",
+      "I": "18"
+     }
+    },
+    {
+     "cap": "Lock $E$ ($30$).",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "tree",
+      "B-F": "tree",
+      "B-I": "tree",
+      "C-D": "skip",
+      "D-E": "tree",
+      "E-F": "skip",
+      "F-G": "skip",
+      "F-I": "skip",
+      "G-H": "tree",
+      "G-I": "skip",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "cur",
+      "F": "done",
+      "G": "done",
+      "H": "done",
+      "I": "done"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "15"
+      ],
+      [
+       "I",
+       "18"
+      ],
+      [
+       "D",
+       "22"
+      ],
+      [
+       "H",
+       "23"
+      ],
+      [
+       "F",
+       "28"
+      ],
+      [
+       "G",
+       "28"
+      ],
+      [
+       "E",
+       "30"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "15",
+      "D": "22",
+      "E": "30",
+      "F": "28",
+      "G": "28",
+      "H": "23",
+      "I": "18"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [
+    [
+     "F",
+     "G"
+    ]
+   ],
+   "title": "Dijkstra from A"
+  },
+  "trace dijkstra directed": {
+   "algo": "dijkstra",
+   "legend": [
+    {
+     "label": "locked",
+     "state": "done"
+    },
+    {
+     "label": "checked",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "S",
+     "0"
+    ],
+    [
+     "B",
+     "2"
+    ],
+    [
+     "A",
+     "3"
+    ],
+    [
+     "T",
+     "6"
+    ]
+   ],
+   "panel": "Finalized distances",
+   "stages": [
+    {
+     "cap": "Start. $d(S)=0$. Lock $S$. Update $A$ to $4$, $B$ to $2$.",
+     "edges": {
+      "S-A": "seen",
+      "S-B": "seen"
+     },
+     "nodes": {
+      "A": "front",
+      "B": "front",
+      "S": "cur"
+     },
+     "rows": [
+      [
+       "S",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "4",
+      "B": "2",
+      "S": "0"
+     }
+    },
+    {
+     "cap": "Lock $B$ ($2$). Update $A$ to $3$, $T$ to $8$.",
+     "edges": {
+      "B-A": "seen",
+      "B-T": "seen",
+      "S-A": "skip",
+      "S-B": "tree"
+     },
+     "nodes": {
+      "A": "front",
+      "B": "cur",
+      "S": "done",
+      "T": "front"
+     },
+     "rows": [
+      [
+       "S",
+       "0"
+      ],
+      [
+       "B",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "3",
+      "B": "2",
+      "S": "0",
+      "T": "8"
+     }
+    },
+    {
+     "cap": "Lock $A$ ($3$). Update $T$ to $6$.",
+     "edges": {
+      "A-T": "seen",
+      "B-A": "tree",
+      "B-T": "skip",
+      "S-A": "skip",
+      "S-B": "tree"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "done",
+      "S": "done",
+      "T": "front"
+     },
+     "rows": [
+      [
+       "S",
+       "0"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "A",
+       "3"
+      ]
+     ],
+     "tags": {
+      "A": "3",
+      "B": "2",
+      "S": "0",
+      "T": "6"
+     }
+    },
+    {
+     "cap": "Lock $T$ ($6$).",
+     "edges": {
+      "A-T": "tree",
+      "B-A": "tree",
+      "B-T": "skip",
+      "S-A": "skip",
+      "S-B": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "S": "done",
+      "T": "cur"
+     },
+     "rows": [
+      [
+       "S",
+       "0"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "A",
+       "3"
+      ],
+      [
+       "T",
+       "6"
+      ]
+     ],
+     "tags": {
+      "A": "3",
+      "B": "2",
+      "S": "0",
+      "T": "6"
+     }
+    }
+   ],
+   "start": "S",
+   "ties": [],
+   "title": "Dijkstra from S"
+  },
+  "trace dijkstra parallel": {
+   "algo": "dijkstra",
+   "legend": [
+    {
+     "label": "locked",
+     "state": "done"
+    },
+    {
+     "label": "checked",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "0"
+    ],
+    [
+     "B",
+     "2"
+    ],
+    [
+     "C",
+     "3"
+    ]
+   ],
+   "panel": "Finalized distances",
+   "stages": [
+    {
+     "cap": "Start. $d(A)=0$. Lock $A$. Update $B$ to $5$, $B$ to $2$, $C$ to $4$.",
+     "edges": {
+      "A-B": "skip",
+      "A-B#2": "seen",
+      "A-C": "seen"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "front",
+      "C": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "2",
+      "C": "4"
+     }
+    },
+    {
+     "cap": "Lock $B$ ($2$). Update $C$ to $3$.",
+     "edges": {
+      "A-B": "skip",
+      "A-B#2": "tree",
+      "A-C": "skip",
+      "B-C": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur",
+      "C": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "2"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "2",
+      "C": "3"
+     }
+    },
+    {
+     "cap": "Lock $C$ ($3$).",
+     "edges": {
+      "A-B": "skip",
+      "A-B#2": "tree",
+      "A-C": "skip",
+      "B-C": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "2"
+      ],
+      [
+       "C",
+       "3"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "2",
+      "C": "3"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [],
+   "title": "Dijkstra from A"
+  },
+  "trace prim CEG": {
+   "algo": "prim",
+   "legend": [
+    {
+     "label": "in tree",
+     "state": "done"
+    },
+    {
+     "label": "candidate",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "0"
+    ],
+    [
+     "B",
+     "8"
+    ],
+    [
+     "C",
+     "7"
+    ],
+    [
+     "D",
+     "10"
+    ],
+    [
+     "E",
+     "8"
+    ],
+    [
+     "F",
+     "7"
+    ],
+    [
+     "G",
+     "5"
+    ],
+    [
+     "H",
+     "5"
+    ],
+    [
+     "I",
+     "5"
+    ]
+   ],
+   "panel": "Tree keys",
+   "stages": [
+    {
+     "cap": "Start. $key(A)=0$. Add $A$. Update $B$ to $8$.",
+     "edges": {
+      "A-B": "seen"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8"
+     }
+    },
+    {
+     "cap": "Add $B$ by edge $A-B$ ($8$). Update $C$ to $7$, $D$ to $14$, $F$ to $20$, $I$ to $10$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "seen",
+      "B-D": "seen",
+      "B-F": "seen",
+      "B-I": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur",
+      "C": "front",
+      "D": "front",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "14",
+      "F": "20",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $C$ by edge $B-C$ ($7$). Update $D$ to $10$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "seen",
+      "B-I": "seen",
+      "C-D": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "cur",
+      "D": "front",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "F": "20",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $D$ by edge $C-D$ ($10$). Update $E$ to $8$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "seen",
+      "B-I": "seen",
+      "C-D": "tree",
+      "D-E": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "cur",
+      "E": "front",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "20",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $E$ by edge $D-E$ ($8$). Update $F$ to $7$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "B-I": "seen",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "cur",
+      "F": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ],
+      [
+       "E",
+       "8"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "7",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $F$ by edge $E-F$ ($7$). Update $G$ to $5$. $I$ keeps $10$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "B-I": "seen",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "seen",
+      "F-I": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "cur",
+      "G": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ],
+      [
+       "E",
+       "8"
+      ],
+      [
+       "F",
+       "7"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "7",
+      "G": "5",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $G$ by edge $F-G$ ($5$). Update $H$ to $5$. $I$ keeps $10$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "B-I": "seen",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree",
+      "F-I": "skip",
+      "G-H": "seen",
+      "G-I": "skip"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "cur",
+      "H": "front",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ],
+      [
+       "E",
+       "8"
+      ],
+      [
+       "F",
+       "7"
+      ],
+      [
+       "G",
+       "5"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "7",
+      "G": "5",
+      "H": "5",
+      "I": "10"
+     }
+    },
+    {
+     "cap": "Add $H$ by edge $G-H$ ($5$). Update $I$ to $5$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "B-I": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree",
+      "F-I": "skip",
+      "G-H": "tree",
+      "G-I": "skip",
+      "H-I": "seen"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "cur",
+      "I": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ],
+      [
+       "E",
+       "8"
+      ],
+      [
+       "F",
+       "7"
+      ],
+      [
+       "G",
+       "5"
+      ],
+      [
+       "H",
+       "5"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "7",
+      "G": "5",
+      "H": "5",
+      "I": "5"
+     }
+    },
+    {
+     "cap": "Add $I$ by edge $H-I$ ($5$). Tree weight $55$.",
+     "edges": {
+      "A-B": "tree",
+      "B-C": "tree",
+      "B-D": "skip",
+      "B-F": "skip",
+      "B-I": "skip",
+      "C-D": "tree",
+      "D-E": "tree",
+      "E-F": "tree",
+      "F-G": "tree",
+      "F-I": "skip",
+      "G-H": "tree",
+      "G-I": "skip",
+      "H-I": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "done",
+      "C": "done",
+      "D": "done",
+      "E": "done",
+      "F": "done",
+      "G": "done",
+      "H": "done",
+      "I": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "8"
+      ],
+      [
+       "C",
+       "7"
+      ],
+      [
+       "D",
+       "10"
+      ],
+      [
+       "E",
+       "8"
+      ],
+      [
+       "F",
+       "7"
+      ],
+      [
+       "G",
+       "5"
+      ],
+      [
+       "H",
+       "5"
+      ],
+      [
+       "I",
+       "5"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "8",
+      "C": "7",
+      "D": "10",
+      "E": "8",
+      "F": "7",
+      "G": "5",
+      "H": "5",
+      "I": "5"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [
+    [
+     "D",
+     "I"
+    ]
+   ],
+   "title": "Prim from A"
+  },
+  "trace prim split": {
+   "algo": "prim",
+   "legend": [
+    {
+     "label": "in tree",
+     "state": "done"
+    },
+    {
+     "label": "candidate",
+     "state": "front"
+    },
+    {
+     "edge": "tree",
+     "label": "tree edge"
+    }
+   ],
+   "order": [
+    [
+     "A",
+     "0"
+    ],
+    [
+     "B",
+     "1"
+    ]
+   ],
+   "panel": "Tree keys",
+   "stages": [
+    {
+     "cap": "Start. $key(A)=0$. Add $A$. Update $B$ to $1$.",
+     "edges": {
+      "A-B": "seen"
+     },
+     "nodes": {
+      "A": "cur",
+      "B": "front"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1"
+     }
+    },
+    {
+     "cap": "Add $B$ by edge $A-B$ ($1$). Tree weight $1$.",
+     "edges": {
+      "A-B": "tree"
+     },
+     "nodes": {
+      "A": "done",
+      "B": "cur"
+     },
+     "rows": [
+      [
+       "A",
+       "0"
+      ],
+      [
+       "B",
+       "1"
+      ]
+     ],
+     "tags": {
+      "A": "0",
+      "B": "1"
+     }
+    }
+   ],
+   "start": "A",
+   "ties": [],
+   "title": "Prim from A"
+  }
+ },
+ "version": "0.1.0"
+}

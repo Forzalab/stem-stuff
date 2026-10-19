@@ -63,6 +63,19 @@ export const bareBank = raw => {
   return BARE.test(s) ? { prefix: "BANK", code: `BANK_${s}` } : null;
 };
 
+/* a multi whose parts are mc (a bank built ahead of the schema: parts are num / expr / text only) becomes one mc question per part,
+   in its place: code + A, B, C..., the shared body, then the part's prompt. Any other problem comes back as is. A sub code too long
+   for a code fails screenBank's shape test like any bad code. */
+export function unfold(p) {
+  if (!p || p.type !== "multi" || !Array.isArray(p.parts) || !p.parts.some(u => u && u.type === "mc")) return [p];
+  const body = Array.isArray(p.body) ? p.body : [];
+  return p.parts.slice(0, 26).map((u, i) => {
+    const { label, prompt, ...q } = u && typeof u === "object" ? u : {};
+    return { ...q, code: p.code + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i], ...(p.title ? { title: `${p.title} (${label || i + 1})` } : {}),
+      ...(p.source ? { source: p.source } : {}), body: prompt ? [...body, { type: "text", md: prompt }] : body };
+  });
+}
+
 /* ---------- an uploaded bank file: what may it keep, and why not the rest ----------
    doc: the parsed JSON. shapeErr(p) -> a string when a problem is malformed (offline.js validate() without the code test).
    -> { flag, kept: [problem], skipped: { shape, noflag, badflag, mismatch, reserved }, fatal }
@@ -71,7 +84,7 @@ export function screenBank(doc, shapeErr) {
   const skipped = { shape: 0, noflag: 0, badflag: 0, mismatch: 0, reserved: 0 };
   if (!doc || typeof doc !== "object" || !Array.isArray(doc.problems)) return { flag: null, kept: [], skipped, fatal: "notbank" };
   const has = doc.bank !== undefined, flag = isBankId(doc.bank) ? doc.bank : null, kept = [];
-  for (const p of doc.problems) {
+  for (const p of doc.problems.flatMap(unfold)) {
     if (!p || typeof p !== "object" || typeof p.code !== "string" || !SHAPE.test(p.code) || shapeErr(p)) { skipped.shape++; continue; }
     const pre = prefixOf(p.code);
     if (isBuiltin(pre)) kept.push(p);

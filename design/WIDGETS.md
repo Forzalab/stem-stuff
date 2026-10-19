@@ -7,6 +7,8 @@
 
 # Sandboxing LLM-written STEM widgets: options and a recommendation
 
+> **Render standard = the OpenUI Lang plan.** Runbook: brain `projects/calc/_files/sprint-render-v2/SPRINT.md` (plan: `projects/calc/topics/openui-render-arch-plan-2026-10-18.md`). No new view/widget format.
+
 **Bottom line:** Write each widget as a pure model (`knobs → state → scene graph`). Run it inside a sandboxed `srcdoc` iframe (`allow-scripts` only) that carries a `<meta>` CSP of `default-src 'none'`. Your existing SVG renderer is copied into that same iframe, and an author-time test gate decides what gets committed. Your authoring-time invariant is what makes this enough: the realistic threat is LLM bugs, not attackers. A separate site, QuickJS or SES would add cost for little extra protection.
 
 Claims marked **[unverified]** come from my background knowledge; I didn't confirm them in this session.
