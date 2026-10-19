@@ -11,14 +11,19 @@
   var BLEED = 48;                                                          // 🔒 glow edge: the sky runs this far past its column, fading out (no hard cut)
 
   /* ---------- 1. the duck + the sky ---------- */
-  var box = null, onTap = null, outT = 0;
+  var box = null, onTap = null, onHollow = null, outT = 0;
   function build() {
     if (box) return box;
     box = document.createElement("div");
     box.className = "ck-rise ai-skin"; box.hidden = true;
     box.innerHTML = '<div class="ck-sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></div>' +
-      '<p class="ck-say" aria-hidden="true"></p><button type="button" class="ck-peek"><span class="ck-duck"></span></button>';
+      '<p class="ck-say" aria-hidden="true"></p><button type="button" class="ck-peek"><span class="ck-duck"></span></button>' +
+      '<button type="button" class="ck-hollow" aria-label="Felt hollow" hidden></button>';
     box.querySelector(".ck-peek").addEventListener("click", function () { var f = onTap; down(); if (f) f(); });
+    box.querySelector(".ck-hollow").addEventListener("click", function (e) {   // J6 seen: "felt hollow" (say's o.onHollow); not before it shows
+      if (+getComputedStyle(e.currentTarget).opacity < 0.5) return;
+      var f = onHollow; down(); if (f) f();
+    });
     document.body.append(box);
     addEventListener("resize", function () { if (up()) place(); });
     return box;
@@ -35,7 +40,7 @@
   function up() { return !!box && !box.hidden && !box.classList.contains("out"); }
   function rise(o) {
     build(); clearTimeout(outT);
-    onTap = o.onTap || null;
+    onTap = o.onTap || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
     box.querySelector(".ck-say").textContent = o.line || "";
     box.querySelector(".ck-peek").setAttribute("aria-label", o.label || "Cluck");
     box.classList.remove("on", "out"); box.hidden = false; place();
@@ -116,14 +121,17 @@
   /* ---------- 3. say: Jev's Cluck nudge (J5 Tier 0, intent.js, the one seam) ----------
      The same rise, carrying Jev's line. Jev decides when; this only checks the screen: the idle peek's rules (ok()) and no duck up now.
      A tap = the idle peek's tap (stemIdleTap) + o.onTap; any other input puts it away = o.onAway (Jev doubles its back-off). It never
-     touches the idle / wrong-answer timers above. Returns true when it showed. */
+     touches the idle / wrong-answer timers above. Returns true when it showed.
+   J6 seen: o.nod = the duck rises with no words (line ""); o.onHollow = a small "Felt hollow" tap target beside the duck (24 px min, shows
+   with the duck's line). Outside input puts a seen peek away NEUTRAL (no onAway given → no back-off). */
   var said = null;
   function say(line, o) {
     o = o || {};
-    if (!line || document.visibilityState === "hidden" || up() || !ok()) return false;
+    if ((!line && !o.nod) || document.visibilityState === "hidden" || up() || !ok()) return false;
     var me = said = { onAway: o.onAway };
-    rise({ line: line, label: "Cluck: " + line,
+    rise({ line: line || "", label: line ? "Cluck: " + line : "Cluck",
       onTap: function () { if (said === me) said = null; if (o.onTap) o.onTap(); if (window.stemIdleTap) window.stemIdleTap(); } });
+    if (o.onHollow) { onHollow = function () { if (said === me) said = null; o.onHollow(); }; box.querySelector(".ck-hollow").hidden = false; }
     return true;
   }
   function sayAway(e) {

@@ -19,7 +19,13 @@
              item so that P(any | all k fire) = P_ONE × share(k); share(3) = SHARE_ALL = 0.85 (ours, J3 tunes), share(1) = 1, linear between
      caps    max 1 per item · ≥ GAP_S (3 min) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
              typing (a key < TYPING_S ago) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
-             without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none */
+             without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none
+   J6 "seen", moment C "earned it the hard way" (copy/seen-lines.js): on a correct pick, proposeSeen(state) → candidates {moment, fam, why}
+   (PROVISIONAL, see there); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
+   hidden) + MAX per session, a QUIET roll (silence is a valid pick), a kind (nod = the duck rises, no words · short · full), a line by the
+   error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; peek.js stemDuck.say carries it.
+   Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
+   those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
 (function () {
   "use strict";
   var W = window;
@@ -27,6 +33,9 @@
   var ACT = { F: "none", S2: "hint_offer", S5: "slow_cue", S6: "cluck_say", S7: "predict_first", Q: "cluck_say" };   // J5 draws cluck_say (S2 from depth 2 too); the rest wait for J4
   var S6_WRONG = 2, S6_HELP_N = 3, SKILL_N = 8, SKILL_MIN_N = 4, SKILL_HIGH = 0.75;
   /* J5 nudge constants, all "ours" (J3 bench start values) */
+  /* J6 seen constants, all "ours" (J3 bench start values) */
+  var SEEN = { GAP_S: 8, QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
+  var RING_CAP = 2000, TITLE_WORDS = 8;
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -37,6 +46,23 @@
     return k <= 1 ? pOne : 1 - Math.pow(1 - pOne * share(k), 1 / k);
   }
 
+  function median(xs) {
+    if (!xs || !xs.length) return 0;
+    var s = xs.slice().sort(function (a, b) { return a - b; }), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  /* PROVISIONAL: placeholder trigger, Tony is redesigning the decision logic (J6). Do not tune.
+     The one place that knows what "earned it the hard way" is. state = { solved (on this pick), wrong, deep (max S2 depth), help, s5,
+     gaps (seconds: open → pick, pick → pick), errs (error families of the wrong picks, in order) }. Pure. Returns [] or candidates
+     { moment: "C", fam, why }; fam = the last wrong pick's family, "any" when none carried one. */
+  function proposeSeen(st) {
+    if (!st || !st.solved || st.help || st.s5 || !(st.wrong >= 2 || st.deep >= 1)) return [];
+    var md = median(st.gaps);
+    if (md < SEEN.GAP_S) return [];
+    var errs = st.errs || [];
+    return [{ moment: "C", fam: errs.length ? errs[errs.length - 1] : "any", why: "wrong=" + st.wrong + " deep=" + st.deep + " gap=" + md.toFixed(1) }];
+  }
+
   function p75(xs) {
     if (!xs || xs.length < S2_MIN_N) return S2_FALLBACK_S;
     var s = xs.slice().sort(function (a, b) { return a - b; });
@@ -45,7 +71,9 @@
 
   /* one learner session. now() = ms; hist = { code: [step seconds] } (the caller stores it).
      o (J5, all optional): say(line, state) → true when the peek showed it · lines = { S2: [...], S6, Q } · on = the nudge states turned on
-     (default all 3) · rand() in [0, 1) · quits = { code: times left unsolved } (the caller stores it) */
+     (default all 3) · rand() in [0, 1) · quits = { code: times left unsolved } (the caller stores it)
+     o (J6, optional; without seenLines moment C is inert): seenLines = { fam: { <family>: [{ id, text, kind }] }, any: [...] } · seenOff() → true
+     when the student turned it off · title(code) → the item's title for {title} · sid = this session's id in the dump */
   function create(now, hist, o) {
     hist = hist || {}; o = o || {};
     var q = null, lines = [], last = null, flowRun = 0, hidden = false, items = 0, keyAt = -Infinity, firsts = [], helps = [];
@@ -53,14 +81,18 @@
     var on = (o.on || NUDGE.STATES).filter(function (s) { return NUDGE.STATES.indexOf(s) >= 0; });
     var pk = chance(on.length), rand = o.rand || Math.random, pool = o.lines || {}, quits = o.quits || {};
     var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false };
+    var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0;
     function sec(t) { return (t - q.open) / 1000; }
     function log(kind, args) {
       if (!q) return;
-      lines.push("+" + sec(now()).toFixed(1) + "  " + kind + (args ? "  " + args : ""));
+      var l = "+" + sec(now()).toFixed(1) + "  " + kind + (args ? "  " + args : "");
+      lines.push(l);
       if (lines.length > CAP) lines.shift();
+      ring.push({ s: sid, i: itemNo, c: q.code, l: l });                  // J6: the session ring, memory only
+      if (ring.length > RING_CAP) ring.shift();
     }
     function hit(st, why) {
-      counts[st]++; last = { state: st, action: ACT[st], src: "home", why: why };
+      counts[st]++; if (st === "S5") q.s5 = true; last = { state: st, action: ACT[st], src: "home", why: why };
       log("jev", st + " " + why);
     }
     function input(kind) {
@@ -78,7 +110,9 @@
         if (q) { flowRun = q.ok && !q.bad ? flowRun + 1 : 0; done(); }  // the item before it ends here
         items++;
         q = { code: p.code, open: t, from: t, step: t, depth: 0, ok: false, bad: false, help: false, picks: [], fast: 0, errAt: 0,
-          wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false };
+          wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false,
+          errs: [], gaps: [], deep: 0, s5: false };
+        itemNo++;
         lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?"));
         if (flowRun) hit("F", "run=" + flowRun);
         return;
@@ -89,19 +123,20 @@
         var ds = (t - q.from) / 1000, ch = p.choice == null ? "" : String(p.choice);
         (hist[q.code] = hist[q.code] || []).push(Math.round(ds));
         if (hist[q.code].length > HIST_CAP) hist[q.code].shift();
-        log("pick", (ch || "-") + " " + p.verdict + (p.tries_left != null ? " tries_left=" + p.tries_left : ""));
+        log("pick", (ch || "-") + " " + p.verdict + (p.tries_left != null ? " tries_left=" + p.tries_left : "") + (p.error ? " err=" + p.error : ""));
+        q.gaps.push(Math.round(ds * 10) / 10);
         var fast = sec(t) < FAST_OPEN_S || (q.errAt && (t - q.errAt) / 1000 < FAST_ERR_S);
         var again = ch && q.picks.indexOf(ch) >= 0;
         q.fast = fast ? q.fast + 1 : 0;
         if (fast && (again || q.fast >= 2)) hit("S5", again ? "repeat " + ch : "fast x" + q.fast);
         if (ch) q.picks.push(ch);
         if (q.first == null) q.first = p.verdict === "correct";
-        if (p.verdict === "wrong") { q.bad = true; q.errAt = t; q.wrong++; }
+        if (p.verdict === "wrong") { q.bad = true; q.errAt = t; q.wrong++; if (p.error) q.errs.push(String(p.error)); }
         else { q.solved = true; if (!q.bad && !q.help && sec(t) < FLOW_S) q.ok = true; }
         q.from = q.step = t; q.depth = 0;
         if (!q.s6 && s6()) { q.s6 = true; hit("S6", "wrong=" + q.wrong); }
         nudges();
-        return;
+        return p.verdict === "correct" ? seen() : undefined;
       }
       if (name === "cluck_open") {
         if (p.auto) return;                                              // the desktop opens it by itself: not a help request
@@ -116,7 +151,7 @@
     function tick() {
       if (!q || hidden) return;
       var lim = p75(hist[q.code]), d = Math.floor((now() - q.step) / 1000 / lim);
-      if (d > q.depth) { q.depth = d; hit("S2", "depth=" + d + " p75=" + lim + "s"); }
+      if (d > q.depth) { q.depth = d; if (d > q.deep) q.deep = d; hit("S2", "depth=" + d + " p75=" + lim + "s"); }
       if (!q.q && qRule()) { q.q = true; hit("Q", q.firstItem && !q.picks.length ? "first item, no pick" : "left before x" + quits[q.code]); }
       nudges();
     }
@@ -182,6 +217,37 @@
       if (tapped) { nz.taps++; log("jev", "nudge tap"); }
       else { nz.dismissed++; nz.gap *= 2; log("jev", "nudge away gap=" + nz.gap + "s"); }
     }
+    /* ---- J6: the seen fire path. Consumes proposeSeen's candidates; never looks at the rule's internals ---- */
+    function words(x) { return x.split(/\s+/).filter(Boolean).length; }
+    function fill(text, title) {                                        // "" = unusable: no title, or the filled line runs past 8 words
+      if (text.indexOf("{title}") < 0) return text;
+      if (!title) return "";
+      var f = text.replace(/\{title\}/g, title);
+      return words(f) > TITLE_WORDS ? "" : f;
+    }
+    function tpls(fam, kind, title) {                                   // unused templates of this kind, usable now: the family's, else the any pool
+      var P = o.seenLines;
+      return [(P.fam || {})[fam] || [], P.any || []].map(function (xs) {
+        return xs.filter(function (t) { return t.kind === kind && !sz.used[t.id] && fill(t.text, title); });
+      });
+    }
+    function seen() {
+      var cs = proposeSeen({ solved: q.solved, wrong: q.wrong, deep: q.deep, help: q.help, s5: q.s5, gaps: q.gaps, errs: q.errs }), t = now();
+      if (!cs.length || !o.seenLines || (o.seenOff && o.seenOff()) || q.rolled.C || sz.n >= SEEN.MAX || block(t)) return null;
+      q.rolled.C = 1;                                                   // one roll per item: a quiet pick is the item's pick
+      if (rand() < SEEN.QUIET) { log("seen", "C quiet"); return null; }
+      var K = SEEN.KIND, r = rand(), kind = r < K.nod ? "nod" : r < K.nod + K.short ? "short" : "full", line = "", id = "";
+      if (kind !== "nod") {
+        var title = o.title ? String(o.title(q.code) || "").trim().replace(/\s+/g, " ") : "", c = tpls(cs[0].fam, kind, title);
+        var xs = c[0].length ? c[0] : c[1], tp = xs[Math.floor(rand() * xs.length)];
+        if (!tp) { log("seen", "C none"); return null; }
+        line = fill(tp.text, title); id = tp.id; sz.used[id] = 1;
+      }
+      sz.n++; nz.at = t; q.nudged = true;                               // the shared gap + 1 per item
+      sz.last = { kind: kind, line: line, id: id, fam: cs[0].fam, code: q.code, why: cs[0].why };
+      log("seen", "C " + kind + (id ? " " + id : ""));
+      return { kind: kind, line: line, delay: SEEN.JIT_MS[0] + Math.floor(rand() * (SEEN.JIT_MS[1] - SEEN.JIT_MS[0] + 1)), fam: cs[0].fam, id: id };
+    }
     /* the page goes with this item open and unsolved: one "left before" for Q next time */
     function leave() {
       if (!q || q.solved) return false;
@@ -190,13 +256,15 @@
     }
     return {
       ev: ev, input: input, tick: tick, vis: vis, nudgeEnd: nudgeEnd, leave: leave,
+      dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
-          nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() } };
+          nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() },
+          seen: { n: sz.n, used: Object.keys(sz.used), last: sz.last } };
       }
     };
   }
-  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, share: share, chance: chance };
+  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, share: share, chance: chance, proposeSeen: proposeSeen, SEEN: SEEN };
 
   /* ---- the flag ---- */
   var on = false;
@@ -213,19 +281,46 @@
   function get(k) { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } }
   function put(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage full / blocked */ } }
   var hist = get(HK), quits = get(QK);
+  /* J6 off switches: stem-seen-off (permanent, localStorage) and stem-seen-s (this session, sessionStorage; memory when blocked) */
+  var SOFF = "stem-seen-off", SSES = "stem-seen-s", SH = "stem-seen-h", sessOff = false;
+  function seenOff() {
+    try { return sessOff || localStorage.getItem(SOFF) === "1" || sessionStorage.getItem(SSES) === "1"; } catch (e) { return sessOff; }
+  }
+  /* a "felt hollow" tap: this session off now; HOLLOW_N of them within the first HOLLOW_OF fires: off for good. { f: fires, h: hollows } */
+  function hollow() {
+    sessOff = true;
+    try { sessionStorage.setItem(SSES, "1"); } catch (e) { /* memory flag holds */ }
+    var h = get(SH); h.h = (h.h || 0) + 1; put(SH, h);
+    if (h.h >= SEEN.HOLLOW_N && (h.f || 0) <= SEEN.HOLLOW_OF) { try { localStorage.setItem(SOFF, "1"); } catch (e) { /* blocked */ } }
+  }
   var save = function () { put(HK, hist); };
   /* J5, the one seam to the peek (peek.js stemDuck.say): Jev decides, the peek only shows the line and tells back how it went */
   var jev = create(function () { return performance.now(); }, hist, {
-    lines: W.__stemNudgeLines, quits: quits,
+    lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: "s" + Math.random().toString(36).slice(2, 8),
+    title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
     rand: typeof W.__stemJevRand === "function" ? W.__stemJevRand : Math.random,   // tests pin the roll; the app never sets it
     say: function (line) {
       var d = W.stemDuck;
       return !!(d && d.say && d.say(line, { onTap: function () { jev.nudgeEnd(true); }, onAway: function () { jev.nudgeEnd(false); } }));
     }
   });
+  /* J6: the green row has settled; show it after r.delay, unless the page moved on (another item, or switched off meanwhile) */
+  function seenShow(r, code) {
+    setTimeout(function () {
+      try {
+        var d = W.stemDuck;
+        if (jev.state().code !== code || seenOff() || !(d && d.say)) return;
+        if (d.say(r.line, { nod: r.kind === "nod", onHollow: hollow })) { var h = get(SH); h.f = (h.f || 0) + 1; put(SH, h); }
+      } catch (e) { /* never break the app */ }
+    }, r.delay);
+  }
   var old = W.stemT;
   W.stemT = function (name, props) {
-    try { jev.ev(name, props); if (name === "pick") save(); } catch (e) { /* never break the app */ }
+    try {
+      var r = jev.ev(name, props);
+      if (name === "pick") save();
+      if (r && r.kind) seenShow(r, jev.state().code);
+    } catch (e) { /* never break the app */ }
     return old && old(name, props);
   };
   ["pointerdown", "keydown", "input", "wheel"].forEach(function (k) {
@@ -234,5 +329,5 @@
   document.addEventListener("visibilitychange", function () { jev.vis(document.hidden); });
   if (W.addEventListener) W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); });
   setInterval(jev.tick, 5000);
-  W.stemJev = jev.state;
+  W.stemJev = jev.state; W.stemJev.dump = jev.dump;
 })();
