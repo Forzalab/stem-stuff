@@ -292,7 +292,7 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .md li + li { margin-top: var(--s1); }
 .mx { white-space: nowrap; }                                        /* math + the punctuation touching it: one unit (app.js md) */
 .md .katex-display { margin: var(--s3) 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-.tbl { overflow-x: auto; margin: 0 0 var(--s3); }
+.tbl { overflow-x: auto; overflow-y: hidden; margin: 0 0 var(--s3); }
 .md table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .md th, .md td { padding: var(--s1) var(--s4); border-bottom: 1px solid var(--line); }
 .md th { color: var(--muted); font-weight: var(--w-em); border-bottom: var(--bw) solid var(--edge); }
@@ -693,6 +693,7 @@ html.side #work > .orig { margin: 0; }
 @keyframes wember { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
+html.side #work { position: sticky; top: var(--s4); align-self: start; }   /* the notes pad stays in view while the page scrolls the question */
 html.side.no-pad #work { position: sticky; top: var(--s4); align-self: start; }   /* videos + hint card stay in view together (they used to be stuck apart, the videos sliding over the card) */
 html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--s4)); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
@@ -803,7 +804,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
 .cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
-.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); }
+.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
@@ -1061,7 +1062,7 @@ html.side:not(.start):not(.dock-bottom) body > .top { width: 100%; margin-top: a
 html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
-html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
+html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the wheel over the question trapped in a second scroller) */
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
 html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; cursor: col-resize; }

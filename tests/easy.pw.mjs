@@ -478,6 +478,35 @@ try {
     assert.equal(m.after, "rgba(0, 0, 0, 0)", "::after: transparent (no rail)"); assert.equal(m.afterImg, "none");
     assert.equal(m.afterW, 48, "the 48px hit area stays");
   });
+  await step("one desktop scroller at 1280x720: the wheel over the question moves the page, Key formulas come into view, wheel back returns to the top (Tony, Oct 18)", async () => {
+    const z = await browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: "block" });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const zp = await z.newPage();
+    await zp.goto(BASE + "/#CALC1_E01");
+    await zp.waitForSelector("#fcard", { timeout: 8000 });
+    await zp.evaluate(() => { const d = document.createElement("div"); d.className = "md"; d.style.height = "520px"; d.textContent = "long problem filler"; document.querySelector("#blocks").append(d); });   // a long problem: more than the window
+    await zp.waitForTimeout(300);
+    const top0 = await zp.evaluate(() => ({ y: scrollY, h: document.documentElement.scrollHeight, fi: document.querySelector("#freezeIn").scrollTop, inner: document.querySelector("#freezeIn").scrollHeight - document.querySelector("#freezeIn").clientHeight }));
+    assert.ok(top0.h > 720 + 100, `the page is taller than the window (${top0.h})`);
+    assert.ok(top0.inner <= 1, `#freezeIn is not a scroller (${top0.inner} px of extra height)`);
+    const qb = await zp.$eval("#q", e => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, Math.min(r.y + 20, 650)]; });
+    await zp.mouse.move(qb[0], qb[1]);
+    for (let i = 0; i < 12; i++) { await zp.mouse.wheel(0, 200); await zp.waitForTimeout(40); }
+    await zp.waitForTimeout(250);
+    const down = await zp.evaluate(() => ({ y: scrollY, fi: document.querySelector("#freezeIn").scrollTop, fb: document.querySelector("#fcard").getBoundingClientRect().bottom }));
+    assert.ok(down.y > 0, `the wheel over #q scrolls the page (${down.y})`);
+    assert.equal(down.fi, 0, "#freezeIn never scrolls on its own");
+    assert.ok(down.fb <= 720 + 1, `Key formulas bottom ${down.fb} reaches the window`);
+    for (let i = 0; i < 30; i++) { await zp.mouse.wheel(0, -300); await zp.waitForTimeout(30); }
+    await zp.waitForTimeout(250);
+    assert.equal(await zp.evaluate(() => scrollY), 0, "wheel back: the top returns");
+    const bad = await zp.evaluate(() => [...document.querySelectorAll("#freeze *, #cluck .wtext, #cluck .wtext *")].filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight).map(e => e.tagName + "." + e.className));
+    assert.deepEqual(bad, [], "no vertical scroller with overflow in the question or the Cluck text");
+    const pos = await zp.$eval("#work", e => getComputedStyle(e).position);
+    assert.equal(pos, "sticky", "the notes column stays in view");
+    await z.close();
+  });
   await step("zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll, centred up-down", async () => {
     const z = await browser.newContext({ viewport: { width: 5464, height: 3600 }, serviceWorkers: "block" });   // Tony's test protocol, Oct 6
     await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
