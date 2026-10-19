@@ -1,7 +1,9 @@
 /* Jev J1 + J2 (brain SPRINT §Render track P5; PATH.md §4): the event-line log + the homebrew rule counters, client only.
    🔒 Tony Oct 18: states F flow / S2 impasse / S5 guess-spam / S7 help abuse only; the rest are parked. J5 (🔒 Tony 18:5x) adds S6 + Q.
-   Nothing leaves the device (J0 privacy text not done): lines + counters live in memory, the S2 step history in localStorage.
-   Flag, default OFF: ?jev=1 turns it on for this device (localStorage stem-jev=1), ?jev=0 off. Also off with stem-t-off / DNT / GPC.
+   🔒 ON FOR ALL (Tony Oct 19, constitution art. 11: log + J5 nudges + J6 seen, no visible flag). Off only with stem-t-off / DNT / GPC
+   (exactly as telemetry.js) or ?jev=0 (this device: localStorage stem-jev=0; ?jev=1 clears it). Counters + the memory ring stay on device;
+   each item's lines go to PostHog as one "jev_item" { sid, i, code, lines } through window.stemT (telemetry.js: same gates, err= / fam=
+   stripped) when the next item opens, or on tab hide / pagehide (the lines so far; the rest go with the next q_open). Never typed text.
    Off = this file defines window.__stemJev (pure, for tests/intent.test.mjs) and does nothing else.
    On  = wraps window.stemT (app.js hook lines, telemetry.js keeps working) + 4 passive input listeners; window.stemJev reads the state.
    Line = "+SS.s  kind  args", seconds since q_open, no typed text. Rules (SPRINT §Jev rules; "ours" = J3 bench start values):
@@ -103,7 +105,7 @@
     var pk = chance(on.length), rand = o.rand || Math.random, pool = o.lines || {}, quits = o.quits || {};
     var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false, awayAt: -Infinity };
     var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0, aw = null;   // aw: the away episode { at, via }
-    var fams = {}, recs = [];                                           // J6 tree, this session: families wrong on earlier items · [{ ok: first-try right, gap }] per item
+    var fams = {}, recs = [], out = [];                                 // J6 tree, this session: families wrong on earlier items · [{ ok: first-try right, gap }] per item · out: lines not shipped yet, [{ i, c, l }] per item (take)
     function sec(t) { return (t - q.open) / 1000; }
     function log(kind, args) {
       if (!q) return;
@@ -112,6 +114,14 @@
       if (lines.length > CAP) lines.shift();
       ring.push({ s: sid, i: itemNo, c: q.code, l: l });                  // J6: the session ring, memory only
       if (ring.length > RING_CAP) ring.shift();
+      var g = out[out.length - 1];
+      if (!g || g.i !== itemNo) { out.push(g = { i: itemNo, c: q.code, l: [] }); if (out.length > 20) out.shift(); }
+      if (g.l.length < 200) g.l.push(l);                                // one event stays small
+    }
+    /* the lines to ship: the ended items' (all = the open one's so far too, for a tab hide / pagehide); each taken once */
+    function take(all) {
+      var n = all ? out.length : out.filter(function (g) { return g.i < itemNo; }).length;
+      return out.splice(0, n);
     }
     function hit(st, why) {
       counts[st]++; if (st === "S5") q.s5 = true; last = { state: st, action: ACT[st], src: "home", why: why };
@@ -311,7 +321,7 @@
       return true;
     }
     return {
-      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave,
+      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take,
       dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
@@ -322,14 +332,14 @@
   }
   W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, share: share, chance: chance, tree: tree, SEEN: SEEN };
 
-  /* ---- the flag ---- */
+  /* ---- on for all (art. 11); ?jev=0 = off on this device, ?jev=1 = back on ---- */
   var on = false;
   try {
     var f = new URLSearchParams(location.search).get("jev");
-    if (f === "1") localStorage.setItem("stem-jev", "1");
-    if (f === "0") localStorage.removeItem("stem-jev");
+    if (f === "0") localStorage.setItem("stem-jev", "0");
+    if (f === "1") localStorage.removeItem("stem-jev");
     var tm = W.__stemTelemetry;
-    on = localStorage.getItem("stem-jev") === "1" && !(tm && (tm.optedOut(navigator, W) || tm.userOff(localStorage)));
+    on = localStorage.getItem("stem-jev") !== "0" && !(tm && (tm.optedOut(navigator, W) || tm.userOff(localStorage)));
   } catch (e) { on = false; }
   if (!on) return;
 
@@ -349,10 +359,10 @@
     var h = get(SH); h.h = (h.h || 0) + 1; put(SH, h);
     if (h.h >= SEEN.HOLLOW_N && (h.f || 0) <= SEEN.HOLLOW_OF) { try { localStorage.setItem(SOFF, "1"); } catch (e) { /* blocked */ } }
   }
-  var save = function () { put(HK, hist); };
+  var save = function () { put(HK, hist); }, sid = "s" + Math.random().toString(36).slice(2, 8);
   /* J5, the one seam to the peek (peek.js stemDuck.say): Jev decides, the peek only shows the line and tells back how it went */
   var jev = create(function () { return performance.now(); }, hist, {
-    lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: "s" + Math.random().toString(36).slice(2, 8),
+    lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: sid,
     title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
     size: function (code) {                                          // J6: the item's stem words + choice count (bank items; an upload has no bank entry → none)
       var b = W.stemBank, p = b && b.get && b.get(code), w = 0;
@@ -377,9 +387,14 @@
     }, r.delay);
   }
   var old = W.stemT;
+  /* the lines to PostHog: one "jev_item" per taken item, through telemetry.js's stemT (its gates + strip rules; a no-op without a key) */
+  function ship(all) {
+    try { jev.take(all).forEach(function (g) { if (old) old("jev_item", { sid: sid, i: g.i, code: g.c, lines: g.l }); }); } catch (e) { /* never break the app */ }
+  }
   W.stemT = function (name, props) {
     try {
       var r = jev.ev(name, props);
+      if (name === "q_open") ship(false);                                // the item before it ended
       if (name === "pick") save();
       if (r && r.kind) seenShow(r, jev.state().code);
     } catch (e) { /* never break the app */ }
@@ -388,7 +403,7 @@
   ["pointerdown", "keydown", "input", "wheel"].forEach(function (k) {
     document.addEventListener(k, function () { try { jev.input(k); } catch (e) { /* ignore */ } }, { capture: true, passive: true });
   });
-  document.addEventListener("visibilitychange", function () { jev.vis(document.hidden); });
+  document.addEventListener("visibilitychange", function () { jev.vis(document.hidden); if (document.hidden) ship(true); });   // after telemetry.js's tab_away / bail
   /* J6: a copy inside the question stem (#blocks: not the choices, not Cluck). Where only, never the copied text */
   document.addEventListener("copy", function (e) {
     try {
@@ -397,7 +412,7 @@
     } catch (x) { /* ignore */ }
   }, { capture: true, passive: true });
   if (W.addEventListener) {                                           // blur / focus: a desktop window switch keeps the tab visible, so only they see it (jev.away times it)
-    W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); });
+    W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); ship(true); });
     W.addEventListener("blur", function () { jev.away("blur", true); });
     W.addEventListener("focus", function () { jev.away("blur", false); });
   }

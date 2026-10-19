@@ -1,4 +1,4 @@
-// J6 seen, earned (intent.js tree → peek.js stemDuck.say; copy/seen-lines.js): with ?jev=1, an mc item answered wrong (negation),
+// J6 seen, earned (intent.js tree → peek.js stemDuck.say; copy/seen-lines.js): Jev on by default (art. 11), an mc item answered wrong (negation),
 // wrong (sign), then right, each pick 10 s apart → after the green row Cluck's peek rises carrying a line for the LAST wrong family (sign).
 // A hollow tap puts it away, sets the session off and no second one comes. Flag off = nothing. Nothing leaves the device (no request
 // besides the page's own; /explain /chat never called). The rolls are pinned (__stemJevRand reads window.__rs: quiet, kind, template, delay).
@@ -47,7 +47,7 @@ async function open(o = {}) {
   /* the pinned rolls: window.__rs = [quiet, kind, template, delay] is spent by the seen moment; every other roll (J5) passes (0.99) */
   await page.addInitScript(() => { window.__rs = []; window.__stemJevRand = () => (window.__rs.length ? window.__rs.shift() : 0.99); });
   await page.clock.install();
-  await page.goto(BASE + "/" + (o.jev === false ? "" : "?jev=1") + "#BANK_T96");
+  await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#BANK_T96");
   await page.clock.runFor(3000);
   await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
   await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
@@ -152,7 +152,7 @@ await step("trap_beaten: a served item's families (sent with the right pick only
   await page.context().close();
 });
 
-await step("flag off (no ?jev=1): the same item, no peek, no stemJev", async () => {
+await step("?jev=0 (off on this device): the same item, no peek, no stemJev", async () => {
   const page = await open({ jev: false });
   await earned(page);
   await idle(page, 4000); await closeCluck(page); await idle(page, 500);

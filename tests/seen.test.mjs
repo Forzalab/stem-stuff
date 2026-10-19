@@ -309,10 +309,10 @@ test("wiring: a nod → say(\"\", { nod: true })", () => {
   L.later[0][0]();
   assert.equal(calls[0][0], ""); assert.equal(calls[0][1].nod, true);
 });
-test("flag off / DNT / stem-t-off: the seen moments are inert (no stemJev, the peek is never asked)", () => {
+test("?jev=0 / DNT / stem-t-off: the seen moments are inert (no stemJev, the peek is never asked)", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
-  for (const o of [{}, { store: { "stem-jev": "1" }, tele: { optedOut: () => true, userOff: () => false } },
-    { store: { "stem-jev": "1" }, tele: { optedOut: () => false, userOff: () => true } }]) {
+  for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },
+    { search: "?jev=1", tele: { optedOut: () => false, userOff: () => true } }]) {
     const L = load({ ...o, duck, rand: () => 0.9 });
     L.win.stemT("q_open", { code: "A" }); L.win.stemT("pick", { code: "A", verdict: "correct" });
     assert.equal(L.win.stemJev, undefined); assert.equal(L.later.length, 0);

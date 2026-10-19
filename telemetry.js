@@ -3,6 +3,7 @@
    Off (stemT stays a no-op, nothing loads, nothing is said) when:
      - Do Not Track or Global Privacy Control is on;
      - the build stamped no key (<meta name="stem-t">: local runs, preview deploys, the offline download).
+   Owner tag (Tony Oct 19, Jev constitution art. 11): Tony's own devices add me: "1" | "test" to every event; everyone else, nothing.
    Before the libraries load, events wait in a small queue; a bail before then goes out as one raw beacon to PostHog.
    Recording is unmasked on purpose (D20/D24): no mask options here, Clarity masking is off in its dashboard. */
 (function () {
@@ -77,7 +78,29 @@
     for (var i = 0; i < list.length; i++) if (list[i].s >= a && list[i].s < b) { n++; ms += list[i].d; }
     return { n: n, ms: Math.round(ms) };
   }
-  W.__stemTelemetry = { gpu: gpu, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  /* owner tag: a coarse device string (no browser version) → SHA-256, compared with OWNER_FP on device only; the hash itself is never sent.
+     localStorage stem-me wins ("1" | "test" = Tony, "0" = not him); a fingerprint hit sets "1" once, so a browser update can't undo it.
+     ?me=1 / ?me=test / ?me=0 set it by hand. window.stemFP() → Promise of this device's hash (Tony pastes his into OWNER_FP). */
+  var OWNER_FP = [];   // Tony's hex hashes
+  function fpStr(nav, scr, dpr, tz) {
+    var ua = nav.userAgentData;
+    return [(ua && ua.platform) || nav.platform || "", scr ? scr.width + "x" + scr.height : "", dpr || "", nav.hardwareConcurrency || "", nav.deviceMemory || "", tz || "", nav.language || "", nav.maxTouchPoints || 0].join("|");
+  }
+  function meOf(stored, hash, list) {
+    if (stored === "1" || stored === "test") return stored;
+    return stored == null && hash && list.indexOf(hash) >= 0 ? "1" : "";   // "0" (or junk) = not him
+  }
+  function stemFP() {
+    try {
+      var tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { /* old browser */ }
+      return W.crypto.subtle.digest("SHA-256", new TextEncoder().encode(fpStr(N, W.screen, W.devicePixelRatio, tz))).then(function (b) {
+        return Array.prototype.map.call(new Uint8Array(b), function (x) { return (x < 16 ? "0" : "") + x.toString(16); }).join("");
+      });
+    } catch (e) { return Promise.resolve(""); }   // no crypto.subtle (http): no tag
+  }
+  W.stemFP = stemFP;
+  try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -96,6 +119,15 @@
   } catch (e) { lt = null; }
   var restored = false;
   try { restored = !!(localStorage.getItem("stem-src") || localStorage.getItem("stem-codes")); } catch (e) { /* storage blocked */ }
+  var stored = null;   // owner tag (see OWNER_FP)
+  try { stored = localStorage.getItem("stem-me"); } catch (e) { /* blocked */ }
+  var me = meOf(stored, "", OWNER_FP);
+  if (stored == null && OWNER_FP.length) stemFP().then(function (h) {
+    if (!meOf(null, h, OWNER_FP)) return;
+    me = "1"; try { localStorage.setItem("stem-me", "1"); } catch (e) { /* this visit only */ }
+    if (ph) try { ph.register({ me: me }); } catch (e) { /* old lib */ }
+  }, noop);
+  function tag(p) { if (me && p) p.me = me; return p; }
   var did;   // our anonymous id, shared with PostHog (bootstrap) so an early bail and later events are one person
   try { did = localStorage.getItem("stem-tid"); } catch (e) { /* blocked */ }
   if (!did) { did = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); try { localStorage.setItem("stem-tid", did); } catch (e) { /* blocked */ } }
@@ -103,7 +135,7 @@
   function send(name, props, beacon) {
     props = props || {};
     if (ph) {
-      try { ph.capture(name, props, beacon ? { transport: "sendBeacon", send_instantly: true } : undefined); } catch (e) { /* never the app's problem */ }
+      try { ph.capture(name, tag(props), beacon ? { transport: "sendBeacon", send_instantly: true } : undefined); } catch (e) { /* never the app's problem */ }
       return;
     }
     if (queue.length < 200) queue.push({ event: name, properties: props, timestamp: new Date().toISOString() });
@@ -113,7 +145,7 @@
     try {
       var batch = queue.splice(0).map(function (e) {
         var p = {}; for (var k in e.properties) p[k] = e.properties[k];
-        p.distinct_id = did; p.$current_url = location.href; p.$lib = "stem-beacon";
+        tag(p); p.distinct_id = did; p.$current_url = location.href; p.$lib = "stem-beacon";
         return { event: e.event, properties: p, timestamp: e.timestamp };
       });
       N.sendBeacon(cfg.host + "/batch/", new Blob([JSON.stringify({ api_key: cfg.ph, batch: batch })], { type: "text/plain" }));
@@ -152,6 +184,12 @@
           if (!st.clAt) return;
           p.ms = Math.round(t - st.clAt); p.scrolled_pct = Math.round(Math.max(st.clPct, clScroll()) * 100); st.clAt = 0; break;
         case "next": st.stage = "next"; break;
+        case "jev_item":                                                                     // intent.js: one item's Jev lines (timing + counts); the error / distractor family stays on device, as with pick
+          p.lines = (p.lines || []).map(function (l) { return String(l).replace(/ (err|fam)=\S+/g, ""); });
+          delete p.error; delete p.families;
+          send(name, p, bailed);                                                             // after a tab hide / pagehide: a beacon
+          if (bailed && !ph) rawFlush();
+          return;
         case "cluck_more": return;                                                           // the scroll-down hint (shown / tap / bottom): Jev's, on device only (intent.js), never sent
         default: if (String(name).charAt(0) === "_") return;                                 // J6: any other "_" name is for intent.js only (_xmark ...), never sent
       }
@@ -254,9 +292,10 @@
           session_recording: { maskAllInputs: true, maskInputFn: function (t) { return blankPII(t); }, maskTextSelector: "*", maskTextFn: function (t) { return blankPII(t); } },
           loaded: function (inst) {
             ph = inst;
+            try { if (me) inst.register({ me: me }); else if (inst.unregister) inst.unregister("me"); } catch (e) { /* old lib */ }   // PostHog's own events too; ?me=0 clears an old one
             if (W.stemFx) try { inst.register({ device_tier: W.stemFx.tier, fx: W.stemFx.fx }); } catch (e) { /* old lib */ }   // on every event (T40)
             var q = queue.splice(0);
-            for (var i = 0; i < q.length; i++) { try { inst.capture(q[i].event, q[i].properties, { timestamp: new Date(q[i].timestamp) }); } catch (e) { /* skip */ } }
+            for (var i = 0; i < q.length; i++) { try { inst.capture(q[i].event, tag(q[i].properties), { timestamp: new Date(q[i].timestamp) }); } catch (e) { /* skip */ } }
           }
         });
       } catch (e) { /* ignore */ }

@@ -158,10 +158,10 @@ test("wiring: ?jev=1 → stemDuck.say gets a pool line; away → the gap doubles
   assert.equal(JSON.parse(store["stem-jev-q"]).A, 1);
 });
 
-test("flag off / DNT / GPC / stem-t-off: the peek is never asked", () => {
+test("?jev=0 / DNT / GPC / stem-t-off: the peek is never asked", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
-  for (const o of [{}, { store: { "stem-jev": "1" }, tele: { optedOut: () => true, userOff: () => false } },
-    { store: { "stem-jev": "1" }, tele: { optedOut: () => false, userOff: () => true } }]) {
+  for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },
+    { search: "?jev=1", tele: { optedOut: () => false, userOff: () => true } }]) {
     const { win, timers } = load({ ...o, duck, rand: () => 0 });
     win.stemT("q_open", { code: "A" });
     assert.equal(timers.length, 0); assert.equal(win.stemJev, undefined);
