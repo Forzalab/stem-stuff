@@ -178,6 +178,7 @@ html.start.dock-bottom .code-sug { top: calc(100% + var(--s2)); bottom: auto; ma
 .inc b { font-family: var(--mono); letter-spacing: .04em; white-space: nowrap; }
 .wchip .inc { display: block; cursor: inherit; }   /* Cluck's chip: the code on its own line; the tap stays the chip's */
 .inc-off { display: block; color: var(--muted); font-size: var(--t-xs); }   /* tracking off: no report went out (incident.mjs) */
+.inc-diag { display: block; color: var(--muted); font-family: var(--mono); font-size: var(--t-xs); }   /* debug mode only: the flight recorder's diag line (incident.mjs diagLine) */
 .entry-msg.ok { color: var(--correct); }
 /* upload results (app.js entryMsg): the words carry the state too. STYLE.md 2.1: there is no warning colour and --mark is never a
    warning (tests/style.test.mjs), so a partial result is plain ink between the green and the red */

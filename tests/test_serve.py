@@ -1222,6 +1222,7 @@ class Incidents(unittest.TestCase):
         x = lines[0]
         t = x.pop("t")
         self.assertRegex(t, r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        self.assertRegex(x.pop("rid"), r"^[\w:.-]{1,80}$")                              # flight recorder P1: the request id on every line
         self.assertEqual(x, {"incident": "E-7K3QX", "src": "client", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "where": "explain", "reason": "network",
                              "phase": "stream", "http.response.status_code": 200, "ms": 13001, "bytes": 0, "url.path": "/explain", "q": "CALC1_XP1", "v": "abc123",
                              "exception.message": "TypeError: network error", "error.type": "TypeError", "ua": "safari-ios",
@@ -1232,14 +1233,17 @@ class Incidents(unittest.TestCase):
                                            "q": "my answer", "answer": "my secret answer", "err": "TypeError: at 5551234567, a.b@c.com " + "x" * 3000})
         self.assertEqual(status, 204)
         x = lines[0]
-        self.assertEqual(set(x) - {"t"}, {"incident", "src", "trace_id", "exception.message", "error.type", "ua", "ua_raw"})
+        self.assertEqual(set(x) - {"t"}, {"incident", "src", "trace_id", "rid", "exception.message", "error.type", "ua", "ua_raw"})
         self.assertEqual(x["exception.message"], ("TypeError: at ##########, *@* " + "x" * 3000)[:serve.ERR_MAX])   # the whole message (Tony), the safety net, the cap
         self.assertNotIn("secret", json.dumps(lines))
 
     def test_rejects_a_bad_code_or_body(self):
-        for body in [{"code": "E-0000O"}, {"code": "e-7k3qx"}, {"where": "x"}, [1], b"not json", b"", json.dumps({"code": "E-7K3QX", "err": "x" * 9000}).encode()]:
+        for body in [{"code": "E-0000O"}, {"code": "e-7k3qx"}, {"where": "x"}, [1], b"not json", b""]:
             (status, _, _), lines = self.post(body)
             self.assertEqual((status, lines), (400, []), body)
+        # too big (the flight recorder's snapshot rides in it now, so the cap is INC_BODY_MAX, was 8 KB): 413, no line
+        (status, _, _), lines = self.post(json.dumps({"code": "E-7K3QX", "err": "x" * serve.INC_BODY_MAX}).encode())
+        self.assertEqual((status, lines), (413, []))
 
     def test_rate_limited_per_browser(self):
         for _ in range(serve.INC_PER_10MIN):
@@ -1284,6 +1288,140 @@ class Incidents(unittest.TestCase):
         self.assertFalse(serve.is_budget(e(403, b"Request blocked")))
         self.assertFalse(serve.is_budget(e(500, b"credit")))
         self.assertFalse(serve.is_budget(OSError("timed out")))
+
+
+class Flight(unittest.TestCase):
+    """flight recorder P1 (brain sprint-render-v2/flight-recorder-DESIGN.md): rid + trace on every print line, the provider's own error
+    words, the last error per provider (KV stem:err:<provider>), the page's snapshot in /log/incident, and GET /health (ok | over | err only)"""
+    ENV = {"CLAUDE_API": "sk-test", "OPENROUTER_API_KEY": "sk-or", "CLAUDE_BUDGET_USD": "100", "CLAUDE_RESERVE_USD": "5"}
+
+    def setUp(self):
+        serve._last_err.clear()
+        serve._inc_seen.clear()
+
+    def err(self, fn):
+        out = io.StringIO()
+        with contextlib.redirect_stderr(out):
+            res = fn()
+        return res, out.getvalue().splitlines()
+
+    def http(self, code, body):
+        return urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(body))
+
+    def test_every_print_line_ends_with_rid_and_trace(self):
+        serve.set_trace("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", "iad1::abcde-1760000000000-1234")
+        _, lines = self.err(lambda: serve.log("note CALC1_XP1: cached"))
+        self.assertEqual(lines, ["note CALC1_XP1: cached rid=iad1::abcde-1760000000000-1234 trace=4bf92f3577b34da6a3ce929d0e0e4736"])
+        _, lines = self.err(lambda: serve.incident("cluck", "upstream", provider="openrouter", err=OSError("x")))
+        self.assertEqual(json.loads(lines[0])["rid"], "iad1::abcde-1760000000000-1234")
+        serve.set_trace(None, "bad id <script>")
+        self.assertEqual(serve._trace.rid, "badidscript")
+        serve.set_trace(None)
+        self.assertRegex(serve._trace.rid, r"^dev-[0-9a-f]{8}$")
+        with open(serve.__file__, encoding="utf-8") as f:
+            src = f.read()
+        self.assertEqual(re.findall(r"print\([^\n]*file=sys\.stderr", src), [m for m in re.findall(r"print\([^\n]*file=sys\.stderr", src) if "json.dumps" in m or "*a" in m],
+                         "every other stderr line goes through log()")
+
+    def test_the_providers_own_words_and_type(self):
+        f = serve.upstream_err
+        self.assertEqual(f(self.http(400, b'{"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API."}}')),
+                         {"etype": "invalid_request_error", "emsg": "Your credit balance is too low to access the Anthropic API."})
+        self.assertEqual(f(self.http(402, b'{"error": {"code": 402, "message": "Insufficient credits"}}')), {"etype": "402", "emsg": "Insufficient credits"})
+        mod = f(self.http(403, json.dumps({"error": {"code": 403, "message": "Your input was flagged", "metadata": {"flagged_input": "SENTINEL my notes"}}}).encode()))
+        self.assertNotIn("SENTINEL", json.dumps(mod), "a moderation reply's flagged input never reaches the log")
+        self.assertEqual(f(self.http(502, b"<html>bad gateway " + b"x" * 500)), {"emsg": ("<html>bad gateway " + "x" * 500)[:120]})
+        self.assertEqual(f(self.http(500, b'{"error": "a.b@c.com 5551234567"}')), {})
+        self.assertEqual(f(OSError("timed out")), {})
+
+    def test_a_provider_failure_is_its_last_error_in_kv(self):
+        calls = []
+        with unittest.mock.patch.object(serve, "KV", ("https://kv", "t")), unittest.mock.patch.object(serve, "_kv", side_effect=lambda *c: calls.append(c)):
+            (code, lines) = self.err(lambda: serve.incident("cluck", "budget_cap", provider="claude", status=400,
+                                                            err=self.http(400, b'{"error":{"type":"invalid_request_error","message":"credit balance is too low"}}')))
+            self.err(lambda: serve.incident("api", "exception", err=RuntimeError("boom")))   # not a provider: no KV write
+        self.assertEqual(len(calls), 1)
+        cmd, key, val, ex, ttl = calls[0]
+        self.assertEqual((cmd, key, ex, ttl), ("SET", "stem:err:claude", "EX", 3600))
+        rec = json.loads(val)
+        self.assertEqual({k: rec[k] for k in ("code", "reason", "status", "etype", "emsg")},
+                         {"code": code, "reason": "budget_cap", "status": 400, "etype": "invalid_request_error", "emsg": "credit balance is too low"})
+        line = json.loads(lines[0])
+        self.assertEqual((line["etype"], line["emsg"]), ("invalid_request_error", "credit balance is too low"))
+        self.assertEqual(serve._last_err["claude"]["code"], code, "kept in this process too (no KV: dev, tests)")
+
+    def test_log_incident_keeps_the_snapshot_under_its_own_keys(self):
+        fr = {"ring": [[1234, "net", "explain", "h", 504, 20100]], "kb": [[5000, "kb", "kd", "textarea#scratch", "char", 0, 3]], "page": {"at": {"q": "CALC1_XP1"}},
+              "diag": "v#197 · explain 504 · 20.1 s · AI: ?", "health": {"claude": "ok", "or": "err"}, "smuggled": "nope"}
+        (res, lines) = self.err(lambda: serve.dispatch("POST", "/log/incident", "", json.dumps({"code": "E-7K3QX", "where": "explain", "fr": fr}).encode(), "UA"))
+        self.assertEqual(res[0], 204)
+        x = json.loads(lines[0])
+        self.assertEqual(x["fr"], {k: v for k, v in fr.items() if k != "smuggled"})
+        (res, _) = self.err(lambda: serve.dispatch("POST", "/log/incident", "", json.dumps({"code": "E-7K3QX", "fr": "not a dict"}).encode(), "UA"))
+        self.assertEqual(res[0], 204)
+
+    def health(self, env=None, kv=None, spent=0.0):
+        """(the page's JSON, the server's log line as a dict) for GET /health with env, a stub KV {key: value} (None = no KV) and spent $"""
+        stack = contextlib.ExitStack()
+        with stack:
+            stack.enter_context(unittest.mock.patch.dict(os.environ, env if env is not None else self.ENV, clear=True))
+            stack.enter_context(unittest.mock.patch.object(serve, "claude_spent", return_value=spent))
+            if kv is not None:
+                stack.enter_context(unittest.mock.patch.object(serve, "KV", ("https://kv", "t")))
+                stack.enter_context(unittest.mock.patch.object(serve, "_kv", side_effect=lambda cmd, *keys: [kv.get(k) for k in keys] if cmd == "MGET" else None))
+            else:
+                stack.enter_context(unittest.mock.patch.object(serve, "KV", (None, None)))
+            (status, head, data), lines = self.err(lambda: serve.dispatch("GET", "/health", ""))
+        self.assertEqual((status, head["Cache-Control"]), (200, "no-store"))
+        body = json.loads(data)
+        self.assertEqual(set(body), {"claude", "or", "ts"})
+        self.assertTrue(all(body[k] in ("ok", "over", "err", None) for k in ("claude", "or")), body)
+        self.assertLess(len(data), 120)
+        log = [ln for ln in lines if ln.startswith("health ")]
+        self.assertEqual(len(log), 1)
+        return body, json.loads(log[0][len("health "):].rsplit(" rid=", 1)[0])
+
+    def test_health_ok_over_err_and_no_number_leaves(self):
+        body, log = self.health()
+        self.assertEqual((body["claude"], body["or"]), ("ok", "ok"))
+        self.assertEqual((log["spent_usd"], log["budget_usd"]), (0.0, 100.0), "the numbers stay in the server's log line")
+        self.assertEqual(self.health(spent=96.0)[0]["claude"], "over", "our CLAUDE_BUDGET_USD cap minus the reserve")
+        self.assertEqual([self.health(env={})[0][k] for k in ("claude", "or")], [None, None], "no keys: null")
+        now = int(time.time())
+        serve._last_err["openrouter"] = {"at": now, "reason": "budget_cap", "status": 402, "code": "S-22222"}
+        serve._last_err["claude"] = {"at": now - 10, "reason": "upstream", "status": 529, "code": "S-33333"}
+        body, log = self.health()
+        self.assertEqual((body["claude"], body["or"]), ("err", "over"))
+        self.assertEqual(log["or_last_err"]["code"], "S-22222")
+        serve._last_err["claude"]["at"] = now - serve.ERR_TTL - 1
+        self.assertEqual(self.health()[0]["claude"], "ok", "an error older than an hour is forgotten")
+        kv = {"stem:err:openrouter": json.dumps({"at": now, "reason": "upstream", "status": 500})}
+        serve._last_err.clear()
+        self.assertEqual(self.health(kv=kv)[0]["or"], "err", "another instance's error, from KV")
+        self.assertNotIn("$", json.dumps(self.health()[0]))
+
+    def test_health_prepaid_balance_from_the_spend_job(self):
+        """the hourly GitHub Action writes stem:anthropic:spend; with PREPAID_CENTS: remaining = PREPAID_CENTS - cents_since; at or under the
+        reserve (CLAUDE_RESERVE_USD x 100) = over; a record older than 3 h = stale (ignored, logged); no key / no env = as before"""
+        now = time.time()
+        iso = lambda t: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t))  # noqa: E731
+        spend = lambda since, at: {"stem:anthropic:spend": json.dumps({"cents_month": 1200, "cents_since": since, "since": "2026-10-01", "at": at, "ok": True})}  # noqa: E731
+        env = dict(self.ENV, PREPAID_CENTS="2000")
+        body, log = self.health(env=env, kv=spend(1600, iso(now - 600)))
+        self.assertEqual(body["claude"], "over", "2000 - 1600 = 400 cents left, under the 500 reserve")
+        self.assertEqual((log["remaining_cents"], log["reserve_cents"], log["cents_month"]), (400, 500.0, 1200))
+        body, log = self.health(env=env, kv=spend(1000, iso(now - 600)))
+        self.assertEqual((body["claude"], log["remaining_cents"]), ("ok", 1000))
+        body, log = self.health(env=env, kv=spend(1990, int((now - 4 * 3600) * 1000)))
+        self.assertEqual((body["claude"], log["spend"]), ("ok", "stale"), "a stale record changes nothing")
+        self.assertNotIn("remaining_cents", log)
+        body, log = self.health(env=dict(env, CLAUDE_RESERVE_USD="2"), kv=spend(1750, now - 60))
+        self.assertEqual((body["claude"], log["remaining_cents"]), ("ok", 250), "the reserve env, in cents")
+        body, log = self.health(kv=spend(1990, iso(now)))
+        self.assertEqual(body["claude"], "ok", "no PREPAID_CENTS: as before")
+        self.assertNotIn("remaining_cents", log)
+        body, log = self.health(env=env, kv={"stem:anthropic:spend_err": json.dumps({"at": iso(now), "error": "401"})})
+        self.assertEqual((body["claude"], log["spend_err"]["error"]), ("ok", "401"), "the job's error: logged only")
 
 
 class Guard(unittest.TestCase):

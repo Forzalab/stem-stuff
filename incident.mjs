@@ -6,11 +6,14 @@
    Never the student's answers, notes or chat (privacy art. 6): only the allowlisted fields below, each a number, a fixed tag, the
    error's whole message (e-mails and long digit runs blanked) or the full User-Agent. That technical detail (Tony, Oct 19: "only for
    troubleshooting purposes for that code") rides in an incident only, never in another telemetry event. DNT / GPC / "Don't record
-   me": no report is sent at all; the student still sees the code (app.js adds that Tony gets less to go on). */
+   me": no report is sent at all; the student still sees the code (app.js adds that Tony gets less to go on).
+   Flight recorder (flight.js, P1): the report also carries `fr` = the last steps of the page (ring), the last keyboard / focus events as
+   classes (kb), the page state (page.at), the diag line and /health's ok|over|err. Rate-limited and deduped there; never student text. */
 export const ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";   // base32 with no 0/O/1/I: read out loud, never mistyped
 export const CODE_RE = /^[ES]-[2-9A-HJ-NP-Z]{5}$/;
 export const PHASES = ["headers", "stream", "parse", "timeout", "abort", "script"];
 export const KEYS = ["code", "where", "reason", "status", "phase", "ms", "bytes", "path", "err", "q", "v", "ua", "trace_id"];   // serve.py INC_KEYS (ua: from the header there)
+export const FR_MAX = 16384;                                   // a whole report (record + flight snapshot): serve.py INC_BODY_MAX
 const MAX = 20;                                                 // a page that keeps failing (an error loop) sends this many, then only counts
 
 /* W3C traceparent "00-<trace id>-<span id>-01" (Tony, Oct 19: OpenTelemetry's shapes, no SDK): every fetch app.js makes sends one, serve.py
@@ -70,14 +73,55 @@ try { const d = new URLSearchParams(W.location.search).get("debug"); if (d === "
 export const debugOn = () => { try { return W.localStorage.getItem(DEBUG) === "1"; } catch { return false; } };
 const seen = new Map();                                         // code -> reason tag, for the debug line
 export const incLabel = c => (seen.has(c) ? c + " " + seen.get(c) : c);
+/* the diag line (flight recorder P1; Tony's debug mode only, students see the code only): "v#197 · explain 504 · 20.1 s · AI: cap".
+   AI: from the server's reason (budget_cap = cap, an S- code's upstream / empty = err), else /health's answer, else "?" */
+const AI_WHERE = /^(explain|chat|note|cluck)$/;
+export function aiState(r, health) {
+  if (r.reason === "budget_cap") return "cap";
+  if (/^S-/.test(r.code || "") && /^(upstream|empty)$/.test(r.reason || "")) return "err";
+  if (health && typeof health === "object") {
+    const v = [health.claude, health.or];
+    return v.includes("ok") ? "ok" : v.includes("over") ? "cap" : v.includes("err") ? "err" : "?";
+  }
+  return "?";
+}
+export function diagLine(r, build, health) {
+  const s = Number.isFinite(r.ms) ? (r.ms / 1000).toFixed(1) + " s" : "? s";
+  return [`v${build || "?"}`, `${r.where} ${r.status ?? r.phase ?? r.reason}`, s, ...(AI_WHERE.test(r.where) ? [`AI: ${aiState(r, health)}`] : [])].join(" · ");
+}
+const build = () => { try { return W.document.querySelector('meta[name="stem-build"]')?.getAttribute("content") || null; } catch { return null; } };
+const diags = new Map();                                        // code -> its diag line (app.js incHTML, debug mode)
+export const incDiag = c => diags.get(c) || null;
+/* GET /health (serve.py): ok | over | err per AI provider, never a number. Asked only after a Cluck incident, only when reports are on, 3 s at most */
+async function health() {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 3000), fr = W.stemFR?.req("health");
+  try {
+    const r = await W.fetch("health", { headers: { traceparent: traceparent() }, signal: ctl.signal, credentials: "same-origin" });
+    fr?.h(r);
+    const j = r.ok ? await r.json() : null, ok = v => (["ok", "over", "err"].includes(v) ? v : null);
+    const h = j && typeof j === "object" ? { claude: ok(j.claude), or: ok(j.or) } : null;
+    if (h) W.stemFR?.log("budget", "claude:" + h.claude, "or:" + h.or, "health");
+    return h;
+  } catch (e) { fr?.x(e); return null; } finally { clearTimeout(t); }
+}
 export function incident(where, why, x = {}) {
   const code = typeof x.server === "string" && CODE_RE.test(x.server.trim()) ? x.server.trim() : newCode();
   const r = { code, ...reason(where, why, { v: version(), ua: W && W.navigator ? W.navigator.userAgent : null, ...x }) };
-  if (seen.size < 50) seen.set(code, r.reason);
+  if (seen.size < 50) { seen.set(code, r.reason); diags.set(code, diagLine(r, build())); }
   try { console.warn("incident " + JSON.stringify(r)); } catch { /* no console */ }
   if (!W || ++sent > MAX || trackingOff()) return code;
-  try { W.stemT?.("incident", r); } catch { /* telemetry never breaks the page */ }
-  beacon(r);
+  /* the flight recorder's snapshot (flight.js): ring + kb + page.at, in this report only, for this code only; { dup, n } / { rate } when gated */
+  let fr = null;
+  try { fr = W.stemFR ? W.stemFR.snap(r, FR_MAX - JSON.stringify(r).length - 512) : null; } catch { /* never */ }   // 512: room for diag + health
+  const send = h => {
+    const d = diagLine(r, build(), h);
+    if (diags.has(code)) { diags.set(code, d); try { W.document.querySelectorAll(`.inc-diag[data-diag="${code}"]`).forEach(n => { n.textContent = d; }); } catch { /* no DOM */ } }
+    const full = !fr ? r : { ...r, fr: fr.ring ? { ...fr, diag: d, health: h || null } : fr };
+    try { W.stemT?.("incident", full); } catch { /* telemetry never breaks the page */ }
+    beacon(full);
+  };
+  if (fr && fr.ring && AI_WHERE.test(r.where) && r.reason !== "budget_cap" && W.fetch && /^https?:$/.test(W.location.protocol)) health().then(send, () => send(null));
+  else send(null);
   return code;
 }
 /* uncaught errors and rejections: logged only (a visible failure that follows logs its own code) */

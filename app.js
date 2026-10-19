@@ -9,7 +9,7 @@ import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
 import { renumberSteps } from "./steps.mjs";
-import { incident, debugOn, incLabel, trackingOff, traceparent, traceOf } from "./incident.mjs";
+import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
 import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
@@ -94,9 +94,11 @@ function entryMsg(text, tone = "bad", inc = null) {
 }
 /* an incident (incident.mjs, SCHEMA.md "Incidents") after the failure line, whose words stay as they were (Tony, Oct 19):
    "Send Tony this code: E-7K3QX", readable and selectable for a screenshot; a tap copies the code. Never the reason, except in
-   Tony's debug mode (?debug=1 once): "E-7K3QX network". Tracking off (DNT / GPC / "Don't record me"): no report went out, and the line says so */
-const incHTML = c => !c ? "" : ` <span class="inc" data-inc="${c}">Send Tony this code: <b>${esc(debugOn() ? incLabel(c) : c)}</b>${trackingOff()
-  ? ` <small class="inc-off">Tracking is off on this device, so Tony gets less to go on.</small>` : ""}</span>`;
+   Tony's debug mode (?debug=1 once): "E-7K3QX network". Tracking off (DNT / GPC / "Don't record me"): no report went out, and the line says so.
+   card: an error card (not Cluck's chip): in debug mode it adds the flight recorder's diag line "v#197 · explain 504 · 20.1 s · AI: cap" */
+const incHTML = (c, card = true) => !c ? "" : ` <span class="inc" data-inc="${c}">Send Tony this code: <b>${esc(debugOn() ? incLabel(c) : c)}</b>${trackingOff()
+  ? ` <small class="inc-off">Tracking is off on this device, so Tony gets less to go on.</small>` : ""}${card && debugOn() && incDiag(c)
+  ? ` <small class="inc-diag" data-diag="${c}">${esc(incDiag(c))}</small>` : ""}</span>`;
 document.addEventListener("click", async e => {
   const b = e.target.closest?.(".inc[data-inc]"); if (!b || b.closest("button")) return;   // inside Cluck's chip, the tap is the chip's (try again)
   e.stopPropagation(); e.preventDefault();
@@ -224,11 +226,15 @@ function md(text, inline = false, big = false) {
 const TIMEOUT = 8000;
 const inflight = new Set();
 const timedOut = e => !!e && e.name === "AbortError";
+/* flight.js: one request's start / headers / first byte / end / error in the page's ring (on the device; only an incident carries it) */
+const FR_NONE = { h() {}, f() {}, e() {}, x() {} };
+const frReq = (ep, tp) => window.stemFR?.req(ep, tp) || FR_NONE;
 async function net(url, init = {}) {
-  const ctl = new AbortController(), req = { ctl, t0: Date.now() };
-  const t = setTimeout(() => ctl.abort(), TIMEOUT);
+  const ctl = new AbortController(), req = { ctl, t0: Date.now(), ep: url.split(/[/?]/)[0] };
+  const t = setTimeout(() => ctl.abort(), TIMEOUT), fr = frReq(req.ep, init.headers?.traceparent);
   inflight.add(req);
-  try { return await fetch(url, { ...init, signal: ctl.signal }); }
+  try { const r = await fetch(url, { ...init, signal: ctl.signal }); fr.h(r); return r; }
+  catch (e) { fr.x(e); throw e; }
   finally { clearTimeout(t); inflight.delete(req); }
 }
 const localState = new Map();
@@ -1464,11 +1470,12 @@ async function wishStart(auto) {
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
-  const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x });
+  const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
   let r = null, bytes = 0;
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto, scratch: scratchTail() }), signal: w.ctl.signal });
+    fr.h(r);
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
       w.failed = r.status === 503 && sc ? 1 : r.status || 1;                // a plain 404/503 = no Cluck here (hidden), 429 = the cap: no incident
@@ -1478,15 +1485,16 @@ async function wishStart(auto) {
       const rd = r.body.getReader(), dec = new TextDecoder();
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
-        bytes += value.length;
+        bytes += value.length; fr.f();
         w.text += dec.decode(value, { stream: true });
         window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
         if (wish === w) peekText();
       }
+      fr.e(bytes);
       if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
-  } catch (e) { if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
+  } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
   w.done = true;
   if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
@@ -1680,7 +1688,7 @@ function wishPaint() {
     el.hidden = off || !!host;
   } else {
     const label = !w.started ? "Explain my mistake" : "Didn't load. Tap to try again";
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc) : ""}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
   btn?.addEventListener("click", () => {
@@ -1922,23 +1930,25 @@ async function clSend(msg) {
   w.ctl = w.ctl || new AbortController();
   let text = "", err = "", inc = null, r = null, bytes = 0;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
-  const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); };
+  const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+    fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
     else {
       const rd = r.body.getReader(), dec = new TextDecoder();
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
-        bytes += value.length;
+        bytes += value.length; fr.f();
         text += dec.decode(value, { stream: true });
         ty.text = text;
       }
+      fr.e(bytes);
       if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
-  } catch (e) { if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   if (wish !== w) return;
   if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
   w.busy = false;
@@ -2813,4 +2823,15 @@ addEventListener("DOMContentLoaded", async () => {
     await fromHash();
   } catch { /* load() / openBank() report their own errors */ } finally { firstDone(); }
 });
-window.__drill = { check, get state() { return S; } };   // for tests/e2e
+/* page.at (flight.js page(), flight recorder P1 §8): the app's state at a failure, as codes, counts and flags. Never a typed answer,
+   notes, chat or Cluck's text: only their lengths */
+const pageState = () => {
+  const w = wish;
+  return {
+    q: S?.code ?? null, bank: bank?.code ?? null, mode: modeOf(), tries: S ? S.tries.length : null, left: S?.triesLeft ?? null, fin: !!S?.finished, hints: S ? S.hints.length : null,
+    wish: w && { code: w.code, started: !!w.started, end: !!w.done, open: !!w.open, failed: w.failed || 0, capped: !!w.capped, chars: (w.text || "").length,
+      shown: w.shown | 0, chat: (w.chat || []).length, busy: !!w.busy, out: !!w.out, inc: w.inc || null },
+    cl: cl && { open: !!cl.open, tab: cl.tab ?? null, auto: !!cl.auto }, inflight: [...inflight].map(r => [r.ep || null, Date.now() - r.t0]),
+  };
+};
+window.__drill = { check, get state() { return S; }, get page() { return pageState(); } };   // for tests/e2e; page: flight.js

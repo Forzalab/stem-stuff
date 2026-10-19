@@ -1,5 +1,5 @@
 """Vercel entry: the stem-stuff API (serve.dispatch) as a WSGI app. vercel.json rewrites /p/, /state/, /b/ and /check
-(and /log/incident) here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
+(and /log/incident, /health) here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
 import os
 import sys
 from urllib.parse import parse_qs
@@ -12,7 +12,7 @@ REASON = {200: "OK", 204: "No Content", 400: "Bad Request", 404: "Not Found", 42
 
 
 def app(environ, start_response):
-    serve.set_trace(environ.get("HTTP_TRACEPARENT"))             # the page's W3C trace id: on every incident line (serve.py Incidents)
+    serve.set_trace(environ.get("HTTP_TRACEPARENT"), environ.get("HTTP_X_VERCEL_ID"))   # the W3C trace id + Vercel request id: on every log line (serve.log)
     path = parse_qs(environ.get("QUERY_STRING", "")).get("path", [environ.get("PATH_INFO", "")])[0]
     try:
         n = int(environ.get("CONTENT_LENGTH") or 0)
