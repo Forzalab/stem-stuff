@@ -8,23 +8,23 @@ const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
 
 /* a fake browser: search = location.search, store = localStorage, tele = window.__stemTelemetry (or none) */
 function load({ search = "", store = {}, tele } = {}) {
-  const listeners = [], timers = [], calls = [];
+  const listeners = [], timers = [], calls = [], args = [];
   const win = {
     location: { search }, navigator: {}, URLSearchParams, performance: { now: () => 0 },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
     document: { hidden: false, addEventListener: t => listeners.push(t) },
     setInterval: f => timers.push(f),
-    stemT: (n, p) => calls.push(n),
+    stemT: (n, p) => { calls.push(n); args.push(p); },
   };
   if (tele) win.__stemTelemetry = tele;
   win.window = win;
   vm.runInNewContext(SRC, win);
-  return { win, store, listeners, timers, calls };
+  return { win, store, listeners, timers, calls, args };
 }
 /* one session on a fake clock: s(x) moves the clock to x seconds */
-function session(hist) {
+function session(hist, o) {
   let t = 0;
-  const j = load().win.__stemJev.create(() => t, hist);
+  const j = load().win.__stemJev.create(() => t, hist, o);
   j.at = x => { t = x * 1000; return j; };
   const st = j.state; j.state = () => JSON.parse(JSON.stringify(st()));   // out of the vm realm, so deepEqual compares plain values
   return j;
@@ -44,7 +44,7 @@ test("?jev=1 turns it on and remembers it; ?jev=0 turns it off", () => {
   const on = load({ search: "?jev=1" });
   assert.equal(on.store["stem-jev"], "1");
   assert.equal(typeof on.win.stemJev, "function");
-  assert.deepEqual(on.listeners.sort(), ["input", "keydown", "pointerdown", "visibilitychange", "wheel"]);
+  assert.deepEqual(on.listeners.sort(), ["copy", "input", "keydown", "pointerdown", "visibilitychange", "wheel"]);
   on.win.stemT("q_open", { code: "A1" });
   assert.deepEqual(on.calls, ["q_open"], "the old stemT still runs");
   const off = load({ search: "?jev=0", store: { "stem-jev": "1" } });
@@ -62,7 +62,7 @@ test("lines: +SS.s  kind  args, reset per item, capped at 40, no typed text", ()
   const j = session();
   j.at(10).ev("q_open", { code: "P2X-14", type: "mc" });
   j.at(19.9).ev("pick", { choice: "B", verdict: "wrong", tries_left: 2 });
-  assert.deepEqual(j.state().lines, ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2"]);
+  assert.deepEqual(j.state().lines, ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2", "+9.9  tree  wrong d=1 read=slip fam=any"]);
   for (let i = 0; i < 50; i++) j.at(30 + i * 6).input();
   assert.equal(j.state().lines.length, 40);
   j.at(500).ev("q_open", { code: "P2X-15", type: "mc" });
@@ -164,4 +164,115 @@ test("pending verdicts and events before any q_open are ignored", () => {
   assert.deepEqual(j.state().counts, { F: 0, S2: 0, S5: 0, S6: 0, S7: 0, Q: 0 });
   j.at(2).ev("q_open", { code: "A" }); j.at(3).ev("pick", { verdict: "pending" });
   assert.equal(j.state().lines.length, 1);
+});
+
+/* ---- J6 streak signals: log lines only (memory ring, ?jev=1), nothing new to PostHog ---- */
+test("away: back after >= 5 s logs `away <s>s via=hide|blur`; shorter logs nothing; hide/show keep a fresh step", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).vis(true); j.at(14.9).vis(false);
+  assert.deepEqual(j.state().lines, ["+0.0  q_open  A ?"], "4.9 s: no line");
+  j.at(20).vis(true); j.at(32.4).vis(false);
+  assert.equal(j.state().lines.at(-1), "+32.4  away  12s via=hide");
+  j.at(40).away("blur", true); j.at(44.9).away("blur", false);
+  assert.equal(j.state().lines.length, 2, "blur < 5 s: nothing");
+  j.at(50).away("blur", true); j.at(75).away("blur", false);
+  assert.equal(j.state().lines.at(-1), "+75.0  away  25s via=blur");
+  j.at(80).away("blur", false); assert.equal(j.state().lines.length, 3, "a focus with no episode: nothing");
+  j.at(90).tick(); assert.equal(j.state().counts.S2, 0, "back from away: a fresh step");
+});
+
+test("away: blur then hide is ONE episode from the blur (via=hide); a focus while hidden is not the return", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).away("blur", true); j.at(13).vis(true); j.at(14).away("blur", false); j.at(30).vis(false);
+  const aw = j.state().lines.filter(l => l.includes("  away  "));
+  assert.deepEqual(aw, ["+30.0  away  20s via=hide"]);
+  j.at(40).vis(true); j.at(41).away("blur", true); j.at(50).vis(false);   // hide first, a late blur inside it
+  assert.deepEqual(j.state().lines.filter(l => l.includes("  away  ")).at(-1), "+50.0  away  10s via=hide");
+  assert.equal(j.state().lines.filter(l => l.includes("  away  ")).length, 2);
+});
+
+test("away: before any q_open nothing is logged and nothing throws", () => {
+  const j = session();
+  j.at(0).away("blur", true); j.at(20).away("blur", false); j.vis(true); j.at(30).vis(false);
+  assert.equal(j.state().lines.length, 0);
+});
+
+test("q_open w= ch= from o.size; a missing size (or a half one) leaves the field out; a throwing size is ignored", () => {
+  const sizes = { A: { w: 31, ch: 4 }, B: { w: 12 }, C: { ch: 5 }, D: null };
+  const j = session({}, { size: c => { if (c === "E") throw new Error("x"); return sizes[c]; } });
+  const open = c => { j.at(0).ev("q_open", { code: c, type: "mc" }); return j.state().lines[0]; };
+  assert.equal(open("A"), "+0.0  q_open  A mc w=31 ch=4");
+  assert.equal(open("B"), "+0.0  q_open  B mc w=12");
+  assert.equal(open("C"), "+0.0  q_open  C mc ch=5");
+  assert.equal(open("D"), "+0.0  q_open  D mc");
+  assert.equal(open("E"), "+0.0  q_open  E mc");
+  const k = session();   // no o.size at all
+  k.at(0).ev("q_open", { code: "A", type: "mc" });
+  assert.equal(k.state().lines[0], "+0.0  q_open  A mc");
+});
+
+test("_xmark logs `xmark <choice>`; _copy logs `copy stem`; neither is a pick / input / help", () => {
+  const j = session();
+  j.at(0).ev("_xmark", { choice: "b" });
+  assert.equal(j.state().lines.length, 0, "before q_open: ignored");
+  j.at(0).ev("q_open", { code: "A", type: "mc" });
+  j.at(7).ev("_xmark", { choice: "b" }); j.at(8).ev("_xmark", {}); j.at(9).ev("_copy");
+  assert.deepEqual(j.state().lines.slice(1), ["+7.0  xmark  b", "+8.0  xmark  -", "+9.0  copy  stem"]);
+  assert.equal(j.state().counts.S5, 0); assert.equal(j.state().last, null);
+});
+
+test("wrapper: every stemT name is forwarded untouched (_ask / _tok / _xmark too), props never grow", () => {
+  const { win, calls, args } = load({ search: "?jev=1" });
+  const qo = { code: "A", type: "mc" };
+  win.stemT("q_open", qo); win.stemT("_ask"); win.stemT("_tok"); win.stemT("_xmark", { choice: "b" });
+  assert.deepEqual(calls, ["q_open", "_ask", "_tok", "_xmark"]);
+  assert.deepEqual([...Object.keys(args[0])], ["code", "type"], "q_open props reach telemetry as the app sent them: no w / ch");
+  assert.deepEqual({ ...args[3] }, { choice: "b" });
+  assert.deepEqual([...win.stemJev().lines], ["+0.0  q_open  A mc", "+0.0  xmark  b"]);
+});
+
+test("a window blur pauses S2; a blur >= 5 s gives a fresh step on focus, a shorter one only pauses", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(70).away("blur", true); j.at(200).tick();
+  assert.equal(j.state().counts.S2, 0, "no impasse while blurred (80 s p75 passed)");
+  j.at(240).away("blur", false);
+  assert.ok(j.state().lines.includes("+240.0  away  170s via=blur"));
+  j.at(300).tick(); assert.equal(j.state().counts.S2, 0, "focus = a fresh step (60 s in)");
+  j.at(321).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "and it counts from the focus");
+  const k = session();
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(76).away("blur", true); k.at(79).away("blur", false); k.at(79.5).tick();
+  assert.equal(k.state().counts.S2, 0, "a 3 s blur: nothing logged, no reset");
+  k.at(81).tick(); assert.equal(why(k, "S2"), "depth=1 p75=80s", "the step was not reset: 81 s since the last input");
+  const m = session();
+  m.at(0).ev("q_open", { code: "A" });
+  m.at(70).away("blur", true); m.at(75).vis(true); m.at(200).tick(); assert.equal(m.state().counts.S2, 0, "blur then hide: paused");
+  m.at(260).vis(false); m.at(300).tick(); assert.equal(m.state().counts.S2, 0, "hide's return is still a fresh step");
+  m.at(341).tick(); assert.equal(m.state().counts.S2, 1);
+});
+
+test("any input ends a blur (a missed focus can't pause S2 for good); input during a hide changes nothing", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).away("blur", true); j.at(100).input("pointerdown");
+  assert.ok(j.state().lines.includes("+100.0  away  90s via=blur"), "a long blur still logs its away line");
+  assert.ok(!j.state().lines.some(l => l.includes("  pause  ")), "fresh step first: no pause line");
+  j.at(170).tick(); assert.equal(j.state().counts.S2, 0, "fresh step from the input");
+  j.at(181).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "S2 counts again");
+  const k = session();
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(10).away("blur", true); k.at(12).input("wheel"); k.at(13).away("blur", false);
+  assert.ok(!k.state().lines.some(l => l.includes("  away  ")), "a short blur ended by input: no away line");
+  const h = session();
+  h.at(0).ev("q_open", { code: "A" });
+  h.at(10).away("blur", true); h.at(20).vis(true); h.at(30).input("pointerdown"); h.at(200).tick();
+  assert.equal(h.state().counts.S2, 0, "still hidden");
+  h.at(210).vis(false);
+  assert.ok(h.state().lines.includes("+210.0  away  200s via=hide"), "the hide ends only with the show");
+  const g = session();
+  g.at(0).ev("q_open", { code: "A" }); g.at(5).vis(true); g.at(15).input("keydown"); g.at(20).vis(false);
+  assert.ok(g.state().lines.includes("+20.0  away  15s via=hide"));
 });

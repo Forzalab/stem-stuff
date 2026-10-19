@@ -43,26 +43,47 @@ async function open(o = {}) {
   page.on("pageerror", e => page.errs.push(String(e)));
   page.on("console", m => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) page.errs.push(m.text()); });
   page.on("request", r => { if (/\/(explain|chat)$/.test(new URL(r.url()).pathname)) page.ai++; });
-  await page.clock.install();
+  /* the page's fetch / XHR calls still out (until() holds the fake clock while any is: see there) */
+  page.net = new Set();
+  const net = r => ["fetch", "xhr"].includes(r.resourceType());
+  page.on("request", r => { if (net(r)) page.net.add(r); });
+  for (const ev of ["requestfinished", "requestfailed"]) page.on(ev, r => page.net.delete(r));
+  /* the page's clock is PAUSED from its first script on: only runFor moves it, never real time. A ticking (installed, not paused)
+     Playwright clock has a second runner, the real-time sync: it fires the due timers and waits a real task after each one; a runFor
+     that lands in that gap runs ahead, then the sync's run ends and sets the clock BACK to where it began (clockSource _runTo ->
+     _advanceNow, Playwright 1.56). Under load that undid whole runFor calls after the page had seen them (the "after the calm" flake:
+     a 1.6 s + 2 s wait came out as 1.6 s, so the move landed inside the 2.5 s calm). Paused, there is no second runner. */
+  const t0 = Date.now();
+  await page.clock.install({ time: t0 });
+  await page.clock.pauseAt(t0 + 1000);
   await page.goto(BASE + "/" + (o.hash ?? "#BANK_T45"));
   await page.clock.runFor(3000);
-  await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
-  /* the idle clock starts when the bank opens (peek.js drill:bank) and the fake clock keeps ticking in real time until then: wait for the
-     bank (and the question in it) so every runFor below counts from a fixed start, not from a network-timed one (the 2:59 / 3:00 flake) */
-  if (o.hash === undefined) await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  await until(page, () => !!window.stemDuck && !document.getElementById("splash"));
+  /* the idle clock starts when the bank opens (peek.js drill:bank): wait for the bank (and the question in it) so every runFor below
+     counts from a fixed start, not from a network-timed one (the 2:59 / 3:00 flake) */
+  if (o.hash === undefined) await until(page, () => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden);
   return page;
 }
+/* wait for fn in the page while the paused clock steps 50 ms at a time (the page's own timers still run, in order); 10 s real time max.
+   While a fetch / XHR of the page is out, the clock holds and the wait is real time: a server reply takes real time, and net() aborts
+   on a page timer (app.js TIMEOUT, 8 s). Stepping on through a slow reply raced that timer: a poll is ~3 ms real, so 160 steps (8 s on
+   the page) passed in ~0.5 s real and a /check that took longer under load came back "Too slow", no try recorded, and wrongPick timed
+   out (the "desktop reduce ... the 3 min idle peek still comes" CI red; a 600 ms /check failed it 4 runs in 5). */
+async function until(page, fn, arg) {
+  const end = Date.now() + 10000;
+  while (!(await page.evaluate(fn, arg))) {
+    if (Date.now() > end) throw new Error("timed out waiting for " + String(fn));
+    if (page.net.size) await new Promise(r => setTimeout(r, 20));
+    else await page.clock.runFor(50);
+  }
+}
 const up = page => page.evaluate(() => window.stemDuck.up);
-/* runFor can be dropped when it lands while the page is busy (seen ~1 run in 10: the clock moved only by real time): check the page's own
-   clock moved by ms and run what is missing, so every wait below really is the minutes it says */
+/* the clock is paused (open), so runFor is the only thing that moves it: every wait below is exactly the time it says (checked) */
 async function idle(page, ms) {
   const t0 = await page.evaluate(() => performance.now());
   await page.clock.runFor(ms);
-  for (let k = 0; k < 5; k++) {
-    const left = ms - ((await page.evaluate(() => performance.now())) - t0);
-    if (left < 500) return;
-    await page.clock.runFor(Math.ceil(left));
-  }
+  const moved = (await page.evaluate(() => performance.now())) - t0;
+  assert.ok(Math.abs(moved - ms) < 1, `the page clock moved ${moved} ms, not ${ms}`);
 }
 const settle = page => page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) a.finish(); }));
 const nudge = page => page.mouse.click(5, 300);                      // a tap on empty page: input, no control
@@ -169,7 +190,7 @@ await step("input in the 3 min (a pick, a wheel) pushes the peek out; a question
   await idle(page, 2 * MIN);
   assert.equal(await up(page), false, "the wheel reset it");
   await page.evaluate(() => { location.hash = "#CALC1_T45M2"; });   // by code, no input
-  await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T45M2");
+  await until(page, () => document.querySelector("#pcode").textContent === "CALC1_T45M2");
   await idle(page, MIN + 2000);
   assert.equal(await up(page), true, "a code change did not restart the wait");
   await page.context().close();
@@ -218,7 +239,7 @@ const wrongPick = async (page, id = "b") => {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`.opt[data-id="${id}"]`);
   await page.click(`.ch[data-id="${id}"] .send`);
-  await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
+  await until(page, n => window.__drill.state.tries.length > n, n);
 };
 for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["desktop", { width: 1440, height: 900 }, false], ["desktop reduce", { width: 1440, height: 900 }, true]]) {
   await step(`${name}: the first wrong answer starts the sunrise in ~0.7 s, once per question, then the 3 min idle peek still comes`, async () => {
@@ -242,7 +263,7 @@ for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["d
     await idle(page, 3000);
     assert.equal(await up(page), false, "once per question");
     await page.evaluate(() => { location.hash = "#CALC1_T45M2"; });    // another question, inside the cooldown: none
-    await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T45M2");
+    await until(page, () => document.querySelector("#pcode").textContent === "CALC1_T45M2");
     await wrongPick(page);
     await idle(page, 3000);
     assert.equal(await up(page), false, "cooldown between peeks");

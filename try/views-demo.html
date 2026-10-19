@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Views renderer demo</title>
+<link rel="icon" href="data:,">
+<!-- P1.1 (render plan v2): views.js + views.css render OpenUI Lang programs, streamed in chunks. Target: brain refine/preview.html.
+     Not wired into the site (no app.js / index.html / sw.js change). Flags: ?grey=1 greyscale · ?s1=N open step N of View 1 ·
+     ?reveal=1 pick 5 and Check in View 2 (the fake /predict answers with the Reveal patch) · ?fast=1 no stream delay.
+     Serve over http: python3 serve.py 8000, then /try/views-demo.html -->
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../views.css">
+<link rel="stylesheet" href="views-demo.css">
+<script type="module" src="views-demo.js"></script>
+</head>
+<body>
+<main>
+
+<p class="dlab"><b>View 1 · Steps</b> · P10 BFS crawl · stage <code>post</code> · page tokens · streamed</p>
+<section class="dq" aria-label="question">
+  <div class="dcode">CSWC_B3</div>
+  <p class="dp">A crawler starts at page A with maxDepth 2. Links: A→B, A→C, B→D, C→D, D→E. Which pages are fetched?</p>
+  <div class="dchoices">
+    <div class="dopt closed"><span class="bd">A</span><span class="txt">A, B, C, D, E</span></div>
+    <div class="dopt right"><span class="bd">B</span><span class="txt">A, B, C</span><svg class="dvg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.5l5 5L19.5 7"/></svg></div>
+    <div class="dopt wrong"><span class="bd">C</span><span class="txt">A, B, C, D</span><svg class="dvg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  </div>
+  <div id="v1" class="dmount"></div>
+</section>
+
+<p class="dlab"><b>View 2 · Predict → Reveal</b> · P11 χ(Petersen), picked 4 · stage <code>wrong:4</code> · Cluck's sheet (<code>.ai-box</code>, no new CSS) · the answer is not in the program: the pick goes to a fake <code>/predict</code>, the Reveal body comes back as a patch</p>
+<section class="dcl ai-skin ai-box" aria-label="Cluck">
+  <div class="dcl-bar"><span class="dcl-av"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z"/></svg></span><span><span class="dcl-title">Cluck</span> <span class="dtag">TUTOR</span></span></div>
+  <div class="dwtext">
+    <p class="dquack">QUACK. Four colours is safe, not minimal.</p>
+    <p>Every odd cycle needs 3. The question is whether 3 is enough for the whole graph. Try again with one hint at a time.</p>
+  </div>
+  <div id="v2" class="dmount"></div>
+</section>
+
+<p class="dlab"><b>View 3 · fallback without Compare or Graph</b> · P2 BFS vs DFS · L0 Head + Table + Callout · page tokens</p>
+<section class="dq" aria-label="fallback view">
+  <div id="v3" class="dmount"></div>
+</section>
+
+<p class="dlab"><b>View 4 · Doodle</b> · every statement of the program drops (unknown component, over a cap) → the renderer draws a Doodle, never a blank · then <code>Doodle("heart")</code> on Cluck's sheet</p>
+<section class="dq" aria-label="doodle fallback">
+  <div id="v4" class="dmount"></div>
+</section>
+<section class="dcl ai-skin ai-box" aria-label="doodle in Cluck">
+  <div id="v5" class="dmount"></div>
+</section>
+
+</main>
+</body>
+</html>

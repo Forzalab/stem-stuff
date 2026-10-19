@@ -1170,6 +1170,14 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
   filter: hue-rotate(-34deg) saturate(1.1) drop-shadow(2px 0 0 var(--help-sheet)) drop-shadow(-2px 0 0 var(--help-sheet)) drop-shadow(0 2px 0 var(--help-sheet)) drop-shadow(0 -2px 0 var(--help-sheet)); }
 .ck-say { position: absolute; left: var(--cx, 50%); bottom: calc(env(safe-area-inset-bottom, 0px) + var(--vis) + var(--s2)); transform: translateX(-50%); margin: 0;
   color: var(--help-muted); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.3; white-space: nowrap; opacity: 0; }
+/* J6 seen: the "felt hollow" tap, a 28px target (24 min) beside the duck, a hollow ring; it shows with the line (same keyframes as .ck-say) */
+.ck-hollow { position: absolute; left: calc(var(--cx, 50%) + var(--dw) / 2 + 4px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); width: 28px; height: 28px;
+  padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: manipulation; opacity: 0; }
+.ck-hollow[hidden] { display: none; }
+.ck-hollow::before { content: ""; position: absolute; inset: 8px; border: var(--bw) solid var(--help-muted); border-radius: 50%; }
+.ck-hollow:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.ck-rise.on .ck-hollow { animation: ck-say var(--d-sky) both; }
+.ck-rise.out .ck-hollow { opacity: 0; pointer-events: none; transition: opacity .45s ease-in; }
 @media (min-width: 720px) { .ck-rise { --vis: 72px; --pk: 52px; --dw: 128px; } .ck-sky { height: 55%; } }
 .ck-rise.on .l1 { animation: ck-l1 var(--d-sky) both; }
 .ck-rise.on .l2 { animation: ck-l2 var(--d-sky) both; }

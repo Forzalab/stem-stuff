@@ -810,6 +810,7 @@ function tick(o, m = "on") {
   const lock = o.hasAttribute("data-lock");
   if (m === "x" && (lock || !fixOf(o))) return;
   const next = markOf(o) === m ? "" : m;
+  if (next === "x") window.stemT?.("_xmark", { choice: o.dataset.id });   // J6: the student's own X (not the lock path / strike); intent.js log only, telemetry.js drops "_" names
   for (const x of opts()) if (x !== o && next === "on" && (lock || x.hasAttribute("data-lock")) && markOf(x) === "on") mark(x, "");
   /* prove mode: "None of these" says every other row is false, so it X's them and opens their boxes (blank rows could never be
      sent: Check needs every row marked. Tony, Oct 3, PHYS_NPT). Struck rows keep their X already. */
@@ -1009,7 +1010,7 @@ function record(a, r) {
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
-  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null });   // telemetry
+  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null, error: r.error, families: r.families });   // telemetry (telemetry.js drops error + families: on device only)
   const mine = x => x.part === a.part;        // a multi counts wrong tries per part; the others have part undefined
   if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
