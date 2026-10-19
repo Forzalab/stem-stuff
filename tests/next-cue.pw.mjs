@@ -51,7 +51,7 @@ const RIGHT = "RIGHT", RIGHT_IDS = ["a"], RIGHT_SET = ["a", "b"];
 async function ctxFor(browser, { mode, W, H, rm = false }) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block",
     reducedMotion: rm ? "reduce" : "no-preference" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   await ctx.addCookies(mode === "diet" ? [{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }] : [{ name: "stem-mode-v", value: "2", url: BASE }]);
   return ctx;
 }

@@ -889,7 +889,7 @@ try {
     const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone,
       serviceWorkers: f.opts.sw ? "allow" : "block", permissions: f.opts.perms || [], extraHTTPHeaders: f.opts.gpc ? { "Sec-GPC": "1", DNT: "1" } : undefined });
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
-    if (!f.opts.ob) await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    if (!f.opts.ob) await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     if (f.opts.padPhone && phone) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     if (f.opts.gpc) await ctx.addInitScript(() => { try { Object.defineProperty(navigator, "globalPrivacyControl", { value: true }); } catch { /* */ } });
     const page = await ctx.newPage();

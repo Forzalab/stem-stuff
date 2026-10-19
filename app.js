@@ -601,6 +601,7 @@ async function load(code) {
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   rwSync();
+  rwRedoTip();
   origRender();
   padRule();
   window.stemBrainrot?.sync();
@@ -2071,11 +2072,19 @@ async function rewardShow(mine, res) {
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  redo: ["Sometimes you get to redo a question!"] };                                // Tony, Oct 19: say it the first time a miss comes back
+/* the redo beat: a Redeem showing (a past miss back, the "Second chance" tag) opens unanswered; caret on the tag. Before the first
+   answer only, so it never meets the one-more-try note or the Comeback toast */
+function rwRedoTip() {
+  const r = window.stemRedo.get();
+  if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
+}
 function rwTip(beat, at) {
   if (!rewardOn() || toastAt || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
-  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at); return true; }
+  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at);
+    window.stemT?.("_ob", { beat, n: n + 1 }); return true; }                     // intent.js log only ("ob <beat> <n>"): Jev sees which note it just met
   catch { return false; }                                                        // blocked storage: no way to keep it once, so never
 }
 

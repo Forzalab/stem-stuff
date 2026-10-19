@@ -174,6 +174,7 @@
       }
       if (name === "cluck_dwell") log("cluck", "close");
       if (name === "_xmark") log("xmark", p.choice == null ? "-" : String(p.choice));   // the student's own X (prove mode); never the auto strike
+      if (name === "_ob") log("ob", String(p.beat || "-") + " " + (p.n || 1));   // an onboarding note shown (app.js rwTip: right, three, miss, redo); log only
       if (name === "_copy") log("copy", "stem");                          // a copy inside the question stem (the wrapper checks where); never the text
     }
     /* J6 streak signals, log only: q_open's " w=<stem words> ch=<choices>" (a field with no value is left out; d=<difficulty> appends here when a bank carries one) */

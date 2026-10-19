@@ -69,7 +69,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off");
-    for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // T37 tips seen: this page tests the bells
+    for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // T37 tips seen: this page tests the bells
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   await typeCode(page, "BANK_RW12");
