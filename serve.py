@@ -1475,12 +1475,13 @@ def leak_facts(p):
     return letters, vals
 
 
-_PICK_RE = re.compile(r"\bpick\s+((?:\*{1,2})?[A-Za-z](?:\*{1,2})?(?:\s*(?:,|and|&|or)\s*(?:\*{1,2})?[A-Za-z](?:\*{1,2})?)*)(?![A-Za-z0-9'])", re.I)
+_PICK_RE = re.compile(r"\b(?:pick|choose|go\s+with|(?:answer|(?:correct|right)\s+(?:one|choice|letter|answer))(?:\s+is|\s*[:=]))\s+((?:\*{1,2})?[A-Za-z](?:\*{1,2})?(?:\s*(?:,|and|&|or)\s*(?:\*{1,2})?[A-Za-z](?:\*{1,2})?)*)(?![A-Za-z0-9'])", re.I)
 _TAIL_RE = re.compile(r"\s*(?:[.,!?;:)(\n*]|$)")
 
 
 def leak_kind(text, facts):
-    """"letter" when the text says "Pick <a correct letter>" ("Pick b and d", "Pick **C**"), "number" when it says an answer number, else None.
+    """"letter" when the text says "Pick <a correct letter>" ("Pick b and d", "Pick **C**"; also "choose", "go with", "the answer is",
+    "the correct one is", "answer:"), "number" when it says an answer number, else None.
     A lower-case "a" ("pick a different one") only counts with punctuation after it."""
     letters, vals = facts
     for m in _PICK_RE.finditer(text):

@@ -149,6 +149,12 @@ class Leaks(unittest.TestCase):
         self.assertEqual(k("It is **13.0** W", (LET, VAL)), "number")
         self.assertEqual(k("$$P = 13 W$$", (LET, VAL)), "number")
         self.assertIsNone(k("Divide 52.0 by 4.0. Pick again, friend.", (LET, VAL)))
+        self.assertEqual(k("The answer is B, quack", (LET, VAL)), "letter")             # other ways to say the letter
+        self.assertEqual(k("correct one is **b**.", (LET, VAL)), "letter")
+        self.assertEqual(k("Answer: B", (LET, VAL)), "letter")
+        self.assertEqual(k("go with B!", (LET, VAL)), "letter")
+        self.assertIsNone(k("The answer is a ratio of work to time.", (LET, VAL)))       # the word "a" again
+        self.assertIsNone(k("Choose a formula first.", ({"a"}, [])))
         self.assertIsNone(serve.leak_kind("pick a different one", ({"a"}, [])))      # the word "a"
         self.assertEqual(serve.leak_kind("pick a. ok", ({"a"}, [])), "letter")
         ml, mv = serve.leak_facts(PMULTI)
