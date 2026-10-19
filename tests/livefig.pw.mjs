@@ -30,7 +30,7 @@ const fence = g => "```fig\n" + JSON.stringify(g) + "\n```";
 const leak = FIX.invalid.find(c => c.why === "leak").fig;
 const REPLY = ["POOF! A wish is a wish.\n", "The push pays for three things at once: heat, height and the spring.\n\n",
   fence(leak).slice(0, 30), fence(leak).slice(30) + "\n", "Here are the forces:\n", fence(FIX.valid[0]).slice(0, 40), "HOLD", fence(FIX.valid[0]).slice(40),
-  "\n\n1. The push — work in\n- $W = 48$ J\n", "---\n", "$$\\boxed{375\\ \\text{N/m}}$$\n", "So the answer is **B, 375 N/m**."];
+  "\n\n1. The push — work in\n- $W = 48$ J\n", "---\n", "$$W = 48\\ \\text{J}$$\n", "So the answer is close, **try once more**."];   // T62: REVEAL is no on a first wish, so the reply may not name the answer (the leak guard would swap it)
 let gate = null;
 const fake = createServer(async (req, res) => {
   for await (const _ of req) { /* drain */ }
