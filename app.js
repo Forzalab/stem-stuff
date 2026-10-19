@@ -121,23 +121,52 @@ function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
+/* the codeblock (T43; design/STYLE.md 2.2): a fenced block in question or choice text. One span per real line: its number is a
+   CSS counter, and a long line wraps hanging under its own indent with no number. Comments and # lines are muted, the only colour. */
+const FENCE = /^```[^\n`]*\n[\s\S]*?^```[ \t]*$/gm;
+const CB_LANG = { c: "C", cpp: "C++", "c++": "C++", java: "Java", js: "JavaScript", javascript: "JavaScript", py: "Python", python: "Python", ts: "TypeScript" };
+/* where a // comment starts (not inside a string), else -1 */
+function commentAt(t) {
+  let q = "";
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) { if (c === "\\") i++; else if (c === q) q = ""; }
+    else if (c === '"' || c === "'" || c === "`") q = c;
+    else if (c === "/" && t[i + 1] === "/") return i;
+  }
+  return -1;
+}
+function cbLine(t) {
+  const ind = /^[ \t]*/.exec(t)[0].replace(/\t/g, "  ").length, at = /^\s*#/.test(t) ? 0 : commentAt(t);
+  const body = at < 0 ? esc(t) : `${esc(t.slice(0, at))}<span class="tc">${esc(t.slice(at))}</span>`;
+  return `<span class="l" style="--ind:${ind}">${body}</span>`;
+}
+function codeblock(code, lang = "", copy = true) {
+  const l = String(lang || "").trim().split(/\s+/)[0], name = CB_LANG[l.toLowerCase()] || l;
+  return `<figure class="cb" aria-label="${esc(name ? name + " code" : "Code")}"><div class="cb-hd"><span class="cb-lang">${esc(name)}</span>`
+    + `<span class="cb-act"><span class="cb-slot" aria-hidden="true"></span>${copy ? `<button type="button" class="btn cb-copy" aria-label="Copy code" title="Copy code">${icon("i-copy")}</button>` : ""}</span></div>`
+    + `<pre><code>${String(code).replace(/\n$/, "").split("\n").map(cbLine).join("")}</code></pre></figure>`;
+}
 /* $$..$$ and $..$ are cut out before markdown so marked never sees TeX; "\$" is a literal dollar. */
 /* big: a choice row. Its inline math sets in display style, so $\frac12$ and $\dfrac12$ look the same in every row (a lone 1/2 is never
    the tiny text-style one); nested parts (a fraction in an exponent) still shrink the TeX way. */
 function md(text, inline = false, big = false) {
   const src = Array.isArray(text) ? text.join("\n") : String(text);
-  const math = [];
+  const math = [], fences = [];
   const tok = i => `KXMATH${i}Z`;
-  let s = src.replace(/\\\$/g, () => { math.push({ lit: "$" }); return tok(math.length - 1); });
+  let s = src.replace(FENCE, m => { fences.push(m); return `KXCODE${fences.length - 1}Z`; });   // a codeblock is never TeX
+  s = s.replace(/\\\$/g, () => { math.push({ lit: "$" }); return tok(math.length - 1); });
   s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => { math.push({ t, d: true }); return tok(math.length - 1); });
   s = s.replace(/\$([^$\n]+?)\$/g, (_, t) => { math.push({ t, d: false }); return tok(math.length - 1); });
+  s = s.replace(/KXCODE(\d+)Z/g, (_, i) => fences[+i]);
   let html;
   if (typeof marked !== "undefined") {
     const renderer = new marked.Renderer();
     renderer.html = tokOrText => esc(typeof tokOrText === "string" ? tokOrText : tokOrText.text);   // raw HTML is escaped
     renderer.image = () => "";                                                                         // images ignored
     renderer.table = function (...a) { return `<div class="tbl">${marked.Renderer.prototype.table.apply(this, a)}</div>`; };
-    html = inline ? marked.parseInline(s, { renderer, gfm: true }) : marked.parse(s, { renderer, gfm: true });
+    renderer.code = (c, lang) => typeof c === "object" ? codeblock(c.text, c.lang, !inline) : codeblock(c, lang, !inline);   // no Copy inside a choice (it is a button)
+    html = inline && !fences.length ? marked.parseInline(s, { renderer, gfm: true }) : marked.parse(s, { renderer, gfm: true });
   } else {
     html = esc(s).split(/\n{2,}/).map(p => inline ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
   }
@@ -2095,6 +2124,16 @@ async function copyPad() {
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
 $("#copy").addEventListener("click", copyPad);
+/* a codeblock's Copy: the raw code (the line numbers are CSS, never text), then i-ok for 2 s. Capture: the tap does nothing else */
+document.addEventListener("click", async e => {
+  const b = e.target.closest?.(".cb-copy"); if (!b) return;
+  e.stopPropagation();
+  const ok = await copyText([...b.closest(".cb").querySelectorAll(".l")].map(l => l.textContent).join("\n"));
+  b.classList.toggle("done", ok);
+  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
+  say(ok ? "Copied." : "Didn't copy. Try again.");
+  clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
+}, true);
 
 /* ================= freeze layer (design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip
