@@ -8,23 +8,23 @@ const SRC = readFileSync(new URL("../telemetry.js", import.meta.url), "utf8");
 
 /* a fake browser: meta = the <meta name="stem-t"> attributes (or null), nav = navigator fields */
 function run({ meta = null, nav = {} } = {}) {
-  const added = [], listeners = [];
+  const added = [], listeners = [], handlers = {};
   const el = attrs => ({ getAttribute: k => (k in attrs ? attrs[k] : null) });
   const document = {
     readyState: "complete", visibilityState: "visible", head: { appendChild: s => added.push(s.src) },
     querySelector: q => (q === 'meta[name="stem-t"]' && meta ? el(meta) : null),
     getElementById: () => null, createElement: () => ({}),
-    addEventListener: (t) => listeners.push(t),
+    addEventListener: (t, f) => { listeners.push(t); handlers[t] = f; },
   };
   const store = {};
   const win = {
     document, navigator: nav, performance: { now: () => 1, getEntriesByType: () => [] }, location: { href: "x", search: "" },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
-    addEventListener: () => {}, setTimeout: () => 0, requestIdleCallback: () => 0, matchMedia: () => ({ matches: false }), URLSearchParams,
+    addEventListener: () => {}, Blob, setTimeout: () => 0, requestIdleCallback: () => 0, matchMedia: () => ({ matches: false }), URLSearchParams,
   };
   win.window = win;
   vm.runInNewContext(SRC, win);
-  return { win, added, listeners };
+  return { win, document, added, listeners, handlers };
 }
 
 test("no meta / empty meta: stemT is a no-op, nothing is loaded, no listeners", () => {
@@ -49,6 +49,18 @@ test("a key, no DNT: stemT is live and listeners are set", () => {
   assert.equal(win.stemT.length, 2);
   assert.ok(listeners.includes("pointerdown") && listeners.includes("visibilitychange"));
   assert.doesNotThrow(() => win.stemT("pick", { verdict: "wrong", right: false }));
+});
+
+test("J6: a pick's `error` family never reaches the queue / PostHog (intent.js reads it on device)", async () => {
+  const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; } };
+  const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
+  win.stemT("pick", { code: "A", verdict: "wrong", right: false, error: "sign" });
+  win.stemT("pick", { code: "A", verdict: "correct", right: true, error: undefined });
+  document.visibilityState = "hidden"; handlers.visibilitychange();   // no PostHog yet: the queue goes out as one beacon
+  const batch = JSON.parse(await sent[0].text()).batch.filter(e => e.event === "pick");
+  assert.equal(batch.length, 2);
+  for (const e of batch) assert.ok(!("error" in e.properties), "error stripped");
+  assert.equal(batch[0].properties.code, "A"); assert.equal(batch[0].properties.verdict, "wrong");
 });
 
 test("readConfig: pattern-checks every value", () => {
