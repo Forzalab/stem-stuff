@@ -87,7 +87,11 @@ const geo = page => page.evaluate(() => {
   return { card: R(document.querySelector("#blocks")), q: R(document.querySelector("#q")), y: scrollY };
 });
 /* the sampler: every 20 ms from the verdict (#q.closed) on, how many on-screen elements are moving: an element with animations in their
-   active phase (delay passed, not ended) is one group (a colour tween splits into one transition per border side: still one thing moving) */
+   active phase (delay passed, not ended) is one group (a colour tween splits into one transition per border side: still one thing moving).
+   Cluck's sunrise (peek.js .ck-rise: 3 sky layers + duck + line, five keyframe runs on one clock) is one thing too: the T45 wrong-answer
+   peek starts it 700 ms after a question's first wrong answer, and on a one-try question (true/false) that is the closing tap, so it
+   lands inside this window (~715-780 ms) on real time about every other run. Counted as one group it still fails here if it overlaps
+   g-next-in (180 + 300 ms) or anything else moving; counted per layer it read as "peak 5" whenever the 20 ms tick caught it */
 const startSampler = page => page.evaluate(() => {
   window.__s = { peak: 0, names: new Set(), at: [] };
   let t0 = 0;
@@ -101,7 +105,7 @@ const startSampler = page => page.evaluate(() => {
       if (!tg || !tg.isConnected || !tg.getClientRects().length) continue;   // a hidden Check's press tween is not on screen
       const c = a.effect.getComputedTiming(), lt = c.localTime;
       if (lt != null && lt >= (c.delay || 0) && lt < (c.delay || 0) + c.activeDuration) {
-        moving.add(tg); window.__s.names.add((a.animationName || a.transitionProperty || "?") + "@" + (tg.className?.baseVal ?? tg.className ?? tg.id ?? ""));
+        moving.add(tg.closest?.(".ck-rise") || tg); window.__s.names.add((a.animationName || a.transitionProperty || "?") + "@" + (tg.className?.baseVal ?? tg.className ?? tg.id ?? ""));
       }
     }
     if (moving.size > window.__s.peak) window.__s.peak = moving.size;
