@@ -157,7 +157,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
     assert.equal(asked, i + 1, `${code}: exactly one prefetch`);
     assert.equal(await cluckOpen(page), false, `${code}: Cluck stays closed`);
   }
-  await page.clock.runFor(121000);                                       // past peek.js COOL (2 min between rises): Q1 / Q2 may have risen already, then Q3 fell inside the cooldown and stayed down (red on main too, ~1 in 3)
+  await page.clock.runFor(1000); await page.clock.fastForward(121000);   // past peek.js COOL (2 min between rises; Q1 / Q2 may have risen): flush Q2's 0.7 s rise timer first, then jump (a long runFor sometimes left performance.now behind; fastForward alone fired Q2's rise after the jump)
   await go(page, order[2]);
   await pick(page, "b");
   await page.clock.runFor(1500);
