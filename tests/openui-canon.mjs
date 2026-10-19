@@ -2,7 +2,8 @@
 // vendored lang-core (vendor/openui-lang.mjs). A port of upstream's packages/lang-core/src/__tests__/conformance.test.ts with
 // zod taken out: evaluation only needs each component's prop keys and the reactive mark on bindable props.
 // canon(text) -> the canonical result of one program; runCase(id) -> the diffs of one fixture case (empty = pass).
-// `node tests/openui-canon.mjs` prints { "<area>/<case>": canonical } for every program case (the Python gate's differential test).
+// `node tests/openui-canon.mjs` prints { "<area>/<case>": { text, ...canonical } } for every program case, and with `--stdin` reads
+// a JSON list of program texts and prints their canonical results in order (both for the Python gate's differential test, test_oui.py).
 import { readFileSync, readdirSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import {
@@ -177,7 +178,10 @@ export const caseIds = () => dirs().flatMap(area => dirs(area).map(name => `${ar
 export const filesOf = id => Object.fromEntries(readdirSync(new URL(id + "/", FIXTURES)).map(f => [f, read(id, f)]));
 export const runCase = id => { const files = filesOf(id); return files["validation.json"] ? runValidation(files) : runProgram(id, files); };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1]}` && process.argv[2] === "--stdin") {
+  const texts = JSON.parse(readFileSync(0, "utf8"));
+  process.stdout.write(JSON.stringify(texts.map(t => canon(t))) + "\n");
+} else if (import.meta.url === `file://${process.argv[1]}`) {
   const out = {};
   for (const id of caseIds()) {
     const files = filesOf(id);
