@@ -17,7 +17,8 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{serve.py,livefig.py,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}"
+      "includeFiles": "{serve.py,livefig.py,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}",
+      "maxDuration": 60
     }
   },
   "rewrites": [
@@ -48,6 +49,10 @@
     {
       "source": "/chat",
       "destination": "/api/index?path=/chat"
+    },
+    {
+      "source": "/log/incident",
+      "destination": "/api/index?path=/log/incident"
     }
   ]
 }

@@ -1,5 +1,5 @@
 """Vercel entry: the stem-stuff API (serve.dispatch) as a WSGI app. vercel.json rewrites /p/, /state/, /b/ and /check
-here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
+(and /log/incident) here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
 import os
 import sys
 from urllib.parse import parse_qs
@@ -7,10 +7,12 @@ from urllib.parse import parse_qs
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import serve  # noqa: E402
 
-REASON = {200: "OK", 400: "Bad Request", 404: "Not Found", 429: "Too Many Requests", 503: "Service Unavailable"}
+REASON = {200: "OK", 204: "No Content", 400: "Bad Request", 404: "Not Found", 429: "Too Many Requests", 500: "Internal Server Error",
+          502: "Bad Gateway", 503: "Service Unavailable"}
 
 
 def app(environ, start_response):
+    serve.set_trace(environ.get("HTTP_TRACEPARENT"))             # the page's W3C trace id: on every incident line (serve.py Incidents)
     path = parse_qs(environ.get("QUERY_STRING", "")).get("path", [environ.get("PATH_INFO", "")])[0]
     try:
         n = int(environ.get("CONTENT_LENGTH") or 0)
@@ -22,7 +24,7 @@ def app(environ, start_response):
         status, headers, chunks = stream(environ.get("HTTP_COOKIE", ""), body)
         start_response(f"{status} {REASON.get(status, '')}", list(headers.items()))
         return chunks                                          # an iterable: the runtime sends it as it comes (or all at once)
-    res = serve.dispatch(environ.get("REQUEST_METHOD", "GET"), path, environ.get("HTTP_COOKIE", ""), body)
+    res = serve.dispatch(environ.get("REQUEST_METHOD", "GET"), path, environ.get("HTTP_COOKIE", ""), body, environ.get("HTTP_USER_AGENT", ""))
     status, headers, data = res or serve._json(404, {"error": "not found"}, None)
     start_response(f"{status} {REASON.get(status, '')}", list(headers.items()) + [("Content-Length", str(len(data)))])
     return [data]

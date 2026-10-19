@@ -177,6 +177,7 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 5 plain 
   assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
   assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
   assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");
+  assert.match(await page.textContent("main"), /When something breaks, you see an error code\. With it we record what failed and some technical detail about your browser, only to fix that error\. What you type, your answers and your notes are never in an error report\./, "error reports listed (incident.mjs)");
   assert.equal(/Clarity/.test(await page.textContent("main")), false, "Clarity is off: not named");
   await page.click("#offBtn");
   assert.equal(await page.evaluate(() => localStorage.getItem("stem-t-off")), "1");

@@ -826,10 +826,19 @@ class Explain(unittest.TestCase):
         seen, gates, test = self.seen, self.gates, self
         self.verdict = json.dumps(self.NOTE)                                            # what the NOTE model says; None: a 500
         self.dead, self.mute = set(), set()                                             # models that 500 / stream no words
+        self.broke = set()                                                              # "gate" / "stream": OpenRouter says 402 out of credit
 
         class Stub(http.server.BaseHTTPRequestHandler):
             def do_POST(self):
                 req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                if ("stream" if req.get("stream") else "gate") in test.broke:
+                    if req.get("stream"):
+                        seen.append((self.headers.get("Authorization"), req))
+                    self.send_response(402)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"error": {"code": 402, "message": "Insufficient credits"}}')
+                    return
                 if not req.get("stream"):                                               # the gate: one non-streamed ON/OFF call
                     gates.append(req)
                     self.send_response(500 if test.verdict is None else 403 if test.verdict.startswith("Request blocked") else 200)
@@ -1137,6 +1146,144 @@ class Explain(unittest.TestCase):
         b"".join(chunks)
         self.assertEqual(status, 200)
         self.assertEqual(self.seen[0][1]["messages"][-1]["content"].count("x"), serve.CHAT_LINE)
+
+    def lines(self, fn):
+        """(fn's result, the incident JSON lines it printed)"""
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            out = fn()
+        return out, [json.loads(x) for x in err.getvalue().splitlines() if x.startswith('{"incident"')]
+
+    def test_out_of_credit_fails_fast_with_a_budget_cap_code(self):
+        """Tony, Oct 19 (the prod "Cluck didn't load"): OpenRouter 402 on the NOTE = no stream model is tried; 503 + X-Incident budget_cap"""
+        self.broke = {"gate", "stream"}
+        t0 = time.time()
+        (status, head, chunks), logged = self.lines(lambda: serve.explain("sid=" + "b" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode()))
+        self.assertLess(time.time() - t0, 3)
+        self.assertEqual(status, 503)
+        code, why, trace = head["X-Incident"].split()
+        self.assertRegex(code, r"^S-[2-9A-HJ-NP-Z]{5}$")
+        self.assertEqual(why, "budget_cap")
+        self.assertRegex(trace, r"^[0-9a-f]{32}$")
+        self.assertTrue(all(x["trace_id"] == trace for x in logged), "one trace id on every line of the request")
+        self.assertEqual(self.seen, [], "no model tried once the key said out of credit")
+        self.assertIn("Cluck stopped early", b"".join(chunks).decode())
+        cap = [x for x in logged if x["reason"] == "budget_cap"]
+        self.assertEqual([(x["gen_ai.system"], x["server.address"], x["http.response.status_code"], x["where"], x["error.type"]) for x in cap[:1]],
+                         [("openrouter", "127.0.0.1", 402, "note", "HTTPError")])                # OpenTelemetry names
+        self.assertIn(code, [x["incident"] for x in logged])                           # the request's own line carries the header's code
+        self.assertTrue(all(x["src"] == "server" and "t" in x for x in logged))
+        self.assertNotIn("a", [x.get("answer") for x in logged])
+
+    def test_out_of_credit_on_the_stream_tries_one_model_not_all(self):
+        self.broke = {"stream"}
+        (status, head, _), logged = self.lines(lambda: serve.explain("sid=" + "d" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode()))
+        self.assertEqual((status, head["X-Incident"].split()[1]), (503, "budget_cap"))
+        self.assertEqual(len(self.seen), 1, [r["model"] for _, r in self.seen])       # the next models share the same empty key
+        self.assertEqual(sum(x["reason"] == "budget_cap" and x.get("gen_ai.system") == "openrouter" for x in logged), 1)
+        status, head, chunks = self.chat()                                               # chat: the same
+        self.assertEqual((status, head["X-Incident"].split()[1]), (503, "budget_cap"))
+
+    def test_a_dead_chain_is_a_502_with_its_code_and_a_line_per_model(self):
+        self.dead = set(serve.OPENROUTER_MODELS)
+        (status, head, chunks), logged = self.lines(lambda: serve.explain("sid=" + "9" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode()))
+        self.assertEqual(status, 502)
+        code, why, _ = head["X-Incident"].split()
+        self.assertEqual(why, "upstream")
+        ups = [x for x in logged if x["reason"] == "upstream"]
+        self.assertEqual([x.get("gen_ai.request.model") for x in ups[:-1]], serve.OPENROUTER_MODELS)   # one line per model that failed, then the request's
+        self.assertEqual((ups[-1]["incident"], ups[-1]["where"], ups[-1]["q"]), (code, "explain", "CALC1_XP1"))
+        self.assertTrue(all(x["http.response.status_code"] == 500 for x in ups[:-1]))
+
+    def test_a_good_reply_logs_nothing_and_has_no_header(self):
+        (status, head, chunks), logged = self.lines(lambda: serve.explain("sid=" + "7" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode()))
+        self.assertEqual((status, logged, "X-Incident" in head), (200, [], False))
+        self.assertTrue(b"".join(chunks).startswith(b"POOF!"))
+
+
+class Incidents(unittest.TestCase):
+    """POST /log/incident (incident.mjs's beacon): one JSON line, allowlisted fields only, rate-limited per browser"""
+    def setUp(self):
+        serve._inc_seen.clear()
+
+    def post(self, body, cookie="sid=" + "1" * 32, ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            res = serve.dispatch("POST", "/log/incident", cookie, body if isinstance(body, bytes) else json.dumps(body).encode(), ua)
+        return res, [json.loads(x) for x in err.getvalue().splitlines() if x.strip()]
+
+    def test_one_line_with_only_the_allowlisted_fields(self):
+        (status, head, data), lines = self.post({"code": "E-7K3QX", "where": "explain", "reason": "network", "status": 200, "phase": "stream", "ms": 13001.7,
+                                                 "bytes": 0, "path": "/explain", "err": "TypeError: network error", "q": "CALC1_XP1", "v": "abc123",
+                                                 "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "answer": "b", "scratch": "my notes", "text": "hi", "extra": {"a": 1}})
+        self.assertEqual((status, data), (204, b""))
+        self.assertNotIn("Set-Cookie", head)
+        self.assertEqual(len(lines), 1)
+        x = lines[0]
+        t = x.pop("t")
+        self.assertRegex(t, r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        self.assertEqual(x, {"incident": "E-7K3QX", "src": "client", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "where": "explain", "reason": "network",
+                             "phase": "stream", "http.response.status_code": 200, "ms": 13001, "bytes": 0, "url.path": "/explain", "q": "CALC1_XP1", "v": "abc123",
+                             "exception.message": "TypeError: network error", "error.type": "TypeError", "ua": "safari-ios",
+                             "ua_raw": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1"})
+
+    def test_bad_values_are_dropped_and_text_is_cut(self):
+        (status, _, _), lines = self.post({"code": "S-7K3QX", "where": "Not A Tag!", "phase": "nope", "status": -4, "ms": "9", "path": "../x y",
+                                           "q": "my answer", "answer": "my secret answer", "err": "TypeError: at 5551234567, a.b@c.com " + "x" * 3000})
+        self.assertEqual(status, 204)
+        x = lines[0]
+        self.assertEqual(set(x) - {"t"}, {"incident", "src", "trace_id", "exception.message", "error.type", "ua", "ua_raw"})
+        self.assertEqual(x["exception.message"], ("TypeError: at ##########, *@* " + "x" * 3000)[:serve.ERR_MAX])   # the whole message (Tony), the safety net, the cap
+        self.assertNotIn("secret", json.dumps(lines))
+
+    def test_rejects_a_bad_code_or_body(self):
+        for body in [{"code": "E-0000O"}, {"code": "e-7k3qx"}, {"where": "x"}, [1], b"not json", b"", json.dumps({"code": "E-7K3QX", "err": "x" * 9000}).encode()]:
+            (status, _, _), lines = self.post(body)
+            self.assertEqual((status, lines), (400, []), body)
+
+    def test_rate_limited_per_browser(self):
+        for _ in range(serve.INC_PER_10MIN):
+            self.assertEqual(self.post({"code": "E-7K3QX"})[0][0], 204)
+        self.assertEqual(self.post({"code": "E-7K3QX"}), ((429, {"Content-Type": "application/json", "Cache-Control": "no-store"}, b'{"error": "limit"}'), []))
+        self.assertEqual(self.post({"code": "E-7K3QX"}, cookie="sid=" + "2" * 32)[0][0], 204)   # another browser
+
+    def test_ua_family(self):
+        f = serve.ua_family
+        self.assertEqual(f("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36"), "chrome-android")
+        self.assertEqual(f("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/129.0 Safari/537.36 Edg/129.0"), "edge-windows")
+        self.assertEqual(f("Mozilla/5.0 (Macintosh) Gecko/20100101 Firefox/131.0"), "firefox-mac")
+        self.assertEqual(f(""), "other-other")
+
+    def test_a_crash_in_the_api_is_a_500_with_its_code(self):
+        with unittest.mock.patch.object(serve, "lookup", side_effect=RuntimeError("boom")):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                status, head, data = serve.dispatch("POST", "/check", "sid=" + "3" * 32, b'{"code": "CALC1_T6B", "answer": "1"}')
+        code, why, trace = head["X-Incident"].split()
+        self.assertEqual((status, why), (500, "exception"))
+        line = json.loads(err.getvalue().splitlines()[-1])
+        self.assertEqual((line["incident"], line["src"], line["url.path"], line["http.request.method"], line["exception.message"], line["error.type"], line["trace_id"]),
+                         (code, "server", "/check", "POST", "RuntimeError: boom", "RuntimeError", trace))
+
+    def test_trace_id_from_traceparent(self):
+        self.assertEqual(serve.set_trace("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"), "4bf92f3577b34da6a3ce929d0e0e4736")
+        self.assertEqual(serve.trace_id(), "4bf92f3577b34da6a3ce929d0e0e4736")
+        for bad in (None, "", "00-xyz-00f067aa0ba902b7-01", "00-" + "0" * 32 + "-00f067aa0ba902b7-01"):
+            t = serve.set_trace(bad)
+            self.assertRegex(t, r"^[0-9a-f]{32}$")
+            self.assertNotEqual(t, "0" * 32)
+
+    def test_is_budget(self):
+        def e(code, body):
+            return urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(body))
+        self.assertTrue(serve.is_budget(e(402, b"")))
+        self.assertTrue(serve.is_budget(e(403, b'{"error":{"message":"Key limit exceeded"}}')))
+        self.assertTrue(serve.is_budget(e(400, b'{"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low"}}')))
+        self.assertTrue(serve.is_budget(OSError("claude stream error: billing_error")))
+        self.assertFalse(serve.is_budget(e(429, b'{"error":{"message":"Rate limit exceeded"}}')))
+        self.assertFalse(serve.is_budget(e(403, b"Request blocked")))
+        self.assertFalse(serve.is_budget(e(500, b"credit")))
+        self.assertFalse(serve.is_budget(OSError("timed out")))
 
 
 class Guard(unittest.TestCase):

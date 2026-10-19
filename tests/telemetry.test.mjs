@@ -80,6 +80,24 @@ test("J6: `_` names (_xmark, _copy ...) and q_open's shape: nothing new reaches 
   assert.deepEqual(Object.keys(q).sort(), ["$current_url", "$lib", "bank", "code", "distinct_id", "mode", "type"], "q_open: no w / ch");
 });
 
+test("incident (incident.mjs): only its allowlisted keys reach PostHog, no text-ish key, no student text", async () => {
+  const { reason, KEYS } = await import("../incident.mjs");
+  const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; } };
+  const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
+  win.stemT("q_open", { code: "CALC1_XP1", bank: null, type: "mc", mode: "sugar" });
+  const secret = "my typed answer is 42 and my notes";
+  win.stemT("incident", { code: "E-7K3QX", ...reason("explain", "network", { phase: "stream", ms: 13000, bytes: 0, path: "/explain", err: new TypeError("Failed to fetch"),
+    answer: secret, scratch: secret, text: secret, chat: secret, tapped: secret }) });
+  document.visibilityState = "hidden"; handlers.visibilitychange();
+  const e = JSON.parse(await sent[0].text()).batch.find(x => x.event === "incident");
+  assert.ok(e, "incident sent");
+  const keys = Object.keys(e.properties).filter(k => !["$current_url", "$lib", "distinct_id"].includes(k));
+  assert.deepEqual(keys.sort(), [...KEYS].sort());
+  for (const k of keys) assert.ok(!/text|answer|scratch|chat|note|msg|message|typed|tap|choice|pick/i.test(k), k);
+  assert.ok(!JSON.stringify(e).includes(secret.slice(0, 12)), "no student text anywhere");
+  assert.equal(e.properties.code, "E-7K3QX", "the incident code, not the question's");
+});
+
 test("readConfig: pattern-checks every value", () => {
   const T = run().win.__stemTelemetry;
   const doc = attrs => ({ querySelector: () => ({ getAttribute: k => (k in attrs ? attrs[k] : null) }) });
