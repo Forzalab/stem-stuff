@@ -26,7 +26,8 @@ for (const W of [390, 1280]) {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(String(e)));
-  page.on("console", m => { if (m.type() === "error") errors.push(m.text()); });
+  // views/library.json 404s until P0.2's registry lands; views-lib.js then falls back to its own list (by design)
+  page.on("console", m => { if (m.type() === "error" && !m.location().url.endsWith("/views/library.json")) errors.push(m.text()); });
   const open = async (qs = "") => {
     await page.goto(`${BASE}/try/views-demo.html${qs}`);
     await page.waitForFunction(() => document.documentElement.getAttribute("data-ready") === "1", null, { timeout: 15000 });

@@ -1,6 +1,6 @@
 // views-lib.js: THE component list of the "stem" view library (render plan v2, Part C). One place, data only.
-// views.js reads it (positional prop order, caps), the tests read it (no look props), and P0.2's registry will generate this
-// file (plus the LibrarySpec JSON, the prompt and the checker list) instead of it being hand-kept.
+// views.js reads it (positional prop order, caps), the tests read it (no look props). When P0.2's views/library.json exists
+// (LibrarySpec, generated from views/registry.json) its entries win per component and LOCAL only fills the names it lacks.
 // Rules (refine F2/F3/F7/F19): no prop names a look (colour, size, icon, style...); look is CSS by cascade (views.css, page vs .ai-box).
 // Every string prop has a maxLength and every list a maxItems: over a cap, the statement drops (`too-long`).
 // Predict has NO answer prop: the pick goes to the server (/predict) and the answer only ever arrives as a patch (F4, F5).
@@ -14,7 +14,8 @@ const ANY = { anyOf: [] };   // filled below with every component: a slot that t
 export const MARKS = ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"];
 export const DOODLES = ["duck", "heart", "star", "spark"];
 
-export const LIB = {
+/** The hand-kept list: used alone until P0.2's views/library.json exists, then only for names that file lacks. */
+export const LOCAL = {
   id: "stem",
   version: "0.1.0",
   root: "View",
@@ -54,6 +55,21 @@ export const LIB = {
       props: { nodes: str(600), edges: str(600), cols: str(200), marks: str(400) }, required: ["nodes", "edges"] },
   },
 };
+
+/** LibrarySpec entry ({description, layer, props: {properties, required}}) -> this file's shape. */
+const fromSpec = c => ({ layer: c.layer, desc: c.description, props: c.props?.properties || {}, required: c.props?.required || [] });
+
+/** P0.2's views/library.json wins per component when present (one source of truth); LOCAL fills the rest. No file -> LOCAL. */
+export function mergeLib(spec, local = LOCAL) {
+  if (!spec?.components) return local;
+  const components = { ...local.components };
+  for (const [name, c] of Object.entries(spec.components)) components[name] = fromSpec(c);
+  return { ...local, version: spec.version || local.version, root: spec.root || local.root, components };
+}
+
+let spec = null;
+try { spec = (await import("./views/library.json", { with: { type: "json" } })).default; } catch { /* no registry yet */ }
+export const LIB = mergeLib(spec);
 ANY.anyOf = Object.keys(LIB.components).map(ref);
 
 /** The JSON Schema the vendored parser takes (createParser(schema, root)). Positional order = props key order. */

@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { render, stream, mountView, register, registered, splitStatements } from "../views.js";
-import { LIB } from "../views-lib.js";
+import { LIB, LOCAL, mergeLib } from "../views-lib.js";
 import { P10, P11, P2, DROPPED, chunk } from "../try/views-demo-src.js";
 import { makePredict } from "../try/views-demo-server.js";
 import { mount, html, byClass, one, all } from "./views-dom.mjs";
@@ -14,6 +14,16 @@ const ANSWER = ["χ(P) = 3", "Three classes cover"];
 
 test("registry: every library component has a drawing, and nothing is drawn that the library does not list", () => {
   assert.deepEqual(registered().sort(), Object.keys(LIB.components).filter(n => n !== "Step").sort());
+});
+
+test("library: no views/library.json -> LOCAL; a LibrarySpec wins per component, LOCAL fills the rest", () => {
+  assert.equal(mergeLib(null), LOCAL);
+  const m = mergeLib({ version: "9.9.9", root: "View", components: {
+    Text: { description: "t", layer: "L0", props: { type: "object", properties: { tex: { type: "string" } }, required: ["tex"] } } } });
+  assert.equal(m.version, "9.9.9");
+  assert.deepEqual(Object.keys(m.components.Text.props), ["tex"]);
+  assert.deepEqual(m.components.Text.required, ["tex"]);
+  assert.equal(m.components.Doodle, LOCAL.components.Doodle);
 });
 
 test("render: the demo programs draw with no errors, slots in the root's order", () => {
