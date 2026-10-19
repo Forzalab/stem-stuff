@@ -29,6 +29,8 @@ function session(hist) {
   const st = j.state; j.state = () => JSON.parse(JSON.stringify(st()));   // out of the vm realm, so deepEqual compares plain values
   return j;
 }
+/* the why of the newest hit of one state (J5 added S6 / Q, which can land on the same tick or pick and take state().last) */
+const why = (j, st) => j.state().lines.filter(l => l.includes("  jev  " + st + " ")).at(-1)?.split("  jev  " + st + " ")[1];
 
 test("flag off (default): stemT untouched, no listeners, no timer, no stemJev", () => {
   const { win, listeners, timers } = load();
@@ -103,9 +105,9 @@ test("S2: no input past 80 s (no history) → depth 1, then 2; input or a pick r
   const j = session();
   j.at(0).ev("q_open", { code: "A" });
   j.at(79).tick(); assert.equal(j.state().counts.S2, 0);
-  j.at(81).tick(); assert.equal(j.state().last.why, "depth=1 p75=80s");
+  j.at(81).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s");
   j.at(90).tick(); assert.equal(j.state().counts.S2, 1, "once per depth");
-  j.at(161).tick(); assert.equal(j.state().last.why, "depth=2 p75=80s");
+  j.at(161).tick(); assert.equal(why(j, "S2"), "depth=2 p75=80s");
   j.at(170).input();
   assert.ok(j.state().lines.includes("+170.0  pause  170s"));
   j.at(249).tick(); assert.equal(j.state().counts.S2, 2);
@@ -124,7 +126,7 @@ test("S2: p75 of this item's past steps once there are 4; picks feed the history
   const j = session(hist);
   j.at(0).ev("q_open", { code: "A" });
   j.at(19).tick(); assert.equal(j.state().counts.S2, 0);
-  j.at(21).tick(); assert.equal(j.state().last.why, "depth=1 p75=20s");
+  j.at(21).tick(); assert.equal(why(j, "S2"), "depth=1 p75=20s");
   j.at(29).input(); j.at(30).ev("pick", { choice: "B", verdict: "wrong" });
   assert.equal(hist.A.at(-1), 30);
   for (let i = 0; i < 30; i++) j.at(40 + i).ev("pick", { verdict: "wrong" });
@@ -137,10 +139,10 @@ test("S5: fast pick that repeats a choice, or 2 fast picks in a row; one fast pi
   j.at(3).ev("pick", { choice: "A", verdict: "wrong" });
   assert.equal(j.state().counts.S5, 0);
   j.at(9).ev("pick", { choice: "B", verdict: "wrong" });                          // 6 s after an error: fast x2
-  assert.equal(j.state().last.why, "fast x2");
+  assert.equal(why(j, "S5"), "fast x2");
   j.at(30).ev("pick", { choice: "C", verdict: "wrong" });                         // slow: run resets
   j.at(35).ev("pick", { choice: "C", verdict: "wrong" });                         // fast + repeat
-  assert.equal(j.state().last.why, "repeat C");
+  assert.equal(why(j, "S5"), "repeat C");
   assert.equal(j.state().counts.S5, 2);
   assert.equal(j.state().last.action, "slow_cue");
   j.at(60).ev("q_open", { code: "B" }); j.at(70).ev("pick", { choice: "A", verdict: "correct" });
@@ -159,7 +161,7 @@ test("S7: Cluck opened by hand < 5 s after the item opened; auto and later opens
 test("pending verdicts and events before any q_open are ignored", () => {
   const j = session();
   j.at(1).ev("pick", { verdict: "correct" }); j.at(1).ev("cluck_open", {}); j.at(1).tick(); j.at(1).input();
-  assert.deepEqual(j.state().counts, { F: 0, S2: 0, S5: 0, S7: 0 });
+  assert.deepEqual(j.state().counts, { F: 0, S2: 0, S5: 0, S6: 0, S7: 0, Q: 0 });
   j.at(2).ev("q_open", { code: "A" }); j.at(3).ev("pick", { verdict: "pending" });
   assert.equal(j.state().lines.length, 1);
 });
