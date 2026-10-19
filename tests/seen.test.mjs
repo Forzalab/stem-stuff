@@ -244,7 +244,7 @@ test("off: seenOff() → nothing; no seenLines → inert; the J5 nudge rules are
   assert.equal(earned(j, 0, "A"), null); off = false;
   assert.ok(earned(j, 200, "B"));
   assert.equal(earned(session({ rand: () => 0.9, seenLines: undefined }), 0, "A"), null);
-  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
 });
 test("dump: the ring is JSONL of every log line (sid, item, code, line), pick lines carry err=", () => {
   const j = session({ rand: R(), sid: "sX" });
