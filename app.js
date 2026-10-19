@@ -54,6 +54,8 @@ let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
 function placeToast() {
   const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
   if (!toastAt.getClientRects().length) { hideToast(); return; }                // its anchor went away (the button while the pad is open)
+  const bar = $(".top"), barB = bar && getComputedStyle(bar).position === "sticky" && !bar.contains(toastAt) ? bar.getBoundingClientRect().bottom : -Infinity;
+  if (toastAt.getBoundingClientRect().bottom < barB) { hideToast(); return; }  // scrolled under the pinned bar: no toast pointing at the bar
   const mk = toastAt.querySelector(".vk, .badge"), mr = mk && mk.getBoundingClientRect();
   const m = mr && mr.width ? mr : toastAt.getBoundingClientRect(), mx = m.left + m.width / 2;   // a one-row pill has no badge: its centre
   const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt") && !!(mr && mr.width);   // on the struck text only beside a badge
@@ -2308,6 +2310,9 @@ addEventListener("scroll", () => stuck(), { passive: true });
    A class, not a scroll-driven animation: that one never ends, and rewards/fx.js waits for the page's animations to finish */
 const edge = () => root.classList.toggle("scrolled", scrollY > 0);
 addEventListener("scroll", edge, { passive: true }); edge();
+/* --top-h: the pinned desktop bar's height; app.css sticks the side columns under it */
+const topBar = $(".top");
+if (topBar && window.ResizeObserver) new ResizeObserver(() => root.style.setProperty("--top-h", topBar.offsetHeight + "px")).observe(topBar);
 document.addEventListener("focusin", onView);
 document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
 freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });

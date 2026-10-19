@@ -86,6 +86,7 @@ button:disabled { cursor: default; }
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 /* phones, a problem open: the bar stays pinned to the top while a long question scrolls under it. It keeps its space (sticky), so the first line sits right under it at scroll 0; its --paper fill (nav.css border-image) hides what passes beneath; z-index in nav.css */
+html:not(.dock-bottom):not(.start) .top { position: sticky; top: 0; }   /* desktop too (Tony, Oct 19: the bar scrolled away and left the HUD popover / toasts pointing at the browser's top edge); the side columns stick under it (--top-h, app.js) */
 html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* not side by side (touch tablets, >= 720px): there the problem column and the notes column are sticky at the top themselves (html.side .freeze, #work), a pinned bar would hide their first lines */
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
@@ -1085,6 +1086,7 @@ html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the box trapped the wheel; a contain scroller capped below the fold) */
 html.side #work { position: sticky; top: var(--s4); align-self: start; }   /* the notes pad stays in view while the page scrolls the question */
+html.side:not(.dock-bottom) .freeze, html.side:not(.dock-bottom) .freeze.stuck, html.side:not(.dock-bottom) #work { top: calc(var(--top-h, 0px) + var(--s4)); }   /* under the pinned desktop bar */
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
 html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; cursor: col-resize; }
