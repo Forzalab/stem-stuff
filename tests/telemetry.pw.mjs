@@ -175,6 +175,7 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 5 plain 
   await page.waitForURL(/privacy\.html$/);
   assert.equal((await page.$$("main > p")).length, 5);
   assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
+  assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
   assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");
   assert.equal(/Clarity/.test(await page.textContent("main")), false, "Clarity is off: not named");
   await page.click("#offBtn");
