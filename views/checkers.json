@@ -133,9 +133,8 @@
     "theme",
     "variant"
   ],
-  "key_props": [
-    "answer",
-    "key"
+  "key_ref_props": [
+    "Predict.answer"
   ],
   "key_ref": "^key\\.[A-Za-z0-9_.-]+$",
   "cluck_caps": {

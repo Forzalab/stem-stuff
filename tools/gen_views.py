@@ -4,7 +4,7 @@ views/prompt/all.md + views/prompt/<recipe>.md (the view-writing prompt, full an
 (gate steps, per-component checker, marks, caps) and the block between the views markers in SCHEMA.md (tables + the
 <!-- schema: views --> JSON Schema for an item's views[]).
 Fails (and --check fails) on: a broken ref; a shipping engine tool engine/ does not serve, or one it serves the registry lacks;
-a banned prop name (look props, F3); a prop named answer/key that is no key reference (F5); a string prop with no maxLength or a list with no maxItems (F2, F7).
+a banned prop name (look props, F3); answer/key anywhere but Predict.answer, which must be a required key reference (F5); a string prop with no maxLength or a list with no maxItems (F2, F7).
 usage: python3 tools/gen_views.py [--check]   (--check: write nothing, exit 1 if any output is stale)"""
 import json
 import os
@@ -88,8 +88,10 @@ def problems(reg, served=None):
         for p, s in c["props"].items():
             if p in reg["banned_props"]:
                 out.append(f"{name}.{p}: banned prop name (look = CSS by cascade, F3)")
-            if p in reg["key_props"] and s.get("pattern") != reg["key_ref"]:
-                out.append(f"{name}.{p}: a prop named {p} must be a key reference (pattern {reg['key_ref']}), never a literal (F5)")
+            if p in reg["key_props"] and f"{name}.{p}" not in reg["key_ref_props"]:
+                out.append(f"{name}.{p}: banned prop name (only {', '.join(reg['key_ref_props'])} may name the answer, F5)")
+            if f"{name}.{p}" in reg["key_ref_props"] and (s.get("pattern") != reg["key_ref"] or p not in c["required"]):
+                out.append(f"{name}.{p}: must be a required key reference (pattern {reg['key_ref']}), never a literal (F5)")
             out += schema_problems(reg, f"{name}.{p}", s)
         for p, n in c.get("cluck", {}).items():
             if p not in ("rows", "cols"):
@@ -207,7 +209,7 @@ def checkers(reg):
             "components": [{"component": n, "checker": c["checker"], "ships": live[c["checker"]]}
                            for n, c in reg["components"].items() if "checker" in c],
             "refs": {ref: d["stages"] for ref, d in reg["refs"].items()},
-            "marks": reg["marks"], "banned_props": reg["banned_props"], "key_props": reg["key_props"], "key_ref": reg["key_ref"],
+            "marks": reg["marks"], "banned_props": reg["banned_props"], "key_ref_props": reg["key_ref_props"], "key_ref": reg["key_ref"],
             "cluck_caps": {n: c["cluck"] for n, c in reg["components"].items() if "cluck" in c}}
 
 
@@ -228,8 +230,8 @@ def schema_block(reg):
              "Outputs: `views/library.json` (shipping components only), `views/prompt/*.md`, `views/checkers.json`, this block. "
              "Args show caps: `string≤N` characters, `[]≤N` items. No look props (F3); look = CSS by cascade.", "",
              "Marks (the only state words): " + ", ".join(f"`{m}`" for m in reg["marks"]) + ". Banned prop names: "
-             + ", ".join(f"`{p}`" for p in reg["banned_props"]) + ". A prop named " + " or ".join(f"`{p}`" for p in reg["key_props"])
-             + f" must be a key reference (`{reg['key_ref']}`), never a literal.", "",
+             + ", ".join(f"`{p}`" for p in reg["banned_props"]) + ". " + " or ".join(f"`{p}`" for p in reg["key_props"]) + " may name a prop only as "
+             + ", ".join(f"`{p}`" for p in reg["key_ref_props"]) + f", a required key reference (`{reg['key_ref']}`), never a literal.", "",
              "| Ref | Allowed stages | What |", "|---|---|---|"]
     lines += [f"| `{r}.*` | {', '.join(d['stages'])} | {d['desc']} |" for r, d in reg["refs"].items()]
     lines += ["", "| Component | Layer | Kind | Ships | Args | Checker |", "|---|---|---|---|---|---|"]

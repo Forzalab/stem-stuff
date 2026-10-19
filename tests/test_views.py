@@ -64,8 +64,14 @@ class Registry(unittest.TestCase):
         del r["components"]["Predict"]["props"]["answer"]["pattern"]
         r["components"]["Answer"]["props"]["key"] = {"type": "string", "maxLength": 9}
         bad = gv.problems(r)
-        self.assertTrue(any(line.startswith("Predict.answer: a prop named answer must be a key reference") for line in bad))
-        self.assertTrue(any(line.startswith("Answer.key: a prop named key must be a key reference") for line in bad))
+        self.assertTrue(any(line.startswith("Predict.answer: must be a required key reference") for line in bad))
+        self.assertTrue(any(line.startswith("Answer.key: banned prop name") for line in bad))
+        r = copy.deepcopy(REG)
+        r["components"]["Callout"]["props"]["answer"] = dict(REG["components"]["Predict"]["props"]["answer"])   # pattern alone is not enough
+        r["components"]["Predict"]["required"].remove("answer")
+        bad = gv.problems(r)
+        self.assertTrue(any(line.startswith("Callout.answer: banned prop name") for line in bad))
+        self.assertTrue(any(line.startswith("Predict.answer: must be a required key reference") for line in bad))
         pat = re.compile(REG["key_ref"])
         for ok in ("key.v1", "key.chi_P", "key.a.b-2"):
             self.assertTrue(pat.match(ok), ok)

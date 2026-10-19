@@ -10,6 +10,7 @@
     "L2": "renderers of engine data: every value comes from an engine result"
   },
   "key_props": ["answer", "key"],
+  "key_ref_props": ["Predict.answer"],
   "key_ref": "^key\\.[A-Za-z0-9_.-]+$",
   "banned_props": ["color", "colour", "size", "icon", "style", "class", "className", "bg", "background", "width", "height", "font", "theme", "variant"],
   "marks": ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"],
