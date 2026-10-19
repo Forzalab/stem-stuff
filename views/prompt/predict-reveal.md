@@ -13,7 +13,7 @@ Recipe: ask a guess, then reveal and mark. Length S. Stages: pre, wrong, post.
 - `given.*`: item givens (given.m, given.v0). Stages: pre, wrong, post.
 - `fig.*`: item figures (fig0, fig1). Stages: pre, wrong, post.
 - `wrong.*`: the picked distractor: wrong.error tag, wrong.text. Stages: wrong, post.
-- `key.*`: hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post. Stages: post.
+- `key.*`: hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post. Stages: post; as Predict.answer in any stage (the server keeps it).
 
 ## Engine tools (Query)
 - `graph.trace`
@@ -29,10 +29,11 @@ Recipe: ask a guess, then reveal and mark. Length S. Stages: pre, wrong, post.
 ## Components (`?` = optional)
 ### L0: primitives (escape hatch): build anything when no learning component fits
 - `View(children)`: root container
-- `Stack(children, dir?)`: children in a row or column
+- `Stack(children)`: children in order (direction is CSS, F3)
 - `Text(text)`: short text; inline $math$ allowed
 - `Math(tex)`: display TeX; an identity it states is re-checked
 - `Card(children, tag?)`: boxed group with an optional tag line
 ### L1: learning components: subject-blind, know data shapes only
-- `Predict(question, answer, tol?)`: student types a guess; marks it right or wrong against answer
-- `Reveal(children, when?)`: hidden until tapped or until a Predict is submitted
+- `Doodle(kind)`: small drawing from our art when no real visual fits (VISUAL-FIRST)
+- `Predict(question, answer, tol?)`: student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)
+- `Reveal(label)`: placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)

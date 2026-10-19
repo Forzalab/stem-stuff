@@ -289,8 +289,8 @@ Library 0.1.0, profile `stem`. Source: `views/registry.json`; regenerate with `p
 | Component | Layer | Kind | Args | Checker |
 |---|---|---|---|---|
 | View | L0 | layout | `View(children)` |  |
-| Stack | L0 | layout | `Stack(children, dir?)` |  |
-| Grid | L0 | layout | `Grid(children, cols?)` |  |
+| Stack | L0 | layout | `Stack(children)` |  |
+| Grid | L0 | layout | `Grid(children)` |  |
 | Card | L0 | layout | `Card(children, tag?)` |  |
 | Text | L0 | layout | `Text(text)` |  |
 | Math | L0 | domain | `Math(tex)` | symbolic.simplify |
@@ -302,11 +302,12 @@ Library 0.1.0, profile `stem`. Source: `views/registry.json`; regenerate with `p
 | Step | L1 | layout | `Step(title, children)` |  |
 | Compare | L1 | layout | `Compare(children, sync?)` |  |
 | Callout | L1 | layout | `Callout(tag, children)` |  |
-| Reveal | L1 | interaction | `Reveal(children, when?)` |  |
+| Reveal | L1 | interaction | `Reveal(label)` |  |
 | Predict | L1 | interaction | `Predict(question, answer, tol?)` | ref |
 | Slider | L1 | interaction | `Slider(value, min, max, step?, label?)` |  |
 | Choice | L1 | interaction | `Choice(question, options)` |  |
 | Assume | L1 | interaction | `Assume(text, alts?)` |  |
+| Doodle | L1 | layout | `Doodle(kind)` |  |
 | MatchQuiz | L1 | interaction | `MatchQuiz(pairs)` | text.term_cards |
 | Axes | L1 | domain | `Axes(axes)` |  |
 | Axis | L1 | layout | `Axis(name, left, right)` |  |

@@ -29,11 +29,12 @@ Recipe: term cards, axes, distinction table. Length M. Stages: pre, wrong, post.
 ## Components (`?` = optional)
 ### L0: primitives (escape hatch): build anything when no learning component fits
 - `View(children)`: root container
-- `Stack(children, dir?)`: children in a row or column
+- `Stack(children)`: children in order (direction is CSS, F3)
 - `Text(text)`: short text; inline $math$ allowed
 - `Math(tex)`: display TeX; an identity it states is re-checked
 - `Card(children, tag?)`: boxed group with an optional tag line
 - `Table(head, rows)`: header row + body rows; cells may be refs
 ### L1: learning components: subject-blind, know data shapes only
+- `Doodle(kind)`: small drawing from our art when no real visual fits (VISUAL-FIRST)
 - `Axes(axes)`: concept axes, each Axis a spectrum
 - `Axis(name, left, right)`: one axis of Axes

@@ -2,7 +2,8 @@
 Writes: views/library.json (LibrarySpec: components + props as JSON Schema), views/prompt/all.md + views/prompt/<recipe>.md
 (the view-writing prompt, full and per recipe subset), views/checkers.json (gate steps + per-component checker), and the
 block between the views markers in SCHEMA.md (tables + the <!-- schema: views --> JSON Schema for an item's views[]).
-Prompts list only engine tools that ship (not "planned"), and only components whose checker ships.
+Prompts list only engine tools that ship (not "planned"), and only components whose checker ships. Shipping tool names must
+match engine/ exactly (engine.spec()); a prop named in registry look_props fails (F3: the look is CSS, never a prop).
 usage: python3 tools/gen_views.py [--check]   (--check: write nothing, exit 1 if any output is stale)"""
 import json
 import os
@@ -17,7 +18,7 @@ END = "<!-- views:end -->"
 JSON_TYPE = {"string": {"type": "string"}, "strings": {"type": "array", "items": {"type": "string"}},
              "nodes": {"type": "array"}, "rows": {"type": "array", "items": {"type": "array"}},
              "int": {"type": "integer"}, "number": {"type": "number"}, "bool": {"type": "boolean"},
-             "ref": {"x-stem": "ref"}, "state": {"x-stem": "state"}, "query": {"x-stem": "query"}}
+             "ref": {}, "state": {}, "query": {}}   # ref / $state / Query result: any value in Lang; the gate checks them
 
 
 def load(path=REG):
@@ -30,9 +31,23 @@ def tools(reg, live_only=False):
     return {t: e["ships"] for e in reg["engines"].values() if not (live_only and e["ships"] == "planned") for t in e["tools"]}
 
 
-def problems(reg):
-    """Every broken cross-reference in the registry, as text lines (empty = good)."""
+def engine_tools():
+    """Tool names engine/ serves (P0.3), or None when the package is not importable."""
+    sys.path.insert(0, ROOT)
+    try:
+        import engine
+    except ImportError:
+        return None
+    return {t["name"] for t in engine.spec()}
+
+
+def problems(reg, served=None):
+    """Every broken cross-reference in the registry, as text lines (empty = good). served = engine tool names (None = skip)."""
     out, comps, all_tools = [], reg["components"], tools(reg)
+    if served is not None:
+        live = set(tools(reg, live_only=True))
+        out += [f"tool {t}: ships in the registry but engine/ has no such tool" for t in sorted(live - served)]
+        out += [f"tool {t}: engine/ serves it but the registry does not list it" for t in sorted(served - set(all_tools))]
     for name in [reg["root"], *reg["base"]]:
         if name not in comps:
             out.append(f"root/base: unknown component {name}")
@@ -50,6 +65,10 @@ def problems(reg):
                 out.append(f"{name}.{p['name']}: unknown type {p['type']}")
             if (p["type"] == "enum") != ("values" in p):
                 out.append(f"{name}.{p['name']}: enum needs values (and only enum has them)")
+            if p["name"] in reg["look_props"]:
+                out.append(f"{name}.{p['name']}: look prop (F3: the look is CSS by cascade)")
+            if p.get("server") and p["type"] != "ref":
+                out.append(f"{name}.{p['name']}: a server-held prop must be a ref")
         names = [p["name"] for p in c["props"]]
         if len(set(names)) != len(names):
             out.append(f"{name}: duplicate prop")
@@ -76,22 +95,36 @@ def problems(reg):
 
 
 def prop_schema(p):
-    s = dict(JSON_TYPE.get(p["type"], {}))
     if p["type"] == "enum":
-        s = {"type": "string", "enum": p["values"]}
-    return s
+        return {"type": "string", "enum": p["values"]}
+    return dict(JSON_TYPE[p["type"]])
+
+
+def ts(s):
+    """A prop schema as a signature type (the vendored prompt generator's spelling)."""
+    if "enum" in s:
+        return " | ".join(f'"{v}"' for v in s["enum"])
+    t = s.get("type")
+    if t == "array":
+        return ts(s["items"]) + "[]" if "items" in s else "any[]"
+    return {"integer": "number", None: "any"}.get(t, t)
 
 
 def library(reg):
-    """LibrarySpec JSON (shape modeled on OpenUI toSpec; P0.4 aligns it with the vendored generator)."""
-    comps = {}
+    """LibrarySpec JSON, the shape vendor/openui-lang.mjs reads (generateSystemPrompt({library}), createParser(schema, root)):
+    root, schema.$defs per component, components[name] = {signature, description}, componentGroups[{name, components, notes[]}]."""
+    defs, comps = {}, {}
     for name, c in reg["components"].items():
-        comps[name] = {"description": c["desc"], "layer": c["layer"], "kind": c["kind"],
-                       "props": {"type": "object", "properties": {p["name"]: prop_schema(p) for p in c["props"]},
-                                 "required": [p["name"] for p in c["props"] if p.get("required")]}}
-    groups = [{"name": layer, "notes": note, "components": [n for n, c in reg["components"].items() if c["layer"] == layer]}
+        props = {p["name"]: prop_schema(p) for p in c["props"]}
+        defs[name] = {"type": "object", "description": c["desc"], "properties": props,
+                      "required": [p["name"] for p in c["props"] if p.get("required")]}
+        comps[name] = {"signature": f"{name}(" + ", ".join(p["name"] + ("" if p.get("required") else "?") + ": " + ts(props[p["name"]])
+                                                          for p in c["props"]) + ")",
+                       "description": c["desc"], "layer": c["layer"], "kind": c["kind"]}
+    groups = [{"name": layer, "notes": [note], "components": [n for n, c in reg["components"].items() if c["layer"] == layer]}
               for layer, note in reg["layers"].items()]
-    return {"version": reg["version"], "profile": reg["profile"], "root": reg["root"], "components": comps, "componentGroups": groups}
+    return {"id": "stem", "version": reg["version"], "root": reg["root"], "schema": {"$defs": defs}, "components": comps,
+            "componentGroups": groups}
 
 
 def sig(name, c):
@@ -120,8 +153,12 @@ def prompt(reg, recipe=None):
               "- `q = Query(\"tool\", {args}, {defaults})` asks an engine. Bind components to `q`. Never type a value an engine can compute.",
               "- No Mutation, no Action, no navigation, no timers.", "",
               "## Bank refs"]
-    lines += [f"- `{ref}.*`: {d['desc']}. Stages: {', '.join(s for s in d['stages'] if s in stages) or 'none here, never use'}."
-              for ref, d in reg["refs"].items()]
+    for ref, d in reg["refs"].items():
+        here = ", ".join(s for s in d["stages"] if s in stages)
+        server = d.get("server_props")
+        if server and server.split(".")[0] in names:
+            here = (here + "; " if here else "none here, except ") + f"as {server} in any stage (the server keeps it)"
+        lines.append(f"- `{ref}.*`: {d['desc']}. Stages: {here or 'none here, never use'}.")
     lines += ["", "## Engine tools (Query)"]
     lines += [f"- `{t}`" for t in tools(reg, live_only=True)]
     lines += ["", "## Components (`?` = optional)"]
@@ -184,7 +221,7 @@ def outputs(reg, schema_md):
 
 def main(argv):
     reg = load()
-    bad = problems(reg)
+    bad = problems(reg, engine_tools())
     if bad:
         print("\n".join(bad), file=sys.stderr)
         return 1

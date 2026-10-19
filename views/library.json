@@ -1,14 +1,12 @@
 {
+  "id": "stem",
   "version": "0.1.0",
-  "profile": "stem",
   "root": "View",
-  "components": {
-    "View": {
-      "description": "root container",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+  "schema": {
+    "$defs": {
+      "View": {
         "type": "object",
+        "description": "root container",
         "properties": {
           "children": {
             "type": "array"
@@ -17,56 +15,34 @@
         "required": [
           "children"
         ]
-      }
-    },
-    "Stack": {
-      "description": "children in a row or column",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Stack": {
         "type": "object",
+        "description": "children in order (direction is CSS, F3)",
         "properties": {
           "children": {
             "type": "array"
-          },
-          "dir": {
-            "type": "string",
-            "enum": [
-              "col",
-              "row"
-            ]
           }
         },
         "required": [
           "children"
         ]
-      }
-    },
-    "Grid": {
-      "description": "small multiples, equal cells",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Grid": {
         "type": "object",
+        "description": "small multiples, equal cells",
         "properties": {
           "children": {
             "type": "array"
-          },
-          "cols": {
-            "type": "integer"
           }
         },
         "required": [
           "children"
         ]
-      }
-    },
-    "Card": {
-      "description": "boxed group with an optional tag line",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Card": {
         "type": "object",
+        "description": "boxed group with an optional tag line",
         "properties": {
           "children": {
             "type": "array"
@@ -78,14 +54,10 @@
         "required": [
           "children"
         ]
-      }
-    },
-    "Text": {
-      "description": "short text; inline $math$ allowed",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Text": {
         "type": "object",
+        "description": "short text; inline $math$ allowed",
         "properties": {
           "text": {
             "type": "string"
@@ -94,14 +66,10 @@
         "required": [
           "text"
         ]
-      }
-    },
-    "Math": {
-      "description": "display TeX; an identity it states is re-checked",
-      "layer": "L0",
-      "kind": "domain",
-      "props": {
+      },
+      "Math": {
         "type": "object",
+        "description": "display TeX; an identity it states is re-checked",
         "properties": {
           "tex": {
             "type": "string"
@@ -110,14 +78,10 @@
         "required": [
           "tex"
         ]
-      }
-    },
-    "Table": {
-      "description": "header row + body rows; cells may be refs",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Table": {
         "type": "object",
+        "description": "header row + body rows; cells may be refs",
         "properties": {
           "head": {
             "type": "array",
@@ -136,14 +100,10 @@
           "head",
           "rows"
         ]
-      }
-    },
-    "Chips": {
-      "description": "row of small chips (givens, tags)",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Chips": {
         "type": "object",
+        "description": "row of small chips (givens, tags)",
         "properties": {
           "items": {
             "type": "array"
@@ -152,18 +112,12 @@
         "required": [
           "items"
         ]
-      }
-    },
-    "Image": {
-      "description": "bank image by ref, with alt text",
-      "layer": "L0",
-      "kind": "layout",
-      "props": {
+      },
+      "Image": {
         "type": "object",
+        "description": "bank image by ref, with alt text",
         "properties": {
-          "src": {
-            "x-stem": "ref"
-          },
+          "src": {},
           "alt": {
             "type": "string"
           }
@@ -172,18 +126,12 @@
           "src",
           "alt"
         ]
-      }
-    },
-    "Given": {
-      "description": "one given value chip, bound to a given.* ref",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Given": {
         "type": "object",
+        "description": "one given value chip, bound to a given.* ref",
         "properties": {
-          "ref": {
-            "x-stem": "ref"
-          },
+          "ref": {},
           "label": {
             "type": "string"
           }
@@ -191,14 +139,10 @@
         "required": [
           "ref"
         ]
-      }
-    },
-    "Steps": {
-      "description": "ordered steps, one at a time (reveal) or as tabs",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Steps": {
         "type": "object",
+        "description": "ordered steps, one at a time (reveal) or as tabs",
         "properties": {
           "steps": {
             "type": "array"
@@ -214,14 +158,10 @@
         "required": [
           "steps"
         ]
-      }
-    },
-    "Step": {
-      "description": "one step of Steps",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Step": {
         "type": "object",
+        "description": "one step of Steps",
         "properties": {
           "title": {
             "type": "string"
@@ -234,14 +174,10 @@
           "title",
           "children"
         ]
-      }
-    },
-    "Compare": {
-      "description": "side by side; sync=true steps both together",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Compare": {
         "type": "object",
+        "description": "side by side; sync=true steps both together",
         "properties": {
           "children": {
             "type": "array"
@@ -253,14 +189,10 @@
         "required": [
           "children"
         ]
-      }
-    },
-    "Callout": {
-      "description": "highlighted box, e.g. tag \"Where it breaks\"",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Callout": {
         "type": "object",
+        "description": "highlighted box, e.g. tag \"Where it breaks\"",
         "properties": {
           "tag": {
             "type": "string"
@@ -273,44 +205,27 @@
           "tag",
           "children"
         ]
-      }
-    },
-    "Reveal": {
-      "description": "hidden until tapped or until a Predict is submitted",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Reveal": {
         "type": "object",
+        "description": "placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)",
         "properties": {
-          "children": {
-            "type": "array"
-          },
-          "when": {
-            "type": "string",
-            "enum": [
-              "tap",
-              "predicted"
-            ]
+          "label": {
+            "type": "string"
           }
         },
         "required": [
-          "children"
+          "label"
         ]
-      }
-    },
-    "Predict": {
-      "description": "student types a guess; marks it right or wrong against answer",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Predict": {
         "type": "object",
+        "description": "student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)",
         "properties": {
           "question": {
             "type": "string"
           },
-          "answer": {
-            "x-stem": "ref"
-          },
+          "answer": {},
           "tol": {
             "type": "number"
           }
@@ -319,18 +234,12 @@
           "question",
           "answer"
         ]
-      }
-    },
-    "Slider": {
-      "description": "binds a $state variable",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Slider": {
         "type": "object",
+        "description": "binds a $state variable",
         "properties": {
-          "value": {
-            "x-stem": "state"
-          },
+          "value": {},
           "min": {
             "type": "number"
           },
@@ -349,14 +258,10 @@
           "min",
           "max"
         ]
-      }
-    },
-    "Choice": {
-      "description": "one question with 2-3 options (low-confidence intent)",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Choice": {
         "type": "object",
+        "description": "one question with 2-3 options (low-confidence intent)",
         "properties": {
           "question": {
             "type": "string"
@@ -372,14 +277,10 @@
           "question",
           "options"
         ]
-      }
-    },
-    "Assume": {
-      "description": "\"I read this as X\" chip; tap sends a refine request",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Assume": {
         "type": "object",
+        "description": "\"I read this as X\" chip; tap sends a refine request",
         "properties": {
           "text": {
             "type": "string"
@@ -394,30 +295,36 @@
         "required": [
           "text"
         ]
-      }
-    },
-    "MatchQuiz": {
-      "description": "match terms to definitions",
-      "layer": "L1",
-      "kind": "interaction",
-      "props": {
+      },
+      "Doodle": {
         "type": "object",
+        "description": "small drawing from our art when no real visual fits (VISUAL-FIRST)",
         "properties": {
-          "pairs": {
-            "x-stem": "ref"
+          "kind": {
+            "type": "string",
+            "enum": [
+              "duck",
+              "heart"
+            ]
           }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "MatchQuiz": {
+        "type": "object",
+        "description": "match terms to definitions",
+        "properties": {
+          "pairs": {}
         },
         "required": [
           "pairs"
         ]
-      }
-    },
-    "Axes": {
-      "description": "concept axes, each Axis a spectrum",
-      "layer": "L1",
-      "kind": "domain",
-      "props": {
+      },
+      "Axes": {
         "type": "object",
+        "description": "concept axes, each Axis a spectrum",
         "properties": {
           "axes": {
             "type": "array"
@@ -426,14 +333,10 @@
         "required": [
           "axes"
         ]
-      }
-    },
-    "Axis": {
-      "description": "one axis of Axes",
-      "layer": "L1",
-      "kind": "layout",
-      "props": {
+      },
+      "Axis": {
         "type": "object",
+        "description": "one axis of Axes",
         "properties": {
           "name": {
             "type": "string"
@@ -450,14 +353,10 @@
           "left",
           "right"
         ]
-      }
-    },
-    "ITable": {
-      "description": "interactive table (kmap, truth, matrix, dp)",
-      "layer": "L1",
-      "kind": "domain",
-      "props": {
+      },
+      "ITable": {
         "type": "object",
+        "description": "interactive table (kmap, truth, matrix, dp)",
         "properties": {
           "kind": {
             "type": "string",
@@ -468,26 +367,18 @@
               "dp"
             ]
           },
-          "spec": {
-            "x-stem": "ref"
-          }
+          "spec": {}
         },
         "required": [
           "kind",
           "spec"
         ]
-      }
-    },
-    "Graph": {
-      "description": "draws a bank graph block (fig ref) or one stage of a trace",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Graph": {
         "type": "object",
+        "description": "draws a bank graph block (fig ref) or one stage of a trace",
         "properties": {
-          "fig": {
-            "x-stem": "ref"
-          },
+          "fig": {},
           "stage": {
             "type": "integer"
           }
@@ -495,114 +386,72 @@
         "required": [
           "fig"
         ]
-      }
-    },
-    "Walk": {
-      "description": "algorithm stepper: stages, frontier, distances from a trace",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Walk": {
         "type": "object",
+        "description": "algorithm stepper: stages, frontier, distances from a trace",
         "properties": {
-          "trace": {
-            "x-stem": "query"
-          }
+          "trace": {}
         },
         "required": [
           "trace"
         ]
-      }
-    },
-    "FlowNet": {
-      "description": "flow network with flows and the min cut",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "FlowNet": {
         "type": "object",
+        "description": "flow network with flows and the min cut",
         "properties": {
-          "flow": {
-            "x-stem": "query"
-          }
+          "flow": {}
         },
         "required": [
           "flow"
         ]
-      }
-    },
-    "Plot": {
-      "description": "function plot from sampled points",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Plot": {
         "type": "object",
+        "description": "function plot from sampled points",
         "properties": {
-          "data": {
-            "x-stem": "query"
-          }
+          "data": {}
         },
         "required": [
           "data"
         ]
-      }
-    },
-    "Riemann": {
-      "description": "Riemann rectangles + sum",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Riemann": {
         "type": "object",
+        "description": "Riemann rectangles + sum",
         "properties": {
-          "data": {
-            "x-stem": "query"
-          }
+          "data": {}
         },
         "required": [
           "data"
         ]
-      }
-    },
-    "FBD": {
-      "description": "free-body diagram; magnitudes from the engine",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "FBD": {
         "type": "object",
+        "description": "free-body diagram; magnitudes from the engine",
         "properties": {
-          "data": {
-            "x-stem": "query"
-          }
+          "data": {}
         },
         "required": [
           "data"
         ]
-      }
-    },
-    "Triangle": {
-      "description": "solved triangle (sides, angles)",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Triangle": {
         "type": "object",
+        "description": "solved triangle (sides, angles)",
         "properties": {
-          "data": {
-            "x-stem": "query"
-          }
+          "data": {}
         },
         "required": [
           "data"
         ]
-      }
-    },
-    "Timeline": {
-      "description": "ordered events on a line (history or motion)",
-      "layer": "L2",
-      "kind": "domain",
-      "props": {
+      },
+      "Timeline": {
         "type": "object",
+        "description": "ordered events on a line (history or motion)",
         "properties": {
-          "data": {
-            "x-stem": "query"
-          }
+          "data": {}
         },
         "required": [
           "data"
@@ -610,10 +459,206 @@
       }
     }
   },
+  "components": {
+    "View": {
+      "signature": "View(children: any[])",
+      "description": "root container",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Stack": {
+      "signature": "Stack(children: any[])",
+      "description": "children in order (direction is CSS, F3)",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Grid": {
+      "signature": "Grid(children: any[])",
+      "description": "small multiples, equal cells",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Card": {
+      "signature": "Card(children: any[], tag?: string)",
+      "description": "boxed group with an optional tag line",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Text": {
+      "signature": "Text(text: string)",
+      "description": "short text; inline $math$ allowed",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Math": {
+      "signature": "Math(tex: string)",
+      "description": "display TeX; an identity it states is re-checked",
+      "layer": "L0",
+      "kind": "domain"
+    },
+    "Table": {
+      "signature": "Table(head: string[], rows: any[][])",
+      "description": "header row + body rows; cells may be refs",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Chips": {
+      "signature": "Chips(items: any[])",
+      "description": "row of small chips (givens, tags)",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Image": {
+      "signature": "Image(src: any, alt: string)",
+      "description": "bank image by ref, with alt text",
+      "layer": "L0",
+      "kind": "layout"
+    },
+    "Given": {
+      "signature": "Given(ref: any, label?: string)",
+      "description": "one given value chip, bound to a given.* ref",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "Steps": {
+      "signature": "Steps(steps: any[], mode?: \"reveal\" | \"tabs\")",
+      "description": "ordered steps, one at a time (reveal) or as tabs",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "Step": {
+      "signature": "Step(title: string, children: any[])",
+      "description": "one step of Steps",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "Compare": {
+      "signature": "Compare(children: any[], sync?: boolean)",
+      "description": "side by side; sync=true steps both together",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "Callout": {
+      "signature": "Callout(tag: string, children: any[])",
+      "description": "highlighted box, e.g. tag \"Where it breaks\"",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "Reveal": {
+      "signature": "Reveal(label: string)",
+      "description": "placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Predict": {
+      "signature": "Predict(question: string, answer: any, tol?: number)",
+      "description": "student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Slider": {
+      "signature": "Slider(value: any, min: number, max: number, step?: number, label?: string)",
+      "description": "binds a $state variable",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Choice": {
+      "signature": "Choice(question: string, options: string[])",
+      "description": "one question with 2-3 options (low-confidence intent)",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Assume": {
+      "signature": "Assume(text: string, alts?: string[])",
+      "description": "\"I read this as X\" chip; tap sends a refine request",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Doodle": {
+      "signature": "Doodle(kind: \"duck\" | \"heart\")",
+      "description": "small drawing from our art when no real visual fits (VISUAL-FIRST)",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "MatchQuiz": {
+      "signature": "MatchQuiz(pairs: any)",
+      "description": "match terms to definitions",
+      "layer": "L1",
+      "kind": "interaction"
+    },
+    "Axes": {
+      "signature": "Axes(axes: any[])",
+      "description": "concept axes, each Axis a spectrum",
+      "layer": "L1",
+      "kind": "domain"
+    },
+    "Axis": {
+      "signature": "Axis(name: string, left: string, right: string)",
+      "description": "one axis of Axes",
+      "layer": "L1",
+      "kind": "layout"
+    },
+    "ITable": {
+      "signature": "ITable(kind: \"kmap\" | \"truth\" | \"matrix\" | \"dp\", spec: any)",
+      "description": "interactive table (kmap, truth, matrix, dp)",
+      "layer": "L1",
+      "kind": "domain"
+    },
+    "Graph": {
+      "signature": "Graph(fig: any, stage?: number)",
+      "description": "draws a bank graph block (fig ref) or one stage of a trace",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "Walk": {
+      "signature": "Walk(trace: any)",
+      "description": "algorithm stepper: stages, frontier, distances from a trace",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "FlowNet": {
+      "signature": "FlowNet(flow: any)",
+      "description": "flow network with flows and the min cut",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "Plot": {
+      "signature": "Plot(data: any)",
+      "description": "function plot from sampled points",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "Riemann": {
+      "signature": "Riemann(data: any)",
+      "description": "Riemann rectangles + sum",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "FBD": {
+      "signature": "FBD(data: any)",
+      "description": "free-body diagram; magnitudes from the engine",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "Triangle": {
+      "signature": "Triangle(data: any)",
+      "description": "solved triangle (sides, angles)",
+      "layer": "L2",
+      "kind": "domain"
+    },
+    "Timeline": {
+      "signature": "Timeline(data: any)",
+      "description": "ordered events on a line (history or motion)",
+      "layer": "L2",
+      "kind": "domain"
+    }
+  },
   "componentGroups": [
     {
       "name": "L0",
-      "notes": "primitives (escape hatch): build anything when no learning component fits",
+      "notes": [
+        "primitives (escape hatch): build anything when no learning component fits"
+      ],
       "components": [
         "View",
         "Stack",
@@ -628,7 +673,9 @@
     },
     {
       "name": "L1",
-      "notes": "learning components: subject-blind, know data shapes only",
+      "notes": [
+        "learning components: subject-blind, know data shapes only"
+      ],
       "components": [
         "Given",
         "Steps",
@@ -640,6 +687,7 @@
         "Slider",
         "Choice",
         "Assume",
+        "Doodle",
         "MatchQuiz",
         "Axes",
         "Axis",
@@ -648,7 +696,9 @@
     },
     {
       "name": "L2",
-      "notes": "renderers of engine data: every value comes from a Query result or a bank ref",
+      "notes": [
+        "renderers of engine data: every value comes from a Query result or a bank ref"
+      ],
       "components": [
         "Graph",
         "Walk",

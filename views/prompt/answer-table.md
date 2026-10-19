@@ -29,10 +29,11 @@ Recipe: givens + answer table (post only). Length S. Stages: post.
 ## Components (`?` = optional)
 ### L0: primitives (escape hatch): build anything when no learning component fits
 - `View(children)`: root container
-- `Stack(children, dir?)`: children in a row or column
+- `Stack(children)`: children in order (direction is CSS, F3)
 - `Text(text)`: short text; inline $math$ allowed
 - `Math(tex)`: display TeX; an identity it states is re-checked
 - `Chips(items)`: row of small chips (givens, tags)
 - `Table(head, rows)`: header row + body rows; cells may be refs
 ### L1: learning components: subject-blind, know data shapes only
+- `Doodle(kind)`: small drawing from our art when no real visual fits (VISUAL-FIRST)
 - `Given(ref, label?)`: one given value chip, bound to a given.* ref

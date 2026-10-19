@@ -29,9 +29,10 @@ Recipe: drag a parameter, watch the verdict change. Length M. Stages: pre, post.
 ## Components (`?` = optional)
 ### L0: primitives (escape hatch): build anything when no learning component fits
 - `View(children)`: root container
-- `Stack(children, dir?)`: children in a row or column
+- `Stack(children)`: children in order (direction is CSS, F3)
 - `Text(text)`: short text; inline $math$ allowed
 - `Math(tex)`: display TeX; an identity it states is re-checked
-- `Grid(children, cols?)`: small multiples, equal cells
+- `Grid(children)`: small multiples, equal cells
 ### L1: learning components: subject-blind, know data shapes only
+- `Doodle(kind)`: small drawing from our art when no real visual fits (VISUAL-FIRST)
 - `Slider(value, min, max, step?, label?)`: binds a $state variable

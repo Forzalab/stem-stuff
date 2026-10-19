@@ -30,11 +30,34 @@ class Registry(unittest.TestCase):
                  (lambda r: r["components"]["Plot"].pop("checker"), "L2 component needs a checker"),
                  (lambda r: r["engines"]["graph"]["tools"].append("symbolic.x"), "not under engine graph"),
                  (lambda r: r["recipes"]["steps"].update(stages=["later"]), "stages must be"),
-                 (lambda r: r["components"]["Text"]["props"].append({"name": "text", "type": "string"}), "duplicate prop")]
+                 (lambda r: r["components"]["Text"]["props"].append({"name": "text", "type": "string"}), "duplicate prop"),
+                 (lambda r: r["components"]["Text"]["props"][0].update(server=True), "server-held prop must be a ref")]
         for breakit, want in cases:
             r = copy.deepcopy(REG)
             breakit(r)
             self.assertTrue(any(want in line for line in gv.problems(r)), want)
+
+    def test_engine_names_match_engine_package(self):
+        served = gv.engine_tools()
+        if served is None:
+            self.skipTest("engine/ not importable")
+        self.assertEqual(gv.problems(REG, served), [])
+        bad = gv.problems(REG, served - {"graph.mst"} | {"graph.new"})
+        self.assertIn("tool graph.mst: ships in the registry but engine/ has no such tool", bad)
+        self.assertIn("tool graph.new: engine/ serves it but the registry does not list it", bad)
+
+    def test_no_look_props(self):
+        r = copy.deepcopy(REG)
+        r["components"]["Card"]["props"].append({"name": "color", "type": "string"})
+        self.assertIn("Card.color: look prop (F3: the look is CSS by cascade)", gv.problems(r))
+
+    def test_locks(self):
+        c = REG["components"]
+        self.assertEqual([p["name"] for p in c["Reveal"]["props"]], ["label"])              # F4: body = second program
+        self.assertTrue(next(p for p in c["Predict"]["props"] if p["name"] == "answer")["server"])   # F5
+        self.assertIn("Doodle", REG["base"])                                                 # VISUAL-FIRST
+        for r in REG["recipes"]:
+            self.assertIn("`Doodle(kind)`", gv.prompt(REG, r))
 
     def test_key_only_in_post(self):
         self.assertEqual(REG["refs"]["key"]["stages"], ["post"])
@@ -52,12 +75,17 @@ class Generated(unittest.TestCase):
 
     def test_library_spec(self):
         lib = gv.library(REG)
+        self.assertEqual(lib["root"], "View")
         self.assertEqual(set(lib["components"]), set(REG["components"]))
+        self.assertEqual(set(lib["schema"]["$defs"]), set(REG["components"]))
         self.assertEqual(sorted(n for g in lib["componentGroups"] for n in g["components"]), sorted(REG["components"]))
-        walk = lib["components"]["Walk"]["props"]
+        self.assertTrue(all(isinstance(g["notes"], list) for g in lib["componentGroups"]))
+        walk = lib["schema"]["$defs"]["Walk"]
         self.assertEqual(walk["required"], ["trace"])
-        self.assertEqual(walk["properties"]["trace"], {"x-stem": "query"})
-        self.assertEqual(lib["components"]["Steps"]["props"]["properties"]["mode"], {"type": "string", "enum": ["reveal", "tabs"]})
+        self.assertEqual(walk["properties"]["trace"], {})
+        self.assertEqual(lib["schema"]["$defs"]["Steps"]["properties"]["mode"], {"type": "string", "enum": ["reveal", "tabs"]})
+        self.assertEqual(lib["components"]["Steps"]["signature"], 'Steps(steps: any[], mode?: "reveal" | "tabs")')
+        self.assertEqual(lib["components"]["Predict"]["signature"], "Predict(question: string, answer: any, tol?: number)")
 
     def test_prompts_offer_only_what_ships(self):
         planned = {t for e in REG["engines"].values() if e["ships"] == "planned" for t in e["tools"]}
@@ -79,6 +107,7 @@ class Generated(unittest.TestCase):
     def test_pre_prompt_hides_key(self):
         text = gv.prompt(REG, "hint-line")   # stages pre, wrong
         self.assertRegex(text, r"`key\.\*`.*Stages: none here, never use")
+        self.assertRegex(gv.prompt(REG, "predict-reveal"), r"`key\.\*`.*Stages: post; as Predict\.answer in any stage \(the server keeps it\)")
         self.assertRegex(gv.prompt(REG, "answer-table"), r"`key\.\*`.*Stages: post\.")
 
     def test_checkers(self):

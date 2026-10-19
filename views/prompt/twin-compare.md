@@ -29,11 +29,12 @@ Recipe: two methods or two algorithms side by side, in sync. Length M. Stages: p
 ## Components (`?` = optional)
 ### L0: primitives (escape hatch): build anything when no learning component fits
 - `View(children)`: root container
-- `Stack(children, dir?)`: children in a row or column
+- `Stack(children)`: children in order (direction is CSS, F3)
 - `Text(text)`: short text; inline $math$ allowed
 - `Math(tex)`: display TeX; an identity it states is re-checked
 - `Table(head, rows)`: header row + body rows; cells may be refs
 ### L1: learning components: subject-blind, know data shapes only
+- `Doodle(kind)`: small drawing from our art when no real visual fits (VISUAL-FIRST)
 - `Compare(children, sync?)`: side by side; sync=true steps both together
 ### L2: renderers of engine data: every value comes from a Query result or a bank ref
 - `Walk(trace)`: algorithm stepper: stages, frontier, distances from a trace
