@@ -1,0 +1,10 @@
+avoid-ai-writing detector, vendored unchanged.
+
+  file:     patterns.js  (= detector/patterns.js upstream, 3,588 lines, zero dependencies)
+  upstream: https://github.com/conorbronsdon/avoid-ai-writing
+  commit:   013d1db6b43288c08fcba422fcda3b981ec93dd9 (2026-10-18)
+  license:  MIT, Copyright (c) 2026 Conor Bronsdon (full text in LICENSE next to this file)
+
+Used for the differential test of aiw.py, the stdlib Python port the gate runs (tests/test_aiw.py via
+tests/aiw-canon.mjs), and by the authoring lab. Not shipped to the page. Do not edit: update by copying a new
+upstream commit, changing the commit line above, and re-running tests/test_aiw.py.

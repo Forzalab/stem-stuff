@@ -44,7 +44,7 @@ def check(raw, key, budget, question=""):
         "new_numbers": sorted(numbers(shown) - numbers(key + "\n" + question) - {0.0, 1.0, 2.0}),
         "words": len(re.findall(r"[A-Za-z']+", shown)),
         "hedges": sum(shown.lower().count(h) for h in HEDGES),
-        "quack": "QUACK" in shown.upper(),
+        "quack": "quack" in shown.lower(),             # v4 (T62): quack / QUACK / quackkk are all fine, not only the caps
     }
     r["over_budget"] = r["words"] > budget
     r["ok"] = not (r["note_leak"] or r["paren_latex"] or r["split_dd"] or r["odd_dollar"] or r["headers"] or r["star_bullets"]

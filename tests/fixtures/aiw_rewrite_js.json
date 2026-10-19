@@ -1,0 +1,250 @@
+{
+ "source": "conorbronsdon/avoid-ai-writing@013d1db detector/patterns.js analyzeText()",
+ "cases": [
+  {
+   "text": "Moreover, the edge A-B has weight 4 and C-D has weight 7.",
+   "issues": [
+    {
+     "type": "transition",
+     "text": "Moreover",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "It is not just a shortcut, it is a testament to how Dijkstra relaxes $d(v)$ in 3 steps.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "testament to",
+     "severity": "high",
+     "suggestion": "shows, proves"
+    },
+    {
+     "type": "negative-parallelism",
+     "text": "is not just a shortcut, it is",
+     "index": 3,
+     "severity": "high",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "Additionally, this robust method uses `dist[v]` to find the shortest path in 12 ms.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "robust",
+     "severity": "high",
+     "suggestion": "strong, reliable, solid"
+    },
+    {
+     "type": "transition",
+     "text": "Additionally",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "I hope this helps! The answer is $x = 5$ m/s.",
+   "issues": [
+    {
+     "type": "chatbot",
+     "text": "I hope this helps",
+     "index": 0,
+     "severity": "critical",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "In today's world, graphs are a pivotal tool for routing 1,200 packets.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "pivotal",
+     "severity": "high",
+     "suggestion": "important, key, critical"
+    },
+    {
+     "type": "transition",
+     "text": "In today's",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "Experts say the greedy pick from A is always safe.",
+   "issues": [
+    {
+     "type": "vague-attribution",
+     "text": "Experts say",
+     "index": 0,
+     "severity": "critical",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "Great question! Let's delve into how BFS visits node A first.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "delve",
+     "severity": "high",
+     "suggestion": "explore, dig into, look at"
+    },
+    {
+     "type": "tier1",
+     "text": "delve into",
+     "severity": "high",
+     "suggestion": "explore, dig into"
+    },
+    {
+     "type": "lets-construction",
+     "text": "Let's delve",
+     "index": 16,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "This could potentially reduce the cut to 9 edges in the graph.",
+   "issues": [
+    {
+     "type": "hedge-stack",
+     "text": "could potentially",
+     "index": 5,
+     "severity": "high",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "It's worth noting that node C has degree 3 in this graph.",
+   "issues": [
+    {
+     "type": "transition",
+     "text": "It's worth noting that",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "In order to find the flow, push 5 units along A-C.",
+   "issues": [
+    {
+     "type": "tier1-clarity",
+     "text": "In order to",
+     "severity": "medium",
+     "suggestion": "to"
+    }
+   ]
+  },
+  {
+   "text": "Furthermore, the seamless update sets $d(B) = 4$ in 2 ms.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "seamless",
+     "severity": "high",
+     "suggestion": "smooth, easy, without friction"
+    },
+    {
+     "type": "transition",
+     "text": "Furthermore",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "Studies show that Prim's method is a game-changer for 10 nodes.",
+   "issues": [
+    {
+     "type": "tier1",
+     "text": "game-changer",
+     "severity": "high",
+     "suggestion": "changes how [X] works"
+    },
+    {
+     "type": "vague-attribution",
+     "text": "Studies show",
+     "index": 0,
+     "severity": "critical",
+     "suggestion": null
+    }
+   ]
+  },
+  {
+   "text": "The edge A-B has weight 4 and C-D has weight 7.",
+   "issues": []
+  },
+  {
+   "text": "Dijkstra relaxes $d(v)$ in 3 steps.",
+   "issues": []
+  },
+  {
+   "text": "This method uses `dist[v]` to find the shortest path in 12 ms.",
+   "issues": []
+  },
+  {
+   "text": "The answer is $x = 5$ m/s.",
+   "issues": []
+  },
+  {
+   "text": "Graphs route 1,200 packets.",
+   "issues": []
+  },
+  {
+   "text": "The greedy pick from A is safe here.",
+   "issues": []
+  },
+  {
+   "text": "BFS visits node A first.",
+   "issues": []
+  },
+  {
+   "text": "This could reduce the cut to 9 edges in the graph.",
+   "issues": []
+  },
+  {
+   "text": "Node C has degree 3 in this graph.",
+   "issues": []
+  },
+  {
+   "text": "To find the flow, push 5 units along A-C.",
+   "issues": []
+  },
+  {
+   "text": "The update sets $d(B) = 4$ in 2 ms.",
+   "issues": []
+  },
+  {
+   "text": "Prim's method is a game-changer for 10 nodes.",
+   "issues": []
+  },
+  {
+   "text": "Moreover, edge A-B has weight 4 and C-D has weight 7.",
+   "issues": [
+    {
+     "type": "transition",
+     "text": "Moreover",
+     "index": 0,
+     "severity": "medium",
+     "suggestion": null
+    }
+   ]
+  }
+ ]
+}
