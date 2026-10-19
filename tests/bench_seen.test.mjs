@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { parseDump, itemState, rows, labelSheet, score, jevShadow, JEV_MODEL, proposeSeen } from "../tools/bench_seen.mjs";
+import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_MODEL, JEV_MODELS, proposeSeen } from "../tools/bench_seen.mjs";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../intent.js"), w); return w; };
@@ -58,9 +58,19 @@ test("jevShadow: builds { model, state, questions: { earned } } and calls only t
   try {
     const out = await jevShadow(["+0.0  q_open  A mc", "+10.0  pick  A wrong"], b => { seen.push(b); return { earned: true }; });
     assert.deepEqual(out, { earned: true });
-    assert.equal(seen[0].model, JEV_MODEL); assert.equal(JEV_MODEL, "typesafe/jev-1.14");
+    assert.equal(seen[0].model, JEV_MODEL); assert.equal(JEV_MODEL, "microsoft/microsoft-decision-1", "MSD-1 is the default");
     assert.equal(seen[0].state, "+0.0  q_open  A mc\n+10.0  pick  A wrong"); assert.deepEqual(Object.keys(seen[0].questions), ["earned"]);
     assert.throws(() => jevShadow([], undefined), /injected client/);
+    assert.deepEqual([...JEV_MODELS], ["microsoft/microsoft-decision-1", "typesafe/jev-1.14"], "jev-1.14 stays as the 2nd arm");
+    seen.length = 0;
+    await jevShadow(["+0.0  q_open  A mc"], b => { seen.push(b); return {}; }, "typesafe/jev-1.14");
+    assert.deepEqual(seen.map(b => b.model), ["typesafe/jev-1.14"], "the model arg picks one arm");
+    seen.length = 0;
+    const both = await jevBench(["+0.0  q_open  A mc"], b => { seen.push(b); return { earned: b.model.length }; });
+    assert.deepEqual(seen.map(b => b.model), [...JEV_MODELS], "bench both, in order");
+    assert.deepEqual(Object.keys(both), [...JEV_MODELS]);
+    seen.length = 0; await jevBench([], b => { seen.push(b); return {}; }, ["typesafe/jev-1.14"]);
+    assert.deepEqual(seen.map(b => b.model), ["typesafe/jev-1.14"], "bench just the models given");
     assert.equal(fetched.length, 0);
   } finally { globalThis.fetch = realFetch; }
 });

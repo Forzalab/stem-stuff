@@ -4,7 +4,7 @@
      node tools/bench_seen.mjs dump.jsonl [--out label-sheet.csv]        → label-sheet.csv: sid,code,window,rule,label (label blank)
      node tools/bench_seen.mjs dump.jsonl --labels labels.csv            → rule precision / recall against the filled label column (y / n)
    The rule is intent.js's own proposeSeen (loaded, not copied), fed the state rebuilt from the item's lines up to its first right pick.
-   jevShadow(lines, client): the Jev-model shadow (typesafe/jev-1.14) as a body for an INJECTED client only. No default network here,
+   jevShadow(lines, client, model?): the Jev-model shadow (microsoft/microsoft-decision-1; typesafe/jev-1.14 is the 2nd arm) as a body for an INJECTED client only. No default network here,
    and the page never loads this file. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -77,11 +77,18 @@ export function score(rs, labelsCsv) {
   return { labelled: tp + fp + fn + tn, tp, fp, fn, tn, precision: tp + fp ? tp / (tp + fp) : null, recall: tp + fn ? tp / (tp + fn) : null };
 }
 
-/* the Jev-model shadow: the body for one item's lines, sent through the caller's client only (client(body) → answer) */
-export const JEV_MODEL = "typesafe/jev-1.14";
-export function jevShadow(lines, client) {
+/* the Jev-model shadow: the body for one item's lines, sent through the caller's client only (client(body) → answer).
+   Two arms: MSD-1 (the default) and jev-1.14 (the 2nd arm). model = one slug to pick an arm; jevBench runs every arm (or the models given) */
+export const JEV_MODELS = ["microsoft/microsoft-decision-1", "typesafe/jev-1.14"];
+export const JEV_MODEL = JEV_MODELS[0];
+export function jevShadow(lines, client, model = JEV_MODEL) {
   if (typeof client !== "function") throw new Error("jevShadow needs an injected client: no default network");
-  return client({ model: JEV_MODEL, state: lines.join("\n"), questions: { earned: null } });
+  return client({ model, state: lines.join("\n"), questions: { earned: null } });
+}
+export async function jevBench(lines, client, models = JEV_MODELS) {
+  const out = {};
+  for (const m of models) out[m] = await jevShadow(lines, client, m);
+  return out;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
