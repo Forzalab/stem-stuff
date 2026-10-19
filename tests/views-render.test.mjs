@@ -130,7 +130,7 @@ test("caps (F7): over a cap the statement drops with too-long", () => {
 test("Predict (F5): no answer in the DOM before the pick is posted; the pick goes to predict(); the Reveal patch merges in place (F4)", async () => {
   const m = mount(), posted = [];
   const server = makePredict({ delay: 0 });
-  const v = render(P11, m, { predict: async (pick, info) => { posted.push([pick, info.view]); return server(pick); } });
+  const v = render(P11, m, { predict: async (pick, info) => { posted.push([pick, info.view, info.key]); return server(pick); } });
   for (const w of ANSWER) assert.ok(!html(m).includes(w), w);
   for (const w of ANSWER) assert.ok(!v.src.includes(w), "nor in the program the page holds");
   assert.ok(one(m, "vw-lock"), "a visible locked row");
@@ -142,7 +142,8 @@ test("Predict (F5): no answer in the DOM before the pick is posted; the pick goe
   pills[3].click();
   go.click();
   await tick(); await tick();
-  assert.deepEqual(posted, [["5", "pick"]]);
+  assert.deepEqual(posted, [["5", "pick", "key.chi"]]);
+  assert.ok(!html(m).includes("key.chi"), "the key ref is posted, never drawn");
   assert.equal(slots(m)[1].firstChild, pred, "Predict kept its node (and its state) through the patch");
   assert.equal(one(m, "vw-verdict").textContent, "Not 5.");
   assert.equal(byClass(m, "vw-pill").filter(p => p.classList.contains("wrong")).length, 2);
@@ -150,6 +151,13 @@ test("Predict (F5): no answer in the DOM before the pick is posted; the pick goe
   assert.match(html(m), /χ\(P\) = 3/);
   assert.equal(byClass(one(m, "vw-fig"), "cm").map(g => g.childNodes[1].textContent).join(""), "1212321332", "classes carry a digit (F12)");
   assert.deepEqual(v.errors, []);
+});
+
+test("Predict (F5): a literal answer drops the statement (bad-value); only a key.<id> ref passes", () => {
+  const m = mount();
+  const v = render('root = View([p])\np = Predict("", "What is χ(P)?", ["2", "3"], [], 2, "3")', m);
+  assert.ok(v.errors.some(e => e.code === "bad-value" && e.statementId === "p"));
+  assert.ok(!html(m).includes("vw-predict"));
 });
 
 test("Predict: a right pick ends it; no predict function = Check stays off (offline)", async () => {

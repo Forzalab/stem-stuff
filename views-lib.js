@@ -3,7 +3,8 @@
 // (LibrarySpec, generated from views/registry.json) its entries win per component and LOCAL only fills the names it lacks.
 // Rules (refine F2/F3/F7/F19): no prop names a look (colour, size, icon, style...); look is CSS by cascade (views.css, page vs .ai-box).
 // Every string prop has a maxLength and every list a maxItems: over a cap, the statement drops (`too-long`).
-// Predict has NO answer prop: the pick goes to the server (/predict) and the answer only ever arrives as a patch (F4, F5).
+// Predict's `answer` is a key REFERENCE ("key.<id>"), never a literal: the page posts it with the pick to /predict and never
+// resolves or draws it; the answer itself only ever arrives as a Reveal patch (F4, F5).
 
 const str = (maxLength, extra = {}) => ({ type: "string", maxLength, ...extra });
 const list = (items, maxItems, extra = {}) => ({ type: "array", items, maxItems, ...extra });
@@ -42,8 +43,9 @@ export const LOCAL = {
     Hints: { layer: "L1", desc: "A hint ladder: one hint at a time",
       props: { hints: list(str(200), 3, { minItems: 1 }) }, required: ["hints"] },
     Predict: { layer: "L1", desc: "Pick an answer; the pick is checked by the server, the page never holds the answer",
-      props: { tag: str(24), q: str(140), choices: list(str(24), 5, { minItems: 2 }), struck: list(str(24), 4), tries: { type: "integer", minimum: 1, maximum: 3 } },
-      required: ["q", "choices"] },
+      props: { tag: str(24), q: str(140), choices: list(str(24), 5, { minItems: 2 }), struck: list(str(24), 4), tries: { type: "integer", minimum: 1, maximum: 3 },
+        answer: str(48, { pattern: "^key\\.[A-Za-z0-9_.-]+$" }) },
+      required: ["q", "choices", "answer"] },
     Reveal: { layer: "L1", desc: "A visible locked row; its body arrives as a second program when the stage changes",
       props: { lock: str(80), body: list(ANY, 4) }, required: ["lock"] },
     Answer: { layer: "L1", desc: "The boxed answer and one sentence",

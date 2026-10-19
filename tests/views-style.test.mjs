@@ -86,6 +86,8 @@ test("views-lib.js: every string prop has a maxLength or an enum, every list a m
 });
 
 test("views-lib.js: Predict carries no answer; the answer reaches the page only as a Reveal patch (F4/F5)", () => {
-  assert.deepEqual(Object.keys(LIB.components.Predict.props).filter(k => /answer|key|correct|solution|tol/i.test(k)), []);
+  const P = LIB.components.Predict.props;
+  assert.deepEqual(Object.keys(P).filter(k => /answer|key|correct|solution|tol/i.test(k)), ["answer"]);
+  assert.ok(new RegExp(P.answer.pattern).test("key.chi") && !new RegExp(P.answer.pattern).test("3"), "answer = a key.<id> ref, never a literal");
   assert.deepEqual(Object.keys(LIB.components.Reveal.props), ["lock", "body"]);
 });

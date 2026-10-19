@@ -1,4 +1,4 @@
-// A FAKE /predict for the demo (F5): on the site this is serve.py's POST /predict {item, view, pick} -> {ok, tries_left, patch?}.
+// A FAKE /predict for the demo (F5): on the site this is serve.py's POST /predict {item, view, key, pick} -> {ok, tries_left, patch?}.
 // The answer and the Reveal body live only here (the "server"), never in the page's program or DOM before stage post.
 // Petersen 3-colouring: outer u0..u4 = 1 2 1 2 3, inner v0..v4 = 2 1 3 3 2 (checked against all 15 edges below).
 

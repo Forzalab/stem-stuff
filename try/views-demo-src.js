@@ -17,7 +17,7 @@ s4 = Step("**D** sits at maxDepth 2: recorded, **not fetched**. D→E is never e
 /** View 2: P11 χ(Petersen), picked 4, stage wrong:4, Cluck's sheet. Predict carries no answer; Reveal is a locked row. */
 export const P11 = `root = View([hints, pick, rv])
 hints = Hints(["The outer ring is a 5-cycle. An odd cycle cannot be 2-coloured, so χ(P) ≥ 3.", "Vertices that are not adjacent may share a colour. Colour the outer pentagon first, then the inner star.", "Petersen has 15 edges and no triangle. Try the inner star with the colours the spokes still allow."])
-pick = Predict("Try again", "What is χ(P)?", ["2", "3", "4", "5"], ["4"], 2)
+pick = Predict("Try again", "What is χ(P)?", ["2", "3", "4", "5"], ["4"], 2, "key.chi")
 rv = Reveal("The answer opens after your second try.")
 `;
 

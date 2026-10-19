@@ -3,7 +3,7 @@
 //   render(program, mount, o)   whole program -> handle
 //   stream(chunks, mount, o)    (async) iterable of text chunks -> Promise<handle>; paints once per completed statement
 //   mountView(mount, o)         handle { push(chunk), end(), patch(program), errors, src, el }
-// o = { predict(pick, {view}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e) }
+// o = { predict(pick, {view, key}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e) }
 // Rules built in (brain refine/REFINE.md): F3 no look props (look = views.css by cascade, page vs .ai-box); F4 Reveal's body is a
 // SECOND program patch-merged in place (spec §7, mergeStatements); F5 Predict posts the pick, the page never holds the answer;
 // F7 caps from views-lib.js drop a statement (`too-long`); F8 append-only paint into slots the root reserves when it arrives;
@@ -101,6 +101,7 @@ function capError(el) {
     if (typeof v === "string") {
       if (s.maxLength && v.length > s.maxLength) return { code: "too-long", message: `${path}: ${v.length} > ${s.maxLength} chars` };
       if (s.enum && !s.enum.includes(v)) return { code: "bad-value", message: `${path}: "${v}" not in ${s.enum.join("|")}` };
+      if (s.pattern && !new RegExp(s.pattern).test(v)) return { code: "bad-value", message: `${path}: does not match ${s.pattern}` };
     }
     if (Array.isArray(v)) {
       if (s.maxItems && v.length > s.maxItems) return { code: "too-long", message: `${path}: ${v.length} > ${s.maxItems} items` };
@@ -369,7 +370,8 @@ register("Hints", (p, c) => {
   return c.h("div", { class: "vw-callout vw-hints" }, c.h("div", { class: "vw-tag" }, "Hint"), text, c.h("div", { class: "vw-row" }, more, n));
 });
 
-/** Predict (F5/F15): pills + pips + one filled Check. The pick goes to ctx.predict; the answer never comes as a prop. */
+/** Predict (F5/F15): pills + pips + one filled Check. The pick goes to ctx.predict with the key ref
+// (p.answer = "key.<id>", F5); the ref is never resolved or drawn, and no answer literal ever comes as a prop. */
 register("Predict", (p, c) => {
   const tries = p.tries || 2, struck = new Set((p.struck || []).map(String));
   const st = c.state(() => ({ pick: null, used: struck.size, wrong: new Set(struck), right: null, busy: false, verdict: null }));
@@ -403,7 +405,7 @@ register("Predict", (p, c) => {
     st.busy = true; show();
     const pick = st.pick;
     let r;
-    try { r = await c.predict(pick, { view: c.id }); }
+    try { r = await c.predict(pick, { view: c.id, key: p.answer }); }
     catch { st.busy = false; st.verdict = { ok: false, text: "Could not check. Try again." }; show(); return; }
     st.busy = false;
     st.used = r && r.tries_left != null ? tries - r.tries_left : st.used + 1;
