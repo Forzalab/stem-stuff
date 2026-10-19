@@ -763,7 +763,7 @@ html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -
 .cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: 0.05em; line-height: var(--lh-xs); }
 .cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
 .cl-bar .cl-x .ico { width: 24px; height: 24px; }
-html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
+.cl-x2 { display: none; }                                                  /* B5 (Tony, Oct 18): the header bar + its X on desktop too; no corner X */
 /* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain" */
 .cl-verify { display: none; margin: var(--s2) 0 0; color: var(--help-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */
 .cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
@@ -789,13 +789,9 @@ html .cl .msg.me { display: block; align-self: flex-end; max-width: 80%; margin:
 .cl-fold[aria-expanded="true"] .ico { transform: rotate(180deg); }
 .cl-fold:hover .cl-fold-t { text-decoration: underline; text-decoration-color: var(--help); text-underline-offset: 4px; }
 .cl-fold:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cl-x2 { position: absolute; z-index: 2; top: var(--s2); right: var(--s2); flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--help); cursor: pointer; }
-.cl-x2 .ico { width: 28px; height: 28px; }
-.cl-x2:hover { background: var(--ai-tint); }
 .cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
 html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
-html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* room for the corner X: no title row to hold it (variant a) */
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }   /* V3 compact (Tony, Oct 13): 24 between turns */
 .cl-thread:empty { display: none; }
@@ -1172,6 +1168,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
   color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
 #ver::after { content: attr(data-v); }
+@media (hover: hover) and (pointer: fine) { html.side #privacy { min-height: 24px; } }   /* desktop + mouse: the link's box fits the 24px foot, off the notes pad's and Cluck's corner (Tony, Oct 19) */
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
@@ -1183,6 +1180,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
    transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
 .ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
 .ck-rise[hidden] { display: none; }
+html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
 .ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }

@@ -586,6 +586,7 @@ async function load(code) {
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
+  qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
@@ -1374,6 +1375,18 @@ const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
 let wish = null;   // { code, text, started, done, open, failed, ctl }
+/* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
+   the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
+   sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
+   asks when tapped, as past the cap */
+const PREFETCH_Q = 2, SEEN = "stem-seen-q";
+let seenMem = [];
+const seenQ = () => { try { const a = JSON.parse(sessionStorage.getItem(SEEN)); return Array.isArray(a) ? a : seenMem; } catch { return seenMem; } };
+function qSeen(code) {
+  const a = seenQ(); if (a.length >= PREFETCH_Q || a.includes(code)) return;
+  seenMem = [...a, code]; try { sessionStorage.setItem(SEEN, JSON.stringify(seenMem)); } catch { /* blocked: this page only */ }
+}
+const shouldPrefetch = code => !painting && wishLog().length < WISH_AUTO && seenQ().includes(code);
 /* the reply cache (Tony, Oct 18): the finished /explain text, in this browser only (localStorage "stem-cluck"): key = code | sorted picks | build
    (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
    text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
@@ -1409,11 +1422,13 @@ function wishOnWrong() {
   if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
   wish = newWish();
   const w = wish;
-  const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
+  /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
+     Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
+  const auto = () => { if (sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", "#wish .wchip", true); };
   if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
-  if (painting || wishLog().length >= WISH_AUTO) w.started = false;       // a restore, or past the cap: the "Explain my mistake" chip does it (no auto call, no auto-open)
+  if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the "Explain my mistake" chip asks (no auto call)
   wishPaint();
-  if (w.started) { wishStart(true); auto(); }
+  if (w.started) { wishStart(true); auto(); }                             // the reply streams now, in the background: one request, reused on open
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
@@ -1786,6 +1801,12 @@ function clClose() {
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
 window.stemIdleTap = () => {
+  const w = wish;
+  if (w && S && w.code === S.code && (!w.started || w.failed) && ![404, 503].includes(w.failed)) {   // B7 (Tony, Oct 19, pick b): no prefetch (or it failed): the duck
+    w.tapped = true;                                                       // tap is the "Explain my mistake" tap, the same request (the T34 exception, an explicit tap only)
+    if (w.started || !wishFromCache(w)) wishRetry(w);                      // a reply in this browser's cache: no call
+    clOpen("explain", null); return;
+  }
   const said = !!wish && wish.started && !wish.failed;
   if (said || origEl) { clOpen(said ? "explain" : "steps", null); return; }
   const b = [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);

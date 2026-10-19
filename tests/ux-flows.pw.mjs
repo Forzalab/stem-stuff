@@ -150,6 +150,9 @@ async function cluckOpen(page, w) {
   if (w === 393) {
     await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
     await page.click(".cl-peek .cl-cta");
+  } else {                                                          // desktop: a wrong answer never opens the sheet by itself either (B7 ii, Tony Oct 18)
+    assert.ok(!(await vis(page, "#cluck")), "desktop: no auto-open after a wrong answer");
+    await page.click(".cl-peek .cl-cta, #wish:not([hidden]) .wchip");
   }
   await page.waitForFunction(() => { const c = document.querySelector("#cluck"); return c && !c.hidden; }, null, { timeout: 6000 });
   await page.click("#cluck .wtext").catch(() => {});             // a tap skips the typing
@@ -223,7 +226,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
   await page.click(".cl-peek .cl-cta"); await opened_();
   await page.click("#cluck .wtext").catch(() => {}); await page.waitForTimeout(300);
-  await page.click(w === 393 ? "#cluck .cl-bar .cl-x" : "#cluck .cl-x2"); await closed();
+  await page.click("#cluck .cl-bar .cl-x"); await closed();         // B5: the bar's X on desktop too (no corner X)
   /* fold: a snack carries the original's worked solution under Cluck's text ("See reference solution") */
   await go(page, C.snack);
   assert.equal(await answerKey(page, C.snack, false), "wrong");
