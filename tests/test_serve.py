@@ -567,6 +567,21 @@ class Banks(unittest.TestCase):
         with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
             json.dump(data, f)
 
+    def test_multi_with_mc_parts_unfolds(self):                               # B0: BANK_P2H10 Q1(a) "9" -> "Can't read 9"
+        mc = lambda c: {"type": "mc", "choices": [{"id": "a", "md": "1"}, {"id": "b", "md": "2"}, {"id": "c", "md": "9"}], "correct": c,
+                        "wrong": [{"choice": "a", "error": "sign", "hint": "QUACK."}]}
+        self.write("BANK_MU12", {"v": 1, "problems": [{"code": "PHYS_MU1", "type": "multi", "title": "Q1", "how": "Pick one.",
+            "body": [{"type": "text", "md": "Givens."}], "parts": [dict(mc("c"), label="a", prompt="(a) $m_1$"), dict(mc("b"), label="b")]}]})
+        ps = serve.problems()
+        self.assertNotIn("PHYS_MU1", ps)
+        a, b = ps["PHYS_MU1A"], ps["PHYS_MU1B"]
+        self.assertEqual((a["type"], a["correct"], a["title"], b["title"]), ("mc", "c", "Q1 (a)", "Q1 (b)"))
+        self.assertEqual(a["body"][-1], {"type": "text", "md": "(a) $m_1$"})
+        self.assertEqual(b["body"], [{"type": "text", "md": "Givens."}])
+        self.assertEqual(serve.grade(a, "u1", {"choice": "c"})["verdict"], "correct")
+        self.assertEqual(serve.grade(b, "u1", {"choice": "a"})["verdict"], "wrong")
+        self.assertEqual([q["choices"] and q["type"] for q in (serve.public(a, "u1"),)], ["mc"])
+
     def test_formula_card_and_keys_stay_server_side(self):                    # design/EASY.md
         self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
         p = dict(BANK["CALC1_X2P"], code="CALC1_FK1", part=["WE_THM", "NOPE"], key="Use: $W = \\Delta K$", slip={"a": "sign"}, tip="Add the areas.")
