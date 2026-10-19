@@ -24,6 +24,7 @@ import os
 import random
 import re
 import secrets
+import string
 import socketserver
 import sys
 import threading
@@ -66,6 +67,25 @@ BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
+def unfold(p):
+    """codes.mjs unfold(): a multi with mc parts becomes one mc question per part, code + A, B, C..., the shared body + the part's prompt."""
+    parts = p.get("parts") if p.get("type") == "multi" else None
+    if not isinstance(parts, list) or not any(isinstance(u, dict) and u.get("type") == "mc" for u in parts):
+        return [p]
+    out = []
+    for i, u in enumerate(parts[:26]):
+        q = {k: v for k, v in (u if isinstance(u, dict) else {}).items() if k not in ("label", "prompt")}
+        q["code"] = p["code"] + string.ascii_uppercase[i]
+        if p.get("title"):
+            q["title"] = f"{p['title']} ({(u.get('label') if isinstance(u, dict) else None) or i + 1})"
+        if p.get("source"):
+            q["source"] = p["source"]
+        body = p.get("body") if isinstance(p.get("body"), list) else []
+        q["body"] = body + [{"type": "text", "md": u["prompt"]}] if isinstance(u, dict) and u.get("prompt") else body
+        out.append(q)
+    return out
+
+
 # ---------------- the bank: problems.json + banks/BANK_XXX.json, each re-read when it changes ----------------
 # design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
@@ -87,7 +107,7 @@ def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
-        ps = [p for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str)]
+        ps = [q for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str) for q in unfold(p)]
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
@@ -396,7 +416,9 @@ GLOBALS = {"__builtins__": {}, "Integer": S.Integer, "Float": S.Float, "Rational
 
 
 def to_python(src, var):
-    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'."""
+    """math.js-ish text -> allowlisted Python text. Adds implicit '*' (2x, 3pi, )(, x(1+x)); '^' -> '**'.
+    var: one variable name, or a tuple of names (engine/symbolic.py: several unknowns)."""
+    var = (var,) if isinstance(var, str) else tuple(var)
     s = src.strip().lower().replace("π", "pi").replace("∞", "inf").replace("·", "*").replace("×", "*")
     toks, i = [], 0
     while i < len(s):
@@ -406,7 +428,7 @@ def to_python(src, var):
                 break
             raise ValueError("bad character")
         num, name, op = m.groups()
-        if name and name not in NAMES and name != var:
+        if name and name not in NAMES and name not in var:
             raise ValueError("unknown name " + name)
         kind = "num" if num else "name" if name else op
         text = num or name or ("**" if op == "^" else op)

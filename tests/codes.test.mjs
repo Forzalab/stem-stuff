@@ -87,6 +87,18 @@ test("screenBank: shapes and fatal", () => {
   for (const d of [null, 5, "x", [], {}, { problems: "no" }, { problems: {} }]) assert.equal(C.screenBank(d, ok).fatal, "notbank", JSON.stringify(d));
   assert.equal(C.screenBank({ problems: [] }, ok).fatal, null, "an empty list is not a wrong file: it just has nothing (No problems found)");
 });
+test("unfold: a multi with mc parts becomes one mc per part (B0: BANK_P2H10 Q1(a) showed a text box, '9' -> Can't read)", () => {
+  const mc = c => ({ type: "mc", choices: [{ id: "a", md: "1" }, { id: "c", md: "9" }], correct: c });
+  const p = { code: "PHYS_HA1", type: "multi", title: "Q1", how: "Pick one in each part.", body: [{ type: "text", md: "Givens." }],
+    parts: [{ ...mc("c"), label: "a", prompt: "(a) $m_1$" }, { ...mc("a"), how: "Tick all." }] };
+  const [a, b] = C.unfold(p);
+  assert.deepEqual(a, { ...mc("c"), code: "PHYS_HA1A", title: "Q1 (a)", body: [{ type: "text", md: "Givens." }, { type: "text", md: "(a) $m_1$" }] });
+  assert.deepEqual(b, { ...mc("a"), how: "Tick all.", code: "PHYS_HA1B", title: "Q1 (2)", body: [{ type: "text", md: "Givens." }] });
+  const typed = { code: "PHYS_HB2", type: "multi", body: [], parts: [{ type: "num", answer: "1" }, { type: "num", answer: "2" }] };
+  assert.deepEqual(C.unfold(typed), [typed], "typed parts stay one multi");
+  assert.deepEqual(C.screenBank({ problems: [p, prob("PHYS_ZZZ")] }, ok).kept.map(q => q.code), ["PHYS_HA1A", "PHYS_HA1B", "PHYS_ZZZ"]);
+  assert.equal(C.screenBank({ problems: [{ ...p, code: "PHYS_ABCDEF" }] }, ok).skipped.shape, 2, "a sub code past 6 is a bad code");
+});
 test("screenBank: the file name is not an input", () => {
   assert.equal(C.screenBank.length, 2);                      // (doc, shapeErr): no name anywhere
 });
