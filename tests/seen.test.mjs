@@ -142,20 +142,21 @@ test("the session logs the log-only branches: `tree  wrong d= read= fam=` (slip,
   const he = h.dump().split("\n").map(x => JSON.parse(x)).filter(r => /  tree  end/.test(r.l));
   assert.deepEqual(plain(he.map(r => [r.c, r.l.replace(/^\+[\d.]+/, "+")])), [["H4", "+  tree  end harder"]], "4 fast first-try items; H5 has not ended");
 });
-test("trap_beaten is live in the session when o.traps gives families: fell for sign on item A, then item B (first try, sign is a trap) → `seen  trap_beaten`; without o.traps nothing", () => {
-  const traps = c => ({ A: ["sign"], B: ["misread", "sign"] })[c] || [];
-  const run = o => {
-    const j = session({ rand: script(0.9, 0.5, 0, 0, 0.9, 0.5, 0, 0), ...o });
-    const a = earned(j, 0, "A", "negation", "sign");
+test("trap_beaten is live: a served-bank-shaped right pick carries `families`; fell for sign on item A, then item B (first try, families has sign) → `seen  trap_beaten`", () => {
+  const run = fams => {
+    const j = session({ rand: script(0.9, 0.5, 0, 0, 0.9, 0.5, 0, 0) });
+    j.at(0).ev("q_open", { code: "A" });
+    j.at(10).ev("pick", { choice: "A", verdict: "wrong", error: "negation" }); j.at(20).ev("pick", { choice: "B", verdict: "wrong", error: "sign" });
+    const a = j.at(30).ev("pick", { choice: "C", verdict: "correct", families: ["negation", "sign"] });
     j.at(300).ev("q_open", { code: "B" });
-    return { a, b: j.at(306).ev("pick", { choice: "A", verdict: "correct" }), j };
+    return { a, b: j.at(306).ev("pick", { choice: "A", verdict: "correct", ...(fams ? { families: fams } : {}) }), j };
   };
-  const on = run({ traps });
-  assert.equal(on.a.fam, "sign"); assert.equal(on.b.fam, "sign"); assert.equal(on.b.id, "sgn-2");
+  const on = run(["misread", "sign"]);
+  assert.equal(on.a.fam, "sign", "A itself is earned"); assert.equal(on.b.fam, "sign"); assert.equal(on.b.id, "sgn-2");
   assert.match(seenLog(on.j).at(-1), /seen {2}trap_beaten short sgn-2$/);
-  const off = run({});
-  assert.equal(off.b, null, "inert without traps"); assert.equal(seenLog(off.j).length, 0);
-  assert.equal(run({ traps: () => { throw new Error("x"); } }).b, null, "a throwing traps is ignored");
+  assert.equal(run(undefined).b, null, "no families on the pick (an upload / offline grade): inert");
+  assert.equal(run(["misread"]).b, null, "a family it never fell for");
+  assert.equal(run("sign").b, null, "not a list: ignored"); assert.equal(run([5, null]).b, null, "non-strings dropped");
 });
 
 /* ---- the fire path ---- */

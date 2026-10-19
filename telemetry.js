@@ -135,7 +135,7 @@
           st.tries = typeof p.tries_left === "number" ? p.tries_left : null;
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
-          delete p.error;                                                                    // J6: the error family stays on device (intent.js reads it; PostHog never gets it)
+          delete p.error; delete p.families;                                                 // J6: the error family + the item's distractor families stay on device (intent.js reads them; PostHog never gets them)
           if (p.verdict === "correct" || p.verdict === "wrong") {
             st.stage = p.right ? "right" : "wrong";
             var why = spamCheck(st.picks, t, p.ms_since_open);

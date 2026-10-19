@@ -133,6 +133,25 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
   });
 }
 
+/* trap_beaten, live on a served bank: /check sends the item's distractor families with a RIGHT pick. M1: fell for negation + sign, then right; M2 (3 min later):
+   right first try, and sign is one of its distractor families. Also: the family list never reaches PostHog's call (stemT's props are the only thing telemetry.js sees) */
+await step("trap_beaten: a served item's families (sent with the right pick only) → `seen  trap_beaten` on a later first-try item", async () => {
+  const page = await open({ vp: { width: 1280, height: 800 } });
+  const checks = [];
+  page.on("response", async r => { if (r.url().endsWith("/check")) { try { checks.push(await r.json()); } catch { /* ignore */ } } });
+  await earned(page);
+  await idle(page, 190000);
+  await page.evaluate(() => { location.hash = "#CALC1_T96M2"; });
+  await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T96M2");
+  await page.evaluate(() => { window.__rs = [0.9, 0.5, 0, 0]; });
+  await pick(page, "a");
+  assert.match(await page.evaluate(() => window.stemJev.dump()), /seen {2}trap_beaten short /);
+  assert.deepEqual(checks.map(c => [c.verdict, "families" in c]), [["wrong", false], ["wrong", false], ["correct", true], ["correct", true]], "families on a right reply only");
+  assert.deepEqual(checks[2].families, ["misread", "negation", "sign"]);
+  assert.deepEqual(page.errs, []);
+  await page.context().close();
+});
+
 await step("flag off (no ?jev=1): the same item, no peek, no stemJev", async () => {
   const page = await open({ jev: false });
   await earned(page);

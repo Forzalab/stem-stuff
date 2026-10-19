@@ -55,11 +55,13 @@ test("J6: a pick's `error` family never reaches the queue / PostHog (intent.js r
   const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; } };
   const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
   win.stemT("pick", { code: "A", verdict: "wrong", right: false, error: "sign" });
-  win.stemT("pick", { code: "A", verdict: "correct", right: true, error: undefined });
+  win.stemT("pick", { code: "A", verdict: "correct", right: true, error: undefined, families: ["negation", "sign"] });
   document.visibilityState = "hidden"; handlers.visibilitychange();   // no PostHog yet: the queue goes out as one beacon
   const batch = JSON.parse(await sent[0].text()).batch.filter(e => e.event === "pick");
   assert.equal(batch.length, 2);
   for (const e of batch) assert.ok(!("error" in e.properties), "error stripped");
+  for (const e of batch) assert.ok(!("families" in e.properties), "the item's distractor families stripped");
+  assert.ok(!JSON.stringify(batch).includes("negation"), "no family name anywhere in the beacon");
   assert.equal(batch[0].properties.code, "A"); assert.equal(batch[0].properties.verdict, "wrong");
 });
 

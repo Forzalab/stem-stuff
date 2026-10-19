@@ -329,6 +329,50 @@ class Grade(unittest.TestCase):
             self.assertEqual(pub["body"], p["body"])
 
 
+class Families(unittest.TestCase):
+    """J6 trap_beaten: /check names the item's distractor families, but only on a CORRECT reply; nothing served before grading carries them."""
+
+    def fams(self, code):
+        return sorted({w["error"] for w in BANK[code]["wrong"]})
+
+    def test_correct_carries_the_sorted_unique_families(self):
+        r = serve.grade(BANK["CALC1_X2P"], "fa1", {"choice": "b"})
+        self.assertEqual((r["verdict"], r["families"]), ("correct", ["op-swap", "sign"]))
+        self.assertEqual(r["families"], self.fams("CALC1_X2P"))
+        r = serve.grade(BANK["CSCI26_A7K"], "fa2", {"choices": ["a", "c"]})
+        self.assertEqual((r["verdict"], r["families"]), ("correct", ["misread", "negation", "other"]))
+
+    def test_wrong_and_locked_replies_are_unchanged(self):
+        r = serve.grade(BANK["CALC1_X2P"], "fa3", {"choice": "a"})
+        self.assertEqual(r["verdict"], "wrong"); self.assertNotIn("families", r); self.assertEqual(r["error"], "sign")
+        self.assertEqual(set(r), {"verdict", "triesLeft", "hint", "error", "gen"})
+        self.assertEqual(serve.grade(BANK["CALC1_X2P"], "fa3", {"choice": "b"})["verdict"], "correct")
+        self.assertNotIn("families", serve.grade(BANK["CALC1_X2P"], "fa3", {"choice": "b"}), "locked")
+        for i in range(2):                                       # out of tries, no reveal: still no families
+            r = serve.grade(BANK["CALC1_X2P"], "fa4", {"choice": "a" if i == 0 else "c"})
+        self.assertNotIn("families", r)
+
+    def test_no_wrong_list_means_an_empty_list_not_a_missing_key(self):
+        p = {k: v for k, v in BANK["CALC1_X2P"].items() if k != "wrong"}
+        self.assertEqual(serve.grade(p, "fa5", {"choice": "b"})["families"], [])
+
+    def test_nothing_served_before_grading_carries_family_data(self):
+        for code in ("CALC1_X2P", "CSCI26_A7K"):
+            for path in (f"/p/{code}.json", f"/state/{code}"):
+                st, _, raw = serve.dispatch("GET", path, "sid=fa6")
+                text = raw.decode()
+                self.assertEqual(st, 200, path)
+                for bad in ('"families"', '"error"') + (('"wrong"',) if path.startswith("/p/") else ()):   # /state's "wrong" is a count
+                    self.assertNotIn(bad, text, path)
+            pub = json.dumps(serve.public(BANK[code], "fa6"))
+            for bad in ('"families"', '"wrong"', '"error"'):
+                self.assertNotIn(bad, pub, code)
+        for f in sorted(os.listdir(os.path.join(ROOT, "banks"))):
+            if f.endswith(".json"):
+                st, _, raw = serve.dispatch("GET", "/b/" + f[:-5] + ".json", "sid=fa6")
+                self.assertNotIn(b'"families"', raw); self.assertNotIn(b'"wrong"', raw); self.assertNotIn(b'"error"', raw)
+
+
 class SugarReveal(unittest.TestCase):
     """T19 (Tony, Oct 12): in sugar the server sends `correct` once a question is out of tries, never before; diet never."""
     SUGAR, DIET = "", "stem-mode=diet; stem-mode-v=2"

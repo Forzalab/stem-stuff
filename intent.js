@@ -24,7 +24,7 @@
              typing (a key < TYPING_S ago) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
              without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none
    J6 "seen", moments earned / trap_beaten (copy/seen-lines.js): on a correct pick, tree(state) → candidates {moment, fam, why}
-   (the decision tree below; its wrong-pick and item-end branches are log only); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
+   (the decision tree below; its wrong-pick and item-end branches are log only; trap_beaten reads the `families` the server sends with a right pick); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
    hidden) + MAX per session, a QUIET roll (silence is a valid pick), a kind (nod = the duck rises, no words · short · full), a line by the
    error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; peek.js stemDuck.say carries it.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
@@ -57,7 +57,7 @@
   /* The J6 decision tree, homebrew: answers the `credit` (earned | lucky) and `error` (slip | misconception) seats; Jev answers the same
      seats with the same shape later, via the one seam (art. 8). Pure. st.node "pick" (default) | "end".
      pick, correct (st.solved): veto → [] on help, s5, or lucky (this pick < FAST_ERR_S after a wrong). Else trap_beaten = solved first try
-       and the item has a distractor family (st.traps) the student fell for on an earlier item (st.fams); else earned = wrong >= 1 or deep >= 2.
+       and the item has a distractor family (st.traps: /check's `families` on a right pick) the student fell for on an earlier item (st.fams); else earned = wrong >= 1 or deep >= 2.
        Surface candidates { moment: "trap_beaten" | "earned", fam, why }; fam = the beaten family, or the last wrong pick's ("any" when none).
      pick, wrong (st.verdict): log only { moment: "wrong", why: "wrong d=<n> read=slip|misconception fam=<f>" } (misconception = that family
        was wrong on an earlier item). end (st.items [{ ok: first-try right, gap }]): log only { moment: "fatigue" | "harder", why: "end <moment>" }. */
@@ -94,7 +94,7 @@
      (default all 3) · rand() in [0, 1) · quits = { code: times left unsolved } (the caller stores it)
      o (J6 streak signals, optional): size(code) → { w: stem words, ch: choices } for the q_open line (missing → no field)
      o (J6, optional; without seenLines the seen moments are inert): seenLines = { fam: { <family>: [{ id, text, kind }] }, any: [...] } · seenOff() → true
-     when the student turned it off · title(code) → the item's title for {title} · traps(code) → the item's distractor families (trap_beaten is inert without it) · sid = this session's id in the dump */
+     when the student turned it off · title(code) → the item's title for {title} · sid = this session's id in the dump */
   function create(now, hist, o) {
     hist = hist || {}; o = o || {};
     var q = null, lines = [], last = null, flowRun = 0, hidden = false, items = 0, keyAt = -Infinity, firsts = [], helps = [];
@@ -143,6 +143,7 @@
       if (!q) return;
       if (name === "pick") {
         if (p.verdict !== "correct" && p.verdict !== "wrong") return;
+        if (p.verdict === "correct" && Array.isArray(p.families)) q.traps = p.families.filter(function (f) { return typeof f === "string"; });   // the server sends the item's distractor families with a right answer only
         var ds = (t - q.from) / 1000, ch = p.choice == null ? "" : String(p.choice);
         (hist[q.code] = hist[q.code] || []).push(Math.round(ds));
         if (hist[q.code].length > HIST_CAP) hist[q.code].shift();
@@ -280,8 +281,7 @@
       });
     }
     function seen() {
-      var trs = []; try { trs = (o.traps && o.traps(q.code)) || []; } catch (e) { /* ignore */ }
-      var cs = tree({ solved: q.solved, wrong: q.wrong, deep: q.deep, help: q.help, s5: q.s5, gaps: q.gaps, errs: q.errs, traps: trs, fams: Object.keys(fams),
+      var cs = tree({ solved: q.solved, wrong: q.wrong, deep: q.deep, help: q.help, s5: q.s5, gaps: q.gaps, errs: q.errs, traps: q.traps || [], fams: Object.keys(fams),
         since: q.errAt ? (now() - q.errAt) / 1000 : null }), t = now();
       if (!cs.length || !o.seenLines || (o.seenOff && o.seenOff()) || q.rolled.seen || sz.n >= SEEN.MAX || block(t)) return null;
       q.rolled.seen = 1;                                                 // one roll per item: a quiet pick is the item's pick
@@ -347,11 +347,6 @@
   /* J5, the one seam to the peek (peek.js stemDuck.say): Jev decides, the peek only shows the line and tells back how it went */
   var jev = create(function () { return performance.now(); }, hist, {
     lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: "s" + Math.random().toString(36).slice(2, 8),
-    traps: function (code) {                                         // J6 trap_beaten: the item's distractor families. The served bank has no wrong[] (the server keeps it) → [] → inert
-      var b = W.stemBank, p = b && b.get && b.get(code), fs = [];
-      ((p && p.wrong) || []).forEach(function (w) { if (w && typeof w.error === "string" && fs.indexOf(w.error) < 0) fs.push(w.error); });
-      return fs;
-    },
     title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
     size: function (code) {                                          // J6: the item's stem words + choice count (bank items; an upload has no bank entry → none)
       var b = W.stemBank, p = b && b.get && b.get(code), w = 0;
