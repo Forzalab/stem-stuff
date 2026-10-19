@@ -43,6 +43,11 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
   saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", part: ["WE_THM"], split: [
     { sub: "CALC1_E04A", stem: "True or false: first.", answer: "true", slip: "First is true." },
     { sub: "CALC1_E04B", stem: "True or false: second.", answer: "false", slip: "Second is false." }] } };
+/* a problem far taller than a 1280×720 window, with a formula card: desktop has one scroller, the page (Tony, Oct 18) */
+P.long = { code: "CALC1_L01", title: "Long one", type: "num", answer: "4",
+  body: Array.from({ length: 24 }, (_, i) => ({ type: "text", md: `Line ${i + 1} of a long problem: $W = F d$ holds here.` })),
+  saccharine: { title: "Long one", part: ["WE_THM", "W_AREA"] } };
+writeFileSync(join(BANKS, "BANK_LONG.json"), JSON.stringify({ v: 1, problems: [P.long] }));
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
 /* every title shares "Term: ": the list still shows one row per question, number + whole title, no shared-prefix header (owner, Oct 6) */
 const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num", body: [{ type: "text", md: `Type ${n}.` }], answer: String(n) });
@@ -460,6 +465,28 @@ try {
   await step("slow link (?slow=1): no brainrot corner, no YouTube at all", () => noRot("/?slow=1"));
   await step("slow link (Data Saver, navigator.connection): no brainrot corner, no YouTube at all", () =>
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));
+  await step("1280x720: one scroller, the page; the wheel over the question scrolls it to the formula card and back (Tony, Oct 18)", async () => {
+    const z = await browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: "block" });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const zp = await z.newPage();
+    await zp.goto(BASE + "/#CALC1_L01"); await opened(zp, "CALC1_L01");
+    await zp.waitForSelector("#fcard", { timeout: 6000 });
+    const traps = () => zp.evaluate(() => [...document.querySelectorAll("#freeze *, #freeze, #cluck .wtext, #cluck .wtext *")].filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight).map(e => e.id || e.className));
+    assert.deepEqual(await traps(), [], "no own vertical scroller in the question or Cluck's text");
+    const q = await zp.$eval("#q", e => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: Math.min(r.top + 20, innerHeight - 20) }; });
+    await zp.mouse.move(q.x, Math.max(q.y, 200));
+    for (let i = 0; i < 20; i++) await zp.mouse.wheel(0, 200);
+    await zp.waitForTimeout(300);
+    const down = await zp.evaluate(() => ({ y: scrollY, card: document.querySelector("#fcard").getBoundingClientRect().bottom, inner: document.querySelector("#freezeIn").scrollTop }));
+    assert.ok(down.y > 0, `the page scrolled: scrollY ${down.y}`);
+    assert.equal(down.inner, 0, "the question box itself never scrolls");
+    assert.ok(down.card <= 720 + 1, `the formula card bottom ${down.card} reaches the window`);
+    for (let i = 0; i < 20; i++) await zp.mouse.wheel(0, -200);
+    await zp.waitForTimeout(300);
+    assert.equal(await zp.evaluate(() => scrollY), 0, "wheel back: the top returns");
+    await z.close();
+  });
   for (const [w, h] of [[1280, 720], [1920, 1080]]) await step(`divider at ${w}x${h}: grip mid-window, the sash inside the panes, no rail (Tony, Oct 18)`, async () => {
     const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
     await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
