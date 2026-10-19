@@ -67,7 +67,7 @@ Contrast floor: text 4.5:1 on its real background (check `--raised` too), contro
 ### 2.2 Type
 
 Source: chat-redesign round 5 TYPE-DECISION v3.1 (brain), Tony's round 7 PICKER 5–7.
-- Families: one text stack, `--font`. **Atkinson Hyperlegible** everywhere by default; WebKit alone (`@supports (font: -apple-system-body)`) puts **SF** (`-apple-system`) first, so iPhones get the system voice and every other browser gets the same vendored face. KaTeX for math. Two named exceptions: `--mono` (`ui-monospace`, Atkinson Hyperlegible Mono) only in the scratchpad and pre-formatted tables (`.wtext .tbl`); Press Start 2P only on the burst title (`.fx-title`). Typed answers, verdict values and markdown `code` are the text face with `tabular-nums`. The q | a switch letters are the UI face, `--t-lg` 600, upright (PICKER 7).
+- Families: one text stack, `--font`. **Atkinson Hyperlegible** everywhere by default; WebKit alone (`@supports (font: -apple-system-body)`) puts **SF** (`-apple-system`) first, so iPhones get the system voice and every other browser gets the same vendored face. KaTeX for math. Two named exceptions: `--mono` (`ui-monospace`, Atkinson Hyperlegible Mono) only in the scratchpad, pre-formatted tables (`.wtext .tbl`) and the codeblock (`.cb`, see "Codeblock": a fenced block in question or choice text, 16px, 400 only, so no bold keywords; never "code box", that is the bank-code bar); Press Start 2P only on the burst title (`.fx-title`). Typed answers, verdict values and markdown `code` are the text face with `tabular-nums`. The q | a switch letters are the UI face, `--t-lg` 600, upright (PICKER 7).
 - `.katex` sets its own size, `--kx`: math at the text face's x-height (Atkinson 1.15em, measured; SF 1.2em, provisional until measured on a device). No other KaTeX multiplier. No `font-size-adjust` (every `font:` shorthand resets it).
 - Scale (phones; desktop steps all five tokens per breakpoint, never a sixth size):
 
@@ -262,6 +262,14 @@ Rule: on a phone, the top of the first answer choice peeks above the fold when a
 - Anatomy: label row (`i-pen` + "Scratchpad" + autosave status in `--t-xs` `--hint`), then a `--field` textarea, `--bw` `--edge`, 8px radius, `--mono` 16px / 1.6, no line numbers. Cut and Copy are `.btn`s inside the bottom-right corner; the text never runs under them.
 - States: focus = the field rule, 2px `--focus` edge, no outline (one ring, Tony). Copy done = `--correct` icon and border.
 - Don't: a resize handle, a second scroll inside the page scroll when it can grow instead.
+
+### Codeblock (`.cb`, T43)
+
+- Anatomy: a fenced block (```lang) in question or choice text (`app.js` `codeblock`). It is a `--page` well with 8px radius, sitting inside the card's padding (mock A). Header row: the language tag (`--t-xs` 600 `--muted`) on the left, the empty T44 slot, then Copy (`i-copy`, 44px, transparent). Under the header, a `--bw-hair` `--line` rule. The code is `--mono` 16px / 1.55, weight 400 only (no bold keywords). Line numbers are `--muted`, one per real line. A long line wraps, hanging under its own indent + 2ch.
+- Colour: **Tokyo Night** (enkia/tokyo-night-vscode-theme, MIT), as the `--syn-*` tokens in `:root`: keyword, string, number, comment, function, type, preprocessor. Each one is at least 4.5:1 on `--page`. Comments use the theme's dark5 `#737aa2`, because its own `#565f89` is 3.2:1. A tiny regex highlighter colours C/C++, Java, JS/TS and Python. Comments and strings win over the keywords inside them. Any other language stays plain.
+- States: Copy done = the `i-ok` icon in `--correct` for 2 s.
+- In a choice row (a button): no fill, no radius, no Copy. Comments there are `--muted`, because `--syn-com` is 4.1:1 on the row's `--card`.
+- Don't: KaTeX inside code, a sideways page scroll, calling it "code box" (that is the bank-code bar).
 
 ### Multitask (`#stage`, the pad page, side by side)
 

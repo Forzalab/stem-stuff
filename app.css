@@ -1,7 +1,7 @@
 /* Drill page. Tokens: design/DESIGN-LANGUAGE.md. Freeze layer: design/FREEZE.md. */
 :root {
   /* type (round 5 TYPE-DECISION v3.1; Tony's round 7 PICKER 6 + 7): one text family per device, two weights (400, 600), five sizes.
-     Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad and pre-formatted tables only */
+     Atkinson is the default everywhere; WebKit alone switches to SF (@supports below). Mono: the scratchpad, pre-formatted tables and the codeblock only */
   --font: "Atkinson Hyperlegible", system-ui, sans-serif;
   --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
@@ -26,6 +26,9 @@
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
+  /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
+     kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
+  --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
@@ -301,6 +304,30 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .md :is(b, strong, em) { font-weight: var(--w-em); font-style: normal; color: inherit; }
 .md :is(h1, h2, h3) { margin: 0 0 var(--s3); font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
 .md blockquote { margin: 0 0 var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
+/* the codeblock (T43, app.js codeblock; STYLE.md "Codeblock"; Tony, Oct 18: mock A's well + syntax colour). A --page well with the
+   card's margin around it, 8px radius. Header: language left, the T44 slot, then Copy. --mono 16px, 400 only (no bold keywords).
+   A long line wraps hanging under its own indent + 2ch; only a real line gets a number. Colour: the Tokyo Night tokens (--syn-*, :root) */
+.cb { --cbx: var(--s3); --g: 2ch; --cb-lh: 1.55; margin: var(--s3) 0; background: var(--page); border-radius: 8px; }
+.opt .cb { --cbx: 0px; margin: 0; background: none; border-radius: 0; }   /* in a choice row: no fill (no box in a box), no Copy (the row is a button) */
+.opt .cb-hd { min-height: 0; border-bottom: 0; }
+.opt .cb pre { padding-bottom: 0; }
+.opt .cb .t-com { color: var(--muted); }                            /* --syn-com is 4.1:1 on the row's --card; --muted 8.4:1 */
+.opt .txt > p { margin: 0; }
+.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 0 0 var(--cbx); border-bottom: var(--bw-hair) solid var(--line); }
+.cb-lang { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
+.cb-act { margin-left: auto; display: flex; align-items: center; }
+.cb-slot { width: 0; }                                              /* T44 run / step / reset go here; empty in T43 */
+.cb-copy { width: 44px; height: 44px; background: transparent; color: var(--muted); border-radius: 6px; }
+.cb-copy .ico { width: 20px; height: 20px; }
+.cb-copy:hover { background: var(--raised); color: var(--ink); }
+.cb-copy.done { color: var(--correct); }
+.cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
+.cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
+.cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
+  padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + (var(--ind) + 2) * 1ch); text-indent: calc(-1 * (var(--ind) + 2) * 1ch); }
+.cb .l::before { content: counter(ln); position: absolute; left: var(--cbx); width: var(--g); text-indent: 0; text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
+.cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
+.cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
 
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
