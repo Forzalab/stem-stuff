@@ -209,11 +209,12 @@ try {
     await page.click('.opt[data-id="t"]'); await page.click('.ch[data-id="t"] .send');
     await page.waitForFunction(() => /Second is false/.test(document.querySelector("#fb")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForSelector("#q.closed", { timeout: 4000 });                                    // one try
-    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish .cue-chip")?.textContent || "") && document.querySelector("#wish .cue-chip").getAttribute("aria-expanded") === "true", null, { timeout: 6000 });   // a row has Cluck too; desktop: the sheet opens by itself. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
+    await page.waitForFunction(() => /Ask Cluck/.test(document.querySelector("#wish .cue-chip")?.textContent || "") && document.querySelector("#wish .cue-chip").getAttribute("aria-expanded") === "false", null, { timeout: 6000 });   // a row has Cluck too. Closed out of tries = the T17b-1 duck chip "Ask Cluck"
+    assert.equal(await page.evaluate(() => !!window.stemCluckOpen && window.stemCluckOpen()), false, "a wrong answer never opens Cluck by itself, desktop too (B7 ii, Tony Oct 18)");
+    await page.click("#wish .cue-chip");
     assert.equal(await page.isVisible("#cluck #clTabEP"), true, "Cluck's text shows");
-    assert.equal(await page.evaluate(() => document.getElementById("cluck").contains(document.activeElement)), false, "an auto-open never takes focus");
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl") && !document.querySelector("#cluck .wcaret"), null, { timeout: 6000 });
-    assert.equal(await page.evaluate(() => window.__said.length), 0, "an auto-open types the text but stays quiet (Tony, Oct 5)");
+    assert.equal(await page.evaluate(() => window.__said.length), 0, "Cluck types the text but stays quiet (Tony, Oct 5)");
     assert.equal(await page.$eval("#xb", e => e.getClientRects().length), 0, "Cluck is showing: no scratchpad");
     asked = 0;
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
@@ -227,15 +228,20 @@ try {
 
   await step("easy: an item with a narration still streams /explain (the narration is never the box text); a lone caret, then typed; reopening goes on where it was; no voice", async () => {
     const said = () => page.evaluate(() => window.__said);
-    await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });   // desktop: open by itself
+    await page.waitForSelector(".cl-peek .cl-cta", { timeout: 6000 });     // B7 ii (Tony, Oct 18): the sheet stays closed, the reply streams in the background
+    assert.equal(await page.isHidden("#cluck"), true, "a wrong answer never opens Cluck by itself");
     assert.equal(asked, 1, "the first wrong answer asks /explain, narration or not");
+    await page.click(".cl-peek .cl-cta");
+    await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });
     assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 3000 });
     const first = (await page.textContent("#cluck .wtext")).trim();
     assert.ok(!/Egg-cellent/.test(first), "no typing: " + first);
     assert.equal(await page.isHidden("#wish"), true, "desktop, sheet open: no chip (Tony, Oct 5: variant a)");
     assert.equal(await page.$(".cl-peek"), null, "desktop, sheet open: no peek, no CTA");
-    await page.click("#cluck .cl-x2");                                       // closed: the peek + CTA are the way back, then open again from the top
+    assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header with its X");
+    assert.equal(await page.isHidden("#cluck .cl-x2"), true, "B5: no corner X");
+    await page.click("#cluck .cl-x");                                        // closed: the peek + CTA are the way back, then open again from the top
     assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "ok but how?", "E1 = T2, wording b (Tony, Oct 13)");
     assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
     assert.ok((await page.$eval(".cl-peek .cl-cta", b => b.getBoundingClientRect().height)) >= 44, "the CTA is a 44px target");
@@ -542,10 +548,11 @@ try {
       const L = Math.min(...rs.map(r => r.left)), R = Math.max(...rs.map(r => r.right));
       return { l: Math.round(L), r: Math.round(document.documentElement.clientWidth - R), cl: !!document.querySelector("#cluck")?.getClientRects().length };
     });
-    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try, the sheet opens by itself
+    await zp.click("#mcGo");                                                   // nothing ticked: a wrong try; the CTA opens the sheet (B7 ii: never by itself)
+    await zp.click(".cl-peek .cl-cta");
     await zp.waitForFunction(() => document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 6000 });
     const open = await gaps();
-    await zp.click("#cluck .cl-x2");
+    await zp.click("#cluck .cl-x");
     await zp.waitForFunction(() => !document.querySelector("#work").classList.contains("cl-on"), null, { timeout: 3000 });
     const shut = await gaps();
     await z.close();

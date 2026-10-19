@@ -736,7 +736,7 @@ html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -
 .cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: 0.05em; line-height: var(--lh-xs); }
 .cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
 .cl-bar .cl-x .ico { width: 24px; height: 24px; }
-html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
+.cl-x2 { display: none; }                                                  /* B5 (Tony, Oct 18): the header bar + its X on desktop too; no corner X */
 /* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain" */
 .cl-verify { display: none; margin: var(--s2) 0 0; color: var(--help-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */
 .cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
@@ -762,13 +762,9 @@ html .cl .msg.me { display: block; align-self: flex-end; max-width: 80%; margin:
 .cl-fold[aria-expanded="true"] .ico { transform: rotate(180deg); }
 .cl-fold:hover .cl-fold-t { text-decoration: underline; text-decoration-color: var(--help); text-underline-offset: 4px; }
 .cl-fold:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.cl-x2 { position: absolute; z-index: 2; top: var(--s2); right: var(--s2); flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--help); cursor: pointer; }
-.cl-x2 .ico { width: 28px; height: 28px; }
-.cl-x2:hover { background: var(--ai-tint); }
 .cl-x:focus-visible, .cl .send:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-bd { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s4) var(--s5); }
 html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
-html.side .cl-bd { padding-right: calc(44px + var(--s4)); }               /* room for the corner X: no title row to hold it (variant a) */
 .cl-pane[hidden] { display: none; }
 .cl-thread { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }   /* V3 compact (Tony, Oct 13): 24 between turns */
 .cl-thread:empty { display: none; }
