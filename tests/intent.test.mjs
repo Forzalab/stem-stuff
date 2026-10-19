@@ -253,3 +253,26 @@ test("a window blur pauses S2; a blur >= 5 s gives a fresh step on focus, a shor
   m.at(260).vis(false); m.at(300).tick(); assert.equal(m.state().counts.S2, 0, "hide's return is still a fresh step");
   m.at(341).tick(); assert.equal(m.state().counts.S2, 1);
 });
+
+test("any input ends a blur (a missed focus can't pause S2 for good); input during a hide changes nothing", () => {
+  const j = session();
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).away("blur", true); j.at(100).input("pointerdown");
+  assert.ok(j.state().lines.includes("+100.0  away  90s via=blur"), "a long blur still logs its away line");
+  assert.ok(!j.state().lines.some(l => l.includes("  pause  ")), "fresh step first: no pause line");
+  j.at(170).tick(); assert.equal(j.state().counts.S2, 0, "fresh step from the input");
+  j.at(181).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "S2 counts again");
+  const k = session();
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(10).away("blur", true); k.at(12).input("wheel"); k.at(13).away("blur", false);
+  assert.ok(!k.state().lines.some(l => l.includes("  away  ")), "a short blur ended by input: no away line");
+  const h = session();
+  h.at(0).ev("q_open", { code: "A" });
+  h.at(10).away("blur", true); h.at(20).vis(true); h.at(30).input("pointerdown"); h.at(200).tick();
+  assert.equal(h.state().counts.S2, 0, "still hidden");
+  h.at(210).vis(false);
+  assert.ok(h.state().lines.includes("+210.0  away  200s via=hide"), "the hide ends only with the show");
+  const g = session();
+  g.at(0).ev("q_open", { code: "A" }); g.at(5).vis(true); g.at(15).input("keydown"); g.at(20).vis(false);
+  assert.ok(g.state().lines.includes("+20.0  away  15s via=hide"));
+});

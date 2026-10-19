@@ -102,6 +102,7 @@
     function input(kind) {
       var t = now();
       if (kind === "keydown" || kind === "input") keyAt = t;
+      if (aw && aw.via === "blur") away("blur", false);                 // fail-safe: input on the page = it has focus again, even if the focus event was missed (never ends a hide)
       if (!q || hidden) return;
       if (t - q.step >= PAUSE_S * 1000) log("pause", Math.round((t - q.step) / 1000) + "s");
       q.step = t; q.depth = 0;
