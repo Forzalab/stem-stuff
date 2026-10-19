@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "gate": [
     {
       "id": "parse",
@@ -7,7 +7,7 @@
     },
     {
       "id": "schema",
-      "desc": "component exists in this library; args match its props"
+      "desc": "component exists in this library; args match its props, caps included (over a cap: drop, log too-long)"
     },
     {
       "id": "query",
@@ -19,11 +19,23 @@
     },
     {
       "id": "leak",
-      "desc": "no key ref and no literal equal to a hidden value outside post"
+      "desc": "no key ref and no literal equal to a hidden value outside post; a Reveal body is a second program"
     },
     {
       "id": "stage",
       "desc": "recipe allows this stage; refs allowed in this stage"
+    },
+    {
+      "id": "marks",
+      "desc": "every state word in nodes / edges / marks / Legend items is one of marks"
+    },
+    {
+      "id": "one-stepper",
+      "desc": "at most one Steps or Compare per root; one figure per Steps"
+    },
+    {
+      "id": "copy",
+      "desc": "no string holds a hex colour, px, an emoji, or an all-caps word over 3 letters that is no code"
     }
   ],
   "components": [
@@ -31,11 +43,6 @@
       "component": "Math",
       "checker": "symbolic.simplify",
       "ships": "P0.3"
-    },
-    {
-      "component": "Predict",
-      "checker": "ref",
-      "ships": "P0"
     },
     {
       "component": "MatchQuiz",
@@ -49,11 +56,6 @@
     },
     {
       "component": "Graph",
-      "checker": "graph.trace",
-      "ships": "P0.3"
-    },
-    {
-      "component": "Walk",
       "checker": "graph.trace",
       "ships": "P0.3"
     },
@@ -75,11 +77,6 @@
     {
       "component": "FBD",
       "checker": "vectors.resolve",
-      "ships": "planned"
-    },
-    {
-      "component": "Triangle",
-      "checker": "vectors.triangle",
       "ships": "planned"
     },
     {
@@ -106,5 +103,42 @@
     "key": [
       "post"
     ]
+  },
+  "marks": [
+    "cur",
+    "done",
+    "front",
+    "rec",
+    "idle",
+    "tree",
+    "seen",
+    "skip",
+    "k1",
+    "k2",
+    "k3"
+  ],
+  "banned_props": [
+    "answer",
+    "key",
+    "color",
+    "colour",
+    "size",
+    "icon",
+    "style",
+    "class",
+    "className",
+    "bg",
+    "background",
+    "width",
+    "height",
+    "font",
+    "theme",
+    "variant"
+  ],
+  "cluck_caps": {
+    "Table": {
+      "rows": 8,
+      "cols": 4
+    }
   }
 }

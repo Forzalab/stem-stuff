@@ -26,7 +26,7 @@ test("library.json: the vendored prompt generator and parser take it", { skip: !
   const prompt = generateSystemPrompt({ library: lib });   // prints components[].signature under each componentGroups heading
   for (const g of lib.componentGroups) assert.ok(prompt.includes(`### ${g.name}\n`), g.name);
   for (const [name, c] of Object.entries(lib.components)) assert.ok(prompt.includes(`${c.signature} — ${c.description}`), name);
-  const r = createParser(lib.schema, lib.root).parse('root = View([s, d])\ns = Steps([a], "reveal")\na = Step("Lock A", [Text("d(A) = 0")])\nd = Doodle("duck")');
+  const r = createParser(lib.schema, lib.root).parse('root = View([s, d])\ns = Steps(g, [a])\ng = Graph("A 48 100, B 160 48", "A-B")\na = Step("Lock A", "A:done B:front")\nd = Doodle("duck")');
   assert.equal(r.root.typeName, "View");
   assert.deepEqual(r.meta.errors ?? [], []);
 });

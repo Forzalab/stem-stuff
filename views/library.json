@@ -1,99 +1,138 @@
 {
   "id": "stem",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "root": "View",
   "schema": {
     "$defs": {
       "View": {
+        "description": "The root: its children are painted in order, each into a slot reserved when the root arrives",
         "type": "object",
-        "description": "root container",
         "properties": {
           "children": {
-            "type": "array"
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/View"
+                },
+                {
+                  "$ref": "#/$defs/Head"
+                },
+                {
+                  "$ref": "#/$defs/Text"
+                },
+                {
+                  "$ref": "#/$defs/Legend"
+                },
+                {
+                  "$ref": "#/$defs/Table"
+                },
+                {
+                  "$ref": "#/$defs/Callout"
+                },
+                {
+                  "$ref": "#/$defs/Steps"
+                },
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "$ref": "#/$defs/Hints"
+                },
+                {
+                  "$ref": "#/$defs/Predict"
+                },
+                {
+                  "$ref": "#/$defs/Reveal"
+                },
+                {
+                  "$ref": "#/$defs/Answer"
+                },
+                {
+                  "$ref": "#/$defs/Doodle"
+                },
+                {
+                  "$ref": "#/$defs/Graph"
+                }
+              ]
+            },
+            "maxItems": 6
           }
         },
         "required": [
           "children"
         ]
       },
-      "Stack": {
+      "Head": {
+        "description": "Title and one-line subtitle of a view",
         "type": "object",
-        "description": "children in order (direction is CSS, F3)",
         "properties": {
-          "children": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "children"
-        ]
-      },
-      "Grid": {
-        "type": "object",
-        "description": "small multiples, equal cells",
-        "properties": {
-          "children": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "children"
-        ]
-      },
-      "Card": {
-        "type": "object",
-        "description": "boxed group with an optional tag line",
-        "properties": {
-          "children": {
-            "type": "array"
+          "title": {
+            "type": "string",
+            "maxLength": 60
           },
-          "tag": {
-            "type": "string"
+          "sub": {
+            "type": "string",
+            "maxLength": 140
           }
         },
         "required": [
-          "children"
+          "title"
         ]
       },
       "Text": {
+        "description": "A paragraph; **bold** is the only emphasis",
         "type": "object",
-        "description": "short text; inline $math$ allowed",
         "properties": {
           "text": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 400
           }
         },
         "required": [
           "text"
         ]
       },
-      "Math": {
+      "Legend": {
+        "description": "Legend chips, each \"mark label\"; the sample is drawn with the figure's own class",
         "type": "object",
-        "description": "display TeX; an identity it states is re-checked",
         "properties": {
-          "tex": {
-            "type": "string"
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "maxItems": 8
           }
         },
         "required": [
-          "tex"
+          "items"
         ]
       },
       "Table": {
+        "description": "A small table: header cells, then rows of cells",
         "type": "object",
-        "description": "header row + body rows; cells may be refs",
         "properties": {
           "head": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5
           },
           "rows": {
             "type": "array",
             "items": {
-              "type": "array"
-            }
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 5
+            },
+            "maxItems": 12
           }
         },
         "required": [
@@ -101,58 +140,50 @@
           "rows"
         ]
       },
-      "Chips": {
+      "Callout": {
+        "description": "A section with a rule and a short tag (\"Where it breaks\"), never a box",
         "type": "object",
-        "description": "row of small chips (givens, tags)",
         "properties": {
-          "items": {
-            "type": "array"
+          "tag": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 400
           }
         },
         "required": [
-          "items"
-        ]
-      },
-      "Image": {
-        "type": "object",
-        "description": "bank image by ref, with alt text",
-        "properties": {
-          "src": {},
-          "alt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "src",
-          "alt"
-        ]
-      },
-      "Given": {
-        "type": "object",
-        "description": "one given value chip, bound to a given.* ref",
-        "properties": {
-          "ref": {},
-          "label": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "ref"
+          "tag",
+          "text"
         ]
       },
       "Steps": {
+        "description": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
         "type": "object",
-        "description": "ordered steps, one at a time (reveal) or as tabs",
         "properties": {
-          "steps": {
-            "type": "array"
+          "fig": {
+            "$ref": "#/$defs/Graph"
           },
-          "mode": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Step"
+            },
+            "maxItems": 8,
+            "minItems": 1
+          },
+          "front": {
             "type": "string",
-            "enum": [
-              "reveal",
-              "tabs"
-            ]
+            "maxLength": 32
+          },
+          "head": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5
           }
         },
         "required": [
@@ -160,497 +191,741 @@
         ]
       },
       "Step": {
+        "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
         "type": "object",
-        "description": "one step of Steps",
         "properties": {
-          "title": {
-            "type": "string"
+          "cap": {
+            "type": "string",
+            "maxLength": 140
           },
-          "children": {
-            "type": "array"
+          "nodes": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "edges": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "tags": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 12
+          },
+          "front": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 8
+            },
+            "maxItems": 8
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 5
+            },
+            "maxItems": 12
           }
         },
         "required": [
-          "title",
-          "children"
+          "cap"
         ]
       },
-      "Compare": {
+      "Hints": {
+        "description": "A hint ladder: one hint at a time",
         "type": "object",
-        "description": "side by side; sync=true steps both together",
         "properties": {
-          "children": {
-            "type": "array"
-          },
-          "sync": {
-            "type": "boolean"
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "maxItems": 3,
+            "minItems": 1
           }
         },
         "required": [
-          "children"
-        ]
-      },
-      "Callout": {
-        "type": "object",
-        "description": "highlighted box, e.g. tag \"Where it breaks\"",
-        "properties": {
-          "tag": {
-            "type": "string"
-          },
-          "children": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "tag",
-          "children"
-        ]
-      },
-      "Reveal": {
-        "type": "object",
-        "description": "placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)",
-        "properties": {
-          "label": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "label"
+          "hints"
         ]
       },
       "Predict": {
+        "description": "Pick an answer; the pick is checked by the server, the page never holds the answer",
         "type": "object",
-        "description": "student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)",
         "properties": {
-          "question": {
-            "type": "string"
+          "tag": {
+            "type": "string",
+            "maxLength": 24
           },
-          "answer": {},
-          "tol": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "question",
-          "answer"
-        ]
-      },
-      "Slider": {
-        "type": "object",
-        "description": "binds a $state variable",
-        "properties": {
-          "value": {},
-          "min": {
-            "type": "number"
+          "q": {
+            "type": "string",
+            "maxLength": 140
           },
-          "max": {
-            "type": "number"
-          },
-          "step": {
-            "type": "number"
-          },
-          "label": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "value",
-          "min",
-          "max"
-        ]
-      },
-      "Choice": {
-        "type": "object",
-        "description": "one question with 2-3 options (low-confidence intent)",
-        "properties": {
-          "question": {
-            "type": "string"
-          },
-          "options": {
+          "choices": {
             "type": "array",
             "items": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5,
+            "minItems": 2
+          },
+          "struck": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 4
+          },
+          "tries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
           }
         },
         "required": [
-          "question",
-          "options"
+          "q",
+          "choices"
         ]
       },
-      "Assume": {
+      "Reveal": {
+        "description": "A visible locked row; its body arrives as a second program when the stage changes",
         "type": "object",
-        "description": "\"I read this as X\" chip; tap sends a refine request",
         "properties": {
+          "lock": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "body": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/View"
+                },
+                {
+                  "$ref": "#/$defs/Head"
+                },
+                {
+                  "$ref": "#/$defs/Text"
+                },
+                {
+                  "$ref": "#/$defs/Legend"
+                },
+                {
+                  "$ref": "#/$defs/Table"
+                },
+                {
+                  "$ref": "#/$defs/Callout"
+                },
+                {
+                  "$ref": "#/$defs/Steps"
+                },
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "$ref": "#/$defs/Hints"
+                },
+                {
+                  "$ref": "#/$defs/Predict"
+                },
+                {
+                  "$ref": "#/$defs/Reveal"
+                },
+                {
+                  "$ref": "#/$defs/Answer"
+                },
+                {
+                  "$ref": "#/$defs/Doodle"
+                },
+                {
+                  "$ref": "#/$defs/Graph"
+                }
+              ]
+            },
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "lock"
+        ]
+      },
+      "Answer": {
+        "description": "The boxed answer and one sentence",
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 40
+          },
           "text": {
-            "type": "string"
-          },
-          "alts": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "type": "string",
+            "maxLength": 140
           }
         },
         "required": [
-          "text"
+          "value"
         ]
       },
       "Doodle": {
+        "description": "A small drawing when nothing else fits (visual first)",
         "type": "object",
-        "description": "small drawing from our art when no real visual fits (VISUAL-FIRST)",
         "properties": {
           "kind": {
             "type": "string",
             "enum": [
               "duck",
-              "heart"
+              "heart",
+              "star",
+              "spark"
             ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 80
           }
         },
         "required": [
           "kind"
         ]
       },
-      "MatchQuiz": {
-        "type": "object",
-        "description": "match terms to definitions",
-        "properties": {
-          "pairs": {}
-        },
-        "required": [
-          "pairs"
-        ]
-      },
-      "Axes": {
-        "type": "object",
-        "description": "concept axes, each Axis a spectrum",
-        "properties": {
-          "axes": {
-            "type": "array"
-          }
-        },
-        "required": [
-          "axes"
-        ]
-      },
-      "Axis": {
-        "type": "object",
-        "description": "one axis of Axes",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "left": {
-            "type": "string"
-          },
-          "right": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "left",
-          "right"
-        ]
-      },
-      "ITable": {
-        "type": "object",
-        "description": "interactive table (kmap, truth, matrix, dp)",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "kmap",
-              "truth",
-              "matrix",
-              "dp"
-            ]
-          },
-          "spec": {}
-        },
-        "required": [
-          "kind",
-          "spec"
-        ]
-      },
       "Graph": {
+        "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"",
         "type": "object",
-        "description": "draws a bank graph block (fig ref) or one stage of a trace",
         "properties": {
-          "fig": {},
-          "stage": {
-            "type": "integer"
+          "nodes": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "edges": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "cols": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "marks": {
+            "type": "string",
+            "maxLength": 400
           }
         },
         "required": [
-          "fig"
-        ]
-      },
-      "Walk": {
-        "type": "object",
-        "description": "algorithm stepper: stages, frontier, distances from a trace",
-        "properties": {
-          "trace": {}
-        },
-        "required": [
-          "trace"
-        ]
-      },
-      "FlowNet": {
-        "type": "object",
-        "description": "flow network with flows and the min cut",
-        "properties": {
-          "flow": {}
-        },
-        "required": [
-          "flow"
-        ]
-      },
-      "Plot": {
-        "type": "object",
-        "description": "function plot from sampled points",
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "Riemann": {
-        "type": "object",
-        "description": "Riemann rectangles + sum",
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "FBD": {
-        "type": "object",
-        "description": "free-body diagram; magnitudes from the engine",
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "Triangle": {
-        "type": "object",
-        "description": "solved triangle (sides, angles)",
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "Timeline": {
-        "type": "object",
-        "description": "ordered events on a line (history or motion)",
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
+          "nodes",
+          "edges"
         ]
       }
     }
   },
   "components": {
     "View": {
-      "signature": "View(children: any[])",
-      "description": "root container",
+      "signature": "View(children: Component[])",
+      "description": "The root: its children are painted in order, each into a slot reserved when the root arrives",
       "layer": "L0",
-      "kind": "layout"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/View"
+                },
+                {
+                  "$ref": "#/$defs/Head"
+                },
+                {
+                  "$ref": "#/$defs/Text"
+                },
+                {
+                  "$ref": "#/$defs/Legend"
+                },
+                {
+                  "$ref": "#/$defs/Table"
+                },
+                {
+                  "$ref": "#/$defs/Callout"
+                },
+                {
+                  "$ref": "#/$defs/Steps"
+                },
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "$ref": "#/$defs/Hints"
+                },
+                {
+                  "$ref": "#/$defs/Predict"
+                },
+                {
+                  "$ref": "#/$defs/Reveal"
+                },
+                {
+                  "$ref": "#/$defs/Answer"
+                },
+                {
+                  "$ref": "#/$defs/Doodle"
+                },
+                {
+                  "$ref": "#/$defs/Graph"
+                }
+              ]
+            },
+            "maxItems": 6
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
     },
-    "Stack": {
-      "signature": "Stack(children: any[])",
-      "description": "children in order (direction is CSS, F3)",
+    "Head": {
+      "signature": "Head(title: string, sub?: string)",
+      "description": "Title and one-line subtitle of a view",
       "layer": "L0",
-      "kind": "layout"
-    },
-    "Grid": {
-      "signature": "Grid(children: any[])",
-      "description": "small multiples, equal cells",
-      "layer": "L0",
-      "kind": "layout"
-    },
-    "Card": {
-      "signature": "Card(children: any[], tag?: string)",
-      "description": "boxed group with an optional tag line",
-      "layer": "L0",
-      "kind": "layout"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "sub": {
+            "type": "string",
+            "maxLength": 140
+          }
+        },
+        "required": [
+          "title"
+        ]
+      }
     },
     "Text": {
       "signature": "Text(text: string)",
-      "description": "short text; inline $math$ allowed",
+      "description": "A paragraph; **bold** is the only emphasis",
       "layer": "L0",
-      "kind": "layout"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 400
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
     },
-    "Math": {
-      "signature": "Math(tex: string)",
-      "description": "display TeX; an identity it states is re-checked",
+    "Legend": {
+      "signature": "Legend(items: string[])",
+      "description": "Legend chips, each \"mark label\"; the sample is drawn with the figure's own class",
       "layer": "L0",
-      "kind": "domain"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "maxItems": 8
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
     },
     "Table": {
-      "signature": "Table(head: string[], rows: any[][])",
-      "description": "header row + body rows; cells may be refs",
+      "signature": "Table(head: string[], rows: string[][])",
+      "description": "A small table: header cells, then rows of cells",
       "layer": "L0",
-      "kind": "layout"
-    },
-    "Chips": {
-      "signature": "Chips(items: any[])",
-      "description": "row of small chips (givens, tags)",
-      "layer": "L0",
-      "kind": "layout"
-    },
-    "Image": {
-      "signature": "Image(src: any, alt: string)",
-      "description": "bank image by ref, with alt text",
-      "layer": "L0",
-      "kind": "layout"
-    },
-    "Given": {
-      "signature": "Given(ref: any, label?: string)",
-      "description": "one given value chip, bound to a given.* ref",
-      "layer": "L1",
-      "kind": "layout"
-    },
-    "Steps": {
-      "signature": "Steps(steps: any[], mode?: \"reveal\" | \"tabs\")",
-      "description": "ordered steps, one at a time (reveal) or as tabs",
-      "layer": "L1",
-      "kind": "layout"
-    },
-    "Step": {
-      "signature": "Step(title: string, children: any[])",
-      "description": "one step of Steps",
-      "layer": "L1",
-      "kind": "layout"
-    },
-    "Compare": {
-      "signature": "Compare(children: any[], sync?: boolean)",
-      "description": "side by side; sync=true steps both together",
-      "layer": "L1",
-      "kind": "layout"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "head": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 5
+            },
+            "maxItems": 12
+          }
+        },
+        "required": [
+          "head",
+          "rows"
+        ]
+      }
     },
     "Callout": {
-      "signature": "Callout(tag: string, children: any[])",
-      "description": "highlighted box, e.g. tag \"Where it breaks\"",
+      "signature": "Callout(tag: string, text: string)",
+      "description": "A section with a rule and a short tag (\"Where it breaks\"), never a box",
       "layer": "L1",
-      "kind": "layout"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 400
+          }
+        },
+        "required": [
+          "tag",
+          "text"
+        ]
+      }
     },
-    "Reveal": {
-      "signature": "Reveal(label: string)",
-      "description": "placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)",
+    "Steps": {
+      "signature": "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])",
+      "description": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
       "layer": "L1",
-      "kind": "interaction"
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "fig": {
+            "$ref": "#/$defs/Graph"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Step"
+            },
+            "maxItems": 8,
+            "minItems": 1
+          },
+          "front": {
+            "type": "string",
+            "maxLength": 32
+          },
+          "head": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5
+          }
+        },
+        "required": [
+          "steps"
+        ]
+      }
+    },
+    "Step": {
+      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][])",
+      "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "cap": {
+            "type": "string",
+            "maxLength": 140
+          },
+          "nodes": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "edges": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "tags": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 12
+          },
+          "front": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 8
+            },
+            "maxItems": 8
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 5
+            },
+            "maxItems": 12
+          }
+        },
+        "required": [
+          "cap"
+        ]
+      }
+    },
+    "Hints": {
+      "signature": "Hints(hints: string[])",
+      "description": "A hint ladder: one hint at a time",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "maxItems": 3,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "hints"
+        ]
+      }
     },
     "Predict": {
-      "signature": "Predict(question: string, answer: any, tol?: number)",
-      "description": "student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)",
+      "signature": "Predict(tag?: string, q: string, choices: string[], struck?: string[], tries?: number)",
+      "description": "Pick an answer; the pick is checked by the server, the page never holds the answer",
       "layer": "L1",
-      "kind": "interaction"
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "maxLength": 24
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 140
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 5,
+            "minItems": 2
+          },
+          "struck": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "maxItems": 4
+          },
+          "tries": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          }
+        },
+        "required": [
+          "q",
+          "choices"
+        ]
+      }
     },
-    "Slider": {
-      "signature": "Slider(value: any, min: number, max: number, step?: number, label?: string)",
-      "description": "binds a $state variable",
+    "Reveal": {
+      "signature": "Reveal(lock: string, body?: Component[])",
+      "description": "A visible locked row; its body arrives as a second program when the stage changes",
       "layer": "L1",
-      "kind": "interaction"
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "lock": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "body": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/View"
+                },
+                {
+                  "$ref": "#/$defs/Head"
+                },
+                {
+                  "$ref": "#/$defs/Text"
+                },
+                {
+                  "$ref": "#/$defs/Legend"
+                },
+                {
+                  "$ref": "#/$defs/Table"
+                },
+                {
+                  "$ref": "#/$defs/Callout"
+                },
+                {
+                  "$ref": "#/$defs/Steps"
+                },
+                {
+                  "$ref": "#/$defs/Step"
+                },
+                {
+                  "$ref": "#/$defs/Hints"
+                },
+                {
+                  "$ref": "#/$defs/Predict"
+                },
+                {
+                  "$ref": "#/$defs/Reveal"
+                },
+                {
+                  "$ref": "#/$defs/Answer"
+                },
+                {
+                  "$ref": "#/$defs/Doodle"
+                },
+                {
+                  "$ref": "#/$defs/Graph"
+                }
+              ]
+            },
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "lock"
+        ]
+      }
     },
-    "Choice": {
-      "signature": "Choice(question: string, options: string[])",
-      "description": "one question with 2-3 options (low-confidence intent)",
+    "Answer": {
+      "signature": "Answer(value: string, text?: string)",
+      "description": "The boxed answer and one sentence",
       "layer": "L1",
-      "kind": "interaction"
-    },
-    "Assume": {
-      "signature": "Assume(text: string, alts?: string[])",
-      "description": "\"I read this as X\" chip; tap sends a refine request",
-      "layer": "L1",
-      "kind": "interaction"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 140
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
     },
     "Doodle": {
-      "signature": "Doodle(kind: \"duck\" | \"heart\")",
-      "description": "small drawing from our art when no real visual fits (VISUAL-FIRST)",
+      "signature": "Doodle(kind: \"duck\" | \"heart\" | \"star\" | \"spark\", text?: string)",
+      "description": "A small drawing when nothing else fits (visual first)",
       "layer": "L1",
-      "kind": "layout"
-    },
-    "MatchQuiz": {
-      "signature": "MatchQuiz(pairs: any)",
-      "description": "match terms to definitions",
-      "layer": "L1",
-      "kind": "interaction"
-    },
-    "Axes": {
-      "signature": "Axes(axes: any[])",
-      "description": "concept axes, each Axis a spectrum",
-      "layer": "L1",
-      "kind": "domain"
-    },
-    "Axis": {
-      "signature": "Axis(name: string, left: string, right: string)",
-      "description": "one axis of Axes",
-      "layer": "L1",
-      "kind": "layout"
-    },
-    "ITable": {
-      "signature": "ITable(kind: \"kmap\" | \"truth\" | \"matrix\" | \"dp\", spec: any)",
-      "description": "interactive table (kmap, truth, matrix, dp)",
-      "layer": "L1",
-      "kind": "domain"
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "duck",
+              "heart",
+              "star",
+              "spark"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      }
     },
     "Graph": {
-      "signature": "Graph(fig: any, stage?: number)",
-      "description": "draws a bank graph block (fig ref) or one stage of a trace",
+      "signature": "Graph(nodes: string, edges: string, cols?: string, marks?: string)",
+      "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"",
       "layer": "L2",
-      "kind": "domain"
-    },
-    "Walk": {
-      "signature": "Walk(trace: any)",
-      "description": "algorithm stepper: stages, frontier, distances from a trace",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "FlowNet": {
-      "signature": "FlowNet(flow: any)",
-      "description": "flow network with flows and the min cut",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "Plot": {
-      "signature": "Plot(data: any)",
-      "description": "function plot from sampled points",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "Riemann": {
-      "signature": "Riemann(data: any)",
-      "description": "Riemann rectangles + sum",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "FBD": {
-      "signature": "FBD(data: any)",
-      "description": "free-body diagram; magnitudes from the engine",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "Triangle": {
-      "signature": "Triangle(data: any)",
-      "description": "solved triangle (sides, angles)",
-      "layer": "L2",
-      "kind": "domain"
-    },
-    "Timeline": {
-      "signature": "Timeline(data: any)",
-      "description": "ordered events on a line (history or motion)",
-      "layer": "L2",
-      "kind": "domain"
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "edges": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "cols": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "marks": {
+            "type": "string",
+            "maxLength": 400
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ]
+      }
     }
   },
   "componentGroups": [
@@ -661,14 +936,10 @@
       ],
       "components": [
         "View",
-        "Stack",
-        "Grid",
-        "Card",
+        "Head",
         "Text",
-        "Math",
-        "Table",
-        "Chips",
-        "Image"
+        "Legend",
+        "Table"
       ]
     },
     {
@@ -677,38 +948,37 @@
         "learning components: subject-blind, know data shapes only"
       ],
       "components": [
-        "Given",
+        "Callout",
         "Steps",
         "Step",
-        "Compare",
-        "Callout",
-        "Reveal",
+        "Hints",
         "Predict",
-        "Slider",
-        "Choice",
-        "Assume",
-        "Doodle",
-        "MatchQuiz",
-        "Axes",
-        "Axis",
-        "ITable"
+        "Reveal",
+        "Answer",
+        "Doodle"
       ]
     },
     {
       "name": "L2",
       "notes": [
-        "renderers of engine data: every value comes from a Query result or a bank ref"
+        "renderers of engine data: every value comes from an engine result"
       ],
       "components": [
-        "Graph",
-        "Walk",
-        "FlowNet",
-        "Plot",
-        "Riemann",
-        "FBD",
-        "Triangle",
-        "Timeline"
+        "Graph"
       ]
     }
+  ],
+  "marks": [
+    "cur",
+    "done",
+    "front",
+    "rec",
+    "idle",
+    "tree",
+    "seen",
+    "skip",
+    "k1",
+    "k2",
+    "k3"
   ]
 }

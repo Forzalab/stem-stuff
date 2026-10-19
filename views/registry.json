@@ -1,786 +1,124 @@
 {
-  "$comment": "Render v2 registry: the ONE source for the view library. Edit here, then run python3 tools/gen_views.py (writes views/library.json, views/prompt/*.md, views/checkers.json and the SCHEMA.md views block). Plan: brain projects/calc/topics/openui-render-arch-plan-2026-10-18.md (START HERE v2, Appendix v1 §16). Locks: F3 no look props (look = CSS by cascade; look_props lists banned names), F4 Reveal body = second program, F5 Predict answer stays server side, VISUAL-FIRST Doodle in base.",
-  "version": "0.1.0",
+  "$comment": "Render v2 registry: the ONE source for the view library. Edit here, then run python3 tools/gen_views.py (writes views/library.json, views/prompt/*.md, views/checkers.json and the SCHEMA.md views block). Plan: brain projects/calc/topics/openui-render-arch-plan-2026-10-18.md (START HERE v2, Appendix v1 §16); caps and locks: refine/REFINE.md F2 F3 F4 F5 F7 F11 F19, VISUAL-FIRST. Prop shapes = the P1.1 renderer's (views-lib.js LOCAL). props: ordered (positional order), JSON Schema each; {\"x-any\": true} = any shipped component. ships: P1.1 = drawn by views.js, emitted into library.json; planned = roadmap only (table in SCHEMA.md, never in a prompt).",
+  "version": "0.2.0",
   "profile": "stem",
   "root": "View",
-  "base": [
-    "View",
-    "Stack",
-    "Text",
-    "Math",
-    "Doodle"
-  ],
+  "base": ["View", "Head", "Text", "Doodle"],
   "layers": {
     "L0": "primitives (escape hatch): build anything when no learning component fits",
     "L1": "learning components: subject-blind, know data shapes only",
-    "L2": "renderers of engine data: every value comes from a Query result or a bank ref"
+    "L2": "renderers of engine data: every value comes from an engine result"
   },
+  "banned_props": ["answer", "key", "color", "colour", "size", "icon", "style", "class", "className", "bg", "background", "width", "height", "font", "theme", "variant"],
+  "marks": ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"],
+  "doodles": ["duck", "heart", "star", "spark"],
   "refs": {
-    "given": {
-      "stages": [
-        "pre",
-        "wrong",
-        "post"
-      ],
-      "desc": "item givens (given.m, given.v0)"
-    },
-    "fig": {
-      "stages": [
-        "pre",
-        "wrong",
-        "post"
-      ],
-      "desc": "item figures (fig0, fig1)"
-    },
-    "wrong": {
-      "stages": [
-        "wrong",
-        "post"
-      ],
-      "desc": "the picked distractor: wrong.error tag, wrong.text"
-    },
-    "key": {
-      "stages": [
-        "post"
-      ],
-      "desc": "hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post",
-      "server_props": "Predict.answer"
-    }
+    "given": {"stages": ["pre", "wrong", "post"], "desc": "item givens (given.m, given.v0)"},
+    "fig": {"stages": ["pre", "wrong", "post"], "desc": "item figures (fig0, fig1)"},
+    "wrong": {"stages": ["wrong", "post"], "desc": "the picked distractor: wrong.error tag, wrong.text"},
+    "key": {"stages": ["post"], "desc": "hidden answer values (key.v1); the gate drops any key ref, or literal equal to a key value, outside post"}
   },
   "gate": [
-    {
-      "id": "parse",
-      "desc": "statement parses as OpenUI Lang (profile stem: no Mutation, no Action, no timers)"
-    },
-    {
-      "id": "schema",
-      "desc": "component exists in this library; args match its props"
-    },
-    {
-      "id": "query",
-      "desc": "Query tool exists in the engine list; runs SERVER side; the browser gets results only"
-    },
-    {
-      "id": "checker",
-      "desc": "domain component: its checker re-runs the engine and compares"
-    },
-    {
-      "id": "leak",
-      "desc": "no key ref and no literal equal to a hidden value outside post"
-    },
-    {
-      "id": "stage",
-      "desc": "recipe allows this stage; refs allowed in this stage"
-    }
+    {"id": "parse", "desc": "statement parses as OpenUI Lang (profile stem: no Mutation, no Action, no timers)"},
+    {"id": "schema", "desc": "component exists in this library; args match its props, caps included (over a cap: drop, log too-long)"},
+    {"id": "query", "desc": "Query tool exists in the engine list; runs SERVER side; the browser gets results only"},
+    {"id": "checker", "desc": "domain component: its checker re-runs the engine and compares"},
+    {"id": "leak", "desc": "no key ref and no literal equal to a hidden value outside post; a Reveal body is a second program"},
+    {"id": "stage", "desc": "recipe allows this stage; refs allowed in this stage"},
+    {"id": "marks", "desc": "every state word in nodes / edges / marks / Legend items is one of marks"},
+    {"id": "one-stepper", "desc": "at most one Steps or Compare per root; one figure per Steps"},
+    {"id": "copy", "desc": "no string holds a hex colour, px, an emoji, or an all-caps word over 3 letters that is no code"}
   ],
   "engines": {
-    "graph": {
-      "ships": "P0.3",
-      "tools": [
-        "graph.trace",
-        "graph.maxflow",
-        "graph.coloring",
-        "graph.mst"
-      ]
-    },
-    "symbolic": {
-      "ships": "P0.3",
-      "tools": [
-        "symbolic.simplify",
-        "symbolic.integrate",
-        "symbolic.derivative",
-        "symbolic.solve",
-        "symbolic.series_test"
-      ]
-    },
-    "numeric": {
-      "ships": "planned",
-      "tools": [
-        "numeric.sample",
-        "numeric.riemann",
-        "numeric.partial_sums"
-      ]
-    },
-    "units": {
-      "ships": "planned",
-      "tools": [
-        "units.convert",
-        "units.dimension_check",
-        "units.sig_figs"
-      ]
-    },
-    "vectors": {
-      "ships": "planned",
-      "tools": [
-        "vectors.resolve",
-        "vectors.triangle"
-      ]
-    },
-    "logic": {
-      "ships": "planned",
-      "tools": [
-        "logic.kmap_groups",
-        "logic.truth_table",
-        "logic.dp_table"
-      ]
-    },
-    "stats": {
-      "ships": "planned",
-      "tools": [
-        "stats.distribution",
-        "stats.sample_stats"
-      ]
-    },
-    "sequence": {
-      "ships": "planned",
-      "tools": [
-        "sequence.order",
-        "sequence.timeline"
-      ]
-    },
-    "text": {
-      "ships": "planned",
-      "tools": [
-        "text.term_cards",
-        "text.distinction"
-      ]
-    }
+    "graph": {"ships": "P0.3", "tools": ["graph.trace", "graph.maxflow", "graph.coloring", "graph.mst"]},
+    "symbolic": {"ships": "P0.3", "tools": ["symbolic.simplify", "symbolic.integrate", "symbolic.derivative", "symbolic.solve", "symbolic.series_test"]},
+    "numeric": {"ships": "planned", "tools": ["numeric.sample", "numeric.riemann", "numeric.partial_sums"]},
+    "units": {"ships": "planned", "tools": ["units.convert", "units.dimension_check", "units.sig_figs"]},
+    "vectors": {"ships": "planned", "tools": ["vectors.resolve", "vectors.triangle"]},
+    "logic": {"ships": "planned", "tools": ["logic.kmap_groups", "logic.truth_table", "logic.dp_table"]},
+    "stats": {"ships": "planned", "tools": ["stats.distribution", "stats.sample_stats"]},
+    "sequence": {"ships": "planned", "tools": ["sequence.order", "sequence.timeline"]},
+    "text": {"ships": "planned", "tools": ["text.term_cards", "text.distinction"]}
   },
   "components": {
-    "View": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "root container",
-      "props": [
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Stack": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "children in order (direction is CSS, F3)",
-      "props": [
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Grid": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "small multiples, equal cells",
-      "props": [
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Card": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "boxed group with an optional tag line",
-      "props": [
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        },
-        {
-          "name": "tag",
-          "type": "string"
-        }
-      ]
-    },
-    "Text": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "short text; inline $math$ allowed",
-      "props": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": true
-        }
-      ]
-    },
-    "Math": {
-      "layer": "L0",
-      "kind": "domain",
-      "desc": "display TeX; an identity it states is re-checked",
-      "checker": "symbolic.simplify",
-      "props": [
-        {
-          "name": "tex",
-          "type": "string",
-          "required": true
-        }
-      ]
-    },
-    "Table": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "header row + body rows; cells may be refs",
-      "props": [
-        {
-          "name": "head",
-          "type": "strings",
-          "required": true
-        },
-        {
-          "name": "rows",
-          "type": "rows",
-          "required": true
-        }
-      ]
-    },
-    "Chips": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "row of small chips (givens, tags)",
-      "props": [
-        {
-          "name": "items",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Image": {
-      "layer": "L0",
-      "kind": "layout",
-      "desc": "bank image by ref, with alt text",
-      "props": [
-        {
-          "name": "src",
-          "type": "ref",
-          "required": true
-        },
-        {
-          "name": "alt",
-          "type": "string",
-          "required": true
-        }
-      ]
-    },
-    "Given": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "one given value chip, bound to a given.* ref",
-      "props": [
-        {
-          "name": "ref",
-          "type": "ref",
-          "required": true
-        },
-        {
-          "name": "label",
-          "type": "string"
-        }
-      ]
-    },
-    "Steps": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "ordered steps, one at a time (reveal) or as tabs",
-      "props": [
-        {
-          "name": "steps",
-          "type": "nodes",
-          "required": true
-        },
-        {
-          "name": "mode",
-          "type": "enum",
-          "values": [
-            "reveal",
-            "tabs"
-          ]
-        }
-      ]
-    },
-    "Step": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "one step of Steps",
-      "props": [
-        {
-          "name": "title",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Compare": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "side by side; sync=true steps both together",
-      "props": [
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        },
-        {
-          "name": "sync",
-          "type": "bool"
-        }
-      ]
-    },
-    "Callout": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "highlighted box, e.g. tag \"Where it breaks\"",
-      "props": [
-        {
-          "name": "tag",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "children",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Reveal": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "placeholder: a visible locked row; its body is a SECOND program the server sends when the stage changes, patch-merged in place (F4)",
-      "props": [
-        {
-          "name": "label",
-          "type": "string",
-          "required": true
-        }
-      ]
-    },
-    "Predict": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "student types a guess; the browser POSTs it to /predict and the server marks it (answer stays server side, F5)",
-      "checker": "ref",
-      "props": [
-        {
-          "name": "question",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "answer",
-          "type": "ref",
-          "required": true,
-          "server": true
-        },
-        {
-          "name": "tol",
-          "type": "number"
-        }
-      ]
-    },
-    "Slider": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "binds a $state variable",
-      "props": [
-        {
-          "name": "value",
-          "type": "state",
-          "required": true
-        },
-        {
-          "name": "min",
-          "type": "number",
-          "required": true
-        },
-        {
-          "name": "max",
-          "type": "number",
-          "required": true
-        },
-        {
-          "name": "step",
-          "type": "number"
-        },
-        {
-          "name": "label",
-          "type": "string"
-        }
-      ]
-    },
-    "Choice": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "one question with 2-3 options (low-confidence intent)",
-      "props": [
-        {
-          "name": "question",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "options",
-          "type": "strings",
-          "required": true
-        }
-      ]
-    },
-    "Assume": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "\"I read this as X\" chip; tap sends a refine request",
-      "props": [
-        {
-          "name": "text",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "alts",
-          "type": "strings"
-        }
-      ]
-    },
-    "Doodle": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "small drawing from our art when no real visual fits (VISUAL-FIRST)",
-      "props": [
-        {
-          "name": "kind",
-          "type": "enum",
-          "values": [
-            "duck",
-            "heart"
-          ],
-          "required": true
-        }
-      ]
-    },
-    "MatchQuiz": {
-      "layer": "L1",
-      "kind": "interaction",
-      "desc": "match terms to definitions",
-      "checker": "text.term_cards",
-      "props": [
-        {
-          "name": "pairs",
-          "type": "ref",
-          "required": true
-        }
-      ]
-    },
-    "Axes": {
-      "layer": "L1",
-      "kind": "domain",
-      "desc": "concept axes, each Axis a spectrum",
-      "props": [
-        {
-          "name": "axes",
-          "type": "nodes",
-          "required": true
-        }
-      ]
-    },
-    "Axis": {
-      "layer": "L1",
-      "kind": "layout",
-      "desc": "one axis of Axes",
-      "props": [
-        {
-          "name": "name",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "left",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "right",
-          "type": "string",
-          "required": true
-        }
-      ]
-    },
-    "ITable": {
-      "layer": "L1",
-      "kind": "domain",
-      "desc": "interactive table (kmap, truth, matrix, dp)",
-      "checker": "logic.truth_table",
-      "props": [
-        {
-          "name": "kind",
-          "type": "enum",
-          "values": [
-            "kmap",
-            "truth",
-            "matrix",
-            "dp"
-          ],
-          "required": true
-        },
-        {
-          "name": "spec",
-          "type": "ref",
-          "required": true
-        }
-      ]
-    },
-    "Graph": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "draws a bank graph block (fig ref) or one stage of a trace",
-      "checker": "graph.trace",
-      "props": [
-        {
-          "name": "fig",
-          "type": "ref",
-          "required": true
-        },
-        {
-          "name": "stage",
-          "type": "int"
-        }
-      ]
-    },
-    "Walk": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "algorithm stepper: stages, frontier, distances from a trace",
-      "checker": "graph.trace",
-      "props": [
-        {
-          "name": "trace",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "FlowNet": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "flow network with flows and the min cut",
-      "checker": "graph.maxflow",
-      "props": [
-        {
-          "name": "flow",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "Plot": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "function plot from sampled points",
-      "checker": "numeric.sample",
-      "props": [
-        {
-          "name": "data",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "Riemann": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "Riemann rectangles + sum",
-      "checker": "numeric.riemann",
-      "props": [
-        {
-          "name": "data",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "FBD": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "free-body diagram; magnitudes from the engine",
-      "checker": "vectors.resolve",
-      "props": [
-        {
-          "name": "data",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "Triangle": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "solved triangle (sides, angles)",
-      "checker": "vectors.triangle",
-      "props": [
-        {
-          "name": "data",
-          "type": "query",
-          "required": true
-        }
-      ]
-    },
-    "Timeline": {
-      "layer": "L2",
-      "kind": "domain",
-      "desc": "ordered events on a line (history or motion)",
-      "checker": "sequence.timeline",
-      "props": [
-        {
-          "name": "data",
-          "type": "query",
-          "required": true
-        }
-      ]
-    }
+    "View": {"layer": "L0", "kind": "layout", "ships": "P1.1", "desc": "The root: its children are painted in order, each into a slot reserved when the root arrives",
+      "props": {"children": {"type": "array", "items": {"x-any": true}, "maxItems": 6}}, "required": ["children"]},
+    "Head": {"layer": "L0", "kind": "layout", "ships": "P1.1", "desc": "Title and one-line subtitle of a view",
+      "props": {"title": {"type": "string", "maxLength": 60}, "sub": {"type": "string", "maxLength": 140}}, "required": ["title"]},
+    "Text": {"layer": "L0", "kind": "layout", "ships": "P1.1", "desc": "A paragraph; **bold** is the only emphasis",
+      "props": {"text": {"type": "string", "maxLength": 400}}, "required": ["text"]},
+    "Legend": {"layer": "L0", "kind": "layout", "ships": "P1.1", "desc": "Legend chips, each \"mark label\"; the sample is drawn with the figure's own class",
+      "props": {"items": {"type": "array", "items": {"type": "string", "maxLength": 32}, "maxItems": 8}}, "required": ["items"]},
+    "Table": {"layer": "L0", "kind": "layout", "ships": "P1.1", "desc": "A small table: header cells, then rows of cells", "cluck": {"rows": 8, "cols": 4},
+      "props": {"head": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 5},
+                "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 5}, "maxItems": 12}}, "required": ["head", "rows"]},
+    "Math": {"layer": "L0", "kind": "domain", "ships": "planned", "desc": "Display TeX; an identity it states is re-checked", "checker": "symbolic.simplify",
+      "props": {"tex": {"type": "string", "maxLength": 200}}, "required": ["tex"]},
+    "Chips": {"layer": "L0", "kind": "layout", "ships": "planned", "desc": "A row of small chips (givens, tags)",
+      "props": {"items": {"type": "array", "items": {"type": "string", "maxLength": 32}, "maxItems": 8}}, "required": ["items"]},
+    "Callout": {"layer": "L1", "kind": "layout", "ships": "P1.1", "desc": "A section with a rule and a short tag (\"Where it breaks\"), never a box",
+      "props": {"tag": {"type": "string", "maxLength": 24}, "text": {"type": "string", "maxLength": 400}}, "required": ["tag", "text"]},
+    "Steps": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
+      "props": {"fig": {"$ref": "#/$defs/Graph"}, "steps": {"type": "array", "items": {"$ref": "#/$defs/Step"}, "maxItems": 8, "minItems": 1},
+                "front": {"type": "string", "maxLength": 32}, "head": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 5}}, "required": ["steps"]},
+    "Step": {"layer": "L1", "kind": "layout", "ships": "P1.1", "desc": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+      "props": {"cap": {"type": "string", "maxLength": 140}, "nodes": {"type": "string", "maxLength": 200}, "edges": {"type": "string", "maxLength": 300},
+                "tags": {"type": "string", "maxLength": 200}, "labels": {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 12},
+                "front": {"type": "array", "items": {"type": "string", "maxLength": 8}, "maxItems": 8},
+                "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 5}, "maxItems": 12}}, "required": ["cap"]},
+    "Hints": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "A hint ladder: one hint at a time",
+      "props": {"hints": {"type": "array", "items": {"type": "string", "maxLength": 200}, "maxItems": 3, "minItems": 1}}, "required": ["hints"]},
+    "Predict": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "Pick an answer; the pick is checked by the server, the page never holds the answer",
+      "props": {"tag": {"type": "string", "maxLength": 24}, "q": {"type": "string", "maxLength": 140},
+                "choices": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 5, "minItems": 2},
+                "struck": {"type": "array", "items": {"type": "string", "maxLength": 24}, "maxItems": 4}, "tries": {"type": "integer", "minimum": 1, "maximum": 3}}, "required": ["q", "choices"]},
+    "Reveal": {"layer": "L1", "kind": "interaction", "ships": "P1.1", "desc": "A visible locked row; its body arrives as a second program when the stage changes",
+      "props": {"lock": {"type": "string", "maxLength": 80}, "body": {"type": "array", "items": {"x-any": true}, "maxItems": 4}}, "required": ["lock"]},
+    "Answer": {"layer": "L1", "kind": "layout", "ships": "P1.1", "desc": "The boxed answer and one sentence",
+      "props": {"value": {"type": "string", "maxLength": 40}, "text": {"type": "string", "maxLength": 140}}, "required": ["value"]},
+    "Doodle": {"layer": "L1", "kind": "layout", "ships": "P1.1", "desc": "A small drawing when nothing else fits (visual first)",
+      "props": {"kind": {"type": "string", "x-enum": "doodles"}, "text": {"type": "string", "maxLength": 80}}, "required": ["kind"]},
+    "Compare": {"layer": "L1", "kind": "layout", "ships": "planned", "desc": "Two side by side, stepped together",
+      "props": {"children": {"type": "array", "items": {"x-any": true}, "minItems": 2, "maxItems": 2}}, "required": ["children"]},
+    "Slider": {"layer": "L1", "kind": "interaction", "ships": "planned", "desc": "Binds a $state variable",
+      "props": {"value": {}, "min": {"type": "number"}, "max": {"type": "number"}, "step": {"type": "number"}, "label": {"type": "string", "maxLength": 40}}, "required": ["value", "min", "max"]},
+    "Choice": {"layer": "L1", "kind": "interaction", "ships": "planned", "desc": "One question with 2-3 options (low-confidence intent)",
+      "props": {"q": {"type": "string", "maxLength": 140}, "options": {"type": "array", "items": {"type": "string", "maxLength": 60}, "minItems": 2, "maxItems": 3}}, "required": ["q", "options"]},
+    "Assume": {"layer": "L1", "kind": "interaction", "ships": "planned", "desc": "\"I read this as X\" chip; a tap sends a refine request",
+      "props": {"text": {"type": "string", "maxLength": 80}, "alts": {"type": "array", "items": {"type": "string", "maxLength": 60}, "maxItems": 3}}, "required": ["text"]},
+    "MatchQuiz": {"layer": "L1", "kind": "interaction", "ships": "planned", "desc": "Match terms to definitions", "checker": "text.term_cards",
+      "props": {"pairs": {"type": "array", "items": {"type": "array", "items": {"type": "string", "maxLength": 80}, "maxItems": 2}, "maxItems": 6}}, "required": ["pairs"]},
+    "ITable": {"layer": "L1", "kind": "domain", "ships": "planned", "desc": "Interactive table (kmap, truth, matrix, dp)", "checker": "logic.truth_table",
+      "props": {"kind": {"type": "string", "enum": ["kmap", "truth", "matrix", "dp"]}, "spec": {}}, "required": ["kind", "spec"]},
+    "Graph": {"layer": "L2", "kind": "domain", "ships": "P1.1", "desc": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"", "checker": "graph.trace",
+      "props": {"nodes": {"type": "string", "maxLength": 600}, "edges": {"type": "string", "maxLength": 600}, "cols": {"type": "string", "maxLength": 200}, "marks": {"type": "string", "maxLength": 400}}, "required": ["nodes", "edges"]},
+    "FlowNet": {"layer": "L2", "kind": "domain", "ships": "planned", "desc": "Flow network with flows and the min cut", "checker": "graph.maxflow",
+      "props": {"flow": {}}, "required": ["flow"]},
+    "Plot": {"layer": "L2", "kind": "domain", "ships": "planned", "desc": "Function plot from sampled points", "checker": "numeric.sample",
+      "props": {"data": {}}, "required": ["data"]},
+    "Riemann": {"layer": "L2", "kind": "domain", "ships": "planned", "desc": "Riemann rectangles + sum", "checker": "numeric.riemann",
+      "props": {"data": {}}, "required": ["data"]},
+    "FBD": {"layer": "L2", "kind": "domain", "ships": "planned", "desc": "Free-body diagram; magnitudes from the engine", "checker": "vectors.resolve",
+      "props": {"data": {}}, "required": ["data"]},
+    "Timeline": {"layer": "L2", "kind": "domain", "ships": "planned", "desc": "Ordered events on a line (history or motion)", "checker": "sequence.timeline",
+      "props": {"data": {}}, "required": ["data"]}
   },
   "recipes": {
-    "hint-line": {
-      "desc": "one next step, nothing more",
-      "stages": [
-        "pre",
-        "wrong"
-      ],
-      "length": "S",
-      "components": [
-        "Callout"
-      ]
-    },
-    "misconception": {
-      "desc": "where the picked idea breaks, first; then the fix",
-      "stages": [
-        "wrong"
-      ],
-      "length": "S",
-      "components": [
-        "Callout",
-        "Card",
-        "Given",
-        "Chips"
-      ]
-    },
-    "predict-reveal": {
-      "desc": "ask a guess, then reveal and mark",
-      "stages": [
-        "pre",
-        "wrong",
-        "post"
-      ],
-      "length": "S",
-      "components": [
-        "Predict",
-        "Reveal",
-        "Card"
-      ]
-    },
-    "steps": {
-      "desc": "worked steps, one at a time",
-      "stages": [
-        "wrong",
-        "post"
-      ],
-      "length": "M",
-      "components": [
-        "Steps",
-        "Step",
-        "Given",
-        "Chips",
-        "Graph"
-      ]
-    },
-    "twin-compare": {
-      "desc": "two methods or two algorithms side by side, in sync",
-      "stages": [
-        "pre",
-        "wrong",
-        "post"
-      ],
-      "length": "M",
-      "components": [
-        "Compare",
-        "Walk",
-        "Graph",
-        "Table"
-      ]
-    },
-    "slider-explore": {
-      "desc": "drag a parameter, watch the verdict change",
-      "stages": [
-        "pre",
-        "post"
-      ],
-      "length": "M",
-      "components": [
-        "Slider",
-        "Grid",
-        "Plot",
-        "Riemann"
-      ]
-    },
-    "concept-match": {
-      "desc": "term cards, axes, distinction table",
-      "stages": [
-        "pre",
-        "wrong",
-        "post"
-      ],
-      "length": "M",
-      "components": [
-        "Card",
-        "MatchQuiz",
-        "Axes",
-        "Axis",
-        "Table"
-      ]
-    },
-    "answer-table": {
-      "desc": "givens + answer table (post only)",
-      "stages": [
-        "post"
-      ],
-      "length": "S",
-      "components": [
-        "Chips",
-        "Given",
-        "Table"
-      ]
-    }
-  },
-  "look_props": [
-    "style",
-    "class",
-    "className",
-    "color",
-    "colour",
-    "bg",
-    "background",
-    "size",
-    "width",
-    "height",
-    "dir",
-    "direction",
-    "cols",
-    "align",
-    "variant",
-    "theme",
-    "font",
-    "tone",
-    "emphasis"
-  ]
+    "hint-line": {"desc": "one next step, nothing more", "stages": ["pre", "wrong"], "length": "S",
+      "components": ["Hints"]},
+    "misconception": {"desc": "where the picked idea breaks, first; then the fix", "stages": ["wrong"], "length": "S",
+      "components": ["Callout", "Chips"]},
+    "predict-reveal": {"desc": "ask a pick, the server marks it, the Reveal body arrives as a patch", "stages": ["pre", "wrong", "post"], "length": "S",
+      "components": ["Predict", "Reveal", "Callout"]},
+    "steps": {"desc": "worked steps, one at a time", "stages": ["wrong", "post"], "length": "M",
+      "components": ["Steps", "Step", "Graph", "Legend", "Table"]},
+    "twin-compare": {"desc": "two methods or two algorithms side by side, in sync", "stages": ["pre", "wrong", "post"], "length": "M",
+      "components": ["Compare", "Steps", "Step", "Graph", "Legend"]},
+    "slider-explore": {"desc": "drag a parameter, watch the verdict change", "stages": ["pre", "post"], "length": "M",
+      "components": ["Slider", "Plot", "Riemann"]},
+    "concept-match": {"desc": "term cards, match, distinction table", "stages": ["pre", "wrong", "post"], "length": "M",
+      "components": ["Callout", "MatchQuiz", "Table"]},
+    "answer-table": {"desc": "the answer + the table that proves it (post only)", "stages": ["post"], "length": "S",
+      "components": ["Answer", "Table", "Chips"]}
+  }
 }
