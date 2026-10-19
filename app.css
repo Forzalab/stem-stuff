@@ -26,6 +26,9 @@
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
+  /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
+     kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
+  --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
   --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
@@ -273,7 +276,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .more::before { content: ""; width: 36px; height: 4px; border-radius: 2px; background: var(--edge); transition: background-color .18s ease-out; }
 .more:hover::before { background: var(--muted); }
 
-.p { --px: 1.25rem; background: var(--qbox); border-radius: 10px; padding: var(--s4) var(--px); }   /* --px: the side padding a codeblock bleeds through */
+.p { background: var(--qbox); border-radius: 10px; padding: var(--s4) 1.25rem; }
 .pcode { margin: 0 0 var(--s2); font-size: var(--t-sm); line-height: 1.3; font-weight: var(--w-em); color: var(--muted); }
 /* the retry tag (app.js retryTag; round 7 PICKER 9 = retry-tag "Agreed" on the shadcn 6px shape): 24px, a 6px corner, glyph + word.
    Only sugar's Second chance wears a ring, --reward; a right answer turns it --correct in place (Redeemed). Every other tag is bare:
@@ -301,16 +304,16 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .md :is(b, strong, em) { font-weight: var(--w-em); font-style: normal; color: inherit; }
 .md :is(h1, h2, h3) { margin: 0 0 var(--s3); font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
 .md blockquote { margin: 0 0 var(--s3); padding-left: var(--s3); border-left: 1px solid var(--line); }
-/* the codeblock (T43, app.js codeblock; STYLE.md 2.2; Tony, Oct 18: mock B's band + mock A's colour). A --page band edge to edge
-   of the question card: no radius, no second edge. Header: language left, the T44 slot, then Copy. --mono 16px, 400 only (no bold).
-   A long line wraps hanging under its own indent + 2ch; only a real line gets a number. Colour: comments and # lines --muted, nothing else */
-.cb { --cbx: var(--s3); --g: 2ch; --cb-lh: 1.55; margin: var(--s3) 0; background: var(--page); }
-.p .md .cb { --cbx: var(--px); margin-inline: calc(-1 * var(--px)); }
-.opt .cb { --cbx: 0px; margin: 0; background: none; }              /* in a choice row: no fill (no box in a box), no Copy (the row is a button) */
-.opt .cb-hd { min-height: 0; }
+/* the codeblock (T43, app.js codeblock; STYLE.md "Codeblock"; Tony, Oct 18: mock A's well + syntax colour). A --page well with the
+   card's margin around it, 8px radius. Header: language left, the T44 slot, then Copy. --mono 16px, 400 only (no bold keywords).
+   A long line wraps hanging under its own indent + 2ch; only a real line gets a number. Colour: the Tokyo Night tokens (--syn-*, :root) */
+.cb { --cbx: var(--s3); --g: 2ch; --cb-lh: 1.55; margin: var(--s3) 0; background: var(--page); border-radius: 8px; }
+.opt .cb { --cbx: 0px; margin: 0; background: none; border-radius: 0; }   /* in a choice row: no fill (no box in a box), no Copy (the row is a button) */
+.opt .cb-hd { min-height: 0; border-bottom: 0; }
 .opt .cb pre { padding-bottom: 0; }
+.opt .cb .t-com { color: var(--muted); }                            /* --syn-com is 4.1:1 on the row's --card; --muted 8.4:1 */
 .opt .txt > p { margin: 0; }
-.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 max(0px, var(--cbx) - 10px) 0 var(--cbx); }
+.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 0 0 var(--cbx); border-bottom: var(--bw-hair) solid var(--line); }
 .cb-lang { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
 .cb-act { margin-left: auto; display: flex; align-items: center; }
 .cb-slot { width: 0; }                                              /* T44 run / step / reset go here; empty in T43 */
@@ -318,12 +321,13 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .cb-copy .ico { width: 20px; height: 20px; }
 .cb-copy:hover { background: var(--raised); color: var(--ink); }
 .cb-copy.done { color: var(--correct); }
-.cb pre { margin: 0; padding: var(--s1) 0 var(--s3); }
+.cb pre { margin: 0; padding: var(--s2) 0 var(--s3); }
 .cb code { display: block; padding: 0; background: none; border-radius: 0; font: 400 1rem/var(--cb-lh) var(--mono); font-variant-ligatures: none; tab-size: 2; counter-reset: ln; }
 .cb .l { display: block; position: relative; min-height: calc(var(--cb-lh) * 1em); counter-increment: ln; white-space: pre-wrap; overflow-wrap: anywhere;
   padding: 0 var(--cbx) 0 calc(var(--g) + var(--cbx) + var(--s2) + (var(--ind) + 2) * 1ch); text-indent: calc(-1 * (var(--ind) + 2) * 1ch); }
 .cb .l::before { content: counter(ln); position: absolute; left: var(--cbx); width: var(--g); text-indent: 0; text-align: right; color: var(--muted); user-select: none; -webkit-user-select: none; }
-.cb .tc { color: var(--muted); }
+.cb .t-kw { color: var(--syn-kw); } .cb .t-str { color: var(--syn-str); } .cb .t-num { color: var(--syn-num); } .cb .t-com { color: var(--syn-com); }
+.cb .t-fn { color: var(--syn-fn); } .cb .t-type { color: var(--syn-type); } .cb .t-pre { color: var(--syn-pre); }
 
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
@@ -895,7 +899,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 @media (max-width: 34rem) {
   :root { --gut: max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)); }
   main { padding-top: var(--s4); }
-  .p { --px: var(--s4); padding: var(--s3) var(--px); }
+  .p { padding: var(--s3) var(--s4); }
   :where(.qnav-on.dock-bottom) main { padding-top: var(--s1); }   /* list row → question box = question box → answers (12px; Tony, Oct 3) */
 }
 /* ---------- top bar steps away while the scratchpad has focus (design/SWAP.md) ----------
@@ -941,7 +945,7 @@ html.swap .freeze, html.swap .freeze.stuck { position: relative; top: 0; margin:
 html.swap .more { display: none; }
 /* the card: problem + how line + answer, one surface */
 html.swap .freeze-in { background: var(--qbox); border-radius: 10px; overscroll-behavior: contain; max-height: none; }
-html.swap .p, html.swap .boxed .p { --px: var(--s4); background: none; border-radius: 0; padding: var(--s3) var(--px) var(--s2); }
+html.swap .p, html.swap .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s2); }
 html.swap .q, html.swap .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s4); }
 html.swap .fb { margin: 0; padding: var(--s2) var(--s4) 0; }
 html.swap .fb:empty { display: none; }
@@ -1021,7 +1025,7 @@ html.mt #problem { flex: 1 1 0; min-height: min(3rem, 30%); overflow-y: auto; ov
 html.mt #fb { order: 2; flex: 0 0 auto; max-height: 34%; overflow-y: auto; margin: 0; padding: var(--s2) var(--s4) 0; }
 html.mt #fb:empty { display: none; }
 html.mt #q { order: 3; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-html.mt .p, html.mt .boxed .p { --px: var(--s4); background: none; border-radius: 0; padding: var(--s3) var(--px) var(--s6); }   /* bottom room: the end of a scroll lands with air, not on the edge (Tony, Oct 3: KISS over a bounce) */
+html.mt .p, html.mt .boxed .p { background: none; border-radius: 0; padding: var(--s3) var(--s4) var(--s6); }   /* bottom room: the end of a scroll lands with air, not on the edge (Tony, Oct 3: KISS over a bounce) */
 html.mt .q, html.mt .boxed .q { background: none; border-radius: 0; margin: 0; padding: var(--s2) var(--s4) var(--s6); }
 html.mt .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.mt #stage > #work { margin: 0; min-height: 0; display: flex; flex-direction: column; }
