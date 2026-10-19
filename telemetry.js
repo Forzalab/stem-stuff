@@ -152,6 +152,7 @@
           if (!st.clAt) return;
           p.ms = Math.round(t - st.clAt); p.scrolled_pct = Math.round(Math.max(st.clPct, clScroll()) * 100); st.clAt = 0; break;
         case "next": st.stage = "next"; break;
+        case "cluck_more": return;                                                           // the scroll-down hint (shown / tap / bottom): Jev's, on device only (intent.js), never sent
         default: if (String(name).charAt(0) === "_") return;                                 // J6: any other "_" name is for intent.js only (_xmark ...), never sent
       }
       if (st.code && p.code == null && name !== "app_load") p.code = st.code;

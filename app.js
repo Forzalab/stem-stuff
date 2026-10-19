@@ -1676,7 +1676,7 @@ function clEl() {
     <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
       <div class="cl-pane" id="clTabSP"></div></div>
-    <div class="cl-ft"></div>`;
+    <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
   cl = { el, tab: "explain", open: false, from: null, fold: false };
   el.querySelector(".cl-fold").addEventListener("click", () => {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
@@ -1686,6 +1686,12 @@ function clEl() {
   cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
+  const bd = el.querySelector(".cl-bd"), ro = new ResizeObserver(clMore);   // the scroll-down hint follows the scroll, the sheet's size and the text as it types in
+  bd.addEventListener("scroll", clMore, { passive: true }); ro.observe(bd); [...bd.children].forEach(c => ro.observe(c));
+  el.querySelector(".cl-more").addEventListener("click", () => {
+    window.stemT?.("cluck_more", { act: "tap" });   // Jev (on device: telemetry.js never sends it)
+    bd.scrollBy({ top: bd.clientHeight * 0.8, behavior: reduceMQ.matches ? "auto" : "smooth" });
+  });
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
   return el;
@@ -1845,6 +1851,7 @@ function clTab(tab, focus) {
     if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
+  clMore();
   if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
 }
 /* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
@@ -1857,12 +1864,25 @@ function clReset() {                                                        // a
   clClose();
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
-  cl.el.querySelector(".cl-ft").innerHTML = "";
+  cl.el.querySelector(".cl-fi").innerHTML = "";
+}
+/* the scroll-down hint (Tony, Oct 19, variant A): while more than 8px of the text is under the ask field, .cl-bd.below shows a fade over the
+   field's top edge and a chevron disc inside it (app.css); a tap scrolls ~80% of the body down; at the bottom it goes. Jev hears "shown" once
+   per reply (the box text, then each chat reply) and "bottom" once per reply that showed it */
+function clMore(late) {
+  if (!cl) return;
+  const bd = cl.el.querySelector(".cl-bd"), on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
+  if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
+  if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
+  bd.classList.toggle("below", on);
+  const k = `${wish?.code}#${cl.el.querySelectorAll(".cl-thread .wreply").length}`, m = cl.more;
+  if (on && m?.k !== k) { cl.more = { k }; window.stemT?.("cluck_more", { act: "shown" }); }
+  else if (!on && cl.open && m?.k === k && !m.end) { m.end = true; window.stemT?.("cluck_more", { act: "bottom" }); }   // scrolled to the end (a close is not "bottom")
 }
 /* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
 function clAsk(build) {
   if (!cl) return;
-  const ft = cl.el.querySelector(".cl-ft"), w = wish;
+  const ft = cl.el.querySelector(".cl-fi"), w = wish;
   cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
   if (!w) { ft.innerHTML = ""; return; }
   const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
