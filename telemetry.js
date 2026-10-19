@@ -134,6 +134,7 @@
           st.tries = typeof p.tries_left === "number" ? p.tries_left : null;
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
+          delete p.error; delete p.families;                                                 // J6: the error family + the item's distractor families stay on device (intent.js reads them; PostHog never gets them)
           if (p.verdict === "correct" || p.verdict === "wrong") {
             st.stage = p.right ? "right" : "wrong";
             var why = spamCheck(st.picks, t, p.ms_since_open);
@@ -151,6 +152,7 @@
           if (!st.clAt) return;
           p.ms = Math.round(t - st.clAt); p.scrolled_pct = Math.round(Math.max(st.clPct, clScroll()) * 100); st.clAt = 0; break;
         case "next": st.stage = "next"; break;
+        default: if (String(name).charAt(0) === "_") return;                                 // J6: any other "_" name is for intent.js only (_xmark ...), never sent
       }
       if (st.code && p.code == null && name !== "app_load") p.code = st.code;
       send(name, p);
