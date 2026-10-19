@@ -1320,7 +1320,7 @@ class Flight(unittest.TestCase):
         self.assertRegex(serve._trace.rid, r"^dev-[0-9a-f]{8}$")
         with open(serve.__file__, encoding="utf-8") as f:
             src = f.read()
-        self.assertEqual(re.findall(r"print\([^\n]*file=sys\.stderr", src), [m for m in re.findall(r"print\([^\n]*file=sys\.stderr", src) if "json.dumps" in m or "*a" in m],
+        self.assertEqual(re.findall(r"print\([^\n]*file=sys\.stderr", src), [m for m in re.findall(r"print\([^\n]*file=sys\.stderr", src) if "json.dumps" in m or m.startswith("print(line,")],
                          "every other stderr line goes through log()")
 
     def test_the_providers_own_words_and_type(self):

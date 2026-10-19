@@ -28,7 +28,8 @@ writeFileSync(join(banks, "BANK_FLY.json"), JSON.stringify({ v: 1, problems: [
 const logs = [];
 const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_BASE: "http://127.0.0.1:9", OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: ["ignore", "ignore", "pipe"] });
-srv.stderr.on("data", d => logs.push(...String(d).split("\n").filter(Boolean)));
+let part = "";   // a pipe chunk can end mid-line: whole lines only
+srv.stderr.on("data", d => { const ls = (part + d).split("\n"); part = ls.pop(); logs.push(...ls.filter(Boolean)); });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
@@ -89,6 +90,10 @@ async function noSentinel(page, what) {
 
 await step("an /explain 504 after typing, scrolling and a resize: one report with the ring (each kind), kb classes, page.at, diag, health; no sentinel", async () => {
   const page = await open({ explain: r => r.fulfill({ status: 504, body: "" }) });
+  const early = await page.evaluate(() => window.stemFR.ring.map(e => e.slice(1, 4).join(" ")));   // flight.js is deferred: still in time for app.js's first requests
+  assert.equal(early[0].split(" ")[0], "boot", early.slice(0, 5));
+  assert.ok(early.includes("net b s") && early.includes("net b h"), "the bank's boot-time request: " + early.slice(0, 12));
+  assert.ok(early.indexOf("net b s") < early.findIndex(e => e.startsWith("nav ")), "before the first question opened");
   await busyThenWrong(page);
   const [b] = await waitFor(page, x => x.where === "explain" && x.fr && x.fr.ring);
   assert.ok(b, "a report with a snapshot: " + JSON.stringify(page.beacons).slice(0, 400));
@@ -120,7 +125,9 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   console.log("     report bytes:", size, "fr bytes:", JSON.stringify(b.fr).length, "page.at bytes:", JSON.stringify(at).length, "ring:", b.fr.ring.length, "kb:", b.fr.kb.length);
   const line = logs.find(l => l.startsWith('{"incident":"' + b.code) && l.includes('"src":"client"'));
   assert.ok(line && JSON.parse(line).fr && JSON.parse(line).fr.ring, "the server's line carries the snapshot");
-  assert.ok(logs.some(l => /^health \{/.test(l) && / rid=\S+ trace=[0-9a-f]{32}$/.test(l)), "the /health line, with rid + trace");
+  const hl = () => logs.some(l => /^health \{/.test(l) && / rid=\S+ trace=[0-9a-f]{32}$/.test(l));
+  for (let i = 0; i < 30 && !hl(); i++) await page.waitForTimeout(100);   // serve.py's stderr arrives on its own time
+  assert.ok(hl(), "the /health line, with rid + trace: " + logs.filter(l => l.startsWith("health")).join(" | "));
   const t = await page.evaluate(() => document.querySelector("#wish").innerText);
   assert.ok(!/·|AI:/.test(t), "no diag line for a student: " + t);
   await noSentinel(page, "explain");

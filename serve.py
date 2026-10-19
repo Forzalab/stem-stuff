@@ -950,7 +950,8 @@ def trace_id():
 
 def log(*a):
     """every server print line (flight recorder P1): the words, then rid= and trace= of the request it belongs to ("-" outside one)"""
-    print(*a, f"rid={getattr(_trace, 'rid', None) or '-'} trace={getattr(_trace, 'id', None) or '-'}", file=sys.stderr, flush=True)
+    line = " ".join(map(str, a)) + f" rid={getattr(_trace, 'rid', None) or '-'} trace={getattr(_trace, 'id', None) or '-'}"
+    print(line, file=sys.stderr, flush=True)   # one write: threads never interleave inside a line
 INC_PER_10MIN = 30                           # /log/incident lines per browser (sid) per 10 minutes, per instance
 ERR_MAX = 2000                               # incident.mjs ERR_MAX
 _inc_seen = {}                               # sid -> [time, ...]

@@ -265,5 +265,5 @@
     g.stemFR = 1;
     W.stemT = g;
   }
-  if (D.readyState === "loading") D.addEventListener("DOMContentLoaded", wrap); else wrap();
+  if (D.readyState === "complete") wrap(); else { D.addEventListener("DOMContentLoaded", wrap); W.addEventListener("load", wrap); }   // deferred: runs before DOMContentLoaded, before telemetry.js has set stemT
 })();
