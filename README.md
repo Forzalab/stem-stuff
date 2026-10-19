@@ -25,3 +25,17 @@ A code-gated STEM drill site (CALC1 / PHYS / CSCI26). It's a static page plus a 
   - `vercel.json` builds `public/` with `tools/build_public.py` (the client only) and sends `/p/`, `/state/`, `/b/`, `/check` to `api/index.py`, which bundles `serve.py`, `problems.json` and `banks/`. Answers never reach static files.
   - Retire the old server: `STEM_REDIRECT=https://stem-stuff.vercel.app ./deploy.sh` (same dir/port). It then sends every request there (302; POST /check 307), keeping the path and the `#CODE`. Run `./deploy.sh` without it to bring the old site back.
   - A bank or `problems.json` change is a redeploy (no hot reload). Reset a browser's tries: edit the `stem:tries` key in the Upstash console. The first check after idle is ~1–2 s slower (sympy loads).
+
+## Anthropic spend
+
+An hourly GitHub Actions job (`.github/workflows/spend.yml` → `tools/anthropic_spend.py`) reads the Anthropic Admin API cost report and writes one KV key, `stem:anthropic:spend` = `{"cents_month", "cents_since", "since", "at", "ok": true}` (USD cents; month = current UTC calendar month). A failed run writes `stem:anthropic:spend_err` = `{"ok": false, "err", "at"}` instead and leaves the last good value alone (the err key is deleted on the next good run). The app estimates the balance as `PREPAID_CENTS − cents_since`.
+
+**The Admin API key must NEVER go into Vercel** (or `.env`, or any file in the repo). It can read and manage the whole organization; it lives only in GitHub Actions secrets. The app only ever reads the KV key.
+
+One-time setup (Tony):
+1. Claude Console → Settings → Admin keys → create an Admin API key (`sk-ant-admin01-…`; org admins only).
+2. GitHub → this repo → Settings → Secrets and variables → Actions:
+   - Secrets: `ANTHROPIC_ADMIN_KEY` (step 1), `KV_REST_API_URL` and `KV_REST_API_TOKEN` (same values as the Vercel project's Upstash env vars).
+   - Variable (or secret): `SPEND_SINCE` = the date the prepaid credit was bought, `YYYY-MM-DD` (unset = 1st of this month).
+3. Vercel project → Settings → Environment Variables: `PREPAID_CENTS` = credit bought on `SPEND_SINCE`, in cents (e.g. `5000` for $50). Not the Admin key.
+4. Actions → anthropic-spend → Run workflow once to check it goes green. Local check without writing KV: `ANTHROPIC_ADMIN_KEY=… tools/anthropic_spend.py --dry-run`.
