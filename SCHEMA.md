@@ -1,5 +1,7 @@
 # SCHEMA: problems.json (the one file)
 
+> **Render standard = the OpenUI Lang plan.** Runbook: brain `projects/calc/_files/sprint-render-v2/SPRINT.md` (plan: `projects/calc/topics/openui-render-arch-plan-2026-10-18.md`). No new view/widget format.
+
 Everything lives in **one file: `problems.json`**. It holds every problem, answer, wrong answer and hint.
 This document is the only schema. The JSON Schemas below are machine-read by the tests (`tests/schemas.mjs` pulls the fenced block after each `<!-- schema: ... -->` marker), so edit them here and nowhere else.
 
