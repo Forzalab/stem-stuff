@@ -43,6 +43,11 @@ async function open(o = {}) {
   page.on("pageerror", e => page.errs.push(String(e)));
   page.on("console", m => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) page.errs.push(m.text()); });
   page.on("request", r => { if (/\/(explain|chat)$/.test(new URL(r.url()).pathname)) page.ai++; });
+  /* the page's fetch / XHR calls still out (until() holds the fake clock while any is: see there) */
+  page.net = new Set();
+  const net = r => ["fetch", "xhr"].includes(r.resourceType());
+  page.on("request", r => { if (net(r)) page.net.add(r); });
+  for (const ev of ["requestfinished", "requestfailed"]) page.on(ev, r => page.net.delete(r));
   /* the page's clock is PAUSED from its first script on: only runFor moves it, never real time. A ticking (installed, not paused)
      Playwright clock has a second runner, the real-time sync: it fires the due timers and waits a real task after each one; a runFor
      that lands in that gap runs ahead, then the sync's run ends and sets the clock BACK to where it began (clockSource _runTo ->
@@ -59,12 +64,17 @@ async function open(o = {}) {
   if (o.hash === undefined) await until(page, () => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden);
   return page;
 }
-/* wait for fn in the page while the paused clock steps 50 ms at a time (the page's own timers still run, in order); 10 s real time max */
+/* wait for fn in the page while the paused clock steps 50 ms at a time (the page's own timers still run, in order); 10 s real time max.
+   While a fetch / XHR of the page is out, the clock holds and the wait is real time: a server reply takes real time, and net() aborts
+   on a page timer (app.js TIMEOUT, 8 s). Stepping on through a slow reply raced that timer: a poll is ~3 ms real, so 160 steps (8 s on
+   the page) passed in ~0.5 s real and a /check that took longer under load came back "Too slow", no try recorded, and wrongPick timed
+   out (the "desktop reduce ... the 3 min idle peek still comes" CI red; a 600 ms /check failed it 4 runs in 5). */
 async function until(page, fn, arg) {
   const end = Date.now() + 10000;
   while (!(await page.evaluate(fn, arg))) {
     if (Date.now() > end) throw new Error("timed out waiting for " + String(fn));
-    await page.clock.runFor(50);
+    if (page.net.size) await new Promise(r => setTimeout(r, 20));
+    else await page.clock.runFor(50);
   }
 }
 const up = page => page.evaluate(() => window.stemDuck.up);
