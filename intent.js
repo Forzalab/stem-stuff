@@ -13,6 +13,8 @@
          last 8 items ≤ 0.75, or < 4 items yet; ours). High skill retrying alone = fine (Aleven 2006) → none
      Q   (first item of this visit, no pick, no help, depth ≥ 1: the "refusal" shape, Botelho 2019) OR (left this item unsolved before on
          this device AND depth ≥ 2; Karumbaiah 2018). Past leaves live in localStorage stem-jev-q (code → count), nothing else
+   J6 streak signals (log lines only, never sent): "away <s>s via=hide|blur" (back after >= 5 s), "copy stem" (a copy inside the question stem),
+   "xmark <choice>" (the student's own X in prove mode), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
    J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (peek.js
    stemDuck.say, the one seam) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
      budget  one shared budget: P_ONE = the fire chance when one trigger is on; with k of the 3 on, each live state rolls p_k once per
@@ -29,7 +31,7 @@
 (function () {
   "use strict";
   var W = window;
-  var FLOW_S = 80, S2_FALLBACK_S = 80, S2_MIN_N = 4, FAST_OPEN_S = 5, FAST_ERR_S = 8, HELP_S = 5, PAUSE_S = 5, CAP = 40, HIST_CAP = 20;
+  var FLOW_S = 80, S2_FALLBACK_S = 80, S2_MIN_N = 4, FAST_OPEN_S = 5, FAST_ERR_S = 8, HELP_S = 5, PAUSE_S = 5, AWAY_S = 5, CAP = 40, HIST_CAP = 20;
   var ACT = { F: "none", S2: "hint_offer", S5: "slow_cue", S6: "cluck_say", S7: "predict_first", Q: "cluck_say" };   // J5 draws cluck_say (S2 from depth 2 too); the rest wait for J4
   var S6_WRONG = 2, S6_HELP_N = 3, SKILL_N = 8, SKILL_MIN_N = 4, SKILL_HIGH = 0.75;
   /* J5 nudge constants, all "ours" (J3 bench start values) */
@@ -72,6 +74,7 @@
   /* one learner session. now() = ms; hist = { code: [step seconds] } (the caller stores it).
      o (J5, all optional): say(line, state) → true when the peek showed it · lines = { S2: [...], S6, Q } · on = the nudge states turned on
      (default all 3) · rand() in [0, 1) · quits = { code: times left unsolved } (the caller stores it)
+     o (J6 streak signals, optional): size(code) → { w: stem words, ch: choices } for the q_open line (missing → no field)
      o (J6, optional; without seenLines moment C is inert): seenLines = { fam: { <family>: [{ id, text, kind }] }, any: [...] } · seenOff() → true
      when the student turned it off · title(code) → the item's title for {title} · sid = this session's id in the dump */
   function create(now, hist, o) {
@@ -81,7 +84,7 @@
     var on = (o.on || NUDGE.STATES).filter(function (s) { return NUDGE.STATES.indexOf(s) >= 0; });
     var pk = chance(on.length), rand = o.rand || Math.random, pool = o.lines || {}, quits = o.quits || {};
     var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false };
-    var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0;
+    var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0, aw = null;   // aw: the away episode { at, via }
     function sec(t) { return (t - q.open) / 1000; }
     function log(kind, args) {
       if (!q) return;
@@ -113,7 +116,7 @@
           wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false,
           errs: [], gaps: [], deep: 0, s5: false };
         itemNo++;
-        lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?"));
+        lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?") + dims(p.code));
         if (flowRun) hit("F", "run=" + flowRun);
         return;
       }
@@ -146,6 +149,22 @@
         return;
       }
       if (name === "cluck_dwell") log("cluck", "close");
+      if (name === "_xmark") log("xmark", p.choice == null ? "-" : String(p.choice));   // the student's own X (prove mode); never the auto strike
+      if (name === "_copy") log("copy", "stem");                          // a copy inside the question stem (the wrapper checks where); never the text
+    }
+    /* J6 streak signals, log only: q_open's " w=<stem words> ch=<choices>" (a field with no value is left out; d=<difficulty> appends here when a bank carries one) */
+    function dims(code) {
+      var z = null; try { z = o.size && o.size(code); } catch (e) { /* ignore */ }
+      return z ? (z.w != null ? " w=" + z.w : "") + (z.ch != null ? " ch=" + z.ch : "") : "";
+    }
+    /* away from the item: "hide" (tab hidden) or "blur" (window lost focus, still visible); on = leaving. One episode from the first leave to
+       the return; a blur followed by a hide is one (via=hide wins). Back after >= AWAY_S: "away <s>s via=..". Shorter: no line */
+    function away(kind, on) {
+      var t = now();
+      if (on) { if (!aw) aw = { at: t, via: kind }; else if (kind === "hide") aw.via = "hide"; return; }
+      if (!aw || (kind === "blur" && aw.via === "hide")) return;          // a focus while still hidden is not the return: the show is
+      var s = (t - aw.at) / 1000, via = aw.via; aw = null;
+      if (s >= AWAY_S) log("away", Math.round(s) + "s via=" + via);
     }
     /* called on a timer: S2 fires once per depth step; Q once per item; then a nudge may go */
     function tick() {
@@ -157,7 +176,7 @@
     }
     function vis(isHidden) {
       if (!q || hidden === isHidden) return;
-      hidden = isHidden; log(isHidden ? "hide" : "show");
+      hidden = isHidden; away("hide", isHidden);
       if (!isHidden) { q.step = now(); q.depth = 0; }                   // back from away: a fresh step, never an impasse
     }
     /* the item ends (next item): skill + help history for S6 */
@@ -255,7 +274,7 @@
       return true;
     }
     return {
-      ev: ev, input: input, tick: tick, vis: vis, nudgeEnd: nudgeEnd, leave: leave,
+      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave,
       dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
@@ -298,6 +317,12 @@
   var jev = create(function () { return performance.now(); }, hist, {
     lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: "s" + Math.random().toString(36).slice(2, 8),
     title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
+    size: function (code) {                                          // J6: the item's stem words + choice count (bank items; an upload has no bank entry → none)
+      var b = W.stemBank, p = b && b.get && b.get(code), w = 0;
+      if (!p) return null;
+      (p.body || []).forEach(function (x) { if (x && x.type === "text" && typeof x.md === "string") w += x.md.split(/\s+/).filter(Boolean).length; });
+      return { w: w, ch: Array.isArray(p.choices) ? p.choices.length : null };
+    },
     rand: typeof W.__stemJevRand === "function" ? W.__stemJevRand : Math.random,   // tests pin the roll; the app never sets it
     say: function (line) {
       var d = W.stemDuck;
@@ -327,7 +352,18 @@
     document.addEventListener(k, function () { try { jev.input(k); } catch (e) { /* ignore */ } }, { capture: true, passive: true });
   });
   document.addEventListener("visibilitychange", function () { jev.vis(document.hidden); });
-  if (W.addEventListener) W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); });
+  /* J6: a copy inside the question stem (#blocks: not the choices, not Cluck). Where only, never the copied text */
+  document.addEventListener("copy", function (e) {
+    try {
+      var s = W.getSelection && W.getSelection(), b = document.getElementById("blocks"), t = e && e.target;
+      if (s && s.rangeCount && b && b.contains(s.getRangeAt(0).commonAncestorContainer) && !(t && /^(INPUT|TEXTAREA)$/.test(t.tagName))) jev.ev("_copy");
+    } catch (x) { /* ignore */ }
+  }, { capture: true, passive: true });
+  if (W.addEventListener) {                                           // blur / focus: a desktop window switch keeps the tab visible, so only they see it (jev.away times it)
+    W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); });
+    W.addEventListener("blur", function () { jev.away("blur", true); });
+    W.addEventListener("focus", function () { jev.away("blur", false); });
+  }
   setInterval(jev.tick, 5000);
   W.stemJev = jev.state; W.stemJev.dump = jev.dump;
 })();

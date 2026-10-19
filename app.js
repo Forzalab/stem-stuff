@@ -809,6 +809,7 @@ function tick(o, m = "on") {
   const lock = o.hasAttribute("data-lock");
   if (m === "x" && (lock || !fixOf(o))) return;
   const next = markOf(o) === m ? "" : m;
+  if (next === "x") window.stemT?.("_xmark", { choice: o.dataset.id });   // J6: the student's own X (not the lock path / strike); intent.js log only, telemetry.js drops "_" names
   for (const x of opts()) if (x !== o && next === "on" && (lock || x.hasAttribute("data-lock")) && markOf(x) === "on") mark(x, "");
   /* prove mode: "None of these" says every other row is false, so it X's them and opens their boxes (blank rows could never be
      sent: Check needs every row marked. Tony, Oct 3, PHYS_NPT). Struck rows keep their X already. */

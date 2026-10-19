@@ -63,6 +63,21 @@ test("J6: a pick's `error` family never reaches the queue / PostHog (intent.js r
   assert.equal(batch[0].properties.code, "A"); assert.equal(batch[0].properties.verdict, "wrong");
 });
 
+test("J6: `_` names (_xmark, _copy ...) and q_open's shape: nothing new reaches the queue / PostHog", async () => {
+  const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; } };
+  const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
+  win.stemT("q_open", { code: "A", bank: "B", type: "mc", mode: "sugar" });
+  win.stemT("_xmark", { choice: "b" }); win.stemT("_copy", { where: "stem" }); win.stemT("_whatever"); win.stemT("_ask"); win.stemT("_tok");
+  win.stemT("pick", { code: "A", choice: "b", verdict: "wrong", right: false });
+  document.visibilityState = "hidden"; handlers.visibilitychange();
+  const batch = JSON.parse(await sent[0].text()).batch;
+  assert.deepEqual(batch.map(e => e.event).filter(n => n !== "app_load" && n !== "guess_spam"), ["q_open", "pick", "tab_away", "bail"], "no `_` event, and _ask / _tok stay silent too");
+  assert.ok(batch.every(e => !e.event.startsWith("_")));
+  assert.ok(!JSON.stringify(batch).includes("xmark") && !JSON.stringify(batch).includes("whatever"));
+  const q = batch.find(e => e.event === "q_open").properties;
+  assert.deepEqual(Object.keys(q).sort(), ["$current_url", "$lib", "bank", "code", "distinct_id", "mode", "type"], "q_open: no w / ch");
+});
+
 test("readConfig: pattern-checks every value", () => {
   const T = run().win.__stemTelemetry;
   const doc = attrs => ({ querySelector: () => ({ getAttribute: k => (k in attrs ? attrs[k] : null) }) });

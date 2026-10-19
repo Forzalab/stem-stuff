@@ -141,6 +141,51 @@ await step("flag off (no ?jev=1): the same item, no peek, no stemJev", async () 
   await page.context().close();
 });
 
+/* J6 streak signals (log lines only). 1: a bank item (the page's own bank): w= ch=, copy inside the stem only, away via=blur. */
+await step("streak signals: q_open w= ch= (bank item), copy stem (not a choice), away via=blur; nothing reaches stemT with a new prop", async () => {
+  const page = await open({ vp: { width: 1280, height: 800 } });
+  await page.evaluate(() => { window.__t = []; const o = window.stemT; window.stemT = (n, p) => { window.__t.push([n, JSON.stringify(p || {})]); return o && o(n, p); }; });
+  const L = async () => (await jev(page)).lines;
+  assert.match((await L())[0], /q_open {2}CALC1_T96M\d mc w=4 ch=4$/, "w= ch=: " + (await L())[0]);
+  const sel = css => page.evaluate(c => { const r = document.createRange(); r.selectNodeContents(document.querySelector(c)); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.dispatchEvent(new ClipboardEvent("copy", { bubbles: true, cancelable: true })); }, css);
+  await sel("#q .opt[data-id=a] .txt"); assert.ok(!(await L()).some(l => /copy/.test(l)), "a copy in a choice: no line");
+  await sel("#blocks .md"); assert.equal((await L()).filter(l => /  copy {2}stem$/.test(l)).length, 1, "a copy in the stem");
+  assert.ok(!(await L()).join("\n").includes("pick one"), "never the copied text");
+  await page.evaluate(() => dispatchEvent(new Event("blur"))); await page.clock.runFor(3000); await page.evaluate(() => dispatchEvent(new Event("focus")));
+  assert.ok(!(await L()).some(l => /away/.test(l)), "3 s: no line");
+  await page.evaluate(() => dispatchEvent(new Event("blur"))); await page.clock.runFor(7000); await page.evaluate(() => dispatchEvent(new Event("focus")));
+  assert.ok((await L()).some(l => /  away {2}[67]s via=blur$/.test(l)), "7 s blur → away: " + (await L()).join(" | "));
+  const t = await page.evaluate(() => window.__t);
+  assert.ok(t.every(x => !/"(w|ch|away|where)":/.test(x[1])), "stemT calls carry no new prop: " + JSON.stringify(t));
+  assert.deepEqual(page.errs, []); assert.equal(page.seenReq, 0, "nothing leaves the device");
+  await page.context().close();
+});
+/* 2: the student's own X in prove mode (a mocked pick-all with `fix`: the server strips it from served banks). "None of these" auto-X's the rest: silent. */
+await step("streak signals: xmark only for the student's own X, not the None-of-these auto-X; no w= ch= for a non-bank item", async () => {
+  const PV = { code: "CSCI26_J6S", type: "mc", pick: "all", shuffle: false, tries: 2, fix: { how: "a number" }, body: txt("Which of these squares is false here?"),
+    choices: [{ id: "a", md: "$2^2=4$" }, { id: "b", md: "$3^2=8$" }, { id: "c", md: "$4^2=16$" }, { id: "d", md: "None of these", lock: true }] };
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }), page = await ctx.newPage();
+  page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
+  await page.route(`**/p/${PV.code}.json`, r => r.fulfill({ json: PV }));
+  await page.goto(BASE + "/?jev=1#" + PV.code);
+  await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !!window.stemJev && !!document.querySelector("#q .opt"), PV.code, { timeout: 10000 });
+  const L = async () => (await jev(page)).lines;
+  assert.match((await L())[0], /q_open {2}CSCI26_J6S mc$/, "no bank entry → no w= ch=");
+  await page.click("#q .opt[data-id=d]");
+  assert.ok(await page.$$eval("#q .opt[data-mark=x]", e => e.length) >= 2, "the page X'd the other rows itself");
+  assert.ok(!(await L()).some(l => /xmark/.test(l)), "the lock auto-X is not a student X: " + (await L()).join(" | "));
+  await page.click("#q .opt[data-id=d]");                              // un-tick it
+  const clicks = (id, n) => (async () => { for (let k = 0; k < n; k++) await page.click(`#q .opt[data-id=${id}]`); })();
+  await clicks("c", 2);                                                // the auto-X'd row: X off → ticked: no X
+  assert.ok(!(await L()).some(l => /xmark/.test(l)), "X off and a tick are not an X: " + (await L()).join(" | "));
+  await clicks("c", 1);                                                // ticked → the student's X
+  assert.equal((await L()).filter(l => /  xmark {2}c$/.test(l)).length, 1, "the student's X: " + (await L()).join(" | "));
+  await clicks("c", 1);                                                // X → off
+  assert.equal((await L()).filter(l => /xmark/.test(l)).length, 1, "taking an X off is not an X");
+  assert.deepEqual(page.errs, []);
+  await ctx.close();
+});
+
 await browser.close();
 srv.kill();
 console.log(failures ? `${failures} FAILED` : "ALL OK", "(shots:", shots + ")");
