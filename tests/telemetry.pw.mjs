@@ -165,7 +165,7 @@ for (const [mode, cookies] of [["sugar", []], ["diet", [{ name: "stem-mode", val
   });
 }
 
-await step("footer: a real 'privacy' link to privacy.html; the page has 3 plain lines", async () => {
+await step("footer: a real 'privacy' link to privacy.html; the page has 5 plain lines", async () => {
   const { ctx, page } = await open({});
   const a = await page.$("a#privacy");
   assert.ok(a, "no #privacy link");
@@ -173,7 +173,9 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 3 plain 
   assert.ok(await a.isVisible(), "link hidden on the start page");
   await a.click();
   await page.waitForURL(/privacy\.html$/);
-  assert.equal((await page.$$("main > p")).length, 3);
+  assert.equal((await page.$$("main > p")).length, 5);
+  assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
+  assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");
   assert.equal(/Clarity/.test(await page.textContent("main")), false, "Clarity is off: not named");
   await page.click("#offBtn");
   assert.equal(await page.evaluate(() => localStorage.getItem("stem-t-off")), "1");
