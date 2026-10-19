@@ -11,8 +11,8 @@ const list = (items, maxItems, extra = {}) => ({ type: "array", items, maxItems,
 const ref = name => ({ $ref: `#/$defs/${name}` });
 const ANY = { anyOf: [] };   // filled below with every component: a slot that takes any component
 
-/** Mark classes: the ONLY state vocabulary (engine NODE_STATE / EDGE_STATE + colour classes, refine F11/F19). */
-export const MARKS = ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"];
+/** Mark classes (library.json `marks` wins when present): the ONLY state vocabulary (engine NODE_STATE / EDGE_STATE + colour classes, refine F11/F19). */
+const LOCAL_MARKS = ["cur", "done", "front", "rec", "idle", "tree", "seen", "skip", "k1", "k2", "k3"];
 export const DOODLES = ["duck", "heart", "star", "spark"];
 
 /** The hand-kept list: used alone until P0.2's views/library.json exists, then only for names that file lacks. */
@@ -72,6 +72,7 @@ export function mergeLib(spec, local = LOCAL) {
 let spec = null;
 try { spec = (await import("./views/library.json", { with: { type: "json" } })).default; } catch { /* no registry yet */ }
 export const LIB = mergeLib(spec);
+export const MARKS = Array.isArray(spec?.marks) ? spec.marks : LOCAL_MARKS;
 ANY.anyOf = Object.keys(LIB.components).map(ref);
 
 /** The JSON Schema the vendored parser takes (createParser(schema, root)). Positional order = props key order. */
