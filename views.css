@@ -1,0 +1,134 @@
+/* views.css: the look of views.js (render plan v2, refine F3/F8/F13/F17/F18). Port of refine/preview.html's view rules.
+   Rules (tests/views-style.test.mjs): tokens from app.css only; no hex, no rgb, no px outside the radius list; no shadow, no gradient;
+   NO NESTED BOX (a view sits on its surface, sections are a rule + a tag); state = weight + dash + fill + glyph + digit, never hue alone.
+   One component, two token sets: on the card the page tokens, inside .ai-box Cluck's warm remap; zero branches in the renderer.
+   Motion (F18, STYLE §2.8): 120 / 200 / 300 ms, scoped to views until app.css closes STYLE §9 row 6. */
+
+.vw { --d-fast: 120ms; --d-move: 200ms; --d-dim: 300ms; --vw-chip: calc(var(--btn) * 2 / 3); --vw-fig: min(28svh, calc(var(--btn) * 5)); }
+.ai-box .vw { --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); }
+
+/* F8: slots in the root's order; an empty slot holds two lines so a late statement fills, never pushes what is above */
+.vw { margin-top: var(--s4); min-width: 0; }
+.vw-slot { min-width: 0; }
+.vw-slot + .vw-slot { margin-top: var(--s4); }
+.vw-slot:not(.on) { min-height: calc(2 * var(--lh) * 1em); }
+.vw h3, .vw p, .vw figure { margin: 0; }
+.vw p { max-width: 65ch; }
+.ai-box .vw p, .ai-box .vw .vw-fig { max-width: 58ch; }
+.vw-col > * + * { margin-top: var(--s4); }
+
+/* L0 */
+.vw-t { font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
+.vw-sub { margin-top: var(--s1); color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.vw b { font-weight: var(--w-em); }
+.vw-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.vw-chip { display: inline-flex; align-items: center; gap: var(--s2); height: var(--vw-chip); padding: 0 var(--s3); border: var(--bw-hair) solid var(--line);
+  border-radius: 6px; color: var(--ink); font-size: var(--t-sm); line-height: 1; white-space: nowrap; }
+.vw-chip.ro { font-weight: var(--w-em); font-variant-numeric: tabular-nums; }
+.vw-chip.cur { border: var(--bw) solid var(--c1); }
+.vw-chip.none { color: var(--muted); }
+.vw-mark { width: 1.25rem; height: 1.25rem; overflow: visible; }
+.vw-front { min-height: var(--vw-chip); }   /* reserved: an empty queue keeps the row's height */
+.vw-lab { margin-bottom: var(--s1); color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: var(--lh-xs); }
+.vw-tb { width: 100%; border-collapse: collapse; font-size: var(--t-sm); line-height: var(--lh-ui); font-variant-numeric: tabular-nums; }
+.vw-tb th { padding: var(--s1) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--edge); color: var(--muted); font-weight: var(--w-em); text-align: left; }
+.vw-tb td { padding: var(--s2) var(--s2) var(--s2) 0; border-bottom: var(--bw) solid var(--line); vertical-align: top; }
+.vw-tb tr:last-child td { border-bottom: 0; }
+.vw-tb tr.cur td { font-weight: var(--w-em); }
+.vw-tb tr.dim td { color: var(--muted); }
+
+/* figures: DESIGN-LANGUAGE strokes (idle 1.5, seen 2 dashed 6 4, tree 3.5, skip dotted 0 7); SVG user units, non-scaling */
+.vw-fig { position: relative; width: 100%; margin: 0; }
+.vw-fig svg { display: block; width: 100%; height: auto; max-height: var(--vw-fig); overflow: visible; }
+.vw-fig svg *, .vw-mark * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.vw .nd circle { fill: var(--body); stroke: var(--muted); stroke-width: 1.5; }
+.vw .nd text { fill: var(--ink); font: 600 1rem var(--font); text-anchor: middle; dominant-baseline: central; }
+.vw .nd.front circle { stroke: var(--c1); stroke-width: 2; stroke-dasharray: 6 4; }
+.vw .nd.cur circle { fill: var(--c1); stroke: var(--ink); stroke-width: 3; }
+.vw .nd.done circle { fill: var(--c1); stroke: var(--c1); stroke-width: 2; }
+.vw .nd:is(.cur, .done) text { fill: var(--action-ink); }
+.ai-box .vw .nd:is(.cur, .done) text { fill: var(--help-ink); }
+.vw .nd.rec circle { fill: var(--body); stroke: var(--c1); stroke-width: 3; }   /* recorded, not fetched: heavy ring, no fill */
+.vw .nd.idle text { fill: var(--muted); }
+.vw .nd text.tg { fill: var(--muted); font: 400 0.8125rem var(--font); font-variant-numeric: tabular-nums; }
+.vw .ed { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.vw .ed.seen { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 6 4; }
+.vw .ed.tree { stroke: var(--c1); stroke-width: 3.5; }
+.vw .ed.skip { stroke: var(--muted); stroke-width: 3; stroke-dasharray: 0 7; opacity: .6; }
+.vw .hd { fill: var(--muted); stroke: none; }
+.vw .hd.tree { fill: var(--c1); }
+.vw .hd.seen { fill: var(--ink); }
+.vw .hd.skip { opacity: .6; }
+.vw .el { fill: var(--muted); font: 400 0.875rem var(--font); text-anchor: middle; }
+.vw .el.tree { fill: var(--c1); }
+.vw .el.seen { fill: var(--ink); }
+.vw .col { fill: var(--muted); font: 400 0.8125rem var(--font); text-anchor: middle; }
+/* colour classes (F12): fill AND digit AND k2 hollow, so classes survive greyscale and the warm remap */
+.vw .cm circle { stroke-width: 2; }
+.vw .cm.k1 circle { fill: var(--c1); stroke: var(--c1); }
+.vw .cm.k2 circle { fill: var(--body); stroke: var(--c2); stroke-width: 3; }
+.vw .cm.k3 circle { fill: var(--c3); stroke: var(--c3); }
+.vw .cm text { fill: var(--action-ink); font: 600 0.8125rem var(--font); text-anchor: middle; dominant-baseline: central; }
+.ai-box .vw .cm text { fill: var(--help-ink); }
+.vw .cm.k2 text, .ai-box .vw .cm.k2 text { fill: var(--ink); }
+
+/* L1: Callout = a rule + a tag, never a box */
+.vw-callout { padding-top: var(--s3); border-top: var(--bw) solid var(--line); }
+.vw-tag { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: var(--lh-xs); }
+.vw-callout > p { margin-top: var(--s1); }
+.vw-row { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); }
+.vw-n { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); font-variant-numeric: tabular-nums; }
+.vw-ico { width: var(--ico); height: var(--ico); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.vw-ico.sm { width: 1.25rem; height: 1.25rem; }
+.vw .btn-label { width: auto; grid-auto-flow: column; gap: var(--s2); padding: 0 var(--s4) 0 var(--s3); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; }
+.vw .btn:disabled { opacity: .45; cursor: default; }
+
+/* Steps (F14): figure, frontier, a 2-line caption slot, table, footer under the content (never floating) */
+.vw-steps > * + * { margin-top: var(--s3); }
+.vw-steps.wait { min-height: var(--vw-fig); }
+.vw-cap { min-height: calc(2 * var(--lh) * 1em); }
+.vw-foot { display: flex; align-items: center; gap: var(--s2); }
+.vw-foot .vw-n { margin-left: auto; }
+
+/* Predict (F15): pills, pips, one filled control (Check); a wrong pick stays on screen, struck */
+.vw-q { margin-top: var(--s1); font-weight: var(--w-em); }
+.vw-pills { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.vw-pill { display: inline-grid; place-items: center; min-width: var(--btn); height: var(--btn); padding: 0 var(--s4); border: var(--bw-hair) solid var(--line);
+  border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; font-weight: var(--w-em); font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: border-color var(--d-fast) ease-out; }
+.vw-pill[aria-checked="true"] { border: var(--bw) solid var(--c1); }
+.vw-pill.wrong { border: var(--bw) solid var(--wrong); color: var(--muted); text-decoration: line-through; text-decoration-color: var(--wrong); cursor: default; }
+.vw-pill.right { border: var(--bw) solid var(--correct); color: var(--correct); }
+.vw-pill:disabled { cursor: default; }
+.vw-pips { display: inline-flex; gap: var(--s1); }
+.vw-pips i { display: block; width: var(--s2); height: var(--s2); border: var(--bw) solid var(--line); border-radius: 50%; }
+.vw-pips i.used { border-color: var(--wrong); background: var(--wrong); }
+.vw-go { margin-left: auto; }
+.ai-box .vw .btn-go { border-color: var(--help); background: var(--help); color: var(--help-ink); }
+.vw-verdict { display: flex; align-items: center; gap: var(--s2); min-height: 1.5rem; margin-top: var(--s2); font-weight: var(--w-em); }
+.vw-verdict.bad { color: var(--wrong); }
+.vw-verdict.ok { color: var(--correct); }
+
+/* Reveal (F4): the locked row is visible state; the body arrives by patch and fades in, in place */
+.vw-lock { display: flex; align-items: center; gap: var(--s2); min-height: var(--btn); padding-top: var(--s3); border-top: var(--bw) solid var(--line); color: var(--muted); }
+.vw-body { padding-top: var(--s3); border-top: var(--bw) solid var(--line); }
+.vw-body > * + * { margin-top: var(--s3); }
+.vw-ans { display: inline-block; padding: 0 var(--s2); border-radius: 6px; background: var(--action-fill); color: var(--action-on); font-weight: var(--w-em); }
+.ai-box .vw-ans { background: var(--ai-ct); color: var(--help-on); }
+
+/* Doodle (VISUAL-FIRST): never taller than a figure slot; fill + outline + shape, so it reads in greyscale */
+.vw-doodle { display: grid; justify-items: center; gap: var(--s2); }
+.vw-doodle svg { display: block; width: auto; height: min(var(--vw-fig), calc(var(--btn) * 3)); max-width: 100%; overflow: visible; }
+.vw-doodle .b { fill: var(--c1); }
+.vw-doodle .o { stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.vw-doodle .k { fill: var(--c2); }
+.vw-doodle .e { fill: var(--ink); }
+.vw-doodle .w { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.vw-doodle figcaption { margin-top: 0; text-align: center; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .vw-reveal.open .vw-body { animation: vw-fade var(--d-move) ease-out both; }
+  .vw-doodle svg { animation: vw-pop var(--d-dim) ease-out both; transform-origin: 50% 100%; }
+}
+@keyframes vw-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vw-pop { from { opacity: 0; transform: translateY(var(--s2)); } to { opacity: 1; transform: none; } }
