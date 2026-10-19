@@ -54,12 +54,11 @@
   }
   /* the viewer's own switch (privacy.html "Don't record me"): DNT/GPC never fire on iOS Safari, so this is the real opt-out */
   function userOff(ls) { try { return ls.getItem("stem-t-off") === "1"; } catch (e) { return false; } }
-  /* dead_tap context: where (% of viewport), which stage, tries left on this item, first 20 chars of the tapped text. Missing -> null, never throws. */
+  /* dead_tap context: where (% of viewport), which stage, tries left on this item. Never the tapped text (privacy default, Tony Oct 18).
+     Missing -> null, never throws. tg is unused: kept so the call site and its signature stay put. */
   function deadProps(tg, el, x, y, vw, vh, stage, code, tries) {
     var pct = function (v, m) { return typeof v === "number" && m > 0 ? Math.max(0, Math.min(100, Math.round(v / m * 100))) : null; };
-    var txt = null;
-    try { txt = String(tg.textContent || "").trim().slice(0, 20) || null; } catch (e) { /* ignore */ }
-    return { el: el, code: code, x: pct(x, vw), y: pct(y, vh), stage: stage || null, tries_left: typeof tries === "number" ? tries : null, txt: txt };
+    return { el: el, code: code, x: pct(x, vw), y: pct(y, vh), stage: stage || null, tries_left: typeof tries === "number" ? tries : null };
   }
   /* WebGL renderer string (T40): one throwaway context; Safari masks it ("Apple GPU"), still a signal on Android/Windows */
   function gpu(doc) {
