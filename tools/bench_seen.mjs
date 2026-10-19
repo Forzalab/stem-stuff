@@ -81,9 +81,12 @@ export function score(rs, labelsCsv) {
    Two arms: MSD-1 (the default) and jev-1.14 (the 2nd arm). model = one slug to pick an arm; jevBench runs every arm (or the models given) */
 export const JEV_MODELS = ["microsoft/microsoft-decision-1", "typesafe/jev-1.14"];
 export const JEV_MODEL = JEV_MODELS[0];
+/* OpenRouter provider prefs on every Jev request body, both arms: zero data retention, no prompt collection. NOT checked against the live API
+   here (no network): the slugs above and the zdr / data_collection field names are as Tony gave them */
+export const JEV_PROVIDER = { zdr: true, data_collection: "deny" };
 export function jevShadow(lines, client, model = JEV_MODEL) {
   if (typeof client !== "function") throw new Error("jevShadow needs an injected client: no default network");
-  return client({ model, state: lines.join("\n"), questions: { earned: null } });
+  return client({ model, provider: { ...JEV_PROVIDER }, state: lines.join("\n"), questions: { earned: null } });
 }
 export async function jevBench(lines, client, models = JEV_MODELS) {
   const out = {};

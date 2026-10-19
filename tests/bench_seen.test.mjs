@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_MODEL, JEV_MODELS, proposeSeen } from "../tools/bench_seen.mjs";
+import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, proposeSeen } from "../tools/bench_seen.mjs";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../intent.js"), w); return w; };
@@ -69,6 +69,11 @@ test("jevShadow: builds { model, state, questions: { earned } } and calls only t
     const both = await jevBench(["+0.0  q_open  A mc"], b => { seen.push(b); return { earned: b.model.length }; });
     assert.deepEqual(seen.map(b => b.model), [...JEV_MODELS], "bench both, in order");
     assert.deepEqual(Object.keys(both), [...JEV_MODELS]);
+    seen.length = 0;
+    await jevShadow(["x"], b => { seen.push(b); return {}; }); await jevShadow(["x"], b => { seen.push(b); return {}; }, "typesafe/jev-1.14"); await jevBench(["x"], b => { seen.push(b); return {}; });
+    assert.equal(seen.length, 4);
+    for (const b of seen) assert.deepEqual({ ...b.provider }, { zdr: true, data_collection: "deny" }, "ZDR in every body: " + b.model);
+    assert.deepEqual({ ...JEV_PROVIDER }, { zdr: true, data_collection: "deny" });
     seen.length = 0; await jevBench([], b => { seen.push(b); return {}; }, ["typesafe/jev-1.14"]);
     assert.deepEqual(seen.map(b => b.model), ["typesafe/jev-1.14"], "bench just the models given");
     assert.equal(fetched.length, 0);
