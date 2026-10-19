@@ -1141,6 +1141,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 #ver { position: fixed; z-index: 1; right: max(var(--s2), env(safe-area-inset-right)); bottom: max(var(--s1), env(safe-area-inset-bottom));
   color: var(--hint); font-size: var(--t-xs); font-weight: 400; line-height: 1; pointer-events: none; user-select: none; }
 #ver::after { content: attr(data-v); }
+@media (hover: hover) and (pointer: fine) { html.side #privacy { min-height: 24px; } }   /* desktop + mouse: the link's box fits the 24px foot, off the notes pad's and Cluck's corner (Tony, Oct 19) */
 .dock-bottom:not(.start) #ver { bottom: calc(var(--dock-h, 88px) + var(--s1)); }   /* phones: above the bottom bar (the start page has none: --dock-h is the whole window there) */
 
 .cl .msg > .cl-quack { margin: 0 0 var(--s2); max-width: 58ch; font-size: var(--t-md); line-height: var(--lh); font-weight: var(--w-em); color: var(--ai-text); overflow-wrap: anywhere; }   /* D72: Cluck's QUACK (quack.mjs) is the reply's first line, in the body colour: it wraps like the text under it */
@@ -1152,6 +1153,7 @@ html.side .pstrip span { writing-mode: vertical-rl; }
    transparent (no new value), the horizon at most 18% (the P8 ember cap). A scoped exception to STYLE.md §1.6 / §2.7 / §2.8 / §5. */
 .ck-rise { position: fixed; inset: 0; z-index: 30; pointer-events: none; --vis: 64px; --pk: 42px; --dw: 96px; --d-sky: 10.8s; }
 .ck-rise[hidden] { display: none; }
+html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): the page's end clears the duck + its line (nothing on top of anything, Tony Oct 19) */
 .ck-sky { position: absolute; left: var(--sky-x, 0); width: var(--sky-w, 100%); bottom: 0; height: 46%; overflow: hidden;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }

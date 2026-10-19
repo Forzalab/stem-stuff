@@ -41,7 +41,25 @@
     box.classList.remove("on", "out"); box.hidden = false; place();
     void box.offsetWidth;                                                   // restart: every rise plays the sunrise from the top
     box.classList.add("on");
+    room();
   }
+  /* nothing on top of anything (Tony, Oct 19): the duck and its line rest on no control. Where they would (a short phone: the hint card's
+     "ok but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
+     question, so the page never jumps back under a finger when the duck goes */
+  var CTL = "button, a[href], input, textarea, select, [role=button], .opt";
+  function room() {
+    var rs = [box.querySelector(".ck-peek"), box.querySelector(".ck-say")].map(function (e) { return e.getBoundingClientRect(); });
+    var top = Math.min(rs[0].top, rs[1].top), need = 0;
+    document.querySelectorAll(CTL).forEach(function (e) {
+      if (box.contains(e) || !e.getClientRects().length || e.closest("[hidden], [inert]") || getComputedStyle(e).position === "fixed") return;
+      var b = e.getBoundingClientRect();
+      if (rs.some(function (q) { return b.left < q.right && b.right > q.left && b.top < q.bottom && b.bottom > q.top; })) need = Math.max(need, b.bottom - top + 8);
+    });
+    if (!need) return;
+    H.style.setProperty("--ck-room", Math.ceil(need + (parseFloat(H.style.getPropertyValue("--ck-room")) || 0)) + "px"); H.classList.add("ck-room");
+    scrollBy({ top: Math.ceil(need), behavior: "instant" });
+  }
+  addEventListener("hashchange", function () { H.classList.remove("ck-room"); H.style.removeProperty("--ck-room"); });
   function down() {
     if (!up()) return;
     box.classList.add("out");                                               // duck 300 ms, sky 400 ms (app.css), then night again

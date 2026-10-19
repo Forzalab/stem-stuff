@@ -1755,6 +1755,12 @@ function clClose() {
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
 window.stemIdleTap = () => {
+  const w = wish;
+  if (w && S && w.code === S.code && (!w.started || w.failed) && ![404, 503].includes(w.failed)) {   // B7 (Tony, Oct 19, pick b): no prefetch (or it failed): the duck
+    w.tapped = true;                                                       // tap is the "Explain my mistake" tap, the same request (the T34 exception, an explicit tap only)
+    if (w.started || !wishFromCache(w)) wishRetry(w);                      // a reply in this browser's cache: no call
+    clOpen("explain", null); return;
+  }
   const said = !!wish && wish.started && !wish.failed;
   if (said || origEl) { clOpen(said ? "explain" : "steps", null); return; }
   const b = [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
