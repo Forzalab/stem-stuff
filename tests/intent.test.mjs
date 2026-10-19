@@ -62,7 +62,7 @@ test("lines: +SS.s  kind  args, reset per item, capped at 40, no typed text", ()
   const j = session();
   j.at(10).ev("q_open", { code: "P2X-14", type: "mc" });
   j.at(19.9).ev("pick", { choice: "B", verdict: "wrong", tries_left: 2 });
-  assert.deepEqual(j.state().lines, ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2"]);
+  assert.deepEqual(j.state().lines, ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2", "+9.9  tree  wrong d=1 read=slip fam=any"]);
   for (let i = 0; i < 50; i++) j.at(30 + i * 6).input();
   assert.equal(j.state().lines.length, 40);
   j.at(500).ev("q_open", { code: "P2X-15", type: "mc" });

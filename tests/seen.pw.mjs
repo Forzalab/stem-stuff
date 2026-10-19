@@ -1,4 +1,4 @@
-// J6 seen, moment C (intent.js proposeSeen → peek.js stemDuck.say; copy/seen-lines.js): with ?jev=1, an mc item answered wrong (negation),
+// J6 seen, earned (intent.js tree → peek.js stemDuck.say; copy/seen-lines.js): with ?jev=1, an mc item answered wrong (negation),
 // wrong (sign), then right, each pick 10 s apart → after the green row Cluck's peek rises carrying a line for the LAST wrong family (sign).
 // A hollow tap puts it away, sets the session off and no second one comes. Flag off = nothing. Nothing leaves the device (no request
 // besides the page's own; /explain /chat never called). The rolls are pinned (__stemJevRand reads window.__rs: quiet, kind, template, delay).
@@ -44,7 +44,7 @@ async function open(o = {}) {
   page.on("pageerror", e => page.errs.push(String(e)));
   page.on("console", m => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) page.errs.push(m.text()); });
   page.on("request", r => { const u = new URL(r.url()); if (/\/(explain|chat|nudge)$/.test(u.pathname)) page.ai++; if (u.origin !== BASE) { page.seenReq++; page.seenUrl = r.url(); } });
-  /* the pinned rolls: window.__rs = [quiet, kind, template, delay] is spent by moment C; every other roll (J5) passes (0.99) */
+  /* the pinned rolls: window.__rs = [quiet, kind, template, delay] is spent by the seen moment; every other roll (J5) passes (0.99) */
   await page.addInitScript(() => { window.__rs = []; window.__stemJevRand = () => (window.__rs.length ? window.__rs.shift() : 0.99); });
   await page.clock.install();
   await page.goto(BASE + "/" + (o.jev === false ? "" : "?jev=1") + "#BANK_T96");
@@ -74,7 +74,7 @@ const pick = async (page, id) => {
 const closeCluck = async page => {
   if (await page.evaluate(() => !!window.stemCluckOpen?.())) { await page.keyboard.press("Escape"); await page.evaluate(() => window.stemCluckOpen?.() && document.querySelector("#wish .wchip, .cl-x, [aria-label='Close Cluck']")?.click()); }
 };
-/* wrong (negation), wrong (sign), right: ten seconds apart so nothing reads as a guess; the rolls for moment C are armed before the right pick */
+/* wrong (negation), wrong (sign), right: ten seconds apart so nothing reads as a guess; the rolls for the seen moment are armed before the right pick */
 async function earned(page) {
   await idle(page, 10000); await pick(page, "b");
   await idle(page, 10000); await pick(page, "c");
@@ -113,6 +113,8 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     assert.ok(L.scrollW <= L.W, "no sideways scroll");
     assert.equal(S.n, 1); assert.equal(S.last.fam, "sign"); assert.equal(S.last.line, L.say);
     assert.match(await page.evaluate(() => window.stemJev.dump()), /pick {2}c wrong tries_left=\d err=sign/);
+    assert.match(await page.evaluate(() => window.stemJev.dump()), /seen {2}earned short sgn-1/, "the tree's earned moment (wrong x2, 10 s apart: not lucky)");
+    assert.match(await page.evaluate(() => window.stemJev.dump()), /tree {2}wrong d=2 read=slip fam=sign/);
     await page.screenshot({ path: join(shots, `seen-${vp.width}.png`) });
     await page.click(".ck-hollow");
     assert.equal(await up(page), false, "a hollow tap puts it away");

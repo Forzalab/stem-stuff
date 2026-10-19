@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-/* J6 bench for moment C "seen" (intent.js proposeSeen). Offline, on files Tony copies by hand: stemJev.dump() → a JSONL file (one
+/* J6 bench for the "seen" moments (intent.js tree). Offline, on files Tony copies by hand: stemJev.dump() → a JSONL file (one
    { s: session, i: item no., c: code, l: "+SS.s  kind  args" } per line; memory only on the device, nothing is ever sent).
      node tools/bench_seen.mjs dump.jsonl [--out label-sheet.csv]        → label-sheet.csv: sid,code,window,rule,label (label blank)
      node tools/bench_seen.mjs dump.jsonl --labels labels.csv            → rule precision / recall against the filled label column (y / n)
-   The rule is intent.js's own proposeSeen (loaded, not copied), fed the state rebuilt from the item's lines up to its first right pick.
+   The rule is intent.js's own tree (loaded, not copied; trap_beaten needs the item's distractor families, which a dump does not carry: inert here), fed the state rebuilt from the item's lines up to its first right pick.
    jevShadow(lines, client, model?): the Jev-model shadow (microsoft/microsoft-decision-1; typesafe/jev-1.14 is the 2nd arm) as a body for an INJECTED client only. No default network here,
    and the page never loads this file. */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
-export const proposeSeen = (() => { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(SRC, w); return w.__stemJev.proposeSeen; })();
+export const tree = (() => { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(SRC, w); return w.__stemJev.tree; })();
 
 const LINE = /^\+(\d+(?:\.\d+)?) {2}(\S+)(?: {2}(.*))?$/;
 
@@ -31,16 +31,16 @@ export function parseDump(text) {
   return items;
 }
 
-/* the proposeSeen state at the item's first right pick; null when it had none (nothing to propose on) */
-export function itemState(it) {
-  const st = { solved: false, wrong: 0, deep: 0, help: false, s5: false, gaps: [], errs: [] };
-  let prev = 0;
+/* the tree's state at the item's first right pick; null when it had none (nothing to propose on). fams = the families wrong on this session's earlier items */
+export function itemState(it, fams = []) {
+  const st = { solved: false, wrong: 0, deep: 0, help: false, s5: false, gaps: [], errs: [], fams, since: null };
+  let prev = 0, errT = null;
   for (const l of it.lines) {
     if (l.kind === "pick") {
       const [, verdict] = l.args.split(" ");
       st.gaps.push(Math.round((l.t - prev) * 10) / 10); prev = l.t;
-      if (verdict === "wrong") { st.wrong++; const e = /\berr=(\S+)/.exec(l.args); if (e) st.errs.push(e[1]); }
-      else if (verdict === "correct") { st.solved = true; return st; }
+      if (verdict === "wrong") { st.wrong++; errT = l.t; const e = /\berr=(\S+)/.exec(l.args); if (e) st.errs.push(e[1]); }
+      else if (verdict === "correct") { st.solved = true; st.since = errT == null ? null : l.t - errT; return st; }
     } else if (l.kind === "cluck" && l.args.startsWith("open")) st.help = true;
     else if (l.kind === "jev") {
       const d = /^S2 depth=(\d+)/.exec(l.args);
@@ -53,9 +53,12 @@ export function itemState(it) {
 
 /* one row per item: the rule's verdict ("C" when it proposes) and what the device did ("", "quiet", "nod", "short", "full") */
 export function rows(items) {
+  const seenFams = new Map();                                            // per session: families wrong on its earlier items
   return items.map(it => {
-    const st = itemState(it), c = st ? proposeSeen(st) : [], f = it.lines.find(l => l.kind === "seen");
-    return { sid: it.sid, code: it.code, window: it.window, rule: c.length ? "C" : "", fired: f ? f.args.replace(/^C /, "").split(" ")[0] : "", fam: c.length ? c[0].fam : "" };
+    const fams = seenFams.get(it.sid) || new Set(), st = itemState(it, [...fams]), c = st ? tree(st) : [], f = it.lines.find(l => l.kind === "seen");
+    for (const l of it.lines) { const e = l.kind === "pick" && /\berr=(\S+)/.exec(l.args); if (e) fams.add(e[1]); }
+    seenFams.set(it.sid, fams);
+    return { sid: it.sid, code: it.code, window: it.window, rule: c.length ? "C" : "", fired: f ? f.args.replace(/^\S+ /, "").split(" ")[0] : "", fam: c.length ? c[0].fam : "", moment: c.length ? c[0].moment : "" };
   });
 }
 const cell = x => /[",\n]/.test(String(x)) ? '"' + String(x).replace(/"/g, '""') + '"' : String(x);

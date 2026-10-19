@@ -1,10 +1,10 @@
-// tools/bench_seen.mjs (J6): the dump parser, the rule replay (the same proposeSeen the page runs), the label sheet, precision / recall,
+// tools/bench_seen.mjs (J6): the dump parser, the rule replay (the same tree the page runs), the label sheet, precision / recall,
 // and jevShadow, which only ever calls a client it is handed.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, proposeSeen } from "../tools/bench_seen.mjs";
+import { parseDump, itemState, rows, labelSheet, score, jevShadow, jevBench, JEV_PROVIDER, JEV_MODEL, JEV_MODELS, tree } from "../tools/bench_seen.mjs";
 
 const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const win = () => { const w = { URLSearchParams, setInterval() {}, performance: { now: () => 0 } }; w.window = w; vm.runInNewContext(read("../intent.js"), w); return w; };
@@ -22,33 +22,34 @@ function dumped() {
   return { text: j.dump(), fired };
 }
 
-test("replay: the bench's per-item rule = the page's own decision (it is the same proposeSeen)", () => {
+test("replay: the bench's per-item rule = the page's own decision (it is the same tree)", () => {
   const { text, fired } = dumped();
   assert.ok(fired && fired.kind, "A fired live");
   const items = parseDump(text), rs = rows(items);
   assert.deepEqual(items.map(i => i.code), ["A", "B", "C"]);
-  assert.deepEqual(rs.map(r => r.rule), ["C", "", ""]);
+  assert.deepEqual(rs.map(r => r.rule), ["C", "", "C"], "A: 2 wrong; B: first try (silence); C: one wrong, 10 s before the right pick = earned");
   assert.equal(rs[0].fam, "sign"); assert.equal(rs[0].fired, "short");
   assert.equal(rs[0].sid, "sB"); assert.deepEqual(rs.map(r => r.window), [1, 2, 3]);
   const st = itemState(items[0]);
-  assert.deepEqual(JSON.parse(JSON.stringify(st)), { solved: true, wrong: 2, deep: 0, help: false, s5: false, gaps: [10, 10, 10], errs: ["negation", "sign"] });
-  assert.equal(proposeSeen(st).length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(st)), { solved: true, wrong: 2, deep: 0, help: false, s5: false, gaps: [10, 10, 10], errs: ["negation", "sign"], fams: [], since: 10 });
+  assert.equal(tree(st).length, 1); assert.equal(rs[0].moment, "earned");
 });
 test("replay: help, S5, S2 depth and an item with no right pick", () => {
   const L = (i, ...ls) => ls.map(l => JSON.stringify({ s: "s", i, c: "K" + i, l })).join("\n");
   const text = [
     L(1, "+0.0  q_open  K1 mc", "+5.0  pick  A wrong err=sign", "+9.0  cluck  open ask", "+20.0  pick  B wrong", "+40.0  pick  C correct"),
-    L(2, "+0.0  q_open  K2 mc", "+95.0  jev  S2 depth=1 p75=80s", "+100.0  pick  A correct"),
+    L(2, "+0.0  q_open  K2 mc", "+95.0  jev  S2 depth=1 p75=80s", "+175.0  jev  S2 depth=2 p75=80s", "+180.0  pick  A correct"),
     L(3, "+0.0  q_open  K3 mc", "+3.0  pick  A wrong", "+4.0  jev  S5 fast x2", "+5.0  pick  B wrong", "+30.0  pick  C correct"),
-    L(4, "+0.0  q_open  K4 mc", "+10.0  pick  A wrong"), "not json", ""].join("\n");
-  assert.deepEqual(rows(parseDump(text)).map(r => r.rule), ["", "C", "", ""]);
+    L(4, "+0.0  q_open  K4 mc", "+10.0  pick  A wrong"), "not json",
+    L(5, "+0.0  q_open  K5 mc", "+10.0  pick  A wrong err=sign", "+17.0  pick  B correct"), ""].join("\n");   // K5: a fix 7 s after the wrong = lucky
+  assert.deepEqual(rows(parseDump(text)).map(r => r.rule), ["", "C", "", "", ""], "K1 help, K2 depth 2, K3 S5, K4 unsolved, K5 lucky");
   assert.equal(itemState(parseDump(text)[3]), null);
 });
 test("label sheet: sid,code,window,rule,label (blank); precision / recall against filled labels", () => {
   const { text } = dumped(), rs = rows(parseDump(text)), sheet = labelSheet(rs);
-  assert.equal(sheet, "sid,code,window,rule,label\nsB,A,1,C,\nsB,B,2,,\nsB,C,3,,\n");
-  const filled = sheet.replace("sB,A,1,C,", "sB,A,1,C,y").replace("sB,B,2,,", "sB,B,2,,n").replace("sB,C,3,,", "sB,C,3,,y");
-  assert.deepEqual(score(rs, filled), { labelled: 3, tp: 1, fp: 0, fn: 1, tn: 1, precision: 1, recall: 0.5 });
+  assert.equal(sheet, "sid,code,window,rule,label\nsB,A,1,C,\nsB,B,2,,\nsB,C,3,C,\n");
+  const filled = sheet.replace("sB,A,1,C,", "sB,A,1,C,y").replace("sB,B,2,,", "sB,B,2,,n").replace("sB,C,3,C,", "sB,C,3,C,y");
+  assert.deepEqual(score(rs, filled), { labelled: 3, tp: 2, fp: 0, fn: 0, tn: 1, precision: 1, recall: 1 });
   assert.equal(score(rs, sheet).labelled, 0);
   assert.equal(score(rs, sheet).precision, null);
 });
