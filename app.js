@@ -121,23 +121,68 @@ function renderMath(src, display) {
   if (typeof katex === "undefined") return `<code>${esc(src)}</code>`;
   return katex.renderToString(src, { displayMode: display, throwOnError: false, output: "htmlAndMathml", trust: c => c.command === "\\htmlClass" });   // \htmlClass: a snack's changed number (chg.mjs)
 }
+/* the codeblock (T43; design/STYLE.md "Codeblock"): a fenced block in question or choice text. One span per real line: its number
+   is a CSS counter, and a long line wraps hanging under its own indent with no number. Colour: a tiny regex highlighter (Tokyo Night,
+   app.css --syn-*). Comments and strings match first, so a keyword or a // inside them stays theirs. An unknown language stays plain. */
+const FENCE = /^```[^\n`]*\n[\s\S]*?^```[ \t]*$/gm;
+const CB_LANG = { c: "C", cpp: "C++", "c++": "C++", java: "Java", js: "JavaScript", javascript: "JavaScript", py: "Python", python: "Python", ts: "TypeScript" };
+const words = s => new Set(s.split(" "));
+/* one token regex per family: 1 comment, 2 string, 3 number, 4 a word, 5 the "(" that makes it a call */
+const synRe = com => new RegExp(`(${com})|("(?:\\\\.|[^"\\\\])*"?|'(?:\\\\.|[^'\\\\])*'?|\`(?:\\\\.|[^\`\\\\])*\`?)`
+  + "|(\\b(?:0[xX][\\da-fA-F]+|\\d+\\.?\\d*(?:[eE][+-]?\\d+)?)[a-zA-Z]*\\b)|([A-Za-z_]\\w*)(\\s*\\()?", "g");
+const C_SYN = { pre: true, re: synRe("//.*|/\\*.*?(?:\\*/|$)"),
+  kw: words("if else for while do switch case default break continue return goto sizeof struct union enum typedef const static extern inline volatile register "
+    + "class public private protected virtual override template typename namespace using new delete this true false nullptr NULL try catch throw finally operator "
+    + "friend constexpr noexcept extends implements interface import package final abstract instanceof throws super function let var of in typeof async await yield export from null undefined"),
+  type: words("int char short long float double bool void unsigned signed auto size_t string vector map set pair boolean byte String Integer Object") };
+const PY_SYN = { re: synRe("#.*"),
+  kw: words("and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield None True False self"),
+  type: words("int float str bool list dict tuple set bytes object") };
+const SYN = { c: C_SYN, cpp: C_SYN, "c++": C_SYN, java: C_SYN, js: C_SYN, javascript: C_SYN, ts: C_SYN, typescript: C_SYN, py: PY_SYN, python: PY_SYN };
+const tok = (k, t) => `<span class="t-${k}">${esc(t)}</span>`;
+/* one line to HTML; st.open = inside a block comment that began on an earlier line */
+function hl(t, syn, st) {
+  let out = "", i = 0;
+  if (st.open) { const e = t.indexOf("*/"); if (e < 0) return tok("com", t); st.open = false; out = tok("com", t.slice(0, e + 2)); t = t.slice(e + 2); }
+  if (!syn) return out + esc(t);
+  if (syn.pre && /^\s*#/.test(t)) return out + tok("pre", t);
+  for (const m of t.matchAll(syn.re)) {
+    const [w, com, str, num, id, call] = m;
+    out += esc(t.slice(i, m.index)); i = m.index + w.length;
+    if (com) { if (com.startsWith("/*") && !com.slice(2).endsWith("*/")) st.open = true; out += tok("com", com); }
+    else if (str) out += tok("str", str);
+    else if (num) out += tok("num", num);
+    else { const k = syn.kw.has(id) ? "kw" : syn.type.has(id) ? "type" : call ? "fn" : ""; out += (k ? tok(k, id) : esc(id)) + esc(call || ""); }
+  }
+  return out + esc(t.slice(i));
+}
+function codeblock(code, lang = "", copy = true) {
+  const l = String(lang || "").trim().split(/\s+/)[0], name = CB_LANG[l.toLowerCase()] || l, syn = SYN[l.toLowerCase()], st = {};
+  return `<figure class="cb" aria-label="${esc(name ? name + " code" : "Code")}"><div class="cb-hd"><span class="cb-lang">${esc(name)}</span>`
+    + `<span class="cb-act"><span class="cb-slot" aria-hidden="true"></span>${copy ? `<button type="button" class="btn cb-copy" aria-label="Copy code" title="Copy code">${icon("i-copy")}</button>` : ""}</span></div>`
+    + `<pre><code>${String(code).replace(/\n$/, "").split("\n").map(t =>
+      `<span class="l" style="--ind:${/^[ \t]*/.exec(t)[0].replace(/\t/g, "  ").length}">${hl(t, syn, st)}</span>`).join("")}</code></pre></figure>`;
+}
 /* $$..$$ and $..$ are cut out before markdown so marked never sees TeX; "\$" is a literal dollar. */
 /* big: a choice row. Its inline math sets in display style, so $\frac12$ and $\dfrac12$ look the same in every row (a lone 1/2 is never
    the tiny text-style one); nested parts (a fraction in an exponent) still shrink the TeX way. */
 function md(text, inline = false, big = false) {
   const src = Array.isArray(text) ? text.join("\n") : String(text);
-  const math = [];
+  const math = [], fences = [];
   const tok = i => `KXMATH${i}Z`;
-  let s = src.replace(/\\\$/g, () => { math.push({ lit: "$" }); return tok(math.length - 1); });
+  let s = src.replace(FENCE, m => { fences.push(m); return `KXCODE${fences.length - 1}Z`; });   // a codeblock is never TeX
+  s = s.replace(/\\\$/g, () => { math.push({ lit: "$" }); return tok(math.length - 1); });
   s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => { math.push({ t, d: true }); return tok(math.length - 1); });
   s = s.replace(/\$([^$\n]+?)\$/g, (_, t) => { math.push({ t, d: false }); return tok(math.length - 1); });
+  s = s.replace(/KXCODE(\d+)Z/g, (_, i) => fences[+i]);
   let html;
   if (typeof marked !== "undefined") {
     const renderer = new marked.Renderer();
     renderer.html = tokOrText => esc(typeof tokOrText === "string" ? tokOrText : tokOrText.text);   // raw HTML is escaped
     renderer.image = () => "";                                                                         // images ignored
     renderer.table = function (...a) { return `<div class="tbl">${marked.Renderer.prototype.table.apply(this, a)}</div>`; };
-    html = inline ? marked.parseInline(s, { renderer, gfm: true }) : marked.parse(s, { renderer, gfm: true });
+    renderer.code = (c, lang) => typeof c === "object" ? codeblock(c.text, c.lang, !inline) : codeblock(c, lang, !inline);   // no Copy inside a choice (it is a button)
+    html = inline && !fences.length ? marked.parseInline(s, { renderer, gfm: true }) : marked.parse(s, { renderer, gfm: true });
   } else {
     html = esc(s).split(/\n{2,}/).map(p => inline ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
   }
@@ -2096,6 +2141,16 @@ async function copyPad() {
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
 $("#copy").addEventListener("click", copyPad);
+/* a codeblock's Copy: the raw code (the line numbers are CSS, never text), then i-ok for 2 s. Capture: the tap does nothing else */
+document.addEventListener("click", async e => {
+  const b = e.target.closest?.(".cb-copy"); if (!b) return;
+  e.stopPropagation();
+  const ok = await copyText([...b.closest(".cb").querySelectorAll(".l")].map(l => l.textContent).join("\n"));
+  b.classList.toggle("done", ok);
+  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
+  say(ok ? "Copied." : "Didn't copy. Try again.");
+  clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
+}, true);
 
 /* ================= freeze layer (design/FREEZE.md) =================
    .freeze is position: sticky. Its max height follows the *visual* viewport, so a tall problem becomes a strip

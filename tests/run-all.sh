@@ -92,7 +92,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
   for name in "${specs[@]}"; do
     f="tests/$name.pw.mjs"
     case "$name" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|seen) run "$name" node "$f" "$(free_port)" ;;
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
   done
