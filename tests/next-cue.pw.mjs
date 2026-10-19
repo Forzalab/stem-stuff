@@ -114,6 +114,13 @@ const startSampler = page => page.evaluate(() => {
 });
 const stopSampler = page => page.evaluate(() => { clearInterval(window.__si); return { peak: window.__s.peak, names: [...window.__s.names], at: window.__s.at.slice(0, 5) }; });
 
+/* the T45 wrong-answer peek (peek.js WRONG_MS) rises 700 ms after a question's first wrong answer unless input comes first. close() pauses
+   450 ms after that wrong answer, then fills / taps at once: on a loaded machine the gap passed 700 ms, the sunrise rose, the fill or tap
+   put it away (peek.js down(): a 630 ms fade, the rise runs still going), and the closing tap came inside that fade, so the sampler saw
+   the duck going + g-next-in: "two animation groups at once" on num / expr / multi / pick-all out (a 1 s gap fails them every run). A
+   student cannot type an answer and tap Check inside 630 ms: wait, like them, until a dismissed duck is gone (hidden) before the closing
+   tap. The input before it has already cancelled any pending peek, so none can rise after this wait. */
+const duckGone = page => page.waitForFunction(() => { const b = document.querySelector(".ck-rise"); return !b || b.hidden; }, null, { timeout: 4000 });
 /* drive one question to its close; returns { check, before } = the Check rect and the geometry right before the closing tap */
 async function close(page, type, outcome, { code } = {}) {
   const p = P.find(x => x.code === code);
@@ -123,7 +130,7 @@ async function close(page, type, outcome, { code } = {}) {
     if (!right) { await page.tap(`#q .opt[data-id="c"]`); await page.tap("#mcGo"); await page.waitForSelector("#q .opt.wrong"); await page.waitForTimeout(450); await page.tap(`#q .opt[data-id="d"]`); }
     else for (const id of ids) await page.tap(`#q .opt[data-id="${id}"]`);
     const go = page.locator("#mcGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
-    const check = await go.evaluate(R), before = await geo(page);
+    await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
@@ -132,7 +139,7 @@ async function close(page, type, outcome, { code } = {}) {
     const id = right ? "a" : p.choices.length > 2 ? "d" : "b";
     await page.tap(`#q .opt[data-id="${id}"]`);
     const go = page.locator(`#q .ch[data-id="${id}"] .send`); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(350);   // the lock-in dim settles
-    const check = await go.evaluate(R), before = await geo(page);
+    await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
@@ -141,14 +148,14 @@ async function close(page, type, outcome, { code } = {}) {
     if (!right) { await page.fill(`#q .part[data-i="3"] .ans`, "1"); await page.tap("#go3"); await page.waitForSelector(`#q .part[data-i="3"] .ff.bad`); await page.waitForTimeout(450); }
     await page.fill(`#q .part[data-i="3"] .ans`, right ? RIGHT : "2");
     const go = page.locator("#go3"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
-    const check = await go.evaluate(R), before = await geo(page);
+    await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
     await startSampler(page); await go.tap();
     return { check, before };
   }
   if (!right) { await page.fill("#ans", "1"); await page.tap("#ansGo"); await page.waitForSelector("#ff.bad"); await page.waitForTimeout(450); }
   await page.fill("#ans", right ? RIGHT : "2");
   const go = page.locator("#ansGo"); await go.scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
-  const check = await go.evaluate(R), before = await geo(page);
+  await duckGone(page); const check = await go.evaluate(R), before = await geo(page);
   await startSampler(page); await go.tap();
   return { check, before };
 }
