@@ -158,7 +158,7 @@ try {
 
   /* the open list: one even scrim over the page, the top bar and its XP strip; the bar's buttons still work under it
      (nav.css .ql-dim + .top::after, Tony's Oct 7 bug shot: an undimmed bar, the strip's own dim, row 1 over the strip) */
-  for (const w of [393, 1366]) await step(`open list at ${w}: one even dim over the page, the bar and the XP strip; row 1 under the strip; a tap on the dim closes it`, async () => {
+  for (const w of [393, 1366]) await step(`open list at ${w}: one even dim over the page, the bar and the XP strip; row 1 under the nav row (phones: over the XP strip, Tony Oct 18); a tap on the dim closes it`, async () => {
     const phone = w < 700, H = phone ? 852 : 768;
     const c3 = await browser.newContext({ viewport: { width: w, height: H }, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
     const pg = await c3.newPage();
@@ -173,7 +173,7 @@ try {
       const list = document.querySelector("#qlist"), row = list.querySelector("li"), top = document.querySelector(".top");
       if (!list.hidden) list.scrollTop = 0;
       const tb = top.getBoundingClientRect();
-      return { chip: !!at(document.querySelector("#qlistBtn"))?.closest("#qlistBtn"), lb: list.getBoundingClientRect().bottom,
+      return { chip: !!at(document.querySelector("#qlistBtn"))?.closest("#qlistBtn"), lb: list.getBoundingClientRect().bottom, navBottom: document.querySelector("#qnav").getBoundingClientRect().bottom,
         hud: hud && !hud.hidden ? { tap: !!at(hud)?.closest(".top > .rw-hud"), bottom: hud.getBoundingClientRect().bottom } : null,
         row1: !list.hidden && row ? { top: row.getBoundingClientRect().top, hit: !!at(row)?.closest("#qlist") } : null,
         page: document.elementFromPoint(x, y)?.id, dim: getComputedStyle(dim).visibility };
@@ -197,7 +197,7 @@ try {
     assert.ok(near(hud0, page0), `the XP strip's row (${rgb(hud0)}) is not under the same dim as the page (${rgb(page0)})`);
     assert.ok(h.row1, "no list row");
     assert.equal(h.row1.hit, true, "row 1 is not above the dim");
-    if (phone) assert.ok(h.row1.top >= h.hud.bottom, `row 1 (top ${h.row1.top}) overlaps the XP strip (bottom ${h.hud.bottom})`);
+    if (phone) assert.ok(h.row1.top >= h.navBottom, `row 1 (top ${h.row1.top}) overlaps the nav row (bottom ${h.navBottom})`);   // phones: the list starts right under the nav row, over the XP strip (Tony, Oct 18 sketch)
     assert.equal(h.page, "qlDim", "the page is not under the dim");
     await pg.mouse.click(...spot);                                              // a tap on the dim
     await pg.waitForFunction(() => document.querySelector("#qlist").hidden, null, { timeout: 2000 });

@@ -60,9 +60,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-to
 html { scrollbar-width: none; }
 html::-webkit-scrollbar { display: none; }
 body * { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+@media (hover: hover) { body *:not(:hover):not(:focus-within) { scrollbar-color: transparent transparent; } }   /* Tony, Oct 18: the thumb shows only while the pointer is over the box or focus is in it */
 @supports not (scrollbar-color: red blue) {
   body ::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
   body ::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--edge); }
+  @media (hover: hover) { body *:not(:hover):not(:focus-within)::-webkit-scrollbar-thumb { background: transparent; } }   /* the thumb shows only while the pointer is over the box */
 }
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
@@ -605,8 +607,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
    height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
 /* docked: all 3 in one box that scrolls sideways (Tony, Oct 5), two in view, a visible thin bar */
-.rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory;
-  scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+.rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory; }
 .rot.docked .vid { flex: none; width: min(calc(40dvh * 9 / 16), calc((100% - var(--s5)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card */
 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
 .rot-hd { display: none; }
@@ -677,6 +678,10 @@ html.side #work > .orig { margin: 0; }
 /* Cluck's box = its own service on the site: the base tokens remap inside it, so .btn, .ff and the text follow */
 .ai-box { --sheet: var(--help-sheet); --field: var(--ai-field); --ink: var(--ai-text); --muted: var(--help-muted); --hint: var(--help-muted);
   --line: var(--help-rule); --edge: var(--ai-line); --knock: rgb(16 19 26 / 0.85); background: var(--sheet); color: var(--ink); }   /* figure labels knock out on the sheet, not the navy question box */
+/* live figures inside Cluck (Tony, Oct 17: "all BLUE" on the warm sheet): graph.js reads --c1/--c2/--c3/--c1-hi/--body from the cascade, so the
+   remap lives here, on Cluck's figures only; question-card figures keep the page tokens. Series = the --help ramp, fills (graph.js FILL .22) are
+   those at low alpha, the sheet shows through the node fill. No new hex; --ink/--muted/--grid/--knock are already remapped by .ai-box */
+.ai-box .fig, .cluck .fig { --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); --bg: var(--help-sheet); }
 /* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
 .cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .9s ease-out;   /* ref 1's ember light, top only */
@@ -695,7 +700,7 @@ html.side #work.cl-on > #rot { flex: none; }
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
 /* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
-body { --cl-edge: var(--edge); }   /* the site's edge: inside the sheet .ai-box remaps --edge */
+html:not(.side) .cl { --cl-edge: var(--ai-line); }   /* the rim: Cluck's warm orange edge (35%), set on the sheet itself; a body-level var() froze the page's blue --edge before .ai-box could remap it (Tony, Oct 18) */
 html:not(.side) .cl { position: fixed; z-index: 45; inset: var(--cl-top, 112px) 0 0; overflow: hidden; border: 1px solid var(--cl-edge); border-bottom: 0; border-radius: 10px 10px 0 0; }
 html.cl-open body { overflow: hidden; }
 .cl-dim { display: none; }
@@ -707,7 +712,7 @@ html.cl-open .cl-dim { display: block; position: fixed; z-index: 44; inset: 0; }
 /* the phone sheet drags (app.js clDrag, sheet.mjs; Tony's CHATBOX PICK r2): a grab handle on top, the header drags too; up = full screen with the corners
    going square (--rr) and a hard dim (--da, plain alpha, never a blur) coming in behind; the body scrolls on its own */
 html:not(.side) .cl { --rr: 30px; border-top-left-radius: var(--rr); border-top-right-radius: var(--rr);   /* MORE ROUND (V3 melt): 30px at the dock, 0 at full, in proportion to the drag (--pp: 0 dock, 1 full) */
-  filter: drop-shadow(0 -12px 28px color-mix(in srgb, var(--glow) calc(28% * (1 - var(--pp, 0))), transparent)); }   /* the orange halo above the top edge, gone at full */
+  filter: drop-shadow(0 -6px 36px color-mix(in srgb, var(--glow) calc(9% * (1 - var(--pp, 0))), transparent)); }   /* a faint, wide orange haze above the top edge (Vision Pro glass: low alpha, soft), gone at full */
 html:not(.side) .cl::before { opacity: 1; }   /* the ember top light at 100% (was 60%) */
 html:not(.side) .cl-dim { background: var(--scrim); opacity: var(--da, .8); }   /* 80% at the dock, 96% at full: a hard dim, no blur */
 html:not(.side) .cl-grab { position: absolute; z-index: 3; top: 0; left: 50%; width: 128px; height: 44px; margin: 0 0 0 -64px; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
@@ -738,7 +743,6 @@ html.side .cl-bar, html:not(.side) .cl-x2 { display: none; }
 .cl:has(.wtext:not(:empty)) .cl-verify { display: block; }
 /* the thread (Tony, Oct 5: explain-column.html C1 "Discord cozy"): avatar left, name + tag + time, the text under; Cluck is a chat user */
 .cl .msg { display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: var(--s3); margin: 0 calc(-1 * var(--s2)); padding: var(--s1) var(--s2); border-radius: 6px; }
-@media (hover: hover) { .cl .msg:not(.me):hover { background: var(--ai-tint); } }   /* a phone tap never leaves a stuck tint */
 .cl .msg > .av { grid-row: 1 / 3; }
 html:not(.side) .cl .msg { display: block; margin: 0; padding: 0; }      /* phone: no avatar column, the text uses the whole width */
 html:not(.side) .cl .msg > .av { display: none; }
@@ -799,7 +803,8 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .cl-ft .done-row { padding: 0 var(--s4) var(--s4); }
 .cl .done-row p { margin: 0; color: var(--help-muted); font-size: var(--t-sm); }
 /* Cluck's text, straight on the sheet (image 3: no box around it) */
-.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); cursor: pointer; }   /* a tap skips the typing */
+.wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; color: var(--ai-text); }
+.wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
@@ -828,6 +833,9 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext .wrule { margin: var(--s3) 0; border: 0; border-top: 1px solid var(--help-rule); }
 .wcaret { display: inline-block; width: .5em; height: 1em; vertical-align: text-bottom; background: var(--muted); animation: wblink 1s steps(2) infinite; }
 @keyframes wblink { 50% { opacity: 0; } }
+.wload { margin-inline-end: var(--s1); color: var(--muted); animation: wload-in var(--d-move) ease-out; }   /* Cluck's wait line (app.js WISH_LINES): fades in per swap */
+@keyframes wload-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wload { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .wcaret, .cl .ask { animation: none !important; } }
 
 /* ---------- scratchpad + copy ---------- */
@@ -1056,10 +1064,10 @@ html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; positi
 html.side .freeze-in { max-height: calc(100dvh - 2 * var(--s4)); }
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
-html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; min-height: min(60vh, 48rem); cursor: col-resize; }
-html.side .sash::before { position: sticky; display: block; top: min(calc(50dvh - 24px), 16rem);   /* the grip sits mid-window, but never more than 16rem down, so it stays by the content zoomed far out (Tony's "zoom out to heck" test, Oct 6) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted); z-index: 1; }
+html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; cursor: col-resize; }
+html.side .sash::before { position: sticky; display: block; top: calc(50dvh - 24px);   /* the grip sits mid-window (Tony, Oct 18: the 16rem cap is gone) */ left: auto; width: 4px; height: 48px; margin: 0 auto; background: var(--muted); z-index: 1; }
 html.side .sash:hover::before, html.side.mt-drag .sash::before { background: var(--ink); }
-html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; box-sizing: border-box; padding: 0 23.5px; background-color: var(--line); background-clip: content-box; }   /* the touch area, whose 1px centre is the rail the full height of the gap: the handle reads as the divider between the panes (r9: it was a lone short bar floating at the top) */
+html.side .sash::after { top: 0; bottom: 0; height: auto; width: 48px; margin: 0 0 0 -24px; box-sizing: border-box; background: none; }   /* the 48px touch area only: no rail (Tony, Oct 18) */
 html.side #stage > #work { grid-column: 3; grid-row: 2; margin: 0; min-width: 0; }
 html.side .xb-label { margin-bottom: var(--s2); }
 html.side.no-pad #xb { display: none; }   /* app.js applyMT: desktop sugar questions with a layer have no notes pad (diet keeps it) */
@@ -1191,3 +1199,8 @@ html.side .pstrip span { writing-mode: vertical-rl; }
 @keyframes ck-rl2 { 0%, 13.9% { opacity: 0; } 44.4% { opacity: .8; } 61.1%, 100% { opacity: 1; } }
 @keyframes ck-rl3 { 0%, 27.8% { opacity: 0; } 61.1%, 100% { opacity: 1; } }
 @keyframes ck-rduck { 0%, 63.9% { opacity: 0; } 66.7%, 86.1% { opacity: .45; } 88.9%, 100% { opacity: 1; } }
+
+/* search mode (phones, app.js codingOn): the code field has focus -> the page behind it is hidden, not removed (no reflow, no keyboard jump); solid paper, nothing peeks under the suggestion list */
+html.coding.dock-bottom:not(.start) body { background: var(--paper); }
+html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
+html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */

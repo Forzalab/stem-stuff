@@ -12,7 +12,7 @@ ajv.addSchema(schema("problems"), "problems");
 const graph = ajv.getSchema("problems#/$defs/graph");
 
 test("live figure fixtures: the valid ones are SCHEMA graph blocks", () => {
-  for (const g of FIX.valid) assert.ok(graph(g), `${g.kind}: ${ajv.errorsText(graph.errors)}`);
+  for (const g of [...FIX.valid, FIX.network.valid]) assert.ok(graph(g), `${g.kind}: ${ajv.errorsText(graph.errors)}`);
 });
 
 test("live figure fixtures: the schema rejects fail Ajv too", () => {

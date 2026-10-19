@@ -17,7 +17,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 KINDS = {"cartesian": {"fn", "shade", "vline", "hline", "point", "seg", "arrow", "arc", "poly", "text"},
          "scene": {"body", "spring", "pulley", "rope", "surface", "incline", "force", "pivot", "point", "seg", "arrow", "arc", "text"},
          "bars": set(), "network": set()}
-MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX_PTS, MAX_ALT = 3000, 12, 6, 8, 16, 3, 4, 12, 200
+MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX_PTS, MAX_ALT = 3000, 12, 6, 12, 30, 3, 4, 12, 200
+# A live network is the key subgraph only (the odd cycle, the path, the cut), never the question's whole graph again: Opus redrew the
+# 10-duck CEQ graph with one edge lit, Oct 18 ("drawing for the sake of drawing"). More nodes: "big"; every vertex of the bank figure: "copy".
+MAX_LIVE_NODES = 6
 GEOM_MAX = 1e4                     # any number in the figure: finite, |v| <= this
 # Fields whose numbers are DATA (shown, or drawn from as a value): they must come from the givens and never be the answer.
 # Every other number is free layout geometry (positions, sizes, axis ranges), only capped.
@@ -25,6 +28,11 @@ DATA_KEYS = {"label", "text", "alt", "unit", "value", "w", "y", "f", "g", "of"}
 EXPR_KEYS = {"y", "f", "g", "of"}     # math.js strings (cartesian fn / shade)
 NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 FENCE_MAX = 4000                   # a fence longer than this is dropped unread
+# Which kinds a figure may be, from the bank's profile.subject (its first dotted part). Tony, Oct 17: "the figure MUST MATCH whatever
+# topic it is" (a network graph showed up on a physics ramp). Unknown or missing subject: the physics-ish set, never a network.
+SUBJECT_KINDS = {"physics": ("scene", "cartesian", "bars"), "cs": ("network",), "discrete": ("network",),
+                 "math": ("cartesian",), "calc": ("cartesian",)}
+DEFAULT_KINDS = ("scene", "cartesian", "bars")
 
 
 def on():
@@ -127,21 +135,39 @@ def _sig3(a, b):
     return b != 0 and abs(a - b) <= 0.5 * 10 ** (math.floor(math.log10(abs(b))) - 2) * (1 + 1e-9) or a == b == 0
 
 
+def kinds_for(subject):
+    """the kinds a figure may be for this subject (fail closed: anything unknown gets DEFAULT_KINDS)"""
+    return SUBJECT_KINDS.get(subject.split(".")[0].lower(), DEFAULT_KINDS) if isinstance(subject, str) else DEFAULT_KINDS
+
+
+def vertices(body):
+    """the question's vertex labels: the node ids and labels of its bank network figure, else its lone capital letters (A, B, ...)"""
+    out = set()
+    for b in body:
+        if isinstance(b, dict) and b.get("kind") == "network":
+            for x in b.get("nodes", []):
+                out |= {x} if isinstance(x, str) else {x.get("id"), x.get("label")} - {None}
+    text = " ".join(str(b.get("md", "")) for b in body if isinstance(b, dict))
+    return {v.strip("$ ") for v in out} if out else set(re.findall(r"(?<![A-Za-z\\])[A-Z](?![A-Za-z])", text))
+
+
 class Ctx:
-    """one reply's figure context: the numbers it may show (givens) and the ones it must not (the hidden unknown)"""
-    def __init__(self, code, givens, answers):
-        self.code, self.givens, self.answers = code, givens, answers
+    """one reply's figure context: the numbers it may show (givens) and the ones it must not (the hidden unknown), the kinds this
+    subject allows and the question's vertex labels (a network may only name those); drawn = the question has its own network figure
+    (already on screen: a live copy of it is dropped)"""
+    def __init__(self, code, givens, answers, kinds=DEFAULT_KINDS, verts=(), drawn=False):
+        self.code, self.givens, self.answers, self.kinds, self.verts, self.drawn = code, givens, answers, kinds, set(verts), drawn
 
 
-def context(code, question, key, answer_values, more=""):
+def context(code, question, key, answer_values, more="", subject=None, verts=(), drawn=False):
     """givens = numbers in the question text, `more` (shown choices, sheet formulas) and the KEY's work, plus 0-10; answers = the hidden
     unknown's value(s) (and a \\boxed{} in the KEY) that the question text itself does not already show"""
-    q = nums(question)
+    q = nums(question) + [float(WORD_NUMS[w]) for w in re.findall(r"[a-z]+", str(question).lower()) if w in WORD_NUMS]   # "five miles" is given
     boxed = [n for b in re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", str(key)) for n in nums(b)]
     ans = [abs(a) for a in [*answer_values, *boxed] if math.isfinite(a) and a != 0 and not any(_eq(abs(a), g) for g in q)]
     ans += [a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10]   # the unknown in another unit / power of ten: 23.3 -> 2.33
     givens = set(q) | set(nums(more)) | set(nums(key)) | set(range(0, 11))
-    return Ctx(code, givens, sorted(set(ans)))
+    return Ctx(code, givens, sorted(set(ans)), kinds_for(subject), verts, drawn)
 
 
 # ---------------- the gate ----------------
@@ -158,6 +184,10 @@ def _walk(v, key, out):
     return out
 
 
+STEP_RE = re.compile(r"^\d{1,2}$")
+WORD_NUMS = {w: i for i, w in enumerate("zero one two three four five six seven eight nine ten eleven twelve".split())}
+
+
 def _labels(g):
     n = 0
     for m in g.get("marks", []):
@@ -168,7 +198,7 @@ def _labels(g):
     for gr in g.get("groups", []):
         n += 1 + len(gr.get("bars") or [])
     n += sum(1 for x in g.get("nodes", []) if isinstance(x, dict) and "label" in x)
-    n += sum(1 for e in g.get("edges", []) if "label" in e)
+    n += sum(1 for e in g.get("edges", []) if "label" in e and not STEP_RE.match(str(e["label"])))   # "1", "2": the step order, free
     return n
 
 
@@ -179,6 +209,8 @@ def check(g, ctx):
         return "no-schema"
     if not isinstance(g, dict) or g.get("type") != "graph" or g.get("kind") not in KINDS:
         return "kind"
+    if g["kind"] not in ctx.kinds:
+        return "subject"                     # a network on a physics question, a scene on a graph-theory one
     if len(json.dumps(g)) > MAX_JSON:
         return "size"
     if not valid(g, s["$defs"]["graph"], s):
@@ -201,6 +233,12 @@ def check(g, ctx):
                 or (g.get("layout") == "free" and not all(isinstance(x, dict) and "at" in x for x in g["nodes"])) \
                 or (g.get("layout") == "tree" and g.get("root") not in ids):
             return "network"
+        if any((x if isinstance(x, str) else x.get("label", x["id"])).strip("$ ") not in ctx.verts for x in g["nodes"]):
+            return "vertex"                  # nodes are the question's own vertices (A, B, ...), never invented ones
+        if ctx.drawn and ctx.verts <= vertices([g]):
+            return "copy"                    # the question's whole graph again: the student already sees it
+        if len(g["nodes"]) > MAX_LIVE_NODES:
+            return "big"                     # the key subgraph only
     for k, v in _walk(g, None, []):
         if isinstance(v, bool):
             continue
@@ -216,10 +254,16 @@ def check(g, ctx):
                 return f"leak:{k}={x:g}"         # the field and the number only: never the model's text
             if not any(_eq(abs(x), n) for n in ctx.givens):
                 return f"not-given:{k}={x:g}"
+    if kind == "scene" and not any(m.get("mark") == "force" and tuple(m["at"]) in bodies for m in marks):
+        return "no-force"                    # a physics scene is the forces on a body: at least one
     return None
 
 
 FENCE = re.compile(r"```[ \t]*([A-Za-z]*)[ \t]*\n?([\s\S]*?)\n?[ \t]*```")
+# Opus sometimes fences its figure as :::fig ... ::: (1 of 6 physics replies, Oct 18; the JSON reached the student): a line-start :::
+# is read as ``` (COLONS), and a line ending in ":" or "::" (or a bare newline) is held a chunk in case it opens one (HOLD).
+COLONS = re.compile(r"(?<=\n)[ \t]*:::")
+HOLD = re.compile(r"\n[ \t]*:{0,2}\Z")
 
 
 def parse(body):
@@ -234,7 +278,7 @@ class Fence:
     "\\n```fig\\n<canonical json>\\n```\\n" in a single chunk and anything else in a fence is dropped. ctx None = strip every fence
     (the OpenRouter path, the kill switch). Never yields raw model JSON."""
     def __init__(self, ctx):
-        self.ctx, self.buf, self.shown, self.log = ctx, "", 0, []
+        self.ctx, self.buf, self.shown, self.log, self.prev = ctx, "", 0, [], "\n"   # prev: the last model char consumed (line start?)
 
     def _block(self, lang, body):
         if self.ctx is None:
@@ -253,14 +297,16 @@ class Fence:
         self.buf += chunk
         out = []
         while True:
+            self.buf = COLONS.sub("```", self.prev + self.buf)[1:]    # :::fig / :::json / bare ::: at a line start: a fence too
             i = self.buf.find("```")
             if i < 0:
-                cut = len(self.buf.rstrip("`"))   # a tail of 1-2 backticks may open a fence
+                h = HOLD.search(self.prev + self.buf)
+                cut = min(len(self.buf.rstrip("`")), max(h.start() - 1, 0) if h else len(self.buf))   # 1-2 backticks or "\n::" may open one
                 out.append(self.buf[:cut])
-                self.buf = self.buf[cut:]
+                self.prev, self.buf = (self.buf[:cut] or self.prev)[-1], self.buf[cut:]
                 break
             out.append(self.buf[:i])
-            self.buf = self.buf[i:]
+            self.prev, self.buf = (self.buf[:i] or self.prev)[-1], self.buf[i:]
             m = FENCE.match(self.buf)
             if not m:
                 if len(self.buf) > FENCE_MAX:            # never closes in reach: drop it and what it held
@@ -268,7 +314,7 @@ class Fence:
                     self.buf = ""
                 break
             out.append(self._block(m.group(1).lower(), m.group(2)))
-            self.buf = self.buf[m.end():]
+            self.prev, self.buf = "`", self.buf[m.end():]
         return "".join(out)
 
     def end(self):
@@ -284,11 +330,11 @@ class Fence:
             print(f"fig {self.ctx.code if self.ctx else '-'} {what}: " + ",".join(self.log), file=sys.stderr)   # reason codes only
 
 
-STRIP = re.compile(r"\n?```[\s\S]*?(?:```|$)\n?")
+STRIP = re.compile(r"\n?(```|:::)[\s\S]*?(?:\1|$)\n?")
 
 
 def strip(text):
-    """a history turn without its fig fence (the chat sends the box text back)"""
+    """a history turn without its fig fence, ``` or ::: (the chat sends the box text back)"""
     return STRIP.sub("\n", text).strip()
 
 
@@ -305,12 +351,40 @@ def weave(system):
     return "\n".join(out)
 
 
+EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kinds this question allows
+    "scene": '{"type":"graph","kind":"scene","alt":"Forces on the block on the ramp.","marks":[{"mark":"incline","at":[-2,0],"base":4,"angle":30},{"mark":"body","at":[0,1.2],"shape":"box","w":0.8,"h":0.5,"angle":30},{"mark":"force","at":[0,1.2],"angle":270,"len":1.4,"label":"$mg$"},{"mark":"force","at":[0,1.2],"angle":120,"len":1.2,"label":"$F_N$"}]}',
+    "cartesian": '{"type":"graph","kind":"cartesian","alt":"The line y = 2x + 1.","x":{"min":0,"max":4,"label":"$x$"},"y":{"min":0,"max":10,"label":"$y$"},"marks":[{"mark":"fn","y":"2*x+1"}]}',
+    "bars": '{"type":"graph","kind":"bars","alt":"Energy before and after.","unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]},{"label":"after","bars":[{"label":"$U$","value":8}]}]}',
+    "network": '{"type":"graph","kind":"network","alt":"Only the odd cycle A, B, C, not the whole graph.","nodes":["A","B","C"],"edges":[{"from":"A","to":"B"},{"from":"B","to":"C"},{"from":"C","to":"A"}]}',
+}
+
+
+def rule(ctx):
+    """RULE for this question: the kinds it allows, one tiny example each, and (network) the vertex labels it may use"""
+    ks = [k for k in ("scene", "cartesian", "bars", "network") if k in ctx.kinds]
+    out = RULE + "\nTHIS question allows ONLY these kinds: " + ", ".join(ks) + ". Any other kind is dropped. One tiny valid example each:"
+    out += "".join(f"\n- {k}: {EXAMPLE[k]}" for k in ks)
+    if "scene" in ks:
+        out += "\nA scene is the forces on a body: at least one force arrow drawn at the body's own point."
+    if "network" in ks:
+        out += "\nNetwork nodes are the question's own vertex labels" + (" (" + ", ".join(sorted(ctx.verts)) + ")" if ctx.verts else "") + ", never new names."
+        if len(ctx.verts) > MAX_LIVE_NODES:
+            out += f" Pick the few vertices that matter (an odd cycle, a path), at most {MAX_LIVE_NODES}."
+    return out
+
+
 RULE = """
-FIGURE (the one exception to "no code" in Format: this fence is allowed): most replies carry ONE figure (never two) whenever a picture helps: a free-body diagram, a graph, energy bars, a network, an orbit. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON.
+FIGURE (the one exception to "no code" in Format: this fence is allowed): draw ONE figure (never two) in every reply unless the reply is pure arithmetic with nothing to picture. Read the intent and match the kind to the subject:
+- graphs and trees (MST, Kruskal, Prim, shortest path, Dijkstra, coloring, BFS/DFS): "network"; draw only the part that proves the idea: the odd cycle, the path, the cut, the edge that changes things. At most 6 nodes. The question's own graph is already on screen; never redraw it. Weighted edges get "w"; the edges chosen get "color":"c1" and "label" "1", "2", ... in the order chosen; a coloring colors the nodes.
+- forces, free-body, incline, spring, pulley: "scene" with the body and every force arrow.
+- motion over time, F-x, PV, work as an area: "cartesian", the area shaded.
+- energy before/after, an energy split: "bars".
+- orbits: "scene": a disk for the planet, a dot for the satellite, an arc for the orbit, the force arrow toward the center, radii as seg.
+Physics never uses "network"; a graph-theory question always does. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON. The line right before the fence names what is drawn ("Forces on the block:", "The graph on A to D:").
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
 - "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}.
 - "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text.
 - "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
-- "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b"}].
+- "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 6 nodes: the key subgraph).
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.
 The figure shows the SETUP: the objects, the forces or the given values, and the steps' inputs. Numbers in labels, text, values and expressions: copy them exactly as the QUESTION or the KEY writes them, never round or compute a new one; when unsure, use a symbol ("$mg$", "$d$") instead. Never the answer or the unknown's value, not even in another unit: label the unknown with its symbol and "?" ("$k = ?$")."""

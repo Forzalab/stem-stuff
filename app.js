@@ -330,9 +330,10 @@ function sugFit() {
   if (sugEl.hidden || !vv || !dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
   const e = $("#entry").getBoundingClientRect(), gap = 16;
   const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
-  const top = Math.max(vv.offsetTop, above ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
-  const room = above ? e.top - top - gap : vv.offsetTop + vv.height - e.bottom - gap;
-  const cap = Math.floor(vv.height * (above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it
+  const coding = root.classList.contains("coding");   // search mode hides the top bar + HUD: the list may rise to the top of the visual viewport
+  const top = Math.max(vv.offsetTop, above && !coding ? ($(".top")?.getBoundingClientRect().bottom || 0) : 0);
+  const room = above ? e.top - top - (coding ? 8 : gap) : vv.offsetTop + vv.height - e.bottom - gap;
+  const cap = Math.floor(vv.height * (coding ? 1 : above ? 0.5 : 0.6));    // never more than about half the visible area: the question stays in sight above it (search mode hides it, so the list takes all the room)
   root.style.setProperty("--sug-max", Math.max(96, Math.min(cap, Math.floor(room))) + "px");
 }
 if (window.visualViewport) for (const ev of ["resize", "scroll"]) window.visualViewport.addEventListener(ev, () => sugFit());
@@ -363,7 +364,23 @@ codeIn.addEventListener("keydown", e => {
 });
 sugEl.addEventListener("pointerdown", e => e.preventDefault());   // keep the focus (and the phone keyboard) in the box
 sugEl.addEventListener("click", e => { const li = e.target.closest("li[data-code]"); if (li) sugPick(li.dataset.code); });
-codeIn.addEventListener("blur", () => sugHide());
+codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
+/* search mode (phones; Tony, Oct 17): while the code field has focus the page behind it (question, choices, pad, FAB) is visibility:hidden
+   (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
+let codingY = null;
+function codingOn() {
+  if (!dockMQ.matches || sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
+  if (root.classList.contains("ql-open")) return;   // the question list is open: it stays up with the keyboard (it hid #qlist; nav.js fit sizes it to the visual viewport)
+  codingY = scrollY; root.classList.add("coding"); sugFit();
+}
+function codingOff() {
+  if (!root.classList.contains("coding")) return;
+  root.classList.remove("coding");
+  if (codingY !== null && Math.abs(scrollY - codingY) > 1) scrollTo(0, codingY);
+  codingY = null;
+}
+codeIn.addEventListener("focus", codingOn);
+addEventListener("resize", () => { if (!dockMQ.matches || sideMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -1248,7 +1265,7 @@ function reveal(r, part) {
 /* the duck chip (sugar, questions with Cluck's key only): right = "Compare with Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
-  if (!wish || wish.code !== S.code) wish = Object.assign(newWish(), { started: false });
+  if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
   wishPaint();
 }
@@ -1311,6 +1328,22 @@ const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
 let wish = null;   // { code, text, started, done, open, failed, ctl }
+/* the reply cache (Tony, Oct 18): the finished /explain text, in this browser only (localStorage "stem-cluck"): key = code | sorted picks | build
+   (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
+   text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
+const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
+const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
+const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
+function ckPut(key, text) {
+  try { localStorage.setItem(CK, JSON.stringify(Object.fromEntries([...ckAll().filter(([k]) => k !== key), [key, { text, t: Date.now() }]].slice(-CK_MAX)))); } catch { /* blocked or full */ }
+}
+function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
+  const text = S && S.code === w.code ? ckGet(ckKey(w.code, S.tries.at(-1))) : "";
+  if (!text) return false;
+  Object.assign(w, { text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  return true;
+}
 function wishEl() {
   let el = $("#wish");
   if (!el) { el = document.createElement("div"); el.id = "wish"; el.className = "wish"; el.hidden = true; $("#fb").after(el); }
@@ -1331,13 +1364,14 @@ function wishOnWrong() {
   wish = newWish();
   const w = wish;
   const auto = () => { if (sideMQ.matches && !w.open) clOpen("explain", "#wish .wchip", true); };   // desktop: the sheet turns to Cluck's text by itself (Tony, Oct 5)
-  if (wishLog().length >= WISH_AUTO) w.started = false;                   // past the cap: "Ask Cluck" does it (no auto-open)
+  if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
+  if (painting || wishLog().length >= WISH_AUTO) w.started = false;       // a restore, or past the cap: the "Explain my mistake" chip does it (no auto call, no auto-open)
   wishPaint();
   if (w.started) { wishStart(true); auto(); }
 }
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
-  const w = wish, t = S.tries.at(-1) || {};
+  const w = wish, t = S.tries.at(-1) || {}, key = ckKey(w.code, t);
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
@@ -1357,6 +1391,7 @@ async function wishStart(auto) {
     }
   } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
   w.done = true;
+  if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
   if (wish !== w) return;
   if (w.failed === 429) { w.started = false; w.failed = 0; w.capped = true; }   // the server's cap: the student can still ask
@@ -1430,6 +1465,11 @@ function wishHTML(t) {
    no typing (the wait stays). */
 const WISH_DOTS = 900, WISH_CPS = 35;
 const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
+/* the wait (Tony, Oct 18): a wish now waits for a draft AND its rewrite (serve.py EDITOR), so until the first chunk Cluck says what he's up
+   to, one line every WISH_SWAP ms from a random start, the caret after it; each line fades in (reduced motion: swaps, no fade). The lines are
+   aria-hidden: the screen reader hears "Cluck is thinking." once. */
+const WISH_LINES = ["Making a duck omelette…", "Ducking in the pond…", "Fluffing feathers…", "Counting breadcrumbs…", "Quacking the numbers…", "Polishing the lamp…"];
+const WISH_SWAP = 1600;
 function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
   while (n < t.length && /\S/.test(t[n])) n++;
@@ -1475,7 +1515,15 @@ function wishFrame(now) {
     }
     x.classList.remove("wrun"); return;
   }
-  if (now < w.at || !t) { if (w.drawn !== -1) { x.innerHTML = WCARET; w.drawn = -1; } w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
+  if (now < w.at || !t) {
+    w.l0 ??= Math.random() * WISH_LINES.length | 0; w.w0 ??= now;
+    const k = t ? -1 : (w.l0 + ((now - w.w0) / WISH_SWAP | 0)) % WISH_LINES.length;   // first chunk in: the line goes, the caret stays
+    if (w.drawn !== -1 || w.line !== k) {
+      x.innerHTML = k < 0 ? WCARET : `<span class="wload" aria-hidden="true">${WISH_LINES[k]}</span>${WCARET}`;
+      if (k >= 0 && !w.thought) { w.thought = true; say("Cluck is thinking."); }
+      w.drawn = -1; w.line = k;
+    }
+    w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
   w.pos = w.skip || reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
@@ -1540,7 +1588,8 @@ function wishPaint() {
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
   btn?.addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
-    if (!w.started || w.failed) wishRetry(w);
+    if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
+    else if (!w.started || w.failed) wishRetry(w);
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
@@ -1718,7 +1767,7 @@ function clTab(tab, focus) {
   cl.el.querySelector(".cl-ft").hidden = !has.explain;
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
-  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: typed again from the top
+  if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again
   if (w && !w.open && was) w.tick = 0;
   if (S && S.orig) {
     S.orig.open = cl.open && has.steps && cl.fold;
