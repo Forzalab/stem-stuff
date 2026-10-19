@@ -777,7 +777,7 @@ def answer_of(u):
 
 def grade(p, sid, body, reveal=False):
     """body: {choice} (mc) | {choices: [ids]} (mc pick all) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
-    Reply {verdict, triesLeft, gen, error?, hint?, repeat?} (+ part: i for a multi). The answer is never in the reply, except
+    Reply {verdict, triesLeft, gen, error?, hint?, repeat?, families? (correct only: the item's distractor error families, sorted, no choice map; J6 trap_beaten)} (+ part: i for a multi). The answer is never in the reply, except
     (T19, Tony Oct 12) `correct` on the reply that shuts the question out of tries, and on a later "locked" one: reveal=True,
     which dispatch() sets in sugar mode only. Diet (the default calm mode) never gets it."""
     multi = p["type"] == "multi"
@@ -867,7 +867,8 @@ def _grade(p, st, body, multi, idx, reveal=False):
             hit = unit_hit(u, text, sig)
     if correct:
         st["done"] = True
-        return reply({"verdict": "correct", "triesLeft": left()})
+        fams = sorted({w["error"] for w in (p["parts"][idx] if multi else p).get("wrong", []) if isinstance(w.get("error"), str)})
+        return reply({"verdict": "correct", "triesLeft": left(), "families": fams})   # J6 trap_beaten: the item's distractor families, sent only once it is right (no choice -> family map)
     tol = (p["parts"][idx] if multi else p).get("tol", 1e-6)
     repeat = any(same(sig, x, tol) for x in st["wrong"])
     if not repeat:
