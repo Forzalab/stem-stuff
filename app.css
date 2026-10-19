@@ -678,7 +678,7 @@ html.side #work > .orig { margin: 0; }
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
-.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
+.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249) */
 .fcard .f .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
