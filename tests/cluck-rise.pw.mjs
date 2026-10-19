@@ -157,6 +157,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
     assert.equal(asked, i + 1, `${code}: exactly one prefetch`);
     assert.equal(await cluckOpen(page), false, `${code}: Cluck stays closed`);
   }
+  await page.clock.runFor(121000);                                       // past peek.js COOL (2 min between rises): Q1 / Q2 may have risen already, then Q3 fell inside the cooldown and stayed down (red on main too, ~1 in 3)
   await go(page, order[2]);
   await pick(page, "b");
   await page.clock.runFor(1500);
@@ -164,6 +165,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.waitForTimeout(800);
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
+  await page.waitForFunction(() => window.stemDuck.up, null, { timeout: 4000 }).catch(() => {});   // the verdict can land after runFor: the 0.7 s rise timer then runs on the flowing clock
   assert.equal(await up(page), true, "Q3: the duck rises");
   await page.click(".ck-peek");                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
   await page.clock.runFor(300);
