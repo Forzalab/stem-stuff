@@ -39,7 +39,7 @@
   /* J6 seen constants, all "ours" (J3 bench start values) */
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
   var RING_CAP = 2000, TITLE_WORDS = 8;
-  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
+  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
   function share(k, n) { n = n || NUDGE.STATES.length; return k <= 1 ? 1 : 1 - (1 - NUDGE.SHARE_ALL) * (k - 1) / (n - 1); }
@@ -101,7 +101,7 @@
     var counts = { F: 0, S2: 0, S5: 0, S6: 0, S7: 0, Q: 0 };
     var on = (o.on || NUDGE.STATES).filter(function (s) { return NUDGE.STATES.indexOf(s) >= 0; });
     var pk = chance(on.length), rand = o.rand || Math.random, pool = o.lines || {}, quits = o.quits || {};
-    var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false };
+    var nz = { n: 0, at: -Infinity, gap: NUDGE.GAP_S, dismissed: 0, taps: 0, last: null, prev: {}, up: false, awayAt: -Infinity };
     var sz = { n: 0, used: {}, last: null }, ring = [], sid = o.sid || "s", itemNo = 0, aw = null;   // aw: the away episode { at, via }
     var fams = {}, recs = [];                                           // J6 tree, this session: families wrong on earlier items · [{ ok: first-try right, gap }] per item
     function sec(t) { return (t - q.open) / 1000; }
@@ -168,6 +168,10 @@
       if (name === "cluck_open") {
         if (p.auto) return;                                              // the desktop opens it by itself: not a help request
         q.help = true; q.ok = false;
+        if (nz.up) nudgeEnd(true);                                       // Cluck opened with the nudge still up: it worked
+        else if ((t - nz.awayAt) / 1000 < NUDGE.TAKE_S) {                // the tap that opened Cluck put the nudge away first (Tony's dump, Oct 19): taken, not a dismiss
+          nz.awayAt = -Infinity; nz.gap /= 2; nz.dismissed--; nz.taps++; log("jev", "nudge took cluck gap=" + nz.gap + "s");
+        }
         log("cluck", "open " + (p.tab || ""));
         if (sec(t) < HELP_S) hit("S7", "cluck at " + sec(t).toFixed(1) + "s");
         return;
@@ -265,7 +269,7 @@
       if (!nz.up) return;
       nz.up = false;
       if (tapped) { nz.taps++; log("jev", "nudge tap"); }
-      else { nz.dismissed++; nz.gap *= 2; log("jev", "nudge away gap=" + nz.gap + "s"); }
+      else { nz.dismissed++; nz.gap *= 2; nz.awayAt = now(); log("jev", "nudge away gap=" + nz.gap + "s"); }   // undone if Cluck opens within TAKE_S (cluck_open)
     }
     /* ---- J6: the seen fire path. Consumes tree's candidates; never looks at the rule's internals ---- */
     function words(x) { return x.split(/\s+/).filter(Boolean).length; }
