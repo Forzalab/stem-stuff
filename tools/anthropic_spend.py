@@ -15,7 +15,7 @@ PREPAID_CENTS - cents_since.
 env: ANTHROPIC_ADMIN_KEY, KV_REST_API_URL, KV_REST_API_TOKEN, SPEND_SINCE (optional; default = start of this month)
 usage: tools/anthropic_spend.py [--dry-run] [--since YYYY-MM-DD]
   --dry-run  print the JSON instead of writing KV (KV vars not needed)
-Exit 0 = good value written (or printed); 1 = failed (err key written when KV is configured); 2 = bad config.
+Exit 0 = good value written (or printed), or secrets not set yet (::notice::, nothing written); 1 = failed (err key written when KV is configured); 2 = bad config.
 Stdlib only. Never prints the key or the KV token.
 """
 import argparse
@@ -142,6 +142,10 @@ def main(argv=None, env=None, now=None):
 
     admin_key = env.get("ANTHROPIC_ADMIN_KEY", "")
     kv_url, kv_token = env.get("KV_REST_API_URL", ""), env.get("KV_REST_API_TOKEN", "")
+    if not admin_key or (not a.dry_run and not (kv_url and kv_token)):
+        # Not set up yet (Tony adds the secrets once): skip green instead of failing red every hour. Writes nothing.
+        print("::notice::spend: secrets not set, skipping")
+        return 0
     since_s = (a.since or env.get("SPEND_SINCE") or "").strip()
     try:
         since = dt.date.fromisoformat(since_s) if since_s else now.date().replace(day=1)
@@ -150,12 +154,6 @@ def main(argv=None, env=None, now=None):
         return 2
     if since > now.date():
         print("spend: SPEND_SINCE is in the future", file=sys.stderr)
-        return 2
-    if not admin_key:
-        print("spend: ANTHROPIC_ADMIN_KEY is not set", file=sys.stderr)
-        return 2
-    if not a.dry_run and not (kv_url and kv_token):
-        print("spend: KV_REST_API_URL / KV_REST_API_TOKEN not set (use --dry-run to print only)", file=sys.stderr)
         return 2
 
     try:

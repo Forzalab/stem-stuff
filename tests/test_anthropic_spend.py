@@ -156,8 +156,20 @@ class WriteAndFailure(Base):
 
     def test_bad_config(self):
         self.assertEqual(self.run_main(Stub(), ["--dry-run"], {**ENV, "SPEND_SINCE": "19/10/2026"})[0], 2)
-        self.assertEqual(self.run_main(Stub(), [], {**ENV, "KV_REST_API_URL": ""})[0], 2)
-        self.assertEqual(self.run_main(Stub(), ["--dry-run"], {**ENV, "ANTHROPIC_ADMIN_KEY": ""})[0], 2)
+        self.assertEqual(self.run_main(Stub(), ["--dry-run"], {**ENV, "SPEND_SINCE": "2099-01-01"})[0], 2)
+
+    def test_secrets_not_set_skips_green(self):
+        for missing in ("ANTHROPIC_ADMIN_KEY", "KV_REST_API_URL", "KV_REST_API_TOKEN"):
+            stub = Stub(kv={s.KEY: "last-good"})
+            code, out, err = self.run_main(stub, [], {**ENV, missing: ""})
+            self.assertEqual(code, 0, missing)
+            self.assertEqual(out.strip(), "::notice::spend: secrets not set, skipping")
+            self.assertEqual(stub.calls, [], missing)                 # no API call, no KV write
+            self.assertEqual(stub.kv, {s.KEY: "last-good"})
+        env = dict(ENV)
+        del env["ANTHROPIC_ADMIN_KEY"]                                 # absent, not just empty; dry-run too
+        code, out, _ = self.run_main(Stub(), ["--dry-run"], env)
+        self.assertEqual((code, out.strip()), (0, "::notice::spend: secrets not set, skipping"))
 
 
 class NoSecrets(Base):
