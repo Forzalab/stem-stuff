@@ -1,0 +1,110 @@
+{
+  "version": "0.1.0",
+  "gate": [
+    {
+      "id": "parse",
+      "desc": "statement parses as OpenUI Lang (profile stem: no Mutation, no Action, no timers)"
+    },
+    {
+      "id": "schema",
+      "desc": "component exists in this library; args match its props"
+    },
+    {
+      "id": "query",
+      "desc": "Query tool exists in the engine list; runs SERVER side; the browser gets results only"
+    },
+    {
+      "id": "checker",
+      "desc": "domain component: its checker re-runs the engine and compares"
+    },
+    {
+      "id": "leak",
+      "desc": "no key ref and no literal equal to a hidden value outside post"
+    },
+    {
+      "id": "stage",
+      "desc": "recipe allows this stage; refs allowed in this stage"
+    }
+  ],
+  "components": [
+    {
+      "component": "Math",
+      "checker": "symbolic.simplify",
+      "ships": "P0.3"
+    },
+    {
+      "component": "Predict",
+      "checker": "ref",
+      "ships": "P0"
+    },
+    {
+      "component": "MatchQuiz",
+      "checker": "text.term_cards",
+      "ships": "planned"
+    },
+    {
+      "component": "ITable",
+      "checker": "logic.truth_table",
+      "ships": "planned"
+    },
+    {
+      "component": "Graph",
+      "checker": "graph.trace",
+      "ships": "P0.3"
+    },
+    {
+      "component": "Walk",
+      "checker": "graph.trace",
+      "ships": "P0.3"
+    },
+    {
+      "component": "FlowNet",
+      "checker": "graph.maxflow",
+      "ships": "P0.3"
+    },
+    {
+      "component": "Plot",
+      "checker": "numeric.sample",
+      "ships": "planned"
+    },
+    {
+      "component": "Riemann",
+      "checker": "numeric.riemann",
+      "ships": "planned"
+    },
+    {
+      "component": "FBD",
+      "checker": "vectors.resolve",
+      "ships": "planned"
+    },
+    {
+      "component": "Triangle",
+      "checker": "vectors.triangle",
+      "ships": "planned"
+    },
+    {
+      "component": "Timeline",
+      "checker": "sequence.timeline",
+      "ships": "planned"
+    }
+  ],
+  "refs": {
+    "given": [
+      "pre",
+      "wrong",
+      "post"
+    ],
+    "fig": [
+      "pre",
+      "wrong",
+      "post"
+    ],
+    "wrong": [
+      "wrong",
+      "post"
+    ],
+    "key": [
+      "post"
+    ]
+  }
+}

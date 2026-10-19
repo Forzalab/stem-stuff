@@ -1,0 +1,664 @@
+{
+  "version": "0.1.0",
+  "profile": "stem",
+  "root": "View",
+  "components": {
+    "View": {
+      "description": "root container",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Stack": {
+      "description": "children in a row or column",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          },
+          "dir": {
+            "type": "string",
+            "enum": [
+              "col",
+              "row"
+            ]
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Grid": {
+      "description": "small multiples, equal cells",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          },
+          "cols": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Card": {
+      "description": "boxed group with an optional tag line",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Text": {
+      "description": "short text; inline $math$ allowed",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    "Math": {
+      "description": "display TeX; an identity it states is re-checked",
+      "layer": "L0",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "tex": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tex"
+        ]
+      }
+    },
+    "Table": {
+      "description": "header row + body rows; cells may be refs",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "head": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array"
+            }
+          }
+        },
+        "required": [
+          "head",
+          "rows"
+        ]
+      }
+    },
+    "Chips": {
+      "description": "row of small chips (givens, tags)",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    },
+    "Image": {
+      "description": "bank image by ref, with alt text",
+      "layer": "L0",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "x-stem": "ref"
+          },
+          "alt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "src",
+          "alt"
+        ]
+      }
+    },
+    "Given": {
+      "description": "one given value chip, bound to a given.* ref",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "x-stem": "ref"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref"
+        ]
+      }
+    },
+    "Steps": {
+      "description": "ordered steps, one at a time (reveal) or as tabs",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "reveal",
+              "tabs"
+            ]
+          }
+        },
+        "required": [
+          "steps"
+        ]
+      }
+    },
+    "Step": {
+      "description": "one step of Steps",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "children"
+        ]
+      }
+    },
+    "Compare": {
+      "description": "side by side; sync=true steps both together",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          },
+          "sync": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Callout": {
+      "description": "highlighted box, e.g. tag \"Where it breaks\"",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "tag",
+          "children"
+        ]
+      }
+    },
+    "Reveal": {
+      "description": "hidden until tapped or until a Predict is submitted",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "children": {
+            "type": "array"
+          },
+          "when": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "predicted"
+            ]
+          }
+        },
+        "required": [
+          "children"
+        ]
+      }
+    },
+    "Predict": {
+      "description": "student types a guess; marks it right or wrong against answer",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "x-stem": "ref"
+          },
+          "tol": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "question",
+          "answer"
+        ]
+      }
+    },
+    "Slider": {
+      "description": "binds a $state variable",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "x-stem": "state"
+          },
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "step": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "min",
+          "max"
+        ]
+      }
+    },
+    "Choice": {
+      "description": "one question with 2-3 options (low-confidence intent)",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "question",
+          "options"
+        ]
+      }
+    },
+    "Assume": {
+      "description": "\"I read this as X\" chip; tap sends a refine request",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "alts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    "MatchQuiz": {
+      "description": "match terms to definitions",
+      "layer": "L1",
+      "kind": "interaction",
+      "props": {
+        "type": "object",
+        "properties": {
+          "pairs": {
+            "x-stem": "ref"
+          }
+        },
+        "required": [
+          "pairs"
+        ]
+      }
+    },
+    "Axes": {
+      "description": "concept axes, each Axis a spectrum",
+      "layer": "L1",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "axes": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "axes"
+        ]
+      }
+    },
+    "Axis": {
+      "description": "one axis of Axes",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "left": {
+            "type": "string"
+          },
+          "right": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "left",
+          "right"
+        ]
+      }
+    },
+    "ITable": {
+      "description": "interactive table (kmap, truth, matrix, dp)",
+      "layer": "L1",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "kmap",
+              "truth",
+              "matrix",
+              "dp"
+            ]
+          },
+          "spec": {
+            "x-stem": "ref"
+          }
+        },
+        "required": [
+          "kind",
+          "spec"
+        ]
+      }
+    },
+    "Graph": {
+      "description": "draws a bank graph block (fig ref) or one stage of a trace",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "fig": {
+            "x-stem": "ref"
+          },
+          "stage": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fig"
+        ]
+      }
+    },
+    "Walk": {
+      "description": "algorithm stepper: stages, frontier, distances from a trace",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "trace": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "trace"
+        ]
+      }
+    },
+    "FlowNet": {
+      "description": "flow network with flows and the min cut",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "flow": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "flow"
+        ]
+      }
+    },
+    "Plot": {
+      "description": "function plot from sampled points",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    },
+    "Riemann": {
+      "description": "Riemann rectangles + sum",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    },
+    "FBD": {
+      "description": "free-body diagram; magnitudes from the engine",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    },
+    "Triangle": {
+      "description": "solved triangle (sides, angles)",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    },
+    "Timeline": {
+      "description": "ordered events on a line (history or motion)",
+      "layer": "L2",
+      "kind": "domain",
+      "props": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "x-stem": "query"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    }
+  },
+  "componentGroups": [
+    {
+      "name": "L0",
+      "notes": "primitives (escape hatch): build anything when no learning component fits",
+      "components": [
+        "View",
+        "Stack",
+        "Grid",
+        "Card",
+        "Text",
+        "Math",
+        "Table",
+        "Chips",
+        "Image"
+      ]
+    },
+    {
+      "name": "L1",
+      "notes": "learning components: subject-blind, know data shapes only",
+      "components": [
+        "Given",
+        "Steps",
+        "Step",
+        "Compare",
+        "Callout",
+        "Reveal",
+        "Predict",
+        "Slider",
+        "Choice",
+        "Assume",
+        "MatchQuiz",
+        "Axes",
+        "Axis",
+        "ITable"
+      ]
+    },
+    {
+      "name": "L2",
+      "notes": "renderers of engine data: every value comes from a Query result or a bank ref",
+      "components": [
+        "Graph",
+        "Walk",
+        "FlowNet",
+        "Plot",
+        "Riemann",
+        "FBD",
+        "Triangle",
+        "Timeline"
+      ]
+    }
+  ]
+}
