@@ -805,7 +805,8 @@ def grade(p, sid, body, reveal=False):
 
 
 def _grade(p, st, body, multi, idx, reveal=False):
-    """One try on entry st (the caller holds _tries_lock). reveal: add `correct` once the unit is shut out of tries (T19, sugar)."""
+    """One try on entry st (the caller holds _tries_lock). reveal: add `correct` once the unit is shut out of tries (T19, sugar),
+    and on a pick-all miss whose ticks are all right, `kept` = those ticked ids (sugar kept rows, app.js keep())."""
 
     def left():
         return max_tries(p) - len(st["wrong"])
@@ -836,6 +837,8 @@ def _grade(p, st, body, multi, idx, reveal=False):
             hit = next((dict(hint_of[c["id"]], struck=c["id"]) for c in sh
                         if c["id"] in ids and c["id"] not in rights(p) and c["id"] in hint_of), None)
             hit = hit or {"error": "incomplete", "hint": p["miss"]}
+            if reveal and ids and set(ids) <= rights(p):         # sugar kept rows: every tick is right (from the key, never the reply shape), so
+                hit["kept"] = sorted(ids)                        # the ticked ids travel back; never an unticked one, never with a false tick
             if "fix" in p:
                 sig = (sig, *(squash(fixes[i])[:200] for i in xs))
         elif "fix" in p:                                         # right set: now every fix must be right too
@@ -877,7 +880,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
         st["wrong"].append(sig)
     out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
     if hit:
-        out.update({k: hit[k] for k in ("error", "struck", "fixWrong") if k in hit})
+        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept") if k in hit})
     if repeat:
         out["repeat"] = True
     return reply(shut(out) if left() <= 0 else out)

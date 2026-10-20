@@ -93,7 +93,8 @@ plus an `if pick=all then correct is array and miss is required` rule. The key f
   - the **ticks stay** (the student edits the set rather than starting over);
   - the struck row is unticked + disabled;
   - Cluck's hint appears under the problem as today;
-  - with a `miss` hint nothing is struck, and the ticks stay.
+  - with a `miss` hint nothing is struck, and the ticks stay;
+  - sugar only (Tony, Oct 20, look B): when every tick is right (the server checks the key and replies `kept: [ticked ids]`, never an unticked id), those rows turn green and stay ticked (`.kept`, `aria-disabled`; a tap toasts "Option already marked correct, cannot change!" once per question). Unticked right rows stay plain, no count. Off: `?keep=0`.
 - Correct: the existing celebration + explain box (`design/EXPLAIN-BOX.md`).
 - The copy payload (`copy/`) records the ticked ids + letters per try.
 

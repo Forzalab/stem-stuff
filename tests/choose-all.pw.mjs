@@ -197,6 +197,95 @@ try {
     });
     await c2.close();
   }
+  /* sugar kept rows (look B, Tony Oct 20): a miss whose ticks are all right keeps those rows green and fixed; unticked right rows stay
+     plain; a tap toasts once; arrows skip them; a reload keeps them. Diet, a struck try and ?keep=0 never keep. A7K: a, c are right */
+  const replies = page => { const log = []; page.on("response", async r => { if (/\/check$/.test(r.url())) log.push(await r.json().catch(() => null)); }); return log; };
+  const look = (page, id) => page.$eval(`#q .opt[data-id="${id}"]`, o => { const c = getComputedStyle(o), b = getComputedStyle(o.querySelector(".badge")), lt = getComputedStyle(o.querySelector(".lt"));
+    return { kept: o.classList.contains("kept"), on: o.getAttribute("aria-checked"), ad: o.getAttribute("aria-disabled"), dis: o.disabled, ring: c.borderTopColor, bw: c.borderTopWidth,
+      bg: c.backgroundColor, ink: c.color, lt: lt.color, badge: b.borderTopColor, badgeBg: b.backgroundColor, ok: !!o.querySelector('.badge use[href="#i-ok"]'), label: o.getAttribute("aria-label") }; });
+  const tok = (page, n) => page.evaluate(n => { const d = document.createElement("i"); d.style.color = `var(${n})`; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; }, n);
+  const toastOn = page => page.evaluate(() => document.querySelector("#toast.on")?.textContent || "");
+  for (const [name, viewport, touch] of [["phone", { width: 390, height: 844 }, true], ["desktop", { width: 1280, height: 900 }, false]]) {
+    const ctx = await newCtx({ viewport, hasTouch: touch, serviceWorkers: "block" }), page = await ctx.newPage(), log = replies(page);
+    const tap = (l, o) => touch ? l.tap(o) : l.click(o);
+    await page.goto(`${BASE}/#${CODE}`); await opened(page, CODE);
+    await step(`${name} sugar: a miss keeps only the ticked right row; the unticked right row stays plain`, async () => {
+      const plain = await look(page, "a");
+      await tap(row(page, "c")); await check(page);
+      assert.deepEqual(log.at(-1).kept, ["c"], "the server sends the ticked right ids only");
+      const c = await look(page, "c"), a = await look(page, "a"), [green, fill, on] = await Promise.all(["--correct", "--correct-fill", "--correct-on"].map(n => tok(page, n)));
+      assert.deepEqual([c.kept, c.on, c.ad, c.dis, c.ok], [true, "true", "true", false, true]);
+      assert.deepEqual([c.ring, c.bw, c.bg, c.ink, c.lt, c.badge], [green, "2px", fill, on, green, green]);
+      assert.equal(c.badgeBg, "rgba(0, 0, 0, 0)", "no blue fill in the square");
+      assert.match(c.label, /, right, kept$/);
+      assert.deepEqual(a, plain, "the unticked right row looks like any empty row");
+      assert.doesNotMatch((await st(page)).fb, /\d\s*(of|\/)\s*\d/, "never a count");
+    });
+    await step(`${name} sugar: tapping a kept row changes nothing and toasts once`, async () => {
+      await tap(row(page, "c"), { force: true });
+      assert.equal(await toastOn(page), "Option already marked correct, cannot change!");
+      assert.equal((await look(page, "c")).on, "true");
+      await page.evaluate(() => document.querySelector("#toast").classList.remove("on"));
+      await tap(row(page, "c"), { force: true });
+      assert.equal(await toastOn(page), "", "once per question");
+      await row(page, "c").focus(); await page.keyboard.press(" ");
+      assert.deepEqual((await st(page)).on, ["c"], "Space on a kept row: no change");
+    });
+    await step(`${name} sugar: arrows skip the kept row`, async () => {
+      const ids = await page.$$eval("#q .opt", os => os.map(o => o.dataset.id)), live = ids.filter(x => x !== "c");
+      await row(page, live[0]).focus();
+      for (let i = 1; i < live.length; i++) { await page.keyboard.press("ArrowDown"); assert.equal((await st(page)).focus, live[i]); }
+      await page.keyboard.press("ArrowDown"); assert.equal((await st(page)).focus, live[0], "wraps, never lands on c");
+    });
+    await step(`${name} sugar: a reload keeps the row; the right set then turns it right`, async () => {
+      await page.reload(); await opened(page, CODE); await page.waitForTimeout(300);
+      const c = await look(page, "c"); assert.deepEqual([c.kept, c.on, c.ad], [true, "true", "true"]);
+      assert.equal((await look(page, "a")).kept, false);
+      await tap(row(page, "a")); await check(page);
+      const s = await st(page); assert.deepEqual(s.right, ["a", "c"]); assert.equal(s.finished, true);
+      assert.equal(await page.locator("#q .opt.kept").count(), 0, "kept turns right in place");
+    });
+    await ctx.close();
+
+    const c2 = await newCtx({ viewport, hasTouch: touch, serviceWorkers: "block" }), p2 = await c2.newPage(), l2 = replies(p2);
+    await step(`${name} sugar: a struck try keeps nothing (its other ticks are not proven right)`, async () => {
+      await p2.goto(`${BASE}/#${CODE}`); await opened(p2, CODE);
+      await (touch ? row(p2, "c").tap() : row(p2, "c").click()); await (touch ? row(p2, "b").tap() : row(p2, "b").click()); await check(p2);
+      assert.equal(l2.at(-1).struck, "b"); assert.equal(l2.at(-1).kept, undefined);
+      assert.equal(await p2.locator("#q .opt.kept").count(), 0); assert.deepEqual((await st(p2)).on, ["c"]);
+    });
+    await c2.close();
+
+    for (const [what, mk, url] of [["diet", browser.newContext, `${BASE}/#${CODE}`], ["?keep=0", newCtx, `${BASE}/?keep=0#${CODE}`]]) {
+      const c3 = await mk({ viewport, hasTouch: touch, serviceWorkers: "block" }), p3 = await c3.newPage(), l3 = replies(p3);
+      await step(`${name} ${what}: a miss keeps nothing; the tick stays a plain blue tick`, async () => {
+        await p3.goto(url); await opened(p3, CODE);
+        await (touch ? row(p3, "c").tap() : row(p3, "c").click()); await check(p3);
+        assert.equal(l3.at(-1).error, "incomplete");
+        if (what === "diet") assert.equal(l3.at(-1).kept, undefined, "diet: the server never sends kept");
+        const c = await look(p3, "c"); assert.deepEqual([c.kept, c.on, c.ad], [false, "true", null]);
+        await (touch ? row(p3, "c").tap() : row(p3, "c").click()); assert.equal((await look(p3, "c")).on, "false", "unticks as today");
+      });
+      await c3.close();
+    }
+  }
+  const c4 = await newCtx({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }), p4 = await c4.newPage();
+  await step("upload sugar: gradeLocal keeps the ticked right row the same way", async () => {
+    await p4.goto(BASE + "/");
+    const [fc] = await Promise.all([p4.waitForEvent("filechooser"), p4.click("#upload")]);
+    await fc.setFiles({ name: "all.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
+    await opened(p4, "CSCI26_U01");
+    await row(p4, "a").click(); await check(p4);
+    assert.deepEqual(await p4.$$eval("#q .opt.kept", os => os.map(o => o.dataset.id)), ["a"]);
+    assert.deepEqual(await p4.evaluate(() => window.__drill.state.tries.at(-1).k), ["a"]);
+    await row(p4, "a").click({ force: true }); assert.deepEqual((await st(p4)).on, ["a"]);
+    await row(p4, "b").click(); await check(p4);                 // out of tries: the T19 reveal. Kept = yours, solid; the missed c dashed
+    await p4.waitForSelector('#q .opt.right[data-id="c"]');
+    const cls = await p4.$$eval("#q .opt.right", os => Object.fromEntries(os.map(o => [o.dataset.id, o.classList.contains("reveal")])));
+    assert.deepEqual(cls, { a: false, c: true });
+    assert.equal(await p4.locator('#q .opt.kept[data-id="c"]').count(), 0, "the unticked right row never keeps");
+  });
+  await c4.close();
 } finally { await browser.close(); srv.kill(); }
 if (fails) { console.log(`${fails} failing`); process.exit(1); }
 console.log("all ok");

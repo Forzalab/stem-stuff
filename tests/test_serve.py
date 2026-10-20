@@ -94,7 +94,20 @@ class Grade(unittest.TestCase):
         self.assertEqual(pub["pick"], "all")
         self.assertFalse({"correct", "wrong", "miss"} & set(pub))
 
-    def test_three_sig_figs(self):                                              # Tony (Oct 3): right to 3 significant figures counts
+    def test_pick_all_kept(self):                                               # sugar kept rows: the ticked ids, only when every tick is right
+        p = {**BANK["CSCI26_A7K"], "code": "KEPT_T", "wrong": [w for w in BANK["CSCI26_A7K"]["wrong"] if w["choice"] != "d"]}   # d: false, no wrong hint
+        g = lambda sid, ids, rv=True: serve.grade(p, sid, {"choices": ids}, reveal=rv)
+        self.assertEqual(g("q1", ["c"])["kept"], ["c"])                          # a miss: the ticked right row, never the unticked a
+        self.assertNotIn("kept", g("q2", ["c"], rv=False))                      # diet: never
+        r = g("q3", ["a", "d"])                                                  # a hintless false tick: same reply shape as a miss, nothing kept
+        self.assertEqual((r["error"], "struck" in r, "kept" in r), ("incomplete", False, False))
+        self.assertNotIn("kept", g("q4", ["a", "b"]))                           # struck: its other ticks are not proven right
+        self.assertNotIn("kept", g("q5", []))                                    # nothing ticked
+        self.assertNotIn("kept", g("q6", ["a", "c"]))                            # right: correct, no kept
+        for ids in (["a"], ["c"], ["a", "d"], ["c", "b"]):
+            self.assertTrue(set(g("q7" + "".join(ids), ids).get("kept", [])) <= set(ids), ids)   # never an unticked id
+
+    def test_three_sig_figs(self):                                             # Tony (Oct 3): right to 3 significant figures counts
         u = {"type": "num", "answer": "9*sqrt(3)"}
         for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", False), ("15.65", False), ("dne", False)):
             self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)

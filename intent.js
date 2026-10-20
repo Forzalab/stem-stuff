@@ -16,7 +16,7 @@
      Q   (first item of this visit, no pick, no help, depth ≥ 1: the "refusal" shape, Botelho 2019) OR (left this item unsolved before on
          this device AND depth ≥ 2; Karumbaiah 2018). Past leaves live in localStorage stem-jev-q (code → count), nothing else
    J6 streak signals (log lines only, never sent): "away <s>s via=hide|blur" (back after >= 5 s), "copy stem" (a copy inside the question stem),
-   "xmark <choice>" (the student's own X in prove mode), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
+   "xmark <choice>" (the student's own X in prove mode), "kept n=<n>" / "kepttap <choice>" (sugar kept rows), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
    An open away episode (window blur or tab hide) pauses S2; back after >= 5 s = a fresh step (a shorter blur only paused).
    J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (peek.js
    stemDuck.say, the one seam) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
@@ -189,6 +189,8 @@
       if (name === "cluck_dwell") log("cluck", "close");
       if (name === "cluck_more") log("cluck", "more " + (p.act || "?"));    // the sheet's scroll-down hint: shown / tap / bottom (app.js clMore), log only
       if (name === "_xmark") log("xmark", p.choice == null ? "-" : String(p.choice));   // the student's own X (prove mode); never the auto strike
+      if (name === "_kept") log("kept", "n=" + (p.n | 0));              // sugar kept rows after a miss (app.js keep()); a count only, log only
+      if (name === "_kepttap") log("kepttap", p.choice == null ? "-" : String(p.choice));   // a tap on a kept row (only the first toasts)
       if (name === "_ob") log("ob", String(p.beat || "-") + " " + (p.n || 1));   // an onboarding note shown (app.js rwTip: right, three, miss, redo); log only
       if (name === "_copy") log("copy", "stem");                          // a copy inside the question stem (the wrapper checks where); never the text
     }
