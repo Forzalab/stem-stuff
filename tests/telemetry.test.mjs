@@ -116,6 +116,18 @@ test("optedOut", () => {
   assert.equal(T.optedOut({ doNotTrack: null, globalPrivacyControl: false }), false);
 });
 
+test("signals: names what optedOut acts on (privacy.html shows it), and the two always agree", () => {
+  const T = run().win.__stemTelemetry;
+  for (const [nav, win, want] of [[{ globalPrivacyControl: true }, {}, ["gpc"]], [{ doNotTrack: "1" }, {}, ["dnt"]], [{ doNotTrack: "yes" }, {}, ["dnt"]],
+    [{}, { doNotTrack: "1" }, ["dnt"]], [{ msDoNotTrack: "1" }, {}, ["dnt"]], [{ globalPrivacyControl: true, doNotTrack: "1" }, {}, ["gpc", "dnt"]], [{}, {}, []]]) {
+    assert.deepEqual([...T.signals(nav, win)], want, JSON.stringify([nav, win]));
+    assert.equal(T.optedOut(nav, win), want.length > 0, JSON.stringify([nav, win]));
+  }
+  const bad = { get globalPrivacyControl() { throw new Error("blocked"); } };
+  assert.throws(() => T.signals(bad, {}));
+  assert.equal(T.optedOut(bad, {}), true, "can't tell: stay off");
+});
+
 test("guess-spam: <2 s after open, or the 3rd pick inside 10 s", () => {
   const T = run().win.__stemTelemetry;
   assert.equal(T.spamCheck([], 0, 1500), "fast");

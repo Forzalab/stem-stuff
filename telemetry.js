@@ -15,10 +15,15 @@
   var now = function () { return W.performance && performance.now ? performance.now() : Date.now(); };
 
   /* ---- pure helpers (exported for tests/telemetry.test.mjs) ---- */
+  /* which privacy signals this browser sends: a subset of ["gpc", "dnt"] (privacy.html says it in one line). Throws if a getter does. */
+  function signals(nav, win) {
+    var s = [];
+    if (nav.globalPrivacyControl) s.push("gpc");
+    if (nav.doNotTrack === "1" || nav.doNotTrack === "yes" || (win && win.doNotTrack === "1") || nav.msDoNotTrack === "1") s.push("dnt");
+    return s;
+  }
   function optedOut(nav, win) {
-    try {
-      return nav.doNotTrack === "1" || nav.doNotTrack === "yes" || (win && win.doNotTrack === "1") || nav.msDoNotTrack === "1" || !!nav.globalPrivacyControl;
-    } catch (e) { return true; }   // can't tell: stay off
+    try { return signals(nav, win).length > 0; } catch (e) { return true; }   // can't tell: stay off
   }
   function readConfig(doc) {
     var m = doc.querySelector('meta[name="stem-t"]');
@@ -108,7 +113,7 @@
   }
   W.stemFP = stemFP;
   try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
-  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
