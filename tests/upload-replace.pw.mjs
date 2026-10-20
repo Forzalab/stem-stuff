@@ -61,7 +61,7 @@ const settled = page => page.waitForFunction(() => /\S/.test(document.querySelec
 async function ctxFor(browser, vp) {
   const phone = vp.width < 600;
   const ctx = await browser.newContext({ viewport: vp, serviceWorkers: "block", hasTouch: phone, isMobile: phone });
-  await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
+  await ctx.addInitScript(() => { try { if (!localStorage.getItem("stem-ob")) localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
   return ctx;
 }
 /* the upload button: the OS file dialog, one file. The button hides once a question is open on a phone, so the click is made in the page. */

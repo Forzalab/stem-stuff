@@ -1,0 +1,33 @@
+# Anthropic spend -> KV key stem:anthropic:spend (tools/anthropic_spend.py). The Admin API key lives ONLY here, in
+# GitHub Actions secrets; never in Vercel (the app takes public requests). README: "Anthropic spend".
+name: anthropic-spend
+on:
+  schedule:
+    - cron: "0 * * * *"     # hourly
+  workflow_dispatch:
+permissions:
+  contents: read            # checkout only
+concurrency:
+  group: anthropic-spend
+  cancel-in-progress: false
+jobs:
+  spend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/anthropic_spend.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch spend and write KV
+        # Secrets reach the script only as env (GitHub masks them in logs); the script never prints them.
+        env:
+          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
+          KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+          KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+          SPEND_SINCE: ${{ vars.SPEND_SINCE || secrets.SPEND_SINCE }}
+        run: python3 tools/anthropic_spend.py

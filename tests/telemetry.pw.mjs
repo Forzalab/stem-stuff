@@ -111,11 +111,14 @@ await step("a key: libraries load only after the first question shows; app_load,
   await page.evaluate(() => { document.getElementById("qnext")?.click(); dispatchEvent(new PageTransitionEvent("pagehide")); });
   const ev = await page.evaluate(() => window.__ph.ev);
   const names = new Set(ev.map(e => e.n));
-  for (const n of ["app_load", "q_open", "pick", "guess_spam", "next", "bail", "tab_away"]) assert.ok(names.has(n), `${n} missing (got ${[...names]})`);
+  for (const n of ["app_load", "q_open", "pick", "guess_spam", "next", "bail", "tab_away", "jev_item"]) assert.ok(names.has(n), `${n} missing (got ${[...names]})`);
   const al = ev.find(e => e.n === "app_load").p;
   for (const k of ["ms_to_first_q", "nav_type", "restored_progress", "s", "display_mode", "prefers_color_scheme"]) assert.ok(k in al, "app_load." + k);
   const pk = ev.filter(e => e.n === "pick").at(-1).p;
   for (const k of ["code", "choice", "right", "ms_since_open", "tries_left", "sure"]) assert.ok(k in pk, "pick." + k);
+  const ji = ev.filter(e => e.n === "jev_item").at(-1);   // Jev on for all (art. 11): the item's lines on pagehide, by beacon
+  assert.deepEqual(Object.keys(ji.p).sort(), ["code", "i", "lines", "sid"]); assert.equal(ji.x && ji.x.transport, "sendBeacon");
+  assert.ok(ji.p.lines.length && ji.p.lines.every(l => /^\+\d+\.\d  [a-z_]+/.test(l) && !/err=|fam=/.test(l)), JSON.stringify(ji.p.lines));
   const bail = ev.find(e => e.n === "bail");
   assert.equal(bail.x && bail.x.transport, "sendBeacon", "bail without the beacon transport");
   assert.deepEqual(errors, []);
@@ -165,7 +168,7 @@ for (const [mode, cookies] of [["sugar", []], ["diet", [{ name: "stem-mode", val
   });
 }
 
-await step("footer: a real 'privacy' link to privacy.html; the page has 5 plain lines", async () => {
+await step("footer: a real 'privacy' link to privacy.html; the page has 6 plain lines", async () => {
   const { ctx, page } = await open({});
   const a = await page.$("a#privacy");
   assert.ok(a, "no #privacy link");
@@ -173,7 +176,8 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 5 plain 
   assert.ok(await a.isVisible(), "link hidden on the start page");
   await a.click();
   await page.waitForURL(/privacy\.html$/);
-  assert.equal((await page.$$("main > p")).length, 5);
+  assert.equal((await page.$$("main > p")).length, 6);
+  assert.match(await page.textContent("main"), /duck may react to how you work/, "Jev (on for all) listed");
   assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
   assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
   assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");

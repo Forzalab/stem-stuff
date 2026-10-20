@@ -53,6 +53,7 @@ async function open(o = {}) {
      that lands in that gap runs ahead, then the sync's run ends and sets the clock BACK to where it began (clockSource _runTo ->
      _advanceNow, Playwright 1.56). Under load that undid whole runFor calls after the page had seen them (the "after the calm" flake:
      a 1.6 s + 2 s wait came out as 1.6 s, so the move landed inside the 2.5 s calm). Paused, there is no second runner. */
+  await page.addInitScript(() => localStorage.setItem("stem-jev", "0"));   // Jev (on for all) has its own idle nudge (nudge.pw.mjs): off here
   const t0 = Date.now();
   await page.clock.install({ time: t0 });
   await page.clock.pauseAt(t0 + 1000);

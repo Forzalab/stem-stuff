@@ -107,7 +107,7 @@ try {
   await step("all correct with the pad page open: the pad closes and the question row (Next) comes back", async () => {
     const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
     await c2.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // the phone pad is diet's (Tony, Oct 14)
-    await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await c2.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     const pg = await c2.newPage();
     await pg.goto(BASE + "/#BANK_NV34");
     await pg.waitForFunction(() => /^CALC1_M0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
@@ -128,7 +128,7 @@ try {
      sits above the first line, not on it */
   await step("393x852: a long question scrolled down, the top bar stays at the top of the screen and on top; at scroll 0 it does not cover the first line", async () => {
     const c4 = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
-    await c4.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await c4.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     const pg = await c4.newPage();
     await pg.goto(BASE + "/#BANK_NV78");
     await pg.waitForFunction(() => /^CALC1_L0/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });

@@ -86,6 +86,7 @@ button:disabled { cursor: default; }
 /* ---------- entry box (dock) ---------- */
 .top { position: relative; padding-top: env(safe-area-inset-top); }
 /* phones, a problem open: the bar stays pinned to the top while a long question scrolls under it. It keeps its space (sticky), so the first line sits right under it at scroll 0; its --paper fill (nav.css border-image) hides what passes beneath; z-index in nav.css */
+html:not(.dock-bottom):not(.start) .top { position: sticky; top: 0; }   /* desktop too (Tony, Oct 19: the bar scrolled away and left the HUD popover / toasts pointing at the browser's top edge); the side columns stick under it (--top-h, app.js) */
 html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* not side by side (touch tablets, >= 720px): there the problem column and the notes column are sticky at the top themselves (html.side .freeze, #work), a pinned bar would hide their first lines */
 .dock { max-width: var(--col); margin: 0 auto; padding: var(--s4) var(--gut) 0; }
 .entry { position: relative; display: flex; align-items: center; gap: var(--s2); }
@@ -683,7 +684,7 @@ html.side #work > .orig { margin: 0; }
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
-.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390) */
+.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249) */
 .fcard .f .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
@@ -804,6 +805,18 @@ html:not(.side) .cl-bd { padding: var(--s1) var(--cl-in) var(--s4); }
 /* one speaker, one format (Tony, Oct 5): a reply sits on the sheet like the first answer, no card */
 .cl-ft { flex: none; padding: var(--s2) var(--s4) var(--s4); }
 .cl-ft[hidden] { display: none; }
+/* the scroll-down hint (Tony, Oct 19, variant A; app.js clMore): more text below = .cl-bd.below. A fade over the field's top edge (STYLE.md 2.7
+   "Fades and glows": the sheet's own --sheet, 2.5rem, no taps): 12px of ramp, then solid, and the disc sits in the solid part, so it never
+   covers a line you can read (the mock's disc sat on "r = 249 m"). A 28px disc in the ask field's colour, a 44px target; no loop, no pulse */
+.cl-ft::before { content: ""; position: absolute; inset: auto 0 100%; height: 2.5rem; pointer-events: none; opacity: 0;
+  background: linear-gradient(transparent, var(--sheet) var(--s3)); }
+.cl-ft .cl-more { position: absolute; z-index: 1; left: 50%; bottom: 100%; width: 44px; height: 44px; margin: 0 0 -8px -22px; padding: 0; border: 0;
+  display: grid; place-items: center; background: none; color: var(--help-on); cursor: pointer; opacity: 0; visibility: hidden; }   /* the disc's foot on the field's 8px top gap */
+.cl-more::before { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--ai-pill); }
+.cl-more .ico { position: relative; width: 20px; height: 20px; }
+.cl-more:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: -4px; border-radius: 50%; }
+.cl-bd.below + .cl-ft::before, .cl-bd.below + .cl-ft .cl-more { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: no-preference) { .cl-ft::before, .cl-ft .cl-more { transition: opacity .18s ease-out, visibility .18s; } }
 /* the ask field: image 3's rim, tangerine → peach → pink → sky and back; still at rest, turning while Cluck types or answers */
 @property --wang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 .ask { display: flex; gap: var(--s2); align-items: center; padding: var(--s2) var(--s2) var(--s2) var(--s5); border-radius: 10px; border: 1.5px solid transparent;   /* square-ish like the code box (Tony, Oct 5: only the Cluck chip stays a pill); RM3 tonal fill; the rim (the one listed --bw exception, STYLE.md 2.6) shows only while Cluck types */
@@ -1091,6 +1104,7 @@ html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the box trapped the wheel; a contain scroller capped below the fold) */
 html.side #work { position: sticky; top: var(--s4); align-self: start; }   /* the notes pad stays in view while the page scrolls the question */
+html.side:not(.dock-bottom) .freeze, html.side:not(.dock-bottom) .freeze.stuck, html.side:not(.dock-bottom) #work { top: calc(var(--top-h, 0px) + var(--s4)); }   /* under the pinned desktop bar */
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
 html.side .sash { grid-column: 2; grid-row: 2; align-self: stretch; cursor: col-resize; }

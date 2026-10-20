@@ -55,6 +55,8 @@ let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
 function placeToast() {
   const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
   if (!toastAt.getClientRects().length) { hideToast(); return; }                // its anchor went away (the button while the pad is open)
+  const bar = $(".top"), barB = bar && getComputedStyle(bar).position === "sticky" && !bar.contains(toastAt) ? bar.getBoundingClientRect().bottom : -Infinity;
+  if (toastAt.getBoundingClientRect().bottom < barB) { hideToast(); return; }  // scrolled under the pinned bar: no toast pointing at the bar
   const mk = toastAt.querySelector(".vk, .badge"), mr = mk && mk.getBoundingClientRect();
   const m = mr && mr.width ? mr : toastAt.getBoundingClientRect(), mx = m.left + m.width / 2;   // a one-row pill has no badge: its centre
   const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt") && !!(mr && mr.width);   // on the struck text only beside a badge
@@ -633,6 +635,7 @@ async function load(code) {
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   rwSync();
+  rwRedoTip();
   origRender();
   padRule();
   window.stemBrainrot?.sync();
@@ -1717,7 +1720,7 @@ function clEl() {
     <div class="cl-bd"><div class="cl-pane" id="clTabEP"><div class="msg">${clWho(false)}<div class="wtext" aria-live="off"></div></div><div class="cl-thread" aria-live="polite"></div><p class="cl-verify">verify b4 use lol</p></div>
       <button type="button" class="cl-fold" id="clFold" aria-expanded="false" aria-controls="clTabSP"><span class="cl-fold-t">See reference solution</span><span class="cl-fold-n"></span>${icon("i-down")}</button>
       <div class="cl-pane" id="clTabSP"></div></div>
-    <div class="cl-ft"></div>`;
+    <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
   cl = { el, tab: "explain", open: false, from: null, fold: false };
   el.querySelector(".cl-fold").addEventListener("click", () => {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
@@ -1727,6 +1730,12 @@ function clEl() {
   cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
+  const bd = el.querySelector(".cl-bd"), ro = new ResizeObserver(clMore);   // the scroll-down hint follows the scroll, the sheet's size and the text as it types in
+  bd.addEventListener("scroll", clMore, { passive: true }); ro.observe(bd); [...bd.children].forEach(c => ro.observe(c));
+  el.querySelector(".cl-more").addEventListener("click", () => {
+    window.stemT?.("cluck_more", { act: "tap" });   // Jev (on device: telemetry.js never sends it)
+    bd.scrollBy({ top: bd.clientHeight * 0.8, behavior: reduceMQ.matches ? "auto" : "smooth" });
+  });
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
   return el;
@@ -1886,6 +1895,7 @@ function clTab(tab, focus) {
     if (S.orig.open) cl.el.querySelectorAll("#clTabSP .fig").forEach(f => { if (!f.firstChild) try { Graph.render(f, f._block); } catch (e) { f.textContent = f._block.alt || ""; } });
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
+  clMore();
   if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
 }
 /* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
@@ -1898,12 +1908,25 @@ function clReset() {                                                        // a
   clClose();
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
-  cl.el.querySelector(".cl-ft").innerHTML = "";
+  cl.el.querySelector(".cl-fi").innerHTML = "";
+}
+/* the scroll-down hint (Tony, Oct 19, variant A): while more than 8px of the text is under the ask field, .cl-bd.below shows a fade over the
+   field's top edge and a chevron disc inside it (app.css); a tap scrolls ~80% of the body down; at the bottom it goes. Jev hears "shown" once
+   per reply (the box text, then each chat reply) and "bottom" once per reply that showed it */
+function clMore(late) {
+  if (!cl) return;
+  const bd = cl.el.querySelector(".cl-bd"), on = cl.open && !cl.el.querySelector(".cl-ft").hidden && bd.scrollHeight - bd.scrollTop - bd.clientHeight > 8;
+  if (on === bd.classList.contains("below")) { clearTimeout(cl.moreT); cl.moreT = 0; return; }
+  if (on && late !== true) { cl.moreT ||= setTimeout(() => { cl.moreT = 0; clMore(true); }, 150); return; }   // it shows once the sheet has settled (side by side the column re-fits ~70ms after it opens): no flash; it hides at once
+  bd.classList.toggle("below", on);
+  const k = `${wish?.code}#${cl.el.querySelectorAll(".cl-thread .wreply").length}`, m = cl.more;
+  if (on && m?.k !== k) { cl.more = { k }; window.stemT?.("cluck_more", { act: "shown" }); }
+  else if (!on && cl.open && m?.k === k && !m.end) { m.end = true; window.stemT?.("cluck_more", { act: "bottom" }); }   // scrolled to the end (a close is not "bottom")
 }
 /* the ask field (STYLE.md "Cluck's surfaces" chat): CHAT_TURNS questions, "N left", a tangerine send; it opens once the box text is out */
 function clAsk(build) {
   if (!cl) return;
-  const ft = cl.el.querySelector(".cl-ft"), w = wish;
+  const ft = cl.el.querySelector(".cl-fi"), w = wish;
   cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
   if (!w) { ft.innerHTML = ""; return; }
   const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
@@ -2117,11 +2140,19 @@ async function rewardShow(mine, res) {
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"] };   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  redo: ["Sometimes you get to redo a question!"] };                                // Tony, Oct 19: say it the first time a miss comes back
+/* the redo beat: a Redeem showing (a past miss back, the "Second chance" tag) opens unanswered; caret on the tag. Before the first
+   answer only, so it never meets the one-more-try note or the Comeback toast */
+function rwRedoTip() {
+  const r = window.stemRedo.get();
+  if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
+}
 function rwTip(beat, at) {
   if (!rewardOn() || toastAt || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
-  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at); return true; }
+  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at);
+    window.stemT?.("_ob", { beat, n: n + 1 }); return true; }                     // intent.js log only ("ob <beat> <n>"): Jev sees which note it just met
   catch { return false; }                                                        // blocked storage: no way to keep it once, so never
 }
 
@@ -2356,6 +2387,9 @@ addEventListener("scroll", () => stuck(), { passive: true });
    A class, not a scroll-driven animation: that one never ends, and rewards/fx.js waits for the page's animations to finish */
 const edge = () => root.classList.toggle("scrolled", scrollY > 0);
 addEventListener("scroll", edge, { passive: true }); edge();
+/* --top-h: the pinned desktop bar's height; app.css sticks the side columns under it */
+const topBar = $(".top");
+if (topBar && window.ResizeObserver) new ResizeObserver(() => root.style.setProperty("--top-h", topBar.offsetHeight + "px")).observe(topBar);
 document.addEventListener("focusin", onView);
 document.addEventListener("focusout", e => { if (!e.relatedTarget) lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
 freezeIn.addEventListener("scroll", () => { if (swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });

@@ -158,10 +158,10 @@ test("wiring: ?jev=1 → stemDuck.say gets a pool line; away → the gap doubles
   assert.equal(JSON.parse(store["stem-jev-q"]).A, 1);
 });
 
-test("flag off / DNT / GPC / stem-t-off: the peek is never asked", () => {
+test("?jev=0 / DNT / GPC / stem-t-off: the peek is never asked", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
-  for (const o of [{}, { store: { "stem-jev": "1" }, tele: { optedOut: () => true, userOff: () => false } },
-    { store: { "stem-jev": "1" }, tele: { optedOut: () => false, userOff: () => true } }]) {
+  for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },
+    { search: "?jev=1", tele: { optedOut: () => false, userOff: () => true } }]) {
     const { win, timers } = load({ ...o, duck, rand: () => 0 });
     win.stemT("q_open", { code: "A" });
     assert.equal(timers.length, 0); assert.equal(win.stemJev, undefined);
@@ -191,4 +191,18 @@ test("lines: ≥ 6 per state, ≤ 8 words, no emotion / state word, no guilt or 
 
 test("the detector itself still bites (so 0 findings above means something)", () => {
   assert.ok(AIW.analyzeText("It is not just a tool, it is a game-changer. Delve into the rich tapestry.").issues.length >= 2);
+});
+
+test("a nudge put away by the tap that opens Cluck counts as taken (Tony's dump, Oct 19: away then cluck open 0.2 s later)", () => {
+  const j = session({ rand: () => 0, on: ["S2"] });
+  j.at(0).ev("q_open", { code: "A" }); j.at(161).tick(); assert.equal(j.n(), 1);
+  j.at(162).nudgeEnd(false); assert.equal(j.state().nudge.gap, 360);
+  j.at(162.2).ev("cluck_open", { tab: "explain" });
+  assert.equal(j.state().nudge.gap, 180, "the doubled gap is undone"); assert.equal(j.state().nudge.taps, 1); assert.equal(j.state().nudge.dismissed, 0);
+  j.at(170).ev("q_open", { code: "B" }); j.at(331).tick(); j.at(342).tick(); assert.equal(j.n(), 2, "the 180 s gap holds");
+  j.at(343).nudgeEnd(false); j.at(346).ev("cluck_open", {});
+  assert.equal(j.state().nudge.gap, 360, "3 s later: a real dismiss"); assert.equal(j.state().nudge.dismissed, 1);
+  j.at(400).ev("q_open", { code: "C" }); j.at(561).tick(); j.at(703).tick(); assert.equal(j.n(), 3);
+  j.at(704).ev("cluck_open", {}); assert.equal(j.state().nudge.taps, 2, "opened with the nudge still up: taken");
+  j.nudgeEnd(false); assert.equal(j.state().nudge.dismissed, 1, "the peek's late away is ignored");
 });

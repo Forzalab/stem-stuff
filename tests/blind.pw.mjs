@@ -54,7 +54,7 @@ const pick = async (page, id) => { await page.click(`#q .opt[data-id="${id}"]`);
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   const page = await ctx.newPage();
   let english = "";
 
