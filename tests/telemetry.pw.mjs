@@ -95,7 +95,7 @@ await step("a key: libraries load only after the first question shows; app_load,
   assert.ok(hits.some(h => /posthog.*array\.js/.test(h.url)), "PostHog not requested");
   assert.ok(hits.some(h => /clarity\.ms\/tag\/abc123/.test(h.url)), "Clarity not requested (the fake meta stamps an id, as a CLARITY=1 build does)");
   const o = await page.evaluate(() => window.__ph.opts);
-  assert.equal(o.respect_dnt, true); assert.equal(o.mask_all_text, false); assert.equal(o.mask_all_element_attributes, false);
+  assert.ok(!("respect_dnt" in o), "optedOut() is the one privacy gate (Tony Oct 20); posthog-js respect_dnt would add a second one"); assert.equal(o.mask_all_text, false); assert.equal(o.mask_all_element_attributes, false);
   const m = await page.evaluate(() => { const r = window.__ph.opts.session_recording; return [r.maskInputFn("call 559-555-1234 or a.b@c.edu"), r.maskTextFn("v = 9.81 m/s, KE = 80 J"), r.maskAllInputs, r.maskTextSelector]; });
   assert.equal(m[0], "call ***-***-**** or *.*@*.***", "PII not blanked in replay inputs");
   assert.equal(m[1], "v = 9.81 m/s, KE = 80 J", "physics text must stay recorded");
@@ -169,7 +169,7 @@ for (const [mode, cookies] of [["sugar", []], ["diet", [{ name: "stem-mode", val
   });
 }
 
-await step("footer: a real 'privacy' link to privacy.html; the page has 6 plain lines", async () => {
+await step("footer: a real 'privacy' link to privacy.html; the page has 7 plain lines", async () => {
   const { ctx, page } = await open({});
   const a = await page.$("a#privacy");
   assert.ok(a, "no #privacy link");
@@ -177,7 +177,7 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 6 plain 
   assert.ok(await a.isVisible(), "link hidden on the start page");
   await a.click();
   await page.waitForURL(/privacy\.html$/);
-  assert.equal((await page.$$("main > p")).length, 6);
+  assert.equal((await page.$$("main > p")).length, 7);
   for (const [re, what] of [[/you see an error code/, "error codes"], [/short log of its last steps/, "on-device flight log"], [/our server still notes the error code/, "server error lines under DNT"], [/The duck:/, "the duck"]])
     assert.match(await page.textContent("main"), re, "privacy lists " + what);   // a merge once dropped these: the page must stay true
   assert.match(await page.textContent("main"), /duck may react to how you work/, "Jev (on for all) listed");

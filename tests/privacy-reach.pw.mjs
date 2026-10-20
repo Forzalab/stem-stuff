@@ -1,6 +1,7 @@
 // G3 "Telemetry safe": the privacy opt-out is reachable on a phone (393x852) WHILE A QUESTION IS OPEN, in 2 taps:
 // the question list button, then the quiet "privacy" link under the list (index.html #privacy, nav.js --ql-bottom). Also: the start
-// page footer link still works, and the link covers nothing (not the list, not the code bar). Needs a running server and Playwright:
+// page footer link still works, and the link covers nothing (not the list, not the code bar), and the page's one privacy-signal
+// line (#sigTx) is right. Needs a running server and Playwright:
 //   python3 serve.py 8816 &   then   node tests/privacy-reach.pw.mjs http://localhost:8816 [shotDir]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -66,6 +67,22 @@ await step("393 phone, start page: the footer link still works", async () => {
   await a.tap();
   await page.waitForURL(/privacy\.html$/, { timeout: 5000 });
   await ctx.close();
+});
+
+await step("privacy.html: one plain line says which privacy signal this browser sends; the switch leaves it alone", async () => {
+  const ctx = await phone(), page = await ctx.newPage();
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "globalPrivacyControl", { get: () => true, configurable: true }));
+  await page.goto(BASE + "/privacy.html");
+  assert.match(await page.textContent("#sigTx"), /Global Privacy Control/);
+  await ctx.close();
+  const ctx2 = await phone(), p2 = await ctx2.newPage();
+  await p2.goto(BASE + "/privacy.html");
+  const none = "Your browser sends no privacy signal.";
+  assert.equal(await p2.textContent("#sigTx"), none);
+  await p2.click("#offBtn");
+  assert.equal(await p2.textContent("#offTx"), "Recording is off on this device.");
+  assert.equal(await p2.textContent("#sigTx"), none, "the switch changed the signal line");
+  await ctx2.close();
 });
 
 await browser.close();

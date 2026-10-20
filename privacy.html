@@ -6,7 +6,8 @@
 <meta name="theme-color" content="#050c16">
 <meta name="color-scheme" content="dark">
 <title>Privacy · STEM drill</title>
-<!-- the footer link's page (design/plans/TELEMETRY.md): a few plain lines, no telemetry on this page itself -->
+<!-- the footer link's page (design/plans/TELEMETRY.md): a few plain lines, no telemetry on this page itself
+     (telemetry.js is loaded only for its signals() helper: there is no <meta name="stem-t"> here, so it records nothing) -->
 <link rel="stylesheet" href="vendor/fonts/atkinson.css">
 <link rel="stylesheet" href="app.css">
 <style>
@@ -31,13 +32,25 @@
   <p><b>What stays on this device:</b> finished questions keep your answers and the hints you opened, so they show again after a reload. Copy puts your answers, your notes and their edit history on your clipboard; they only go where you paste them.</p>
   <p><b>Why:</b> to see where questions get confusing, so we can make them clearer, and to keep the site fast on your device.</p>
   <p><b>Questions, or want your data removed?</b> Ask Tony, who shared this app with you. Please keep private info (phone numbers, passwords) out of your notes and Cluck.</p>
+  <p><b>Last changed:</b> October 20, 2026. Changes to this page are posted here.</p>
   <div class="opt-out">
-    <p id="offTx">Don't want to be recorded on this device?</p>
+    <p id="sigTx"></p>
+    <p id="offTx" aria-live="polite">Don't want to be recorded on this device?</p>
     <button type="button" class="btn btn-label" id="offBtn">Don't record me</button>
   </div>
   <a class="back" href="./">Back to questions</a>
 </main>
+<script src="telemetry.js"></script>
 <script>
+/* the privacy signal this browser sends (telemetry.js signals(), the same check that turns recording off), in one plain line */
+(function () {
+  var t = document.getElementById("sigTx"), s;
+  try { s = window.__stemTelemetry.signals(navigator, window); } catch (e) { s = null; }
+  var name = { gpc: "Global Privacy Control", dnt: "Do Not Track" };
+  t.textContent = !s ? "We can't read your browser's privacy signals, so we record nothing from this device."
+    : !s.length ? "Your browser sends no privacy signal."
+    : "Your browser sends " + s.map(function (k) { return name[k]; }).join(" and ") + ", so we record nothing from this device.";
+})();
 /* "Don't record me" (TELEMETRY.md): localStorage stem-t-off=1 → telemetry.js loads nothing on this device. A second tap undoes it. */
 (function () {
   var b = document.getElementById("offBtn"), t = document.getElementById("offTx");
