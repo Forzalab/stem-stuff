@@ -295,7 +295,7 @@
         var p = W.posthog;
         if (!p || !p.init) return;
         p.init(cfg.ph, {
-          api_host: cfg.host, respect_dnt: true, person_profiles: "always", persistence: "localStorage",
+          api_host: cfg.host, person_profiles: "always", persistence: "localStorage",   // no respect_dnt: optedOut() is the one privacy gate (Tony Oct 20)
           bootstrap: { distinctID: did }, capture_pageview: true, capture_pageleave: true,
           autocapture: false, disable_session_recording: true,   // bench 2026-10-07 (design/bench/posthog-2026-10-07): both on = +202 ms TBT; pageview + stemT events only
           disable_surveys: true, capture_dead_clicks: false,   // D22 bench: −42 KB; our dead_tap covers dead clicks
