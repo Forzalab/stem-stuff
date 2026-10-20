@@ -61,16 +61,24 @@
     var pct = function (v, m) { return typeof v === "number" && m > 0 ? Math.max(0, Math.min(100, Math.round(v / m * 100))) : null; };
     return { el: el, code: code, x: pct(x, vw), y: pct(y, vh), stage: stage || null, tries_left: typeof tries === "number" ? tries : null };
   }
-  /* WebGL renderer string (T40): one throwaway context; Safari masks it ("Apple GPU"), still a signal on Android/Windows */
+  /* GPU family (T40): one throwaway context, the renderer string is read and coarsened right here; only the family token is ever
+     returned or sent, never the model string (the unmasked renderer is a fingerprint vector). Safari masks it anyway ("Apple GPU"). */
+  var GPU_FAM = [["apple", /apple/i], ["adreno", /adreno/i], ["mali", /\bmali\b/i], ["powervr", /powervr/i],
+    ["nvidia", /nvidia|geforce|quadro/i], ["amd", /\b(amd|ati)\b|radeon/i], ["intel", /intel/i]];
+  function gpuFamily(r) {
+    if (typeof r !== "string" || !r) return "none";
+    for (var i = 0; i < GPU_FAM.length; i++) if (GPU_FAM[i][1].test(r)) return GPU_FAM[i][0];
+    return "other";
+  }
   function gpu(doc) {
     try {
       var gl = doc.createElement("canvas").getContext("webgl");
-      if (!gl) return null;
+      if (!gl) return "none";
       var x = gl.getExtension("WEBGL_debug_renderer_info");
-      var r = String(gl.getParameter(x ? x.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || "").slice(0, 80) || null;
+      var f = gpuFamily(String(gl.getParameter(x ? x.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || ""));
       var lose = gl.getExtension("WEBGL_lose_context"); if (lose) lose.loseContext();
-      return r;
-    } catch (e) { return null; }
+      return f;
+    } catch (e) { return "none"; }
   }
   /* long tasks (T40): [{s: startTime, d: duration}] → count + total ms of the ones that started in [a, b) */
   function ltSum(list, a, b) {
@@ -100,7 +108,7 @@
   }
   W.stemFP = stemFP;
   try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
-  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }

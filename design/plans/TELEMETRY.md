@@ -46,7 +46,7 @@ like every other script. `privacy.html` is "pass" (needs the network). No sw.js 
 
 | event | props | where |
 |---|---|---|
-| `app_load` | ms_to_first_q, nav_type, restored_progress (had `stem-src`/`stem-codes` before boot), s (`?s=` share channel), display_mode (standalone/browser), prefers_color_scheme, has_code; device (T40, from fx.js): hw_cores, dev_mem, dpr, save_data, eff_type, reduced_motion, reduced_transparency, contrast, ios_ver, webview, blur_supported, gpu (WebGL renderer), device_tier (weak/strong, also `$set` + registered on every event), fx (blur/dim), fx_why | telemetry.js, when `stemFirst` resolves |
+| `app_load` | ms_to_first_q, nav_type, restored_progress (had `stem-src`/`stem-codes` before boot), s (`?s=` share channel), display_mode (standalone/browser), prefers_color_scheme, has_code; device (T40, from fx.js): hw_cores, dev_mem, dpr, save_data, eff_type, reduced_motion, reduced_transparency, contrast, ios_ver, webview, blur_supported, gpu (coarse GPU family from the WebGL renderer: apple/adreno/mali/powervr/intel/nvidia/amd/other/none; never the model string), device_tier (weak/strong, also `$set` + registered on every event), fx (blur/dim), fx_why | telemetry.js, when `stemFirst` resolves |
 | `q_open` | code, bank, type, mode (sugar/diet, the cookie) | app.js `load()` after `render()` |
 | `pick` | code, choice, part, right, verdict, tries_left, ms_since_open (since q_open), sure (null until the bet, D52) | app.js `record()` (MC, pick-all, typed, parts) |
 | `guess_spam` | code, why (`fast` = pick <2 s after open, `burst` = 3rd pick in 10 s), ms_since_open, picks_10s | telemetry.js, on a graded pick |
