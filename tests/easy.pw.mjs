@@ -88,7 +88,7 @@ const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => {
-    try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
+    try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
     window.__said = [];                                                    // the voice: what was spoken, how loud (no audio in CI)
     if (!("speechSynthesis" in window)) Object.defineProperty(window, "speechSynthesis", { value: { cancel() {}, speaking: false } });
     if (typeof SpeechSynthesisUtterance !== "function") window.SpeechSynthesisUtterance = function (t) { this.text = t; };
@@ -411,7 +411,7 @@ try {
   /* a slow link (Tony, Oct 5: 128 kbps): no corner, no preconnect, not one request to YouTube, on a question with a layer */
   async function noRot(url, init, vp = { width: 1280, height: 900 }) {
     const c = await browser.newContext({ viewport: vp, serviceWorkers: "block" });
-    await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     if (init) await c.addInitScript(init);
     const yt = [];
     c.on("request", r => { if (/youtube|ytimg/.test(r.url())) yt.push(r.url()); });
@@ -473,7 +473,7 @@ try {
     noRot("/", () => Object.defineProperty(navigator, "connection", { value: { saveData: true, effectiveType: "4g", downlink: 10 } })));
   await step("1280x720: one scroller, the page; the wheel over the question scrolls it to the formula card and back (Tony, Oct 18)", async () => {
     const z = await browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: "block" });
-    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const zp = await z.newPage();
     await zp.goto(BASE + "/#CALC1_L01"); await opened(zp, "CALC1_L01");
@@ -495,7 +495,7 @@ try {
   });
   for (const [w, h] of [[1280, 720], [1920, 1080]]) await step(`divider at ${w}x${h}: grip mid-window, the sash inside the panes, no rail (Tony, Oct 18)`, async () => {
     const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
-    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const zp = await z.newPage();
     await zp.goto(BASE + "/#CALC1_E01");
@@ -513,7 +513,7 @@ try {
   });
   await step("zoomed out to heck (5464×3600, ~25%): videos B-spaced side by side, notes box capped, divider handle by the content, no sideways scroll, centred up-down", async () => {
     const z = await browser.newContext({ viewport: { width: 5464, height: 3600 }, serviceWorkers: "block" });   // Tony's test protocol, Oct 6
-    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const zp = await z.newPage();
     await zp.goto(BASE + "/#CALC1_E01");
@@ -537,7 +537,7 @@ try {
      equals the gap right of it, Cluck open and closed, up to a 4K window (the owner's zoomed-out run) */
   for (const [w, h] of [[1366, 768], [1920, 1080], [2560, 1440], [3840, 2160]]) await step(`centred at ${w}: the bar + both panes, Cluck open and closed`, async () => {
     const z = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
-    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await z.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const zp = await z.newPage();
     await zp.goto(BASE + "/#BANK_EZ12");

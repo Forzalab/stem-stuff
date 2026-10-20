@@ -156,7 +156,7 @@ const check = (ok, msg) => { if (MEASURE) { if (!ok) log("   (would fail) " + ms
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const phone = async rm => {
   const ctx = await browser.newContext({ viewport: { width: +(process.env.BF_W || 393), height: +(process.env.BF_H || 852) }, reducedMotion: rm || "no-preference", serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   await ctx.addInitScript(PROBE);
   const page = await ctx.newPage();
   await page.goto(BASE + "/#CALC1_B01"); await opened(page, "CALC1_B01");
@@ -233,7 +233,7 @@ try {
     }
     const one = async ([W, H, mode, m]) => {
       const c = await browser.newContext({ viewport: { width: W, height: H }, serviceWorkers: "block" });
-      await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+      await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
       const p = await c.newPage();
       await p.goto(BASE + "/#CALC1_B01"); await opened(p, "CALC1_B01");
       await p.waitForSelector("#rwHud:not([hidden])", { timeout: 6000 });

@@ -35,10 +35,13 @@ The pool is the bank's real questions (sugar snacks are not in it; see below). L
 
 1. **Never the same code within 3.** A code shown in the last 3 slots can't be picked (tiny banks: the last `n − 1`).
 2. **A due miss first.** A question that owes a miss and whose wait is over goes first (the one due earliest). A wrong first
-   pick waits **3** others, the next wrong on its comeback **8**, then **20** (and 20 after that) (D58). A right first pick on
-   the comeback pays the miss off and resets the gaps.
+   pick waits **at least 3** others, the next wrong on its comeback **at least 8**, then **at least 20** (and 20 after that)
+   (D58; the gaps are minimums). A right first pick on the comeback pays the miss off and resets the gaps.
+   **No two redos back to back** (Tony Oct 19: "no two redos back to back"): when the last slot was a Redeem and a non-owed
+   question is ready, a due miss waits one more slot. Only redos left: they go in due order. A wait already cut to the tiny-bank
+   cap (`n − 1`) is never held.
 3. **Every 4th slot pulls the least-seen topic** (D59): the topic with the fewest showings per question gets this slot, even
-   when another topic scores higher. A due miss still wins the slot (so the 3 / 8 / 20 gaps stay exact).
+   when another topic scores higher. A due miss still wins the slot (so the 3 / 8 / 20 minimums stay tight), unless it is held for a redo just before.
 4. **Else the best score** among the questions whose wait is over:
    `score = topic deficit + fresh bonus + 0.5 × misses − 0.5 × rights`, where topic deficit = (most-seen topic's average
    showings) − (this topic's average showings), fresh bonus = 1 for a never-shown question. Least-seen topics rise; fresh

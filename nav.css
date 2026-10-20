@@ -102,6 +102,7 @@ html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, fil
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
 html.dock-bottom:not(.start):not(.side):not(.ql-open):not(.mt):not(.swap) .top { z-index: 35; }
+html:not(.dock-bottom):not(.start):not(.ql-open) .top { z-index: 35; }   /* the pinned desktop bar (app.css) over the page, under Cluck's sheet (45) and the toasts (50+) */
 .top > .rw-hud::after {
   content: ""; position: absolute; z-index: 4; inset: 0; pointer-events: none;   /* no colour: .top::after dims it */
 }

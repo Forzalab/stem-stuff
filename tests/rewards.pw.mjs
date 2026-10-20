@@ -68,8 +68,9 @@ const overlap = (a, b) => a && b && a.left < b.right && a.right > b.left && a.to
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off");
-    for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // T37 tips seen: this page tests the bells
+  /* stem-jev=0 in every context here: Jev (on for all) and its duck lines stay out of the toasts under test (seen.pw.mjs covers them) */
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off");
+    for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // T37 tips seen: this page tests the bells
   const page = await ctx.newPage();
   await page.goto(BASE + "/");
   await typeCode(page, "BANK_RW12");
@@ -173,7 +174,7 @@ try {
 
   await step("a snack marks what it changed: the chip, its number, and the original's number in the question and the steps (TODO A)", async () => {
     const cc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-    await cc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await cc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const d = await cc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");
     assert.equal(await d.textContent("#blocks .chg-chip"), "Changed: 2 → 4 N/m");
@@ -188,7 +189,7 @@ try {
 
   await step("the original beside a snack fades: whole solution, then the last line behind Peek (2 XP), then folded", async () => {
     const dc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-    await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const d = await dc.newPage();
     await d.goto(BASE + "/#CALC1_S01"); await opened(d, "CALC1_S01");      // no bank: the first snack of Q7 this browser sees
     assert.equal(await d.$eval("#orig", e => e.parentElement.id), "work", "desktop: in the pad column");
@@ -244,7 +245,7 @@ try {
     assert.equal(await d.$$eval("#orig .rw-free", f => f.length), 0, "no FREE at level 3: looking again before answering is a peek");
     await dc.close();
     const pc = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-    await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await pc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const p = await pc.newPage();
     await p.goto(BASE + "/#CALC1_S01"); await opened(p, "CALC1_S01");
     assert.equal(await p.$eval("#orig", e => e.parentElement.id), "freezeIn", "phone: on top of the problem");
@@ -291,7 +292,7 @@ try {
 
   await step("phone 390x844: the HUD is its own row under the nav, clear of the nav, the code bar and the Scratchpad button", async () => {
     const ph = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: "block" });
-    await ph.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await ph.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const p2 = await ph.newPage();
     await p2.goto(BASE + "/");
     await typeCode(p2, "BANK_RW12");
@@ -309,7 +310,7 @@ try {
   await step("a wrong pick with a try left shakes once; the closing right pick does not pulse (T17b-1 one blink); reduced motion: nothing moves (Tony, Oct 6 TK1)", async () => {
     for (const rmode of ["no-preference", "reduce"]) {
       const cx = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: rmode, serviceWorkers: "block" });
-      await cx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+      await cx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
       const p5 = await cx.newPage();
       await p5.goto(BASE + "/#CALC1_R03"); await opened(p5, "CALC1_R03");
       await p5.evaluate(() => { window.__nudge = []; new MutationObserver(ms => { for (const m of ms) { const t = m.target; if (t.classList && t.classList.contains("opt"))
@@ -332,7 +333,7 @@ try {
 
   await step("T37 onboarding: one toast per first event (right on the coin, a closed miss on the count, plain then humor, 3 in a row on the level star), per device", async () => {
     const oc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
-    await oc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    await oc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     const o = await oc.newPage();
     const tip = async (text, at) => {
       await o.waitForFunction(t => { const e = document.querySelector("#toast"); return e?.classList.contains("on") && e.textContent === t; }, text, { timeout: 8000 })
@@ -368,7 +369,7 @@ try {
 
   await step("reduced motion: a correct answer pays but makes no particles", async () => {
     const rm = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
-    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const p3 = await rm.newPage();
     await p3.goto(BASE + "/#CALC1_R02"); await opened(p3, "CALC1_R02");
     await watchFx(p3);
@@ -381,7 +382,7 @@ try {
 
   await step("reduced motion: the players still show, muted and playing, and the link hides / shows them (Tony, Oct 6: it was a dead click)", async () => {
     const rm = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
-    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
+    await rm.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); } catch { /* */ } });
     const p4 = await rm.newPage();
     await p4.goto(BASE + "/#CALC1_S01"); await opened(p4, "CALC1_S01");
     await p4.waitForSelector("#work > #rot.docked:not([hidden])", { timeout: 4000 });

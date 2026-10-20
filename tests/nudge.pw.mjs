@@ -1,6 +1,6 @@
-// J5 Cluck nudge, Tier 0 (intent.js → peek.js stemDuck.say; brain cluck-nudge.md 🔒): with ?jev=1, the first item idle past 80 s with
+// J5 Cluck nudge, Tier 0 (intent.js → peek.js stemDuck.say; brain cluck-nudge.md 🔒): Jev on by default (art. 11, no flag), the first item idle past 80 s with
 // no pick (Q) → Cluck's peek rises carrying a Q line from copy/nudge-lines.js. Any input puts it away (a dismiss: Jev's gap doubles); a tap
-// counts as taken. Flag off = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
+// counts as taken. ?jev=0 (this device off) = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
 //   node tests/nudge.pw.mjs <port> [shots dir]      (starts its own serve.py on that port)
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -42,7 +42,7 @@ async function open(o = {}) {
   page.on("request", r => { if (/\/(explain|chat|nudge)$/.test(new URL(r.url()).pathname)) page.ai++; });
   await page.addInitScript(() => { window.__stemJevRand = () => 0; });
   await page.clock.install();
-  await page.goto(BASE + "/" + (o.jev === false ? "" : "?jev=1") + "#BANK_T95");
+  await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#BANK_T95");
   await page.clock.runFor(3000);
   await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
   await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
@@ -73,7 +73,7 @@ const look = page => page.evaluate(() => {
 const jev = page => page.evaluate(() => window.stemJev().nudge);
 
 for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1280, height: 800 }]]) {
-  await step(`${name}: ?jev=1, first item idle past 80 s with no pick → the peek rises with a Q line; a key puts it away and the gap doubles`, async () => {
+  await step(`${name}: default on (no flag), first item idle past 80 s with no pick → the peek rises with a Q line; a key puts it away and the gap doubles`, async () => {
     const page = await open({ vp, touch: name === "phone" });
     await idle(page, 75000);
     assert.equal(await up(page), false, "nothing before the Q depth");
@@ -113,7 +113,7 @@ await step("a tap on the nudge = taken (no back-off)", async () => {
   await page.context().close();
 });
 
-await step("flag off (no ?jev=1): no nudge at 90 s, no stemJev", async () => {
+await step("?jev=0 (off on this device): no nudge at 90 s, no stemJev", async () => {
   const page = await open({ jev: false });
   await idle(page, 90000);
   assert.equal(await up(page), false);

@@ -16,7 +16,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "acda076dc5b5b702626734c0f863bcd89142fd370169eed5107d83f272664690"
+SHA = "a1cd78cca039f8bc7b447860fedb99a5c2188b6bc507009d360a83b5311ea417"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):

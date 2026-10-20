@@ -32,7 +32,7 @@ let n = 0;
 for (const [W, H] of [[390, 844], [375, 667]]) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: "block" });
   await ctx.addCookies(DIET);
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // onboarding has its own check below
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });   // onboarding has its own check below
   const page = await ctx.newPage();
   page.setDefaultTimeout(6000);
   const errors = [];
