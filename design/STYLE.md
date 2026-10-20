@@ -125,6 +125,7 @@ One weight, one focus rule, one ring (Tony, Oct 3: "too thicc overall and dispar
 | Field focus (every field, the pad too) | border `--focus` + `inset 0 0 0 1px var(--focus)` = one 2px blue edge. **No outline** |
 | Keyboard focus (buttons, FAB, sash, anything `:focus-visible`) | `--ring` (2px) `--focus` outline at 2px offset (-3px inside a field) |
 | Wrong typed box (`.ff.bad`) | `--bw-alarm` (2px) `--wrong-rim` **dashed**: the only heavy line (dash = not accepted, so it survives grayscale) |
+| Sugar kept row (`.choices.all .opt.kept`, Tony Oct 20) | `--bw-alarm` (2px) `--correct` **solid** + `--correct-fill`: a fixed right tick after a miss (CHOOSE-ALL.md §4) |
 | Cluck's ask rim (`.ask`) | 1.5px, shown only while Cluck types: the one listed exception |
 
 - Never a border and an outline on the same focus. Never 3px. Guarded by `tests/style.test.mjs` §2.6.

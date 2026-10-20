@@ -408,6 +408,14 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 /* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
 .choices.all .opt[data-mark="x"] .badge { border-color: var(--wrong); color: var(--wrong); }
 .choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
+/* sugar kept rows (app.js keep(); look B, Tony Oct 20): ticked and right at a miss, fixed. A 2px (--bw-alarm) --correct ring (its 1.5px over the
+   rest hairline comes back from the padding: nothing moves), the --correct-fill wash, text --correct-on (12.4:1), the green check in the
+   square like .right. No dim, no tag; fresh ticks keep the blue. A 150 ms colour fade, no pop (a miss is a wrong try) */
+.choices.all .opt.kept, .choices.all .opt.kept:hover { border: var(--bw-alarm) solid var(--correct); background: var(--correct-fill); color: var(--correct-on); cursor: default;
+  padding: calc(var(--s2) - var(--bw-alarm) + var(--bw-hair)) calc(var(--s3) - var(--bw-alarm) + var(--bw-hair)); transition: border-color .15s ease-out, background-color .15s ease-out, color .15s ease-out; }
+.choices.all .opt.kept .lt { color: var(--correct); }
+.choices.all .opt.kept .badge { background: none; border-color: var(--correct); color: var(--correct); }
+@media (prefers-reduced-motion: reduce) { .choices.all .opt.kept { transition: none; } }
 .ch .fix { margin: var(--s1) 0 0 calc(var(--s3) + 2.75rem); }
 .ch .fix[hidden] { display: none; }
 .chk { display: flex; justify-content: flex-end; align-items: center; gap: var(--s3); margin-top: var(--s2); }
@@ -523,8 +531,8 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
   padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw-hair) solid var(--line); color: var(--ink); }
-:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
-:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal)) .chk.cue) .nx:active .nf { background: var(--correct-press); border-color: var(--correct-press); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
+:is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx:active .nf { background: var(--correct-press); border-color: var(--correct-press); }
 .nx:active .nf { transform: translateY(1px); }
 .nx:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .nx .ico { width: 20px; height: 20px; }

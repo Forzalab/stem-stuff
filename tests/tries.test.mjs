@@ -96,6 +96,13 @@ test("pick all: the first ticked distractor in shown (authored) order strikes; n
   assert.deepEqual([r.verdict, r.triesLeft, r.error, r.hint, r.struck], ["wrong", 0, "incomplete", "QUACK. Missing one.", undefined]);
   assert.equal(gradeLocal(p, { choices: ["a", "c"] }).verdict, "locked");
 });
+test("pick all: a false tick with no hint gets the some-taps-wrong line, nothing struck; all ticks right gets miss", () => {
+  const p = pickAll("T_a3w", { wrong: [{ choice: "e", error: "misread", hint: "QUACK. e" }] });
+  let r = gradeLocal(p, { choices: ["a", "b"] });
+  assert.deepEqual([r.verdict, r.error, r.hint, r.struck], ["wrong", "incomplete", "QUACK. Some taps are wrong. Check each row again.", undefined]);
+  r = gradeLocal(p, { choices: ["c"] });
+  assert.deepEqual([r.verdict, r.error, r.hint, r.struck], ["wrong", "incomplete", "QUACK. Missing one.", undefined]);
+});
 test("pick all: shown() keeps every correct id and the locked ones from a pool of 8", () => {
   const p = pickAll("T_a4", { correct: ["g", "h"], choices: "abcdefgh".split("").map(id => ({ id, md: id, ...(id === "c" ? { lock: true } : {}) })) });
   assert.deepEqual(shown(p).map(c => c.id), ["a", "b", "c", "g", "h"]);

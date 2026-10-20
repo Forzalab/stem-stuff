@@ -258,6 +258,7 @@ async function check(code, answer) {
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
 const FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math.";   // serve.py FIX_NUDGE
+const WRONG_MISS = "QUACK. Some taps are wrong. Check each row again.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -329,7 +330,8 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     const w = key.wrong || [];
     if (!correct) {
       const c = sh.find(c => ch.includes(c.id) && !right.includes(c.id) && w.some(x => x.choice === c.id));
-      hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: key.miss };
+      hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: ch.every(x => right.includes(x)) ? key.miss : WRONG_MISS };   // no struck id: never leak which row is false
+      if (modeOf() === "sugar" && ch.length && ch.every(x => right.includes(x))) hit.kept = [...ch].sort();   // sugar kept rows (serve.py): every tick right
       if (key.fix) sig = [sig, ...need.map(id => squash(fx[id]).slice(0, 200))];
     } else if (key.fix) {                                 // unreadable fix = invalid; else the first wrong fix in authored order
       const us = need.map(id => { const e = w.find(x => x.choice === id); return e && e.fix ? { id, u: { ...key.fix, ...e.fix, fixbox: true }, t: fx[id].slice(0, 200) } : null; }).filter(Boolean);
@@ -357,6 +359,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   if (hit && hit.error) out.error = hit.error;
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
+  if (hit && hit.kept) out.kept = hit.kept;
   if (repeat) out.repeat = true;
   return R(left() <= 0 ? shut(out) : out);
 }
@@ -846,6 +849,7 @@ function wireMC(q) {
     const send = e.target.closest(".send");
     if (send) { submitMC(); return; }
     const o = e.target.closest(".opt"); if (!o || o.disabled) return;
+    if (o.classList.contains("kept")) { keptTap(o); return; }
     if (all(S.prob)) tick(o, S.prob.fix && !o.hasAttribute("data-lock") && markOf(o) ? "x" : "on");   // prove: blank -> tick -> X -> blank
     else select(o.getAttribute("aria-checked") === "true" ? null : o);   // tap the selected choice again: deselect
     roving(o);
@@ -862,7 +866,7 @@ function wireMC(q) {
       return;
     }
     const o = e.target.closest(".opt"); if (!o || !S || S.finished) return;
-    const many = all(S.prob), live = opts().filter(x => !x.disabled), i = live.indexOf(o);
+    const many = all(S.prob), live = opts().filter(x => !x.disabled && !x.classList.contains("kept")), i = live.indexOf(o);
     const move = d => { const n = live[(i + d + live.length) % live.length]; roving(n); n.focus(); if (!many) select(n); };
     if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); move(1); }
     else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
@@ -889,7 +893,9 @@ function mark(o, m) {
   o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}${m === "x" ? ", marked wrong" : ""}`);
 }
 function tick(o, m = "on") {
+  if (o.classList.contains("kept")) { keptTap(o); return; }
   const lock = o.hasAttribute("data-lock");
+  if (lock && opts().some(x => x.classList.contains("kept"))) return;   // "None of these" would untick the kept rows (the server calls it invalid anyway)
   if (m === "x" && (lock || !fixOf(o))) return;
   const next = markOf(o) === m ? "" : m;
   if (next === "x") window.stemT?.("_xmark", { choice: o.dataset.id });   // J6: the student's own X (not the lock path / strike); intent.js log only, telemetry.js drops "_" names
@@ -899,6 +905,25 @@ function tick(o, m = "on") {
   if (lock && next === "on" && S.prob.fix) for (const x of opts()) if (x !== o && !x.hasAttribute("data-lock") && !x.classList.contains("wrong") && fixOf(x) && markOf(x) !== "x") mark(x, "x");
   mark(o, next);
   syncTicks();
+}
+/* sugar kept rows (brain tick-lock proposal, look B, Tony Oct 20): after a pick-all miss whose ticks are ALL right (the server says so
+   from the key: `kept` = the ticked ids, never an unticked one; gradeLocal mirrors it), those rows stay ticked in green and can't be
+   unticked. aria-disabled (not disabled: still read and focusable); arrows skip them; a tap only toasts, once per question.
+   Unticked right rows stay plain. Cleared by a new render (next question, redo); a reload keeps them again from the try record (k).
+   Off: ?keep=0 (localStorage stem-keep=0; ?keep=1 clears it), like ?jev=0. Diet never: `kept` comes in sugar only */
+const keepOff = (() => { try { const f = new URLSearchParams(location.search).get("keep"); if (f === "0") localStorage.setItem("stem-keep", "0"); if (f === "1") localStorage.removeItem("stem-keep"); return localStorage.getItem("stem-keep") === "0"; } catch { return false; } })();
+const keepOn = () => modeOf() === "sugar" && !keepOff;
+function keep(o) {
+  if (!o || o.disabled) return;
+  mark(o, "on");
+  o.classList.add("kept"); o.setAttribute("aria-disabled", "true");
+  o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}, right, kept`);
+}
+function keptTap(o) {
+  window.stemT?.("_kepttap", { choice: o.dataset.id });   // intent.js log only, telemetry.js drops "_" names
+  if (S.keptTold) return;
+  S.keptTold = true;
+  toast("Option already marked correct, cannot change!", o);
 }
 /* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
@@ -963,15 +988,21 @@ async function submitAll() {
   if (r.verdict === "timeout") { feedback(r); return; }     // not a try: the ticks stay, retry resends them
   const tick = c.map(id => S.prob.choices.find(x => x.id === id).md);
   if (r.verdict !== "invalid") record({ a: S.prob.fix ? { tick, fix: Object.fromEntries(xs.map(o => [o.dataset.l, f[o.dataset.id]])) } : tick, c, l: on.map(o => o.dataset.l),
-    ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}) }, r);
+    ...(S.prob.fix ? { f } : {}), ...(r.struck ? { s: r.struck } : {}), ...(r.fixWrong ? { w: r.fixWrong } : {}), ...(r.kept ? { k: r.kept } : {}) }, r);
   if (r.verdict === "correct") {
-    for (const o of on) { o.classList.add("right"); glyph(o, "i-ok"); }   // no pop: Next is the one motion (T17b-1)
+    for (const o of on) { o.classList.remove("kept"); o.classList.add("right"); glyph(o, "i-ok"); }   // no pop: Next is the one motion (T17b-1); kept turns right in place
     for (const o of xs) fixOf(o).classList.add("ok", "done");
     finish();
   } else if (r.verdict === "wrong") {
     const o = r.struck && opts().find(x => x.dataset.id === r.struck), was = document.activeElement;
     const bad = r.fixWrong && opts().find(x => x.dataset.id === r.fixWrong); if (bad && fixOf(bad)) fixOf(bad).classList.add("bad");
     strike(o); if (r.triesLeft > 0) nudge(o, "jolt"); syncTicks();
+    const kept = r.kept && keepOn() ? r.kept.map(id => opts().find(x => x.dataset.id === id)).filter(Boolean) : [];
+    if (kept.length) {                                       // no pop: a miss is a wrong try. Focus goes to the first live empty row
+      kept.forEach(keep); window.stemT?.("_kept", { n: kept.length });
+      const n = opts().find(x => !x.disabled && !x.classList.contains("kept") && markOf(x) !== "on");
+      if (n && r.triesLeft > 0 && (was === go || kept.includes(was))) { roving(n); n.focus(); }
+    }
     if (o && fixOf(o) && was === go) fixOf(o).querySelector("input").focus();              // prove mode: the struck row needs its fix now
     else if (o && (was === o || (was === go && go.disabled))) { const n = opts().find(x => !x.disabled); if (n) { roving(n); n.focus(); } }
     else if (o && o.tabIndex === 0) { const n = opts().find(x => !x.disabled); if (n) roving(n); }
@@ -1178,6 +1209,7 @@ function paintRec(rec) {
       if (!o || o.disabled) continue;
       mark(o, "on");
       if (last.v === "correct") { o.classList.add("right"); glyph(o, "i-ok"); }
+      else if (last.v === "wrong" && last.k && last.k.includes(o.dataset.id) && keepOn()) keep(o);
     }
     if (last && last.f) for (const [id, v] of Object.entries(last.f)) {
       const o = opt(id), f = o && fixOf(o); if (!f) continue;
@@ -1185,7 +1217,7 @@ function paintRec(rec) {
       f.querySelector("input").value = v;
       f.classList.toggle("bad", last.w === id); if (last.v === "correct") f.classList.add("ok", "done");
     }
-    const live = opts().find(x => !x.disabled); if (live) roving(live);
+    const live = opts().find(x => !x.disabled && !x.classList.contains("kept")); if (live) roving(live);
     syncTicks();
   } else if (p.type === "mc") {
     for (const t of S.tries) {
@@ -1331,7 +1363,7 @@ function reveal(r, part) {
     for (const o of opts()) {
       if (ids.includes(o.dataset.id)) {
         if (all(p)) mark(o, "on");
-        o.classList.remove("wrong"); o.classList.add("right", "reveal"); glyph(o, "i-ok");
+        o.classList.remove("wrong"); o.classList.add("right"); o.classList.toggle("reveal", !o.classList.contains("kept")); glyph(o, "i-ok");   // kept = yours: solid
       } else if (all(p) && markOf(o) === "on" && !o.classList.contains("wrong")) strike(o);      // a ticked wrong row: struck, x
     }
     return "The right answer: " + opts().filter(o => ids.includes(o.dataset.id)).map(o => o.querySelector(".txt").textContent.trim()).join(", ") + ".";
