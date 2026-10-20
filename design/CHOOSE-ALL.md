@@ -43,7 +43,7 @@ Same `mc` problem, one new key. Reuse everything: `choices`, `lock`, `shuffle`, 
     { "choice": "d", "error": "sign", "hint": "QUACK. The NOT goes to *both* inputs. Check $B$." },
     { "choice": "e", "error": "other", "hint": "QUACK. Test one row: $A=1, B=0$. Does any choice match?" }
   ],
-  "miss": "QUACK. Every pick you made is right. Is that all of them? Test each one left over." }
+  "miss": "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ⁠_⁠ಠ QUACK." }
 ```
 
 | key | meaning | served |
