@@ -4528,7 +4528,7 @@
           "hint": "QUACK. Test one row: $A=1, B=0$. Does any choice match?"
         }
       ],
-      "miss": "QUACK. Every tick you made is right. Is that all of them? Test each one left."
+      "miss": "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ⁠_⁠ಠ QUACK."
     },
     {
       "code": "CSCI26_A8F",
@@ -4592,7 +4592,7 @@
           }
         }
       ],
-      "miss": "QUACK. Every tick is right. Is that all the true ones? Check each one left."
+      "miss": "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ⁠_⁠ಠ QUACK."
     }
   ]
 }

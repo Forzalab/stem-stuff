@@ -54,7 +54,7 @@ MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "dead", "before", "original")
 DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
-NONE_MISS = "QUACK. Some taps are wrong. Check each row again."
+NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
