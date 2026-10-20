@@ -9,7 +9,7 @@ const SRC = readFileSync(new URL("../flight.js", import.meta.url), "utf8");
 const SENTINEL = "Zq7xSENTINELwv";
 
 /* a fake browser: handlers[type] = the listeners flight.js put on document / window; clock = performance.now() */
-function run({ stemT = () => {}, store = {} } = {}) {
+function run({ stemT = () => {}, store = {}, observers = null, idle = null } = {}) {
   const handlers = {}, clock = { t: 1234.4 }, timers = [];
   const add = tg => (type, f) => { (handlers[tg + ":" + type] ||= []).push(f); };
   const el = (tag, id, extra = {}) => ({ tagName: tag.toUpperCase(), id, className: "", getAttribute: () => null, textContent: "", value: "",
@@ -25,10 +25,15 @@ function run({ stemT = () => {}, store = {} } = {}) {
     document, performance: { now: () => clock.t }, navigator: { onLine: true, userAgent: "UA", hardwareConcurrency: 4 }, location: { hash: "#CALC1_FL2", search: "" },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } },
     matchMedia: () => ({ matches: false, addEventListener() {} }), addEventListener: add("win"), setTimeout: f => { timers.push(f); return timers.length; },
-    innerWidth: 390, innerHeight: 844, devicePixelRatio: 3, scrollY: 0, stemT,
+    innerWidth: 390, innerHeight: 844, devicePixelRatio: 3, scrollY: 0, stemT, clearTimeout: id => { timers[id - 1] = null; },
     __drill: { page: { q: "CALC1_FL2", tries: 1, wish: { chars: 0, failed: 1 } } },
   };
   win.window = win;
+  if (idle) win.requestIdleCallback = (f, o) => idle.push([f, o]);
+  if (observers) {                                               // a PerformanceObserver that hands each observed type's callback to the test
+    win.PerformanceObserver = function (cb) { this.observe = o => { observers[o.type] = cb; }; };
+    win.PerformanceObserver.supportedEntryTypes = ["layout-shift", "longtask"];
+  }
   vm.runInNewContext(SRC, win);
   const fire = (key, e) => (handlers[key] || []).forEach(f => f(e));
   return { win, FR: win.stemFR, fire, clock, timers, nodes, store };
@@ -177,4 +182,66 @@ test("layout kinds: resize / scroll / visualViewport go through one throttled ti
   fire("win:error", { target: { tagName: "IMG", id: "", className: "fig", getAttribute: () => null, src: "https://x/y/fig.png?token=" + SENTINEL } });
   assert.deepEqual(P(FR.ring.at(-1).slice(1)), ["load", "img.fig", "https://x/y/fig.png"]);
   assert.ok(["boot", "flag", "mq"].every(x => k.includes(x)), "boot, flags, media queries at load");
+});
+
+/* the pending timers (a cleared one is null), run in order */
+const tick = timers => { while (timers.some(Boolean)) { const i = timers.findIndex(Boolean), f = timers[i]; timers[i] = null; f(); } };
+
+test("page.before (P2): re-read 250 ms after stage / nav / cluck / sw / vis (one timer for a burst), in idle time; the report carries it with its age, no text", () => {
+  const idle = [];
+  const { FR, win, timers, clock } = run({ idle });
+  FR.log("net", "b", "s");
+  assert.equal(timers.filter(Boolean).length, 0, "a net entry re-reads nothing");
+  win.__drill.page = { q: "CALC1_FL1", tries: 0 };
+  win.stemT("q_open", { code: "CALC1_FL1" }); FR.log("cluck", "open"); FR.log("vis", "hidden");
+  assert.equal(timers.filter(Boolean).length, 2, "debounced: one page timer for the three entries (+ the stage's box timer)");
+  clock.t = 2000; tick(timers);
+  assert.equal(idle.length, 1, "one idle read for the burst");
+  assert.equal(idle[0][1].timeout, 1000);
+  idle.shift()[0]();
+  win.__drill.page = { q: "CALC1_FL2", tries: 1, wish: { failed: 1 } };   // the failure: the page has moved on
+  clock.t = 3500;
+  const s = FR.snap({ code: "E-7K3QB", where: "explain", reason: "http", status: 504 });
+  assert.equal(s.page.before.app.q, "CALC1_FL1", "the state from before");
+  assert.equal(s.page.before.age_ms, 1500);
+  assert.equal(s.page.at.app.q, "CALC1_FL2");
+  assert.deepEqual(P(s.page.before.said), P(s.page.at.said), "our own strings only, else a length");
+  assert.ok(!JSON.stringify(s).includes(SENTINEL), "no typed text, no field value");
+  assert.ok(JSON.stringify(s).length < 8192, "before + at stay small: " + JSON.stringify(s).length);
+  const fit = FR._t.fit;
+  const o = fit({ ring: [[1, "x"]], kb: [[1, "kb", "kd", "x".repeat(40)]], page: { before: { x: "y".repeat(3000) }, at: { x: "z".repeat(100) } } }, 1000);
+  assert.equal(o.page.before, null, "page.before goes before the kb entries and page.at");
+  assert.equal(o.kb.length, 1);
+  assert.ok(o.page.at);
+});
+
+test("page.before: no rIC (Safari) = read in the debounce timer; none yet = null", () => {
+  const { FR, win, timers } = run();
+  assert.equal(FR.snap({ code: "E-7K3QC", where: "chat", reason: "http", status: 500 }).page.before, null);
+  win.stemT("next");
+  tick(timers);
+  assert.ok(FR.snap({ code: "E-7K3QD", where: "check", reason: "http", status: 502 }).page.before.app, "read without requestIdleCallback");
+});
+
+test("perf (P2): long tasks become ONE entry per 30 s window (n, total ms, longest ms, heap MB), only when there were some; a report flushes it", () => {
+  const observers = {};
+  const { FR, timers, win } = run({ observers });
+  assert.equal(typeof observers.longtask, "function", "a longtask observer");
+  const lt = (...d) => observers.longtask({ getEntries: () => d.map(duration => ({ duration })) });
+  lt(60.4, 120); lt(80);
+  assert.equal(timers.filter(Boolean).length, 1, "one 30 s timer");
+  assert.equal(FR.ring.filter(e => e[1] === "perf").length, 0, "nothing until the window ends");
+  win.performance.memory = { usedJSHeapSize: 52 * 1048576 };
+  tick(timers);
+  assert.deepEqual(P(FR.ring.filter(e => e[1] === "perf").map(e => e.slice(2))), [[3, 260, 120, 52]]);
+  tick(timers);
+  assert.equal(FR.ring.filter(e => e[1] === "perf").length, 1, "an idle page logs nothing");
+  delete win.performance.memory;
+  lt(55);
+  const s = FR.snap({ code: "E-7K3QE", where: "explain", reason: "http", status: 504 });
+  const perf = s.ring.filter(e => e[1] === "perf");
+  assert.deepEqual(P(perf.at(-1).slice(2)), [1, 55, 55, null], "the pending window, in the report; no heap off Chrome");
+  assert.ok(s.ring.findIndex(e => e[1] === "inc") > s.ring.lastIndexOf(perf.at(-1)));
+  tick(timers);
+  assert.equal(FR.ring.filter(e => e[1] === "perf").length, 2, "not logged twice");
 });

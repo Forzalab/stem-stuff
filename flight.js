@@ -1,14 +1,17 @@
 /* Flight recorder (brain sprint-render-v2/flight-recorder-DESIGN.md, P1; Tony Oct 19: "capture the site's stages and API status at the
    point of error, like a log of everything"). A ring of the last 256 things the page did, in memory only, for everyone: nothing leaves
-   the device from here. incident.mjs asks snap() for the last 64 entries + the last 20 keyboard/focus entries + the page state (page.at)
-   and sends them ONLY inside an incident report, ONLY to troubleshoot that code, and never under DNT / GPC / "Don't record me".
+   the device from here. incident.mjs asks snap() for the last 64 entries + the last 20 keyboard/focus entries + the page state
+   (page.before + page.at) and sends them ONLY inside an incident report, ONLY to troubleshoot that code, and never under DNT / GPC /
+   "Don't record me".
    Every entry is a flat array [t, kind, a, b, c, d]: t = ms since the page started (rounded), then numbers, codes, our own tags.
    Never recorded, even here: typed / tapped text, answers, notes, chat, Cluck's reply, any field's value (only its length), printable
    key values, e.code, InputEvent.data, clipboard, pointer positions, key timing finer than 100 ms.
-   Kinds: boot nav stage pick net rid cluck sw conn vis err flag ev budget kb (§1a) + layout (Tony 11:2x: "log everything non-sensitive"):
+   Kinds: boot nav stage pick net rid cluck sw conn vis err flag ev budget perf kb (§1a) + layout (Tony 11:2x: "log everything non-sensitive"):
    vp (resize) scroll cls (layout shift) box (key controls on a stage change) mq (theme / media queries) load (a font / image / script
    that failed) ro (key nodes resized). Listeners are passive and capture; scroll / resize / ResizeObserver / visualViewport reach the
-   ring at most 4 times a second, read in one timer, so no per-frame work. window.stemFR = { log, req, snap, page, kb }. Never throws. */
+   ring at most 4 times a second, read in one timer, so no per-frame work. window.stemFR = { log, req, snap, page, kb }. Never throws.
+   P2: perf (long tasks folded into one entry at most every 30 s, + JS heap MB on Chrome) and page.before (the page state re-read in idle
+   time 250 ms after each stage / nav / cluck / sw / vis entry, so a report shows the page as it was just before the error line). */
 (function () {
   "use strict";
   var W = window, D = document, P = W.performance;
@@ -64,11 +67,12 @@
     if (ev === "in") return push(K, KB, [t100(), "kb", "in", label(el), inputType(e.inputType), flags(e, el), was == null ? null : was, n]);
     return push(K, KB, [t100(), "kb", ev, label(el), null, flags(e, el), n]);
   }
-  /* the incident snapshot: the last SNAP_RING entries + SNAP_KB kb entries + page.at; over CAP bytes: the oldest ring entries go first,
-     then the kb entries, then the page */
+  /* the incident snapshot: the last SNAP_RING entries + SNAP_KB kb entries + page { before, at }; over CAP bytes: the oldest ring entries
+     go first, then page.before, then the kb entries, then the page */
   function fit(o, cap) {
     var s = JSON.stringify(o);
     while (s.length > cap && o.ring.length) { o.ring.splice(0, Math.max(1, Math.ceil(o.ring.length / 8))); o.cut = 1; s = JSON.stringify(o); }
+    if (s.length > cap && o.page && o.page.before) { o.page.before = null; o.cut = 1; s = JSON.stringify(o); }
     while (s.length > cap && o.kb.length) { o.kb.shift(); o.cut = 1; s = JSON.stringify(o); }
     if (s.length > cap) { o.page = null; o.cut = 1; }
     return o;
@@ -85,8 +89,9 @@
   }
 
   /* ---- the ring ---- */
+  var PAGE_ON = { stage: 1, nav: 1, cluck: 1, sw: 1, vis: 1 };   // the kinds after which page.before is re-read (pageSoon)
   function log(k, a, b, c, d) {
-    try { var e = [now(), k]; for (var i = 1; i < arguments.length; i++) e.push(arguments[i]); push(R, RING, e); } catch (x) { /* never the page's problem */ }
+    try { var e = [now(), k]; for (var i = 1; i < arguments.length; i++) e.push(arguments[i]); push(R, RING, e); if (PAGE_ON[k] === 1) pageSoon(); } catch (x) { /* never the page's problem */ }
   }
   /* one request's lifecycle (OTel's shape: a span with phases): s(tart), h(eaders) status + ms + bytes (content-length), f(irst byte),
      e(nd) total bytes, x (error) its name. Plus `rid`: Vercel's x-vercel-id and the W3C trace id of the request (incident.mjs traceparent) */
@@ -146,6 +151,31 @@
       };
     } catch (x) { return { err: blank(x && x.message) }; }
   }
+  /* page.before (§8, P2): at the failure the error line is already painted and a sheet may have closed, so the report also carries the
+     state from just before. Debounced 250 ms after a stage / nav / cluck / sw / vis entry, then read in idle time: never on an input
+     path, ≤ 1.5 KB, one slot ({ t, p }); the snapshot adds its age */
+  var before = null, pgT = 0;
+  function pageSoon() {
+    if (pgT) W.clearTimeout(pgT);
+    pgT = W.setTimeout(function () {
+      pgT = 0;
+      var go = function () { try { before = { t: now(), p: page() }; } catch (x) { /* never */ } };
+      if (W.requestIdleCallback) W.requestIdleCallback(go, { timeout: 1000 }); else go();
+    }, THROTTLE);
+  }
+  /* perf (P2): long tasks (main-thread work ≥ 50 ms) folded into ONE entry [perf, n, total ms, longest ms, JS heap MB (Chrome) or null] at
+     most every 30 s, only when there were some; a PerformanceObserver, so nothing runs on an input path and nothing when the page is idle */
+  var lt = { n: 0, ms: 0, max: 0 }, ltT = 0, PERF_MS = 30000;
+  function perfFlush() {
+    if (!lt.n) return;
+    var m = P && P.memory;
+    log("perf", lt.n, Math.round(lt.ms), Math.round(lt.max), m && m.usedJSHeapSize ? Math.round(m.usedJSHeapSize / 1048576) : null);
+    lt = { n: 0, ms: 0, max: 0 };
+  }
+  function longTasks(es) {
+    for (var i = 0; i < es.length; i++) { var d = es[i].duration || 0; lt.n++; lt.ms += d; if (d > lt.max) lt.max = d; }
+    if (!ltT) ltT = W.setTimeout(function () { ltT = 0; perfFlush(); }, PERF_MS);
+  }
   /* incident.mjs: the snapshot for one incident (r = its record; cap = the bytes left in its report), or { dup, n } / { rate } when gated (see gate) */
   var lastInc = null;
   function snap(r, cap) {
@@ -157,14 +187,16 @@
       try { W.localStorage.setItem("stem-inc", JSON.stringify(g.times)); } catch (x) { /* blocked */ }
       if (g.rate) return { rate: 1 };
       lastInc = { key: key, t: t, code: r.code, n: 1 };
+      perfFlush();                                                     // the long tasks so far, in this report
       log("inc", r.code, r.where, r.reason);
-      return fit({ ring: R.slice(-SNAP_RING), kb: K.slice(-SNAP_KB), page: { at: page() },
+      var b4 = before ? Object.assign({ age_ms: now() - before.t }, before.p) : null;
+      return fit({ ring: R.slice(-SNAP_RING), kb: K.slice(-SNAP_KB), page: { before: b4, at: page() },
         dev: { dpr: W.devicePixelRatio, vw: W.innerWidth, vh: W.innerHeight, mem: W.navigator.deviceMemory || null, cores: W.navigator.hardwareConcurrency || null,
           tier: W.stemFx ? W.stemFx.tier : null } }, Math.min(CAP, cap || CAP));
     } catch (x) { return null; }
   }
   W.stemFR = { log: log, req: req, snap: snap, page: page, kb: K, ring: R,
-    _t: { push: push, blank: blank, label: label, keyClass: keyClass, inputType: inputType, kbEntry: kbEntry, fit: fit, gate: gate, CAP: CAP } };
+    _t: { push: push, blank: blank, label: label, keyClass: keyClass, inputType: inputType, kbEntry: kbEntry, fit: fit, gate: gate, CAP: CAP, perfFlush: perfFlush } };
 
   /* ---- what the recorder watches itself (one listener per type, passive, capture) ---- */
   var on = function (tg, type, f) { try { tg.addEventListener(type, function (e) { try { f(e); } catch (x) { /* never */ } }, { capture: true, passive: true }); } catch (x) { /* old browser */ } };
@@ -214,6 +246,10 @@
       }).observe({ type: "layout-shift", buffered: true });
     }
   } catch (x) { /* no layout-shift timing (Safari, Firefox) */ }
+  try {
+    if (W.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).indexOf("longtask") >= 0)
+      new PerformanceObserver(function (l) { try { longTasks(l.getEntries()); } catch (x) { /* never */ } }).observe({ type: "longtask", buffered: true });
+  } catch (x) { /* no long-task timing (Safari, Firefox) */ }
   /* a font / image / script / stylesheet that failed to load (resource errors reach a capture listener only): its path, no query */
   on(W, "error", function (e) {
     var tg = e.target;

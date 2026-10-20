@@ -1,6 +1,6 @@
 // Flight recorder P1 (brain sprint-render-v2/flight-recorder-DESIGN.md): after some typing, scrolling and a resize, a stubbed /explain
 // failure (504) sends ONE /log/incident report whose `fr` holds ring entries of each kind (incl. layout + net + cluck), keyboard entries
-// as classes (no printable key), page.at, the diag line and /health's answer. A sentinel string typed into the answer field, the notes
+// as classes (no printable key), page.before (P2) + page.at, the diag line and /health's answer. A sentinel string typed into the answer field, the notes
 // and Cluck's chat never reaches a report, a stemT (PostHog) call, a beacon or a server log line. The diag line shows in debug mode only.
 // Own serve.py.
 //   node tests/flight.pw.mjs <port> [shots dir]
@@ -118,11 +118,13 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   assert.equal(at.hash, "#CALC1_FL2");
   assert.ok(at.app.wish && at.app.wish.failed, "Cluck's state: failed");
   assert.ok(Array.isArray(at.boxes) && at.boxes.length > 0, "control boxes");
+  const bf = b.fr.page.before;                                             // P2: the state re-read after the last stage / nav / cluck entry
+  assert.ok(bf && bf.app && bf.hash && Array.isArray(bf.boxes) && Number.isFinite(bf.age_ms) && bf.age_ms >= 0, "page.before with its age: " + JSON.stringify(bf).slice(0, 300));
   assert.match(b.fr.diag, /^v.+ · explain 504 · \d+\.\d s · AI: (ok|err|cap|\?)$/);
   assert.ok(b.fr.health && "claude" in b.fr.health, "/health's answer folded in: " + JSON.stringify(b.fr.health));
   const size = JSON.stringify(b).length;
   assert.ok(size <= 16384, "under the hard cap: " + size);
-  console.log("     report bytes:", size, "fr bytes:", JSON.stringify(b.fr).length, "page.at bytes:", JSON.stringify(at).length, "ring:", b.fr.ring.length, "kb:", b.fr.kb.length);
+  console.log("     report bytes:", size, "fr bytes:", JSON.stringify(b.fr).length, "page.at bytes:", JSON.stringify(at).length, "page.before bytes:", JSON.stringify(bf).length, "ring:", b.fr.ring.length, "kb:", b.fr.kb.length);
   const line = logs.find(l => l.startsWith('{"incident":"' + b.code) && l.includes('"src":"client"'));
   assert.ok(line && JSON.parse(line).fr && JSON.parse(line).fr.ring, "the server's line carries the snapshot");
   const hl = () => logs.some(l => /^health \{/.test(l) && / rid=\S+ trace=[0-9a-f]{32}$/.test(l));
