@@ -228,6 +228,7 @@ class Pipe(unittest.TestCase):
             p.start()
             self.addCleanup(p.stop)
         serve._claude_spent.clear()
+        serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
 
     def tearDown(self):
         self.env.stop()

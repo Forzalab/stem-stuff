@@ -1,10 +1,12 @@
 """T62 Cluck prompt v4: the prompt file, the user-turn layout, REVEAL, the <XYZ> stripper, the leak guard, the 50/50 arms, the prompt-cache
 shape and the arms' fallbacks. urllib is mocked: no network, no key."""
 import hashlib
+import io
 import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 import urllib.error
 from unittest import mock
@@ -30,6 +32,27 @@ P1 = prob()
 P2 = prob("T_CART", extra={"body": [{"type": "text", "md": "Two carts stick. Find v."}]})
 PMULTI = prob("T_MULTI", correct=["a", "e"], extra={"pick": "all", "choices": [{"id": i, "md": f"opt {i}"} for i in "abcde"]})
 LET, VAL = serve.leak_facts(P1)
+
+
+class Slow(Resp):
+    """a stream that sleeps waits[i] s before its line i: a model that thinks or pings before (or between) its words"""
+    def __init__(self, data, waits):
+        super().__init__(data)
+        self.waits = waits
+
+    def __iter__(self):
+        for i, line in enumerate(self.read().splitlines(True)):
+            time.sleep(self.waits.get(i, 0))
+            yield line
+
+
+PING = b'event: ping\ndata: {"type": "ping"}\n\n'
+THINK = b'data: {"choices": [{"delta": {"content": "", "reasoning": "hmm"}}]}\n\n: OPENROUTER PROCESSING\n\n'
+
+
+def no_credit(code=400):
+    return urllib.error.HTTPError("u", code, "Bad Request", {}, io.BytesIO(json.dumps(
+        {"type": "error", "error": {"type": "invalid_request_error", "message": "Your credit balance is too low to access the Anthropic API."}}).encode()))
 
 
 def feed_all(parts, cls=serve.Xyz):
@@ -257,6 +280,7 @@ class CacheShape(unittest.TestCase):
             return Resp(sse_claude(["Hi.\n", "ok"])) if "anthropic.com" in req.full_url else Resp(sse_or(["Hi.\n", "ok"]))
         with mock.patch.dict(os.environ, {"CLAUDE_API": "k"}), mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "KV", (None, None)):
             serve._claude_spent.clear()
+            serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
             "".join(serve.v4_stream(dict(v4, arm=arm), "sk-or"))
         return calls[0]
 
@@ -316,6 +340,7 @@ class Layers(unittest.TestCase):
             return Resp(sse_claude(["Hi.\n"])) if "anthropic.com" in req.full_url else Resp(sse_or(["Hi.\n"]))
         with mock.patch.dict(os.environ, {"CLAUDE_API": "k"}), mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "KV", (None, None)):
             serve._claude_spent.clear()
+            serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
             "".join(serve.v4_stream(v4, "sk-or"))
         return calls[0]
 
@@ -376,6 +401,7 @@ class Handlers(unittest.TestCase):
         serve._tries.clear()
         serve._cluck_turns.clear()
         serve._claude_spent.clear()
+        serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
         self.bodies = []
         self.reply = "Quack! <XYZ>secret</XYZ>Divide by time.\n"
         self.url = mock.patch("urllib.request.urlopen", side_effect=self.fake)
@@ -438,6 +464,7 @@ class Fallbacks(unittest.TestCase):
         self.kv = mock.patch.object(serve, "KV", (None, None))
         self.kv.start()
         serve._claude_spent.clear()
+        serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
         self.url = mock.patch("urllib.request.urlopen", side_effect=self.fake)
         self.url.start()
 
@@ -476,6 +503,7 @@ class Fallbacks(unittest.TestCase):
     def test_claude_fails_deepseek_answers(self):
         for bad in (http_error(529, "overloaded_error"), http_error(402, "billing_error"), Resp(sse_claude([])), Resp(sse_claude(["<XYZ>notes only</XYZ>"]))):
             self.calls.clear()
+            serve._last_err.clear()                    # each failure on its own: the 402 starts the cooldown (Speed below)
             self.claude = lambda b=bad: b
             self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
             self.assertEqual(self.calls, ["claude", "deepseek"])
@@ -508,6 +536,50 @@ class Fallbacks(unittest.TestCase):
             self.run_arm("claude", reveal=True)
         self.assertEqual(self.calls, ["claude"])
 
+    def test_no_word_by_the_cap_falls_back(self):
+        with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1"}):
+            self.claude = lambda: Slow(PING * 6 + sse_claude(["Too late.\n"]), {i: 0.03 for i in range(18)})   # pings only for 0.5 s
+            self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
+            self.assertEqual(self.calls, ["claude", "deepseek"])
+            self.ds = lambda: Slow(THINK * 6 + sse_or(["Too late.\n"]), {i: 0.03 for i in range(24)})        # reasoning + keepalive only
+            self.assertEqual(self.run_arm("deepseek"), "Old chain.\n", "both arms slow: the old chain")
+            self.assertEqual(self.calls[2:], ["deepseek", "claude", "old"])
+            self.claude = lambda: Resp(sse_claude(["Claude says hi.\n"]))
+            self.calls.clear()
+            self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\n")
+            self.assertEqual(self.calls, ["deepseek", "claude"])
+
+    def test_never_cut_once_words_flowed(self):
+        with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1"}):
+            self.claude = lambda: Slow(sse_claude(["Quack! slow\n", "but here."]), {i: 0.05 for i in range(9, 15)})   # a word at once (line 7), then 0.3 s of gaps
+            self.assertEqual(self.run_arm("claude"), "Quack! slow\nbut here.")
+            self.assertEqual(self.calls, ["claude"])
+            self.ds = lambda: Slow(sse_or(["Deep, slow\n", "but here."]), {1: 0.15, 2: 0.15})
+            self.calls.clear()
+            self.assertEqual(self.run_arm("deepseek"), "Deep, slow\nbut here.")
+            self.assertEqual(self.calls, ["deepseek"])
+
+    def test_blank_reply_is_empty(self):
+        self.claude = lambda: Resp(sse_claude(["<XYZ>notes</XYZ>\n\n", "  \n"]))
+        self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
+        self.assertEqual(self.calls, ["claude", "deepseek"])
+        self.assertEqual("".join(serve.v4_visible(iter(["\n", " \n", "<XYZ>x</XYZ>"]), True, (LET, VAL))), "")
+        for chunks in (["\n", "  "], [], [""]):
+            status, head, body = serve._relay({"code": "T"}, lambda c=chunks: iter(c), "explain", {})
+            self.assertEqual(status, 502)
+            self.assertRegex(head["X-Incident"], r"^S-\w{5} empty ")
+            self.assertEqual(b"".join(body), serve.STOPPED)
+        status, _, body = serve._relay({"code": "T"}, lambda: iter(["\n", "Quack.\n"]), "explain", {})
+        self.assertEqual((status, b"".join(body)), (200, b"Quack.\n"))
+
+    def test_lamp_greeting_cut_on_both_arms(self):
+        self.claude = lambda: Resp(sse_claude(["<XYZ>tries: 1</XYZ>\nHi la", "mp. I'm here.\n", "Divide the work by the time, the lamp says."]))
+        self.ds = lambda: Resp(sse_or(["Hey Lamp, ", "quack!\n", "Look at the slip."]))
+        self.assertEqual(self.run_arm("claude"), "\nI'm here.\nDivide the work by the time, the lamp says.")
+        self.assertEqual(self.run_arm("deepseek"), "quack!\nLook at the slip.")
+        self.assertEqual(self.run_arm("deepseek", reveal=True), "quack!\nLook at the slip.")
+
+
     def test_sticky_arm_unchanged_after_a_fallback(self):
         self.claude = lambda: http_error(529, "overloaded_error")
         self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
@@ -526,6 +598,64 @@ class Fallbacks(unittest.TestCase):
     def test_no_prompt_means_old_path(self):
         with mock.patch.object(serve, "PROMPT_V4", None):
             self.assertEqual(self.run_arm("claude"), "Old chain.\n")
+
+
+class Cooldown(unittest.TestCase):
+    """speed fix #4 (Tony, Oct 20): after Claude says out of credit or a bad key, its arm is off for CLUCK_CLAUDE_COOLDOWN_S"""
+    setUp, tearDown, fake, run_arm = Fallbacks.setUp, Fallbacks.tearDown, Fallbacks.fake, Fallbacks.run_arm
+
+    def test_billing_or_key_error_skips_claude(self):
+        for bad in (no_credit(400), http_error(401, "authentication_error"), http_error(403, "permission_error"), http_error(402, "billing_error")):
+            serve._last_err.clear()
+            self.calls.clear()
+            self.claude = lambda b=bad: b
+            self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
+            self.assertEqual(self.calls, ["claude", "deepseek"])
+            code = serve._last_err["claude"]["code"]
+            self.calls.clear()
+            self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
+            self.assertEqual(self.calls, ["deepseek"], "cooling: Claude is not called")
+            self.assertEqual(serve._last_err["claude"]["code"], code, "a skip is no new failure: the window does not move")
+
+    def test_claude_comes_back_after_the_window(self):
+        self.claude = lambda: no_credit()
+        self.run_arm("claude")
+        self.claude = lambda: Resp(sse_claude(["Claude is back.\n", "ok"]))
+        serve._last_err["claude"]["at"] -= 601                          # default CLUCK_CLAUDE_COOLDOWN_S = 600
+        self.calls.clear()
+        self.assertEqual(self.run_arm("claude"), "Claude is back.\nok")
+        self.assertEqual(self.calls, ["claude"])
+        serve._last_err["claude"].update(reason="budget_cap", at=int(time.time()))
+        with mock.patch.dict(os.environ, {"CLUCK_CLAUDE_COOLDOWN_S": "0"}):  # the knob
+            self.calls.clear()
+            self.run_arm("claude")
+            self.assertEqual(self.calls, ["claude"])
+
+    def test_other_errors_do_not_cool_down(self):
+        for bad in (http_error(529, "overloaded_error"), http_error(400, "invalid_request_error"), http_error(429, "rate_limit_error")):
+            serve._last_err.clear()
+            self.claude = lambda b=bad: b
+            self.run_arm("claude")
+            self.claude = lambda: Resp(sse_claude(["Claude.\n"]))
+            self.calls.clear()
+            self.assertEqual(self.run_arm("claude"), "Claude.\n")
+            self.assertEqual(self.calls, ["claude"])
+
+
+class LampCut(unittest.TestCase):
+    def test_cases(self):
+        cut = {"Hi lamp. I'm here.\nDivide.": "I'm here.\nDivide.", "Hey Lamp, you're close\n": "you're close\n",
+               "Lamp — so close!": "so close!", "hello there, LAMP! (｀・ω・´)\n": "(｀・ω・´)\n",
+               "Hi lamp!\n\nYou picked A.": "You picked A.", "\n\nOh lamp... hmm": "\n\nhmm"}
+        same = ["Quack! the lamp says try again.\n", "Lamp says hi", "Lamps glow", "lamp-like glow", "Hi Lampy", "Hi Tony.\nHi lamp.",
+                "You did it, lamp. Hi lamp."]
+        for t, want in cut.items():
+            self.assertEqual(serve.lamp_cut(t), want, t)
+        for t in same:
+            self.assertEqual(serve.lamp_cut(t), t, t)
+
+    def test_letter_and_reminder_unchanged(self):
+        self.assertEqual(serve.LAMP, "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. REVEAL: ")
 
 
 if __name__ == "__main__":
