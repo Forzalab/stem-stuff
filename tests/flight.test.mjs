@@ -79,6 +79,24 @@ test("kb: content-free (key CLASS, inputType enum, lengths), 100 ms times, a hel
   assert.ok(!s.includes(SENTINEL) && !s.includes("KeyZ") && !/"(q|é)"/.test(s), s);
 });
 
+test("kb P2: keyup as a class (never folded), paste / cut / copy / submit as the event only: no clipboard, no value", () => {
+  const { FR, fire, clock, nodes } = run();
+  const ta = nodes["#scratch"], clip = { getData: () => SENTINEL, types: ["text/plain"] };
+  clock.t = 7349;
+  fire("doc:keydown", kd("z", ta)); fire("doc:keyup", kd("z", ta)); fire("doc:keyup", kd("z", ta)); fire("doc:keyup", kd("Enter", ta, { ctrlKey: true }));
+  for (const t of ["paste", "cut", "copy"]) fire("doc:" + t, { target: ta, clipboardData: clip, data: SENTINEL });
+  const form = { tagName: "FORM", id: "", className: "ask", getAttribute: () => null };
+  fire("doc:submit", { target: form, submitter: ta });
+  const k = FR.kb;
+  assert.deepEqual(P(k.map(e => [e[2], e[3], e[4]])), [["kd", "textarea#scratch", "char"], ["ku", "textarea#scratch", "char"], ["ku", "textarea#scratch", "char"],
+    ["ku", "textarea#scratch", "Enter"], ["paste", "textarea#scratch", null], ["cut", "textarea#scratch", null], ["copy", "textarea#scratch", null], ["submit", "form.ask", null]]);
+  assert.equal(k[3][5] & 1, 1, "ctrl");
+  assert.deepEqual(P([k[4][6], k[7][6]]), [SENTINEL.length, null], "a field's length; a form has none");
+  assert.ok(k.every(e => e[0] === 7300), "100 ms times");
+  const s = JSON.stringify(k);
+  assert.ok(!s.includes(SENTINEL) && !/"z"|KeyZ/.test(s), s);
+});
+
 test("keyClass / inputType / blank: the masking rules", () => {
   const { keyClass, inputType, blank, label } = run().FR._t;
   for (const c of ["a", "Z", "7", "$", "é", "😀"]) assert.equal(keyClass(c), "char", c);

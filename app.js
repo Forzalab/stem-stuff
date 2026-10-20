@@ -106,6 +106,8 @@ document.addEventListener("click", async e => {
   e.stopPropagation(); e.preventDefault();
   say((await copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
 }, true);
+/* a classic script (offline.js: the SW reload loop) cannot import incident.mjs: it fires "stem:incident" { where, why } */
+addEventListener("stem:incident", e => { const d = e.detail || {}; incident(d.where, d.why); });
 /* serve.py's X-Incident: "S-7K3QX budget_cap <trace id>" (its code, its reason tag, the request's trace id) */
 const xInc = r => (r && r.headers.get("x-incident") || "").trim().split(/\s+/);
 /* a request that failed: one incident. r = the Response when one came (its X-Incident, the server's code + reason, win), else e = what fetch threw */
@@ -240,18 +242,26 @@ async function net(url, init = {}) {
   finally { clearTimeout(t); inflight.delete(req); }
 }
 const localState = new Map();
+/* /check timed out twice in a row (flight recorder P2): the 2nd is its own incident, timeout_x2, so it is not folded into the 1st (flight.js
+   dedupe) and its report shows the page after two waits; any other answer resets the count */
+let checkSlow = 0;
 async function check(code, answer) {
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(modeView(off.get(code), modeOf()), answer);   // an upload: the same mode view the server uses
-  const t0 = Date.now(), tp = traceparent();
+  const t0 = Date.now(), tp = traceparent(), slow = checkSlow;
   let inc = null;
+  checkSlow = 0;
   try {
     const rd = window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {};   // a redo round grades in its own namespace
     const r = await net("check", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
                                      body: JSON.stringify({ code, ...answer, ...rd }) });
     if (r.ok) { try { return await r.json(); } catch (e) { inc = reqInc("check", "/check", t0, { e, phase: "parse", q: code, tp }); } }
     else if (r.status >= 500) inc = reqInc("check", "/check", t0, { r, q: code, tp });   // a 4xx: no grader here (a static host), not a failure
-  } catch (e) { inc = reqInc("check", "/check", t0, { e, q: code, tp }); if (timedOut(e)) return { verdict: "timeout", inc }; /* else offline */ }
+  } catch (e) {
+    if (timedOut(e)) checkSlow = slow + 1;
+    inc = reqInc("check", "/check", t0, { e, q: code, tp, why: checkSlow >= 2 ? "timeout_x2" : undefined });
+    if (timedOut(e)) return { verdict: "timeout", inc }; /* else offline */
+  }
   return { verdict: "pending", inc };
 }
 /* mirror of serve.py grade(): keep the two in step */

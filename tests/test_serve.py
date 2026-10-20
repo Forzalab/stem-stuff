@@ -1200,6 +1200,59 @@ class Explain(unittest.TestCase):
         self.assertEqual((status, logged, "X-Incident" in head), (200, [], False))
         self.assertTrue(b"".join(chunks).startswith(b"POOF!"))
 
+    def traced(self, sid, **body):
+        """(status, the ONE trace line) for a POST /explain through serve.STREAMS (as Handler / api/index.py call it)"""
+        serve.set_trace("")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            status, _, chunks = serve.STREAMS["/explain"]("sid=" + sid, json.dumps({"code": "CALC1_XP1", "answer": "a", **body}).encode())
+            b"".join(chunks)
+        lines = [json.loads(x) for x in err.getvalue().splitlines() if x.startswith('{"trace"')]
+        self.assertEqual(len(lines), 1, err.getvalue())
+        self.assertNotIn(self.SENTINEL, err.getvalue(), "no student text in any line")
+        self.assertNotIn(sid, err.getvalue(), "the browser id only as its hash")
+        return status, lines[0]
+
+    SENTINEL = "Zq7xSENTINELwv"
+
+    def test_one_trace_line_per_request_with_its_phases(self):
+        """flight recorder P2: the request's status, first byte, bytes, the NOTE + each model call (status, ms), its S- codes; no text"""
+        status, t = self.traced("7" * 32, scratch="my notes " + self.SENTINEL)
+        self.assertEqual((status, t["trace"], t["path"], t["status"], t["q"], t["done"], t["inc"]), (200, 1, "/explain", 200, "CALC1_XP1", True, []))
+        self.assertEqual(t["sid"], hashlib.sha256(("7" * 32).encode()).hexdigest()[:8])
+        self.assertGreater(t["bytes"], 0)
+        self.assertTrue(0 <= t["fb_ms"] <= t["ms"])
+        self.assertEqual([(x["p"], x.get("model"), x.get("status")) for x in t["phases"]],
+                         [("note", serve.OPENROUTER_NOTE_MODELS[0], 200), ("or", serve.OPENROUTER_MODELS[0], 200)])
+        self.assertTrue(all(isinstance(x["ms"], int) and isinstance(x["at"], int) for x in t["phases"]))
+        self.assertRegex(t["trace_id"], r"^[0-9a-f]{32}$")
+
+    def test_a_failed_request_traces_every_model_and_code(self):
+        self.dead = set(serve.OPENROUTER_MODELS)
+        status, t = self.traced("9" * 32, scratch=self.SENTINEL)
+        self.assertEqual((status, t["status"], t["fb_ms"] is not None), (502, 502, True))   # the "(Cluck stopped early)" line
+        ors = [x for x in t["phases"] if x["p"] == "or"]
+        self.assertEqual([(x["model"], x["status"]) for x in ors], [(m, 500) for m in serve.OPENROUTER_MODELS])
+        incs = [x for x in t["phases"] if x["p"] == "inc"]
+        self.assertEqual(t["inc"], [x["code"] for x in incs])
+        self.assertEqual(len(incs), len(serve.OPENROUTER_MODELS) + 1, "one per model, then the request's own")
+
+    def test_a_cut_stream_still_prints_its_line(self):
+        serve.set_trace("")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            _, _, chunks = serve.STREAMS["/explain"]("sid=" + "6" * 32, json.dumps({"code": "CALC1_XP1", "answer": "a"}).encode())
+            next(chunks)
+            chunks.close()                                                             # the client left mid-reply
+        t = [json.loads(x) for x in err.getvalue().splitlines() if x.startswith('{"trace"')]
+        self.assertEqual([(x["done"], x["status"]) for x in t], [(False, 200)])
+        serve.set_trace("")
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            status, _, chunks = serve.STREAMS["/explain"]("sid=" + "6" * 32, json.dumps({"code": "NOPE_X1", "answer": "a"}).encode())
+            b"".join(chunks)
+        t = [json.loads(x) for x in err.getvalue().splitlines() if x.startswith('{"trace"')]   # (a bank reload may log "loaded ..." first)
+        self.assertEqual((status, [x["status"] for x in t]), (404, [404]), "an early answer too")
+
 
 class Incidents(unittest.TestCase):
     """POST /log/incident (incident.mjs's beacon): one JSON line, allowlisted fields only, rate-limited per browser"""
@@ -1259,13 +1312,15 @@ class Incidents(unittest.TestCase):
         self.assertEqual(f(""), "other-other")
 
     def test_a_crash_in_the_api_is_a_500_with_its_code(self):
+        serve.set_trace("")                                                             # a new request (Handler / api/index.py do this)
         with unittest.mock.patch.object(serve, "lookup", side_effect=RuntimeError("boom")):
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
                 status, head, data = serve.dispatch("POST", "/check", "sid=" + "3" * 32, b'{"code": "CALC1_T6B", "answer": "1"}')
         code, why, trace = head["X-Incident"].split()
         self.assertEqual((status, why), (500, "exception"))
-        line = json.loads(err.getvalue().splitlines()[-1])
+        line, t = map(json.loads, err.getvalue().splitlines()[-2:])                     # the incident line, then the request's trace line
+        self.assertEqual((t["trace"], t["status"], t["trace_id"], t["phases"][0]["code"]), (1, 500, trace, code))
         self.assertEqual((line["incident"], line["src"], line["url.path"], line["http.request.method"], line["exception.message"], line["error.type"], line["trace_id"]),
                          (code, "server", "/check", "POST", "RuntimeError: boom", "RuntimeError", trace))
 
@@ -1298,6 +1353,7 @@ class Flight(unittest.TestCase):
     def setUp(self):
         serve._last_err.clear()
         serve._inc_seen.clear()
+        serve._or_key.update(at=0.0, v=None)
 
     def err(self, fn):
         out = io.StringIO()
@@ -1360,10 +1416,15 @@ class Flight(unittest.TestCase):
         (res, _) = self.err(lambda: serve.dispatch("POST", "/log/incident", "", json.dumps({"code": "E-7K3QX", "fr": "not a dict"}).encode(), "UA"))
         self.assertEqual(res[0], 204)
 
-    def health(self, env=None, kv=None, spent=0.0):
-        """(the page's JSON, the server's log line as a dict) for GET /health with env, a stub KV {key: value} (None = no KV) and spent $"""
+    OR_KEY = {"limit": 10.0, "usage": 2.5, "limit_remaining": 7.5, "free": False}
+
+    def health(self, env=None, kv=None, spent=0.0, orkey=OR_KEY):
+        """(the page's JSON, the server's log line as a dict) for GET /health with env, a stub KV {key: value} (None = no KV), spent $ and
+        OpenRouter's key status (or_key_state; "ask" = not stubbed)"""
         stack = contextlib.ExitStack()
         with stack:
+            if orkey != "ask":
+                stack.enter_context(unittest.mock.patch.object(serve, "or_key_state", return_value=orkey))
             stack.enter_context(unittest.mock.patch.dict(os.environ, env if env is not None else self.ENV, clear=True))
             stack.enter_context(unittest.mock.patch.object(serve, "claude_spent", return_value=spent))
             if kv is not None:
@@ -1399,6 +1460,72 @@ class Flight(unittest.TestCase):
         serve._last_err.clear()
         self.assertEqual(self.health(kv=kv)[0]["or"], "err", "another instance's error, from KV")
         self.assertNotIn("$", json.dumps(self.health()[0]))
+
+    def test_health_asks_openrouter_for_its_key_status_no_number_leaves(self):
+        """flight recorder P2: OpenRouter's /auth/key (limit_remaining <= 0 or a 402 = over, 401/403 = err, unreachable = no change); the
+        dollars only in the log line"""
+        body, log = self.health()
+        self.assertEqual((body["or"], log["or_key"]["limit_remaining"]), ("ok", 7.5))
+        self.assertNotIn("7.5", json.dumps(body))
+        self.assertEqual(self.health(orkey=dict(self.OR_KEY, limit_remaining=0))[0]["or"], "over")
+        self.assertEqual(self.health(orkey={"status": 402})[0]["or"], "over")
+        self.assertEqual(self.health(orkey={"status": 401})[0]["or"], "err")
+        self.assertEqual(self.health(orkey={"err": "URLError"})[0]["or"], "ok", "OpenRouter unreachable from here: no change")
+        self.assertEqual(self.health(orkey=dict(self.OR_KEY, limit_remaining=None))[0]["or"], "ok", "a key with no limit")
+        serve._last_err["openrouter"] = {"at": int(time.time()), "reason": "upstream", "status": 500, "code": "S-22222"}
+        with unittest.mock.patch.object(serve, "or_key_state", side_effect=AssertionError("not asked")):
+            body, log = self.health(orkey="ask")
+        self.assertEqual((body["or"], "or_key" in log), ("err", False), "a fresh failure wins; OpenRouter is not asked")
+
+    def test_or_key_state_is_asked_once_a_minute_a_failure_too(self):
+        calls = []
+
+        class R(io.BytesIO):
+            def __exit__(self, *a):
+                return False
+
+        def urlopen(req, timeout):
+            calls.append((req.full_url, req.get_header("Authorization"), timeout))
+            if len(calls) == 2:
+                raise urllib.error.HTTPError(req.full_url, 401, "x", {}, io.BytesIO(b"{}"))
+            return R(json.dumps({"data": {"label": "sk-or-v1-abc...", "limit": 10, "usage": 2.5, "limit_remaining": 7.5, "is_free_tier": False}}).encode())
+        with unittest.mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-or"}), unittest.mock.patch.object(serve.urllib.request, "urlopen", urlopen):
+            for _ in range(5):
+                self.assertEqual(serve.or_key_state(), {"limit": 10, "usage": 2.5, "limit_remaining": 7.5, "free": False})
+            self.assertEqual(calls, [(serve.OPENROUTER_BASE + "/auth/key", "Bearer sk-or", 2)])
+            serve._or_key["at"] -= serve.OR_KEY_TTL + 1
+            for _ in range(3):
+                self.assertEqual(serve.or_key_state(), {"status": 401})
+            self.assertEqual(len(calls), 2, "a failure is kept a minute too")
+        with unittest.mock.patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(serve.or_key_state())
+
+    def test_a_slow_or_failed_api_request_gets_a_trace_line(self):
+        """/check, /b, /p...: a trace line only when not 2xx or slower than TRACE_SLOW_MS; /health and /log/incident print their own"""
+        def run(*a):
+            serve.set_trace("")
+            return self.err(lambda: serve.dispatch(*a))[1]
+        t = json.loads(run("GET", "/p/NOPE_X1.json", "")[-1])
+        self.assertEqual((t["trace"], t["path"], t["status"], t["method"], t["phases"]), (1, "/p/NOPE_X1.json", 404, "GET", []))
+        self.assertEqual([x for x in run("GET", "/b/last.json", "") if x.startswith('{"trace"')], [])
+        with unittest.mock.patch.object(serve, "TRACE_SLOW_MS", -1), unittest.mock.patch.object(serve, "or_key_state", return_value=None):
+            self.assertEqual(json.loads(run("GET", "/b/last.json", "")[-1])["status"], 200)
+            self.assertEqual([x for x in run("GET", "/health", "") if x.startswith('{"trace"')], [])
+        with unittest.mock.patch.object(serve, "_dispatch", side_effect=RuntimeError("boom")):
+            lines = run("GET", "/p/X.json", "")
+        inc, t = json.loads(lines[0]), json.loads(lines[1])
+        self.assertEqual((t["status"], t["phases"][0]["p"], t["phases"][0]["code"]), (500, "inc", inc["incident"]))
+
+    def test_or_post_traces_each_call(self):
+        serve.set_trace("")
+        with unittest.mock.patch.object(serve.urllib.request, "urlopen", side_effect=urllib.error.HTTPError("u", 402, "x", {}, io.BytesIO(b""))):
+            with self.assertRaises(urllib.error.HTTPError):
+                serve._or_post({"model": "m/a", "response_format": {}}, "k", 3)
+        with unittest.mock.patch.object(serve.urllib.request, "urlopen", side_effect=TimeoutError("t")):
+            with self.assertRaises(TimeoutError):
+                serve._or_post({"model": "m/b", "stream": True}, "k", 3)
+        self.assertEqual([(x["p"], x["model"], x.get("status"), x.get("err")) for x in serve._trace.phases],
+                         [("note", "m/a", 402, None), ("or", "m/b", None, "TimeoutError")])
 
     def test_health_prepaid_balance_from_the_spend_job(self):
         """the hourly GitHub Action writes stem:anthropic:spend; with PREPAID_CENTS: remaining = PREPAID_CENTS - cents_since; at or under the

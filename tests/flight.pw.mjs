@@ -106,7 +106,7 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   assert.ok(b.fr.ring.some(e => e[1] === "nav" && e[2] === "CALC1_FL2"), "the question opened");
   assert.ok(b.fr.kb.length > 0 && b.fr.kb.length <= 20, "kb entries: " + b.fr.kb.length);
   const evs = new Set(b.fr.kb.map(e => e[2]));
-  for (const ev of ["kd", "in"]) assert.ok(evs.has(ev), `kb ${ev} in ${[...evs]}`);
+  for (const ev of ["kd", "ku", "in"]) assert.ok(evs.has(ev), `kb ${ev} in ${[...evs]}`);   // ku: P2
   for (const e of b.fr.kb) {
     assert.equal(e[0] % 100, 0, "100 ms times");
     if (e[4] != null) { assert.match(String(e[4]), KEYS, "a key class / inputType, never a value: " + JSON.stringify(e)); assert.ok(String(e[4]).length > 1, "no printable key: " + JSON.stringify(e)); }

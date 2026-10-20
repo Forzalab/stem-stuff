@@ -119,6 +119,22 @@ try {
     assert.equal(await bar(page).count(), 0, "no bar after a further reload");
     slow = null;
   });
+  await step("a reload loop (flight recorder P2): a 3rd SW reload inside 60 s does not happen; the bar instead + incident sw_loop", async () => {
+    const incs = [];
+    const onMsg = m => { if (/^incident /.test(m.text())) incs.push(JSON.parse(m.text().slice(9))); };
+    page.on("console", onMsg);
+    await page.evaluate(() => { const t = Date.now(); sessionStorage.setItem("stem-swr", JSON.stringify([t - 5000, t - 1000])); window.__same = 1; });   // two reloads just now
+    deploy("#93", "ddd4444");
+    await check(page);
+    await bar(page).waitFor({ state: "visible", timeout: 15000 });
+    assert.equal(await page.evaluate(() => window.__same), 1, "no reload");
+    for (let i = 0; i < 20 && !incs.length; i++) await page.waitForTimeout(100);
+    assert.deepEqual(incs.map(x => [x.where, x.reason]), [["sw", "sw_loop"]]);
+    assert.ok(await page.evaluate(() => window.stemFR.ring.some(e => e[1] === "sw" && e[2] === "loop")), "the ring has it");
+    await Promise.all([page.waitForEvent("load"), bar(page).click()]);                   // a tap still updates
+    assert.deepEqual(await ver(page), ["#93", "#93"]);
+    page.off("console", onMsg);
+  });
 } finally {
   await browser.close();
   server.close();
