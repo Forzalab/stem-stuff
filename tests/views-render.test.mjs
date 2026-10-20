@@ -3,7 +3,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { render, stream, mountView, register, registered, splitStatements } from "../views.js";
-import { LIB, LOCAL, mergeLib } from "../views-lib.js";
+import { readFileSync } from "node:fs";
+import { LIB, MARKS, DOODLES } from "../views-lib.js";
 import { P10, P11, P2, DROPPED, chunk } from "../try/views-demo-src.js";
 import { makePredict } from "../try/views-demo-server.js";
 import { mount, html, byClass, one, all } from "./views-dom.mjs";
@@ -16,14 +17,18 @@ test("registry: every library component has a drawing, and nothing is drawn that
   assert.deepEqual(registered().sort(), Object.keys(LIB.components).filter(n => n !== "Step").sort());
 });
 
-test("library: no views/library.json -> LOCAL; a LibrarySpec wins per component, LOCAL fills the rest", () => {
-  assert.equal(mergeLib(null), LOCAL);
-  const m = mergeLib({ version: "9.9.9", root: "View", components: {
-    Text: { description: "t", layer: "L0", props: { type: "object", properties: { tex: { type: "string" } }, required: ["tex"] } } } });
-  assert.equal(m.version, "9.9.9");
-  assert.deepEqual(Object.keys(m.components.Text.props), ["tex"]);
-  assert.deepEqual(m.components.Text.required, ["tex"]);
-  assert.equal(m.components.Doodle, LOCAL.components.Doodle);
+test("library: views-lib.js loads views/library.json, the one source (no hand-kept list beside it)", () => {
+  const spec = JSON.parse(readFileSync(new URL("../views/library.json", import.meta.url), "utf8"));
+  assert.deepEqual([LIB.id, LIB.version, LIB.root], [spec.id, spec.version, spec.root]);
+  assert.deepEqual(Object.keys(LIB.components), Object.keys(spec.components));
+  for (const [n, c] of Object.entries(spec.components)) {
+    assert.deepEqual(LIB.components[n], { layer: c.layer, desc: c.description, props: c.props.properties, required: c.props.required }, n);
+    assert.deepEqual(Object.keys(LIB.components[n].props), Object.keys(c.props.properties), `${n}: positional order`);
+  }
+  assert.deepEqual(MARKS, spec.marks);
+  assert.deepEqual(DOODLES, spec.components.Doodle.props.properties.kind.enum);
+  const src = readFileSync(new URL("../views-lib.js", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /\bLOCAL\b|type: "(string|array|integer)"/, "views-lib.js holds no component data of its own");
 });
 
 test("render: the demo programs draw with no errors, slots in the root's order", () => {
