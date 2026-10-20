@@ -178,6 +178,8 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 6 plain 
   await a.click();
   await page.waitForURL(/privacy\.html$/);
   assert.equal((await page.$$("main > p")).length, 6);
+  for (const [re, what] of [[/you see an error code/, "error codes"], [/short log of its last steps/, "on-device flight log"], [/our server still notes the error code/, "server error lines under DNT"], [/The duck:/, "the duck"]])
+    assert.match(await page.textContent("main"), re, "privacy lists " + what);   // a merge once dropped these: the page must stay true
   assert.match(await page.textContent("main"), /duck may react to how you work/, "Jev (on for all) listed");
   assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
   assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
