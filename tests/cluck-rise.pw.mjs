@@ -60,7 +60,7 @@ async function open(vp, o = {}) {
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
   if (o.diet) await ctx.addCookies(DIET);
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   const page = await ctx.newPage();
   page.errs = []; page.ai = 0;
@@ -157,6 +157,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
     assert.equal(asked, i + 1, `${code}: exactly one prefetch`);
     assert.equal(await cluckOpen(page), false, `${code}: Cluck stays closed`);
   }
+  await page.clock.runFor(1000); await page.clock.fastForward(121000);   // past peek.js COOL (2 min between rises; Q1 / Q2 may have risen): flush Q2's 0.7 s rise timer first, then jump (a long runFor sometimes left performance.now behind; fastForward alone fired Q2's rise after the jump)
   await go(page, order[2]);
   await pick(page, "b");
   await page.clock.runFor(1500);
@@ -164,6 +165,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.waitForTimeout(800);
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
+  await page.waitForFunction(() => window.stemDuck.up, null, { timeout: 4000 }).catch(() => {});   // the verdict can land after runFor: the 0.7 s rise timer then runs on the flowing clock
   assert.equal(await up(page), true, "Q3: the duck rises");
   await page.click(".ck-peek");                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
   await page.clock.runFor(300);

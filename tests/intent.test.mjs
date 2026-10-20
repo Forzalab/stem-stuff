@@ -8,18 +8,18 @@ const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
 
 /* a fake browser: search = location.search, store = localStorage, tele = window.__stemTelemetry (or none) */
 function load({ search = "", store = {}, tele } = {}) {
-  const listeners = [], timers = [], calls = [], args = [];
+  const listeners = [], handlers = [], timers = [], calls = [], args = [];
   const win = {
     location: { search }, navigator: {}, URLSearchParams, performance: { now: () => 0 },
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } },
-    document: { hidden: false, addEventListener: t => listeners.push(t) },
+    document: { hidden: false, addEventListener: (t, f) => { listeners.push(t); handlers.push(f); } },
     setInterval: f => timers.push(f),
     stemT: (n, p) => { calls.push(n); args.push(p); },
   };
   if (tele) win.__stemTelemetry = tele;
   win.window = win;
   vm.runInNewContext(SRC, win);
-  return { win, store, listeners, timers, calls, args };
+  return { win, store, listeners, handlers, timers, calls, args };
 }
 /* one session on a fake clock: s(x) moves the clock to x seconds */
 function session(hist, o) {
@@ -32,30 +32,51 @@ function session(hist, o) {
 /* the why of the newest hit of one state (J5 added S6 / Q, which can land on the same tick or pick and take state().last) */
 const why = (j, st) => j.state().lines.filter(l => l.includes("  jev  " + st + " ")).at(-1)?.split("  jev  " + st + " ")[1];
 
-test("flag off (default): stemT untouched, no listeners, no timer, no stemJev", () => {
-  const { win, listeners, timers } = load();
-  assert.equal(win.stemJev, undefined);
-  assert.equal(listeners.length, 0);
-  assert.equal(timers.length, 0);
-  assert.ok(win.__stemJev.create);
-});
-
-test("?jev=1 turns it on and remembers it; ?jev=0 turns it off", () => {
-  const on = load({ search: "?jev=1" });
-  assert.equal(on.store["stem-jev"], "1");
+test("on by default (art. 11, no flag): stemT wrapped, listeners + timer set, stemJev live; ?jev=0 = off on this device", () => {
+  const on = load();
   assert.equal(typeof on.win.stemJev, "function");
   assert.deepEqual(on.listeners.sort(), ["copy", "input", "keydown", "pointerdown", "visibilitychange", "wheel"]);
+  assert.equal(on.timers.length, 1);
   on.win.stemT("q_open", { code: "A1" });
   assert.deepEqual(on.calls, ["q_open"], "the old stemT still runs");
-  const off = load({ search: "?jev=0", store: { "stem-jev": "1" } });
-  assert.equal(off.store["stem-jev"], undefined);
-  assert.equal(off.win.stemJev, undefined);
+  const off = load({ search: "?jev=0" });
+  assert.equal(off.store["stem-jev"], "0", "remembered");
+  assert.equal(off.win.stemJev, undefined); assert.equal(off.listeners.length, 0); assert.equal(off.timers.length, 0);
+  assert.ok(off.win.__stemJev.create);
+  assert.equal(load({ store: off.store }).win.stemJev, undefined, "still off on the next visit");
+  const back = load({ search: "?jev=1", store: off.store });
+  assert.equal(back.store["stem-jev"], undefined, "?jev=1 clears the opt-out");
+  assert.equal(typeof back.win.stemJev, "function");
 });
 
-test("stem-t-off / DNT keep it off even with the flag", () => {
-  const tele = { optedOut: () => false, userOff: () => true };
-  assert.equal(load({ store: { "stem-jev": "1" }, tele }).win.stemJev, undefined);
-  assert.equal(load({ store: { "stem-jev": "1" }, tele: { optedOut: () => true, userOff: () => false } }).win.stemJev, undefined);
+test("stem-t-off / DNT / GPC keep it off (telemetry.js's own gates), even with ?jev=1", () => {
+  const tele = (nav, ls) => ({ optedOut: () => !!(nav.doNotTrack === "1" || nav.globalPrivacyControl), userOff: () => ls["stem-t-off"] === "1" });
+  for (const [nav, store] of [[{ doNotTrack: "1" }, {}], [{ globalPrivacyControl: true }, {}], [{}, { "stem-t-off": "1" }]]) {
+    assert.equal(load({ search: "?jev=1", store, tele: tele(nav, store) }).win.stemJev, undefined, JSON.stringify([nav, store]));
+  }
+  assert.equal(typeof load({ tele: tele({}, {}) }).win.stemJev, "function", "no opt-out: on");
+});
+
+test("jev_item: one event per ended item at the next q_open, the open item's lines so far on a tab hide, the rest later; shape { sid, i, code, lines }", () => {
+  let t = 0;
+  const L = load(); L.win.performance.now = () => t;
+  const items = () => L.calls.map((n, k) => [n, L.args[k]]).filter(([n]) => n === "jev_item").map(([, p]) => JSON.parse(JSON.stringify(p)));
+  L.win.stemT("q_open", { code: "A", type: "mc" });
+  t = 9000; L.win.stemT("pick", { code: "A", choice: "B", verdict: "wrong", tries_left: 2, error: "sign" });
+  assert.equal(items().length, 0, "nothing while the item is open");
+  t = 20000; L.win.stemT("q_open", { code: "B", type: "mc" });
+  const [a] = items();
+  assert.deepEqual(Object.keys(a).sort(), ["code", "i", "lines", "sid"]);
+  assert.match(a.sid, /^s[a-z0-9]+$/); assert.equal(a.i, 1); assert.equal(a.code, "A");
+  assert.deepEqual(a.lines, ["+0.0  q_open  A mc", "+9.0  pick  B wrong tries_left=2 err=sign", "+9.0  tree  wrong d=1 read=slip fam=sign"], "raw here: telemetry.js strips err= / fam= (telemetry.test.mjs)");
+  const hide = L.listeners.indexOf("visibilitychange");
+  assert.ok(hide >= 0);
+  t = 25000; L.win.document.hidden = true; L.handlers[hide]();
+  assert.deepEqual(items()[1], { sid: a.sid, i: 2, code: "B", lines: ["+0.0  q_open  B mc"] }, "hide: the open item so far");
+  t = 40000; L.win.document.hidden = false; L.handlers[hide]();
+  L.win.stemT("_copy"); L.win.stemT("q_open", { code: "C", type: "mc" });
+  assert.deepEqual(items()[2].lines, ["+20.0  away  15s via=hide", "+20.0  copy  stem"], "only what was not sent yet; never the copied text");
+  assert.equal(items().length, 3);
 });
 
 test("lines: +SS.s  kind  args, reset per item, capped at 40, no typed text", () => {

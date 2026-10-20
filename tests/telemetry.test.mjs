@@ -7,7 +7,7 @@ import vm from "node:vm";
 const SRC = readFileSync(new URL("../telemetry.js", import.meta.url), "utf8");
 
 /* a fake browser: meta = the <meta name="stem-t"> attributes (or null), nav = navigator fields */
-function run({ meta = null, nav = {} } = {}) {
+function run({ meta = null, nav = {}, search = "", store = {}, src = SRC, scr } = {}) {
   const added = [], listeners = [], handlers = {};
   const el = attrs => ({ getAttribute: k => (k in attrs ? attrs[k] : null) });
   const document = {
@@ -16,15 +16,14 @@ function run({ meta = null, nav = {} } = {}) {
     getElementById: () => null, createElement: () => ({}),
     addEventListener: (t, f) => { listeners.push(t); handlers[t] = f; },
   };
-  const store = {};
   const win = {
-    document, navigator: nav, performance: { now: () => 1, getEntriesByType: () => [] }, location: { href: "x", search: "" },
+    document, navigator: nav, performance: { now: () => 1, getEntriesByType: () => [] }, location: { href: "x", search }, crypto: globalThis.crypto, TextEncoder, Intl, screen: scr,
     localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
     addEventListener: () => {}, Blob, setTimeout: () => 0, requestIdleCallback: () => 0, matchMedia: () => ({ matches: false }), URLSearchParams,
   };
   win.window = win;
-  vm.runInNewContext(SRC, win);
-  return { win, document, added, listeners, handlers };
+  vm.runInNewContext(src, win);
+  return { win, document, added, listeners, handlers, store };
 }
 
 test("no meta / empty meta: stemT is a no-op, nothing is loaded, no listeners", () => {
@@ -175,4 +174,80 @@ test("T40 ltSum: long tasks inside a window", () => {
   assert.deepEqual({ ...T.ltSum(l, 0, 10000) }, { n: 2, ms: 180 });
   assert.deepEqual({ ...T.ltSum(l, 10000, 20000) }, { n: 1, ms: 80 });
   assert.equal(T.gpu({ createElement: () => ({ getContext: () => null }) }), null, "no WebGL: null, no throw");
+});
+
+/* ---- Jev on for all (art. 11): jev_item + the owner tag ---- */
+const beaconOf = async (o = {}) => {
+  const sent = [], nav = { sendBeacon: (u, b) => { sent.push(b); return true; }, ...(o.nav || {}) };
+  const r = run({ meta: { content: "phc_abc" }, ...o, nav });
+  r.flush = async () => { r.document.visibilityState = "hidden"; r.handlers.visibilitychange(); return sent.length ? JSON.parse(await sent.at(-1).text()).batch : []; };
+  r.sent = sent;
+  return r;
+};
+
+test("jev_item: lines go out with err= / fam= stripped; no error / families fields, no typed text; after a hide it goes by beacon", async () => {
+  const r = await beaconOf();
+  const lines = ["+0.0  q_open  A mc w=31 ch=4", "+9.0  pick  B wrong tries_left=2 err=sign", "+9.0  tree  wrong d=1 read=slip fam=sign",
+    "+12.0  xmark  c", "+14.0  copy  stem", "+20.0  pause  6s", "+30.0  seen  earned short neg-2", "+31.0  jev  nudge S2 say", "+40.0  tree  end fatigue"];
+  r.win.stemT("jev_item", { sid: "sab12", i: 1, code: "A", lines, error: "sign", families: ["sign"] });
+  const ev = (await r.flush()).find(e => e.event === "jev_item");
+  assert.ok(ev, "queued, then out with the hide's beacon");
+  const p = ev.properties;
+  assert.equal(p.sid, "sab12"); assert.equal(p.i, 1); assert.equal(p.code, "A");
+  assert.deepEqual(p.lines, ["+0.0  q_open  A mc w=31 ch=4", "+9.0  pick  B wrong tries_left=2", "+9.0  tree  wrong d=1 read=slip",
+    "+12.0  xmark  c", "+14.0  copy  stem", "+20.0  pause  6s", "+30.0  seen  earned short neg-2", "+31.0  jev  nudge S2 say", "+40.0  tree  end fatigue"]);
+  assert.ok(!("error" in p) && !("families" in p), "error / families fields stripped");
+  for (const l of p.lines) assert.match(l, /^\+\d+\.\d  [a-z_]+(  .*)?$/, "the line shape: timing + kind + short args");
+  assert.ok(!/err=|fam=/.test(JSON.stringify(p.lines)));
+  const n = r.sent.length;
+  r.win.stemT("jev_item", { sid: "sab12", i: 2, code: "B", lines: ["+0.0  q_open  B mc"] });   // already bailed (pagehide after the hide): out at once
+  assert.equal(r.sent.length, n + 1);
+  const late = JSON.parse(await r.sent.at(-1).text()).batch;
+  assert.deepEqual(late.map(e => e.event), ["jev_item"]);
+});
+
+test("jev_item: no family name anywhere in the beacon", async () => {
+  const r = await beaconOf();
+  r.win.stemT("jev_item", { sid: "s1", i: 1, code: "A", lines: ["+1.0  pick  A wrong err=negation", "+1.0  tree  wrong d=1 read=slip fam=negation"], error: "negation", families: ["negation"] });
+  const b = await r.flush();
+  assert.equal(b.find(e => e.event === "jev_item").properties.lines[0], "+1.0  pick  A wrong");
+  assert.ok(!JSON.stringify(b).includes("negation"));
+});
+
+test("owner tag: stem-me 1 / test → me on every event; none or 0 → no me key; ?me= sets it by hand", async () => {
+  for (const [store, search, me, kept] of [[{ "stem-me": "test" }, "", "test", "test"], [{ "stem-me": "1" }, "", "1", "1"], [{}, "", undefined, undefined],
+    [{ "stem-me": "0" }, "", undefined, "0"], [{}, "?me=test", "test", "test"], [{ "stem-me": "1" }, "?me=0", undefined, "0"], [{}, "?me=junk", undefined, undefined]]) {
+    const r = await beaconOf({ store, search });
+    r.win.stemT("q_open", { code: "A" }); r.win.stemT("jev_item", { sid: "s", i: 1, code: "A", lines: [] });
+    const b = await r.flush();
+    assert.ok(b.length >= 3);
+    for (const e of b) assert.equal(e.properties.me, me, JSON.stringify([store, search, e.event]));
+    assert.equal(r.store["stem-me"], kept);
+  }
+});
+
+test("owner tag: fpStr is coarse (no browser version), userAgentData.platform first", () => {
+  const T = run().win.__stemTelemetry;
+  const nav = { platform: "MacIntel", userAgent: "Mozilla/5.0 Chrome/130.0.1", appVersion: "5.0", hardwareConcurrency: 8, deviceMemory: 8, language: "en-US", maxTouchPoints: 0 };
+  assert.equal(T.fpStr(nav, { width: 1512, height: 982 }, 2, "America/Los_Angeles"), "MacIntel|1512x982|2|8|8|America/Los_Angeles|en-US|0");
+  assert.equal(T.fpStr({ ...nav, userAgentData: { platform: "macOS" } }, { width: 1512, height: 982 }, 2, "America/Los_Angeles").split("|")[0], "macOS");
+  assert.equal(T.fpStr({}, null, undefined, ""), "|||||||0", "missing fields: empty, never throws");
+  assert.equal(T.meOf(null, "ab", ["ab"]), "1"); assert.equal(T.meOf(null, "cd", ["ab"]), ""); assert.equal(T.meOf("0", "ab", ["ab"]), "", "?me=0 beats the fingerprint");
+  assert.equal(T.meOf("test", "", []), "test"); assert.equal(T.meOf(null, "", []), "");
+});
+
+test("owner tag: a fingerprint in OWNER_FP sets stem-me=1 (sticky) and tags events; the hash itself is never sent; stemFP() gives it", async () => {
+  const scr = { width: 390, height: 844 }, nav = { platform: "iPhone", language: "en-US", maxTouchPoints: 5 };
+  const h = await run({ nav, scr }).win.stemFP();
+  assert.match(h, /^[0-9a-f]{64}$/);
+  const r = await beaconOf({ nav, scr, src: SRC.replace("var OWNER_FP = [];", `var OWNER_FP = ["${h}"];`) });
+  for (let k = 0; k < 200 && !r.store["stem-me"]; k++) await new Promise(res => setTimeout(res, 10));   // the digest is async
+  assert.equal(r.store["stem-me"], "1");
+  r.win.stemT("q_open", { code: "A" });
+  const b = await r.flush();
+  assert.ok(b.every(e => e.properties.me === "1"));
+  assert.ok(!JSON.stringify(b).includes(h), "never the hash");
+  const other = await beaconOf({ nav: { ...nav, platform: "Win32" }, scr, src: SRC.replace("var OWNER_FP = [];", `var OWNER_FP = ["${h}"];`) });
+  await other.win.stemFP(); await new Promise(res => setTimeout(res, 50));   // its own digest has had time to land
+  assert.equal(other.store["stem-me"], undefined, "another device: no tag");
 });

@@ -66,13 +66,21 @@ export function qPick(st, pool, topicOf = family) {
   const live = free.length ? free : pool;
   const ready = live.filter(c => due(c) <= t);
   const out = (code, why) => ({ code, redeem: !!(S(code) && S(code).owe), again: !!(S(code) && S(code).n), why });   // again: a re-showing (graded fresh)
-  const owed = ready.filter(c => S(c) && S(c).owe).sort(soon);
-  if (owed.length) return out(owed[0], "miss");
+  const owes = c => !!(S(c) && S(c).owe);
+  const owed = ready.filter(owes).sort(soon);
+  /* no two redos back to back (Tony Oct 19): the last slot was a Redeem and a non-owed question is ready -> the due miss waits
+     ONE slot (the gap is a minimum, D58). Only when its wait is under the tiny-bank cap, so wait + 1 still fits n - 1; only redos
+     left -> they go in due order */
+  const prev = Object.values(st.seen).some(s => s.last === st.pos && s.redeem), rest = ready.filter(c => !owes(c));
+  const hold = prev && rest.length > 0 && owed.length > 0 && (S(owed[0]).wait ?? SKIP) < cap;
+  if (owed.length && !hold) return out(owed[0], "miss");
+  const pick = hold ? live.filter(c => !owes(c)) : live;           // held: the topic pull and the score skip the owed ones too
   if (t % PULL === 0) {
-    const tops = [...new Set(live.map(topicOf))].sort((a, b) => avg.get(a) - avg.get(b) || hash(st.salt + a) - hash(st.salt + b));
-    const inT = live.filter(c => topicOf(c) === tops[0]), r = inT.filter(c => due(c) <= t);
+    const tops = [...new Set(pick.map(topicOf))].sort((a, b) => avg.get(a) - avg.get(b) || hash(st.salt + a) - hash(st.salt + b));
+    const inT = pick.filter(c => topicOf(c) === tops[0]), r = inT.filter(c => due(c) <= t);
     return out((r.length ? r.sort(best) : inT.sort(soon))[0], "topic");
   }
+  if (hold) return out(rest.sort(best)[0], "score");
   if (ready.length) return out(ready.sort(best)[0], "score");
   return out([...live].sort(soon)[0], "soonest");
 }

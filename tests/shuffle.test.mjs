@@ -72,6 +72,26 @@ test("queue: wrong first pick, then retry right, still comes back after 3 (only 
   const s2 = qNew("r2"); qShow(s2, "PHYS_A0"); assert.equal(qAnswer(s2, "PHYS_A0", true), true); assert.equal(qAnswer(s2, "PHYS_A0", false), false);
   assert.equal(s2.seen.PHYS_A0.miss, 0); assert.equal(s2.seen.PHYS_A0.owe, false);
 });
+test("queue: two misses back to back never come back back to back (Tony Oct 19); each still waits at least 3", () => {
+  const pool = bank(16), st = qNew("pair"), missed = [];
+  const picks = play(st, pool, 14, (c, slot, s, p) => { if (slot <= 2) { missed.push(c); return false; } return true; });
+  for (let i = 1; i < picks.length; i++) assert.ok(!(picks[i].redeem && picks[i - 1].redeem), `adjacent comebacks at slots ${i} and ${i + 1}`);
+  const back = missed.map(c => slotsOf(picks, c)[1]);
+  assert.ok(back.every(Boolean), "both come back");
+  assert.ok(back[0] - 1 - 1 >= GAPS[0] && back[1] - 2 - 1 >= GAPS[0], `at least ${GAPS[0]} others: ${back}`);
+  assert.ok(Math.abs(back[1] - back[0]) >= 2, `spread: ${back}`);
+});
+test("queue: only redos left -> they come in due order, back to back", () => {
+  const pool = bank(16), st = qNew("onlyredo");
+  /* every question shown: three misses at slots 1-3 (wait 14 < the cap 15, so a hold could apply; due 16, 17, 18), then 13 rights
+     at slots 7-19 resting (capped at 15: due 23 and later), so at slot 20 nothing but the redos is ready */
+  const owed = pool.slice(0, 3);
+  pool.forEach((c, i) => { const o = i < 3; st.seen[c] = { n: 1, right: o ? 0 : 1, miss: o ? 1 : 0, last: o ? i + 1 : i + 4, wait: o ? 14 : 30, gapIdx: o ? 1 : 0, owe: o, first: o ? "wrong" : "right", redeem: false, retry: 0 }; });
+  st.pos = 19;
+  const picks = play(st, pool, 3, () => true);
+  assert.deepEqual(picks.map(p => p.code), owed, "due order");
+  assert.ok(picks.every(p => p.redeem));
+});
 test("queue: a 5-question bank caps each gap at n - 1 and never repeats within 3", () => {
   const pool = bank(5), st = qNew("five");
   let target = null;

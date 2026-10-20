@@ -244,7 +244,7 @@ test("off: seenOff() → nothing; no seenLines → inert; the J5 nudge rules are
   assert.equal(earned(j, 0, "A"), null); off = false;
   assert.ok(earned(j, 200, "B"));
   assert.equal(earned(session({ rand: () => 0.9, seenLines: undefined }), 0, "A"), null);
-  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
 });
 test("dump: the ring is JSONL of every log line (sid, item, code, line), pick lines carry err=", () => {
   const j = session({ rand: R(), sid: "sX" });
@@ -309,10 +309,10 @@ test("wiring: a nod → say(\"\", { nod: true })", () => {
   L.later[0][0]();
   assert.equal(calls[0][0], ""); assert.equal(calls[0][1].nod, true);
 });
-test("flag off / DNT / stem-t-off: the seen moments are inert (no stemJev, the peek is never asked)", () => {
+test("?jev=0 / DNT / stem-t-off: the seen moments are inert (no stemJev, the peek is never asked)", () => {
   const calls = [], duck = { say: () => { calls.push(1); return true; } };
-  for (const o of [{}, { store: { "stem-jev": "1" }, tele: { optedOut: () => true, userOff: () => false } },
-    { store: { "stem-jev": "1" }, tele: { optedOut: () => false, userOff: () => true } }]) {
+  for (const o of [{ search: "?jev=0" }, { search: "?jev=1", tele: { optedOut: () => true, userOff: () => false } },
+    { search: "?jev=1", tele: { optedOut: () => false, userOff: () => true } }]) {
     const L = load({ ...o, duck, rand: () => 0.9 });
     L.win.stemT("q_open", { code: "A" }); L.win.stemT("pick", { code: "A", verdict: "correct" });
     assert.equal(L.win.stemJev, undefined); assert.equal(L.later.length, 0);

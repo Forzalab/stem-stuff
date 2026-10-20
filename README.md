@@ -39,3 +39,17 @@ Every failure the app can catch gets one code, and the student sees it after the
 - **Flight recorder (`flight.js`):** the page keeps its last 256 steps in memory (`nav`, `stage`, `pick`, `net` start/headers/first byte/end/error with status, ms, bytes, `rid` = `x-vercel-id` + trace id, `cluck`, `vis`, `conn`, `err`, `sw`, layout: `vp`, `scroll`, `cls`, `box`, `mq`, `load`, `ro`) plus 32 keyboard/focus events as classes (`kd`/`in`/`cs`/`ce`/`fi`/`fo`/`vv`: target id, `char` or a named key, `inputType`, lengths, 100 ms times; never a value). An incident report carries `fr` = the last 64 steps, the last 20 keyboard events, `page.at` (the app's state: question, tries, Cluck, viewport, control boxes; no text), the diag line and `/health`'s answer: ≤ 16 KB, ~4 KB typical; 3 per 10 minutes, the same failure within 60 s sends `{dup, n}` only. Look at it in the client line's `fr` (Vercel) or the PostHog `incident` event.
 - **Server lines:** every stderr line ends `rid=<x-vercel-id> trace=<trace id>`; a provider failure's incident line adds `etype` + `emsg` (the provider's own error type and message, 120 chars) and is kept as KV `stem:err:<claude|openrouter>` for an hour. `GET /health` answers `{"claude","or": ok|over|err|null}` only; the numbers (spend, budget, prepaid balance from `stem:anthropic:spend` with `PREPAID_CENTS`, last errors) go in its `health {...}` log line.
 - Do Not Track / Global Privacy Control / privacy.html "Don't record me": no report is sent; the code still shows, with "Tracking is off on this device, so Tony gets less to go on."
+
+## Anthropic spend
+
+An hourly GitHub Actions job (`.github/workflows/spend.yml` → `tools/anthropic_spend.py`) reads the Anthropic Admin API cost report and writes one KV key, `stem:anthropic:spend` = `{"cents_month", "cents_since", "since", "at", "ok": true}` (USD cents; month = current UTC calendar month). A failed run writes `stem:anthropic:spend_err` = `{"ok": false, "err", "at"}` instead and leaves the last good value alone (the err key is deleted on the next good run). The app estimates the balance as `PREPAID_CENTS − cents_since`.
+
+**The Admin API key must NEVER go into Vercel** (or `.env`, or any file in the repo). It can read and manage the whole organization; it lives only in GitHub Actions secrets. The app only ever reads the KV key.
+
+One-time setup (Tony):
+1. Claude Console → Settings → Admin keys → create an Admin API key (`sk-ant-admin01-…`; org admins only).
+2. GitHub → this repo → Settings → Secrets and variables → Actions:
+   - Secrets: `ANTHROPIC_ADMIN_KEY` (step 1), `KV_REST_API_URL` and `KV_REST_API_TOKEN` (same values as the Vercel project's Upstash env vars).
+   - Variable (or secret): `SPEND_SINCE` = the date the prepaid credit was bought, `YYYY-MM-DD` (unset = 1st of this month).
+3. Vercel project → Settings → Environment Variables: `PREPAID_CENTS` = credit bought on `SPEND_SINCE`, in cents (e.g. `5000` for $50). Not the Admin key.
+4. Actions → anthropic-spend → Run workflow once to check it goes green. Local check without writing KV: `ANTHROPIC_ADMIN_KEY=… tools/anthropic_spend.py --dry-run`.
