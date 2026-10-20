@@ -1,7 +1,19 @@
 // incident.mjs (SCHEMA.md "Incidents"): the code format, the one record's fields, and never any student text in it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ALPHA, CODE_RE, KEYS, ERR_MAX, newCode, errText, reason, incident, traceparent, traceOf } from "../incident.mjs";
+import { ALPHA, CODE_RE, KEYS, ERR_MAX, newCode, errText, reason, incident, traceparent, traceOf, diagLine, aiState } from "../incident.mjs";
+
+test("diag line (flight recorder P1, debug mode only): build, endpoint + status, seconds, the AI's state from the server's reason or /health", () => {
+  const r = { code: "E-7K3QX", where: "explain", reason: "http", status: 504, ms: 20100 };
+  assert.equal(diagLine(r, "#197"), "v#197 · explain 504 · 20.1 s · AI: ?");
+  assert.equal(diagLine({ ...r, code: "S-7K3QX", reason: "budget_cap", status: 503 }, "#197"), "v#197 · explain 503 · 20.1 s · AI: cap");
+  assert.equal(diagLine({ ...r, code: "S-7K3QX", reason: "upstream", status: 502 }, null), "v? · explain 502 · 20.1 s · AI: err");
+  assert.equal(diagLine({ where: "bank", reason: "network", phase: "timeout", ms: 8000 }, "#197"), "v#197 · bank timeout · 8.0 s", "no AI part off Cluck");
+  assert.equal(aiState(r, { claude: "ok", or: "err" }), "ok");
+  assert.equal(aiState(r, { claude: "over", or: null }), "cap");
+  assert.equal(aiState(r, { claude: "err", or: "err" }), "err");
+  assert.equal(aiState(r, null), "?");
+});
 
 test("traceparent: W3C 00-<32 hex>-<16 hex>-01; a trace id keeps its trace, a new span each time", () => {
   const a = traceparent(), t = traceOf(a);
