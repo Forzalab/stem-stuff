@@ -258,6 +258,7 @@ async function check(code, answer) {
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
 const FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math.";   // serve.py FIX_NUDGE
+const WRONG_MISS = "QUACK. Some taps are wrong. Check each row again.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -329,7 +330,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     const w = key.wrong || [];
     if (!correct) {
       const c = sh.find(c => ch.includes(c.id) && !right.includes(c.id) && w.some(x => x.choice === c.id));
-      hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: key.miss };
+      hit = c ? { ...w.find(x => x.choice === c.id), struck: c.id } : { error: "incomplete", hint: ch.every(x => right.includes(x)) ? key.miss : WRONG_MISS };   // no struck id: never leak which row is false
       if (key.fix) sig = [sig, ...need.map(id => squash(fx[id]).slice(0, 200))];
     } else if (key.fix) {                                 // unreadable fix = invalid; else the first wrong fix in authored order
       const us = need.map(id => { const e = w.find(x => x.choice === id); return e && e.fix ? { id, u: { ...key.fix, ...e.fix, fixbox: true }, t: fx[id].slice(0, 200) } : null; }).filter(Boolean);

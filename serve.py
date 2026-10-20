@@ -55,6 +55,7 @@ PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries",
 DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
+WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -835,7 +836,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
         if not correct:                                          # first ticked distractor in authored order, else miss
             hit = next((dict(hint_of[c["id"]], struck=c["id"]) for c in sh
                         if c["id"] in ids and c["id"] not in rights(p) and c["id"] in hint_of), None)
-            hit = hit or {"error": "incomplete", "hint": p["miss"]}
+            hit = hit or {"error": "incomplete", "hint": p["miss"] if set(ids) <= rights(p) else WRONG_MISS}   # no struck id: never leak which row is false
             if "fix" in p:
                 sig = (sig, *(squash(fixes[i])[:200] for i in xs))
         elif "fix" in p:                                         # right set: now every fix must be right too
