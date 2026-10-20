@@ -10,7 +10,7 @@
    vp (resize) scroll cls (layout shift) box (key controls on a stage change) mq (theme / media queries) load (a font / image / script
    that failed) ro (key nodes resized). Listeners are passive and capture; scroll / resize / ResizeObserver / visualViewport reach the
    ring at most 4 times a second, read in one timer, so no per-frame work. window.stemFR = { log, req, snap, page, kb }. Never throws.
-   P2: perf (long tasks folded into one entry at most every 30 s, + JS heap MB on Chrome) and page.before (the page state re-read in idle
+   P2: kb keyup + paste / cut / copy / submit (the event only); perf (long tasks folded into one entry at most every 30 s, + JS heap MB on Chrome) and page.before (the page state re-read in idle
    time 250 ms after each stage / nav / cluck / sw / vis entry, so a report shows the page as it was just before the error line). */
 (function () {
   "use strict";
@@ -59,10 +59,10 @@
   function kbEntry(ev, e) {
     var el = e.target, n = len(el), was = lastLen && el && typeof el === "object" ? lastLen.get(el) : undefined;
     if (lastLen && n != null) lastLen.set(el, n);
-    if (ev === "kd") {
+    if (ev === "kd" || ev === "ku") {
       var prev = K[K.length - 1];
-      if (e.repeat && prev && prev[2] === "kd" && prev[3] === label(el)) { prev[8] = (prev[8] || 0) + 1; return prev; }   // a held key: one entry, a count
-      return push(K, KB, [t100(), "kb", "kd", label(el), keyClass(e.key), flags(e, el), n]);
+      if (ev === "kd" && e.repeat && prev && prev[2] === "kd" && prev[3] === label(el)) { prev[8] = (prev[8] || 0) + 1; return prev; }   // a held key: one entry, a count
+      return push(K, KB, [t100(), "kb", ev, label(el), keyClass(e.key), flags(e, el), n]);
     }
     if (ev === "in") return push(K, KB, [t100(), "kb", "in", label(el), inputType(e.inputType), flags(e, el), was == null ? null : was, n]);
     return push(K, KB, [t100(), "kb", ev, label(el), null, flags(e, el), n]);
@@ -266,8 +266,11 @@
   on(W, "pageshow", function (e) { log("vis", "pageshow", e.persisted ? 1 : 0); });
   on(W, "hashchange", function () { log("nav", hashCode(), null, "hash"); });
   try { var swc = W.navigator.serviceWorker; if (swc) swc.addEventListener("controllerchange", function () { log("sw", "ctlchange"); }); } catch (x) { /* ignore */ }
-  /* keyboard & focus, content-free (§1a; Tony 10:4x). P1 events: keydown, input, composition start / end, focus in / out */
+  /* keyboard & focus, content-free (§1a; Tony 10:4x). P1 events: keydown, input, composition start / end, focus in / out. P2: keyup, and
+     paste / cut / copy / submit as the event only (its target, flags, the field's length: never clipboardData or a value) */
   on(D, "keydown", function (e) { kbEntry("kd", e); });
+  on(D, "keyup", function (e) { kbEntry("ku", e); });
+  ["paste", "cut", "copy", "submit"].forEach(function (t) { on(D, t, function (e) { kbEntry(t, e); }); });
   on(D, "input", function (e) { kbEntry("in", e); });
   on(D, "compositionstart", function (e) { kbEntry("cs", e); });
   on(D, "compositionend", function (e) { kbEntry("ce", e); });

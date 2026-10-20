@@ -945,6 +945,7 @@ def set_trace(header, rid=None):
     m = TRACEPARENT.match((header or "").strip().lower())
     _trace.id = m.group(1) if m and m.group(1) != "0" * 32 else secrets.token_hex(16)
     _trace.rid = re.sub(r"[^\w:.-]", "", rid or "")[:80] or "dev-" + secrets.token_hex(4)
+    _trace.t0, _trace.phases, _trace.top = time.time(), [], {}
     return _trace.id
 
 
@@ -956,6 +957,63 @@ def log(*a):
     """every server print line (flight recorder P1): the words, then rid= and trace= of the request it belongs to ("-" outside one)"""
     line = " ".join(map(str, a)) + f" rid={getattr(_trace, 'rid', None) or '-'} trace={getattr(_trace, 'id', None) or '-'}"
     print(line, file=sys.stderr, flush=True)   # one write: threads never interleave inside a line
+
+
+# ---- the per-request trace (flight recorder P2): ONE JSON line per /explain | /chat request, and per slow / failed API request ----
+TRACE_PHASES = 40                            # phases kept per request (a chain of 3 models + NOTE + failures is ~8)
+TRACE_SLOW_MS = 2000                         # a non-stream API request gets its line only when slower than this or not 2xx (keeps volume tiny)
+
+
+def tr(p=None, **kv):
+    """this request's trace: tr("or", model=…, ms=…) adds a phase (+ `at` = ms since the request began), tr(q=…) sets a top-level field.
+    Callers pass codes, tags and numbers only, never student text"""
+    ph = getattr(_trace, "phases", None)
+    if ph is None:
+        return
+    if p is None:
+        _trace.top.update(kv)
+    elif len(ph) < TRACE_PHASES:
+        ph.append(dict(p=p, at=int((time.time() - _trace.t0) * 1000), **{k: v for k, v in kv.items() if v is not None}))
+
+
+def trace_line(path, status, ms, **more):
+    """{"trace": 1, "trace_id", "rid", "path", "status", "ms", ...top fields, "phases": [...], "t"}: one stderr line (README "Incidents")"""
+    out = dict(trace=1, trace_id=trace_id(), rid=getattr(_trace, "rid", None), path=path, status=status, ms=int(ms), **getattr(_trace, "top", {}))
+    out.update(more, phases=getattr(_trace, "phases", []), t=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    print(json.dumps(out, separators=(",", ":"), default=str), file=sys.stderr, flush=True)
+
+
+ARM_PROVIDER = {"claude": "claude", "deepseek": "openrouter"}
+
+
+def traced(path, fn):
+    """a STREAMS handler whose reply prints the request's trace line when its stream ends, is cut off (the client left) or never starts:
+    status, first-byte ms, total ms, bytes, done, the student's arm (v4) and whether it fell back, the browser as sha256(sid)[:8], the
+    S- codes, every phase"""
+    def run(cookie_header, body):
+        t0 = time.time()
+        status, head, chunks = fn(cookie_header, body)
+        ck = cookie_header if "sid=" in (cookie_header or "") else (head.get("Set-Cookie") or "").split(";")[0]   # a first visit: the new id
+        sid = new_sid(ck)[0] if "sid=" in ck else None
+        more = dict(sid=hashlib.sha256(sid.encode()).hexdigest()[:8] if sid else None, v4=v4_on())
+        if more["v4"]:
+            more["arm"] = cluck_arm(sid)
+
+        def gen():
+            fb, n, done = None, 0, False
+            try:
+                for c in chunks:
+                    if fb is None and c:
+                        fb = int((time.time() - t0) * 1000)
+                    n += len(c)
+                    yield c
+                done = True
+            finally:
+                incs = [x for x in getattr(_trace, "phases", []) if x["p"] == "inc"]
+                trace_line(path, status, (time.time() - t0) * 1000, fb_ms=fb, bytes=n, done=done, inc=[x["code"] for x in incs],
+                           fallback=bool(more.get("arm")) and any(x.get("provider") == ARM_PROVIDER[more["arm"]] for x in incs), **more)
+        return status, head, gen()
+    return run
 INC_PER_10MIN = 30                           # /log/incident lines per browser (sid) per 10 minutes, per instance
 ERR_MAX = 2000                               # incident.mjs ERR_MAX
 _inc_seen = {}                               # sid -> [time, ...]
@@ -1047,6 +1105,7 @@ def incident(where, reason, **f):
     code = "S-" + "".join(secrets.choice(INC_ALPHA) for _ in range(5))
     fields, up = inc_fields(dict(f, where=where, reason=reason)), upstream_err(f.get("err"))
     inc_line(code, "server", fields, **up)
+    tr("inc", code=code, reason=reason, provider=f.get("provider"), model=fields.get("model"), status=fields.get("status"), etype=up.get("etype"), emsg=up.get("emsg"))
     if f.get("provider") in GEN_AI and not isinstance(f.get("err"), OutOfCredit):   # our own cap / skip: /health reads claude_spent itself
         note_err(f["provider"], dict(at=int(time.time()), code=code, reason=reason, status=fields.get("status"), trace=trace_id(), **up))
     return code
@@ -1106,11 +1165,42 @@ def _when(at):
 SPEND_STALE = 3 * 3600                       # stem:anthropic:spend older than this: not trusted (the hourly job stopped)
 
 
+OR_KEY_TTL = 60                              # seconds: OpenRouter's key status is asked at most once a minute per instance
+_or_key = {"at": 0.0, "v": None}
+_or_key_lock = threading.Lock()
+
+
+def or_key_state():
+    """OpenRouter GET /auth/key (free, authenticated: the key's limit, usage, limit_remaining in $): {"limit", "usage", "limit_remaining",
+    "free"}, {"status": n} on an HTTP error, {"err": name} when unreachable; None without a key. /health has no rate limit, so the answer
+    (a failure too) is kept OR_KEY_TTL in this process's memory (no KV, Tony): /health can never hammer OpenRouter. The lock = one call
+    at a time; 2 s at most"""
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        return None
+    with _or_key_lock:
+        if time.time() - _or_key["at"] < OR_KEY_TTL:
+            return _or_key["v"]
+        try:
+            req = urllib.request.Request(OPENROUTER_BASE + "/auth/key", headers={"Authorization": "Bearer " + key, "X-Title": "stem-stuff"})
+            with urllib.request.urlopen(req, timeout=2) as r:
+                d = (json.loads(r.read()) or {}).get("data") or {}
+            num = lambda v: v if isinstance(v, (int, float)) and not isinstance(v, bool) else None  # noqa: E731
+            v = {"limit": num(d.get("limit")), "usage": num(d.get("usage")), "limit_remaining": num(d.get("limit_remaining")), "free": d.get("is_free_tier") is True}
+        except urllib.error.HTTPError as e:
+            v = {"status": e.code}
+        except Exception as e:  # noqa: BLE001
+            v = {"err": type(e).__name__}
+        _or_key.update(at=time.time(), v=v)
+        return v
+
+
 def health_state():
     """(page-facing {"claude", "or"} of ok | over | err | None (no key), server-only numbers for the log line).
     claude: over = our CLAUDE_BUDGET_USD cap reached, or the prepaid balance (PREPAID_CENTS − stem:anthropic:spend.cents_since, written
     hourly by a GitHub Action) at or under the reserve; err / over = its last failure within ERR_TTL (budget_cap = over); else ok.
-    A spend record older than SPEND_STALE is "stale" (logged) and ignored. or: the same from its last failure."""
+    A spend record older than SPEND_STALE is "stale" (logged) and ignored. or: the same from its last failure; else OpenRouter's own key
+    status (or_key_state, cached a minute): 402 or limit_remaining <= 0 = over, 401 / 403 = err (a bad key), unreachable = no change."""
     keys = ["stem:err:claude", "stem:err:openrouter", "stem:anthropic:spend", "stem:anthropic:spend_err"]
     vals = [None] * len(keys)
     if all(KV):
@@ -1137,6 +1227,12 @@ def health_state():
         out[name] = ("over" if e.get("reason") == "budget_cap" else "err") if e else "ok"
         if e:
             nums[f"{name}_last_err"] = {k: e.get(k) for k in ("code", "reason", "status", "etype", "emsg")}
+    if out["or"] == "ok":
+        k = nums["or_key"] = or_key_state() or {}
+        if k.get("status") == 402 or (k.get("limit_remaining") is not None and k["limit_remaining"] <= 0):
+            out["or"] = "over"
+        elif k.get("status") in (401, 403):
+            out["or"] = "err"
     if out["claude"] is not None:
         spent, budget = claude_spent(), _fenv("CLAUDE_BUDGET_USD", 100.0)
         nums.update(spent_usd=round(spent, 4), budget_usd=budget)
@@ -1235,9 +1331,21 @@ def _model_params(model, max_tokens):
 
 
 def _or_post(payload, key, timeout):
+    """one OpenRouter call; its trace phase ("note" = the NOTE, else "or"): the model + status + ms to the headers, or the error's name"""
     req = urllib.request.Request(OPENROUTER_BASE + "/chat/completions", data=json.dumps(payload).encode(), method="POST",
                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "X-Title": "stem-stuff"})
-    return urllib.request.urlopen(req, timeout=timeout)
+    t0, ph = time.time(), "note" if "response_format" in payload else "or"
+    ms = lambda: int((time.time() - t0) * 1000)  # noqa: E731
+    try:
+        r = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as e:
+        tr(ph, model=payload.get("model"), status=e.code, ms=ms())
+        raise
+    except Exception as e:
+        tr(ph, model=payload.get("model"), err=type(e).__name__, ms=ms())
+        raise
+    tr(ph, model=payload.get("model"), status=getattr(r, "status", None), ms=ms())
+    return r
 AUTO_PER_HOUR, ANY_PER_HOUR = 5, 40          # Tony: 5 questions an hour fire on the first wrong answer; past that, the student asks
 _asked = {}                                  # sid -> [(time, auto)]
 _asked_lock = threading.Lock()
@@ -2205,6 +2313,7 @@ def _relay(p, chunks, what, head):
     """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
     (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
     is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket."""
+    tr(q=p["code"])
     t0, it = time.time(), iter(chunks())
     ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
@@ -2432,7 +2541,7 @@ def chat(cookie_header, body):
     return _relay(p, chunks, "chat", head)
 
 
-STREAMS = {"/explain": explain, "/chat": chat}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
+STREAMS = {k: traced(k, f) for k, f in (("/explain", explain), ("/chat", chat))}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
 POST_MAX = CHAT_MAX                              # the most any POST body may be; each path checks its own limit
 
 
@@ -2446,12 +2555,17 @@ def _json(status, obj, cookie):
 def dispatch(method, path, cookie_header="", body=b"", ua=""):
     """The API, shared by Handler (this server) and api/index.py (Vercel): (status, headers, bytes), or None when the
     path is not an API path (a static file). A crash inside = a 500 with its incident code in X-Incident (one log line), not a dead request."""
+    t0, path = time.time(), path.split("?")[0]
     try:
-        return _dispatch(method, path.split("?")[0], cookie_header, body, ua)
+        res = _dispatch(method, path, cookie_header, body, ua)
     except Exception as e:  # noqa: BLE001
-        code = incident("api", "exception", err=e, path=path.split("?")[0], method=method)
+        code = incident("api", "exception", err=e, path=path, method=method)
         st, head, data = _json(500, {"error": "server"}, None)
-        return st, dict(head, **{"X-Incident": f"{code} exception {trace_id()}"}), data
+        res = st, dict(head, **{"X-Incident": f"{code} exception {trace_id()}"}), data
+    ms = (time.time() - t0) * 1000
+    if res and path not in ("/log/incident", "/health") and (res[0] >= 300 or ms > TRACE_SLOW_MS):   # those two print their own line
+        trace_line(path, res[0], ms, method=method)
+    return res
 
 
 def _dispatch(method, path, cookie_header, body, ua):

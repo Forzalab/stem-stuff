@@ -156,7 +156,23 @@
     const stamped = () => { const m = document.querySelector('meta[name="stem-build"]'); return !!m && m.content !== "dev"; };
     /* "a file changed" is the dev path (serve.py); a deploy always brings its own sw.js, so it comes through controllerchange */
     navigator.serviceWorker.addEventListener("message", e => { if (e.data && e.data.type === "stem-update" && !stamped()) show(); });
-    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!had) return; if (busy) show(); else location.reload(); });
+    /* a reload loop (flight recorder P2): a 3rd reload of this tab inside 60 s (sessionStorage stem-swr = [time, ...]) does not happen;
+       the bar shows instead and the loop is an incident, sw_loop (app.js "stem:incident") */
+    const looping = () => {
+      try {
+        const now = Date.now(), t = JSON.parse(sessionStorage.getItem("stem-swr") || "[]").filter(x => now - x < 60000);
+        t.push(now); sessionStorage.setItem("stem-swr", JSON.stringify(t));
+        return t.length > 2;
+      } catch (e) { return false; }                     // blocked storage: no loop guard, as before
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!had) return;
+      if (busy) { show(); return; }
+      if (!looping()) { location.reload(); return; }
+      show();
+      if (window.stemFR) window.stemFR.log("sw", "loop");
+      dispatchEvent(new CustomEvent("stem:incident", { detail: { where: "sw", why: "sw_loop" } }));
+    });
     navigator.serviceWorker.startMessages();
   }
 

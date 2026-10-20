@@ -24,9 +24,14 @@ writeFileSync(join(banks, "BANK_INC.json"), JSON.stringify({ v: 1, problems: [{ 
   body: txt("Pick one."), correct: "a", choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })),
   saccharine: { title: "Inc 1", key: "Tick: a", slip: { b: "Two is not one." } } }] }));
 /* a stub OpenRouter: out of credit (402) when `broke`, else a short reply */
-let broke = false, orCalls = 0;
+let broke = false, orCalls = 0, keyCalls = 0;
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
+  if (req.method === "GET" && req.url === "/auth/key") {                // /health asks for the key's status (cached a minute by serve.py)
+    keyCalls++;
+    res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ data: { label: "sk-or-v1-x", limit: 10, usage: 9.5, limit_remaining: 0.5, is_free_tier: false } }));
+    return;
+  }
   const j = JSON.parse(body);
   if (j.stream) orCalls++;
   if (broke) { res.writeHead(402, { "Content-Type": "application/json" }); res.end('{"error": {"code": 402, "message": "Insufficient credits"}}'); return; }
@@ -43,10 +48,15 @@ const drop = createServer((req, res) => {
 });
 await new Promise(r => stub.listen(0, "127.0.0.1", r));
 await new Promise(r => drop.listen(0, "127.0.0.1", r));
-const logs = [];
+const logs = [], traces = [], raw = [];
 const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"),
   OPENROUTER_BASE: `http://127.0.0.1:${stub.address().port}`, OPENROUTER_API_KEY: "sk-test", CLAUDE_API: "" }, stdio: ["ignore", "ignore", "pipe"] });
-srv.stderr.on("data", d => logs.push(...String(d).split("\n").filter(l => l.startsWith('{"incident"')).map(l => JSON.parse(l))));
+let part = "";   // a pipe chunk can end mid-line: whole lines only
+srv.stderr.on("data", d => {
+  const ls = (part + d).split("\n"); part = ls.pop(); raw.push(...ls);
+  logs.push(...ls.filter(l => l.startsWith('{"incident"')).map(l => JSON.parse(l)));
+  traces.push(...ls.filter(l => l.startsWith('{"trace"')).map(l => JSON.parse(l)));
+});
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
@@ -102,6 +112,12 @@ await step("a plain 500 (no header): the page's own E- code; the sheet says \"Cl
   assert.notEqual(sel, "none", "the code is selectable");
   const bs = await beacon(page, 2);
   assert.deepEqual(bs.map(b => [b.reason, b.status]), [["http", 500], ["http", 500]]);
+  /* P2: /health also asks OpenRouter's /auth/key, at most once a minute (two /health calls so far: steps 1 and 2); no number reaches the page */
+  assert.deepEqual(bs[0].fr.health, { claude: null, or: "ok" }, "OpenRouter's key has 0.50 left: ok");
+  assert.equal(keyCalls, 1, "auth/key asked once for both /health calls");
+  const hl = raw.filter(l => l.startsWith("health {"));
+  assert.ok(hl.length >= 2 && hl.every(l => l.includes('"limit_remaining":0.5')), "the dollars in the server's log line: " + hl.join(" | "));
+  assert.ok(!/0\.5|9\.5/.test(JSON.stringify(bs)), "never in the report");
   await page.context().close();
 });
 
@@ -134,9 +150,37 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
   assert.match(b.trace_id || "", /^[0-9a-f]{32}$/);
   assert.equal(cl.trace_id, b.trace_id, "the beacon's trace id is the request's (traceparent)");
   assert.equal(sv.trace_id, b.trace_id, "the server's line shares it");
+  /* P2: the request's ONE trace line: its status, the NOTE call's 402, its S- codes, the same trace id */
+  for (let i = 0; i < 30 && !traces.some(x => x.path === "/explain"); i++) await page.waitForTimeout(100);
+  const tl = traces.filter(x => x.path === "/explain");
+  assert.equal(tl.length, 1, "one trace line: " + JSON.stringify(traces));
+  assert.deepEqual([tl[0].status, tl[0].trace_id, tl[0].q, tl[0].done], [503, b.trace_id, "CALC1_INC1", true]);
+  assert.ok(tl[0].inc.includes(code) && tl[0].phases.some(p => p.p === "note" && p.status === 402), JSON.stringify(tl[0]));
   await page.screenshot({ path: join(SHOTS, "incident-budget.png") });
   await page.context().close();
   broke = false;
+});
+
+await step("/check times out twice in a row (P2): the 2nd is its own incident, timeout_x2, with its own snapshot (not a dup of the 1st)", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+  await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
+  await ctx.route("**/check", () => {});                               // never answers: net() aborts it after 8 s
+  const page = await ctx.newPage();
+  page.beacons = [];
+  page.on("request", r => { if (new URL(r.url()).pathname === "/log/incident") page.beacons.push(JSON.parse(r.postData() || "{}")); });
+  await page.goto(BASE + "/#BANK_INC");
+  await page.waitForFunction(() => !document.getElementById("splash") && /^#CALC1_INC1/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
+  await page.waitForFunction(() => document.querySelector(".verdict.wait .inc") && /Too slow/.test(document.body.innerText), null, { timeout: 15000 });
+  const first = await page.evaluate(() => document.querySelector(".verdict.wait .inc").dataset.inc);
+  await page.click(".verdict.wait .retry");
+  await page.waitForFunction(c => { const x = document.querySelector(".verdict.wait .inc"); return x && x.dataset.inc !== c; }, first, { timeout: 15000 });
+  const bs = await beacon(page, 2);
+  assert.deepEqual(bs.map(b => [b.where, b.reason, b.phase]), [["check", "timeout", "timeout"], ["check", "timeout_x2", "timeout"]]);
+  assert.ok(bs.every(b => b.fr && b.fr.ring), "each with its own snapshot: " + JSON.stringify(bs.map(b => Object.keys(b.fr || {}))));
+  assert.notEqual(bs[0].code, bs[1].code);
+  await ctx.close();
 });
 
 await step("tracking off (privacy.html \"Don't record me\"): the code still shows, with a note; no report is sent", async () => {
