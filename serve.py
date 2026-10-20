@@ -14,6 +14,7 @@
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
+import datetime
 import errno
 import hashlib
 import http.cookies
@@ -30,6 +31,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import sympy
@@ -111,9 +113,9 @@ def _read(path):
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
-        print(f"loaded {len(ps)} problems from {path}", file=sys.stderr)
+        log(f"loaded {len(ps)} problems from {path}")
     except Exception as e:  # noqa: BLE001
-        print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
+        log(f"{path} unreadable, keeping the last good copy: {e}")
         ps = old[1] if old else []
     _files[path] = (mtime, ps)
     return ps
@@ -139,7 +141,7 @@ def _bank_files():
             out[n[:-5]] = os.path.join(BANKS, n)
         elif n not in _bank["skipped"]:
             _bank["skipped"].add(n)
-            print(f"banks/{n}: not a bank name (BANK_ + 3-6 of A-Z0-9), skipped", file=sys.stderr)
+            log(f"banks/{n}: not a bank name (BANK_ + 3-6 of A-Z0-9), skipped")
     return out
 
 
@@ -158,7 +160,7 @@ def _index():
                         by_code[p["code"]] = p
                         prof[p["code"]] = _profiles.get(path)
                     elif by_code[p["code"]] != p:
-                        print(f"{p['code']} is in two files with different content: the first one wins", file=sys.stderr)
+                        log(f"{p['code']} is in two files with different content: the first one wins")
             _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
         return _bank
 
@@ -181,7 +183,7 @@ def sheet():
                 data = json.load(f)
             _sheet["rows"] = {r["id"]: {"id": r["id"], "group": g["name"], "tex": r["tex"]} for g in data["groups"] for r in g["rows"]}
         except Exception as e:  # noqa: BLE001
-            print(f"{path} unreadable, keeping the last good copy: {e}", file=sys.stderr)
+            log(f"{path} unreadable, keeping the last good copy: {e}")
         _sheet["mtime"] = mtime
     return _sheet["rows"]
 
@@ -193,7 +195,7 @@ def formulas(code, part):
         if i in rows:
             out.append(rows[i])
         else:
-            print(f"{code}: part {i} is not on the formula sheet", file=sys.stderr)
+            log(f"{code}: part {i} is not on the formula sheet")
     return out
 
 
@@ -638,12 +640,12 @@ def _save_tries():
         data["cluck"] = {" ".join(k): rows for k, rows in _cluck_turns.items()}
     if all(KV):
         if _gen.get("kv_bad"):
-            print("tries not saved: KV was unreadable on load", file=sys.stderr)
+            log("tries not saved: KV was unreadable on load")
             return
         try:
             _kv("SET", KV_KEY, json.dumps(data))
         except (OSError, ValueError) as e:
-            print("tries not saved to KV:", e, file=sys.stderr)
+            log("tries not saved to KV:", e)
         return
     tmp = TRIES + ".tmp"
     try:
@@ -651,7 +653,7 @@ def _save_tries():
             json.dump(data, f, indent=1)
         os.replace(tmp, TRIES)
     except OSError as e:
-        print("tries.json not saved:", e, file=sys.stderr)
+        log("tries.json not saved:", e)
 
 
 def _entry(key):
@@ -898,7 +900,7 @@ def ensure_bundle():
             if src > built:
                 bundle.build(BUNDLE)
         except Exception as e:  # noqa: BLE001
-            print("bundle failed:", e, file=sys.stderr)
+            log("bundle failed:", e)
 
 
 def new_sid(cookie_header):
@@ -912,6 +914,303 @@ def new_sid(cookie_header):
         return jar["sid"].value, None
     sid = secrets.token_hex(16)
     return sid, f"sid={sid}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly"
+
+
+# ---------------- Incidents (SCHEMA.md "Incidents", Tony Oct 19): every failure we can catch = one code + ONE JSON line in the logs ----------------
+# Server codes are "S-" + 5 chars, the page's "E-" (incident.mjs). A line holds the code, a reason tag and numbers, never student text.
+# Vercel → Logs, search the code. A Cluck failure before any text went out answers with the code in X-Incident ("S-XXXXX reason <trace id>").
+INC_ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"   # incident.mjs ALPHA: no 0/O/1/I
+INC_CODE = re.compile(r"^[ES]-[2-9A-HJ-NP-Z]{5}$")
+INC_TAG = re.compile(r"^[a-z0-9_/-]{1,40}$")
+INC_PHASES = ("headers", "stream", "parse", "timeout", "abort", "script")
+INC_INTS = ("status", "ms", "bytes")
+INC_STRS = {"path": (re.compile(r"^/?[\w./-]{1,80}$"), 80), "q": (CODE_RE, 40), "v": (re.compile(r"^[\w.#-]{1,40}$"), 40),
+            "model": (re.compile(r"^[\w./:-]{1,80}$"), 80), "provider": (INC_TAG, 40), "trace_id": (re.compile(r"^[0-9a-f]{32}$"), 32),
+            "method": (re.compile(r"^[A-Z]{3,7}$"), 7)}
+INC_KEYS = ("code", "where", "reason", "phase", "err") + INC_INTS + tuple(INC_STRS)   # incident.mjs KEYS (+ model, provider, method: server only)
+# the log line's names follow OpenTelemetry's semantic conventions where one exists (Tony, Oct 19: "the OTel middle path", no SDK)
+OTEL = {"status": "http.response.status_code", "path": "url.path", "method": "http.request.method", "model": "gen_ai.request.model", "err": "exception.message"}
+GEN_AI = {"openrouter": ("openrouter", lambda: OPENROUTER_BASE), "claude": ("anthropic", lambda: CLAUDE_BASE)}   # provider -> gen_ai.system, its base URL
+_trace = threading.local()                   # this request's W3C trace id (set_trace): on every incident line and in X-Incident
+TRACEPARENT = re.compile(r"^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$")
+
+
+def set_trace(header, rid=None):
+    """the request's traceparent (the page sends one per fetch, incident.mjs traceparent()), else a new trace id; returns it.
+    rid: Vercel's x-vercel-id (api/index.py), or a random "dev-…" here: Vercel → Logs finds every line of one request by it"""
+    m = TRACEPARENT.match((header or "").strip().lower())
+    _trace.id = m.group(1) if m and m.group(1) != "0" * 32 else secrets.token_hex(16)
+    _trace.rid = re.sub(r"[^\w:.-]", "", rid or "")[:80] or "dev-" + secrets.token_hex(4)
+    return _trace.id
+
+
+def trace_id():
+    return getattr(_trace, "id", None) or set_trace("")
+
+
+def log(*a):
+    """every server print line (flight recorder P1): the words, then rid= and trace= of the request it belongs to ("-" outside one)"""
+    line = " ".join(map(str, a)) + f" rid={getattr(_trace, 'rid', None) or '-'} trace={getattr(_trace, 'id', None) or '-'}"
+    print(line, file=sys.stderr, flush=True)   # one write: threads never interleave inside a line
+INC_PER_10MIN = 30                           # /log/incident lines per browser (sid) per 10 minutes, per instance
+ERR_MAX = 2000                               # incident.mjs ERR_MAX
+_inc_seen = {}                               # sid -> [time, ...]
+_inc_lock = threading.Lock()
+
+
+def err_text(e):
+    """"HTTPError: HTTP Error 402: Payment Required": the exception's type and its whole message (Tony, Oct 19), e-mails and runs of
+    5+ digits blanked, control characters gone, cut at ERR_MAX (incident.mjs errText)"""
+    t = e if isinstance(e, str) else f"{type(e).__name__}: {e}"
+    t = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "*@*", str(t))
+    t = re.sub(r"\d{5,}", lambda m: "#" * len(m.group()), t)
+    return re.sub(r"[\x00-\x09\x0b-\x1f\x7f]", "", t)[:ERR_MAX] or None
+
+
+def inc_fields(f):
+    """only INC_KEYS, each checked: a tag, a phase, a non-negative int, a short pattern-checked string or a cleaned error line"""
+    out = {}
+    for k in ("where", "reason"):
+        if isinstance(f.get(k), str) and INC_TAG.match(f[k]):
+            out[k] = f[k]
+    if f.get("phase") in INC_PHASES:
+        out["phase"] = f["phase"]
+    for k in INC_INTS:
+        v = f.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v < 1e12:
+            out[k] = int(v)
+    for k, (rx, n) in INC_STRS.items():
+        v = f.get(k)
+        if isinstance(v, str) and len(v) <= n and rx.match(v):
+            out[k] = v
+    if f.get("err"):
+        out["err"] = err_text(f["err"] if isinstance(f["err"], (str, BaseException)) else str(f["err"]))
+    return out
+
+
+def inc_line(code, src, f, **more):
+    """the ONE log line: {"incident": code, "src": server|client, "trace_id", ...fields (OTEL names), "error.type", "t": UTC time}"""
+    out = {"incident": code, "src": src, "trace_id": f.get("trace_id") or trace_id(), "rid": getattr(_trace, "rid", None)}
+    for k, v in f.items():
+        if k == "provider" and v in GEN_AI:
+            out["gen_ai.system"], out["server.address"] = GEN_AI[v][0], urllib.parse.urlsplit(GEN_AI[v][1]()).hostname
+        elif k != "trace_id":
+            out[OTEL.get(k, k)] = v
+    if f.get("err") or f.get("reason"):
+        out["error.type"] = f["err"].split(":")[0] if f.get("err") and re.match(r"^\w+:", f["err"]) else f.get("reason")
+    print(json.dumps(dict(out, **more, t=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())), separators=(",", ":")), file=sys.stderr, flush=True)
+
+
+def upstream_err(e):
+    """an AI provider's own words for a failure (flight recorder P1): {"etype": its error type, "emsg": its message, 120 chars,
+    blanked like err_text}. The parsed error.message, not the raw body: a moderation reply carries the flagged input in its metadata"""
+    if not isinstance(e, urllib.error.HTTPError):
+        return {}
+    raw = upstream_body(e).decode("utf-8", "replace")
+    try:
+        er = json.loads(raw).get("error")
+    except (ValueError, AttributeError):
+        er = None
+    if isinstance(er, dict):
+        et, msg = er.get("type") or er.get("code"), er.get("message")
+    else:
+        et, msg = None, None if raw.lstrip().startswith("{") else raw
+    out = {}
+    if et is not None and re.match(r"^[\w.-]{1,60}$", str(et)):
+        out["etype"] = str(et)
+    if isinstance(msg, str) and msg.strip():
+        out["emsg"] = (err_text(msg.strip()) or "")[:120]
+    return out
+
+
+# the last failure per AI provider (incident()): KV stem:err:<provider> for an hour, shared by every instance, read by /health
+ERR_TTL = 3600
+_last_err = {}
+
+
+def note_err(provider, rec):
+    _last_err[provider] = rec
+    if all(KV):
+        try:
+            _kv("SET", f"stem:err:{provider}", json.dumps(rec, separators=(",", ":")), "EX", ERR_TTL)
+        except (OSError, ValueError) as e:
+            log("stem:err not saved to KV:", e)
+
+
+def incident(where, reason, **f):
+    """a server failure: a new S- code, its line in the logs; returns the code (X-Incident, or the "(Cluck stopped early)" line).
+    A provider failure also logs the provider's own error type + message (upstream_err) and becomes that provider's last error (note_err)"""
+    code = "S-" + "".join(secrets.choice(INC_ALPHA) for _ in range(5))
+    fields, up = inc_fields(dict(f, where=where, reason=reason)), upstream_err(f.get("err"))
+    inc_line(code, "server", fields, **up)
+    if f.get("provider") in GEN_AI and not isinstance(f.get("err"), OutOfCredit):   # our own cap / skip: /health reads claude_spent itself
+        note_err(f["provider"], dict(at=int(time.time()), code=code, reason=reason, status=fields.get("status"), trace=trace_id(), **up))
+    return code
+
+
+def ua_family(ua):
+    """"chrome-android", "safari-ios", ...: the browser and the platform, never the full User-Agent"""
+    ua = ua or ""
+    b = next((n for n, rx in (("edge", r"Edg/"), ("samsung", r"SamsungBrowser"), ("opera", r"OPR/"), ("firefox", r"Firefox/|FxiOS"),
+                              ("chrome", r"Chrome/|CriOS"), ("safari", r"Safari/")) if re.search(rx, ua)), "other")
+    o = next((n for n, rx in (("ios", r"iPhone|iPad|iPod"), ("android", r"Android"), ("windows", r"Windows"), ("mac", r"Macintosh"),
+                              ("linux", r"Linux|CrOS")) if re.search(rx, ua)), "other")
+    return f"{b}-{o}"
+
+
+def log_incident(cookie_header, body, ua=""):
+    """POST /log/incident (incident.mjs's beacon): one JSON line, src client. 400 unless a JSON object with a valid code;
+    429 past INC_PER_10MIN for this browser. No cookie is set (a beacon); the sid only rate-limits.
+    413 over INC_BODY_MAX. fr: the page's flight recorder snapshot (flight.js: ring, kb, page.at, diag, health), logged as it came
+    under its own allowlisted keys; the page builds it from codes, numbers and our own tags only (never student text)"""
+    if len(body or b"") > INC_BODY_MAX:
+        return _json(413, {"error": "too big"}, None)
+    b = _body(body, INC_BODY_MAX)
+    if not isinstance(b, dict) or not isinstance(b.get("code"), str) or not INC_CODE.match(b["code"]):
+        return _json(400, {"error": "bad incident"}, None)
+    sid = new_sid(cookie_header)[0] if "sid=" in (cookie_header or "") else "-"
+    now = time.time()
+    with _inc_lock:
+        seen_t = [t for t in _inc_seen.get(sid, []) if now - t < 600]
+        if len(seen_t) >= INC_PER_10MIN:
+            _inc_seen[sid] = seen_t
+            return _json(429, {"error": "limit"}, None)
+        _inc_seen[sid] = seen_t + [now]
+    fr = b.get("fr")
+    fr = {k: v for k, v in fr.items() if k in FR_KEYS} if isinstance(fr, dict) else None
+    inc_line(b["code"], "client", inc_fields(b), ua=ua_family(ua), ua_raw=re.sub(r"[^\x20-\x7e]", "", ua or "")[:512],   # the full UA: incidents only
+             **({"fr": fr} if fr else {}))
+    return 204, {"Cache-Control": "no-store"}, b""
+
+
+INC_BODY_MAX = 16384                         # flight.js keeps a report under it (incident.mjs); bigger = 413
+FR_KEYS = ("ring", "kb", "page", "dev", "diag", "health", "cut", "dup", "n", "rate")
+
+
+def _when(at):
+    """KV `at` (epoch s / ms, or an ISO time) as epoch seconds, or None"""
+    if isinstance(at, (int, float)) and not isinstance(at, bool):
+        return at / 1000 if at > 1e11 else float(at)
+    if isinstance(at, str):
+        try:
+            return datetime.datetime.fromisoformat(at.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return None
+    return None
+
+
+SPEND_STALE = 3 * 3600                       # stem:anthropic:spend older than this: not trusted (the hourly job stopped)
+
+
+def health_state():
+    """(page-facing {"claude", "or"} of ok | over | err | None (no key), server-only numbers for the log line).
+    claude: over = our CLAUDE_BUDGET_USD cap reached, or the prepaid balance (PREPAID_CENTS − stem:anthropic:spend.cents_since, written
+    hourly by a GitHub Action) at or under the reserve; err / over = its last failure within ERR_TTL (budget_cap = over); else ok.
+    A spend record older than SPEND_STALE is "stale" (logged) and ignored. or: the same from its last failure."""
+    keys = ["stem:err:claude", "stem:err:openrouter", "stem:anthropic:spend", "stem:anthropic:spend_err"]
+    vals = [None] * len(keys)
+    if all(KV):
+        try:
+            vals = _kv("MGET", *keys) or vals
+        except (OSError, ValueError) as e:
+            log("health: KV unreadable:", e)
+
+    def j(v):
+        try:
+            return json.loads(v) if isinstance(v, str) else None
+        except ValueError:
+            return None
+    err = {"claude": j(vals[0]) or _last_err.get("claude"), "openrouter": j(vals[1]) or _last_err.get("openrouter")}
+    spend, now = j(vals[2]), time.time()
+    reserve = _fenv("CLAUDE_RESERVE_USD", 5.0) * 100
+    nums = {"reserve_cents": reserve}
+    out = {}
+    for name, prov, key in (("claude", "claude", "CLAUDE_API"), ("or", "openrouter", "OPENROUTER_API_KEY")):
+        if not os.environ.get(key):
+            out[name] = None
+            continue
+        e = err[prov] if isinstance(err[prov], dict) and now - (_when(err[prov].get("at")) or 0) < ERR_TTL else None
+        out[name] = ("over" if e.get("reason") == "budget_cap" else "err") if e else "ok"
+        if e:
+            nums[f"{name}_last_err"] = {k: e.get(k) for k in ("code", "reason", "status", "etype", "emsg")}
+    if out["claude"] is not None:
+        spent, budget = claude_spent(), _fenv("CLAUDE_BUDGET_USD", 100.0)
+        nums.update(spent_usd=round(spent, 4), budget_usd=budget)
+        if spent >= budget - _fenv("CLAUDE_RESERVE_USD", 5.0):
+            out["claude"] = "over"
+        prepaid = _fenv("PREPAID_CENTS", None)
+        if isinstance(spend, dict) and prepaid is not None and isinstance(spend.get("cents_since"), (int, float)):
+            age = now - (_when(spend.get("at")) or 0)
+            nums.update(prepaid_cents=prepaid, cents_since=spend["cents_since"], cents_month=spend.get("cents_month"), spend_age_s=int(age))
+            if age > SPEND_STALE:
+                nums["spend"] = "stale"
+            else:
+                nums["remaining_cents"] = prepaid - spend["cents_since"]
+                if nums["remaining_cents"] <= reserve:
+                    out["claude"] = "over"
+        if j(vals[3]) or vals[3]:
+            nums["spend_err"] = j(vals[3]) or str(vals[3])[:120]
+    return out, nums
+
+
+def health():
+    """GET /health (flight recorder P1): {"claude", "or": ok | over | err | null, "ts"}, ≤ 100 bytes, no-store. No number leaves the
+    server (Tony: dollars stay server-side): they go in this request's log line. The page asks only after a Cluck incident (incident.mjs)"""
+    out, nums = health_state()
+    log("health " + json.dumps(dict(out, **nums), separators=(",", ":"), default=str))
+    return _json(200, dict(out, ts=int(time.time())), None)
+
+
+# Out of credit (Tony, Oct 19: the prod "Cluck didn't load" was the API budget cap): an upstream 402, or a 400/401/403/429 that names
+# credit / billing / a key limit (OpenRouter "Insufficient credits" / "Key limit exceeded", Anthropic "credit balance is too low",
+# a stream's billing_error), or our own CLAUDE_BUDGET_USD cap. One request's chain keeps a set `out` of the providers that said so:
+# the rest of that chain skips them, so a chain where every provider is out fails at once (503 + X-Incident budget_cap), not after
+# a 13-20 s crawl through each model on the same empty key.
+BUDGET_RE = re.compile(rb"credit|billing|budget|insufficient|key limit|spend limit|quota", re.I)
+
+
+class OutOfCredit(Exception):
+    pass
+
+
+def upstream_body(e):
+    """an HTTPError's body, read once and kept on the exception (note() reads it too)"""
+    if not hasattr(e, "stem_body"):
+        try:
+            e.stem_body = e.read()[:4000] if isinstance(e, urllib.error.HTTPError) else b""
+        except Exception:  # noqa: BLE001
+            e.stem_body = b""
+    return e.stem_body
+
+
+def is_budget(e):
+    if isinstance(e, OutOfCredit):
+        return True
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code == 402 or (e.code in (400, 401, 403, 429) and bool(BUDGET_RE.search(upstream_body(e))))
+    return bool(re.search(r"billing|credit|budget", str(e), re.I))
+
+
+def budget_hit(e, provider, out, where="cluck", **f):
+    """True when e says out of credit: the provider joins `out` (this chain skips it) and gets one budget_cap line per chain"""
+    if not is_budget(e):
+        return False
+    if out is None or provider not in out:
+        incident(where, "budget_cap", provider=provider, status=getattr(e, "code", None), err=e, **f)
+    if out is not None:
+        out.add(provider)
+    return True
+
+
+def claude_ready(out):
+    """claude_ok() for one chain: not out of credit there; our own CLAUDE_BUDGET_USD cap reached (a key, over the cap) = budget_cap"""
+    if "claude" in out:
+        return False
+    if claude_ok():
+        return True
+    if os.environ.get("CLAUDE_API"):
+        budget_hit(OutOfCredit("CLAUDE_BUDGET_USD cap reached"), "claude", out)
+    return False
 
 
 # ---------------- Cluck the genie (design/EASY.md Phase 4): a streamed, paraphrased solution after a wrong answer, easy mode only ----------------
@@ -977,11 +1276,11 @@ def explain_allowed(sid, auto, now=None):
     """the hourly caps: auto (first wrong answer) at most AUTO_PER_HOUR, anything at most ANY_PER_HOUR. Records the ask when allowed."""
     now = now if now is not None else time.time()
     with _asked_lock:
-        log = [(t, a) for t, a in _asked.get(sid, []) if now - t < 3600]
-        if len(log) >= ANY_PER_HOUR or (auto and sum(a for _, a in log) >= AUTO_PER_HOUR):
-            _asked[sid] = log
+        asked = [(t, a) for t, a in _asked.get(sid, []) if now - t < 3600]
+        if len(asked) >= ANY_PER_HOUR or (auto and sum(a for _, a in asked) >= AUTO_PER_HOUR):
+            _asked[sid] = asked
             return False
-        _asked[sid] = log + [(now, bool(auto))]
+        _asked[sid] = asked + [(now, bool(auto))]
         return True
 
 
@@ -1081,7 +1380,8 @@ def system_for(base, p):
 def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
     """yields text chunks (Claude: the editor's rewrite in one piece; OpenRouter: streamed), markdown stripped. Raises OSError on a dead
     connection. The NOTE call goes first."""
-    n = note(p, answer, None, key, scratch=scratch)
+    out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
+    n = note(p, answer, None, key, scratch=scratch, out=out)
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
@@ -1089,7 +1389,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz)}], reveal=turn[1], facts=leak_facts(p),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
-                            fig_ctx(p, answer), edit=True, v4=v4)
+                            fig_ctx(p, answer), edit=True, v4=v4, out=out)
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -1114,11 +1414,13 @@ def _or_one(model, messages, key, max_tokens):
                 yield text
 
 
-def _or_stream(messages, key, max_tokens):
+def _or_stream(messages, key, max_tokens, out=None):
     """OPENROUTER_MODELS in order: the next one when a model errors or says nothing before its first word; once words flow, it stays"""
     err = None
     for m in OPENROUTER_MODELS:
-        said = False
+        if out is not None and "openrouter" in out:   # out of credit: no model on this key can answer, so none is tried (fast fail)
+            raise OutOfCredit("openrouter")
+        said, t0 = False, time.time()
         try:
             for t in _or_one(m, messages, key, max_tokens):
                 said = True
@@ -1127,11 +1429,17 @@ def _or_stream(messages, key, max_tokens):
             if said:
                 raise
             err = e
-            print(f"model {m}: {e}", file=sys.stderr)
+            log(f"model {m}: {e}")
+            if budget_hit(e, "openrouter", out, model=m, phase="headers", ms=(time.time() - t0) * 1000):
+                if out is None:
+                    raise OutOfCredit("openrouter") from e
+            else:
+                incident("cluck", "upstream", provider="openrouter", model=m, status=getattr(e, "code", None), err=e, phase="headers", ms=(time.time() - t0) * 1000)
             continue
         if said:
             return
-        print(f"model {m}: empty reply", file=sys.stderr)
+        log(f"model {m}: empty reply")
+        incident("cluck", "empty", provider="openrouter", model=m, phase="stream", ms=(time.time() - t0) * 1000)
     if err:
         raise err
 
@@ -1195,7 +1503,7 @@ def claude_add(usd):
             _kv("INCRBYFLOAT", k, f"{usd:.8f}")
             _kv("EXPIRE", k, CLAUDE_SPEND_TTL)
         except (OSError, ValueError) as e:
-            print("claude spend not saved to KV:", e, file=sys.stderr)
+            log("claude spend not saved to KV:", e)
 
 
 def claude_ok():
@@ -1250,11 +1558,11 @@ def _edit(draft, fig, max_tokens):
         gate = livefig.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one([{"type": "text", "text": EDITOR, "cache_control": CACHE}], [{"role": "user", "content": draft}], max_tokens)) + gate.end()
     except Exception as e:  # noqa: BLE001
-        print(f"rewrite: {e}", file=sys.stderr)
+        log(f"rewrite: {e}")
         return draft
     lost = [k for k in keep if k not in out]
     if not out.strip() or lost:
-        print(f"rewrite: {'empty' if not out.strip() else f'lost {len(lost)} of {len(keep)}'}, draft sent", file=sys.stderr)
+        log(f"rewrite: {'empty' if not out.strip() else f'lost {len(lost)} of {len(keep)}'}, draft sent")
         return draft
     return out
 
@@ -1335,7 +1643,7 @@ def _claude_one(system, messages, max_tokens, arm="-"):
     finally:
         if any(used.values()):
             claude_add(claude_cost(used))
-            print("claude usage: arm=" + arm + " in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used), file=sys.stderr)
+            log("claude usage: arm=" + arm + " in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used))
 
 
 def claude_cost(used):
@@ -1356,7 +1664,7 @@ def _read_prompt_v4():
         with open(os.path.join(ROOT, "prompts", "cluck-v4.txt"), encoding="utf-8", newline="") as f:
             return f.read()
     except OSError as e:
-        print("prompts/cluck-v4.txt missing:", e, file=sys.stderr)
+        log("prompts/cluck-v4.txt missing:", e)
         return None
 
 
@@ -1631,7 +1939,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None):
         yield vis
     if guard and guard.kind:
         LEAK_GUARD["n"] += 1
-        print(f"cluck leak_guard {code}: kind={guard.kind} partial={sent} total={LEAK_GUARD['n']}", file=sys.stderr)   # no text
+        log(f"cluck leak_guard {code}: kind={guard.kind} partial={sent} total={LEAK_GUARD['n']}")   # no text
         yield ("\n" if sent else "") + CLUCK_NUDGE
 
 
@@ -1684,55 +1992,61 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
                     yield text
     finally:
         if usage:
-            print("deepseek usage: arm=%s in=%s cached=%s out=%s" % (v4["arm"], usage.get("prompt_tokens"),
-                  (usage.get("prompt_tokens_details") or {}).get("cached_tokens"), usage.get("completion_tokens")), file=sys.stderr)
+            log("deepseek usage: arm=%s in=%s cached=%s out=%s" % (v4["arm"], usage.get("prompt_tokens"),
+                  (usage.get("prompt_tokens_details") or {}).get("cached_tokens"), usage.get("completion_tokens")))
 
 
-def v4_stream(v4, key):
+def v4_stream(v4, key, out=None):
     """the letter-prompt request on the student's own arm, then the other arm (error, timeout, no budget, empty reply: only while nothing visible
     went out); text already sent + a failure = the error propagates, no switch. Yields nothing when both fail (the caller runs the old chain).
     Logs the arm that answered and whether it was a fallback; the sticky arm itself never changes."""
     if PROMPT_V4 is None:
         return
+    out = set() if out is None else out
     order = ["claude", "deepseek"] if v4["arm"] == "claude" else ["deepseek", "claude"]
     for i, name in enumerate(order):
-        if name == "claude" and not claude_ok():
-            print("cluck v4: claude arm off (no key or budget)", file=sys.stderr)
+        if name == "claude" and not claude_ready(out):
+            log("cluck v4: claude arm off (no key or budget)")
             continue
-        if name == "deepseek" and not key:
+        if name == "deepseek" and (not key or "openrouter" in out):
             continue
-        sent = False
+        sent, t0 = False, time.time()
         try:
             chunks = _v4_claude_chunks(v4, V4_MAX) if name == "claude" else _v4_deepseek_chunks(v4, key, V4_MAX)
             for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig")):
                 sent = True
                 yield t
             if sent:
-                print(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}", file=sys.stderr)
+                log(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}")
                 return
-            print(f"cluck v4: {name} empty reply", file=sys.stderr)
+            log(f"cluck v4: {name} empty reply")
+            incident("cluck", "empty", provider=name, phase="stream", ms=(time.time() - t0) * 1000)
         except Exception as e:  # noqa: BLE001
             if sent:
                 raise
-            print(f"cluck v4: {name}: {e}", file=sys.stderr)
+            log(f"cluck v4: {name}: {e}")
+            prov, ms = ("claude" if name == "claude" else "openrouter"), (time.time() - t0) * 1000
+            if not budget_hit(e, prov, out, phase="headers", ms=ms):
+                incident("cluck", "upstream", provider=prov, model=CLAUDE_MODEL if name == "claude" else DS_MODEL, status=getattr(e, "code", None), err=e, phase="headers", ms=ms)
 
 
-def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None):
+def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None):
     """Claude first when claude_ok(); nothing before the first word (any error, empty) = the OpenRouter chain, same params.
     fig: a livefig.Ctx (fig_ctx): the Claude path then gets livefig.rule(fig) and its fences go through the
     gate; the OpenRouter path never has the rule and strips any fence (live figures are Claude only).
     edit: a wish: the Claude draft is held whole and EDITOR's rewrite (_edit) goes out instead; nothing reaches the student before
     it, so a draft that breaks midway still falls back.
     v4 (T62): the letter-prompt request (v4_stream); its arms fall back to each other, and only if both fail does `messages` run the old way."""
+    out = set() if out is None else out          # this chain's out-of-credit providers (budget_hit): skipped, not retried
     if v4 is not None:
         sent = False
-        for t in v4_stream(v4, key):
+        for t in v4_stream(v4, key, out):
             sent = True
             yield t
         if sent:
             return
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
-    elif claude_ok():
+    elif claude_ready(out):
         said, live, edit, draft = False, fig is not None and livefig.on(), edit and rewrite_on(), []
         gate, budget = livefig.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
         try:
@@ -1755,16 +2069,18 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None):
                 elif tail:
                     yield tail
                 return
-            print(f"claude {CLAUDE_MODEL}: empty reply", file=sys.stderr)
+            log(f"claude {CLAUDE_MODEL}: empty reply")
         except Exception as e:  # noqa: BLE001
             if said and not edit:
                 raise
-            print(f"claude {CLAUDE_MODEL}: {e}", file=sys.stderr)
+            log(f"claude {CLAUDE_MODEL}: {e}")
+            if not budget_hit(e, "claude", out, model=CLAUDE_MODEL):
+                incident("cluck", "upstream", provider="claude", model=CLAUDE_MODEL, status=getattr(e, "code", None), err=e, phase="stream" if said else "headers")
     gate = livefig.Fence(None)
-    for t in _or_stream(messages, key, max_tokens):
-        out = gate.feed(t)
-        if out:
-            yield out
+    for t in _or_stream(messages, key, max_tokens, out):
+        o = gate.feed(t)
+        if o:
+            yield o
     tail = gate.end()
     if tail:
         yield tail
@@ -1828,14 +2144,38 @@ def _wish_problem(cookie_header, b):
     return None if p is None or mode != "sugar" or hidden(p, mode) or not sugar(p).get("key") else p
 
 
-def _relay(p, chunks, what):
-    """the model's text as bytes; any failure (the prompt or the connection) ends with one line instead of a cut socket."""
+STOPPED = "\n(Cluck stopped early. Sorry!)".encode()
+
+
+def _relay(p, chunks, what, head):
+    """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
+    (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
+    is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket."""
+    t0, it = time.time(), iter(chunks())
+    ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
-        for t in chunks():
-            yield t.encode()
+        first = next(it, None)
     except Exception as e:  # noqa: BLE001
-        print(f"{what} {p['code']}: {e}", file=sys.stderr)
-        yield "\n(Cluck stopped early. Sorry!)".encode()
+        log(f"{what} {p['code']}: {e}")
+        first, why, err = None, "budget_cap" if is_budget(e) else "upstream", e
+    else:
+        why, err = "empty", None
+    if not first:
+        code = incident(what, why, err=err, phase="headers" if err else "stream", ms=ms(), q=p["code"], status=getattr(err, "code", None))
+        return (503 if why == "budget_cap" else 502), dict(head, **{"X-Incident": f"{code} {why} {trace_id()}"}), iter([STOPPED])
+
+    def rest():
+        sent = len(first.encode())
+        yield first.encode()
+        try:
+            for t in it:
+                sent += len(t.encode())
+                yield t.encode()
+        except Exception as e:  # noqa: BLE001
+            log(f"{what} {p['code']}: {e}")
+            incident(what, "budget_cap" if is_budget(e) else "upstream", err=e, phase="stream", ms=ms(), bytes=sent, q=p["code"])
+            yield STOPPED
+    return 200, head, rest()
 
 
 def explain(cookie_header, body):
@@ -1850,7 +2190,7 @@ def explain(cookie_header, body):
     if not explain_allowed(sid, bool(b.get("auto"))):
         return 429, head, iter([b""])
     turn = cluck_begin(p, sid, b.get("answer"))
-    return 200, head, _relay(p, lambda: explain_stream(p, b.get("answer"), key, b.get("scratch"), sid, turn), "explain")
+    return _relay(p, lambda: explain_stream(p, b.get("answer"), key, b.get("scratch"), sid, turn), "explain", head)
 
 
 # ---------------- Cluck chat (handoff 2026-10-04): follow-up questions under the genie box, CHAT_TURNS per problem per browser ----------------
@@ -1926,7 +2266,7 @@ def cached_note(p, answer):
     return dict(n, on_topic=True)
 
 
-def note(p, answer, text, key, tag=None, scratch=""):
+def note(p, answer, text, key, tag=None, scratch="", out=None):
     """the hidden read: a dict, {"on_topic": False} for a regex hit or the key's guardrail block, None on any failure (fail open).
     The server, not the model, sets how sure Cluck sounds: no written SLIP for the pick caps confidence at medium (the model's own
     `reproduces` check makes up moves, design/CLUCK-NOTE.md)."""
@@ -1934,7 +2274,7 @@ def note(p, answer, text, key, tag=None, scratch=""):
         return {"on_topic": False}
     c = cached_note(p, answer) if text is None else None
     if c:
-        print(f"note {p['code']}: cached", file=sys.stderr)
+        log(f"note {p['code']}: cached")
         return c
     tag = tag or "student_" + secrets.token_hex(4)
     user = explain_prompt(p, answer) + scratch_block(scratch, tag)
@@ -1950,19 +2290,21 @@ def note(p, answer, text, key, tag=None, scratch=""):
             if not isinstance(n, dict) or set(NOTE_SCHEMA["required"]) - set(n):
                 raise ValueError("not the schema")
         except urllib.error.HTTPError as e:  # the key's OpenRouter guardrail (Security, content filters) blocked it: a 403 "Request blocked"
-            print(f"note {p['code']}: {e}", file=sys.stderr)
-            if e.code == 403 and b"Request blocked" in e.read():
+            log(f"note {p['code']}: {e}")
+            if e.code == 403 and b"Request blocked" in upstream_body(e):
                 return {"on_topic": False}
+            if budget_hit(e, "openrouter", out, where="note", model=m, q=p["code"]):
+                return None                      # out of credit: no NOTE (fail open); the chain after it skips OpenRouter at once
             continue
         except Exception as e:  # noqa: BLE001
-            print(f"note {p['code']}: {e}", file=sys.stderr)
+            log(f"note {p['code']}: {e}")
             continue
         if text is None:
             n["on_topic"] = True
         picked = answer if isinstance(answer, list) else [answer]
         if not any((sugar(p).get("slip") or {}).get(str(a)) for a in picked) and n["confidence"] == "high":
             n["confidence"] = "medium"
-        print(f"note {p['code']}: gap={n['gap']} field={n['field']} confidence={n['confidence']}", file=sys.stderr)   # counts per question, no free text
+        log(f"note {p['code']}: gap={n['gap']} field={n['field']} confidence={n['confidence']}")   # counts per question, no free text
         return n
     return None
 
@@ -2017,7 +2359,8 @@ def chat(cookie_header, body):
     turn = cluck_begin(p, sid, b.get("answer"))              # T62: this browser's turn on the item (REVEAL: yes from the 3rd)
     def chunks():
         tag = "student_" + secrets.token_hex(4)                 # one random tag per request: the NOTE and Cluck see the same one
-        n = note(p, b.get("answer"), history[-1]["content"], key, tag, b.get("scratch"))
+        out = set()
+        n = note(p, b.get("answer"), history[-1]["content"], key, tag, b.get("scratch"), out)
         if n and not n["on_topic"]:
             yield random.choice(CANNED)
             return
@@ -2029,8 +2372,8 @@ def chat(cookie_header, body):
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
             v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True))
-        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4)
-    return 200, head, _relay(p, chunks, "chat")
+        yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4, out=out)
+    return _relay(p, chunks, "chat", head)
 
 
 STREAMS = {"/explain": explain, "/chat": chat}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
@@ -2044,10 +2387,20 @@ def _json(status, obj, cookie):
     return status, head, json.dumps(obj).encode()
 
 
-def dispatch(method, path, cookie_header="", body=b""):
+def dispatch(method, path, cookie_header="", body=b"", ua=""):
     """The API, shared by Handler (this server) and api/index.py (Vercel): (status, headers, bytes), or None when the
-    path is not an API path (a static file)."""
-    path = path.split("?")[0]
+    path is not an API path (a static file). A crash inside = a 500 with its incident code in X-Incident (one log line), not a dead request."""
+    try:
+        return _dispatch(method, path.split("?")[0], cookie_header, body, ua)
+    except Exception as e:  # noqa: BLE001
+        code = incident("api", "exception", err=e, path=path.split("?")[0], method=method)
+        st, head, data = _json(500, {"error": "server"}, None)
+        return st, dict(head, **{"X-Incident": f"{code} exception {trace_id()}"}), data
+
+
+def _dispatch(method, path, cookie_header, body, ua):
+    if method == "POST" and path == "/log/incident":
+        return log_incident(cookie_header, body, ua)
     if method == "POST":
         if path not in ("/check", "/narrate"):
             return None
@@ -2066,6 +2419,8 @@ def dispatch(method, path, cookie_header="", body=b""):
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
         return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
+    if path == "/health":
+        return health()
     m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path)
     if not m:
         return None
@@ -2115,6 +2470,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(data)
 
     def route(self, head=False):
+        set_trace(self.headers.get("traceparent"))
         if REDIRECT:
             self.moved(302)
             return
@@ -2137,6 +2493,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.route(head=True)
 
     def do_POST(self):
+        set_trace(self.headers.get("traceparent"))
         if REDIRECT:
             self.moved(307)                               # 307 keeps POST + body
             return
@@ -2157,7 +2514,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(c)
                 self.wfile.flush()
             return
-        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), body)
+        res = dispatch("POST", self.path, self.headers.get("Cookie", ""), body, self.headers.get("User-Agent", ""))
         if res:
             self.reply(res)
         else:

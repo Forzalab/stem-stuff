@@ -9,6 +9,7 @@ import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
 import { changes, markNums } from "./chg.mjs";
 import { renumberSteps } from "./steps.mjs";
+import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
 import { clampPos, progress, radiusAt, dimAt, snapTo } from "./sheet.mjs";
 window.stemCodes = codes;   // offline.js (a classic script, runs after this module) reads the code rules from here
 
@@ -87,11 +88,30 @@ function toast(text, at) {
 }
 /* the entry line (#entryMsg): every upload / open outcome ends here. tone: bad (red, the default) | warn | ok. The class is reset
    each time, so a green line never colours the next red one. */
-function entryMsg(text, tone = "bad") {
+function entryMsg(text, tone = "bad", inc = null) {
   const m = $("#entryMsg");
   m.textContent = text;
+  if (inc) m.insertAdjacentHTML("beforeend", incHTML(inc));
   m.className = "entry-msg" + (text && tone !== "bad" ? " " + tone : "");
 }
+/* an incident (incident.mjs, SCHEMA.md "Incidents") after the failure line, whose words stay as they were (Tony, Oct 19):
+   "Send Tony this code: E-7K3QX", readable and selectable for a screenshot; a tap copies the code. Never the reason, except in
+   Tony's debug mode (?debug=1 once): "E-7K3QX network". Tracking off (DNT / GPC / "Don't record me"): no report went out, and the line says so.
+   card: an error card (not Cluck's chip): in debug mode it adds the flight recorder's diag line "v#197 · explain 504 · 20.1 s · AI: cap" */
+const incHTML = (c, card = true) => !c ? "" : ` <span class="inc" data-inc="${c}">Send Tony this code: <b>${esc(debugOn() ? incLabel(c) : c)}</b>${trackingOff()
+  ? ` <small class="inc-off">Tracking is off on this device, so Tony gets less to go on.</small>` : ""}${card && debugOn() && incDiag(c)
+  ? ` <small class="inc-diag" data-diag="${c}">${esc(incDiag(c))}</small>` : ""}</span>`;
+document.addEventListener("click", async e => {
+  const b = e.target.closest?.(".inc[data-inc]"); if (!b || b.closest("button")) return;   // inside Cluck's chip, the tap is the chip's (try again)
+  e.stopPropagation(); e.preventDefault();
+  say((await copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
+}, true);
+/* serve.py's X-Incident: "S-7K3QX budget_cap <trace id>" (its code, its reason tag, the request's trace id) */
+const xInc = r => (r && r.headers.get("x-incident") || "").trim().split(/\s+/);
+/* a request that failed: one incident. r = the Response when one came (its X-Incident, the server's code + reason, win), else e = what fetch threw */
+/* tp: the request's traceparent (incident.mjs): its trace id goes in the incident, so this E- code and the server's lines link */
+const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where, why || xInc(r)[1] || (r ? "http" : timedOut(e) ? "timeout" : x.phase === "parse" ? "parse" : "network"),
+  { status: r && r.status, phase: timedOut(e) ? "timeout" : "headers", server: xInc(r)[0], trace_id: xInc(r)[2] || traceOf(tp), err: e, ms: Date.now() - t0, path, ...x });
 /* a press that cannot move says why (nav.js "drill:note", load()): a toast under Next, else the entry line */
 function note(text) {
   const at = $("#qnext");
@@ -208,24 +228,31 @@ function md(text, inline = false, big = false) {
 const TIMEOUT = 8000;
 const inflight = new Set();
 const timedOut = e => !!e && e.name === "AbortError";
+/* flight.js: one request's start / headers / first byte / end / error in the page's ring (on the device; only an incident carries it) */
+const FR_NONE = { h() {}, f() {}, e() {}, x() {} };
+const frReq = (ep, tp) => window.stemFR?.req(ep, tp) || FR_NONE;
 async function net(url, init = {}) {
-  const ctl = new AbortController(), req = { ctl, t0: Date.now() };
-  const t = setTimeout(() => ctl.abort(), TIMEOUT);
+  const ctl = new AbortController(), req = { ctl, t0: Date.now(), ep: url.split(/[/?]/)[0] };
+  const t = setTimeout(() => ctl.abort(), TIMEOUT), fr = frReq(req.ep, init.headers?.traceparent);
   inflight.add(req);
-  try { return await fetch(url, { ...init, signal: ctl.signal }); }
+  try { const r = await fetch(url, { ...init, signal: ctl.signal }); fr.h(r); return r; }
+  catch (e) { fr.x(e); throw e; }
   finally { clearTimeout(t); inflight.delete(req); }
 }
 const localState = new Map();
 async function check(code, answer) {
   const off = window.stemOffline;
   if (off && off.has(code)) return gradeLocal(modeView(off.get(code), modeOf()), answer);   // an upload: the same mode view the server uses
+  const t0 = Date.now(), tp = traceparent();
+  let inc = null;
   try {
     const rd = window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {};   // a redo round grades in its own namespace
-    const r = await net("check", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+    const r = await net("check", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
                                      body: JSON.stringify({ code, ...answer, ...rd }) });
-    if (r.ok) return await r.json();
-  } catch (e) { if (timedOut(e)) return { verdict: "timeout" }; /* else offline */ }
-  return { verdict: "pending" };
+    if (r.ok) { try { return await r.json(); } catch (e) { inc = reqInc("check", "/check", t0, { e, phase: "parse", q: code, tp }); } }
+    else if (r.status >= 500) inc = reqInc("check", "/check", t0, { r, q: code, tp });   // a 4xx: no grader here (a static host), not a failure
+  } catch (e) { inc = reqInc("check", "/check", t0, { e, q: code, tp }); if (timedOut(e)) return { verdict: "timeout", inc }; /* else offline */ }
+  return { verdict: "pending", inc };
 }
 /* mirror of serve.py grade(): keep the two in step */
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
@@ -522,13 +549,16 @@ async function openBank(code, o) {
 }
 async function openBankIn(code, { go = true, quiet = false } = {}) {
   retryLoad.hidden = true;
-  let b = null;
+  let b = null, r = null;
+  const t0 = Date.now(), path = `/b/${code}.json`, tp = traceparent();
   try {
-    const r = await net(`b/${code}.json`);
+    r = await net(`b/${code}.json`, { headers: { traceparent: tp } });
     if (r.ok) b = await r.json(); else r.text().catch(() => {});
+    if (r.status >= 500) throw r;                                         // the server broke: a failure with a code, not "not found"
   } catch (e) {
+    const inc = reqInc("bank", path, t0, e === r ? { r, tp } : r ? { e, phase: "parse", tp } : { e, tp });
     if (!quiet) {
-      entryMsg(timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.");
+      entryMsg(timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.", "bad", inc);
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
@@ -551,11 +581,15 @@ let S = null;        // { code, prob, start, tries, hints, triesLeft, finished, 
    (offline.js answers it for an uploaded file). design/NAV.md */
 async function getProblem(code) {
   const p = !modeFlip && bank && bank.get.get(code);                      // a mode flip: the bank in memory is the old mode's view
-  if (p) { net(`p/${code}.json`).then(r => r.text()).catch(() => {}); return structuredClone(p); }   // a copy, like a fresh fetch
-  const r = await net(`p/${code}.json`);
-  if (r.ok) return r.json();
+  if (p) { net(`p/${code}.json`, { headers: { traceparent: traceparent() } }).then(r => r.text()).catch(() => {}); return structuredClone(p); }   // a copy, like a fresh fetch
+  const t0 = Date.now(), path = `/p/${code}.json`, tp = traceparent();
+  let r;
+  try { r = await net(`p/${code}.json`, { headers: { traceparent: tp } }); if (r.ok) return await r.json(); }
+  catch (e) { e.inc = reqInc("problem", path, t0, r ? { e, phase: "parse", q: code, tp } : { e, q: code, tp }); throw e; }
   r.text().catch(() => {});   // drain the 404 body so the request completes
-  const e = new Error("not found"); e.status = r.status; throw e;
+  const e = new Error("not found"); e.status = r.status;
+  if (r.status !== 404) e.inc = reqInc("problem", path, t0, { r, q: code, tp });
+  throw e;
 }
 /* a 404 on a code: a custom prefix this device has never seen names its bank ("BEAR_QAA needs BANK_BEAR", a shared link on a
    fresh device); a prefix it knows (a bank with it is open or uploaded) or a built-in one is a typo: "not found" */
@@ -577,7 +611,7 @@ async function load(code) {
     }
   }
   catch (e) {
-    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.");
+    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -1013,8 +1047,8 @@ function partFeedback(i, r, typed) {
   let h = "";
   if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (r.hint) {
     const hintWithQuack = quackHint(r.hint, S.code + ":part" + i + ":" + S.tries.length);
     h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
@@ -1342,8 +1376,8 @@ function feedback(r, typed) {
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span></p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span><button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
   let quackHtml = "";
   if (r.hint) {
@@ -1439,21 +1473,31 @@ async function wishStart(auto) {
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
+  const t0 = Date.now(), tp = traceparent(), inc = x => reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }), fr = frReq("explain", tp);
+  let r = null, bytes = 0;
   try {
-    const r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin",
+    r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto, scratch: scratchTail() }), signal: w.ctl.signal });
-    if (!r.ok || !r.body) { w.failed = r.status || 1; }
+    fr.h(r);
+    if (!r.ok || !r.body) {
+      const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
+      w.failed = r.status === 503 && sc ? 1 : r.status || 1;                // a plain 404/503 = no Cluck here (hidden), 429 = the cap: no incident
+      if (![404, 429, 503].includes(r.status) || sc) w.inc = inc({ r, bytes: 0 });
+    }
     else {
       const rd = r.body.getReader(), dec = new TextDecoder();
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
+        bytes += value.length; fr.f();
         w.text += dec.decode(value, { stream: true });
         window.stemT?.("_tok");   // telemetry: first chunk time
         if (wish === w && w.open) wishText();
         if (wish === w) peekText();
       }
+      fr.e(bytes);
+      if (!w.text && !w.ctl.signal.aborted) { w.failed = 1; w.inc = inc({ why: "empty", phase: "stream", bytes, status: r.status }); }   // 200 and then nothing
     }
-  } catch { if (!w.ctl.signal.aborted) w.failed = 1; }
+  } catch (e) { fr.x(e); if (!w.ctl.signal.aborted) { w.failed = 1; w.inc = inc(r ? { e, phase: "stream", bytes, status: r.status } : { e }); } }   // r: the headers came, the stream broke
   w.done = true;
   if (!w.failed && w.text && !w.ctl.signal.aborted) ckPut(key, w.text);   // a whole reply only: not a failure, not one cut by leaving the question
   window.stemT?.("cluck_stream", { code: w.code, chars: w.text.length, figs: (w.text.match(WFIG) || []).length, failed: w.failed || 0, auto: !!auto });   // telemetry
@@ -1463,7 +1507,7 @@ async function wishStart(auto) {
   if (w.open) wishDraw();                                                  // an open sheet shows the failure, not a caret forever (G2c row 23)
 }
 function wishRetry(w) {                                                    // the chip and the sheet's "Try again": a fresh request
-  Object.assign(w, { failed: 0, capped: false, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
+  Object.assign(w, { failed: 0, capped: false, inc: null, text: "", done: false, shown: 0, pos: 0, at: 0, tick: 0, skip: false, said: false, drawn: 0, ended: false });
   wishStart(false);
 }
 /* text: one line per line, the Mathy flow (design: brain topics/ai-tutor-ux.md): sentences with $..$ math and **bold** key numbers; "1. Title — subtitle" opens a step (Gemini's steps, alt's mock) that holds what
@@ -1571,7 +1615,7 @@ function wishFrame(now) {
   const t = w.text;
   if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
     if (w.drawn !== -2) {
-      x.innerHTML = w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button></div>`
+      x.innerHTML = w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
         : `<div class="wl">Cluck is out of wishes for this hour. Try again later.</div>`;
       w.drawn = -2;
       x.querySelector(".wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
@@ -1598,7 +1642,7 @@ function wishFrame(now) {
       const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
-    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (end ? "" : WCARET);
+    x.innerHTML = wishHTML(t.slice(0, w.shown)) + (!end ? WCARET : w.failed && w.inc ? `<div class="wl">${incHTML(w.inc).trim()}</div>` : "");   // the stream broke mid-reply: the code under what came
     wishFigs(x);
     w.drawn = w.shown; w.ended = end;
   }
@@ -1647,7 +1691,7 @@ function wishPaint() {
     el.hidden = off || !!host;
   } else {
     const label = !w.started ? "Explain my mistake" : "Didn't load. Tap to try again";
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
   btn?.addEventListener("click", () => {
@@ -1907,30 +1951,34 @@ async function clSend(msg) {
   w.chat.push({ role: "user", content: msg }); w.busy = true; clAsk();
   re.scrollIntoView({ block: "nearest" });
   w.ctl = w.ctl || new AbortController();
-  let text = "", err = "";
+  let text = "", err = "", inc = null, r = null, bytes = 0;
   const ty = { text: "", pos: 0, shown: 0, done: false }, typed = wishType(re, ty);   // the reply is typed word by word as it comes, not drawn per chunk
+  const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
-    const r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", signal: w.ctl.signal,
+    r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
       body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+    fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
-    else if (!r.ok || !r.body) err = "fail";
+    else if (!r.ok || !r.body) fail({ r });
     else {
       const rd = r.body.getReader(), dec = new TextDecoder();
       for (;;) {
         const { value, done } = await rd.read(); if (done) break;
+        bytes += value.length; fr.f();
         text += dec.decode(value, { stream: true });
         ty.text = text;
       }
-      if (!text.trim()) err = "fail";
+      fr.e(bytes);
+      if (!text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
     }
-  } catch { if (w.ctl.signal.aborted) return; err = "fail"; }
+  } catch (e) { fr.x(e); if (w.ctl.signal.aborted) return; fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
   if (wish !== w) return;
   if (err) ty.off = true; else { ty.done = true; await typed; if (wish !== w) return; }
   w.busy = false;
   if (err) {
     w.chat.pop();                                                          // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
-    else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.");
+    else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.") + incHTML(inc);
   } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
@@ -2809,4 +2857,15 @@ addEventListener("DOMContentLoaded", async () => {
     await fromHash();
   } catch { /* load() / openBank() report their own errors */ } finally { firstDone(); }
 });
-window.__drill = { check, get state() { return S; } };   // for tests/e2e
+/* page.at (flight.js page(), flight recorder P1 §8): the app's state at a failure, as codes, counts and flags. Never a typed answer,
+   notes, chat or Cluck's text: only their lengths */
+const pageState = () => {
+  const w = wish;
+  return {
+    q: S?.code ?? null, bank: bank?.code ?? null, mode: modeOf(), tries: S ? S.tries.length : null, left: S?.triesLeft ?? null, fin: !!S?.finished, hints: S ? S.hints.length : null,
+    wish: w && { code: w.code, started: !!w.started, end: !!w.done, open: !!w.open, failed: w.failed || 0, capped: !!w.capped, chars: (w.text || "").length,
+      shown: w.shown | 0, chat: (w.chat || []).length, busy: !!w.busy, out: !!w.out, inc: w.inc || null },
+    cl: cl && { open: !!cl.open, tab: cl.tab ?? null, auto: !!cl.auto }, inflight: [...inflight].map(r => [r.ep || null, Date.now() - r.t0]),
+  };
+};
+window.__drill = { check, get state() { return S; }, get page() { return pageState(); } };   // for tests/e2e; page: flight.js
