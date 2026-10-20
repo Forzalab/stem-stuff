@@ -53,6 +53,7 @@ class ClaudePipe(unittest.TestCase):
         self.kv = mock.patch.object(serve, "KV", (None, None))
         self.kv.start()
         serve._claude_spent.clear()
+        serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
         self.url = mock.patch("urllib.request.urlopen", side_effect=self.fake)
         self.url.start()
 
@@ -103,6 +104,7 @@ class ClaudePipe(unittest.TestCase):
         for code, etype in ((402, "billing_error"), (400, "invalid_request_error"), (401, "authentication_error"),
                             (429, "rate_limit_error"), (529, "overloaded_error"), (500, "api_error")):
             self.calls.clear()
+            serve._last_err.clear()                    # each error on its own: a billing / key error starts the cooldown (Cooldown below)
             self.claude = lambda c=code, e=etype: http_error(c, e)
             self.assertEqual(self.run_it(), "OR words.", etype)
             self.assertEqual(self.hosts(), ["claude", "or"])
@@ -266,6 +268,7 @@ class ClaudePipe(unittest.TestCase):
         pi, po = serve.claude_price(serve.CLAUDE_MODEL)
         self.assertAlmostEqual(serve.claude_spent(), (10 * pi + 2000 * pi * 1.25 + 50 * po) / 1e6)
         serve._claude_spent.clear()
+        serve._last_err.clear()                 # a billing error in an earlier test would start the Claude cooldown
         self.claude = lambda: Resp(sse_claude(["Hi.\n", "x"], usage_in=10, usage_out=50, write=0, read=2000))
         self.run_it()
         self.assertAlmostEqual(serve.claude_spent(), (10 * pi + 2000 * pi * 0.1 + 50 * po) / 1e6)

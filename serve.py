@@ -1208,7 +1208,7 @@ def claude_ready(out):
         return False
     if claude_ok():
         return True
-    if os.environ.get("CLAUDE_API"):
+    if os.environ.get("CLAUDE_API") and not claude_cooling():       # cooling: its own incident was logged when Claude said so
         budget_hit(OutOfCredit("CLAUDE_BUDGET_USD cap reached"), "claude", out)
     return False
 
@@ -1506,9 +1506,19 @@ def claude_add(usd):
             log("claude spend not saved to KV:", e)
 
 
+def claude_cooling():
+    """Claude's last failure in this process (incident -> note_err) said out of credit (budget_cap) or a bad key (401 / 403) less than
+    CLUCK_CLAUDE_COOLDOWN_S ago (default 600): its arm is skipped till then, so the other arm answers at once instead of after a failed call.
+    A skip logs no new incident, so the window ends on time; the next Claude call then decides again (Tony, Oct 20: speed fix #4)"""
+    e = _last_err.get("claude")
+    return (isinstance(e, dict) and (e.get("reason") == "budget_cap" or e.get("status") in (401, 403))
+            and time.time() - (e.get("at") or 0) < _fenv("CLUCK_CLAUDE_COOLDOWN_S", 600.0))
+
+
 def claude_ok():
-    """a key, and this cycle's spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 100 - 5)"""
-    return bool(os.environ.get("CLAUDE_API")) and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 100.0) - _fenv("CLAUDE_RESERVE_USD", 5.0)
+    """a key, not cooling down (claude_cooling), and this cycle's spend still under CLAUDE_BUDGET_USD - CLAUDE_RESERVE_USD (default 100 - 5)"""
+    return (bool(os.environ.get("CLAUDE_API")) and not claude_cooling()
+            and claude_spent() < _fenv("CLAUDE_BUDGET_USD", 100.0) - _fenv("CLAUDE_RESERVE_USD", 5.0))
 
 
 # Counters Claude's habits; appended to the shared base prompt on the Claude path only (FORMAT and VOICE stay the rule).
@@ -1596,6 +1606,15 @@ def claude_system(text, extra=""):
     return blocks + ([{"type": "text", "text": extra}] if extra else [])
 
 
+def text_late(t0, said):
+    """raises TimeoutError when no word came yet (said False) and CLUCK_FIRST_TEXT_S (default 6) went by since the request (t0): urlopen's
+    timeout is per read, so a stream that only thinks or pings never times out on its own (Tony, Oct 20: speed fix #6). The caller's
+    fallback (the other arm, then the old chain) answers instead. Once a word came: never."""
+    cap = _fenv("CLUCK_FIRST_TEXT_S", 6.0)
+    if not said and time.time() - t0 > cap:
+        raise TimeoutError(f"no text in {cap:g} s")
+
+
 def _claude_one(system, messages, max_tokens, arm="-"):
     """one streamed Claude call (system as given, messages without it); yields text (Plain), holds until the first newline and cuts a
     leading NOTE line. Counts the spend."""
@@ -1604,9 +1623,11 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
                                           "content-type": "application/json"})
     plain, head, held, used = Plain(), True, "", {"input_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "out": 0, "w1h": 0}
+    t0, said = time.time(), False
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             for raw in r:
+                text_late(t0, said)
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -1625,6 +1646,7 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                     used["out"] = int((ev.get("usage") or {}).get("output_tokens") or used["out"])
                 elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
                     t = ev["delta"].get("text") or ""
+                    said = said or bool(t.strip())
                     if head:                                   # hold to the first newline: a NOTE line there is never shown
                         held += t
                         if "\n" not in held:
@@ -1917,21 +1939,46 @@ class LeakGuard:
         return last
 
 
+_LAMP_P = r"(?:[.,!?:;~—–]|-(?!\w))"           # the punctuation after a greeting (a "-" only when no word follows: "lamp-like" stays)
+_LAMP_HI = re.compile(r"(?:(?:hi|hey|hello|heya|hiya|yo|oh|dear)(?:[^\S\n]+there)?(?:[^\S\n]*,[^\S\n]*|[^\S\n]+)lamp\b|lamp(?=[^\S\n]*" + _LAMP_P
+                      + r"))(?:[^\S\n]*" + _LAMP_P + r")*[^\S\n]*", re.I)
+
+
+def lamp_cut(text):
+    """the reply without a greeting to the lamp at the very start of its first line ("Hi lamp.", "Hey Lamp,", "Lamp —"): the model took the
+    REMINDER FROM LAMP line for a person (prod Oct 19: "Hi lamp. I'm here."). Only that greeting goes; "lamp" anywhere else stays. A first line
+    left empty goes too, with the blanks after it."""
+    rest = text.lstrip()
+    m = _LAMP_HI.match(rest)
+    if not m:
+        return text
+    rest = rest[m.end():]
+    return rest.lstrip() if not rest.split("\n", 1)[0].strip() else text[:len(text) - len(text.lstrip())] + rest
+
+
 def v4_visible(chunks, reveal, facts, code="-", fig=None):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
-    livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), then, with
-    REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so the spend is counted, CLUCK_NUDGE sent). Nothing is yielded
-    for a reply that is only notes (the caller then treats it as empty)."""
+    livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
+    first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
+    the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
     xyz, fence = Xyz(), livefig.Fence(fig)
     guard = None if reveal else LeakGuard(facts)
-    sent = False
+    sent, head = False, ""                       # head: the first visible line so far; None once it went on
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
+        if head is not None:
+            head, vis = head + vis, lamp_cut(head + vis)
+            if "\n" not in vis.lstrip():            # no word yet, or the first line not ended
+                continue
+            head = None
         vis = guard.feed(vis) if guard else vis
         if vis:
             sent = True
             yield vis
     vis = fence.feed(xyz.end()) + fence.end()
+    if head is not None:
+        vis = lamp_cut(head + vis)
+        vis = vis if vis.strip() else ""
     if guard:
         vis = guard.feed(vis) + guard.end()
     if vis:
@@ -1967,10 +2014,11 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     msgs = [{"role": "system", "content": PROMPT_V4 + "\n\n" + v4["bank"]}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
                    provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
-    plain, usage = Plain(), {}
+    plain, usage, t0, said = Plain(), {}, time.time(), False
     try:
         with _or_post(payload, key, 25) as r:
             for raw in r:
+                text_late(t0, said)                  # reasoning (low effort: 100-720 tokens) streams for 3-9 s before the first word
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -1987,6 +2035,7 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
                     delta = j["choices"][0]["delta"].get("content") or ""
                 except (KeyError, IndexError, TypeError, AttributeError):
                     continue
+                said = said or bool(delta.strip())
                 text = plain.feed(delta)
                 if text:
                     yield text
@@ -2006,7 +2055,7 @@ def v4_stream(v4, key, out=None):
     order = ["claude", "deepseek"] if v4["arm"] == "claude" else ["deepseek", "claude"]
     for i, name in enumerate(order):
         if name == "claude" and not claude_ready(out):
-            log("cluck v4: claude arm off (no key or budget)")
+            log("cluck v4: claude arm off (no key, budget or cooldown)")
             continue
         if name == "deepseek" and (not key or "openrouter" in out):
             continue
@@ -2027,7 +2076,8 @@ def v4_stream(v4, key, out=None):
             log(f"cluck v4: {name}: {e}")
             prov, ms = ("claude" if name == "claude" else "openrouter"), (time.time() - t0) * 1000
             if not budget_hit(e, prov, out, phase="headers", ms=ms):
-                incident("cluck", "upstream", provider=prov, model=CLAUDE_MODEL if name == "claude" else DS_MODEL, status=getattr(e, "code", None), err=e, phase="headers", ms=ms)
+                incident("cluck", "upstream", provider=prov, model=CLAUDE_MODEL if name == "claude" else DS_MODEL, status=getattr(e, "code", None), err=e,
+                         phase="timeout" if isinstance(e, TimeoutError) else "headers", ms=ms)
 
 
 def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=None):
@@ -2155,6 +2205,8 @@ def _relay(p, chunks, what, head):
     ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
         first = next(it, None)
+        while first is not None and not first.strip():   # blanks only so far: no reply yet (a reply of blanks = empty, not a 200 of nothing)
+            first = next(it, None)
     except Exception as e:  # noqa: BLE001
         log(f"{what} {p['code']}: {e}")
         first, why, err = None, "budget_cap" if is_budget(e) else "upstream", e
