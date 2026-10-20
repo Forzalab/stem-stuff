@@ -134,6 +134,7 @@ await step("T40: app_load carries the device fields + tier, fps_probe arrives on
   const al = ev.find(e => e.n === "app_load").p;
   for (const k of ["hw_cores", "dev_mem", "dpr", "save_data", "eff_type", "reduced_motion", "reduced_transparency", "contrast", "ios_ver", "webview", "blur_supported", "gpu", "device_tier", "fx", "fx_why"])
     assert.ok(k in al, "app_load." + k);
+  assert.ok(["apple", "adreno", "mali", "powervr", "intel", "nvidia", "amd", "other", "none"].includes(al.gpu), "app_load.gpu is a family token, not a model string: " + al.gpu);
   assert.ok(["weak", "strong"].includes(al.device_tier)); assert.ok(["blur", "dim"].includes(al.fx));
   assert.deepEqual(al.$set, { device_tier: al.device_tier });
   assert.deepEqual(reg, { device_tier: al.device_tier, fx: al.fx });

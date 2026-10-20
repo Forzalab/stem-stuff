@@ -173,7 +173,27 @@ test("T40 ltSum: long tasks inside a window", () => {
   const l = [{ s: 100, d: 60 }, { s: 9000, d: 120.4 }, { s: 12000, d: 80 }];
   assert.deepEqual({ ...T.ltSum(l, 0, 10000) }, { n: 2, ms: 180 });
   assert.deepEqual({ ...T.ltSum(l, 10000, 20000) }, { n: 1, ms: 80 });
-  assert.equal(T.gpu({ createElement: () => ({ getContext: () => null }) }), null, "no WebGL: null, no throw");
+  assert.equal(T.gpu({ createElement: () => ({ getContext: () => null }) }), "none", "no WebGL: none, no throw");
+  assert.equal(T.gpu({ createElement: () => { throw new Error("x"); } }), "none", "throws: none");
+  const gl = r => ({ createElement: () => ({ getContext: () => ({ RENDERER: 1, UNMASKED_RENDERER_WEBGL: 2,
+    getExtension: n => n === "WEBGL_debug_renderer_info" ? { UNMASKED_RENDERER_WEBGL: 2 } : null, getParameter: () => r }) }) });
+  assert.equal(T.gpu(gl("ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)")), "nvidia", "only the family leaves gpu()");
+});
+
+test("T40 gpuFamily: the GPU is sent as a coarse family token, never the model string", () => {
+  const T = run().win.__stemTelemetry;
+  const cases = {
+    "Apple GPU": "apple", "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)": "apple",
+    "Adreno (TM) 640": "adreno", "ANGLE (Qualcomm, Adreno (TM) 730, OpenGL ES 3.2)": "adreno",
+    "Mali-G78 MP14": "mali", "ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)": "mali", "PowerVR Rogue GE8320": "powervr",
+    "ANGLE (Intel, Intel(R) UHD Graphics 620 (0x00005917) Direct3D11 vs_5_0 ps_5_0, D3D11)": "intel", "Intel Iris OpenGL Engine": "intel",
+    "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)": "nvidia", "Quadro P1000/PCIe/SSE2": "nvidia",
+    "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)": "amd", "AMD Radeon Pro 5500M OpenGL Engine": "amd",
+    "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)": "other", "Mesa llvmpipe": "other",
+    "": "none"
+  };
+  for (const [r, f] of Object.entries(cases)) assert.equal(T.gpuFamily(r), f, r);
+  assert.equal(T.gpuFamily(null), "none"); assert.equal(T.gpuFamily(undefined), "none");
 });
 
 /* ---- Jev on for all (art. 11): jev_item + the owner tag ---- */
