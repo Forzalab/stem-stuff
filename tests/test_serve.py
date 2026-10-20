@@ -107,7 +107,16 @@ class Grade(unittest.TestCase):
         for ids in (["a"], ["c"], ["a", "d"], ["c", "b"]):
             self.assertTrue(set(g("q7" + "".join(ids), ids).get("kept", [])) <= set(ids), ids)   # never an unticked id
 
-    def test_three_sig_figs(self):                                             # Tony (Oct 3): right to 3 significant figures counts
+    def test_pick_all_miss_direction(self):                                     # incomplete: sussy only when every tick is right
+        key = dict(BANK["CSCI26_A7K"], code="CSCI26_W0X", wrong=[w for w in BANK["CSCI26_A7K"]["wrong"] if w["choice"] != "b"])
+        r = serve.grade(key, "w1", {"choices": ["a", "b"]})                     # b is false and has no hint
+        self.assertEqual((r["verdict"], r["error"], r["hint"]), ("wrong", "incomplete", serve.WRONG_MISS))
+        self.assertNotIn("struck", r)                                           # never say which row is false
+        r = serve.grade(key, "w2", {"choices": ["a"]})                          # every tick right, one missing
+        self.assertEqual((r["error"], r["hint"]), ("incomplete", serve.NONE_MISS))
+        self.assertNotIn("struck", r)
+
+    def test_three_sig_figs(self):                                              # Tony (Oct 3): right to 3 significant figures counts
         u = {"type": "num", "answer": "9*sqrt(3)"}
         for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", False), ("15.65", False), ("dne", False)):
             self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
