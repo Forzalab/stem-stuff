@@ -8,7 +8,7 @@
    troubleshooting purposes for that code") rides in an incident only, never in another telemetry event. DNT / GPC / "Don't record
    me": no report is sent at all; the student still sees the code (app.js adds that Tony gets less to go on).
    Flight recorder (flight.js, P1): the report also carries `fr` = the last steps of the page (ring), the last keyboard / focus events as
-   classes (kb), the page state (page.at), the diag line and /health's ok|over|err. Rate-limited and deduped there; never student text. */
+   classes (kb), the page state (page.before + page.at), the diag line and /health's ok|over|err. Rate-limited and deduped there; never student text. */
 export const ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";   // base32 with no 0/O/1/I: read out loud, never mistyped
 export const CODE_RE = /^[ES]-[2-9A-HJ-NP-Z]{5}$/;
 export const PHASES = ["headers", "stream", "parse", "timeout", "abort", "script"];
@@ -110,7 +110,7 @@ export function incident(where, why, x = {}) {
   if (seen.size < 50) { seen.set(code, r.reason); diags.set(code, diagLine(r, build())); }
   try { console.warn("incident " + JSON.stringify(r)); } catch { /* no console */ }
   if (!W || ++sent > MAX || trackingOff()) return code;
-  /* the flight recorder's snapshot (flight.js): ring + kb + page.at, in this report only, for this code only; { dup, n } / { rate } when gated */
+  /* the flight recorder's snapshot (flight.js): ring + kb + page.before + page.at, in this report only, for this code only; { dup, n } / { rate } when gated */
   let fr = null;
   try { fr = W.stemFR ? W.stemFR.snap(r, FR_MAX - JSON.stringify(r).length - 512) : null; } catch { /* never */ }   // 512: room for diag + health
   const send = h => {
