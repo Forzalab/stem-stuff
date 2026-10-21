@@ -686,6 +686,7 @@ function render() {
   scrollTo({ top: 0 });
   $("#pstripCode").textContent = code;
   lastEdit = null; padPeekText();
+  clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
   applyMT();
   layoutFreeze();
 }
@@ -1905,7 +1906,13 @@ const HK = {                                                                // t
   nerd: ["Cluck is at rest, potential energy high", "Cluck is in a superposition of helpful", "Cluck has a derivation ready", "Cluck is waiting for a nonzero input", "Cluck is converging on an answer"],
 };
 const HK_DEF = "deadpan";                                                   // no telemetry id (off, DNT / GPC, no key): this kind, nothing recorded
-const hkForced = (() => { try { const m = /(?:^|[#?&])hk=([a-z]+)/.exec(location.hash + "&" + location.search.slice(1)); return m && HK[m[1]] ? m[1] : null; } catch { return null; } })();   // QA: #hk=<kind>
+const hkForced = (() => {                                                   // QA: #hk=<kind> (alone or after a code) or ?hk=<kind>, read once; the hash
+  try {                                                                     // loses it before boot reads the code (never "Can't open hk=...")
+    const m = /(?:^|[#?&])hk=([a-z]+)/.exec(location.hash + "&" + location.search.slice(1));
+    if (/(^#|&)hk=/.test(location.hash)) history.replaceState(history.state, "", location.pathname + location.search + location.hash.replace(/&?hk=\w*/, "").replace(/^#&/, "#").replace(/^#$/, ""));
+    return m && HK[m[1]] ? m[1] : null;
+  } catch { return null; }
+})();
 function hkKind() {
   if (hkK) return hkK;
   if (hkForced) return (hkK = hkForced);
@@ -2931,11 +2938,10 @@ addEventListener("pageshow", e => {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") resume(false); });
 
 /* ================= boot ================= */
-const hashBare = () => location.hash.slice(1).replace(/(^|&)hk=\w*/, "").replace(/^&/, "");   // #hk=<kind> is the QA force of DISMISS.md, never a code
-const hashCode = () => hashBare() ? normalizeLink(decodeURIComponent(hashBare())) : null;
+const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURIComponent(location.hash.slice(1))) : null;
 const fromHash = () => {
   const n = hashCode();
-  if (!n) { if (hashBare()) note(`Can't open ${hashBare().slice(0, 39)}.`); return; }   // a #code that is no code (T16: said, not silent)
+  if (!n) { if (location.hash.length > 1) note(`Can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };

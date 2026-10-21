@@ -174,6 +174,21 @@ await step("phone: unchanged; the X closes the sheet, nothing folds, no row", as
   await page.context().close();
 });
 
+await step("1920x1080 + 393x852: greyscale shots (STYLE.md §7.16); 1920 dismissed is centred with no sideways scroll", async () => {
+  const grey = page => page.addStyleTag({ content: "html { filter: grayscale(1); }" });
+  const d = await cluck({ width: 1920, height: 1080 });
+  await d.click("#cluck .cl-bar .cl-x");
+  const s = await state(d);
+  assert.ok(s.gone && s.back && !s.hscroll && Math.abs(s.gapL - s.gapR) <= 2, JSON.stringify(s));
+  await d.screenshot({ path: join(SHOTS, "dismiss-1920.png") });
+  await grey(d); await d.screenshot({ path: join(SHOTS, "dismiss-1920-grey.png") });
+  await d.context().close();
+  const p = await cluck(PHONE);
+  await p.screenshot({ path: join(SHOTS, "phone-393.png") });
+  await grey(p); await p.screenshot({ path: join(SHOTS, "phone-393-grey.png") });
+  await p.context().close();
+});
+
 await browser.close(); srv.kill(); stub.close();
 console.log(failures ? `${failures} FAIL` : "all ok", "· shots:", SHOTS);
 process.exit(failures ? 1 : 0);
