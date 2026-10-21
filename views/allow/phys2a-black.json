@@ -1,7 +1,7 @@
 {
  "course": "phys2a",
- "min_ai": 3,
- "max_human": 1,
+ "min_ai_files": 3,
+ "max_human": 0,
  "ai_sources": [
   "/home/claude/brain/projects/calc/_files/blind-bank/BANK_BLND.json",
   "/home/claude/brain/projects/calc/_files/phys2a-exam2-bank/BANK_P2X.json",
@@ -36,1816 +36,529 @@
   {
    "term": "acceleration makes",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "acceleration toward",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
-  },
-  {
-   "term": "aluminum rod",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "aluminum rod b",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "angular acceleration",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "angular momentum directed",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "angular momentum points",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "angular speed constant",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "assumed frictionless",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "astronaut",
-   "ai": 12,
-   "human": 0
-  },
-  {
-   "term": "astronauts pull",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "axes",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "axes run",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "axis points",
-   "ai": 10,
-   "human": 0
-  },
-  {
-   "term": "bicycle wheel spinning",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "block slides outward",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "block speed outward",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "block's",
-   "ai": 10,
-   "human": 0
-  },
-  {
-   "term": "block's radial",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "block's radial speed",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "brake holds",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "bridge truss crosses",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "brought momentarily",
-   "ai": 12,
-   "human": 1
-  },
-  {
-   "term": "bulb filament",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "cdot",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "cdot text",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "ceiling",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "ceiling fan",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "centripetal",
-   "ai": 15,
-   "human": 1
-  },
-  {
-   "term": "centripetal acceleration",
-   "ai": 15,
-   "human": 1
-  },
-  {
-   "term": "child halfway",
-   "ai": 7,
-   "human": 1
   },
   {
    "term": "child's",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "child's acceleration",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "child's weight",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "circular orbit lowers",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "circular orbit requires",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "circular orbit weaker",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
-  },
-  {
-   "term": "circular track",
-   "ai": 28,
-   "human": 1
-  },
-  {
-   "term": "collides",
-   "ai": 46,
-   "human": 1
   },
   {
    "term": "comes momentarily",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "compressed spring",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "compressed spring latch",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "compresses",
    "ai": 10,
+   "ai_files": 5,
    "human": 0
-  },
-  {
-   "term": "conserved",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "constant torque",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "copper rod",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "cord wound",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "cord wound around",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "counterweight hangs",
-   "ai": 11,
-   "human": 0
-  },
-  {
-   "term": "counterweight's",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "counterweight's acceleration",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "cube",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "curve",
-   "ai": 33,
-   "human": 1
-  },
-  {
-   "term": "cylinder",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "daughter rachel",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "diameter",
-   "ai": 3,
-   "human": 1
   },
   {
    "term": "direction toward earth's",
    "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "disk radius",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "disk turns",
-   "ai": 16,
-   "human": 0
-  },
-  {
-   "term": "disk's",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "disk's center",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "downward acceleration",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "downward force",
-   "ai": 4,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "earth's center",
    "ai": 15,
-   "human": 0
-  },
-  {
-   "term": "earth's force",
-   "ai": 4,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "earth's gravitational",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "earth's gravitational force",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "earth's radius",
    "ai": 87,
+   "ai_files": 8,
    "human": 0
   },
   {
    "term": "earth's surface",
    "ai": 18,
+   "ai_files": 5,
    "human": 0
-  },
-  {
-   "term": "elephant's",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "elephant's piston",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "emissivity",
-   "ai": 3,
-   "human": 1
   },
   {
    "term": "energies",
    "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "equilibrium",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "fall acceleration",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "false rows blank",
-   "ai": 177,
-   "human": 0
-  },
-  {
-   "term": "ferris",
-   "ai": 40,
-   "human": 1
-  },
-  {
-   "term": "ferris wheel",
-   "ai": 40,
-   "human": 1
-  },
-  {
-   "term": "filament",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "final angular momentum",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "final angular speed",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "firefighter",
-   "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "first puck exerts",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
-  },
-  {
-   "term": "first puck leaves",
-   "ai": 46,
-   "human": 1
   },
   {
    "term": "first puck looses",
    "ai": 40,
+   "ai_files": 7,
    "human": 0
   },
   {
    "term": "first puck releases",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "first puck's",
    "ai": 29,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "first puck's original",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "first satellite's",
    "ai": 5,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "first satellite's mass",
    "ai": 5,
+   "ai_files": 4,
    "human": 0
-  },
-  {
-   "term": "fixed wedge",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "fixed wedge shaped",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "flywheel",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "four particles",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "four thin rods",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "free fall acceleration",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "friction torque",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "frictionless axle",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "frictionless horizontal",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "frictionless horizontal axle",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "frictionless ice",
-   "ai": 50,
-   "human": 1
   },
   {
    "term": "frictionless ice hits",
    "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "frictionless incline",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "frictionless pivot",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "frictionless radial",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "frictionless radial slot",
-   "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "frictionless slope",
    "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "geometric",
-   "ai": 12,
-   "human": 0
-  },
-  {
-   "term": "geometric center",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "geometric centre",
-   "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "give energies",
    "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "gravitational constant",
-   "ai": 59,
-   "human": 1
-  },
-  {
-   "term": "gravity above",
-   "ai": 21,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "gravity delivers",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "gravity delivers power",
    "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "h atom",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "h atoms",
-   "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "halve",
    "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "held horizontal",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "hinge",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "homogeneous solid cube",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "homogeneous solid floats",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "horizontal axis",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "horizontal axle",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "horizontal disk turns",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "horizontal edge",
-   "ai": 3,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "horizontal line",
    "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "horizontal part",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "horizontal rod",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "horizontal rod hangs",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "horizontal spring",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "horizontally hits",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "horsepower",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "horsepower required",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "hub",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "identical puck",
-   "ai": 46,
-   "human": 1
-  },
-  {
-   "term": "increments",
-   "ai": 79,
-   "human": 1
-  },
-  {
-   "term": "initial separation",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "juliet",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "junction",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "junction temperature",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "kn normal",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "kw",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "kwh",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "ladder",
-   "ai": 12,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "larger circular",
    "ai": 8,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "larger circular orbit",
    "ai": 8,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "latch",
    "ai": 28,
-   "human": 0
-  },
-  {
-   "term": "launched vertically",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "length hangs vertically",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "light bulb filament",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "light cord",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "light cord wound",
-   "ai": 5,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "make earth's",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "make earth's gravitational",
    "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "mass moving horizontally",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "mass pulley",
-   "ai": 3,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "mass unchanged",
    "ai": 6,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "mass unchanged list",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "mass unchanged r",
    "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "massless rod",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "massless rods",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "massless string",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "massless string joins",
-   "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "maximum compression",
    "ai": 4,
+   "ai_files": 3,
    "human": 0
-  },
-  {
-   "term": "membrane breaks",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "midpoint",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "minimum horsepower",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "minimum horsepower required",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "momentarily",
-   "ai": 23,
-   "human": 1
-  },
-  {
-   "term": "momentum directed",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "momentum points",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "motionless",
-   "ai": 6,
-   "human": 1
-  },
-  {
-   "term": "moving horizontally hits",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "negligible compared",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "new equilibrium",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "new magnitude",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "o atom",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "onboard",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "onboard rocket",
-   "ai": 11,
-   "human": 1
   },
   {
    "term": "onboard rocket provides",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
-  },
-  {
-   "term": "orbit compared",
-   "ai": 5,
-   "human": 1
   },
   {
    "term": "orbit lowers",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "orbit radius",
    "ai": 30,
+   "ai_files": 7,
    "human": 0
   },
   {
    "term": "orbit requires",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "orbit requires positive",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "orbit takes",
    "ai": 5,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "orbit takes units",
    "ai": 5,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "orbit weaker",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
-  },
-  {
-   "term": "orbital speed",
-   "ai": 22,
-   "human": 1
   },
   {
    "term": "orbits",
    "ai": 14,
+   "ai_files": 5,
    "human": 0
-  },
-  {
-   "term": "particle moves",
-   "ai": 18,
-   "human": 1
-  },
-  {
-   "term": "particle varies",
-   "ai": 44,
-   "human": 1
-  },
-  {
-   "term": "perfectly inelastic",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "pg e charges",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "piston",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "pistons",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "pivots",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "pivots freely",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "plus stool",
-   "ai": 6,
-   "human": 1
-  },
-  {
-   "term": "point halfway",
-   "ai": 6,
-   "human": 1
-  },
-  {
-   "term": "positive axis",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "positive axis points",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "projectile since",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "projectile thrown",
-   "ai": 5,
-   "human": 1
   },
   {
    "term": "puck exerts",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
-  },
-  {
-   "term": "puck looses",
-   "ai": 46,
-   "human": 1
-  },
-  {
-   "term": "puck looses half",
-   "ai": 44,
-   "human": 1
   },
   {
    "term": "puck moving",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "puck releases",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "puck's",
    "ai": 35,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "puck's momentum",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "puck's original",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "puck's original motion",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "pucks",
    "ai": 15,
-   "human": 0
-  },
-  {
-   "term": "pulley radius",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "pulley turns",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "pulley turns counterclockwise",
-   "ai": 7,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "quantities",
    "ai": 5,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "quantity",
    "ai": 40,
+   "ai_files": 6,
    "human": 0
-  },
-  {
-   "term": "rachel",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "radial slot",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "radial speed",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "radial speed constant",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "radial speed stays",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "radiated",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "radiated energy",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "radiated energy goes",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "radiates",
-   "ai": 9,
-   "human": 1
   },
   {
    "term": "radius around",
    "ai": 4,
+   "ai_files": 4,
    "human": 0
-  },
-  {
-   "term": "radius turns",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "rectangle",
-   "ai": 12,
-   "human": 1
-  },
-  {
-   "term": "rest horizontal",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rigid massless",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "rigid massless rods",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "rms",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "rms speed",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "roadway",
-   "ai": 21,
-   "human": 1
   },
   {
    "term": "rod hangs",
    "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "rod length",
-   "ai": 10,
-   "human": 0
-  },
-  {
-   "term": "rod pivots",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rod pivots freely",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rod rotates",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "rod rotates counterclockwise",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "rod swings",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rod's",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rods",
-   "ai": 20,
-   "human": 1
-  },
-  {
-   "term": "romeo",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "rope length",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "rope's",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "rope's midpoint",
-   "ai": 4,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "rough incline",
    "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "row blank",
-   "ai": 169,
-   "human": 0
-  },
-  {
-   "term": "rows blank",
-   "ai": 177,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "satellite orbits",
    "ai": 7,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "satellite's",
    "ai": 53,
+   "ai_files": 7,
    "human": 0
   },
   {
    "term": "satellite's mass",
    "ai": 20,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "satellite's mass doubled",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "satellite's orbit",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "satellite's orbital",
    "ai": 15,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "satellite's orbital speed",
    "ai": 15,
+   "ai_files": 6,
    "human": 0
-  },
-  {
-   "term": "saturn moves",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "saturn's",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "saturn's orbit",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "second puck leaves",
-   "ai": 46,
-   "human": 1
-  },
-  {
-   "term": "second puck looses",
-   "ai": 6,
-   "human": 1
   },
   {
    "term": "second puck's",
    "ai": 6,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "second puck's momentum",
    "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "separation",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "shaped ramp",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "shear strain",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "shorten",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "shortens",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "sits motionless",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "slanted",
-   "ai": 9,
-   "human": 0
-  },
-  {
-   "term": "slanted bar",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "slide horizontally",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "slides outward",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "slope angle",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "snugly",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "solid cube",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "solid floats",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "solid flywheel",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "solid sphere",
-   "ai": 4,
-   "human": 1
-  },
-  {
-   "term": "span",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "speed outward",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "spokes massless",
-   "ai": 5,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "spring latch",
    "ai": 28,
+   "ai_files": 6,
    "human": 0
-  },
-  {
-   "term": "spring's",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "spring's relaxed",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "spring's relaxed end",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "state junction",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "state junction temperature",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "stationary",
-   "ai": 46,
-   "human": 1
-  },
-  {
-   "term": "steady state junction",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "stool free",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "strain",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "string brake",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "string brake holds",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "strut",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "struts",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "student plus stool",
-   "ai": 6,
-   "human": 1
-  },
-  {
-   "term": "student sits motionless",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "students piston",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "submerged",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "sun radiates",
-   "ai": 9,
-   "human": 1
-  },
-  {
-   "term": "suppose pg",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "suppose pg e",
-   "ai": 8,
-   "human": 1
-  },
-  {
-   "term": "take torques",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "tangential",
-   "ai": 19,
-   "human": 1
   },
   {
    "term": "tangential acceleration",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
-  },
-  {
-   "term": "tangential direction",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "thin hoop",
-   "ai": 7,
-   "human": 1
-  },
-  {
-   "term": "thin metal rod",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "thin rods",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "thin spherical",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "thin spherical shell",
-   "ai": 7,
-   "human": 0
-  },
-  {
-   "term": "tick",
-   "ai": 411,
-   "human": 0
-  },
-  {
-   "term": "tire",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "tires",
-   "ai": 21,
-   "human": 1
-  },
-  {
-   "term": "total acceleration",
-   "ai": 21,
-   "human": 1
   },
   {
    "term": "total acceleration makes",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "total kinetic",
    "ai": 20,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "total kinetic energy",
    "ai": 20,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "total momentum",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "toward earth's",
    "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "toward earth's center",
    "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "track turns vertical",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "translational",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "translational speed",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "tread",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "truss crosses",
-   "ai": 8,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "turns counterclockwise",
    "ai": 14,
-   "human": 0
-  },
-  {
-   "term": "turns vertical",
-   "ai": 6,
+   "ai_files": 6,
    "human": 0
   },
   {
    "term": "two pucks",
    "ai": 10,
-   "human": 0
-  },
-  {
-   "term": "two vertical",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "two vertical strings",
-   "ai": 4,
+   "ai_files": 5,
    "human": 0
   },
   {
    "term": "unchanged",
    "ai": 13,
+   "ai_files": 4,
    "human": 0
   },
   {
    "term": "unchanged list",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "unchanged list ii",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "unchanged q",
    "ai": 3,
+   "ai_files": 3,
    "human": 0
   },
   {
    "term": "unchanged r",
    "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "uniform horizontal",
-   "ai": 15,
-   "human": 1
-  },
-  {
-   "term": "uniform horizontal disk",
-   "ai": 11,
-   "human": 1
-  },
-  {
-   "term": "uniform horizontal rod",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "unstressed",
-   "ai": 12,
-   "human": 1
-  },
-  {
-   "term": "unstressed spring",
-   "ai": 12,
-   "human": 1
-  },
-  {
-   "term": "varies",
-   "ai": 44,
-   "human": 1
-  },
-  {
-   "term": "vertical circle",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "vertical edge",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "vertical part",
-   "ai": 6,
-   "human": 0
-  },
-  {
-   "term": "vertical plane",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "vertical strings",
-   "ai": 4,
-   "human": 0
-  },
-  {
-   "term": "volume submerged",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "water molecule",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "wedge shaped",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "wedge shaped ramp",
-   "ai": 3,
-   "human": 1
-  },
-  {
-   "term": "wheel radius",
-   "ai": 5,
-   "human": 0
-  },
-  {
-   "term": "wheel's",
-   "ai": 10,
-   "human": 1
-  },
-  {
-   "term": "wheel's moment",
-   "ai": 5,
-   "human": 1
-  },
-  {
-   "term": "wheelbarrow",
-   "ai": 8,
-   "human": 0
-  },
-  {
-   "term": "young's",
-   "ai": 3,
-   "human": 0
-  },
-  {
-   "term": "young's modulus",
-   "ai": 3,
+   "ai_files": 3,
    "human": 0
   }
  ]

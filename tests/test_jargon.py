@@ -1,6 +1,7 @@
 """tools/jargon.py: provenance from the file extension (.json/.md = ai, anything else = human), a term is blacklisted
-when it is frequent in AI sources (>= min_ai) and absent or rare in human ones (<= max_human), common English never
-counts, bank JSON reads question + choice text only, and the shipped manifest builds current blacklists."""
+only when it occurs in >= min_ai_files DISTINCT AI files (hits in one file never add up) and has <= max_human (default 0)
+human hits, common English never counts, a term holding a bank-format/markup word (format-stop.txt) or a TeX command
+never counts, bank JSON reads question + choice text only, and the shipped manifest builds current blacklists."""
 import json
 import os
 import subprocess
@@ -29,9 +30,9 @@ class Provenance(unittest.TestCase):
 
     def test_manifest_tag_ignored(self):
         with tempfile.TemporaryDirectory() as d:
-            a = write(d, "a.md", "kinetic kinetic kinetic")
-            out = jargon.build([{"path": a, "course": "c", "provenance": "human"}], "c", d)
-            self.assertEqual(out["ai_sources"], [a])
+            fs = [write(d, n, "kinetic") for n in ("a.md", "b.md", "c.md")]
+            out = jargon.build([{"path": a, "course": "c", "provenance": "human"} for a in fs], "c", d)
+            self.assertEqual(out["ai_sources"], fs)
             self.assertEqual([t["term"] for t in out["terms"]], ["kinetic"])
 
     def test_no_reader(self):
@@ -59,32 +60,52 @@ class Build(unittest.TestCase):
     def black(self, entries, **kw):
         return {t["term"]: t for t in jargon.build(entries, "phys", self.d, **kw)["terms"]}
 
-    def test_ai_frequent_human_rare(self):
+    def test_distinct_ai_files_human_zero(self):
         ai1 = write(self.d, "bank.json", json.dumps({"problems": [
             {"body": [{"md": "Kinetic energy. Entropy rises. Entropy."}], "choices": [{"md": "entropy"}, {"md": "momentum"}]}]}))
-        ai2 = write(self.d, "notes.md", "Kinetic energy, kinetic energy. Momentum momentum. The ball rolls the ball.")
-        hum = write(self.d, "exam.txt", "Kinetic energy is here. More kinetic energy. Momentum once.")
-        e = [{"path": p, "course": "phys"} for p in (ai1, ai2, hum)] + [{"path": ai2, "course": "other"}]
+        ai2 = write(self.d, "notes.md", "Kinetic energy. Entropy. Momentum. The ball rolls the ball. Puck puck puck puck.")
+        ai3 = write(self.d, "more.md", "Kinetic energy. Entropy. Momentum. The ball.")
+        hum = write(self.d, "exam.txt", "Kinetic energy is here. Momentum once.")
+        e = [{"path": p, "course": "phys"} for p in (ai1, ai2, ai3, hum)] + [{"path": ai2, "course": "other"}]
         t = self.black(e)
-        self.assertEqual(t["entropy"], {"term": "entropy", "ai": 3, "human": 0})  # absent in human text
-        self.assertEqual(t["momentum"], {"term": "momentum", "ai": 3, "human": 1})  # rare in human text
-        self.assertNotIn("kinetic", t)          # 3 AI uses, but 2 human uses: students meet it
+        self.assertEqual(t["entropy"], {"term": "entropy", "ai": 5, "ai_files": 3, "human": 0})
+        self.assertNotIn("momentum", t)         # in 3 AI files, but 1 human hit: students meet it
+        self.assertNotIn("kinetic", t)
         self.assertNotIn("kinetic energy", t)
+        self.assertNotIn("puck", t)             # 4 hits, all in ONE AI file: hits never add up across a file
+        self.assertEqual(self.black(e, min_ai_files=1)["puck"]["ai_files"], 1)
         self.assertNotIn("ball", t)             # common English is never jargon
         out = jargon.build(e, "phys", self.d)
-        self.assertEqual(out["ai_sources"], sorted([ai1, ai2]))
+        self.assertEqual((out["min_ai_files"], out["max_human"]), (3, 0))
+        self.assertEqual(out["ai_sources"], sorted([ai1, ai2, ai3]))
         self.assertEqual(out["human_sources"], [hum])
         self.assertEqual([x["term"] for x in out["terms"]], sorted(x["term"] for x in out["terms"]))
 
     def test_thresholds(self):
-        ai = write(self.d, "a.md", "entropy entropy")
-        e = [{"path": ai, "course": "phys"}]
-        self.assertNotIn("entropy", self.black(e))
-        self.assertIn("entropy", self.black(e, min_ai=2))
+        a, b = write(self.d, "a.md", "entropy entropy entropy"), write(self.d, "b.md", "entropy")
+        e = [{"path": a, "course": "phys"}, {"path": b, "course": "phys"}]
+        self.assertNotIn("entropy", self.black(e))                  # 2 distinct files < 3
+        self.assertIn("entropy", self.black(e, min_ai_files=2))
         hum = write(self.d, "h.txt", "entropy")
         e.append({"path": hum, "course": "phys"})
-        self.assertIn("entropy", self.black(e, min_ai=2))
-        self.assertNotIn("entropy", self.black(e, min_ai=2, max_human=0))
+        self.assertNotIn("entropy", self.black(e, min_ai_files=2))  # one human hit is enough to clear it
+        self.assertIn("entropy", self.black(e, min_ai_files=2, max_human=1))
+
+    def test_format_stoplist(self):
+        stop = jargon.load_format_stop()
+        for w in ("tick", "rows", "blank", "true", "false", "choices", "hint", "nudge", "md"):
+            self.assertIn(w, stop)
+        e = [{"path": write(self.d, n, "Tick the rows. Leave false rows blank. Zygote. Entropy \\cdot \\vec flux."),
+              "course": "phys"} for n in ("a.md", "b.md", "c.md")]
+        t = self.black(e)
+        self.assertIn("zygote", t)
+        for bad in ("tick", "rows", "false rows blank", "rows blank", "cdot", "vec", "entropy cdot"):
+            self.assertNotIn(bad, t)
+        self.assertIn("entropy flux", t)                            # a TeX command is markup, not a word
+        self.assertIn("tick", self.black(e, stop=set()))            # the stoplist is what removes it
+        with tempfile.TemporaryDirectory() as d:
+            p = write(d, "s.txt", "# comment\nTick  # trailing\n\nrow\n")
+            self.assertEqual(jargon.load_format_stop(os.path.join(d, p)), {"tick", "row"})
 
     def test_human_only_is_empty(self):
         h = write(self.d, "h.txt", "entropy entropy entropy entropy")

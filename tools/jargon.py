@@ -9,16 +9,22 @@ extension only, never a manual tag (provenance()): .json and .md = "ai"; every o
 Readers: .txt, .md, extensionless (all text); .pdf (pdftotext); .json bank ({"problems": [...]}: each problem's body text md + choice md only,
 no hints; a list md is joined by lines). Any other type (pptx, ...) needs a text export next to it: put the .txt in the manifest (a .txt is human).
 Term = a content word not in common English (copy_gate.is_common), or a 2-3-gram of adjacent content words that holds one.
-Thresholds (defaults):
-  --min-ai 3      a term is used >= 3 times in total across the course's AI sources (frequent in AI text), AND
-  --max-human 1   it is used <= 1 time in total across the course's human sources (absent or rare in human text).
-Output: {"course", "min_ai", "max_human", "ai_sources", "human_sources", "terms": [{"term", "ai", "human"}]}, sorted by
-term. No AI source gives an empty, valid blacklist. copy_gate.load_black(course) reads it.
-usage: python3 tools/jargon.py [--manifest views/allow/sources.json] [--out-dir views/allow] [--min-ai 3]
-                               [--max-human 1] [--course ID] [--root DIR] [--check]"""
+TeX commands (backslash cdot, backslash text, ...) are markup, not words: they are removed before terms are cut.
+A term is blacklisted only when ALL hold (defaults; Oct 21 tightening: raw hit counts let one long AI bank, or a topic
+the human docs skipped, flood the list):
+  (a) --min-ai-files 3  it occurs in >= 3 DISTINCT AI source files (not just >= 3 hits),
+  (b) --max-human 0     it has <= 0 hits in the course's human sources,
+  (c) it is not common English (copy_gate.is_common, per word as above),
+  (d) none of its words is a bank-format/markup token of views/allow/format-stop.txt (SCHEMA.md keys + fixed UI words).
+Output: {"course", "min_ai_files", "max_human", "ai_sources", "human_sources", "terms": [{"term", "ai", "ai_files",
+"human"}]} (ai = total AI hits), sorted by term. No AI source gives an empty, valid blacklist.
+copy_gate.load_black(course) reads it.
+usage: python3 tools/jargon.py [--manifest views/allow/sources.json] [--out-dir views/allow] [--min-ai-files 3]
+                               [--max-human 0] [--course ID] [--root DIR] [--check]"""
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -29,7 +35,15 @@ import copy_gate  # noqa: E402
 
 MANIFEST = os.path.join(ROOT, "views", "allow", "sources.json")
 OUT_DIR = os.path.join(ROOT, "views", "allow")
+FORMAT_STOP = os.path.join(ROOT, "views", "allow", "format-stop.txt")
 AI_EXT = (".json", ".md")
+_TEX_CMD = re.compile(r"\\[A-Za-z]+")
+
+
+def load_format_stop(path=FORMAT_STOP):
+    """The bank-format/markup stop words of format-stop.txt (one lowercase word per line, # comments)."""
+    with open(path, encoding="utf-8") as f:
+        return {w for w in (ln.split("#", 1)[0].strip().lower() for ln in f) if w}
 
 
 def provenance(path):
@@ -69,7 +83,7 @@ def read_texts(path):
 def terms_of(text, common):
     """Every jargon term occurrence (with repeats) in text."""
     out = []
-    for run in copy_gate._runs_by_phrase(text):
+    for run in copy_gate._runs_by_phrase(_TEX_CMD.sub(" ", text)):
         rare = [not copy_gate.is_common(w, common) for w in run]
         for n in (1, 2, 3):
             for s in range(0, len(run) - n + 1):
@@ -84,21 +98,27 @@ def missing_external(entries, course, root=ROOT):
             and not os.path.exists(os.path.join(root, e["path"]))]
 
 
-def build(entries, course, root=ROOT, min_ai=3, max_human=1, common=None):
+def build(entries, course, root=ROOT, min_ai_files=3, max_human=0, common=None, stop=None):
     common = copy_gate.load_common() if common is None else common
+    stop = load_format_stop() if stop is None else stop
     count = {"ai": Counter(), "human": Counter()}
+    files = Counter()  # term -> distinct AI files holding it
     paths = {"ai": [], "human": []}
     for e in entries:
         if e.get("course") != course:
             continue
         prov = provenance(e["path"])
         paths[prov].append(e["path"])
+        here = Counter()
         for text in read_texts(os.path.join(root, e["path"])):
-            count[prov].update(terms_of(text, common))
+            here.update(terms_of(text, common))
+        count[prov].update(here)
+        if prov == "ai":
+            files.update(here.keys())
     ai, human = count["ai"], count["human"]
-    terms = [{"term": t, "ai": ai[t], "human": human[t]} for t in sorted(ai)
-             if ai[t] >= min_ai and human[t] <= max_human]
-    return {"course": course, "min_ai": min_ai, "max_human": max_human, "ai_sources": sorted(paths["ai"]),
+    terms = [{"term": t, "ai": ai[t], "ai_files": files[t], "human": human[t]} for t in sorted(ai)
+             if files[t] >= min_ai_files and human[t] <= max_human and not stop.intersection(t.split())]
+    return {"course": course, "min_ai_files": min_ai_files, "max_human": max_human, "ai_sources": sorted(paths["ai"]),
             "human_sources": sorted(paths["human"]), "terms": terms}
 
 
@@ -110,8 +130,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--manifest", default=MANIFEST)
     ap.add_argument("--out-dir", default=OUT_DIR)
-    ap.add_argument("--min-ai", type=int, default=3)
-    ap.add_argument("--max-human", type=int, default=1)
+    ap.add_argument("--min-ai-files", type=int, default=3, help="distinct AI source files a term must occur in")
+    ap.add_argument("--max-human", type=int, default=0, help="most hits a term may have in the human sources")
     ap.add_argument("--course")
     ap.add_argument("--root", default=ROOT, help="base of the manifest's relative paths (default: the repo)")
     ap.add_argument("--check", action="store_true", help="write nothing; exit 1 if an output is stale")
@@ -126,7 +146,7 @@ def main(argv=None):
         if miss:
             print("skip %s: %d external source(s) not on disk" % (p, len(miss)))
             continue
-        out = dump(build(entries, c, a.root, a.min_ai, a.max_human))
+        out = dump(build(entries, c, a.root, a.min_ai_files, a.max_human))
         old = open(p, encoding="utf-8").read() if os.path.exists(p) else None
         if old != out:
             stale += 1
