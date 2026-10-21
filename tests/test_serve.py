@@ -856,6 +856,7 @@ class Explain(unittest.TestCase):
         self.verdict = json.dumps(self.NOTE)                                            # what the NOTE model says; None: a 500
         self.dead, self.mute = set(), set()                                             # models that 500 / stream no words
         self.broke = set()                                                              # "gate" / "stream": OpenRouter says 402 out of credit
+        self.slow = 0                                                                   # seconds the NOTE call takes
 
         class Stub(http.server.BaseHTTPRequestHandler):
             def do_POST(self):
@@ -870,6 +871,7 @@ class Explain(unittest.TestCase):
                     return
                 if not req.get("stream"):                                               # the gate: one non-streamed ON/OFF call
                     gates.append(req)
+                    time.sleep(test.slow)
                     self.send_response(500 if test.verdict is None else 403 if test.verdict.startswith("Request blocked") else 200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -885,7 +887,7 @@ class Explain(unittest.TestCase):
 
             def log_message(self, *a):
                 pass
-        self.srv = http.server.HTTPServer(("127.0.0.1", 0), Stub)
+        self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Stub)                # a slow NOTE must not hold the stream
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
         self.old = serve.BANKS, serve.OPENROUTER_BASE, os.environ.get("OPENROUTER_API_KEY")
         serve.BANKS = tempfile.mkdtemp(prefix="stem-x-")
@@ -929,7 +931,7 @@ class Explain(unittest.TestCase):
         g = self.gates[0]
         self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.NOTE_SCHEMA)
         self.assertTrue(g["response_format"]["json_schema"]["strict"])
-        self.assertEqual((g["provider"], g["model"], g["temperature"]), ({"zdr": True, "data_collection": "deny", "require_parameters": True}, serve.OPENROUTER_NOTE_MODELS[0], 0))
+        self.assertEqual((g["provider"], g["model"], g["temperature"]), ({"order": serve.NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True}, serve.OPENROUTER_NOTE_MODELS[0], 0))
         self.assertNotIn("MESSAGE:", g["messages"][1]["content"])                       # a pick, no message
 
     def test_no_slip_caps_confidence_at_medium(self):
@@ -951,6 +953,34 @@ class Explain(unittest.TestCase):
         status, text = self.ask()
         self.assertEqual(status, 200)
         self.assertNotIn("NOTE:", self.seen[0][1]["messages"][1]["content"])
+
+    def test_slow_note_never_holds_explain_past_the_budget(self):
+        old, serve.NOTE_EXPLAIN_S = serve.NOTE_EXPLAIN_S, 0.2
+        self.slow = 1
+        try:
+            t0 = time.time()
+            status, text = self.ask()
+            self.assertLess(time.time() - t0, 0.9)                                       # the prose did not wait out the NOTE
+        finally:
+            serve.NOTE_EXPLAIN_S = old
+        self.assertEqual((status, len(self.gates)), (200, 1))
+        self.assertNotIn("NOTE:", self.seen[0][1]["messages"][1]["content"])            # fail open: Cluck went without it
+        self.assertEqual(serve.NOTE_EXPLAIN_S, 1.5)
+
+    def test_note_payload_per_model(self):
+        old = serve.OPENROUTER_NOTE_MODELS
+        serve.OPENROUTER_NOTE_MODELS = ["anthropic/claude-haiku-5.5", "openai/gpt-6-luna", serve.DS_MODEL]
+        self.verdict = None                                                             # every model 500s: all three get asked
+        try:
+            self.ask()
+        finally:
+            serve.OPENROUTER_NOTE_MODELS = old
+        h, luna, ds = self.gates
+        self.assertNotIn("temperature", h)                                              # endpoints reject it: an OpenRouter 404
+        self.assertNotIn("temperature", luna)
+        self.assertEqual(ds["temperature"], 0)
+        self.assertEqual(h["reasoning"], {"enabled": False})                             # thinking would eat the 400 tokens
+        self.assertEqual(ds["provider"]["order"], ["together", "baseten/fast", "deepinfra/fp8"])
 
     def test_easy_only_key_needed_and_caps(self):
         self.assertEqual(self.ask(cookie="stem-mode=hard; stem-mode-v=2")[0], 404)     # hard mode: no genie
@@ -1057,7 +1087,7 @@ class Explain(unittest.TestCase):
         self.assertIn(text, serve.CANNED)
         self.assertEqual(self.seen, [])                                                 # Cluck never called
         g = self.gates[0]
-        self.assertEqual(g["provider"], {"zdr": True, "data_collection": "deny", "require_parameters": True})
+        self.assertEqual(g["provider"], {"order": serve.NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True})
         self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.NOTE_SCHEMA)
         self.assertIn("why step 0?", g["messages"][1]["content"])
         self.assertIn("Answer: b) 3", g["messages"][1]["content"])                     # the KEY: "related" is judged against it
