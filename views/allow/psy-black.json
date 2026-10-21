@@ -1,0 +1,757 @@
+{
+ "course": "psy",
+ "min_ai": 3,
+ "max_human": 1,
+ "ai_sources": [
+  "banks/BANK_PSY6.json",
+  "banks/BANK_PSY7.json"
+ ],
+ "human_sources": [],
+ "terms": [
+  {
+   "term": "acceptance",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "accessibility",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "activate",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "affirmation",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "afterward",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "appraisal",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "attitude accessibility",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "attitude centrality",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "attitudes predict",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "attribution",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "attribution error",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "availability",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "availability heuristic",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "bettors",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "bettors felt",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "bettors felt more",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "bias",
+   "ai": 14,
+   "human": 0
+  },
+  {
+   "term": "centrality",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "children devalue",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "cognition",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "cognitive",
+   "ai": 8,
+   "human": 0
+  },
+  {
+   "term": "cognitive consistency",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "cognitive consistency theories",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "cognitive dissonance",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "cognitive dissonance theory",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "compensatory",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "compensatory stereotypes",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "competence",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "compliance",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "confirmation",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "confirmation bias",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "consistency",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "consistency theories",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "death reminders",
+   "ai": 9,
+   "human": 0
+  },
+  {
+   "term": "death reminders raised",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "decision dissonance",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "devalue",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "directly illustrate",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "dissonance",
+   "ai": 24,
+   "human": 0
+  },
+  {
+   "term": "dissonance theory",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "dominance",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "effort justification",
+   "ai": 9,
+   "human": 0
+  },
+  {
+   "term": "emotion",
+   "ai": 21,
+   "human": 0
+  },
+  {
+   "term": "emotion regulation",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "fast responders",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "fast responders voted",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "flexion",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "focal",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "focal emotion",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "focal emotions",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "focalism",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "forbidden",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "franklin",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "fundamental attribution",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "fundamental attribution error",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "heuristic",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "higher life satisfaction",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "ideographs",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "ideographs liked",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "ideographs liked more",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "illustrate",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "immortality",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "implicit",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "implicit attitude",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "implicit attitude measure",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "induced",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "inferred",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "initiation",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "initiation made",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "insufficient",
+   "ai": 9,
+   "human": 0
+  },
+  {
+   "term": "insufficient justification",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "intrinsic",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "intrinsic interest",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "introspection",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "justification",
+   "ai": 27,
+   "human": 0
+  },
+  {
+   "term": "justification theory",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "latency",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "lean",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "liars",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "life satisfaction",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "likert",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "likert scale",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "made attitudes predict",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "made children devalue",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "made ideographs",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "made ideographs liked",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "mild",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "mild threat",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "mild threat made",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "mortality",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "mortality salience",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "most directly illustrate",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "negativity",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "negativity bias",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "neglect",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "nodding",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "nodding while",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "nodding while listening",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "outward",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "outward signs",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "overjustification",
+   "ai": 8,
+   "human": 0
+  },
+  {
+   "term": "overjustification effect",
+   "ai": 8,
+   "human": 0
+  },
+  {
+   "term": "overweights",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "paid liars",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "paradigm",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "perception",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "perception theory",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "person's",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "post decision dissonance",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "predict",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "predicted",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "primacy",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "primacy effect",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "prototype",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "reactance",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "readily",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "reappraisal",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "recency",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "recency effect",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "relationship's",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "relationship's future",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "relationship's future worse",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "reminders",
+   "ai": 9,
+   "human": 0
+  },
+  {
+   "term": "reminders raised",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "reminders raised ratings",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "representativeness",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "representativeness heuristic",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "responders",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "responders voted",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "response latency",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "rival",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "salience",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "satisfaction",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "schemas",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "self affirmation",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "self perception",
+   "ai": 10,
+   "human": 0
+  },
+  {
+   "term": "self perception theory",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "severe initiation",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "severe initiation made",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "stereotypes",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "suppression",
+   "ai": 7,
+   "human": 0
+  },
+  {
+   "term": "symbolic",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "symbolic immortality",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "system justification",
+   "ai": 9,
+   "human": 0
+  },
+  {
+   "term": "system justification theory",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "textbook",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "tornadoes",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "traits",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "trustworthiness",
+   "ai": 3,
+   "human": 0
+  }
+ ]
+}

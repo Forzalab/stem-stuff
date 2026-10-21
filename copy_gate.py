@@ -1,11 +1,11 @@
 """copy_gate.py: the gate's `copy-words` checks for a view's student-facing strings (views plan, Oct 20: plain words,
-Flesch-Kincaid grade 2-4, jargon only from a human-corpus allowlist, every slot fits its box). Stdlib only, like aiw.py.
+Flesch-Kincaid grade 2-4, no blacklisted jargon, every slot fits its box). Stdlib only, like aiw.py.
 
     fk_grade(text) -> float | None          Flesch-Kincaid grade of text after TeX and numbers-with-units are removed
                                             (None when no words remain).
-    check_view(strings, allow, budgets=None, lint_context=None) -> list[issue]
+    check_view(strings, black, budgets=None, lint_context=None) -> list[issue]
         strings  {slot_id: text}, every student-facing string of ONE view
-        allow    set of allowed terms (lowercase words or 2-3-grams), e.g. load_allow(course)
+        black    set of banned terms (lowercase words or 2-3-grams), e.g. load_black(course) (tools/jargon.py)
         budgets  {slot_id: max characters} from slots.json (None: no overflow check)
         issue    {"check": "fk"|"jargon"|"overflow"|"aiw", "slot": slot_id, ...detail}. The fk issue scores the whole view,
                  so its slot is "*" and it lists every slot in "slots".
@@ -14,13 +14,14 @@ Rules
 - fk: the WHOLE view text is joined (each slot is its own sentence) and scored once; single short strings are never
   scored alone. Under FK_MIN_WORDS (20) words the formula is noise (one short label swings it by many grades), so the
   check is skipped. Fail when grade > 4 or grade < 2.
-- jargon: a content word (alphabetic, not a common-English word, see below) is jargon unless it, or a 2-3-gram of
-  adjacent content words holding it, is in `allow`. One issue per distinct term per slot.
+- jargon (BLACKLIST, Tony Oct 20): a content word or a 2-3-gram of adjacent content words that is in `black` is
+  flagged. One issue per distinct term per slot. Words not on the list pass (the blacklist is built from AI-written vs
+  human-written sources, see tools/jargon.py).
 - overflow: len(text) > budgets[slot].
 - aiw: every blocking aiw.lint_view_strings finding, with the slot it came from.
 
-Common English = views/allow/common-en.txt (top 5000 English words, wordfreq data, CC-BY-SA-4.0; see its header).
-A word also counts as common if stripping one regular suffix (s, es, ed, d, ing, ly, er, est; e.g. "dogs", "liked",
+Common English (used by tools/jargon.py: a common word is never jargon) = views/allow/common-en.txt (top 5000
+English words, wordfreq data, CC-BY-SA-4.0; see its header). A word also counts as common if stripping one regular suffix (s, es, ed, d, ing, ly, er, est; e.g. "dogs", "liked",
 "running") gives a listed word. FUNCTION_WORDS (grammar words) never form or break n-grams.
 
 Syllable heuristic (deterministic, no dictionary): lowercase, letters only; count runs of vowels [aeiouy]; minus one for
@@ -69,9 +70,9 @@ def load_common(path=COMMON_PATH):
     return words
 
 
-def load_allow(course, allow_dir=ALLOW_DIR):
-    """Allowed terms of views/allow/<course>.json (built by tools/jargon.py); a missing file is an empty set."""
-    p = os.path.join(allow_dir, course + ".json")
+def load_black(course, allow_dir=ALLOW_DIR):
+    """Banned terms of views/allow/<course>-black.json (built by tools/jargon.py); a missing file is an empty set."""
+    p = os.path.join(allow_dir, course + "-black.json")
     if not os.path.exists(p):
         return set()
     with open(p, encoding="utf-8") as f:
@@ -163,26 +164,20 @@ def _runs_by_phrase(text):
     return out
 
 
-def jargon_terms(text, allow, common=None):
-    """Distinct jargon words in text, in first-seen order (see module doc)."""
-    common = load_common() if common is None else common
-    allow = {a.lower() for a in allow}
+def jargon_terms(text, black):
+    """Distinct blacklisted terms (words and 2-3-grams of adjacent content words) in text, in first-seen order."""
+    black = {t.lower() for t in black}
     found = []
     for run in _runs_by_phrase(text):
-        for i, w in enumerate(run):
-            if is_common(w, common) or w in allow:
-                continue
-            covered = False
-            for n in (2, 3):
-                for s in range(max(0, i - n + 1), min(i, len(run) - n) + 1):
-                    if " ".join(run[s:s + n]) in allow:
-                        covered = True
-            if not covered and w not in found:
-                found.append(w)
+        for s in range(len(run)):
+            for n in (1, 2, 3):
+                t = " ".join(run[s:s + n])
+                if s + n <= len(run) and t in black and t not in found:
+                    found.append(t)
     return found
 
 
-def check_view(strings, allow, budgets=None, lint_context=None, common=None):
+def check_view(strings, black, budgets=None, lint_context=None):
     issues = []
     joined = join_view(strings)
     st = fk_stats(joined)
@@ -192,7 +187,7 @@ def check_view(strings, allow, budgets=None, lint_context=None, common=None):
             issues.append({"check": "fk", "slot": "*", "slots": list(strings), "grade": g, "words": st["words"],
                            "want": [FK_LO, FK_HI]})
     for slot, text in strings.items():
-        for term in jargon_terms(text or "", allow, common):
+        for term in jargon_terms(text or "", black):
             issues.append({"check": "jargon", "slot": slot, "term": term})
     for slot, text in strings.items():
         if budgets and slot in budgets and len(text or "") > budgets[slot]:
@@ -212,5 +207,5 @@ def fk_skipped(strings):
 if __name__ == "__main__":
     import sys
     data = json.load(sys.stdin)
-    allow = load_allow(data["course"]) if data.get("course") else set(data.get("allow", []))
-    print(json.dumps(check_view(data["strings"], allow, data.get("budgets")), indent=1))
+    black = load_black(data["course"]) if data.get("course") else set(data.get("black", []))
+    print(json.dumps(check_view(data["strings"], black, data.get("budgets")), indent=1))
