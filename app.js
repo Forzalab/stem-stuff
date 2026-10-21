@@ -124,7 +124,7 @@ $("#toast")?.addEventListener("click", hideToast);
 $("#toast")?.addEventListener("pointerenter", holdToast);
 $("#toast")?.addEventListener("pointerleave", goToast);
 document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(); });   // Escape: the toast, then Cluck's sheet
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the toast, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
 addEventListener("scroll", placeToast, { passive: true });
 addEventListener("resize", placeToast);
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
@@ -686,6 +686,7 @@ function render() {
   scrollTo({ top: 0 });
   $("#pstripCode").textContent = code;
   lastEdit = null; padPeekText();
+  clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
   applyMT();
   layoutFreeze();
 }
@@ -1768,7 +1769,7 @@ function clEl() {
     if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
-  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", clClose));
+  el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (design/DISMISS.md)
   cl.dim = document.createElement("div"); cl.dim.className = "cl-dim"; cl.dim.addEventListener("click", clClose);   // K1: a tap above the sheet closes it (no dim colour: the question stays bright)
   document.body.append(cl.dim);
   clDrag(el);
@@ -1873,7 +1874,8 @@ function clPlace() {                                                        // s
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
-  window.stemT?.("cluck_open", { tab, auto: !!auto });   // telemetry
+  if (clGone && sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
+  window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
   clEl(); if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
@@ -1881,7 +1883,7 @@ function clOpen(tab, from, auto) {                                        // aut
   layoutFreeze();
   if (sideMQ.matches && !auto) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
 }
-function clClose() {
+function clClose(dismiss) {
   if (!cl || !cl.open) return;
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
@@ -1889,7 +1891,69 @@ function clClose() {
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
+  if (dismiss === true && sideMQ.matches && !origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
+}
+/* ---------- dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
+   html.side only: the X, Escape, or the sash dragged to the right edge folds the whole right column; the question column centres and
+   its type steps up. Under the verdict, one hairline row (B4) brings it back. Its sassy line rotates (H; the one humour exception in
+   chrome, STYLE.md §5); "Show him" stays put; the button's name is plain. Phones: unchanged. In memory only, never stored. */
+let clGone = false, hkT = 0, hkI = 0, hkK = null;
+const HK = {                                                                // the A/B by humour kind: one kind per device (hkKind)
+  sassy: ["Cluck is pretending not to watch", "Cluck has notes. Many notes.", "Cluck saw that. Just saying.", "Cluck is waiting. Patiently. Mostly.", "Cluck could explain, if asked"],
+  deadpan: ["Cluck is still here", "Cluck has an explanation", "Cluck is available", "Cluck remains a duck", "Cluck is on standby"],
+  duck: ["Cluck knows ducks don't cluck", "Cluck is folded, not offended", "Cluck is sitting on an answer", "Cluck promises not to quack", "Cluck is floating nearby"],
+  nerd: ["Cluck is at rest, potential energy high", "Cluck is in a superposition of helpful", "Cluck has a derivation ready", "Cluck is waiting for a nonzero input", "Cluck is converging on an answer"],
+};
+const HK_DEF = "deadpan";                                                   // no telemetry id (off, DNT / GPC, no key): this kind, nothing recorded
+const hkForced = (() => {                                                   // QA: #hk=<kind> (alone or after a code) or ?hk=<kind>, read once; the hash
+  try {                                                                     // loses it before boot reads the code (never "Can't open hk=...")
+    const m = /(?:^|[#?&])hk=([a-z]+)/.exec(location.hash + "&" + location.search.slice(1));
+    if (/(^#|&)hk=/.test(location.hash)) history.replaceState(history.state, "", location.pathname + location.search + location.hash.replace(/&?hk=\w*/, "").replace(/^#&/, "#").replace(/^#$/, ""));
+    return m && HK[m[1]] ? m[1] : null;
+  } catch { return null; }
+})();
+function hkKind() {
+  if (hkK) return hkK;
+  if (hkForced) return (hkK = hkForced);
+  const ks = Object.keys(HK);
+  let i = -1; try { i = window.stemHk ? window.stemHk(ks.length) : -1; } catch { i = -1; }   // telemetry.js: a stable hash of its anonymous id
+  return (hkK = Number.isInteger(i) && ks[i] ? ks[i] : HK_DEF);
+}
+function clGoneSet(on) {
+  if (clGone === on) return;
+  clGone = on;
+  if (on && cl && cl.open) { cl.auto = true; clClose(); }                  // the sash drag with the sheet open: it goes with the column
+  applyMT(); layoutFreeze();
+}
+function hkStop() { clearInterval(hkT); hkT = 0; }
+function hkShow(b, roll) {
+  const t = b.querySelector(".hk-t"), set = HK[hkKind()];
+  t.textContent = set[hkI % set.length];
+  if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
+}
+function clBackSync() {
+  const show = clGone && sideMQ.matches && !!S;
+  let b = $("#clBack");
+  if (!show) { if (b) b.hidden = true; hkStop(); return; }
+  if (!b) {
+    b = document.createElement("button"); b.type = "button"; b.id = "clBack"; b.className = "cl-back"; b.hidden = true;
+    b.setAttribute("aria-label", "Show Cluck's explanation");
+    b.innerHTML = `${icon("i-duck")}<span class="hk" aria-hidden="true"><span class="hk-t"></span></span><span class="hk-go" aria-hidden="true">Show him</span>`;
+    b.addEventListener("click", clBack);
+  }
+  const home = $("#freezeIn");
+  if (b.parentElement !== home || b.nextElementSibling) home.append(b);       // under the verdict (and Cluck's chip / peek), last in the column
+  if (!b.hidden) return;
+  b.hidden = false; hkI = 0; hkShow(b, false);
+  window.stemT?.("cluck_back_seen", { hk: hkKind() });                      // the A/B exposure (telemetry.js: a no-op when off)
+  hkStop();
+  if (!reduceMQ.matches) hkT = setInterval(() => { if (b.hidden || !b.isConnected) { hkStop(); return; } hkI++; hkShow(b, true); }, 3600);   // reduced motion: one static line
+}
+function clBack() {
+  const w = wish, said = !!w && !!S && w.code === S.code && w.started && !w.failed && ![404, 503].includes(w.failed);
+  clGoneSet(false);
+  if (said || origEl) clOpen(said ? "explain" : "steps", "#clBack");
 }
 /* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
@@ -2602,22 +2666,23 @@ function padRule() {
 }
 const padGone = () => !sideMQ.matches && root.classList.contains("no-pad");   // phone sugar: the pad has no way in
 function applyMT() {
-  const side = sideMQ.matches && !!S, k = mtKind();
+  const side = sideMQ.matches && !!S, k = mtKind(), gone = side && clGone;
   if (sideMQ.matches || !S) mtOpen = false;
   const r = dragR != null ? dragR : mtRatio(k), on = side || mtOpen;
   root.classList.toggle("side", side);
+  root.classList.toggle("cl-gone", gone);                                      // Cluck's column dismissed: one centred column (DISMISS.md)
   padRule();
   root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)
   root.classList.toggle("mt", mtOpen);
   const fit = mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);
-  root.classList.toggle("mt-r0", on && !fit && dragR == null && r === 0);
+  root.classList.toggle("mt-r0", on && !gone && !fit && dragR == null && r === 0);
   root.classList.toggle("mt-drag", dragR != null);
   root.style.setProperty("--r", r);
   root.classList.toggle("mt-q", mtOpen && mtTile === "q");
   root.classList.toggle("mt-a", mtOpen && mtTile === "a");
   root.classList.toggle("pad-off", !!S && !sideMQ.matches && !mtOpen);         // phones: no pad on the page, the button opens it
-  sash.hidden = !on; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && r === 0 && dragR == null);
+  sash.hidden = !on || gone; mtMode.hidden = !mtOpen; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
   mtMode.dataset.pane = mtTile === "q" ? "problem" : "scratch";
   mtMode.setAttribute("aria-label", mtTile === "q" ? "Show answer" : "Show question");
   mtExp.hidden = side || !mtOpen;                                               // the collapse corner of the pad page only
@@ -2631,6 +2696,7 @@ function applyMT() {
   sash.setAttribute("aria-valuetext", anchorName(k, r));
   sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
+  clBackSync();
   if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
   fabSync();
 }
@@ -2725,6 +2791,7 @@ sash.addEventListener("pointermove", e => {
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
   d.moved = true;
   const pos = (d.side ? e.clientX : e.clientY) - d.a - 8;
+  d.raw = pos / d.len;                                                           // past 85% to the right (desktop): the column goes (DISMISS.md)
   dragR = Math.min(Math.max(...ANCH[mtKind()]), Math.max(0.06, pos / d.len));
   applyMT();
 });
@@ -2733,6 +2800,7 @@ function sashEnd(e) {
   mtDrag = null;
   const k = mtKind();
   if (!d.moved) { dragR = null; setRatio(nextDown(k, mtRatio(k))); return; }
+  if (d.side && d.raw > 0.85) { dragR = null; clGoneSet(true); return; }       // the mirror of the strip: dragged to the right edge = dismissed, the ratio is kept
   let r = dragR; dragR = null;
   r = r < (d.side ? 0.2 : 1 / 6) ? 0 : near(k, r);                              // past 20% to the left (desktop) / a sixth (phone): the strip / sliver
   setRatio(r);
