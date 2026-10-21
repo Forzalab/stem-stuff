@@ -1135,6 +1135,25 @@ html.side .pstrip {
 html.side .pstrip[hidden] { display: none; }
 html.side .pstrip:hover { background: var(--raised); color: var(--ink); }
 html.side .pstrip span { writing-mode: vertical-rl; }
+/* Cluck's column dismissed (desktop; design/DISMISS.md, Tony Oct 20, mock-dismiss variant A + B4): one centred column, the question
+   one ladder step up (--t-md to --t-lg), no "Question" label (nothing sits beside it). app.js clGoneSet / clBackSync */
+html.side.cl-gone main { grid-template-columns: minmax(0, 1fr); }
+html.side.cl-gone .freeze, html.side.cl-gone .freeze.stuck { width: min(100%, calc(var(--col) * 0.85)); margin: 0 auto; }
+html.side.cl-gone .sash, html.side.cl-gone #work, html.side.cl-gone .pstrip, html.side.cl-gone .freeze .q-label { display: none; }
+html.side.cl-gone #problem, html.side.cl-gone #q { font-size: var(--t-lg); }
+html.side.cl-gone #problem { padding: var(--s5) var(--s6); }
+/* B4: the way back, a hairline row under the verdict (the .cl-fold shape, no box); H: its line rotates, "Show him" stays */
+.cl-back { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 48px; margin-top: var(--s4); padding: 0; border: 0; border-top: 1px solid var(--line);
+  background: none; color: var(--help-on); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); text-align: left; cursor: pointer; }
+.cl-back[hidden] { display: none; }
+.cl-back > .ico { color: var(--help); }
+.cl-back .hk { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.cl-back .hk-t { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--help-muted); font-weight: 400; }
+.cl-back .hk-t.roll { animation: hk-roll .45s ease both; }
+@keyframes hk-roll { from { transform: translateY(60%); opacity: 0; } to { transform: none; opacity: 1; } }
+.cl-back .hk-go { flex: none; }
+.cl-back:hover .hk-go { text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .cl-back .hk-t.roll { animation: none; } }
 
 /* ---------- desktop: wide window + fine pointer (the complement of app.js dockMQ: the top entry bar, not the phone dock) ----------
    Bigger: the column, the type scale and the one button size grow together (tokens only, so every rule above follows).

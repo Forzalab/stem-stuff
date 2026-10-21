@@ -91,6 +91,13 @@
     for (var i = 0; i < list.length; i++) if (list[i].s >= a && list[i].s < b) { n++; ms += list[i].d; }
     return { n: n, ms: Math.round(ms) };
   }
+  /* the A/B bucket (design/DISMISS.md): FNV-1a of the anonymous id, mod n. Stable for one id; no new id, no new storage. Junk -> 0 */
+  function bucket(id, n) {
+    if (typeof id !== "string" || !id || !(n > 0)) return 0;
+    var h = 0x811c9dc5;
+    for (var i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h % n;
+  }
   /* owner tag: a coarse device string (no browser version) → SHA-256, compared with OWNER_FP on device only; the hash itself is never sent.
      localStorage stem-me wins ("1" | "test" = Tony, "0" = not him); a fingerprint hit sets "1" once, so a browser update can't undo it.
      ?me=1 / ?me=test / ?me=0 set it by hand. window.stemFP() → Promise of this device's hash (Tony pastes his into OWNER_FP). */
@@ -113,7 +120,7 @@
   }
   W.stemFP = stemFP;
   try { var mq = new URLSearchParams(location.search).get("me"); if (mq === "1" || mq === "test" || mq === "0") W.localStorage.setItem("stem-me", mq); } catch (e) { /* blocked */ }
-  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff };
+  W.__stemTelemetry = { fpStr: fpStr, meOf: meOf, gpu: gpu, gpuFamily: gpuFamily, ltSum: ltSum, deadProps: deadProps, optedOut: optedOut, signals: signals, readConfig: readConfig, spamCheck: spamCheck, rageCheck: rageCheck, blankPII: blankPII, userOff: userOff, bucket: bucket };
 
   var cfg;
   try { if (optedOut(N, W) || userOff(W.localStorage)) return; cfg = readConfig(D); } catch (e) { return; }
@@ -144,6 +151,7 @@
   var did;   // our anonymous id, shared with PostHog (bootstrap) so an early bail and later events are one person
   try { did = localStorage.getItem("stem-tid"); } catch (e) { /* blocked */ }
   if (!did) { did = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); try { localStorage.setItem("stem-tid", did); } catch (e) { /* blocked */ } }
+  W.stemHk = function (n) { return bucket(did, n); };   // app.js hkKind: only while telemetry is on (off: no id, app.js takes its fixed default)
 
   function send(name, props, beacon) {
     props = props || {};
