@@ -161,15 +161,17 @@ await step("motion, mid-run: the peek shows the eyes only (42px of 64)", async (
   await page.context().close();
 });
 
-await step("any input puts him away; a 10px mouse jitter does not, a 30px move does; the timer starts over", async () => {
+await step("any input puts him away; a mouse move never does while he is up (fix A); the timer starts over", async () => {
   const page = await open({ vp: { width: 1440, height: 900 } });
   await idle(page, 3 * MIN + 1000);
   assert.equal(await up(page), true);
   await page.mouse.move(600, 600); await page.mouse.move(610, 600);
   assert.equal(await up(page), true, "jitter is not input");
   await page.mouse.move(640, 600);
-  assert.equal(await up(page), false, "a real move is");
+  assert.equal(await up(page), true, "a real move does not put him away while he is up (AMA 8, fix A)");
+  await page.keyboard.press("Shift");
   await idle(page, 800);
+  assert.equal(await up(page), false, "a key does");
   assert.equal(await page.evaluate(() => document.querySelector(".ck-rise").hidden), true, "gone (out of the tab order)");
   await idle(page, 3 * MIN);
   assert.equal(await up(page), false, "the second one waits 10 more min");
@@ -195,6 +197,30 @@ await step("input in the 3 min (a pick, a wheel) pushes the peek out; a question
   await idle(page, MIN + 2000);
   assert.equal(await up(page), true, "a code change did not restart the wait");
   await page.context().close();
+});
+
+await step("desktop: duck up, the mouse moves 200px toward him: still up; a click on him works; a key press still dismisses", async () => {
+  const page = await open({ vp: { width: 1440, height: 900 } });
+  await idle(page, 3 * MIN + 1000);
+  await settle(page);
+  assert.equal(await up(page), true);
+  const b = await page.evaluate(() => { const r = document.querySelector(".ck-peek").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.move(b.x - 200, b.y - 60); await page.mouse.move(b.x - 100, b.y - 30); await page.mouse.move(b.x - 5, b.y);
+  await idle(page, 800);
+  assert.equal(await up(page), true, "reaching for him does not hide him");
+  await page.mouse.click(b.x, b.y);
+  await idle(page, 800);
+  assert.equal(await up(page), false, "the click on him took it");
+  assert.deepEqual(page.errs, []);
+  await page.context().close();
+  const p2 = await open({ vp: { width: 1440, height: 900 } });
+  await idle(p2, 3 * MIN + 1000);
+  await p2.mouse.move(300, 300); await p2.mouse.move(500, 300);
+  assert.equal(await up(p2), true, "moved, still up");
+  await p2.keyboard.press("Shift");
+  await idle(p2, 800);
+  assert.equal(await up(p2), false, "a key press dismisses");
+  await p2.context().close();
 });
 
 await step("a tap on the duck: no AI call, he goes, the timer starts over", async () => {
@@ -275,7 +301,7 @@ for (const [name, vp, rm] of [["phone", { width: 390, height: 844 }, false], ["d
   });
 }
 
-await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up (2.5 s calm), a click puts him away; after the calm a move does", async () => {
+await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up, a click puts him away; a move after 2.5 s keeps him up too (fix A)", async () => {
   const page = await open({ vp: { width: 1440, height: 900 } });
   await wrongPick(page);
   await page.mouse.move(700, 400);
@@ -283,7 +309,7 @@ await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up 
   assert.equal(await up(page), true, "up");
   await page.mouse.move(800, 500); await page.mouse.move(900, 450);
   await idle(page, 100);
-  assert.equal(await up(page), true, "a 100px move in the calm does not dismiss");
+  assert.equal(await up(page), true, "a 100px move does not dismiss");
   await nudge(page);
   await idle(page, 800);
   assert.equal(await up(page), false, "a click puts him away");
@@ -295,7 +321,10 @@ await step("desktop, wrong-answer peek: a 100px mouse move at +1 s keeps him up 
   await idle(p2, 2000);                                                // past the calm
   await p2.mouse.move(900, 500); await p2.mouse.move(700, 300);
   await idle(p2, 800);
-  assert.equal(await up(p2), false, "after the calm a move dismisses as before");
+  assert.equal(await up(p2), true, "after 2.5 s a move still does not dismiss (fix A)");
+  await p2.keyboard.press("Shift");
+  await idle(p2, 800);
+  assert.equal(await up(p2), false, "a key does");
   await p2.context().close();
 });
 
