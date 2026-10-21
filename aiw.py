@@ -2715,6 +2715,9 @@ LINT_IGNORE = frozenset([
 LINT_ALLOW = frozenset(['paradigm'])
 
 
+SLOT_RE = re.compile(r'\$t\.([a-z][a-z0-9_]{0,31})')   # same as oui.SLOT_RE (aiw.py stays import-free)
+
+
 def lint_view_strings(strings, context=None):
     """Per-string verdicts for the gate. strings: iterable of str. context (optional dict):
       contextMode  'general' (default) | 'technical' | 'marketing' | 'personal'  (technical skips title case and
@@ -2734,7 +2737,8 @@ def lint_view_strings(strings, context=None):
     block_types = frozenset(context['block']) if 'block' in context else LINT_BLOCK
     out = []
     for s in strings:
-        r = analyze_text(s, opts, min_words=1) if s and s.strip() else {'issues': []}
+        # a "$t.<id>" slot (views/registry.json "slot") holds no words yet: nothing to judge, it passes (its fill is linted)
+        r = analyze_text(s, opts, min_words=1) if s and s.strip() and not SLOT_RE.fullmatch(s) else {'issues': []}
         block = []
         ignored = []
         other = []

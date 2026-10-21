@@ -199,3 +199,40 @@ test("Doodle fallback (VISUAL-FIRST): empty program, every statement dropped, ga
 test("splitStatements: newlines inside strings and brackets do not end a statement", () => {
   assert.deepEqual(splitStatements('a = Text("x\ny")\nb = View([c,\n d])\nc = Te'), [['a = Text("x\ny")', "b = View([c,\n d])"], "c = Te"]);
 });
+
+// Slots (views plan Oct 20, registry "slot"): "$t.<id>" strings fill from o.t; a missing id paints an outlined box data-slot=<id>
+const SLOTTED = 'root = View([hd, pk])\nhd = Head("$t.title", "$t.sub")\npk = Predict("$t.tag", "$t.q", ["1", "$t.c_two"], [], 2, "key.v1")';
+test("slots: $t.<id> resolves from the t map, the text drawn as text (no box)", () => {
+  const m = mount();
+  const v = render(SLOTTED, m, { t: { title: "Count the colours", sub: "One line", tag: "Guess", q: "How many?", c_two: "2" } });
+  assert.deepEqual(v.errors, []);
+  assert.equal(one(m, "vw-t").textContent, "Count the colours");
+  assert.equal(one(m, "vw-sub").textContent, "One line");
+  assert.equal(one(m, "vw-q").textContent, "How many?");
+  assert.deepEqual(byClass(m, "vw-pill").map(b => b.textContent), ["1", "2"]);
+  assert.deepEqual(byClass(m, "vw-tslot"), []);
+});
+
+test("slots: a missing id paints an outlined empty box labelled by the id (data-slot), the rest fills", () => {
+  const m = mount();
+  const v = render(SLOTTED, m, { t: { title: "Count the colours", q: "How many?" } });
+  assert.deepEqual(v.errors, []);
+  assert.equal(one(m, "vw-t").textContent, "Count the colours");
+  const boxes = byClass(m, "vw-tslot");
+  assert.deepEqual(boxes.map(b => b.getAttribute("data-slot")), ["sub", "tag", "c_two"]);
+  assert.ok(boxes.every(b => b.textContent === b.getAttribute("data-slot")));
+  const none = mount();
+  render(SLOTTED, none);                                     // no t at all: every slot is a box, nothing errors
+  assert.deepEqual(byClass(none, "vw-tslot").map(b => b.getAttribute("data-slot")), ["title", "sub", "tag", "q", "c_two"]);
+});
+
+test("slots: caps apply to the filled text; only a whole-string ref with a valid id is a slot", () => {
+  const m = mount();
+  const v = render('root = View([hd])\nhd = Head("$t.title")', m, { t: { title: "x".repeat(61) } });
+  assert.equal(v.errors[0]?.code, "too-long");
+  const k = mount();
+  render('root = View([hd])\nhd = Head("see $t.title", "$t.Bad")', k, { t: { title: "no" } });
+  assert.equal(one(k, "vw-t").textContent, "see $t.title");
+  assert.equal(one(k, "vw-sub").textContent, "$t.Bad");
+  assert.deepEqual(byClass(k, "vw-tslot"), []);
+});

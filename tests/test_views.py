@@ -186,5 +186,69 @@ class Generated(unittest.TestCase):
         self.assertEqual(gv.main(["--check"]), 0)
 
 
+def _texty(s):
+    """A prop schema that holds strings (a string, or a list of them at any depth)."""
+    return s.get("type") == "string" or (s.get("type") == "array" and _texty(s.get("items", {})))
+
+
+class Slots(unittest.TestCase):
+    """The slot convention (views plan Oct 20): "$t.<id>" strings; every student-facing prop has a role and a wordClass."""
+    SLOT = REG["slot"]
+
+    def test_every_text_prop_has_role_and_word_class(self):
+        data = set(self.SLOT["not_words"])
+        for name, c in REG["components"].items():
+            words = c.get("words", {})
+            for p in words:
+                self.assertIn(p, c["props"], f"{name}.words.{p}: no such prop")
+                self.assertNotIn(f"{name}.{p}", data, f"{name}.{p}: both words and not_words")
+            for p, s in c["props"].items():
+                if not _texty(s) or f"{name}.{p}" in data:
+                    continue
+                self.assertIn(p, words, f"{name}.{p}: a string prop needs words (role + wordClass) or a slot.not_words entry")
+                self.assertIn(words[p].get("role"), self.SLOT["roles"], f"{name}.{p}")
+                self.assertIn(words[p].get("wordClass"), self.SLOT["wordClasses"], f"{name}.{p}")
+        for d in data:
+            comp, p = d.split(".")
+            self.assertIn(p, REG["components"][comp]["props"], d)
+
+    def test_roles_and_word_classes(self):
+        self.assertEqual(self.SLOT["roles"], ["button", "label", "heading", "body", "chip"])
+        self.assertEqual(self.SLOT["wordClasses"], ["verb_phrase", "noun_phrase", "adj", "sentence"])
+        self.assertEqual(REG["components"]["Head"]["words"]["title"], {"role": "heading", "wordClass": "noun_phrase"})
+
+    def test_id_regex(self):
+        sys.path.insert(0, ROOT)
+        import aiw
+        import oui
+        rx = re.compile(self.SLOT["id"])
+        self.assertEqual(self.SLOT["id"], "^[a-z][a-z0-9_]{0,31}$")
+        for ok in ("a", "title", "c_two", "q1", "a" * 32):
+            self.assertTrue(rx.fullmatch(ok), ok)
+            self.assertEqual(oui.slot_id("$t." + ok), ok)
+            self.assertTrue(aiw.SLOT_RE.fullmatch("$t." + ok), ok)
+        for bad in ("", "Title", "1a", "_a", "a-b", "a.b", "a" * 33, "a b"):
+            self.assertFalse(rx.fullmatch(bad), bad)
+            self.assertIsNone(oui.slot_id("$t." + bad), bad)
+            self.assertFalse(aiw.SLOT_RE.fullmatch("$t." + bad), bad)
+        self.assertIsNone(oui.slot_id("see $t.title"))
+        self.assertIsNone(oui.slot_id(3))
+        with open(os.path.join(ROOT, "views.js")) as f:
+            js = re.search(r"const SLOT = /\^(.+)\$/;", f.read()).group(1)
+        self.assertEqual(js.replace("\\$", "$").replace("\\.", "."), "$t.(" + self.SLOT["id"][1:-1] + ")")
+
+    def test_gate_takes_a_slot_where_a_string_is_allowed(self):
+        sys.path.insert(0, ROOT)
+        import aiw
+        import oui
+        with open(os.path.join(ROOT, "views", "library.json")) as f:
+            cat = oui.compile_schema(json.load(f)["schema"])
+        r = oui.parse('root = View([hd, s])\nhd = Head("$t.title", "$t.sub")\ns = Hints(["$t.h1", "$t.a_long_hint_slot_id"])', cat, "View")
+        self.assertEqual(r["meta"]["errors"], [])
+        self.assertEqual(r["root"]["typeName"], "View")
+        out = aiw.lint_view_strings(["$t.title", "$t.a_very_long_slot_id_here"])
+        self.assertTrue(all(o["ok"] and not o["block"] for o in out))
+
+
 if __name__ == "__main__":
     unittest.main()
