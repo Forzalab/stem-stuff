@@ -84,8 +84,8 @@ class Jargon(unittest.TestCase):
         self.assertEqual(cg.load_black("no-such-course"), set())
 
     def test_load_black_shipped(self):
-        black = cg.load_black("psy")
-        self.assertIn("attitude centrality", black)  # frequent in the (AI, .json) PSY banks, no human source yet
+        black = cg.load_black("socpsy")
+        self.assertIn("death reminders", black)  # frequent in the AI socpsy banks, absent from the human sources
 
 
 class Overflow(unittest.TestCase):

@@ -91,13 +91,38 @@ class Build(unittest.TestCase):
         self.assertEqual(jargon.read_texts(os.path.join(self.d, p)), ["Which is centrality?", "attitude centrality"])
 
 
+    def test_list_md_joined(self):
+        p = write(self.d, "bank.json", json.dumps({"problems": [{"body": [{"md": ["line one", "", "line two"]}]}]}))
+        self.assertEqual(jargon.read_texts(os.path.join(self.d, p)), ["line one\n\nline two"])
+
+
+class External(unittest.TestCase):
+    def test_missing_external_skips_course_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            write(d, "a.md", "entropy entropy entropy")
+            man = write(d, "m.json", json.dumps([
+                {"path": "a.md", "course": "here"},
+                {"path": "a.md", "course": "away"},
+                {"path": "/no/such/brain/x.txt", "course": "away", "external": True}]))
+            self.assertEqual(jargon.missing_external(json.load(open(os.path.join(d, man))), "away", d),
+                             ["/no/such/brain/x.txt"])
+            out = os.path.join(d, "out")
+            os.mkdir(out)
+            argv = ["--manifest", os.path.join(d, man), "--out-dir", out, "--root", d]
+            self.assertEqual(jargon.main(argv + ["--check"]), 1)       # "here" is stale: still checked
+            self.assertEqual(jargon.main(argv), 0)
+            self.assertEqual(sorted(os.listdir(out)), ["here-black.json"])  # "away" skipped, not written
+            self.assertEqual(jargon.main(argv + ["--check"]), 0)
+
+
 class Shipped(unittest.TestCase):
     def test_manifest_builds_and_is_current(self):
         with open(jargon.MANIFEST, encoding="utf-8") as f:
             entries = json.load(f)
         self.assertTrue(entries)
-        for e in entries:
-            self.assertTrue(os.path.exists(os.path.join(ROOT, e["path"])), e["path"])
+        for e in entries:  # in-repo sources must exist; external (brain) ones may be absent (CI) -> course skipped
+            if not e.get("external"):
+                self.assertTrue(os.path.exists(os.path.join(ROOT, e["path"])), e["path"])
         r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "jargon.py"), "--check"],
                            capture_output=True, text=True, timeout=120)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)

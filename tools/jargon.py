@@ -1,11 +1,13 @@
 """tools/jargon.py: build the per-course jargon BLACKLIST views/allow/<course>-black.json (Tony, Oct 20: blacklist for
 now; AI-written text carries jargon, human-written text shows which terms students really meet).
 
-Manifest views/allow/sources.json = [{"path": "<repo-relative>", "course": "<id>"}]. Provenance comes from the file
+Manifest views/allow/sources.json = [{"path": "<repo-relative or absolute>", "course": "<id>", "external": true?}].
+"external": true marks a source outside the repo (the brain): a course with any external source missing on disk is
+skipped (its shipped list is kept, --check passes for it), so CI without the brain still checks in-repo courses. Provenance comes from the file
 extension only, never a manual tag (provenance()): .json and .md = "ai"; every other type (.txt, .pdf, slides, ...) =
 "human". A "provenance" key in the manifest is ignored.
-Readers: .txt (all text); .md (all text); .json bank ({"problems": [...]}: each problem's body text md + choice md only,
-no hints). Any other type (pdf, pptx, ...) needs a text export next to it: put the .txt in the manifest (a .txt is human).
+Readers: .txt, .md, extensionless (all text); .pdf (pdftotext); .json bank ({"problems": [...]}: each problem's body text md + choice md only,
+no hints; a list md is joined by lines). Any other type (pptx, ...) needs a text export next to it: put the .txt in the manifest (a .txt is human).
 Term = a content word not in common English (copy_gate.is_common), or a 2-3-gram of adjacent content words that holds one.
 Thresholds (defaults):
   --min-ai 3      a term is used >= 3 times in total across the course's AI sources (frequent in AI text), AND
@@ -17,6 +19,7 @@ usage: python3 tools/jargon.py [--manifest views/allow/sources.json] [--out-dir 
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections import Counter
 
@@ -37,7 +40,12 @@ def provenance(path):
 def read_texts(path):
     """The text pieces of one source file."""
     ext = os.path.splitext(path)[1].lower()
-    if ext not in (".txt", ".md", ".json"):
+    if ext == ".pdf":
+        r = subprocess.run(["pdftotext", "-q", path, "-"], capture_output=True, text=True)
+        if r.returncode:
+            raise ValueError("pdftotext failed on %s" % path)
+        return [r.stdout]
+    if ext not in ("", ".txt", ".md", ".json"):
         raise ValueError("no reader for %s: add a .txt export of it to the manifest" % path)
     with open(path, encoding="utf-8") as f:
         if ext != ".json":
@@ -46,12 +54,12 @@ def read_texts(path):
     probs = data.get("problems", []) if isinstance(data, dict) else data
     out = []
     for p in probs:
-        for b in p.get("body", []) or []:
-            if isinstance(b, dict) and isinstance(b.get("md"), str):
-                out.append(b["md"])
-        for ch in p.get("choices", []) or []:
-            if isinstance(ch, dict) and isinstance(ch.get("md"), str):
-                out.append(ch["md"])
+        for b in (p.get("body", []) or []) + (p.get("choices", []) or []):
+            md = b.get("md") if isinstance(b, dict) else None
+            if isinstance(md, list):
+                md = "\n".join(x for x in md if isinstance(x, str))
+            if isinstance(md, str):
+                out.append(md)
     return out
 
 
@@ -65,6 +73,12 @@ def terms_of(text, common):
                 if any(rare[s:s + n]):
                     out.append(" ".join(run[s:s + n]))
     return out
+
+
+def missing_external(entries, course, root=ROOT):
+    """External sources of course not on disk (a non-empty list means: skip this course)."""
+    return [e["path"] for e in entries if e.get("course") == course and e.get("external")
+            and not os.path.exists(os.path.join(root, e["path"]))]
 
 
 def build(entries, course, root=ROOT, min_ai=3, max_human=1, common=None):
@@ -104,8 +118,12 @@ def main(argv=None):
     courses = [a.course] if a.course else sorted({e["course"] for e in entries})
     stale = 0
     for c in courses:
-        out = dump(build(entries, c, a.root, a.min_ai, a.max_human))
         p = os.path.join(a.out_dir, c + "-black.json")
+        miss = missing_external(entries, c, a.root)
+        if miss:
+            print("skip %s: %d external source(s) not on disk" % (p, len(miss)))
+            continue
+        out = dump(build(entries, c, a.root, a.min_ai, a.max_human))
         old = open(p, encoding="utf-8").read() if os.path.exists(p) else None
         if old != out:
             stale += 1

@@ -5,7 +5,20 @@
  "ai_sources": [
   "problems.json"
  ],
- "human_sources": [],
+ "human_sources": [
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/1.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/2.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/3.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/1.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/2.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/3.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/4.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/5.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/6.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/7.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/8.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/9.txt"
+ ],
  "terms": [
   {
    "term": "arrange",
