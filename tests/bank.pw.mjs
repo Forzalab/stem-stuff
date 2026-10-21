@@ -29,8 +29,8 @@ writeFileSync(join(BANKS, "BANK_AB12.json"), JSON.stringify(BANK));
 
 /* the order is a per-bank queue with a random salt (design/plans/QUEUE.md): pin a salt that plays file order for both tiny banks,
    set again whenever it is missing (one step wipes storage) */
-const { qFresh, qRest, qNew } = await import("../shuffle.mjs");
-const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]) && qRest(qNew(s), a).every((c, i) => c === a[i]);
+const { qFresh } = await import("../shuffle.mjs");
+const same = (a, s) => qFresh(a, s).every((c, i) => c === a[i]);
 const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => same(BANK.problems.map(p => p.code), s) && same(FILE.problems.map(p => p.code), s));
 const PIN = s => { try { for (const k of ["stem-q-BANK_AB12", "stem-q-upload"]) if (!localStorage.getItem(k)) localStorage.setItem(k, JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } };
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });

@@ -34,8 +34,8 @@ const longQ = n => ({ code: `CALC1_L0${n}`, type: "mc", correct: "a", shuffle: f
 writeFileSync(join(BANKS, "BANK_NV78.json"), JSON.stringify({ v: 1, problems: [longQ(1), longQ(2)] }));
 writeFileSync(join(BANKS, "BANK_NV34.json"), JSON.stringify({ v: 1, problems: [MC, num("CALC1_M02", "2", "1 + 1")] }));
 
-const { qFresh, qRest, qNew } = await import("../shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
-const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => qFresh(CODES, s).every((c, i) => c === CODES[i]) && qRest(qNew(s), CODES).every((c, i) => c === CODES[i]));
+const { qFresh, qNew, qShow, qPick } = await import("../shuffle.mjs");   // pin the queue's salt so it plays file order (it was the shuffle seed)
+const SEED = Array.from({ length: 2000 }, (_, i) => "k" + i).find(s => qFresh(CODES, s).every((c, i) => c === CODES[i]));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -208,6 +208,23 @@ try {
     await pg.click("#qlistBtn"); await pg.keyboard.press("Escape");             // Escape closes it too
     await pg.waitForFunction(() => document.querySelector("#qlist").hidden && getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
     await c3.close();
+  });
+  await step("the list is file order (Tony, Oct 20) after a reload and after answering; Next still plays the hidden queue, not the next row", async () => {
+    const nextOf = s => { const st = qNew(s); qShow(st, CODES[0]); return qPick(st, CODES).code; };
+    const SALT = Array.from({ length: 2000 }, (_, i) => "q" + i).find(s => nextOf(s) !== CODES[1]);
+    assert.ok(SALT, "no salt whose queue leaves file order");
+    const c4 = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block", hasTouch: true, isMobile: true });
+    await c4.addInitScript(s => { try { if (!localStorage.getItem("stem-q-BANK_NV12")) localStorage.setItem("stem-q-BANK_NV12", JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 })); } catch { /* blocked */ } }, SALT);
+    const pg = await c4.newPage();
+    await pg.goto(BASE + "/#BANK_NV12"); await opened(pg, CODES[0]);
+    assert.deepEqual(await order(pg), CODES, "list is not file order on open");
+    await pg.click("#qnext"); await opened(pg, nextOf(SALT));
+    assert.deepEqual(await order(pg), CODES, "list moved after Next");
+    await pg.fill("#ans", "99"); await pg.click("#ansGo"); await pg.waitForTimeout(800);   // a wrong try re-ranks the queue, not the list
+    assert.deepEqual(await order(pg), CODES, "list moved after answering");
+    await pg.reload(); await pg.waitForFunction(() => document.querySelector("#pcode")?.textContent);
+    assert.deepEqual(await order(pg), CODES, "list moved after a reload");
+    await c4.close();
   });
 } finally {
   await browser.close();

@@ -25,7 +25,7 @@ Nothing else: no counter ("3 / 12"), no heading on the list, no close button. Re
 
 ## Which questions: upload only (decision)
 
-The nav exists **only when problems were uploaded** (a `problems.json` read by `offline.js`). The list is `stemOffline.codes()` in one fixed, salted per-bank order (`nav.js`): stable across reloads, and position doesn't give away the topic (a bank written in topic blocks). There is no Shuffle button; Next plays the hidden queue ("Mastery order" below). A second upload joins the same list. After an upload the queue's first pick opens (`offline.js` `first()`, via `window.stemOrder`; a fresh queue starts at the file's first real question). With problems from the server, the nav is hidden, not disabled.
+The nav exists **only when problems were uploaded** (a `problems.json` read by `offline.js`). The list is `stemOffline.codes()` in file order (Q1, Q2, ... as the bank JSON lists them; Tony, Oct 20, superseding the salted per-bank order of Oct 3). A second upload keeps upload order, then file order. There is no Shuffle button; Next plays the hidden queue ("Mastery order" below). A second upload joins the same list. After an upload the queue's first pick opens (`offline.js` `first()`, via `window.stemOrder`; a fresh queue starts at the file's first real question). With problems from the server, the nav is hidden, not disabled.
 
 Why not "codes this browser already opened" in server mode:
 - The code is the gate. Tony hands out codes, and the server never lists them. A history list would be a second, partial, per-device list that disagrees with what Tony assigned.
@@ -46,8 +46,8 @@ So: server mode looks exactly as it does today (the code bar), and the empty pag
 - **Next**: forward through what was already shown (after Prev), else the queue's pick (a sugar snack first, right in front of
   its real, unless the rewards say skip). Never disabled while the bank has a question.
 - **Prev**: back through what was shown in this bank (`hist`). Disabled on the first one. History steps are not new showings.
-- **The list**: a jump index, not the queue: one fixed salted per-bank order (`qRest`) that never moves under you (Tony, Oct 3)
-  and gives no topic away by position, snacks right above their real. A row opens that question (a new showing). Prev / Next
+- **The list**: a jump index, not the queue: file order (Tony, Oct 20; supersedes the salted `qRest` list of Oct 3, now removed), the same after a reload or an answer,
+  snacks right above their real. Next still plays the hidden queue, not the next row. A row opens that question (a new showing). Prev / Next
   skip history items no longer in the list (an older upload) and are off when the open problem is not in it.
 - **Answers**: app.js fires `drill:answer` `{ code, right }` after each graded pick; nav.js re-ranks (D62). `drill:problem` records
   a showing unless the code is the history item already open (a reload, Prev / Next through history).

@@ -5,7 +5,7 @@
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, qRest, deadOpen, deadLead } from "./shuffle.mjs";
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead } from "./shuffle.mjs";
 const MAX = 60;
 const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -164,10 +164,10 @@ function init() {
     const p = od ? { code: od } : !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
-  /* the list (a jump index, not the queue): one fixed per-bank order that never moves under you (salted, so a row's position
-     can't give its topic away); snacks right above their real */
+  /* the list (a jump index, not the queue): file order, Q1, Q2, ... as the bank JSON lists them (a second upload joins after the
+     first; Tony, Oct 20); snacks right above their real. Next still plays the hidden queue. */
   function rows0(cs) {
-    return glue(qRest(Q(), cs), beforeOf);
+    return glue(cs, beforeOf);
   }
 
   function update(code) {

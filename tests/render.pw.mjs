@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { qNew, qPick, qShow, qRest } from "../shuffle.mjs";
+import { qNew, qPick, qShow } from "../shuffle.mjs";
 const require = createRequire(import.meta.url);
 /* the code box: a bank keeps it with the list (Tony, Oct 5 clutter pass C2 / C8), a lone question as a label (C7), a phone strip in the bar */
 async function showCode(page) {
@@ -313,9 +313,8 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await page.locator("#qnav").isHidden(), "nav shown for a server problem");
       const bank = JSON.parse(readFileSync(new URL("../problems.json", import.meta.url), "utf8"));
       for (const p of bank.problems) p.code = p.code.replace("_", "_N");
-      const file = bank.problems.map(p => p.code), codes = qRest(qNew("pin"), file), n = codes.length;   // the list's fixed order (salt pinned above)
-      assert.notDeepEqual(codes, file, "the list kept file order");
-      const f0 = file[0], k0 = codes.indexOf(f0);                                  // a fresh queue opens the file's first question
+      const file = bank.problems.map(p => p.code), codes = file, n = codes.length;   // the list is file order (Tony, Oct 20)
+            const f0 = file[0], k0 = codes.indexOf(f0);                                  // a fresh queue opens the file's first question
       bank.problems.find(p => p.code === codes[1]).title = "Area between a parabola and a line";
       await showCode(page);   // the bar rests as a strip while a problem is open
     const [ch] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
