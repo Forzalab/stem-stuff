@@ -209,6 +209,58 @@ try {
     await pg.waitForFunction(() => document.querySelector("#qlist").hidden && getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
     await c3.close();
   });
+
+  /* a code that is not there, typed with the list open (Tony, Oct 21, two shots): the bar's live controls (list button, code box) are not
+     greyed by the list's dim (they work: STYLE.md, dim = disabled), and once the list shuts, the box the message keeps up is not crossed by
+     the XP strip (nav.css stretched .rw-hud over columns 2 / 4 whenever the list was shut, so its bar lay across the code) */
+  for (const w of [1280, 1920]) await step(`not-found code at ${w}: list button + code box undimmed over the open list; the XP strip clear of the kept-up box after`, async () => {
+    const c5 = await browser.newContext({ viewport: { width: w, height: 800 }, serviceWorkers: "block" });
+    const pg = await c5.newPage();
+    await pg.goto(BASE + "/#BANK_NV56");
+    await pg.waitForFunction(() => !document.querySelector("#qnav").hidden && !document.querySelector("#rwHud")?.hidden && !!document.querySelector("#pcode")?.textContent, null, { timeout: 8000 });
+    await pg.waitForFunction(() => !document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0", null, { timeout: 8000 });
+    const lum = async sel => {   /* the mean grey of 4 pixels in the control's left padding, mid-height: dimmed reads darker. 1x1 PNGs: a lone pixel is never filtered */
+      const r = await pg.$eval(sel, el => { const b = el.getBoundingClientRect(); return { x: Math.round(b.left + 4), y: Math.round(b.top + b.height / 2 - 2) }; });
+      let s = 0;
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 2], [1, 3]]) {
+        const buf = await pg.screenshot({ clip: { x: r.x + dx, y: r.y + dy, width: 1, height: 1 } }), dat = [];
+        for (let o = 8; o < buf.length; o += 12 + buf.readUInt32BE(o)) if (buf.toString("latin1", o + 4, o + 8) === "IDAT") dat.push(buf.subarray(o + 8, o + 8 + buf.readUInt32BE(o)));
+        const px = zlib.inflateSync(Buffer.concat(dat), { finishFlush: zlib.constants.Z_SYNC_FLUSH });
+        s += px[1] + px[2] + px[3];
+      }
+      return s / 4;
+    };
+    await pg.click("#qlistBtn");
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
+    await pg.fill("#code", "CALC1_ZZ9");
+    await pg.press("#code", "Enter");
+    await pg.waitForFunction(() => /not found/.test(document.querySelector("#entryMsg").textContent), null, { timeout: 4000 });
+    await pg.evaluate(() => document.activeElement?.blur());                   // Enter shuts the list; the message keeps the box up
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).visibility === "hidden", null, { timeout: 2000 });
+    await pg.mouse.move(w - 4, 790); await pg.waitForTimeout(500);
+    const g = await pg.evaluate(() => {
+      const box = document.querySelector(".top .entry"), hud = document.querySelector(".top > .rw-hud"), b = box.getBoundingClientRect(), h = hud.getBoundingClientRect();
+      const code = document.querySelector("#code").getBoundingClientRect(), y = code.top + code.height / 2, hits = [];
+      for (let x = code.left + 2; x < code.right - 2; x += 8) hits.push(!!document.elementFromPoint(x, y)?.closest(".entry"));
+      return { msg: document.querySelector("#entryMsg").textContent, shown: !!box.getClientRects().length && getComputedStyle(box).display !== "none",
+        overlap: b.left < h.right && h.left < b.right && b.top < h.bottom && h.top < b.bottom, box: [b.left, b.right], hud: [h.left, h.right], clear: hits.every(Boolean) };
+    });
+    assert.match(g.msg, /not found/, "the message went with the list");
+    assert.ok(g.shown, "the code box went with its message");
+    assert.equal(g.overlap, false, `the XP strip (${g.hud}) lies across the code box (${g.box})`);
+    assert.equal(g.clear, true, "something is drawn over the code box");
+    const shut = [await lum("#qlistBtn"), await lum("#code")];
+    await pg.click("#qlistBtn");                                                // the list again, the message still up (Tony's second shot)
+    await pg.waitForFunction(() => getComputedStyle(document.querySelector("#qlDim")).opacity === "1", null, { timeout: 2000 });
+    await pg.evaluate(() => document.activeElement?.blur());
+    await pg.mouse.move(w - 4, 790); await pg.waitForTimeout(500);
+    const onTop = await pg.evaluate(() => ["#qlistBtn", "#code"].map(s => { const el = document.querySelector(s), r = el.getBoundingClientRect(); return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest(s); }));
+    assert.deepEqual(onTop, [true, true], "list button / code box under the dim");
+    const open = [await lum("#qlistBtn"), await lum("#code")];
+    open.forEach((v, i) => assert.ok(v >= shut[i] - 6, `${["list button", "code box"][i]} dimmed over the open list: grey ${v} vs ${shut[i]} shut`));
+    await c5.close();
+  });
+
   await step("the list is file order (Tony, Oct 20) after a reload and after answering; Next still plays the hidden queue, not the next row", async () => {
     const nextOf = s => { const st = qNew(s); qShow(st, CODES[0]); return qPick(st, CODES).code; };
     const SALT = Array.from({ length: 2000 }, (_, i) => "q" + i).find(s => nextOf(s) !== CODES[1]);

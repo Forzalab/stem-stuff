@@ -44,7 +44,7 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
 /* C2 / C15 (Tony, Oct 5 clutter pass): with a bank open the row is List · XP · Prev / Next. The code box (Upload, Paste)
    comes with the list, on a row of their own above it. A load error (message or Retry) brings the box back on its own */
 .qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .entry { display: none; }
-.qnav-on:not(.dock-bottom):not(.start):not(.ql-open) .top > .rw-hud { grid-column: 2 / 4; }   /* the empty columns go to the XP strip */
+.qnav-on:not(.dock-bottom):not(.start):not(.ql-open):not(.entry-open):not(:has(#entryMsg:not(:empty), #retryLoad:not([hidden]))) .top > .rw-hud { grid-column: 2 / 4; }   /* the empty columns go to the XP strip; only while the code box is away (the rule above): a box kept up by a message ("X not found.") or by focus keeps column 2, or the strip lies across it (Tony, Oct 21) */
 /* open: they join row 1 in the XP strip's room, so the bar stays one row (Tony, Oct 6: "overflows the bar onto 2 rows") */
 
 /* the list: a card like the problem's; long lists scroll inside. Bar on top: it floats over the page (above). Phone bottom dock: as before */
@@ -98,6 +98,11 @@ html.ql-open .ql-dim { opacity: 1; visibility: visible; pointer-events: auto; tr
 html.ql-open .top { z-index: 47; }
 .top::after { content: ""; position: absolute; z-index: 10; inset: 0; border-image: linear-gradient(var(--ql-dim) 0 0) fill 0 / 0 / 0 100vw; opacity: 0; pointer-events: none; transition: opacity .225s ease-out; }
 html.ql-open .top::after { opacity: 1; }
+/* the bar's live controls (list button, code box, Prev / Next, the message) sit over that dim: they work, so they never look disabled (STYLE.md: dim = disabled; Tony, Oct 21).
+   Flex / grid items, so z-index needs no position. .code-box holds .code-sug (its own 31 over the list, z 30): a z-index on the box makes it the
+   suggestions' stacking context, so the box takes 31 itself, or a tap on a suggestion lands on the list (ux-flows code-suggestions). Only the XP strip (an outside tap) stays dimmed */
+html.ql-open .top :is(#qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-box)) { z-index: 11; }
+html.ql-open .top .entry > .code-box { z-index: 31; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
