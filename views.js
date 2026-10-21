@@ -3,7 +3,9 @@
 //   render(program, mount, o)   whole program -> handle
 //   stream(chunks, mount, o)    (async) iterable of text chunks -> Promise<handle>; paints once per completed statement
 //   mountView(mount, o)         handle { push(chunk), end(), patch(program), errors, src, el }
-// o = { predict(pick, {view, key}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e) }
+// o = { predict(pick, {view, key}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e), t: {id: text} }
+// Slots (views plan Oct 20, registry "slot"): a string prop that is exactly "$t.<id>" is filled from o.t; an id o.t lacks paints
+// as an outlined empty box <span class="vw-tslot" data-slot="<id>"> (what measure_slots reads). Caps apply to the filled text.
 // Rules built in (brain refine/REFINE.md): F3 no look props (look = views.css by cascade, page vs .ai-box); F4 Reveal's body is a
 // SECOND program patch-merged in place (spec §7, mergeStatements); F5 Predict posts the pick, the page never holds the answer;
 // F7 caps from views-lib.js drop a statement (`too-long`); F8 append-only paint into slots the root reserves when it arrives;
@@ -28,15 +30,25 @@ const SVG_TAGS = new Set(["svg", "g", "circle", "line", "polygon", "path", "text
 export function h(doc, tag, attrs, ...kids) {
   const el = SVG_TAGS.has(tag) ? doc.createElementNS(SVGNS, tag) : doc.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) if (v != null && v !== false) el.setAttribute(k, v === true ? "" : String(v));
-  for (const k of kids.flat(Infinity)) if (k != null && k !== false) el.append(typeof k === "object" ? k : doc.createTextNode(String(k)));
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) el.append(typeof k === "object" ? k : textNode(doc, String(k)));
   return el;
+}
+const SLOT = /^\$t\.([a-z][a-z0-9_]{0,31})$/;
+const slotBox = (doc, id) => h(doc, "span", { class: "vw-tslot", "data-slot": id }, id);
+function textNode(doc, s) { const m = SLOT.exec(s); return m ? slotBox(doc, m[1]) : doc.createTextNode(s); }
+/** Fill "$t.<id>" strings from t, deep (inline elements too: Steps reads its steps' props without rendering them). */
+function fill(v, t) {
+  if (typeof v === "string") { const m = SLOT.exec(v); return m && t && Object.hasOwn(t, m[1]) ? String(t[m[1]]) : v; }
+  if (Array.isArray(v)) return v.map(x => fill(x, t));
+  if (v && v.type === "element") return { ...v, props: Object.fromEntries(Object.entries(v.props || {}).map(([k, x]) => [k, fill(x, t)])) };
+  return v;
 }
 const dis = (el, on) => (on ? el.setAttribute("disabled", "") : el.removeAttribute("disabled"));
 const cls = (el, name, on) => el.classList[on ? "add" : "remove"](name);
 
 /** "**bold**" is the only emphasis (weight, never colour); everything else is plain text. */
 function rich(doc, s) {
-  return String(s ?? "").split(/\*\*(.+?)\*\*/).map((t, i) => (i % 2 ? h(doc, "b", null, t) : t)).filter(t => t !== "");
+  return String(s ?? "").split(/\*\*(.+?)\*\*/).map((t, i) => (i % 2 ? h(doc, "b", null, t) : SLOT.test(t) ? textNode(doc, t) : t)).filter(t => t !== "");
 }
 
 // The site sprite's paths (index.html), inlined so a view draws without the sprite.
@@ -99,7 +111,7 @@ function capError(el) {
     if (v == null || !s) return null;
     if (v.type === "element") return capError(v);
     if (typeof v === "string") {
-      if (s.maxLength && v.length > s.maxLength) return { code: "too-long", message: `${path}: ${v.length} > ${s.maxLength} chars` };
+      if (s.maxLength && v.length > s.maxLength && !SLOT.test(v)) return { code: "too-long", message: `${path}: ${v.length} > ${s.maxLength} chars` };
       if (s.enum && !s.enum.includes(v)) return { code: "bad-value", message: `${path}: "${v}" not in ${s.enum.join("|")}` };
       if (s.pattern && !new RegExp(s.pattern).test(v)) return { code: "bad-value", message: `${path}: does not match ${s.pattern}` };
     }
@@ -205,11 +217,12 @@ class Session {
     const hit = id && this.cache.get(id);
     if (hit && hit.json === json) return hit.node;
     try {
-      const bad = capError(el);
+      const full = fill(el, this.o.t);
+      const bad = capError(full);
       if (bad) throw Object.assign(new Error(bad.message), { code: bad.code });
       const fn = REG.get(el.typeName);
       if (!fn) throw Object.assign(new Error(`no drawing for ${el.typeName}`), { code: "unknown-component" });
-      const node = fn(el.props || {}, this.ctx(id ?? owner));
+      const node = fn(full.props || {}, this.ctx(id ?? owner));
       if (!node) throw new Error(`${el.typeName} drew nothing`);
       if (id) { node.setAttribute?.("data-st", id); this.cache.set(id, { json, node }); this.rerrs.delete(id); }
       return node;
