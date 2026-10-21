@@ -1,0 +1,52 @@
+# Bank-format / markup tokens: never jargon (tools/jargon.py rule (d)). A term holding any of these words is dropped.
+# Source: SCHEMA.md "Problem fields" table (problem-level JSON keys and the `type` values num/expr/text/mc/multi) and
+# the fixed UI wording of the answer widgets SCHEMA.md describes (pick-all: "tick the TRUE rows, leave FALSE rows
+# blank"; answer boxes; TRUE/FALSE as a 2-choice mc). Only schema/UI tokens go here, never a course word.
+# One lowercase word per line; # starts a comment.
+# problem keys
+code
+title
+type
+body
+how
+var
+choices
+choice
+shuffle
+parts
+part
+prompt
+answer
+accept
+points
+tol
+correct
+wrong
+nudge
+match
+re
+error
+hint
+md
+id
+lock
+label
+pick
+# type values
+num
+expr
+text
+mc
+multi
+# fixed UI words
+tick
+ticks
+ticked
+row
+rows
+blank
+blanks
+true
+false
+box
+boxes

@@ -26,6 +26,13 @@ import serve  # noqa: E402
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
 
 
+class TriesIsolation(unittest.TestCase):
+    def test_suite_never_uses_the_repo_tries_json(self):
+        # serve.TRIES is fixed at serve's first import, by whichever test module loads it first: every module that
+        # imports serve (directly or via tools/) must set STEM_TRIES to a temp path before that import
+        self.assertNotEqual(os.path.realpath(serve.TRIES), os.path.realpath(os.path.join(ROOT, "tries.json")))
+
+
 class Evaluate(unittest.TestCase):
     def test_values(self):
         cases = {"9/2": 4.5, "sqrt(3)": math.sqrt(3), "e^(-6)": math.exp(-6), "ln(2)": math.log(2), "log(2)": math.log(2),

@@ -4,10 +4,13 @@ import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
+os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import livefig  # noqa: E402
 import serve  # noqa: E402
 

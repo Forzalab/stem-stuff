@@ -5,11 +5,14 @@ import io
 import json
 import os
 import sys
+import tempfile
 import unittest
 import urllib.error
 from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
+os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import serve  # noqa: E402
 
 MSGS = [{"role": "system", "content": "BASE PROMPT"}, {"role": "user", "content": "QUESTION"}]

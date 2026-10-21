@@ -1,6 +1,7 @@
 """copy_gate.py: FK grade on the whole view (grade-3 passes, grade-9+ fails, under 20 words skipped), TeX and
 numbers-with-units stripped, jargon blacklist hit/miss (words and 2-3-grams), overflow per slot budget, aiw lint hits surface,
 every issue names its slot."""
+import json
 import os
 import sys
 import unittest
@@ -84,8 +85,10 @@ class Jargon(unittest.TestCase):
         self.assertEqual(cg.load_black("no-such-course"), set())
 
     def test_load_black_shipped(self):
-        black = cg.load_black("socpsy")
-        self.assertIn("death reminders", black)  # frequent in the AI socpsy banks, absent from the human sources
+        black = cg.load_black("phys2a")
+        with open(os.path.join(cg.ALLOW_DIR, "phys2a-black.json"), encoding="utf-8") as f:
+            self.assertEqual(black, {t["term"] for t in json.load(f)["terms"]})
+        self.assertIn("orbit radius", black)  # in >= 3 AI phys2a banks, 0 hits in the human sources
 
 
 class Overflow(unittest.TestCase):

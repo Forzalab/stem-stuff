@@ -1,9 +1,12 @@
 """tools/bench_claude.py: the FORMAT checker on canned replies, and the 8 bench cases build (no network, no key)."""
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools"))
+# bench_claude imports serve, which fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
+os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import bench_claude as b  # noqa: E402
 
 KEY = "$P = W/t = 52.0 / 4.0 = 13.0\\ \\text{W}$.\nAnswer: b) 13.0 W"
