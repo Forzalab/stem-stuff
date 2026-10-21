@@ -3,10 +3,13 @@ plus the livefig changes it came with (step-number edge labels are free, spelled
 import json
 import os
 import sys
+import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
+# serve fixes serve.TRIES at import: point it at a temp file, never the repo's tries.json
+os.environ.setdefault("STEM_TRIES", os.path.join(tempfile.mkdtemp(prefix="stem-tries-"), "tries.json"))
 import bench_figs as b  # noqa: E402
 import livefig  # noqa: E402
 import serve  # noqa: E402
