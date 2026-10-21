@@ -385,6 +385,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 ```
 <!-- views:end -->
 
+**Copy gate (`copy-words`, `copy_gate.py`).** Runs on a view's student-facing strings (`{slot_id: text}`). Every issue names its slot. `fk`: the Flesch-Kincaid grade of the whole view text, joined with one sentence per slot after TeX and numbers-with-units are stripped, must be 2–4. Under 20 words the score is noise, so the check is skipped. `jargon`: no word or 2–3-gram from `views/allow/<course>-black.json`. `overflow`: no slot is longer than its character budget. `aiw`: no blocking `aiw.lint_view_strings` finding. The blacklist comes from `python3 tools/jargon.py`, which reads the sources in `views/allow/sources.json`. Provenance is set by file extension: `.json` and `.md` count as AI, every other type counts as human. A term is blacklisted when it is not common English (`views/allow/common-en.txt`, top 5000, wordfreq data, CC-BY-SA-4.0), appears 3 or more times in AI sources, and appears at most once in human sources. Tests: `tests/test_copy_gate.py`, `tests/test_jargon.py`.
+
 ## Checklist before commit
 1. `cd tests && npm test` passes. It checks the schema, unique codes and suffixes, that answers and `match` values evaluate, that TeX renders, that graph math compiles, the label count, MC distractor coverage, and that no hint states the answer.
 2. Open `/#<CODE>` locally. The figure reads correctly, no labels overlap, and the width is fine on a phone.

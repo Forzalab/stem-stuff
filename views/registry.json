@@ -30,7 +30,8 @@
     {"id": "stage", "desc": "recipe allows this stage; refs allowed in this stage"},
     {"id": "marks", "desc": "every state word in nodes / edges / marks / Legend items is one of marks"},
     {"id": "one-stepper", "desc": "at most one Steps or Compare per root; one figure per Steps"},
-    {"id": "copy", "desc": "no string holds a hex colour, px, an emoji, or an all-caps word over 3 letters that is no code"}
+    {"id": "copy", "desc": "no string holds a hex colour, px, an emoji, or an all-caps word over 3 letters that is no code"},
+    {"id": "copy-words", "desc": "copy_gate.py on the view's student-facing strings: Flesch-Kincaid grade 2-4 on the whole view text (TeX and numbers stripped; skipped under 20 words), no term from views/allow/<course>-black.json (tools/jargon.py), no slot over its character budget, no blocking aiw.lint_view_strings finding"}
   ],
   "engines": {
     "graph": {"ships": "P0.3", "tools": ["graph.trace", "graph.maxflow", "graph.coloring", "graph.mst"]},
