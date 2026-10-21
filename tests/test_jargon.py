@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
@@ -35,9 +36,16 @@ class Provenance(unittest.TestCase):
 
     def test_no_reader(self):
         with tempfile.TemporaryDirectory() as d:
-            write(d, "book.pdf", "x")
+            write(d, "slides.pptx", "x")
             with self.assertRaises(ValueError):
-                jargon.build([{"path": "book.pdf", "course": "c"}], "c", d)
+                jargon.build([{"path": "slides.pptx", "course": "c"}], "c", d)
+
+    def test_pdf_without_pdftotext_is_a_clear_error(self):  # CI has no poppler: a ValueError, not a raw OSError
+        with tempfile.TemporaryDirectory() as d:
+            write(d, "book.pdf", "x")
+            with unittest.mock.patch.object(jargon.subprocess, "run", side_effect=FileNotFoundError("pdftotext")):
+                with self.assertRaisesRegex(ValueError, "pdftotext"):
+                    jargon.read_texts(os.path.join(d, "book.pdf"))
 
 
 class Build(unittest.TestCase):

@@ -41,7 +41,10 @@ def read_texts(path):
     """The text pieces of one source file."""
     ext = os.path.splitext(path)[1].lower()
     if ext == ".pdf":
-        r = subprocess.run(["pdftotext", "-q", path, "-"], capture_output=True, text=True)
+        try:
+            r = subprocess.run(["pdftotext", "-q", path, "-"], capture_output=True, text=True)
+        except FileNotFoundError:
+            raise ValueError("no pdftotext (poppler-utils) to read %s: install it or add a .txt export" % path)
         if r.returncode:
             raise ValueError("pdftotext failed on %s" % path)
         return [r.stdout]
