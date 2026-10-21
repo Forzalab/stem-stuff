@@ -1,0 +1,13 @@
+{
+ "course": "calc",
+ "min_count": 3,
+ "min_sources": 2,
+ "sources": [],
+ "ignored": [
+  {
+   "path": "problems.json",
+   "provenance": "unknown"
+  }
+ ],
+ "terms": []
+}

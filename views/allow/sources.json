@@ -1,0 +1,5 @@
+[
+ {"path": "banks/BANK_PSY6.json", "course": "psy", "provenance": "unknown"},
+ {"path": "banks/BANK_PSY7.json", "course": "psy", "provenance": "unknown"},
+ {"path": "problems.json", "course": "calc", "provenance": "unknown"}
+]
