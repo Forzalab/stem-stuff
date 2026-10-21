@@ -105,8 +105,6 @@ export function qAnswer(st, code, right, { spam = false } = {}) {
   else { s.miss += 1; s.owe = true; s.wait = GAPS[s.gapIdx]; s.gapIdx = Math.min(s.gapIdx + 1, GAPS.length - 1); }
   return true;
 }
-/* the fixed per-bank order of the questions not shown yet (nav.js list rows): salted, so a row's position gives no topic away */
-export const qRest = (st, codes) => [...codes].sort((a, b) => hash(st.salt + a) - hash(st.salt + b));
 /* what a fresh queue with this salt plays when every showing is skipped (tests pin a salt, like they pinned the old seed) */
 export function qFresh(codes, salt, topicOf = family) {
   const st = qNew(salt), out = [];

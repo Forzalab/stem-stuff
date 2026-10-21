@@ -89,7 +89,7 @@ behind a snack + real pair comes back one slot late.
 The first open of a bank under the queue (no `stem-q-<BANK>` yet) reads the marks already saved (this browser's records, else
 the server's): a right first try rests far back; any miss (wrong tries, or out) owes a Redeem. The first comes back after a
 warm-up of 3 fresh questions, the next ones one every 4 slots (slots 4, 8, 12…), never back to back (Fable fix 3). Nothing is wiped. The old `stem-order` seed is no longer read for the question order (MC choices still use
-their own seed). The question list remains as a jump index in one fixed salted per-bank order (it never moves under you),
+their own seed). The question list remains as a jump index in file order (Tony, Oct 20; was one fixed salted order) (it never moves under you),
 snacks above their real.
 
 ## Trace: 30 answers, seeded
