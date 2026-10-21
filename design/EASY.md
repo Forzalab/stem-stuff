@@ -46,8 +46,10 @@ formula card, a "what to do" line, and a streamed AI solution after a wrong answ
 - Cluck chat (`POST /chat`): 5 follow-ups per question per browser (`CHAT_TURNS`, serve.py + app.js).
 - The hidden NOTE (design/CLUCK-NOTE.md; Tony, Oct 5: "must be json"): before Cluck speaks, on `/explain` and `/chat`, one non-streamed call
   reads the student and answers strict JSON (`NOTE_SCHEMA`: on_topic, field, concept, asked, need, assumed, real, reproduces, gap, evidence,
-  confidence). `OPENROUTER_NOTE_MODELS`, default `deepseek/deepseek-v4.1-flash` with thinking off; ZDR + `require_parameters`, temperature 0,
-  6 s, the message wrapped in an XML tag with a random suffix (`<student_3fa9c1>`; spotlighting: a tag the student cannot guess, they cannot close). Cluck's chat call gets every student turn wrapped the same way. It never reaches the browser: Cluck's context turn gets it, and sentence 2 names the
+  confidence). `OPENROUTER_NOTE_MODELS`, default `deepseek/deepseek-v4.1-flash` with thinking off; ZDR + `require_parameters`, temperature 0
+  (dropped for `anthropic/` and `openai/`: their endpoints reject it), provider order `CLUCK_NOTE_PROVIDERS` (default
+  together, baseten/fast, deepinfra/fp8, fallbacks on; NOTE bench Oct 21), 3 s (`NOTE_TIMEOUT`); `/explain` waits at most 1.5 s
+  (`NOTE_EXPLAIN_S`, wall clock), then Cluck starts without it (speed #3), the message wrapped in an XML tag with a random suffix (`<student_3fa9c1>`; spotlighting: a tag the student cannot guess, they cannot close). Cluck's chat call gets every student turn wrapped the same way. It never reaches the browser: Cluck's context turn gets it, and sentence 2 names the
   student's assumption (high: plainly; medium: "Looks like…"; low / no_signal: no claim). The server caps confidence at medium when the
   pick has no written SLIP. On `/chat` it is also the gate: `INJECT_RE` first (free), then `on_topic: false` or a 403 "Request blocked"
   from the key's OpenRouter guardrail → a canned confused-duck QUACK line (`CANNED`), no Cluck call, and the turn is spent. Any NOTE

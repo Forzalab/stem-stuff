@@ -1321,7 +1321,8 @@ OPENROUTER_MODELS = [m for m in os.environ.get("OPENROUTER_MODELS", "deepseek/de
 # Each model's own thinking setting (brain topics/cluck-chat-gate.md, bench Oct 5): a thinking model spends max_tokens before it writes
 # (glm-5.3-flash, deepseek with effort low: empty replies). gemini-3.8-flash refuses enabled:false (400), so it thinks a little and gets
 # more room. One OpenRouter `models` array can't carry per-model params, so the server tries the models itself, in order.
-REASONING = {"deepseek/": ({"enabled": False}, 1), "google/gemini": ({"effort": "low"}, 4), "openai/": ({"enabled": False}, 1)}
+REASONING = {"deepseek/": ({"enabled": False}, 1), "google/gemini": ({"effort": "low"}, 4), "openai/": ({"enabled": False}, 1),
+             "anthropic/": ({"enabled": False}, 1)}   # NOTE bench Oct 21: Haiku thinking on spent the 400 tokens, 25-40% empty JSON
 
 
 def _model_params(model, max_tokens):
@@ -1491,9 +1492,9 @@ def system_for(base, p):
 
 def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
     """yields text chunks (Claude: the editor's rewrite in one piece; OpenRouter: streamed), markdown stripped. Raises OSError on a dead
-    connection. The NOTE call goes first."""
+    connection. The NOTE call goes first, capped at NOTE_EXPLAIN_S (a pick has no gate to wait for)."""
     out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
-    n = note(p, answer, None, key, scratch=scratch, out=out)
+    n = note_within(NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
@@ -2420,6 +2421,10 @@ def wrap(text, tag):
 
 
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
+NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
+# NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
+NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
+NO_TEMP = ("anthropic/", "openai/")          # no endpoint takes temperature with require_parameters: OpenRouter 404s every call
 
 
 def cached_note(p, answer):
@@ -2446,7 +2451,8 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
     if text is not None:
         user += "\n\nMESSAGE:\n" + wrap(text, tag)
     for m in OPENROUTER_NOTE_MODELS:
-        payload = dict(_model_params(m, 400), temperature=0, provider={"zdr": True, "data_collection": "deny", "require_parameters": True},
+        payload = dict(_model_params(m, 400), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
+                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "note", "strict": True, "schema": NOTE_SCHEMA}},
                        messages=[{"role": "system", "content": CLUCK_NOTE}, {"role": "user", "content": user}])
         try:
@@ -2471,6 +2477,22 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
             n["confidence"] = "medium"
         log(f"note {p['code']}: gap={n['gap']} field={n['field']} confidence={n['confidence']}")   # counts per question, no free text
         return n
+    return None
+
+
+def note_within(budget, *a, **k):
+    """note() with a wall-clock cap: None past `budget` s (fail open); the late call ends in its own thread, unread"""
+    box, ctx = [], dict(vars(_trace))                        # the request's trace (id, rid, phases list) follows the call
+
+    def run():
+        vars(_trace).update(ctx)
+        box.append(note(*a, **k))
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(budget)
+    if box:
+        return box[0]
+    log(f"note {a[0]['code']}: over {budget} s, Cluck goes without")
     return None
 
 
