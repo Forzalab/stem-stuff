@@ -1,0 +1,124 @@
+{
+ "course": "calc",
+ "min_ai": 3,
+ "max_human": 1,
+ "ai_sources": [
+  "problems.json"
+ ],
+ "human_sources": [
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/1.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/2.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Ch_9_Review_unpacked/3.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/1.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/2.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/3.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/4.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/5.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/6.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/7.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/8.txt",
+  "/home/claude/brain/projects/calc/_files/knowledge/Math_5B_Final_Review_SU261321_unpacked/9.txt"
+ ],
+ "terms": [
+  {
+   "term": "arrange",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "circuit's",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "circuit's equivalent",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "dial",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "dials",
+   "ai": 8,
+   "human": 0
+  },
+  {
+   "term": "digit",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "digits",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "flips",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "fuzzy",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "modus",
+   "ai": 6,
+   "human": 0
+  },
+  {
+   "term": "modus ponens",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "modus tollens",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "nand",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "pixels",
+   "ai": 5,
+   "human": 0
+  },
+  {
+   "term": "ponens",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "simplify",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "tollens",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "toppings",
+   "ai": 3,
+   "human": 0
+  },
+  {
+   "term": "trillion",
+   "ai": 4,
+   "human": 0
+  },
+  {
+   "term": "xor",
+   "ai": 3,
+   "human": 0
+  }
+ ]
+}
