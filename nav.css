@@ -99,8 +99,10 @@ html.ql-open .top { z-index: 47; }
 .top::after { content: ""; position: absolute; z-index: 10; inset: 0; border-image: linear-gradient(var(--ql-dim) 0 0) fill 0 / 0 / 0 100vw; opacity: 0; pointer-events: none; transition: opacity .225s ease-out; }
 html.ql-open .top::after { opacity: 1; }
 /* the bar's live controls (list button, code box, Prev / Next, the message) sit over that dim: they work, so they never look disabled (STYLE.md: dim = disabled; Tony, Oct 21).
-   Flex / grid items, so z-index needs no position; not .code-sug, which keeps its own 31 over the list. Only the XP strip (an outside tap) stays dimmed */
-html.ql-open .top :is(#qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-sug)) { z-index: 11; }
+   Flex / grid items, so z-index needs no position. .code-box holds .code-sug (its own 31 over the list, z 30): a z-index on the box makes it the
+   suggestions' stacking context, so the box takes 31 itself, or a tap on a suggestion lands on the list (ux-flows code-suggestions). Only the XP strip (an outside tap) stays dimmed */
+html.ql-open .top :is(#qlistBtn, #qprev, #qnext, .entry-msg, .entry > :not(.code-box)) { z-index: 11; }
+html.ql-open .top .entry > .code-box { z-index: 31; }
 html:not(.ql-open) .top { z-index: auto; transition: opacity .375s ease-out, filter .45s ease-out, z-index .225s step-end; transition-behavior: allow-discrete; }
 /* pinned (phones): 35 = over the page, the fixed dock (20, inside the bar) and the list (30, inside the bar); under the FAB 40, Cluck 45 and the dim 46.
    Not while the notes panes own the screen (html.mt, html.swap: fixed layers at z 14 / 15 that cover the whole viewport, bar included): auto there, as before */
