@@ -499,7 +499,8 @@ try {
     await z.route(/youtube|ytimg|googlevideo/, r => r.abort());
     const zp = await z.newPage();
     await zp.goto(BASE + "/#CALC1_E01");
-    await zp.waitForSelector("#sash", { state: "attached", timeout: 6000 });
+    await opened(zp, "CALC1_E01");                                             // #sash is static HTML; the side-by-side layout (html.side, the shown sash) comes with the problem (app.js applyMT)
+    await zp.waitForFunction(() => document.documentElement.classList.contains("side") && !document.querySelector("#sash").hidden, null, { timeout: 6000 });
     const m = await zp.evaluate(() => {
       const sash = document.querySelector("#sash"), r = sash.getBoundingClientRect(), kids = [...sash.parentElement.children].filter(k => k !== sash && k.getBoundingClientRect().height > 0), pane = { bottom: Math.max(...kids.map(k => k.getBoundingClientRect().bottom)) };   // the panes beside it
       return { top: parseFloat(getComputedStyle(sash, "::before").top), bottom: r.bottom, paneBottom: pane.bottom, after: getComputedStyle(sash, "::after").backgroundColor,
