@@ -1,5 +1,5 @@
 // Sugar rewards in the real page (design/REWARDS-WIRING.md): the HUD row, XP + the bells on every correct, a quiet +1 on a wrong try,
-// 6 XP on try 2, a drop (slots + the WIN burst, never with #toast), state across a reload, snacks right before their real, the fading original,
+// 6 XP on try 2, a drop (flow C: a banner, no overlay, never with #toast), a level up + drop (one overlay, the reels inside, keys), state across a reload, snacks right before their real, the fading original,
 // and nothing at all in diet. Starts its own serve.py with a throwaway banks/ folder and tries.json:   node tests/rewards.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -89,7 +89,7 @@ try {
     assert.equal(await xp(page), 0);
     await page.click("#rwHud .rw-tap");                                        // HUD B: one tap = "your progress", in words
     await page.waitForSelector("#rwPop:popover-open", { timeout: 2000 });
-    assert.match(await page.textContent("#rwPop"), /Level 1.*Next level20 XP to go.*Exam questions0 solved.*Easy ones0 solved/);
+    assert.match(await page.textContent("#rwPop"), /Level 1.*Next level80 XP to go.*Exam questions0 solved.*Easy ones0 solved/);
     const pop = (await rects(page, ["#rwPop"]))[0];
     assert.ok(pop.top >= hud.bottom && pop.right <= 1280, "under the strip, on screen " + JSON.stringify(pop));
     await page.keyboard.press("Escape");
@@ -131,19 +131,20 @@ try {
     await page.waitForFunction(x => document.querySelector("#rwHud .rw-num").textContent === String(x), x0 + 7, { timeout: 4500 })
       .catch(() => { throw new Error("the held +1 counts up with the correct answer's 6"); });
     assert.equal(await page.evaluate(() => window.Rewards.state().real), 2);
-    await quiet(page);                                                          // 23 XP: the level-up burst
+    await quiet(page);
   });
 
-  await step("a common drop (held 1 s+): slots, then the WIN burst with stars, out of the 15 s cap; #toast never shows with it", async () => {
+  await step("flow C: a common drop with no level up is the banner only (no overlay, no reels); #toast never shows with it", async () => {
     await go(page, "CALC1_R03");
     await page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.lastBurst = 0; s.dry = 0; localStorage.setItem(k, JSON.stringify(s)); });
+    await page.evaluate(() => { window.__ov = 0; new MutationObserver(ms => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) window.__ov++; }).observe(document.body, { childList: true }); });
     await rig(page, [0, 0, 0, 0]);                                              // 14 XP, a drop, common, line 1
     await page.waitForTimeout(1100);
     await pick(page, "a");
-    await page.waitForSelector(".fx-slots-ov", { timeout: 6000 });
-    await page.waitForSelector(".fx-ov.fx-win .fx-stars", { timeout: 12000 });
-    assert.match(await page.textContent(".fx-ov.fx-win .fx-title"), /WIN!/);
-    assert.match(await page.textContent(".fx-ov.fx-win"), /QUACK! Brain \+1\./);
+    await page.waitForSelector(".fx-toast", { timeout: 6000 });
+    assert.match(await page.textContent(".fx-toast"), /QUACK! Brain \+1\./);
+    assert.equal(await page.evaluate(() => window.__ov), 0, "an overlay for a drop with no level up");
+    assert.equal(await page.$$eval(".fx-slots", e => e.length), 0, "reels outside a level up");
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
     assert.match(await page.textContent("#sr"), /Correct\. Plus \d+ XP\. QUACK! Brain \+1\./);
     await quiet(page);
@@ -378,6 +379,53 @@ try {
     await p3.waitForFunction(() => window.Rewards.state().xp > 0, null, { timeout: 4000 });
     assert.equal(await p3.$$eval(".fx-sp, .fx-fly, .fx-ring", e => e.length), 0);
     await rm.close();
+  });
+
+  await step("flow C: a correct with a drop AND a level up: one overlay, the reels inside it, done in <= 2.5 s; Enter under it never reaches Next; -> closes it, then -> goes Next", async () => {
+    const lc = await browser.newContext({ viewport: { width: 393, height: 852 }, serviceWorkers: "block" });
+    await lc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off");
+      for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    const lp = await lc.newPage();
+    await lp.goto(BASE + "/"); await typeCode(lp, "BANK_RW12");
+    await lp.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await go(lp, "CALC1_R02");
+    await lp.waitForSelector("#rwHud:not([hidden])");
+    await lp.evaluate(() => { const k = "stem-rw:BANK_RW12"; const s = JSON.parse(localStorage.getItem(k) || "{}"); s.xp = 70; s.cv = 2; s.lastBurst = 0; localStorage.setItem(k, JSON.stringify(s)); });
+    await lp.reload(); await opened(lp, "CALC1_R02"); await lp.waitForSelector("#rwHud:not([hidden])");
+    await lp.evaluate(() => { window.__ov = []; new MutationObserver(ms => { for (const m of ms) { for (const n of m.addedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) window.__ov.push({ cls: n.className, t0: performance.now(), reels: 0 });
+      for (const n of m.removedNodes) if (n.nodeType === 1 && n.classList?.contains("fx-ov")) { const o = window.__ov.find(x => x.cls === n.className && !x.t1); if (o) o.t1 = performance.now(); } } }).observe(document.body, { childList: true }); });
+    await lp.waitForTimeout(1100);
+    await rig(lp, [0, 0, 0, 0]);                                                // 14 XP (84: level 2), a common drop
+    const h0 = await lp.evaluate(() => location.hash);
+    await lp.click('#q .opt[data-id="a"]'); await lp.focus('#q .opt[data-id="a"]'); await lp.keyboard.press("Enter");   // Enter = Check
+    await lp.waitForSelector(".fx-ov.fx-levelup", { timeout: 8000 });
+    assert.equal(await lp.$$eval(".fx-ov.fx-levelup .fx-slots", e => e.length), 1, "the reels are not inside the level-up overlay");
+    assert.equal(await lp.$$eval(".fx-ov", e => e.length), 1);
+    await lp.waitForSelector("#q .nx", { state: "attached" });
+    await lp.evaluate(() => document.querySelector("#q .nx").focus());
+    for (let i = 0; i < 3; i++) await lp.keyboard.press("Enter");
+    await lp.waitForTimeout(300);
+    assert.equal(await lp.evaluate(() => location.hash), h0, "Enter under the overlay reached Next");
+    await lp.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 6000 });
+    const ov = await lp.evaluate(() => window.__ov);
+    assert.equal(ov.length, 1, "more than one overlay on one answer: " + JSON.stringify(ov));
+    assert.ok(ov[0].t1 - ov[0].t0 <= 2500, `the level-up beat took ${Math.round(ov[0].t1 - ov[0].t0)} ms`);
+    assert.equal(await lp.$$eval(".fx-toast", e => e.length), 0, "a banner after the level-up overlay (two beats)");
+    await lp.focus("#q .nx"); await lp.keyboard.press("Enter"); await lp.waitForTimeout(400);
+    assert.equal(await lp.evaluate(() => location.hash), h0, "Enter pressed Next");
+    /* a fresh overlay (a level-up burst by hand): the first -> only closes it, the next -> goes Next */
+    await lp.evaluate(() => { window.FX.burst("levelup", { title: "LEVEL UP", sub: "LEVEL 3", drop: "rare" }); });
+    await lp.waitForSelector(".fx-ov.fx-levelup");
+    await lp.evaluate(() => document.body.focus());
+    await lp.keyboard.press("ArrowRight");
+    await lp.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 3000 });
+    assert.equal(await lp.evaluate(() => location.hash), h0, "the -> that closed the overlay also went Next");
+    await lp.keyboard.press("ArrowRight");
+    await lp.waitForFunction(h => location.hash !== h, h0, { timeout: 4000 });
+    const h1 = await lp.evaluate(() => location.hash);
+    await lp.keyboard.press("ArrowLeft");
+    await lp.waitForFunction(h => location.hash !== h, h1, { timeout: 4000 });
+    await lc.close();
   });
 
   await step("reduced motion: the players still show, muted and playing, and the link hides / shows them (Tony, Oct 6: it was a dead click)", async () => {

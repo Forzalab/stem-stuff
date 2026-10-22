@@ -44,11 +44,32 @@ test("XP: real 14-18, True/False row 8-10, snack 6, peeked 2; second try 6 (snac
   assert.deepEqual([R.state().real, R.state().snacks], [1, 1]);
 });
 
-test("levels: 20, 50 XP (each level costs 10 more)", () => {
+test("levels (flow C, Oct 21): L2 = 80, L3 = 208, then each level costs 10 more (346, 494)", () => {
   script = [0, 0.99]; ok("A");                                         // 14 XP, no drop
-  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [14, 1, 20]);
-  script = [0, 0.99]; const r = ok("B");
-  assert.equal(r.levelUp, true); assert.equal(r.burst, "levelup"); assert.equal(R.state().level, 2); assert.equal(R.state().next, 50);
+  assert.deepEqual([R.state().xp, R.state().level, R.state().next], [14, 1, 80]);
+  for (const c of ["B", "C", "D", "E"]) { script = [0]; ok(c, { dwellMs: 0 }); }   // 70 XP (under 1 s: no roll, so no pity drop)
+  assert.equal(R.state().level, 1);
+  script = [0]; const r = ok("F", { dwellMs: 0 });
+  assert.equal(r.levelUp, true); assert.equal(r.burst, "levelup"); assert.equal(R.state().level, 2); assert.equal(R.state().next, 208);
+  fresh(); mem.set("stem-rw:T" + (n - 1), JSON.stringify({ xp: 346, cv: 2 })); R.use("T" + (n - 1));
+  assert.deepEqual([R.state().level, R.state().floor, R.state().next], [4, 346, 494]);
+});
+
+test("level 2 needs at least 5 first-try corrects (no drops), even at the top XP 18", () => {
+  for (let i = 0; i < 4; i++) { script = [0.999]; const r = ok("M" + i, { dwellMs: 0 }); assert.equal(r.xp, 18); assert.equal(r.levelUp, false); }
+  assert.equal(R.state().level, 1, "4 first-try corrects reached level 2");
+  script = [0.999]; assert.equal(ok("M4", { dwellMs: 0 }).levelUp, true);
+});
+
+test("a save from the old curve keeps its level (never goes down), and levels on from the new curve", () => {
+  mem.set("stem-rw:OLD", JSON.stringify({ xp: 60, streak: 2 }));       // old curve: level 3 (20, 50, 90)
+  R.use("OLD");
+  assert.deepEqual([R.state().level, R.state().xp, R.state().next], [3, 60, 346]);
+  script = [0, 0.99]; const r = ok("A");
+  assert.equal(r.levelUp, false); assert.equal(R.state().level, 3);
+  assert.equal(JSON.parse(mem.get("stem-rw:OLD")).keep, 3, "the kept level is saved");
+  mem.set("stem-rw:OLD2", JSON.stringify({ xp: 10 })); R.use("OLD2");
+  assert.equal(R.state().level, 1);
 });
 
 test("drop roll on every correct: p by kind, any try, the 1 s dwell, pity after 2 dry, rarity bands", () => {
@@ -75,8 +96,8 @@ test("a wrong try: +1 for trying, no roll, no toast, no burst; the streak waits"
   assert.equal(R.state().streak, 4);
   R.answer({ code: "E", correct: false, firstTry: false });
   assert.equal(R.state().streak, 4, "a second wrong try on E does not touch it");
-  fresh(); script = [0]; ok("F", { dwellMs: 0 });                       // 14 XP
-  for (let i = 0; i < 5; i++) no("G" + i);                              // 19 XP
+  fresh(); for (const c of ["F", "F2", "F3", "F4", "F5"]) { script = [0]; ok(c, { dwellMs: 0 }); }   // 70 XP
+  for (let i = 0; i < 9; i++) no("G" + i);                              // 79 XP
   const q = no("H");
   assert.deepEqual([q.levelUp, q.burst], [true, null], "a level reached by a +1 stays quiet");
 });

@@ -22,11 +22,17 @@
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
   var img = function (n) { return '<img src="' + icon(n) + '" alt="" draggable="false">'; };
-  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {} }; }
+  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {}, cv: 2, keep: 1 }; }
   function ls() { try { return g.localStorage || null; } catch (e) { return null; } }
   function load() {
     var d = fresh();
-    try { var j = JSON.parse(ls().getItem(PRE + key)); if (j) for (var k in d) if (j[k] != null) d[k] = j[k]; } catch (e) { /* blocked or empty */ }
+    try {
+      var j = JSON.parse(ls().getItem(PRE + key));
+      if (j) {
+        for (var k in d) if (j[k] != null) d[k] = j[k];
+        if (j.cv !== 2) { d.cv = 2; d.keep = Math.max(1, oldLevelOf(d.xp)); }   // a save from the old curve keeps the level it showed (never goes down)
+      }
+    } catch (e) { /* blocked or empty */ }
     return d;
   }
   function save() { try { ls().setItem(PRE + key, JSON.stringify(s)); } catch (e) { /* blocked: this page only */ } }
@@ -37,16 +43,20 @@
   function on() { return key !== null; }
 
   var ri = function (a, b) { return a + Math.floor(Math.random() * (b - a + 1)); };
-  // cumulative XP to reach level L: per-level cost 20, 30, 40 ...
-  function floorOf(L) { return 20 * (L - 1) + 5 * (L - 1) * (L - 2); }
-  function levelOf(xp) { var L = 1; while (floorOf(L + 1) <= xp) L++; return L; }
+  /* cumulative XP to reach level L (flow C, Tony Oct 21): L2 = 80 (~5 first-try corrects at 14-18), L3 = 208 (~8 more), then each level
+     costs 10 more than the one before: 138, 148, ... (L4 = 346, L5 = 494). cv 2 = this curve. A save from the old curve (20, 30, 40 ...)
+     keeps the level it had (s.keep, set once in load()): the shown level is max(curve, keep), so no one's level ever drops. */
+  function floorOf(L) { return L <= 1 ? 0 : L === 2 ? 80 : 208 + 138 * (L - 3) + 5 * (L - 3) * (L - 4); }
+  function curveLevel(xp) { var L = 1; while (floorOf(L + 1) <= xp) L++; return L; }
+  function oldLevelOf(xp) { var L = 1; while (20 * L + 5 * L * (L - 1) <= xp) L++; return L; }   // the pre-Oct-21 curve, migration only
+  function levelOf(xp) { return Math.max(curveLevel(xp), (s && s.keep) || 1); }
   function rate() { return s.hist.length ? s.hist.reduce(function (a, b) { return a + b; }, 0) / s.hist.length : null; }
   function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i]; }
   var reduced = function () { try { return !!(g.matchMedia && g.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } };
 
   function state() {
     if (!s) return null;
-    var L = levelOf(s.xp), f = floorOf(L), n = floorOf(L + 1);
+    var L = levelOf(s.xp), f = Math.min(floorOf(L), s.xp), n = floorOf(L + 1);   // a kept level (old save) fills its bar from today's XP
     return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate() };
   }
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
