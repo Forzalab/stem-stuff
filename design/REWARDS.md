@@ -2,16 +2,22 @@
 
 Mock: `design/rewards/index.html` (open it in a browser; no server). Spec: brain `projects/calc/topics/sugar-rewards.md` (main).
 Files: `engine.js` + `hud.css` (XP, levels, drop roll, streak, pity, snack runs, HUD), `fx.js` + `fx.css` (pop, sparks, coin fly,
-toast, 3-reel slots, LEVEL UP / BONUS / legend bursts). State: localStorage `stem-rw`. Sugar only when it reaches the app.
+toast, 3-reel slots, LEVEL UP / BONUS / legend bursts; the app now runs flow C below: one LEVEL UP overlay with the reels inside, drops as banners). State: localStorage `stem-rw`. Sugar only when it reaches the app.
 
 ## Dead easy (Tony, Oct 4; newest, beats the numbers below and in REWARDS-WIRING.md)
 [stated] "make the points and animation and bells VERY EASY TO OBTAIN. like dead easy. participation trophy." "bells, as in whistles and bells".
 - XP: real first try 14–18, True/False row 8–10, snack 6, peeked 2; second-try correct 6 (snack 3); a wrong try +1 "for trying".
-- Levels cost 20, 30, 40 … XP. Drop roll on every correct held 1 s+ (no roll after a peek): p 0.6 real / 0.5 T/F / 0.45 snack,
+- Levels (flow C, Tony Oct 21): level 2 at 80 XP (~5 first-try corrects), level 3 at 208 (~8 more), then each level costs 10 more
+  than the one before (L4 346, L5 494 …; `rewards/engine.js` floorOf). A save from the old 20, 30, 40 … curve keeps the level it
+  showed (`keep`, set once on load; shown level = max(curve, keep)), so no level ever drops. Drop roll on every correct held 1 s+ (no roll after a peek): p 0.6 real / 0.5 T/F / 0.45 snack,
   pity after 2 dry, rarity 70 / 25 / 5. Burst cap 15 s. The streak never halves: a wrong try pauses it, any correct adds one.
 - Bells (visual, no sound, sugar only, none under reduced motion): every correct = pop + sparks + confetti + "+N XP" float + coins
-  to the HUD + one shine across the coin pill. A common drop = slots, then the WIN burst with 3 stars (red-gold rays); rare / legend /
-  level up as before. Inside the 15 s cap a drop becomes the banner.
+  to the HUD + one shine across the coin pill.
+- Bursts flow C (Tony, Oct 21; newest): only LEVEL UP goes full screen, and the slot reels spin INSIDE the level-up overlay when the
+  same answer dropped; they never get an overlay of their own. A drop with no level up = the banner only (WIN / BONUS; LEGEND = the
+  gold banner + a small confetti puff). Several rewards on one answer merge into one beat, at most one overlay per answer: a normal
+  correct ≈ pop + sparks + bar fill + banner (~1.5–2 s); with a level up, one overlay with the reels inside (~2.2 s). Reduced motion
+  = one fade; tap / Escape / → skip it (the first → only closes it); Enter never presses Next (under the overlay or after).
 - Hard lines kept: no money, no fake near miss. A wrong try's +1 is a small cream "+1" by the coin, no sparks, no words, and a level
   reached by it bursts nothing, so a right answer still feels much bigger (a loss dressed up as a win stays off the table).
 

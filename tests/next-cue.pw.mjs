@@ -222,7 +222,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
     await page.ctx.close();
     if (type === "num" && outcome === "right" && got) {
       const kp = await pageFor(browser, O, code);
-      await step(`${T}: the Enter that sent Check, held (e.repeat), stays on this question; a fresh Enter on Next goes on`, async () => {
+      await step(`${T}: the Enter that sent Check, held (e.repeat), stays on this question; a fresh Enter on Next stays too (Oct 21 keys: Enter never presses Next); -> goes on`, async () => {
         await kp.fill("#ans", RIGHT); await kp.focus("#ans");
         const h0 = await kp.evaluate(() => location.hash);
         await kp.keyboard.down("Enter");                                          // sends Check
@@ -232,7 +232,10 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
         await kp.waitForTimeout(500);
         assert.equal(await kp.evaluate(() => location.hash), h0, "a held Enter skipped the question");
         await kp.keyboard.up("Enter");
-        await kp.keyboard.press("Enter");
+        await kp.keyboard.press("Enter"); await kp.waitForTimeout(500);
+        assert.equal(await kp.evaluate(() => location.hash), h0, "a fresh Enter on Next went on (Enter is Check / chat only)");
+        await kp.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 6000 }).catch(() => {});
+        await kp.keyboard.press("ArrowRight");
         await kp.waitForFunction(h => location.hash !== h, h0, { timeout: 4000 });
       });
       await kp.ctx.close();
