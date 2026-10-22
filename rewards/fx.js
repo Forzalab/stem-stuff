@@ -212,11 +212,14 @@
     };
     t.addEventListener('click', hide);
     tTimer = setTimeout(hide, 2200);
-    if (tier === 'legend' && !still()) {                                     // small confetti: the FX layer's canvas, from the banner
-      if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());
-      const m = mid(t);
-      if (layerConfetti) layerConfetti({ particleCount: 28, spread: 70, startVelocity: 22, ticks: 90, scalar: .8, colors: ['#ffcd94', '#ff9a3e', '#ff8204'],
-        shapes: ['star', 'circle'], origin: { x: m.x / innerWidth, y: m.y / innerHeight } });
+    if (tier === 'legend' && !still()) {                                     // small confetti from the banner, on the banner's own host (one group)
+      const f = confettiIn(tHost), m = mid(t);
+      if (f) {
+        f.canvas.classList.add('fx-toast-conf');
+        Promise.race([f({ particleCount: 28, spread: 70, startVelocity: 22, ticks: 90, scalar: .8, colors: ['#ffcd94', '#ff9a3e', '#ff8204'],
+          shapes: ['star', 'circle'], origin: { x: m.x / innerWidth, y: m.y / innerHeight } }), new Promise(r => setTimeout(r, 1600))])
+          .then(() => { if (f.reset) f.reset(); f.canvas.remove(); });
+      }
     }
     return t.getAnimations()[0] && t.getAnimations()[0].finished.catch(() => {});   // the queue moves on once it has landed
   }
