@@ -53,6 +53,9 @@
                 },
                 {
                   "$ref": "#/$defs/Graph"
+                },
+                {
+                  "$ref": "#/$defs/Geometry"
                 }
               ]
             },
@@ -360,6 +363,9 @@
                 },
                 {
                   "$ref": "#/$defs/Graph"
+                },
+                {
+                  "$ref": "#/$defs/Geometry"
                 }
               ]
             },
@@ -434,6 +440,32 @@
           "nodes",
           "edges"
         ]
+      },
+      "Geometry": {
+        "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer",
+        "type": "object",
+        "properties": {
+          "pts": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "marks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "maxItems": 12
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "pts",
+          "marks"
+        ]
       }
     }
   },
@@ -491,6 +523,9 @@
                 },
                 {
                   "$ref": "#/$defs/Graph"
+                },
+                {
+                  "$ref": "#/$defs/Geometry"
                 }
               ]
             },
@@ -848,6 +883,9 @@
                 },
                 {
                   "$ref": "#/$defs/Graph"
+                },
+                {
+                  "$ref": "#/$defs/Geometry"
                 }
               ]
             },
@@ -938,6 +976,37 @@
           "edges"
         ]
       }
+    },
+    "Geometry": {
+      "signature": "Geometry(pts: string, marks: string[], alt?: string)",
+      "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer",
+      "layer": "L1",
+      "kind": "layout",
+      "props": {
+        "type": "object",
+        "properties": {
+          "pts": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "marks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "maxItems": 12
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "pts",
+          "marks"
+        ]
+      }
     }
   },
   "componentGroups": [
@@ -967,7 +1036,8 @@
         "Predict",
         "Reveal",
         "Answer",
-        "Doodle"
+        "Doodle",
+        "Geometry"
       ]
     },
     {
