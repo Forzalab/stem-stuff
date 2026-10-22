@@ -1359,8 +1359,25 @@ function cueNext() {
   if (!painting) nx.focus({ preventScroll: true });
   if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
 }
-/* the held Enter that sent Check auto-repeats onto Next once it has focus: a repeat never presses Next (not a shortcut: it only drops repeats) */
-addEventListener("keydown", e => { if (e.repeat && (e.key === "Enter" || e.key === " ") && e.target.matches?.("#q .nx")) e.preventDefault(); }, true);
+/* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
+   after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
+addEventListener("keydown", e => {
+  if (!e.target.matches?.("#q .nx, #qnext")) return;
+  if (e.key === "Enter" || (e.repeat && e.key === " ")) e.preventDefault();
+}, true);
+/* → = Next, ← = Prev (the bar's own buttons: nav.js's queue), only when focus is not in a choice list (there the arrows move the pick,
+   and that handler takes the key first), a text box or the splitter. An overlay up: the first → only closes it (rewards/fx.js takes the
+   key on capture, same as Escape); while it fades out the arrows still do nothing. */
+const ARROW_OWN = "input, textarea, select, [contenteditable]:not([contenteditable=false]), .choices, [role=radiogroup], [role=listbox], [role=separator], #qlist";
+addEventListener("keydown", e => {
+  if ((e.key !== "ArrowRight" && e.key !== "ArrowLeft") || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (document.querySelector(".fx-ov")) { e.preventDefault(); return; }
+  if (!e.target.matches?.("#q .nx") && e.target.closest?.(ARROW_OWN)) return;   // Next in the Check slot sits inside the choice row
+  const nav = $("#qnav"), b = $(e.key === "ArrowRight" ? "#qnext" : "#qprev");
+  if (!nav || nav.hidden || !b || b.disabled || b.hidden) return;
+  e.preventDefault();
+  b.click();
+});
 /* ---------- T19 SUGAR REVEAL (Tony, Oct 12): out of tries in sugar shows the right answer ----------
    The server sends `correct` only with the lockout and only in sugar (serve.py answer_of; a reload gets it from /state).
    mc: the right row turns green with a check (class right + reveal), the picked wrong rows stay struck with their x.
@@ -2242,7 +2259,7 @@ function rewardTick(res, mine) {
 }
 const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
 async function rewardShow(mine, res) {
-  const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
+  const fx = FXL();
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
   fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
   fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
@@ -2253,18 +2270,18 @@ async function rewardShow(mine, res) {
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
-  await wait(600);
-  if (res.drop && fx.slots) await fx.slots(res.drop);
-  if (res.burst && fx.burst) {
-    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
-      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS!", sub: res.sub || res.line };
-    await fx.burst(res.burst, opt);
+  if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
+  /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
+     it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
+  if (res.burst === "levelup" && fx.burst) {                                 // engine.js: a level up from a +1 or a dead-easy one stays quiet
+    await fx.burst("levelup", { title: "LEVEL UP", sub: `LEVEL ${res.level}`, drop: res.drop || null });
+    if (mine.rwBack) comeback();
+    return;
   }
-  const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
+  const line = res.drop ? res.line : res.streakNote;
   if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
   else if (line === res.streakNote && res.streak === 3 && rwTip("three", $("#rwHud .rw-star"))) { /* T37: the onboarding line says "3 cracked" itself */ }
-  else if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+  else if (line && fx.toast) { hideToast(); fx.toast(line, res.drop ? res.sub || res.streakNote : null, res.drop || null); }
   else if (!mine.prob.dead) rwTip("right", $("#rwCoin"));
 }
 /* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first
