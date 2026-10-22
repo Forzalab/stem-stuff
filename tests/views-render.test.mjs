@@ -236,3 +236,36 @@ test("slots: caps apply to the filled text; only a whole-string ref with a valid
   assert.equal(one(k, "vw-sub").textContent, "$t.Bad");
   assert.deepEqual(byClass(k, "vw-tslot"), []);
 });
+
+// Geometry (H): named points, every mark kind drawn as SVG; caps drop the statement
+const GEO = 'root = View([g])\ng = Geometry("A 0,0; B 3,0; C 3,4; O 1.5,2", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "dim(A,B,3 m)", "angle(A,B,C,$\\\\theta$)", "arrow(A,C,$F$)", "circle(O,0.5)", "label(C,$t.top)"], "A right triangle with legs 3 and 4.")';
+const hasCls = (n, c) => (n.getAttribute?.("class") || "").split(" ").includes(c);
+test("Geometry: every mark kind is an SVG element in one 1:1 figure", () => {
+  const m = mount();
+  const v = render(GEO, m, { t: { top: "top" } });
+  assert.deepEqual(v.errors, []);
+  const svg = all(m, n => n.tagName === "SVG");
+  assert.equal(svg.length, 1);
+  const cls = c => all(m, n => hasCls(n, c));
+  assert.equal(cls("gm-seg").length, 3);
+  for (const k of ["gm-right", "gm-dim", "gm-angle", "gm-arrow", "gm-circle"]) assert.equal(cls(k).length, 1, k);
+  assert.equal(cls("gm-pt").length, 4);
+  const texts = cls("gm-t").map(n => n.textContent);
+  for (const s of ["3 m", "θ", "F", "top", "A", "B", "C", "O"]) assert.ok(texts.includes(s), s);
+  assert.equal(one(m, "vw-geo").getAttribute("aria-label"), "A right triangle with legs 3 and 4.");
+  const [, , w, hh] = svg[0].getAttribute("viewBox").split(" ").map(Number);
+  assert.ok(Math.abs((w - 68) / (hh - 68) - 3 / 4) < 1e-6, "1:1 scale: the drawing keeps the 3 by 4 box");
+});
+
+test("Geometry: over a cap (13 marks, 7 labels) or a mark on an unknown point drops the statement", () => {
+  const many = Array.from({ length: 13 }, () => '"seg(A,B)"').join(", ");
+  const labs = Array.from({ length: 7 }, (_, i) => `"label(A,L${i})"`).join(", ");
+  for (const [src, code] of [[`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${labs}])`, "too-long"],
+    [`root = View([g])\ng = Geometry("A 0,0; B 1,0", [${many}])`, "too-long"],
+    [`root = View([g])\ng = Geometry("A 0,0; B 1,0", ["seg(A,Z)"])`, "bad-value"]]) {
+    const m = mount();
+    const v = render(src, m);
+    assert.ok(v.errors.some(e => e.code === code), src);
+    assert.equal(all(m, n => hasCls(n, "gm-pt")).length, 0, src);
+  }
+});

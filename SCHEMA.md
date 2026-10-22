@@ -322,6 +322,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | MatchQuiz | L1 | interaction | planned | `MatchQuiz(pairs: string≤80[]≤2[]≤6)` | text.term_cards |
 | ITable | L1 | domain | planned | `ITable(kind: "kmap" | "truth" | "matrix" | "dp", spec: any)` | logic.truth_table |
 | Graph | L2 | domain | P1.1 | `Graph(nodes: string≤600, edges: string≤600, cols?: string≤200, marks?: string≤400)` | graph.trace |
+| Geometry | L1 | layout | P1.1 | `Geometry(pts: string≤240, marks: string≤80[]≤12, alt?: string≤160)` |  |
 | FlowNet | L2 | domain | planned | `FlowNet(flow: any)` | graph.maxflow |
 | Plot | L2 | domain | planned | `Plot(data: any)` | numeric.sample |
 | Riemann | L2 | domain | planned | `Riemann(data: any)` | numeric.riemann |
