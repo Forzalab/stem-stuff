@@ -2041,13 +2041,13 @@ function clAsk(build) {
   if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>That's ${CHAT_TURNS} questions on this one. On to the next!</p></div>`; return; }
   if (build || !ft.querySelector(".ask")) {
     ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
-    const f = ft.querySelector(".ask"), ta = f.querySelector("textarea");
-    f.addEventListener("submit", e => { e.preventDefault(); const m = ta.value.trim(); if (m) { ta.value = ""; askFit(ta); clSend(m); } });
-    ta.addEventListener("keydown", e => {                                  // Enter sends (as the old one-line field did); Shift+Enter is a new line; never mid-IME
+    const f = ft.querySelector(".ask"), inp = f.querySelector("textarea");   // inp: the typed fields' Enter (STYLE.md §5 list), no new shortcut
+    f.addEventListener("submit", e => { e.preventDefault(); const m = inp.value.trim(); if (m) { inp.value = ""; askFit(inp); clSend(m); } });
+    inp.addEventListener("keydown", e => {                                  // Enter sends (as the old one-line field did); Shift+Enter is a new line; never mid-IME
       if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
       e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
     });
-    ta.addEventListener("input", () => askFit(ta));
+    inp.addEventListener("input", () => askFit(inp));
   }
   const ready = wishTyped(w) && !w.busy;
   ft.querySelector(".left").textContent = `${left} left`;
