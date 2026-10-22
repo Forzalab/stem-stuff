@@ -20,7 +20,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "a1cd78cca039f8bc7b447860fedb99a5c2188b6bc507009d360a83b5311ea417"
+SHA = "0e58780ca5bf27cbeac8020c68eedf6efd93aaa3235d500f54284d7a9c080d3e"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -138,6 +138,55 @@ class Reveal(unittest.TestCase):
             st["wrong"] = ["a", "c"]
         self.assertTrue(serve.tries_out(self.p, "sidT"))
         self.assertEqual(serve.cluck_begin(self.p, "sidT", "a"), (1, True))
+
+    def solve(self, sid):
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry((sid, self.p["code"]))["done"] = True
+
+    def test_correct_pick_reveals_on_turn_1(self):                     # C (Tony, Oct 21): a solved item is REVEAL yes from the first turn
+        self.solve("sidC")
+        self.assertTrue(serve.tries_out(self.p, "sidC"))
+        self.assertTrue(serve.item_solved(self.p, "sidC"))
+        self.assertEqual(serve.cluck_begin(self.p, "sidC", "b"), (1, True))
+        row = serve._cluck_turns[("sidC", "BANK_X_1")][0]
+        self.assertEqual(row, [1, 2, "", "b"])                         # reveal kept as 2: the replay knows the turn carried RESULT: correct
+        self.assertTrue(serve.row_solved(row))
+        self.assertFalse(serve.row_solved([1, 1, "", "a"]))            # out of tries (or 3rd turn): REVEAL yes, not solved
+        self.assertFalse(serve.row_solved(None))
+        self.assertFalse(serve.item_solved(self.p, "sidD"))            # untried: neither
+        self.assertEqual(serve.cluck_begin(self.p, "sidD", "a"), (1, False))
+
+    def test_no_nudge_on_a_solved_item(self):
+        self.solve("sidN")
+        reveal = serve.cluck_begin(self.p, "sidN", "b")[1]
+        reply = "Quack! My path:\n$$P = 52.0 / 4.0 = 13.0$$\nThe answer is **b**, 13.0 W.\nHow did you get there? Pick b. (•̀ᴗ•́)و\n"
+        self.assertIsNotNone(serve.leak_kind(reply, serve.leak_facts(self.p)))   # it names the letter and the number
+        out = "".join(serve.v4_visible([reply], reveal, serve.leak_facts(self.p)))
+        self.assertEqual(out, reply)                                   # LeakGuard off: the full worked path goes out
+        self.assertNotIn(serve.CLUCK_NUDGE, out)
+        self.assertNotIn("not yet", out)
+
+    def test_layout_carries_result_correct(self):
+        st, dyn = serve.v4_user(P1, "b", serve.WISH_QUERY, True, "", True)
+        self.assertEqual(st, serve.explain_prompt(P1, "b") + "\n\nRESULT: correct")
+        self.assertTrue(dyn.endswith("REVEAL: yes\n\nUSER QUERY: hi cluck <3"))
+        self.assertNotIn("RESULT", "".join(serve.v4_user(P1, "a", serve.WISH_QUERY, True)))   # not solved: no RESULT line
+        self.assertNotIn("RESULT", serve.explain_prompt(P1, "b"))                            # the old path's prompt is unchanged
+        hist = [{"role": "assistant", "content": "Quack! my path."}, {"role": "user", "content": "i did 52/4"}]
+        turns = serve.v4_chat_turns(P1, "b", hist, [[1, 2, "", "b"], [2, 2, "", "b"]])       # the replay keeps it on every turn
+        self.assertTrue(turns[0]["content"][0].endswith("\n\nRESULT: correct"))
+        self.assertTrue(turns[2]["content"][0].endswith("\n\nRESULT: correct"))
+        self.assertIn("REVEAL: yes", turns[2]["content"][1])
+
+    def test_no_restate_rule_in_the_layout(self):                      # F (Tony, Oct 21): the problem text is not read back
+        self.assertIn("- RESULT: correct → REVEAL: yes; show your path, then ask for theirs.\n", serve.PROMPT_V4)
+        self.assertIn("- As the user and you are using the same lamp, assume the user already knows the problem data. Do not repeat whatever "
+                      "the problem already states in its text, which is the text in the QUESTION block.\n", serve.PROMPT_V4)
+        st, _ = serve.v4_user(P1, "a", "hi", False)
+        self.assertTrue(st.startswith("QUESTION:\nA motor does 52.0 J of work in 4.0 s. Power?\n\n"))   # the block the rule points at
+        self.assertIn("hyped up labrador", serve.PROMPT_V4)            # the lore memory rides in the letter
+        self.assertIn("I miss you for that.", serve.PROMPT_V4)
 
 
 class XyzStrip(unittest.TestCase):
@@ -419,7 +468,7 @@ class Handlers(unittest.TestCase):
         return Resp(sse_claude([self.reply]))
 
     def go(self, fn, **body):
-        status, _, chunks = fn("sid=" + "d" * 32, json.dumps(dict(code="H_1", answer="a", **body)).encode())
+        status, _, chunks = fn("sid=" + "d" * 32, json.dumps({"code": "H_1", "answer": "a", **body}).encode())
         self.assertEqual(status, 200)
         return b"".join(chunks).decode()
 
@@ -443,6 +492,25 @@ class Handlers(unittest.TestCase):
         self.assertEqual(c3[2], c2[2])
         self.assertIn("REVEAL: no", c3[2]["content"][1]["text"])
         self.assertNotIn("secret", json.dumps(c3))                                          # the model's notes are not replayed either
+
+    def test_solved_wish_then_chat(self):                              # C: a correct pick -> REVEAL yes + RESULT: correct, no nudge, replayed
+        with serve._tries_lock:
+            serve._load_tries()
+            serve._entry(("d" * 32, "H_1"))["done"] = True
+        self.reply = "Quack! My path:\n$$P = 52.0 / 4.0 = 13.0$$\nSo **b**, 13.0 W.\nHow did you get it? (•̀ᴗ•́)و\n"
+        out = self.go(serve.explain, answer="b")
+        self.assertEqual(out, self.reply)                                                   # the full path, letter + number, no nudge
+        self.assertNotIn(serve.CLUCK_NUDGE, out)
+        w = self.bodies[-1]["messages"][0]["content"]
+        self.assertTrue(w[0]["text"].endswith("\n\nRESULT: correct"))
+        self.assertIn("REVEAL: yes\n\nUSER QUERY: hi cluck <3", w[1]["text"])
+        hist = [{"role": "assistant", "content": out}, {"role": "user", "content": "i divided too"}]
+        self.assertNotIn(serve.CLUCK_NUDGE, self.go(serve.chat, answer="b", history=hist))  # the reply goes in the normal chat box
+        c2 = self.bodies[-1]["messages"]
+        self.assertEqual(c2[0], self.bodies[0]["messages"][0] | {"content": c2[0]["content"]})
+        self.assertEqual(c2[0]["content"][0]["text"], w[0]["text"])                          # the wish turn replays byte for byte
+        self.assertTrue(c2[-1]["content"][0]["text"].endswith("\n\nRESULT: correct"))
+        self.assertIn("REVEAL: yes\n\nUSER QUERY: i divided too", c2[-1]["content"][1]["text"])
 
     def test_off_without_claude_key_or_deepseek_arm(self):
         with mock.patch.dict(os.environ, {"CLUCK_ARM": "split"}):
