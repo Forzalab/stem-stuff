@@ -2123,7 +2123,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
     ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
            "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
     try:
-        gate = livefig.Fence(fig)
+        gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one(system + [{"type": "text", "text": livefig.rule(fig)}],
                                                          [{"role": "user", "content": ask}], FIG_REASK_TOKENS)) + gate.end()
     except Exception as e:  # noqa: BLE001
