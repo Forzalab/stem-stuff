@@ -175,9 +175,12 @@ html.start .rw-hud { display: none; }
 .fx-toast-b { min-width: 0; }
 .fx-toast-t { font: 600 var(--t-lg, 1.25rem)/1.15 var(--rw-font); }
 .fx-toast-s { font: 600 var(--t-xs, 0.8125rem)/1.3 var(--rw-font); color: var(--help-ink); }
+/* flow C: a LEGEND drop is the gold banner (+ a small confetti puff, fx.js); WIN / BONUS keep the reward sticker */
+.fx-toast-legend { background: var(--help-on); border-color: var(--reward); box-shadow: 0 4px 0 var(--help-deep), 0 0 0 3px var(--reward), var(--rw-sh4); }
+.fx-toast-legend .fx-toast-i { width: 40px; height: 40px; }
 
-/* ---------- slots: a sticker card on a violet scrim ---------- */
-.fx-slots-ov { background: rgb(5 12 22 / .86); }
+/* ---------- slots: a sticker card INSIDE the level-up overlay (flow C: never an overlay of its own) ---------- */
+.fx-in-lvl { margin-top: 20px; }
 .fx-slots {
   position: relative; width: min(340px, calc(100vw - 32px)); padding: 8px; border-radius: var(--rw-r-l); background: var(--help-on); transform: rotate(-1deg);
   box-shadow: 0 6px 0 var(--help-deep), var(--rw-sh5);
@@ -185,7 +188,7 @@ html.start .rw-hud { display: none; }
 .fx-slots-in { border-radius: var(--rw-r-m); padding: 12px; background: var(--help-fill); }
 .fx-bulbs { display: flex; justify-content: space-between; padding: 0 6px 10px; }
 .fx-bulbs i { width: 8px; height: 8px; border-radius: 50%; background: var(--reward); box-shadow: 0 2px 0 var(--help-deep); }
-.fx-spin .fx-bulbs i { animation: fx-blink .75s steps(1) 4; }   /* finite: the reels stop by 0.9 s and the class goes with them */
+.fx-spin .fx-bulbs i { animation: fx-blink .75s steps(1) 4; }   /* finite: the reels stop by ~1.25 s and the class goes with them */
 .fx-spin .fx-bulbs i:nth-child(odd) { animation-delay: .375s; }
 .fx-reels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; border-radius: var(--rw-r-m); background: var(--help-fill); }
 .fx-reel { position: relative; height: var(--cell); overflow: hidden; border-radius: var(--rw-r-s); background: var(--ink); transition: box-shadow .3s; }
@@ -202,9 +205,6 @@ html.start .rw-hud { display: none; }
 /* ---------- bursts: flat bright field, speed lines, sticker title (solid sun fill, ink outline; no gradient text) ---------- */
 .fx-burst { background: var(--fx-b2); }
 .fx-levelup { --fx-b1: var(--reward); --fx-b2: var(--help); --fx-b3: var(--help-deep); --fx-dot: rgb(255 220 192 / .22); }   /* PALETTE-v3 §5: one ramp, 3 slots */
-.fx-bonus { --fx-b1: var(--reward); --fx-b2: var(--help-deep); --fx-b3: var(--help-line); --fx-dot: rgb(255 220 192 / .22); }
-.fx-win { --fx-b1: var(--help); --fx-b2: var(--help-deep); --fx-b3: var(--help-line); --fx-dot: rgb(255 220 192 / .22); }   /* a common drop */
-.fx-legend { --fx-b1: var(--help-on); --fx-b2: var(--reward); --fx-b3: var(--help); --fx-dot: rgb(54 25 0 / .3); }
 .fx-rays {
   position: absolute; left: 50%; top: 50%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax;
   background: repeating-conic-gradient(from 0deg, rgb(255 220 192 / .30) 0 2.5deg, transparent 2.5deg 11deg),
@@ -234,17 +234,10 @@ html.start .rw-hud { display: none; }
   margin-top: 16px; padding: 8px 24px; border-radius: var(--rw-pill); border: 3px solid var(--page); background: var(--reward); color: var(--help-ink);
   font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4);
 }
-.fx-sub { margin-top: 16px; font: 600 var(--t-lg, 1.25rem)/1.15 var(--rw-font); color: var(--ink); text-shadow: 0 3px 0 var(--page); }
-.fx-legend .fx-sub { font-size: var(--t-xl, 1.75rem); color: var(--help-ink); text-shadow: 0 3px 0 var(--help-on); }
-.fx-duck { position: relative; width: min(44vw, 180px); margin-bottom: 8px; }
-.fx-duck img { position: relative; display: block; width: 100%; height: auto; filter: var(--duckgold) drop-shadow(0 6px 0 rgb(90 40 0 / .55)); animation: fx-bob 1.65s ease-in-out 2 alternate; }
-.fx-rain { position: absolute; top: 0; filter: drop-shadow(1px 0 0 rgb(54 25 0)) drop-shadow(-1px 0 0 rgb(54 25 0)) drop-shadow(0 1px 0 rgb(54 25 0)) drop-shadow(0 -1px 0 rgb(54 25 0))
-  drop-shadow(0 3px 3px rgb(54 25 0 / .7)); }   /* 3:1 (Tony, Oct 12): a solid 1 px dark-brown outline, so the gold coins hold >= 3:1 on the tangerine legend field */
 
 @keyframes fx-blink { 50% { opacity: .25; } }
-@keyframes fx-bob { from { transform: translateY(-6px) rotate(-5deg); } to { transform: translateY(6px) rotate(5deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .fx-rays, .fx-bulbs i, .fx-duck img, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle, .rw-hint.rw-nudge, .rw-hint.rw-nudge::after { animation: none !important; }
+  .fx-rays, .fx-bulbs i, .rw-lvl.rw-pulse, .rw-coin.rw-shine::after, .rw-chip.rw-wiggle, .rw-hint.rw-nudge, .rw-hint.rw-nudge::after { animation: none !important; }
   .rw-hint-chev svg { transition: none; }
   .rw-bar i, .rw-flame { transition: none; }
 }

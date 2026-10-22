@@ -1,4 +1,4 @@
-/* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, slot reels, full-screen bursts). Port of design/rewards/fx.js
+/* rewards/fx.js: the sugar reward FX (pops, sparks, coins, drop banner, the level-up overlay with its slot reels; flow C: one overlay max). Port of design/rewards/fx.js
    for the app (design/REWARDS-WIRING.md §5): icons from window.RW_ICONS (rewards/icons.js; per-file licence in rewards/icons/NOTICE-traced.txt), canvas-confetti from
    vendor/ (ISC). Every node it adds is aria-hidden (app.js says the words once) and carries .rw-skin (rewards/rewards.css tokens).
    Nothing runs until app.js calls a function (diet never does), except one passive pointerdown listener that only settles a wiggling
@@ -25,7 +25,8 @@
 
   /* ---------- one blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12) ----------
      Every call app.js makes joins ONE queue; a step starts only when the one before has finished, so at most one group moves at a time:
-     the answer's own pulse -> sparks, "+N XP" and coins (the FX layer) -> the HUD (shine, bar, level pulse) -> slots -> burst -> banner.
+     the answer's own pulse -> sparks, "+N XP" and coins (the FX layer) -> the HUD (shine, bar, level pulse) -> the level-up overlay
+     (reels inside on a drop) OR the banner. Flow C (Tony, Oct 21): one beat per answer, at most one overlay, and only for LEVEL UP.
      Calls for the same group made before their step starts share it. While the queue runs the HUD bar and level pulse wait (.fx-hold)
      and a Cluck chip's ad wiggle stops (.fx-busy). Reduced motion: the whole sequence gets one fade (the first overlay or banner); the
      rest is instant. Triggers, odds, XP and payouts are rewards/engine.js's and app.js's; this only orders what is drawn. */
@@ -74,7 +75,7 @@
     Promise.race([Promise.all(ps.concat(tail || [])), new Promise(r => setTimeout(r, CAP))]).then(next);
   }
   // a new answer or a new question while the last answer still plays: its queued answer / FX-layer / HUD steps are dropped (their promises
-  // resolve; the HUD's numbers catch up on the next render) and the FX layer still moving finishes. Its slots, burst and banner stay queued
+  // resolve; the HUD's numbers catch up on the next render) and the FX layer still moving finishes. Its level-up overlay and banner stay queued
   // and play first: the engine already spent the burst cap on them (engine.js answer()), so they are never dropped or clicked away.
   const SKIP = { answer: 1, layer: 1, hud: 1, chip: 1 };
   function flush() {
@@ -191,11 +192,14 @@
   }
 
   let tHost, cur, tTimer;
-  function toast(text, sub) {                                     // the drop banner: never takes a tap (pointer-events: none in rewards.css)
+  /* the drop banner (flow C: a WIN / BONUS / LEGEND drop is a banner, never an overlay): never takes a tap (pointer-events: none in
+     rewards.css). tier: the drop's ('legend' = the gold banner + a small confetti puff from it; 'rare' a gem; else the star) */
+  const TOAST_I = { common: 'coin_color', rare: 'gem_stone_color', legend: 'duck_color' };
+  function toast(text, sub, tier) {
     if (!tHost || !tHost.isConnected) tHost = host('fx-toast-host');
     clearTimeout(tTimer);
     if (cur) cur.remove();
-    const t = cur = tHost.appendChild(mk('div', 'fx-toast', img('glowing_star_color', 'fx-toast-i')));
+    const t = cur = tHost.appendChild(mk('div', 'fx-toast' + (tier ? ' fx-toast-' + tier : ''), img(TOAST_I[tier] || 'glowing_star_color', 'fx-toast-i' + (tier === 'legend' ? ' fx-gold' : ''))));
     const b = t.appendChild(mk('div', 'fx-toast-b'));
     b.append(txt('div', 'fx-toast-t', text));
     if (sub) b.append(txt('div', 'fx-toast-s', sub));
@@ -208,6 +212,12 @@
     };
     t.addEventListener('click', hide);
     tTimer = setTimeout(hide, 2200);
+    if (tier === 'legend' && !still()) {                                     // small confetti: the FX layer's canvas, from the banner
+      if (!layerConfetti || !layerConfetti.canvas.isConnected) layerConfetti = confettiIn(layer());
+      const m = mid(t);
+      if (layerConfetti) layerConfetti({ particleCount: 28, spread: 70, startVelocity: 22, ticks: 90, scalar: .8, colors: ['#ffcd94', '#ff9a3e', '#ff8204'],
+        shapes: ['star', 'circle'], origin: { x: m.x / innerWidth, y: m.y / innerHeight } });
+    }
     return t.getAnimations()[0] && t.getAnimations()[0].finished.catch(() => {});   // the queue moves on once it has landed
   }
 
@@ -216,17 +226,18 @@
     const el = host('fx-ov ' + cls);
     let closed = false, done;
     const p = new Promise(r => (done = r));
-    const key = e => { if (e.key === 'Escape') skip(); };
+    // Escape, and → (flow C keys: the first → only closes the overlay; app.js sees defaultPrevented and does not go Next). Enter does nothing here
+    const key = e => { if (e.key === 'Escape' || e.key === 'ArrowRight') { e.preventDefault(); skip(); } else if (e.key === 'Enter') e.preventDefault(); };
     const close = () => {
       if (closed) return;
       closed = true;
-      document.removeEventListener('keydown', key);
+      document.removeEventListener('keydown', key, true);
       el.style.pointerEvents = 'none';
       if (still()) { el.remove(); done(); }                                   // reduced motion: out at once (its one fade was the way in)
       else run(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).then(done);
     };
     el.addEventListener('click', skip);
-    document.addEventListener('keydown', key);
+    document.addEventListener('keydown', key, true);
     fadeIn(el, 270);
     return { el, close, done: p };
   }
@@ -235,23 +246,24 @@
   const FILLER = ['cherries_color', 'star_color', 'trophy_color', 'glowing_star_color']; // never a tier icon -> no fake near-miss
   const CELL = 84;
 
-  function slots(tier) {
-    const T = TIER[tier] ? tier : 'common', [win, label, size] = TIER[T], calm = still();
-    let landed = false, reels = [];
-    const ov = overlay('fx-slots-ov', () => (landed ? ov.close() : land(350)));
-    const p = ov.el.appendChild(mk('div', 'fx-slots fx-t-' + T,
+  /* flow C (Tony, Oct 21): the slot reels never get an overlay of their own; they spin INSIDE the level-up overlay (par = its content).
+     Returns { land() }: land() stops them on the payline at once (a tap / Escape / → on the overlay). */
+  function reels(par, tier, calm, ovEl) {
+    const T = TIER[tier] ? tier : 'common', [win, label, size] = TIER[T];
+    let landed = false, rs = [];
+    const p = par.appendChild(mk('div', 'fx-slots fx-in-lvl fx-t-' + T,
       `<div class="fx-slots-in"><div class="fx-bulbs">${'<i></i>'.repeat(11)}</div><div class="fx-reels"></div><div class="fx-slabel"></div></div>`));
     p.style.setProperty('--cell', CELL + 'px');
     if (!calm) p.classList.add('fx-spin');            // marquee bulbs blink only while the reels move
     const lab = p.querySelector('.fx-slabel'), box = p.querySelector('.fx-reels');
     lab.textContent = label;
     const winCls = T === 'legend' ? 'fx-gold' : '';
-    reels = [0, 1, 2].map(i => {
-      const n = 12 + i * 4, icons = []; // icons[1] is the payline result; strip scrolls downward onto it
+    rs = [0, 1, 2].map(i => {
+      const n = 10 + i * 3, icons = []; // icons[1] is the payline result; strip scrolls downward onto it
       for (let k = 0; k < n; k++) { let x = win; if (k !== 1) do x = pick(FILLER); while (x === icons[k - 1]); icons.push(x); }
       const reel = box.appendChild(mk('div', 'fx-reel',
         `<div class="fx-strip">${icons.map((x, k) => `<div class="fx-cell">${img(x, k === 1 ? winCls : '')}</div>`).join('')}</div>`));
-      const strip = reel.firstChild, dur = 750 + i * 300;
+      const strip = reel.firstChild, dur = 550 + i * 200;  // inside the ~2.2 s level-up beat: the last reel lands by ~1.25 s
       strip.style.transform = `translateY(${-CELL}px)`;
       if (calm) return { strip };
       strip.classList.add('spin');
@@ -259,39 +271,28 @@
       const a = strip.animate([
         { transform: `translateY(${-(n - 1) * CELL}px)`, easing: 'cubic-bezier(.16,1,.3,1)' },
         { transform: `translateY(${-CELL}px)` }
-      ], { duration: dur });
+      ], { duration: dur, delay: 300, fill: 'backwards' });
       return { strip, a };
     });
-
-    function land(hold) {
+    function land() {
       if (landed) return;
       landed = true;
       p.classList.remove('fx-spin');
-      reels.forEach(r => { r.a && r.a.finish(); r.strip.classList.remove('spin'); });
+      rs.forEach(r => { r.a && r.a.finish(); r.strip.classList.remove('spin'); });
       p.classList.add('win');
-      if (!calm) {
-        reels.forEach((r, i) => r.strip.children[1].firstChild.animate(popKF(1.25), { duration: 630, delay: i * 105, easing: EASE.out }));
-        lab.animate(enterKF(.4), { duration: 630, easing: EASE.out });
+      if (!calm && ovEl.isConnected) {
+        rs.forEach((r, i) => r.strip.children[1].firstChild.animate(popKF(1.2), { duration: 450, delay: i * 80, easing: EASE.out }));
         const c = mid(box);
-        spray(ov.el, c.x, c.y, COUNT[size], DIST[size]);
+        spray(ovEl, c.x, c.y, COUNT[size], DIST[size]);
       }
-      setTimeout(ov.close, hold);
     }
-
-    if (calm) land(900);
-    else {
-      p.animate(enterKF(.8), { duration: 390, easing: EASE.out });
-      Promise.all(reels.map(r => r.a.finished)).then(() => land(500), () => {});
-    }
-    return ov.done;
+    if (calm) land();
+    else Promise.all(rs.map(r => r.a.finished)).then(land, () => {});
+    return { land, done: () => landed };
   }
 
-  const KIND = {
-    levelup: { t: 'LEVEL UP', d: 1800 },
-    win: { t: 'WIN!', d: 1800 },
-    bonus: { t: 'BONUS!', d: 1800 },
-    legend: { t: 'THE GOLDEN DUCK HAS NOTICED YOU.', s: '+50 XP', d: 3000 }
-  };
+  // flow C: only LEVEL UP goes full screen (~2.2 s with its 300 ms fade out); WIN / BONUS / LEGEND are banners (toast)
+  const KIND = { levelup: { t: 'LEVEL UP', d: 1900 } };
 
   // pixel title: outline layer + gradient fill + shine sweep, stacked in one grid cell
   function titleEl(text) {
@@ -314,46 +315,25 @@
     return w;
   }
 
-  // falling coin images (CSS), plus confetti glitter when available
-  function shower(par, n) {
-    const H = innerHeight + 80;
-    for (let i = 0; i < n; i++) {
-      const c = par.appendChild(mk('img', 'fx-rain'));
-      c.src = src('coin24_color'); c.alt = '';   // 18 to 34 px: the duck coin's 24 px cut
-      const s = rnd(18, 34), r = rnd(-540, 540);
-      c.style.cssText = `left:${rnd(0, 100)}%;width:${s}px;height:${s}px`;
-      run(c, [0, .25, .5, .75, 1].map((t, k) => ({
-        transform: `translateY(${-40 + H * Math.pow(t, 1.4)}px) rotate(${r * t}deg) scaleX(${k % 2 ? .25 : 1})`, opacity: 1
-      })), { duration: rnd(1650, 2400), delay: rnd(0, 1050), fill: 'backwards' });
-    }
-    const f = confettiIn(par);
-    if (f) f({ particleCount: 90, spread: 120, startVelocity: 38, ticks: 300, gravity: .9, scalar: 1.1, shapes: ['circle', 'star'],
-      colors: ['#ffcd94', '#ff9a3e', '#ffdcc0', '#ff8204'], origin: { x: .5, y: .45 } });
-  }
-
+  /* the one overlay an answer may have (flow C): LEVEL UP, with the slot reels inside it when the same answer also dropped (o.drop) */
   function burst(kind, o) {
     o = o || {};
-    if (!KIND[kind]) kind = 'levelup';
+    kind = 'levelup';
     const K = KIND[kind], calm = still(), title = o.title || K.t, sub = o.sub != null ? o.sub : K.s;
-    let timer;
-    const ov = overlay('fx-burst fx-' + kind, () => { clearTimeout(timer); ov.close(); });
+    let timer, rl = null;
+    const ov = overlay('fx-burst fx-' + kind, () => { if (rl && !rl.done()) { rl.land(); return; } clearTimeout(timer); ov.close(); });
     ov.el.innerHTML = '<div class="fx-rays"></div><div class="fx-dots"></div>';
     const c = ov.el.appendChild(mk('div', 'fx-bc'));
-    if (!calm && (kind === 'levelup' || kind === 'win')) c.append(stars());   // the 3-star WIN banner of the slot kit
-    const duck = !calm && kind === 'legend' && c.appendChild(mk('div', 'fx-duck', img('duck_color', 'fx-gold')));
+    if (!calm) c.append(stars());
     const t = c.appendChild(titleEl(title));
-    const s = sub ? c.appendChild(txt('div', kind === 'levelup' ? 'fx-plate' : 'fx-sub', sub)) : null;
+    const s = sub ? c.appendChild(txt('div', 'fx-plate', sub)) : null;
+    if (o.drop) rl = reels(c, o.drop, calm, ov.el);
     if (!calm) {
       t.animate([{ transform: 'scale(.6)', opacity: 0 }, { transform: 'scale(1.1)', opacity: 1, offset: .6 }, { transform: 'scale(1)', opacity: 1 }],
         { duration: 600, delay: 300, easing: EASE.out, fill: 'backwards' });   // then the title ribbon (300 ms)
       if (s) s.animate([{ transform: 'translateY(14px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }],
         { duration: 450, delay: 600, easing: EASE.pop, fill: 'backwards' });   // then the plate (900 ms)
-      if (duck) {
-        duck.animate([{ transform: 'scale(0) rotate(-30deg)', opacity: 0 }, { transform: 'scale(1.15) rotate(6deg)', opacity: 1, offset: .65 }, { transform: 'scale(1) rotate(0)', opacity: 1 }],
-          { duration: 780, easing: EASE.out });
-        shower(ov.el, 26);
-      }
-      setTimeout(() => { const m = mid(t); spray(ov.el, m.x, m.y, kind === 'legend' ? 30 : 22, 150); }, 900);   // the sparks last (900 ms)
+      if (!rl) setTimeout(() => { if (ov.el.isConnected) { const m = mid(t); spray(ov.el, m.x, m.y, 22, 150); } }, 900);   // the sparks last (900 ms); with reels their landing sprays
     }
     timer = setTimeout(ov.close, K.d);
     return ov.done;
@@ -383,9 +363,8 @@
     coinFly: (fromEl, toEl, n) => seq('layer', () => coinFly(fromEl, toEl, n)),
     shine: el => seq('hud', () => shine(el)),
     hud: fn => seq('hud', fn),                                              // app.js: the HUD's render (count-up, bar) in the HUD step
-    slots: tier => seq('slots', () => slots(tier)),
-    burst: (kind, o) => seq('burst', () => burst(kind, o)),
-    toast: (text, sub) => seq('toast', () => toast(text, sub)),
+    burst: (kind, o) => seq('burst', () => burst(kind, o)),                 // flow C: LEVEL UP only; o.drop = the reels inside it
+    toast: (text, sub, tier) => seq('toast', () => toast(text, sub, tier)),
     nod                                                                     // app.js: the duck chip's calm nod, its own step after the answer's
   };
 })();
