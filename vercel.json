@@ -17,7 +17,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "{serve.py,livefig.py,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}",
+      "includeFiles": "{serve.py,livefig.py,views_gate.py,oui.py,views/registry.json,views/library.json,SCHEMA.md,prompts/**,problems.json,skills.json,banks/**}",
       "maxDuration": 60
     }
   },
