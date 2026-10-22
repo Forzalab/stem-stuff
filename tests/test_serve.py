@@ -1313,6 +1313,93 @@ class Explain(unittest.TestCase):
         self.assertEqual((status, [x["status"] for x in t]), (404, [404]), "an early answer too")
 
 
+class FigBridge(unittest.TestCase):
+    """H bridge (Oct 22): the model sees the question figure as compact JSON; a dropped live figure is asked for ONCE more"""
+    GOOD = {"type": "graph", "kind": "scene", "alt": "Forces on the box on the ramp.", "marks": [
+        {"mark": "body", "at": [0, 0], "shape": "box", "w": 1, "h": 0.5}, {"mark": "force", "at": [0, 0], "angle": 270, "len": 1, "label": "$mg$"}]}
+
+    def test_figure_question_carries_its_graph_json(self):
+        p = dict(BANK["PHYS_F3N"], saccharine={"key": "k"})
+        out = serve.explain_prompt(p, "1")
+        line = next(x for x in out.split("\n") if x.startswith("Figure data: "))
+        g = json.loads(line[len("Figure data: "):])
+        self.assertEqual(g["kind"], "scene")
+        self.assertEqual(g["marks"][0]["angle"], 30)
+        self.assertNotIn("alt", g)                                      # the alt is the Figure line already
+        self.assertLessEqual(len(line), serve.FIG_JSON_MAX + 20)
+        self.assertNotIn("Figure data:", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))   # no figure: no JSON
+
+    def test_graph_json_drops_a_field_holding_the_answer(self):
+        g = {"type": "graph", "kind": "scene", "alt": "A block.", "marks": [
+            {"mark": "body", "at": [0, 0], "shape": "box", "w": 1, "h": 1, "label": "$7.25$ kg"}, {"mark": "force", "at": [0, 0], "angle": 90, "len": 1}]}
+        p = {"code": "T_GJ", "type": "num", "answer": "7.25", "body": [{"type": "text", "md": "Find the mass."}, g]}
+        out = json.loads(serve.graph_json(g, p, "Find the mass."))
+        self.assertNotIn("label", out["marks"][0])                        # the answer's field is gone
+        self.assertEqual(out["marks"][0]["w"], 1)                         # the rest stays
+        self.assertNotIn("7.25", serve.graph_json(g, p, "Find the mass."))
+        big = dict(g, marks=[dict(g["marks"][1], len=1 + i / 1000) for i in range(80)])
+        self.assertEqual(serve.graph_json(big, p), "")                    # over FIG_JSON_MAX: no JSON
+
+    def ctx(self):
+        return serve.livefig.context("T_FB", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
+
+    def visible(self, parts, reask_out):
+        calls = []
+
+        def reask(why):
+            calls.append(why)
+            return reask_out
+        return "".join(serve.v4_visible(iter(parts), True, ("", []), "T_FB", self.ctx(), reask)), calls
+
+    def test_dropped_figure_is_asked_for_once(self):
+        bad = "```fig\n{\"type\": \"graph\"\n```\n"
+        good = "\n```fig\n" + json.dumps(self.GOOD) + "\n```\n"
+        out, calls = self.visible(["Words first.\n", bad, "More words.\n"], good)
+        self.assertEqual(calls, ["json"])
+        self.assertIn("```fig", out)
+        self.assertIn("Words first.", out)
+        out, calls = self.visible(["Fine.\n", good, "Done.\n"], "x")       # a good figure: no re-ask
+        self.assertEqual(calls, [])
+        out, calls = self.visible(["No figure at all.\n"], "x")             # nothing drawn: no re-ask (the draw rule is the letter's job)
+        self.assertEqual(calls, [])
+
+    def test_reask_gates_again_then_gives_up(self):
+        system = [{"type": "text", "text": "S"}]
+        bad_again = ["```fig\n" + json.dumps(dict(self.GOOD, marks=[dict(self.GOOD["marks"][1], label="$9.0$ N")])) + "\n```"]   # the answer
+        with unittest.mock.patch.object(serve, "_claude_one", return_value=iter(bad_again)) as one:
+            self.assertEqual(serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"), "")
+        self.assertEqual(one.call_count, 1)
+        self.assertEqual(one.call_args[0][2], serve.FIG_REASK_TOKENS)
+        self.assertIn("FIGURE", one.call_args[0][0][-1]["text"])           # the same fig rule
+        with unittest.mock.patch.object(serve, "_claude_one", return_value=iter(["```fig\n" + json.dumps(self.GOOD) + "\n```"])):
+            self.assertIn('"kind":"scene"', serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"))
+        with unittest.mock.patch.object(serve, "_claude_one", side_effect=OSError("down")):
+            self.assertEqual(serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"), "")   # never an error to the student
+
+    def test_v4_stream_reasks_once_on_the_claude_arm_only(self):
+        bad = ["Words.\n", "```fig\n{bad\n```\n", "End.\n"]
+        v4 = {"arm": "claude", "code": "T_FB", "reveal": True, "facts": ("", []), "fig": self.ctx(), "bank": "B",
+              "turns": [{"role": "user", "content": ["Q block", "dyn"]}]}
+        seq = [iter(bad), iter(["```fig\n{still bad\n```"])]
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "claude_ready", return_value=True), \
+                unittest.mock.patch.object(serve, "_claude_one", side_effect=lambda *a, **k: seq.pop(0)) as one:
+            out = "".join(serve.v4_stream(v4, "k"))
+        self.assertEqual(one.call_count, 2)                                # the reply + ONE re-ask
+        self.assertNotIn("```", out)
+        self.assertIn("Words.", out)
+        with unittest.mock.patch.dict(os.environ, {"CLUCK_LIVE_FIGS": "0"}), unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), \
+                unittest.mock.patch.object(serve, "claude_ready", return_value=True), \
+                unittest.mock.patch.object(serve, "_claude_one", side_effect=lambda *a, **k: iter(bad)) as one:
+            "".join(serve.v4_stream(v4, "k"))
+        self.assertEqual(one.call_count, 1)                                # kill switch: no re-ask
+        ds = dict(v4, arm="deepseek")
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), \
+                unittest.mock.patch.object(serve, "_v4_deepseek_chunks", side_effect=lambda *a, **k: iter(bad)), \
+                unittest.mock.patch.object(serve, "_claude_one") as one:
+            "".join(serve.v4_stream(ds, "k"))
+        self.assertEqual(one.call_count, 0)                                # the non-vision arm: no re-ask
+
+
 class Incidents(unittest.TestCase):
     """POST /log/incident (incident.mjs's beacon): one JSON line, allowlisted fields only, rate-limited per browser"""
     def setUp(self):
