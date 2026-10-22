@@ -52,9 +52,10 @@ const KINDS = {   // app.js HK, first lines (the default, deadpan, when there is
   sassy: "Cluck is pretending not to watch", deadpan: "Cluck is still here", duck: "Cluck knows ducks don't cluck", nerd: "Cluck is at rest, potential energy high" };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the sheet on it */
-/* right (default): then the right pick closes the question, so Cluck's way in under it is the "Compare" chip, not the "ok but how?" peek:
-   with the peek up the row stays hidden (E, Tony Oct 21: one Cluck CTA on screen at a time; checked on its own below) */
-async function cluck(vp, { hash = "", motion = "no-preference", hk = null, right = true } = {}) {
+/* close (default): then the other wrong picks use up the tries, so the question closes with the "Ask Cluck" chip, not the "ok but how?" peek
+   or the "Compare with Cluck's steps" chip: with either of those up the row stays hidden (E, Tony Oct 21: one Cluck CTA on screen at a time;
+   checked on its own below) */
+async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close = true } = {}) {
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", reducedMotion: motion });
   await ctx.addInitScript(hk => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
@@ -70,8 +71,13 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, right
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
   await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });
-  if (right) {
-    await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
+  if (close) {
+    for (const id of await page.$$eval(".opt[data-id]", os => os.map(o => o.dataset.id).filter(d => d !== "a" && d !== "b"))) {
+      if (await page.evaluate(() => window.__drill.state.finished)) break;
+      const k = await page.evaluate(() => window.__drill.state.tries.length);
+      await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
+      await page.waitForFunction(k => window.__drill.state.tries.length > k, k, { timeout: 5000 });
+    }
     await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
   }
   await page.evaluate(() => window.stemIdleTap());
@@ -195,14 +201,14 @@ await step("1920x1080 + 393x852: greyscale shots (STYLE.md §7.16); 1920 dismiss
   await p.context().close();
 });
 
-/* E (Tony, Oct 21): "ok but how?" and "Show him" are never on screen together */
+/* E (Tony, Oct 21): "Show him" is never on screen with "ok but how?" or "Compare with Cluck's steps" */
 const ctas = page => page.evaluate(() => {
   const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
   return { how: [...document.querySelectorAll(".cl-peek .cl-cta")].some(vis), back: vis(document.querySelector("#clBack")) };
 });
 const one = async (page, what) => { const c = await ctas(page); assert.ok(!(c.how && c.back), `${what}: both Cluck CTAs up ${JSON.stringify(c)}`); return c; };
 await step("E desktop 1280: with the 'ok but how?' peek up, no 'Show him' row; open / dismiss / Escape / reopen never show both", async () => {
-  const page = await cluck(DESK, { right: false });
+  const page = await cluck(DESK, { close: false });
   await one(page, "open");
   await page.click("#cluck .cl-bar .cl-x");
   let c = await one(page, "dismissed (X)");
@@ -217,12 +223,13 @@ await step("E desktop 1280: with the 'ok but how?' peek up, no 'Show him' row; o
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
   c = await one(page, "question closed");
-  assert.ok(!c.how && c.back, "no peek once the question is closed: 'Show him' comes back " + JSON.stringify(c));
+  const cmp = await page.evaluate(() => [...document.querySelectorAll("#wish .cue-ok")].some(e => e.getClientRects().length > 0));
+  assert.ok(!c.how && !c.back && cmp, "solved: 'Compare with Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
 });
 await step("E phone 360: open / close never show both", async () => {
-  const page = await cluck({ width: 360, height: 740 }, { right: false });
+  const page = await cluck({ width: 360, height: 740 }, { close: false });
   await one(page, "open");
   await page.click("#cluck .cl-bar .cl-x"); await page.waitForTimeout(300);
   await one(page, "closed");
@@ -233,7 +240,7 @@ await step("E phone 360: open / close never show both", async () => {
 /* G (Tony, Oct 21): the ask box is a textarea that wraps and grows to min(6 lines, 40vh), then scrolls inside; Enter sends, Shift+Enter is a
    new line, never mid-IME; back to one line after a send; never a sideways scroll */
 for (const vp of [{ width: 360, height: 740 }, DESK]) await step(`G ${vp.width}: the ask box wraps, grows, stops at its cap, scrolls; Enter sends, Shift+Enter a new line`, async () => {
-  const page = await cluck(vp, { right: false });
+  const page = await cluck(vp, { close: false });
   const T = "#cluck .ask textarea";
   await page.waitForSelector(T + ":not([disabled])", { timeout: 8000 });
   await page.waitForFunction(() => !document.querySelector("#cluck .ask .send").disabled, null, { timeout: 8000 });

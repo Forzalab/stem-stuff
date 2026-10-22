@@ -1725,7 +1725,7 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
@@ -1933,7 +1933,7 @@ function hkShow(b, roll) {
   t.textContent = set[hkI % set.length];
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
-function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta")].some(c => c.getClientRects().length > 0); }   // "ok but how?" on screen
+function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "ok but how?" or "Compare with Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
 function clBackSync() {
   const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "ok but how?" wins
   let b = $("#clBack");
