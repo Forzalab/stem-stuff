@@ -880,5 +880,882 @@
     }
    ]
   }
+ },
+ "geom": {
+  "valid": [
+   {
+    "type": "graph",
+    "kind": "cartesian",
+    "alt": "The ramp as a right triangle with its angle and its length.",
+    "equal": true,
+    "axes": false,
+    "grid": false,
+    "x": {
+     "min": -1,
+     "max": 3
+    },
+    "y": {
+     "min": -1,
+     "max": 2
+    },
+    "marks": [
+     {
+      "mark": "poly",
+      "pts": [
+       [
+        0,
+        0
+       ],
+       [
+        2,
+        0
+       ],
+       [
+        2,
+        1.15
+       ]
+      ]
+     },
+     {
+      "mark": "right",
+      "at": [
+       2,
+       0
+      ],
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ]
+     },
+     {
+      "mark": "angle",
+      "at": [
+       0,
+       0
+      ],
+      "from": [
+       2,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "label": "$30^\\circ$"
+     },
+     {
+      "mark": "dim",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "label": "$1.2$ m",
+      "side": "l"
+     },
+     {
+      "mark": "circle",
+      "c": [
+       1,
+       0.3
+      ],
+      "r": 0.2,
+      "dash": true
+     }
+    ]
+   },
+   {
+    "type": "graph",
+    "kind": "scene",
+    "alt": "The block on the ramp, the ramp angle and the push distance.",
+    "marks": [
+     {
+      "mark": "seg",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       0
+      ]
+     },
+     {
+      "mark": "seg",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ]
+     },
+     {
+      "mark": "body",
+      "at": [
+       1,
+       0.8
+      ],
+      "shape": "box",
+      "w": 0.4,
+      "h": 0.25,
+      "angle": 30
+     },
+     {
+      "mark": "force",
+      "at": [
+       1,
+       0.8
+      ],
+      "angle": 270,
+      "len": 0.8,
+      "label": "$mg$"
+     },
+     {
+      "mark": "right",
+      "at": [
+       2,
+       0
+      ],
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "size": 0.15
+     },
+     {
+      "mark": "angle",
+      "at": [
+       0,
+       0
+      ],
+      "from": [
+       2,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "label": "$30^\\circ$",
+      "r": 0.4
+     },
+     {
+      "mark": "dim",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       0
+      ],
+      "label": "$d$",
+      "side": "r"
+     },
+     {
+      "mark": "circle",
+      "c": [
+       2,
+       1.15
+      ],
+      "r": 0.1,
+      "fill": true
+     }
+    ]
+   }
+  ],
+  "invalid": [
+   {
+    "name": "angle without its label",
+    "why": "schema",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "right without a ray",
+    "why": "schema",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "dim on an unknown side",
+    "why": "schema",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "x"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "circle without a radius",
+    "why": "schema",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "dim label is the answer",
+    "why": "leak",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$375$ N/m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "angle label not a given",
+    "why": "not-given",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$47^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      }
+     ]
+    }
+   },
+   {
+    "name": "geometry labels count toward the cap",
+    "why": "labels",
+    "fig": {
+     "type": "graph",
+     "kind": "cartesian",
+     "alt": "The ramp as a right triangle with its angle and its length.",
+     "equal": true,
+     "axes": false,
+     "grid": false,
+     "x": {
+      "min": -1,
+      "max": 3
+     },
+     "y": {
+      "min": -1,
+      "max": 2
+     },
+     "marks": [
+      {
+       "mark": "poly",
+       "pts": [
+        [
+         0,
+         0
+        ],
+        [
+         2,
+         0
+        ],
+        [
+         2,
+         1.15
+        ]
+       ]
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$"
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$1.2$ m",
+       "side": "l"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        1,
+        0.3
+       ],
+       "r": 0.2,
+       "dash": true
+      },
+      {
+       "mark": "text",
+       "at": [
+        0,
+        1
+       ],
+       "text": "$A$"
+      },
+      {
+       "mark": "text",
+       "at": [
+        1,
+        1
+       ],
+       "text": "$B$"
+      },
+      {
+       "mark": "text",
+       "at": [
+        1,
+        2
+       ],
+       "text": "$C$"
+      },
+      {
+       "mark": "point",
+       "at": [
+        0,
+        0
+       ],
+       "label": "$O$"
+      },
+      {
+       "mark": "point",
+       "at": [
+        2,
+        0
+       ],
+       "label": "$P$"
+      }
+     ]
+    }
+   }
+  ]
  }
 }
