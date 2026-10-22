@@ -1372,7 +1372,7 @@ const ARROW_OWN = "input, textarea, select, [contenteditable]:not([contenteditab
 addEventListener("keydown", e => {
   if ((e.key !== "ArrowRight" && e.key !== "ArrowLeft") || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
   if (document.querySelector(".fx-ov")) { e.preventDefault(); return; }
-  if (e.target.closest?.(ARROW_OWN)) return;
+  if (!e.target.matches?.("#q .nx") && e.target.closest?.(ARROW_OWN)) return;   // Next in the Check slot sits inside the choice row
   const nav = $("#qnav"), b = $(e.key === "ArrowRight" ? "#qnext" : "#qprev");
   if (!nav || nav.hidden || !b || b.disabled || b.hidden) return;
   e.preventDefault();
