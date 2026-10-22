@@ -1,0 +1,3 @@
+root = View([hd, pk])
+hd = Head("$t.title")
+pk = Predict("$t.tag", "$t.q", ["$t.a", "$t.b", "$t.c", "$t.d"], [], 2, "key.ad")
