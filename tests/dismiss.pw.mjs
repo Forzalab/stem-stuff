@@ -52,7 +52,10 @@ const KINDS = {   // app.js HK, first lines (the default, deadpan, when there is
   sassy: "Cluck is pretending not to watch", deadpan: "Cluck is still here", duck: "Cluck knows ducks don't cluck", nerd: "Cluck is at rest, potential energy high" };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the sheet on it */
-async function cluck(vp, { hash = "", motion = "no-preference", hk = null } = {}) {
+/* close (default): then the other wrong picks use up the tries, so the question closes with the "Ask Cluck" chip, not the "ok but how?" peek
+   or the "Compare with Cluck's steps" chip: with either of those up the row stays hidden (E, Tony Oct 21: one Cluck CTA on screen at a time;
+   checked on its own below) */
+async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close = true } = {}) {
   const phone = vp.width < 500;
   const ctx = await browser.newContext({ viewport: vp, hasTouch: phone, isMobile: phone, serviceWorkers: "block", reducedMotion: motion });
   await ctx.addInitScript(hk => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ }
@@ -68,6 +71,15 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null } = {}
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
   await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
   await page.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 10000, polling: 100 });
+  if (close) {
+    for (const id of await page.$$eval(".opt[data-id]", os => os.map(o => o.dataset.id).filter(d => d !== "a" && d !== "b"))) {
+      if (await page.evaluate(() => window.__drill.state.finished)) break;
+      const k = await page.evaluate(() => window.__drill.state.tries.length);
+      await page.click(`.opt[data-id="${id}"]`); await page.click(`.ch[data-id="${id}"] .send`);
+      await page.waitForFunction(k => window.__drill.state.tries.length > k, k, { timeout: 5000 });
+    }
+    await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
+  }
   await page.evaluate(() => window.stemIdleTap());
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
   await page.waitForTimeout(300);
@@ -187,6 +199,98 @@ await step("1920x1080 + 393x852: greyscale shots (STYLE.md §7.16); 1920 dismiss
   await p.screenshot({ path: join(SHOTS, "phone-393.png") });
   await grey(p); await p.screenshot({ path: join(SHOTS, "phone-393-grey.png") });
   await p.context().close();
+});
+
+/* E (Tony, Oct 21): "Show him" is never on screen with "ok but how?" or "Compare with Cluck's steps" */
+const ctas = page => page.evaluate(() => {
+  const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
+  return { how: [...document.querySelectorAll(".cl-peek .cl-cta")].some(vis), back: vis(document.querySelector("#clBack")) };
+});
+const one = async (page, what) => { const c = await ctas(page); assert.ok(!(c.how && c.back), `${what}: both Cluck CTAs up ${JSON.stringify(c)}`); return c; };
+await step("E desktop 1280: with the 'ok but how?' peek up, no 'Show him' row; open / dismiss / Escape / reopen never show both", async () => {
+  const page = await cluck(DESK, { close: false });
+  await one(page, "open");
+  await page.click("#cluck .cl-bar .cl-x");
+  let c = await one(page, "dismissed (X)");
+  assert.ok(c.how && !c.back, "dismissed with the peek: only 'ok but how?' " + JSON.stringify(c));
+  assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-gone")), true, "the column folded");
+  await page.click(".cl-peek .cl-cta");
+  await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
+  await one(page, "reopened from the peek");
+  await page.keyboard.press("Escape"); await page.waitForTimeout(200);
+  c = await one(page, "dismissed (Escape)");
+  assert.ok(c.how && !c.back, "Escape: only 'ok but how?' " + JSON.stringify(c));
+  await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
+  await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
+  c = await one(page, "question closed");
+  const cmp = await page.evaluate(() => [...document.querySelectorAll("#wish .cue-ok")].some(e => e.getClientRects().length > 0));
+  assert.ok(!c.how && !c.back && cmp, "solved: 'Compare with Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
+});
+await step("E phone 360: open / close never show both", async () => {
+  const page = await cluck({ width: 360, height: 740 }, { close: false });
+  await one(page, "open");
+  await page.click("#cluck .cl-bar .cl-x"); await page.waitForTimeout(300);
+  await one(page, "closed");
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
+});
+
+/* G (Tony, Oct 21): the ask box is a textarea that wraps and grows to min(6 lines, 40vh), then scrolls inside; Enter sends, Shift+Enter is a
+   new line, never mid-IME; back to one line after a send; never a sideways scroll */
+for (const vp of [{ width: 360, height: 740 }, DESK]) await step(`G ${vp.width}: the ask box wraps, grows, stops at its cap, scrolls; Enter sends, Shift+Enter a new line`, async () => {
+  const page = await cluck(vp, { close: false });
+  const T = "#cluck .ask textarea";
+  await page.waitForSelector(T + ":not([disabled])", { timeout: 8000 });
+  await page.waitForFunction(() => !document.querySelector("#cluck .ask .send").disabled, null, { timeout: 8000 });
+  const g = () => page.$eval(T, t => { const cs = getComputedStyle(t), d = document.documentElement;
+    return { h: t.getBoundingClientRect().height, sh: t.scrollHeight, ch: t.clientHeight, sw: t.scrollWidth, cw: t.clientWidth, oy: cs.overflowY, lh: parseFloat(cs.lineHeight),
+      max: parseFloat(cs.maxHeight), v: t.value, ml: t.maxLength, tag: t.tagName, dsw: d.scrollWidth, dcw: d.clientWidth, ih: innerHeight }; });
+  const a = await g();
+  assert.equal(a.tag, "TEXTAREA"); assert.equal(a.ml, 500, "maxlength kept");
+  assert.ok(Math.abs(a.max - Math.min(6 * a.lh + (a.h - a.lh), 0.4 * a.ih)) <= 2, `cap = min(6 lines, 40vh): ${JSON.stringify(a)}`);
+  const msg = Array.from({ length: 60 }, (_, i) => "word" + (i % 10)).join(" ").slice(0, 300);
+  assert.equal(msg.length, 300);
+  await page.click(T); await page.fill(T, msg);
+  const b = await g();
+  assert.ok(b.h > a.h + a.lh / 2, `300 chars wrap and the box grows: ${a.h} -> ${b.h}`);
+  assert.ok(b.sw <= b.cw && b.dsw <= b.dcw, "no sideways scroll: " + JSON.stringify(b));
+  await page.press(T, "End");
+  for (let i = 0; i < 10; i++) await page.keyboard.press("Shift+Enter");
+  const c = await g();
+  assert.equal(c.v, msg + "\n".repeat(10), "Shift+Enter adds new lines, sends nothing");
+  assert.ok(Math.abs(c.h - c.max) <= 1, `stops at the cap: ${JSON.stringify(c)}`);
+  assert.ok(c.sh > c.ch + 1 && c.oy === "auto", "past the cap it scrolls inside: " + JSON.stringify(c));
+  assert.ok(c.sw <= c.cw && c.dsw <= c.dcw, "no sideways scroll at the cap: " + JSON.stringify(c));
+  const sent0 = await page.$$eval("#cluck .cl-thread .msg.me", m => m.length);
+  await page.$eval(T, t => t.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true, cancelable: true })));
+  assert.equal(await page.$$eval("#cluck .cl-thread .msg.me", m => m.length), sent0, "Enter mid-IME composition does not send");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(n => document.querySelectorAll("#cluck .cl-thread .msg.me").length > n, sent0, { timeout: 4000 });
+  assert.equal(await page.$$eval("#cluck .cl-thread .msg.me p", p => p.at(-1).textContent), msg.trim(), "Enter sent the message (trimmed)");
+  const d = await g();
+  assert.equal(d.v, "", "the box empties");
+  assert.ok(Math.abs(d.h - a.h) <= 1, `back to one line after the send: ${a.h} vs ${d.h}`);
+  assert.ok(d.dsw <= d.dcw, "no sideways scroll after the send");
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
+});
+
+/* D (Tony, Oct 21): the top bar's lower edge fades at every width once the page scrolls; a fade only, it never catches a click */
+await step("D 1280: the top bar's fade is there once scrolled, pointer-events none, no backdrop blur", async () => {
+  const page = await cluck(DESK);
+  await page.evaluate(() => { const s = document.createElement("div"); s.style.height = "2000px"; document.querySelector("#main").append(s); scrollTo(0, 300); });
+  await page.waitForFunction(() => document.documentElement.classList.contains("scrolled"), null, { timeout: 2000 });
+  const f = await page.evaluate(() => { const t = document.querySelector(".top"), cs = getComputedStyle(t, "::before"), r = t.getBoundingClientRect();
+    const under = document.elementFromPoint(innerWidth / 2, r.bottom + 4);
+    return { content: cs.content, pe: cs.pointerEvents, bg: cs.backgroundImage, h: parseFloat(cs.height), bf: getComputedStyle(t).backdropFilter, underTop: !!under && !!under.closest(".top") }; });
+  assert.ok(f.content !== "none" && /gradient/.test(f.bg) && f.h > 0, "the fade is there: " + JSON.stringify(f));
+  assert.equal(f.pe, "none", "the fade never catches a click");
+  assert.equal(f.underTop, false, "a tap just under the bar reaches the page");
+  assert.ok(!f.bf || f.bf === "none", "no backdrop-filter");
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
 });
 
 await browser.close(); srv.kill(); stub.close();

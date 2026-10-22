@@ -342,7 +342,7 @@ try {
         new MutationObserver(() => { const r = document.querySelector("#cluck .wreply:last-of-type"); if (!r) return; const c = r.cloneNode(true); c.querySelectorAll(".katex-mathml").forEach(m => m.remove());
           const t = c.textContent.replace(/\s+/g, " ").trim(); if (t !== window.__rv.at(-1)) window.__rv.push(t); }).observe(document.querySelector("#cluck"), { subtree: true, childList: true, characterData: true });
       });
-      await page.fill("#cluck .ask input", "why step " + n + "?"); await page.click("#cluck .ask .send");
+      await page.fill("#cluck .ask textarea", "why step " + n + "?"); await page.click("#cluck .ask .send");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 9000 });
       if (n === 1) {
         const rv = await page.evaluate(() => window.__rv), words = t => t.split(" ").filter(Boolean).length;

@@ -300,8 +300,8 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.click("#wish .wchip");                       // started=false after a 429: this asks again, now stubbed ok
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden, null, { timeout: 4000 });
   await page.click("#cluck .wtext").catch(() => {});
-  await page.waitForSelector("#cluck .ask input:not([disabled])", { timeout: 8000 });
-  await page.fill("#cluck .ask input", "why?"); await page.click("#cluck .ask .send");
+  await page.waitForSelector("#cluck .ask textarea:not([disabled])", { timeout: 8000 });
+  await page.fill("#cluck .ask textarea", "why?"); await page.click("#cluck .ask .send");
   await page.waitForFunction(() => /out of wishes for this hour/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 5000 });
   out.push("/chat 429: 'Cluck is out of wishes for this hour.'");
   return "stubbed; " + out.join("; ");
@@ -322,7 +322,7 @@ flow(22, "cluck-chat-5", async (page, w) => {
   await cluckOpen(page, w);
   for (let n = 1; n <= 5; n++) {
     await page.waitForSelector("#cluck .ask .send:not([disabled])", { timeout: 6000 });
-    await page.fill("#cluck .ask input", `why step ${n}?`); await page.click("#cluck .ask .send");
+    await page.fill("#cluck .ask textarea", `why step ${n}?`); await page.click("#cluck .ask .send");
     await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 6000 });
   }
   await page.waitForFunction(() => /That's 5 questions on this one/.test(document.querySelector("#cluck .done-row")?.textContent || ""), null, { timeout: 3000 });

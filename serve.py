@@ -38,6 +38,7 @@ import urllib.request
 import sympy
 
 import livefig
+import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
@@ -1524,8 +1525,9 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
-        cluck_noted(p, sid, turn[0], xyz)
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz)}], reveal=turn[1], facts=leak_facts(p),
+        rows = cluck_noted(p, sid, turn[0], xyz)
+        solved = any(row_solved(r) for r in rows if r[0] == turn[0])
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
@@ -1694,7 +1696,7 @@ def rewrite_on():
     return os.environ.get("CLUCK_REWRITE", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
-KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
+KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|```openui\n[\s\S]*?\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
 
 
 def _edit(draft, fig, max_tokens):
@@ -1704,7 +1706,7 @@ def _edit(draft, fig, max_tokens):
     if not draft.strip():
         return draft
     try:
-        gate = livefig.Fence(fig)
+        gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one([{"type": "text", "text": EDITOR, "cache_control": CACHE}], [{"role": "user", "content": draft}], max_tokens)) + gate.end()
     except Exception as e:  # noqa: BLE001
         log(f"rewrite: {e}")
@@ -1873,14 +1875,17 @@ def v4_dynamic(xyz, reveal, text):
     return "\n\n" + (xyz + "\n\n" if xyz else "") + LAMP + ("yes" if reveal else "no") + "\n\nUSER QUERY: " + (clean_query(text) or "...")
 
 
-def v4_user(p, pick, text, reveal, xyz=""):
-    """one user turn as two blocks: [explain_prompt(p, pick)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
-    return [explain_prompt(p, pick), v4_dynamic(xyz, reveal, text)]
+RESULT_OK = "RESULT: correct"                 # C (Tony, Oct 21): the item is solved; the letter's lamp rule turns it into "show your path, ask for theirs"
+
+
+def v4_user(p, pick, text, reveal, xyz="", solved=False):
+    """one user turn as two blocks: [explain_prompt(p, pick) (+ RESULT: correct on a solved item)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
+    return [explain_prompt(p, pick) + ("\n\n" + RESULT_OK if solved else ""), v4_dynamic(xyz, reveal, text)]
 
 
 def v4_chat_turns(p, pick, history, rows):
     """the messages for a chat follow-up. history: chat_history() (Cluck's box text first, the student last). rows: this item's stored turns
-    (cluck_begin), the newest = this turn. Every earlier user turn is rebuilt from what it was sent with (pick, REVEAL, NOTE) so the request
+    (cluck_begin), the newest = this turn. Every earlier user turn is rebuilt from what it was sent with (pick, REVEAL, solved, NOTE) so the request
     replays byte for byte; only the newest turn carries the new REVEAL / NOTE (rows[-1]). A turn with no stored row (another instance) is
     rebuilt without a NOTE: a cache miss, never a wrong answer."""
     users = [t for t in history if t["role"] == "user"]
@@ -1889,39 +1894,51 @@ def v4_chat_turns(p, pick, history, rows):
     def row(i):
         return rows[i] if 0 <= i < len(rows) else None
     w = row(len(rows) - m - 1)                                            # the wish turn this box came from
-    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "")})
+    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w))})
     for t in history:
         if t["role"] == "assistant":
             out.append({"role": "assistant", "content": livefig.strip(t["content"]) or "..."})
             continue
         r = row(len(rows) - m + j)
-        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "")})
+        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r))})
         j += 1
     return out
 
 
 def tries_out(p, sid):
-    """this browser's tries on the item are used up (sugar: state() carries `correct` once a unit is shut out); a multi: every part closed, one out"""
+    """the item is closed for this browser, so REVEAL may say yes: its tries are used up (sugar: state() carries `correct` once a unit is shut
+    out) OR it is solved (`done`; C, Tony Oct 21: a correct pick reveals); a multi: every part done or out, at least one"""
     st = state(p, sid, reveal=True)
-    if "parts" in st:
-        return all(u["done"] or "correct" in u for u in st["parts"]) and any("correct" in u for u in st["parts"])
-    return "correct" in st
+    us = st["parts"] if "parts" in st else [st]
+    return all(u["done"] or "correct" in u for u in us) and any(u["done"] or "correct" in u for u in us)
+
+
+def item_solved(p, sid):
+    """this browser solved the item (RESULT: correct): a single item `done`; a multi: every part done"""
+    st = state(p, sid)
+    us = st["parts"] if "parts" in st else [st]
+    return bool(us) and all(u["done"] for u in us)
+
+
+def row_solved(r):
+    """a stored Cluck turn row [n, reveal, note, pick]: reveal is 2 when the turn was sent on a solved item (RESULT: correct), else 1 / 0"""
+    return bool(r) and r[1] == 2
 
 
 def cluck_begin(p, sid, pick):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
-    used up OR this is the 3rd turn or later; else no."""
+    used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved)."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
-    out = tries_out(p, sid)
+    out, solved = tries_out(p, sid), item_solved(p, sid)
     key = (sid, p["code"])
     with _tries_lock:
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
         reveal = out or n >= 3
-        rows.append([n, int(reveal), "", pick])
+        rows.append([n, 2 if solved else int(reveal), "", pick])
         del rows[:-CLUCK_KEEP]
         _save_tries()
     return n, reveal
@@ -2107,7 +2124,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
     ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
            "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
     try:
-        gate = livefig.Fence(fig)
+        gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one(system + [{"type": "text", "text": livefig.rule(fig)}],
                                                          [{"role": "user", "content": ask}], FIG_REASK_TOKENS)) + gate.end()
     except Exception as e:  # noqa: BLE001
@@ -2123,7 +2140,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
-    xyz, fence = Xyz(), livefig.Fence(fig)
+    xyz, fence = Xyz(), views_gate.Fence(fig)
     guard = None if reveal else LeakGuard(facts)
     sent, head = False, ""                       # head: the first visible line so far; None once it went on
     for t in chunks:
@@ -2297,7 +2314,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
     elif claude_ready(out):
         said, live, edit, draft = False, fig is not None and livefig.on(), edit and rewrite_on(), []
-        gate, budget = livefig.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
+        gate, budget = views_gate.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
         try:
             msgs = [dict(messages[0], content=livefig.weave(messages[0]["content"]))] + messages[1:] if live else messages
             turns = msgs[1:]
@@ -2325,7 +2342,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
             log(f"claude {CLAUDE_MODEL}: {e}")
             if not budget_hit(e, "claude", out, model=CLAUDE_MODEL):
                 incident("cluck", "upstream", provider="claude", model=CLAUDE_MODEL, status=getattr(e, "code", None), err=e, phase="stream" if said else "headers")
-    gate = livefig.Fence(None)
+    gate = views_gate.Fence(None)
     for t in _or_stream(messages, key, max_tokens, out):
         o = gate.feed(t)
         if o:

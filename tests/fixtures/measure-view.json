@@ -7,6 +7,6 @@
   {"id": "intro", "component": "Text", "prop": "text", "role": "body", "wordClass": "sentence", "maxChars": {"360": 400, "390": 400, "1280": 400}},
   {"id": "tag", "component": "Predict", "prop": "tag", "role": "label", "wordClass": "noun_phrase", "lines": 1, "maxChars": {"360": 24, "390": 24, "1280": 24}},
   {"id": "q", "component": "Predict", "prop": "q", "role": "heading", "wordClass": "sentence", "lines": 2, "maxChars": {"360": 68, "390": 76, "1280": 140}},
-  {"id": "a", "component": "Predict", "prop": "choices", "role": "button", "wordClass": "noun_phrase", "lines": 1, "maxChars": {"360": 3, "390": 3, "1280": 3}}
+  {"id": "a", "component": "Predict", "prop": "choices", "role": "button", "wordClass": "noun_phrase", "lines": 1, "maxChars": {"360": 24, "390": 24, "1280": 24}}
  ]
 }
