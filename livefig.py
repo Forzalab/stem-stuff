@@ -14,8 +14,10 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # What a live figure may use: a strict subset of SCHEMA.md's kinds and marks (no circuit: its outputs are the answer; no param /
 # tangent / path: t-expressions are harder to check). Caps keep it small enough for a phone and for a ms gate.
-KINDS = {"cartesian": {"fn", "shade", "vline", "hline", "point", "seg", "arrow", "arc", "poly", "text"},
-         "scene": {"body", "spring", "pulley", "rope", "surface", "incline", "force", "pivot", "point", "seg", "arrow", "arc", "text"},
+# the geometry marks (H bridge, Oct 22): right-angle square, dimension line, angle arc + label, circle shorthand; both kinds
+GEOM = ("right", "dim", "angle", "circle")
+KINDS = {"cartesian": {"fn", "shade", "vline", "hline", "point", "seg", "arrow", "arc", "poly", "text", *GEOM},
+         "scene": {"body", "spring", "pulley", "rope", "surface", "incline", "force", "pivot", "point", "seg", "arrow", "arc", "text", *GEOM},
          "bars": set(), "network": set()}
 MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX_PTS, MAX_ALT = 3000, 12, 6, 12, 30, 3, 4, 12, 200
 # A live network is the key subgraph only (the odd cycle, the path, the cut), never the question's whole graph again: Opus redrew the
@@ -382,8 +384,8 @@ FIGURE (the one exception to "no code" in Format: this fence is allowed): draw O
 - orbits: "scene": a disk for the planet, a dot for the satellite, an arc for the orbit, the force arrow toward the center, radii as seg.
 Physics never uses "network"; a graph-theory question always does. In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph. Write it as data: a line ```fig, then the figure as ONE line of JSON, then a line ```. Nothing else inside the fence, and never mention the fence or JSON. The line right before the fence names what is drawn ("Forces on the block:", "The graph on A to D:").
 The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never the answer",...}. K and its keys:
-- "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}.
-- "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text.
+- "cartesian": "x":{"min":a,"max":b,"label":"$x$"},"y":{...},"marks":[...]; marks: fn {"mark":"fn","y":"2*x+1"}, shade {"f","g","from","to"}, vline {"x"}, hline {"y"}, point {"at":[x,y]}, seg/arrow {"from":[x,y],"to":[x,y]}, arc {"at","r","from","to"}, poly {"pts"}, text {"at","text"}; geometry: right {"at":corner,"from","to"} (right-angle square), dim {"from","to","label","side":"l|r"} (a length), angle {"at":vertex,"from","to","label"} (arc + label), circle {"c":[x,y],"r"}. Set "equal":true for geometry.
+- "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text, right, dim, angle, circle.
 - "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
 - "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 6 nodes: the key subgraph).
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.

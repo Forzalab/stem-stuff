@@ -133,7 +133,7 @@
   }
 
   /* ---- marks shared by scene and cartesian: pts(m) in world units, draw(m, k) -> svg ---- */
-  const LAYER = { surface: 0, incline: 1, poly: 2, seg: 2, arc: 2, path: 3, rope: 4, spring: 4, pulley: 5, body: 6, pivot: 7, point: 8, axes: 8, force: 9, arrow: 9, text: 10 };
+  const LAYER = { surface: 0, incline: 1, poly: 2, seg: 2, arc: 2, circle: 2, right: 2, angle: 2, dim: 2, path: 3, rope: 4, spring: 4, pulley: 5, body: 6, pivot: 7, point: 8, axes: 8, force: 9, arrow: 9, text: 10 };
   const S = {
     surface: { pts: m => [m.from, m.to], draw: (m, k) => { const a = k.X(m.from), b = k.X(m.to); return line([a, b], col(m.color), SW.out) + hatch(a, b, m.side); } },
     incline: {
@@ -285,7 +285,47 @@
         return arrow(o, ex, SW.axis, col("muted")) + arrow(o, ey, SW.axis, col("muted"));
       }
     },
-    text: { pts: m => [m.at], draw(m, k) { k.label(m.text, k.X(m.at), m.anchor || "c", m.color); return ""; } }
+    text: { pts: m => [m.at], draw(m, k) { k.label(m.text, k.X(m.at), m.anchor || "c", m.color); return ""; } },
+    /* geometry marks (H bridge, Oct 22): angles are taken on screen, so they stay true with or without equal: true */
+    right: {
+      pts: m => [m.at, m.from, m.to],
+      draw(m, k) {
+        const a = k.X(m.at), p = k.X(m.from), q = k.X(m.to), u = norm(p[0] - a[0], p[1] - a[1]), v = norm(q[0] - a[0], q[1] - a[1]);
+        const z = m.size ? m.size * k.s : 12;
+        if (m.label) k.label(m.label, [a[0] + z * (u[0] + v[0]), a[1] + z * (u[1] + v[1])], m.anchor || dirAnchor(u[0] + v[0], u[1] + v[1]), m.color);
+        return `<g data-mark="right">${line([[a[0] + z * u[0], a[1] + z * u[1]], [a[0] + z * (u[0] + v[0]), a[1] + z * (u[1] + v[1])], [a[0] + z * v[0], a[1] + z * v[1]]], col(m.color || "muted"), SW.con, m.dash ? DASH.guide : "")}</g>`;
+      }
+    },
+    dim: {
+      pts: m => [m.from, m.to],
+      draw(m, k) {
+        const a = k.X(m.from), b = k.X(m.to), [ux, uy] = norm(b[0] - a[0], b[1] - a[1]), sg = m.side === "r" ? -1 : 1;
+        const n = [sg * uy, -sg * ux], off = 14, t = 5, c = col(m.color || "muted"), at = (p, d) => [p[0] + d * n[0], p[1] + d * n[1]];
+        let s = line([at(a, 3), at(a, off + t)], c, SW.grid) + line([at(b, 3), at(b, off + t)], c, SW.grid);
+        s += arrow(at([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], off), at(a, off), SW.con, c) + arrow(at([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], off), at(b, off), SW.con, c);
+        if (m.label) k.label(m.label, at([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], off + 2), m.anchor || dirAnchor(n[0], n[1]), m.color);
+        return `<g data-mark="dim">${s}</g>`;
+      }
+    },
+    angle: {
+      pts: m => [m.at, m.from, m.to],
+      draw(m, k) {
+        const a = k.X(m.at), p = k.X(m.from), q = k.X(m.to), sa = v => Math.atan2(-(v[1] - a[1]), v[0] - a[0]) / deg;
+        let a0 = sa(p), d = ((sa(q) - a0) % 360 + 360) % 360;
+        if (d > 180) { a0 = sa(q); d = 360 - d; }
+        const r = m.r ? m.r * k.s : 22, mid = (a0 + d / 2) * deg, u = [Math.cos(mid), -Math.sin(mid)];
+        if (m.label) k.label(m.label, [a[0] + u[0] * (r + 3), a[1] + u[1] * (r + 3)], m.anchor || dirAnchor(u[0], u[1]), m.color);
+        return `<g data-mark="angle">${arcPath(a, r, a0, a0 + d, col(m.color || "muted"), SW.con, m.dash ? DASH.guide : "")}</g>`;
+      }
+    },
+    circle: {
+      pts: m => [add(m.c, [-m.r, -m.r]), add(m.c, [m.r, m.r])],
+      draw(m, k) {
+        const [x, y] = k.X(m.c), r = m.r * k.s, c = col(m.color || "ink");
+        if (m.label) k.label(m.label, [x + r * Math.SQRT1_2, y - r * Math.SQRT1_2], m.anchor || "ne", m.color);
+        return `<circle data-mark="circle" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:${m.fill ? c : "none"};fill-opacity:${FILL};stroke:${c}" stroke-width="${SW.out}"${m.dash ? ` stroke-dasharray="${DASH.guide}"` : ""}/>`;
+      }
+    }
   };
 
   /* ---- layout: draw, measure labels, grow padding, redraw (max 3 passes) ---- */

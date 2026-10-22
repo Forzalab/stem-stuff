@@ -1437,10 +1437,35 @@ def network_data(b):
     return " Vertices: " + " ".join(ids) + ". Edges: " + ", ".join(es) + "."
 
 
+FIG_JSON_MAX = 3000
+
+
+def graph_json(b, p, text=""):
+    """the question's graph block as compact JSON for the model (H bridge, Oct 22: it saw the alt only, never the coordinates), the alt
+    left out (it is the Figure line), any field holding the hidden answer's value dropped (the same no-leak rule as a live figure:
+    livefig.context's answers, 3 sig figs, another unit); "" when it is still over FIG_JSON_MAX chars"""
+    ans = livefig.context(p.get("code", ""), text, "", hidden_values(p)).answers
+
+    def leaks(v):
+        return any(livefig._sig3(abs(x), a) for x in ([float(v)] if isinstance(v, (int, float)) and not isinstance(v, bool) else
+                                                       livefig.nums(v) if isinstance(v, str) else []) for a in ans)
+
+    def flat(x):                                       # a field with no object inside (a number, a label, a point): dropped whole
+        return not isinstance(x, (dict, list)) or not any(isinstance(y, (dict, list)) and not flat(y) or isinstance(y, dict) for y in x)
+
+    def clean(v):
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items() if k != "alt" and not (flat(x) and any(leaks(y) for _, y in livefig._walk(x, k, [])))}
+        return [clean(x) for x in v] if isinstance(v, list) else v
+    s = json.dumps(clean(b), ensure_ascii=False, separators=(",", ":"))
+    return s if len(s) <= FIG_JSON_MAX else ""
+
+
 def explain_prompt(p, answer):
     """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
     text = "\n".join("\n".join(m) if isinstance(m, list) else m for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))   # md may be a list of lines
-    figs = "\n".join("Figure: " + b["alt"] + network_data(b) for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
+    figs = "\n".join("Figure: " + b["alt"] + network_data(b) + ("\nFigure data: " + gj if (gj := graph_json(b, p, text)) else "")
+                     for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
     lines = [f"QUESTION:\n{text}", figs]
     if p.get("type") == "mc":
         lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
@@ -2086,7 +2111,30 @@ def lamp_cut(text):
     return rest.lstrip() if not rest.split("\n", 1)[0].strip() else text[:len(text) - len(text.lstrip())] + rest
 
 
-def v4_visible(chunks, reveal, facts, code="-", fig=None):
+FIG_REASK_TOKENS = 600
+FIG_OUT_RE = re.compile(r"\n```fig\n[^\n]*\n```\n")
+FIG_OK = ("ok", "off", "second")
+
+
+def fig_reask(system, user_text, fig, why, code="-"):
+    """H bridge (Oct 22): the reply's figure was dropped by the gate (bad JSON, a leak, the caps): ask ONCE more for just the figure
+    (FIG_REASK_TOKENS, the same livefig rule), gate it again. Returns the checked fence, or "" (words only) with the reason logged.
+    Never an error to the student."""
+    ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
+           "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
+    try:
+        gate = views_gate.Fence(fig)
+        out = "".join(gate.feed(t) for t in _claude_one(system + [{"type": "text", "text": livefig.rule(fig)}],
+                                                         [{"role": "user", "content": ask}], FIG_REASK_TOKENS)) + gate.end()
+    except Exception as e:  # noqa: BLE001
+        log(f"fig {code} reask: {type(e).__name__}")
+        return ""
+    m = FIG_OUT_RE.search(out)
+    log(f"fig {code} reask: " + (",".join(gate.log) or "none") + ("" if m else " -> words only"))
+    return m.group(0) if m else ""
+
+
+def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
     livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
@@ -2106,6 +2154,11 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None):
             sent = True
             yield vis
     vis = fence.feed(xyz.end()) + fence.end()
+    bad = [x for x in fence.log if x not in FIG_OK]
+    if bad:
+        log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
+    if reask and fig is not None and livefig.on() and not fence.shown and bad:
+        vis += reask(bad[0].split(":")[0])                  # one more try, the figure only; "" = words only
     if head is not None:
         vis = lamp_cut(head + vis)
         vis = vis if vis.strip() else ""
@@ -2192,7 +2245,12 @@ def v4_stream(v4, key, out=None):
         sent, t0 = False, time.time()
         try:
             chunks = _v4_claude_chunks(v4, V4_MAX) if name == "claude" else _v4_deepseek_chunks(v4, key, V4_MAX)
-            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig")):
+            reask = None
+            if name == "claude" and v4.get("fig") is not None and v4["turns"]:
+                first = v4["turns"][0]["content"]
+                reask = lambda why: fig_reask([{"type": "text", "text": PROMPT_V4}, {"type": "text", "text": v4["bank"]}],   # noqa: E731
+                                              first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
+            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask):
                 sent = True
                 yield t
             if sent:
