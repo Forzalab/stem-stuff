@@ -402,6 +402,66 @@ class Families(unittest.TestCase):
                 self.assertNotIn(b'"families"', raw); self.assertNotIn(b'"wrong"', raw); self.assertNotIn(b'"error"', raw)
 
 
+class SolvedReveals(unittest.TestCase):
+    """C (Tony, Oct 21): a solved item counts as REVEAL yes for Cluck: tries_out / cluck_begin treat `done` like out of tries"""
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.ps = [unittest.mock.patch.object(serve, "TRIES", os.path.join(tmp, "t.json")), unittest.mock.patch.object(serve, "KV", (None, None)),
+                   unittest.mock.patch.dict(os.environ, {"CLAUDE_API": "k"})]
+        for m in self.ps:
+            m.start()
+        serve._gen.update(n=0, loaded=None)
+        serve._tries.clear()
+        serve._cluck_turns.clear()
+
+    def tearDown(self):
+        for m in self.ps:
+            m.stop()
+
+    def unit(self, key, done=False, out=False, p=None):
+        with serve._tries_lock:
+            serve._load_tries()
+            st = serve._entry(key)
+            st["done"] = done
+            if out:
+                st["wrong"] = [("w", i) for i in range(serve.max_tries(p))]
+
+    def test_single(self):
+        p = BANK["CALC1_T6B"]
+        self.assertEqual((serve.tries_out(p, "s1"), serve.item_solved(p, "s1")), (False, False))
+        self.unit(("s1", p["code"]), done=True)
+        self.assertEqual((serve.tries_out(p, "s1"), serve.item_solved(p, "s1")), (True, True))
+        self.assertEqual(serve.cluck_begin(p, "s1", "12"), (1, True))
+        self.assertEqual(serve._cluck_turns[("s1", p["code"])][-1][1], 2)
+        self.unit(("s2", p["code"]), out=True, p=p)                                   # out of tries: reveal, not solved
+        self.assertEqual((serve.tries_out(p, "s2"), serve.item_solved(p, "s2")), (True, False))
+        self.assertEqual(serve.cluck_begin(p, "s2", "5"), (1, True))
+        self.assertEqual(serve._cluck_turns[("s2", p["code"])][-1][1], 1)
+        self.unit(("s3", p["code"]))                                                  # tried, still open: no
+        self.assertEqual(serve.cluck_begin(p, "s3", "5"), (1, False))
+
+    def test_multi(self):
+        p = BANK["CSCI26_M5V"]
+        self.assertEqual(p["type"], "multi")
+        n = len(p["parts"])
+        self.assertGreaterEqual(n, 2)
+        self.unit(("m1", p["code"], 0), done=True)                                   # one part done, the rest open: no
+        self.assertEqual((serve.tries_out(p, "m1"), serve.item_solved(p, "m1")), (False, False))
+        self.assertEqual(serve.cluck_begin(p, "m1", "14"), (1, False))
+        for i in range(1, n):
+            self.unit(("m1", p["code"], i), out=True, p=p)                           # done + out: closed, reveal, not solved
+        self.assertEqual((serve.tries_out(p, "m1"), serve.item_solved(p, "m1")), (True, False))
+        self.assertEqual(serve.cluck_begin(p, "m1", "14"), (2, True))
+        for i in range(n):
+            self.unit(("m2", p["code"], i), done=True)                               # every part done: solved
+        self.assertEqual((serve.tries_out(p, "m2"), serve.item_solved(p, "m2")), (True, True))
+        self.assertEqual(serve.cluck_begin(p, "m2", "14"), (1, True))
+        self.assertTrue(serve.row_solved(serve._cluck_turns[("m2", p["code"])][-1]))
+        for i in range(n):
+            self.unit(("m3", p["code"], i), out=True, p=p)                           # every part out (the old rule): still reveal
+        self.assertEqual((serve.tries_out(p, "m3"), serve.item_solved(p, "m3")), (True, False))
+
+
 class SugarReveal(unittest.TestCase):
     """T19 (Tony, Oct 12): in sugar the server sends `correct` once a question is out of tries, never before; diet never."""
     SUGAR, DIET = "", "stem-mode=diet; stem-mode-v=2"
