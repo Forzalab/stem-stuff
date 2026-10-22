@@ -1359,8 +1359,25 @@ function cueNext() {
   if (!painting) nx.focus({ preventScroll: true });
   if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
 }
-/* the held Enter that sent Check auto-repeats onto Next once it has focus: a repeat never presses Next (not a shortcut: it only drops repeats) */
-addEventListener("keydown", e => { if (e.repeat && (e.key === "Enter" || e.key === " ") && e.target.matches?.("#q .nx")) e.preventDefault(); }, true);
+/* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
+   after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
+addEventListener("keydown", e => {
+  if (!e.target.matches?.("#q .nx, #qnext")) return;
+  if (e.key === "Enter" || (e.repeat && e.key === " ")) e.preventDefault();
+}, true);
+/* → = Next, ← = Prev (the bar's own buttons: nav.js's queue), only when focus is not in a choice list (there the arrows move the pick,
+   and that handler takes the key first), a text box or the splitter. An overlay up: the first → only closes it (rewards/fx.js takes the
+   key on capture, same as Escape); while it fades out the arrows still do nothing. */
+const ARROW_OWN = "input, textarea, select, [contenteditable]:not([contenteditable=false]), .choices, [role=radiogroup], [role=listbox], [role=separator], #qlist";
+addEventListener("keydown", e => {
+  if ((e.key !== "ArrowRight" && e.key !== "ArrowLeft") || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (document.querySelector(".fx-ov")) { e.preventDefault(); return; }
+  if (e.target.closest?.(ARROW_OWN)) return;
+  const nav = $("#qnav"), b = $(e.key === "ArrowRight" ? "#qnext" : "#qprev");
+  if (!nav || nav.hidden || !b || b.disabled || b.hidden) return;
+  e.preventDefault();
+  b.click();
+});
 /* ---------- T19 SUGAR REVEAL (Tony, Oct 12): out of tries in sugar shows the right answer ----------
    The server sends `correct` only with the lockout and only in sugar (serve.py answer_of; a reload gets it from /state).
    mc: the right row turns green with a check (class right + reveal), the picked wrong rows stay struck with their x.
