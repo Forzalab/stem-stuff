@@ -18,6 +18,16 @@ from functools import cmp_to_key
 # ── JS value semantics ───────────────────────────────────────────────────────────────────────────────────────────────────────
 JS_WS = "\t\n\v\f\r                  　﻿"
 NUM_RE = re.compile(r"[+-]?(?:\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?)")
+# Slot convention (views/registry.json "slot"): a student-facing string may be exactly "$t.<id>". It is a plain string here, so
+# validation takes it wherever a string is allowed (no change to the upstream port); the gate's cap and copy checks skip it
+# (views.js fills it and caps the filled text). Keep in step with registry slot.id and views.js SLOT.
+SLOT_RE = re.compile(r"\$t\.([a-z][a-z0-9_]{0,31})")
+
+
+def slot_id(v):
+    """The id of a "$t.<id>" slot string, else None."""
+    m = SLOT_RE.fullmatch(v) if isinstance(v, str) else None
+    return m.group(1) if m else None
 
 
 def trim(s):

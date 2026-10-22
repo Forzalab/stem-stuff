@@ -16,6 +16,9 @@
 .vw p { max-width: 65ch; }
 .ai-box .vw p, .ai-box .vw .vw-fig { max-width: 58ch; }
 .vw-col > * + * { margin-top: var(--s4); }
+/* a "$t.<id>" slot with no text yet: an outlined empty box labelled by its id (measure_slots reads its size) */
+.vw-tslot { display: inline-block; min-width: 4ch; padding: 0 var(--s1); border: var(--bw-hair) dashed var(--line); border-radius: 4px;
+  color: var(--muted); font-size: var(--t-xs); line-height: var(--lh-xs); }
 
 /* L0 */
 .vw-t { font-size: var(--t-lg); font-weight: var(--w-em); line-height: var(--lh-title); }
