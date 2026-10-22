@@ -1566,12 +1566,24 @@ const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
    wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
 const WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
 const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
-const stripFigs = t => t.replace(WFIG, "\n").replace(/```[\s\S]*$/, "");
+/* a view (P4.1, views_gate.py): the server sends at most one gated OpenUI Lang program per reply as "\n```openui\n<program>\n```\n", in the
+   same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
+const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
+const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
+const stripFigs = t => t.replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];
     if (done && !done.isConnected) { ph.replaceWith(done); continue; }
     ph.removeAttribute("data-f");
+    if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
+      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { ph.replaceChildren(); ph.textContent = alt; ph.classList.add("fig-off"); };
+      ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
+      import("./views.js").then(V => { V.render(src, ph, {}); if (!ph.querySelector(".vw-slot.on:not(.vw-fallback) svg, .vw-slot.on:not(.vw-fallback) p")) off(); })
+        .catch(e => { console.error(e); off(); });
+      if (!done) figEl[k] = ph;
+      continue;
+    }
     let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
     if (!b || b.type !== "graph") { ph.remove(); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
@@ -1588,7 +1600,7 @@ function wishHTML(t) {
     eqs = []; li = [];
   };
   const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
-  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
+  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(WOUI, (m, p) => `\n\u0001FIG${figKey(OUI + p)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
   t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
   t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
   for (const l of t.split("\n")) {
