@@ -243,6 +243,7 @@ class Session {
       h: (...a) => h(doc, ...a),
       icon: (n, sm) => icon(doc, n, sm),
       rich: s => rich(doc, s),
+      t: this.o.t,
     };
   }
   handle() {
@@ -307,6 +308,105 @@ function drawGraph(doc, g, st = {}) {
   for (const [x, t] of g.cols) kids.push(h(doc, "text", { class: "col", x, y: Hh - 8 }, t));
   return h(doc, "svg", { viewBox: `0 0 ${W} ${Hh}`, "aria-hidden": "true", focusable: "false" }, kids);
 }
+// Geometry: named points "A 0,0; B 3,0" (y up, 1:1 scale) and marks seg(A,B) circle(O,r) right(at,from,to) dim(from,to,label[,left|right])
+// angle(at,from,to[,label]) arrow(from,to[,label]) label(at,text). Caps (registry): 12 points, 12 marks, 6 labels; over one: too-long.
+const GEO_CAPS = { pts: 12, marks: 12, labels: 6 };
+const GREEK = { alpha: "α", beta: "β", gamma: "γ", delta: "δ", theta: "θ", phi: "φ", pi: "π", mu: "μ", omega: "ω", lambda: "λ", Delta: "Δ", circ: "°", cdot: "·" };
+const plainTex = s => String(s).replace(/\$/g, "").replace(/\\([A-Za-z]+)/g, (m, w) => GREEK[w] ?? w).replace(/[{}]/g, "").replace(/\^\s*°/g, "°").trim();
+const tooLong = msg => Object.assign(new Error(msg), { code: "too-long" });
+const badGeo = msg => Object.assign(new Error(msg), { code: "bad-value" });
+/** Geometry props -> { pts: {name: [x, y]}, marks: [{k, ...}] }; throws (too-long / bad-value) on a cap or a bad mark. */
+export function geoModel(p) {
+  const pts = {};
+  for (const t of String(p.pts || "").split(";")) {
+    const m = /^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(t);
+    if (m) pts[m[1]] = [+m[2], +m[3]]; else if (t.trim()) throw badGeo(`point "${t.trim().slice(0, 20)}"`);
+  }
+  if (!Object.keys(pts).length) throw badGeo("geometry has no points");
+  if (Object.keys(pts).length > GEO_CAPS.pts) throw tooLong(`${Object.keys(pts).length} > ${GEO_CAPS.pts} points`);
+  const marks = (p.marks || []).map(String);
+  if (marks.length > GEO_CAPS.marks) throw tooLong(`${marks.length} > ${GEO_CAPS.marks} marks`);
+  const P = n => { if (!pts[n]) throw badGeo(`no point ${n}`); return pts[n]; };
+  const out = [];
+  let labels = 0;
+  for (const s of marks) {
+    const m = /^\s*(seg|circle|right|dim|angle|arrow|label)\s*\((.*)\)\s*$/.exec(s);
+    if (!m) throw badGeo(`mark "${s.slice(0, 20)}"`);
+    const a = m[2].split(",").map(x => x.trim()), k = m[1], rest = i => a.slice(i).join(", ").trim();
+    let o;
+    if (k === "seg") o = { k, a: P(a[0]), b: P(a[1]) };
+    else if (k === "circle") { if (!(+a[1] > 0)) throw badGeo("circle radius"); o = { k, c: P(a[0]), r: +a[1] }; }
+    else if (k === "right") o = { k, at: P(a[0]), u: P(a[1]), v: P(a[2]) };
+    else if (k === "angle") o = { k, at: P(a[0]), u: P(a[1]), v: P(a[2]), text: rest(3) };
+    else if (k === "arrow") o = { k, a: P(a[0]), b: P(a[1]), text: rest(2) };
+    else if (k === "label") o = { k, at: P(a[0]), text: rest(1) };
+    else {
+      const side = a.length > 3 && /^(left|right)$/i.test(a[a.length - 1]) ? a.pop().toLowerCase() : null;
+      o = { k, a: P(a[0]), b: P(a[1]), text: rest(2), side };
+    }
+    if (o.text) labels++;
+    out.push(o);
+  }
+  if (labels > GEO_CAPS.labels) throw tooLong(`${labels} > ${GEO_CAPS.labels} labels`);
+  return { pts, marks: out };
+}
+function drawGeometry(doc, g, t) {
+  const all = Object.values(g.pts), ext = [...all];
+  for (const m of g.marks) if (m.k === "circle") ext.push([m.c[0] - m.r, m.c[1] - m.r], [m.c[0] + m.r, m.c[1] + m.r]);
+  const xs = ext.map(p => p[0]), ys = ext.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const span = Math.max(x1 - x0, y1 - y0) || 1, k = 240 / span, pad = 34;      // one scale for x and y (1:1)
+  const W = (x1 - x0) * k + 2 * pad, H = (y1 - y0) * k + 2 * pad;
+  const X = p => (p[0] - x0) * k + pad, Y = p => (y1 - p[1]) * k + pad;      // y up
+  const txt = (s, x, y) => {
+    const m = SLOT.exec(s), id = m && m[1], filled = id && t && Object.hasOwn(t, id) ? String(t[id]) : null;
+    return h(doc, "text", { class: "gm-t", x, y, "data-slot": id && filled == null ? id : null }, filled ?? (id || plainTex(s)));
+  };
+  const cx = all.reduce((s, p) => s + X(p), 0) / all.length, cy = all.reduce((s, p) => s + Y(p), 0) / all.length;
+  const kids = [];
+  for (const m of g.marks) {
+    if (m.k === "seg") kids.push(h(doc, "line", { class: "gm gm-seg", x1: X(m.a), y1: Y(m.a), x2: X(m.b), y2: Y(m.b) }));
+    else if (m.k === "circle") kids.push(h(doc, "circle", { class: "gm gm-circle", cx: X(m.c), cy: Y(m.c), r: m.r * k }));
+    else if (m.k === "arrow") {
+      const ax = X(m.a), ay = Y(m.a), bx = X(m.b), by = Y(m.b), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
+      const hx = bx - ux * 10, hy = by - uy * 10;
+      kids.push(h(doc, "g", { class: "gm gm-arrow" }, h(doc, "line", { x1: ax, y1: ay, x2: hx, y2: hy }),
+        h(doc, "polygon", { points: `${bx},${by} ${hx - uy * 6},${hy + ux * 6} ${hx + uy * 6},${hy - ux * 6}` })));
+      if (m.text) kids.push(txt(m.text, (ax + bx) / 2 - uy * 14, (ay + by) / 2 + ux * 14 + 4));
+    } else if (m.k === "right" || m.k === "angle") {
+      const ox = X(m.at), oy = Y(m.at), un = p => { const dx = X(p) - ox, dy = Y(p) - oy, L = Math.hypot(dx, dy) || 1; return [dx / L, dy / L]; };
+      const [ax, ay] = un(m.u), [bx, by] = un(m.v);
+      if (m.k === "right") {
+        const s = 12;
+        kids.push(h(doc, "path", { class: "gm gm-right", d: `M${ox + ax * s},${oy + ay * s} L${ox + (ax + bx) * s},${oy + (ay + by) * s} L${ox + bx * s},${oy + by * s}` }));
+      } else {
+        const r = 22, cross = ax * by - ay * bx;
+        kids.push(h(doc, "path", { class: "gm gm-angle", d: `M${ox + ax * r},${oy + ay * r} A${r},${r} 0 0 ${cross > 0 ? 1 : 0} ${ox + bx * r},${oy + by * r}` }));
+        if (m.text) { const mx = ax + bx, my = ay + by, L = Math.hypot(mx, my) || 1; kids.push(txt(m.text, ox + (mx / L) * (r + 12), oy + (my / L) * (r + 12) + 4)); }
+      }
+    } else if (m.k === "dim") {
+      const ax = X(m.a), ay = Y(m.a), bx = X(m.b), by = Y(m.b), L = Math.hypot(bx - ax, by - ay) || 1;
+      let nx = (by - ay) / L, ny = -(bx - ax) / L;
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      const outward = (mx + nx - cx) ** 2 + (my + ny - cy) ** 2 >= (mx - cx) ** 2 + (my - cy) ** 2;
+      if (m.side ? m.side === "left" : !outward) { nx = -nx; ny = -ny; }     // default: the side away from the figure
+      const o = 14, px = nx * o, py = ny * o;
+      kids.push(h(doc, "g", { class: "gm gm-dim" }, h(doc, "line", { x1: ax + px, y1: ay + py, x2: bx + px, y2: by + py }),
+        h(doc, "line", { x1: ax + px * 0.5, y1: ay + py * 0.5, x2: ax + px * 1.5, y2: ay + py * 1.5 }),
+        h(doc, "line", { x1: bx + px * 0.5, y1: by + py * 0.5, x2: bx + px * 1.5, y2: by + py * 1.5 })));
+      if (m.text) kids.push(txt(m.text, mx + nx * (o + 14), my + ny * (o + 14) + 4));
+    } else if (m.k === "label") {
+      const x = X(m.at), y = Y(m.at), dx = x - cx, dy = y - cy, L = Math.hypot(dx, dy) || 1;
+      kids.push(txt(m.text, x + (dx / L) * 26, y + (dy / L) * 26 + 4));
+    }
+  }
+  for (const [id, p] of Object.entries(g.pts)) {
+    const dx = X(p) - cx, dy = Y(p) - cy, L = Math.hypot(dx, dy) || 1;
+    kids.push(h(doc, "g", { class: "gm-pt" }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 }),
+      h(doc, "text", { class: "gm-t gm-name", x: X(p) + (dx / L) * 12, y: Y(p) + (dy / L) * 12 + 4 }, id)));
+  }
+  return h(doc, "svg", { viewBox: `0 0 ${W.toFixed(1)} ${H.toFixed(1)}`, "aria-hidden": "true", focusable: "false" }, kids);
+}
 const SAMPLE_NODE = new Set(["cur", "done", "front", "rec", "idle"]);
 function sample(doc, mark) {
   const k = /^k\d$/.test(mark);
@@ -335,6 +435,7 @@ register("Legend", (p, c) => c.h("div", { class: "vw-chips", role: "list", "aria
 })));
 register("Table", (p, c) => table(c.doc, p.head || [], p.rows || []));
 register("Graph", (p, c) => c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure" }, drawGraph(c.doc, graphModel(p))));
+register("Geometry", (p, c) => c.h("div", { class: "vw-fig vw-geo", role: "img", "aria-label": p.alt || "figure" }, drawGeometry(c.doc, geoModel(p), c.t)));
 
 // ─── L1 ───
 register("Callout", (p, c) => c.h("div", { class: "vw-callout" }, c.h("div", { class: "vw-tag" }, p.tag), c.h("p", null, c.rich(p.text))));

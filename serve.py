@@ -37,6 +37,7 @@ import urllib.request
 import sympy
 
 import livefig
+import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
@@ -1669,7 +1670,7 @@ def rewrite_on():
     return os.environ.get("CLUCK_REWRITE", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
-KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
+KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|```openui\n[\s\S]*?\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
 
 
 def _edit(draft, fig, max_tokens):
@@ -1679,7 +1680,7 @@ def _edit(draft, fig, max_tokens):
     if not draft.strip():
         return draft
     try:
-        gate = livefig.Fence(fig)
+        gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one([{"type": "text", "text": EDITOR, "cache_control": CACHE}], [{"role": "user", "content": draft}], max_tokens)) + gate.end()
     except Exception as e:  # noqa: BLE001
         log(f"rewrite: {e}")
@@ -2090,7 +2091,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None):
     livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
-    xyz, fence = Xyz(), livefig.Fence(fig)
+    xyz, fence = Xyz(), views_gate.Fence(fig)
     guard = None if reveal else LeakGuard(facts)
     sent, head = False, ""                       # head: the first visible line so far; None once it went on
     for t in chunks:
@@ -2227,7 +2228,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
     elif claude_ready(out):
         said, live, edit, draft = False, fig is not None and livefig.on(), edit and rewrite_on(), []
-        gate, budget = livefig.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
+        gate, budget = views_gate.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
         try:
             msgs = [dict(messages[0], content=livefig.weave(messages[0]["content"]))] + messages[1:] if live else messages
             turns = msgs[1:]
@@ -2255,7 +2256,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
             log(f"claude {CLAUDE_MODEL}: {e}")
             if not budget_hit(e, "claude", out, model=CLAUDE_MODEL):
                 incident("cluck", "upstream", provider="claude", model=CLAUDE_MODEL, status=getattr(e, "code", None), err=e, phase="stream" if said else "headers")
-    gate = livefig.Fence(None)
+    gate = views_gate.Fence(None)
     for t in _or_stream(messages, key, max_tokens, out):
         o = gate.feed(t)
         if o:

@@ -66,6 +66,15 @@
 .vw .el.tree { fill: var(--c1); }
 .vw .el.seen { fill: var(--ink); }
 .vw .col { fill: var(--muted); font: 400 0.8125rem var(--font); text-anchor: middle; }
+/* Geometry (1:1 scale, y up): ink strokes, muted dims and arcs; fits the figure slot min(28svh, half the width) */
+.vw-geo svg { max-height: min(var(--vw-fig), 50vw); }
+.vw .gm { fill: none; stroke: var(--ink); stroke-width: 1.75; }
+.vw .gm-dim, .vw .gm-angle, .vw .gm-right { stroke: var(--muted); stroke-width: 1.25; }
+.vw .gm-arrow { stroke: var(--c1); stroke-width: 2.25; }
+.vw .gm-arrow polygon { fill: var(--c1); stroke: none; }
+.vw .gm-pt circle { fill: var(--ink); stroke: none; }
+.vw .gm-t { fill: var(--ink); font: 400 0.875rem var(--font); text-anchor: middle; }
+.vw .gm-t.gm-name { font-weight: 600; }
 /* colour classes (F12): fill AND digit AND k2 hollow, so classes survive greyscale and the warm remap */
 .vw .cm circle { stroke-width: 2; }
 .vw .cm.k1 circle { fill: var(--c1); stroke: var(--c1); }
