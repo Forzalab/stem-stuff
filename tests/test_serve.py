@@ -1905,3 +1905,82 @@ class Guard(unittest.TestCase):
         self.assertIn(b"Kill them? [y/N] ", out)
         self.assertTrue(self.up(b))
         self.assertIsNone(pa.poll())                                             # A was not killed
+
+
+class FigImage(unittest.TestCase):
+    """the Claude arm sends each question figure as a pre-rendered PNG (tools/fig_png.mjs) with the question block; the non-vision arm,
+    CLUCK_FIG_IMG=0 and a figure-less question get none; the bytes are the same on every turn (the cached prefix replays them)"""
+    FIG, PLAIN = "CALC1_A9R", "CALC1_T6B"
+
+    def msgs(self, v4):
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_claude_one", return_value=iter(())) as one:
+            serve._v4_claude_chunks(v4, 100)
+        return one.call_args[0][1]
+
+    def v4(self, code, turns=None):
+        p = serve.problems()[code]
+        return {"arm": "claude", "code": code, "bank": "B", "imgs": serve.fig_images(p),
+                "turns": turns or [{"role": "user", "content": ["Q block " + p["code"], "dyn wish"]}]}
+
+    @staticmethod
+    def imgs(msgs):
+        return [b for m in msgs for b in m["content"] if b["type"] == "image"]
+
+    def test_every_bank_figure_has_png(self):
+        miss = [f"{c}-{i}.png" for c, p in serve.problems().items() for i, b in enumerate(p.get("body", []))
+                if b.get("type") == "graph" and not os.path.isfile(os.path.join(serve.FIG_DIR, f"{c}-{i}.png"))]
+        self.assertEqual(miss, [], "graph blocks with no figure PNG: run `node tools/fig_png.mjs` and commit banks/figs/")
+
+    def test_figure_question_has_image(self):
+        import base64
+        m = self.msgs(self.v4(self.FIG))
+        im = self.imgs(m)
+        self.assertEqual(len(im), sum(b.get("type") == "graph" for b in serve.problems()[self.FIG]["body"]))
+        self.assertGreater(len(im), 0)
+        self.assertEqual(im[0]["source"]["media_type"], "image/png")
+        self.assertEqual(im[0]["source"]["type"], "base64")
+        self.assertTrue(base64.b64decode(im[0]["source"]["data"]).startswith(b"\x89PNG"))
+        c = m[0]["content"]
+        self.assertEqual([b["type"] for b in c], ["image"] * len(im) + ["text", "text"])   # with the question block, just ahead of it
+        self.assertIn("cache_control", c[len(im)])                                       # the breakpoint still on the question block
+
+    def test_no_image_without_figure(self):
+        self.assertEqual(self.imgs(self.msgs(self.v4(self.PLAIN))), [])
+
+    def test_kill_switch(self):
+        with unittest.mock.patch.dict(os.environ, {"CLUCK_FIG_IMG": "0"}):
+            v4 = self.v4(self.FIG)
+        self.assertEqual(self.imgs(self.msgs(v4)), [])
+
+    def test_missing_png_skipped(self):
+        p = dict(serve.problems()[self.FIG], code="T_NOPNG")
+        with unittest.mock.patch.object(serve, "log") as lg:
+            self.assertEqual(serve.fig_images(p), [])
+            self.assertEqual(serve.fig_images(p), [])
+        self.assertEqual(lg.call_count, sum(b.get("type") == "graph" for b in p["body"]))   # once per PNG, not per call
+
+    def test_deepseek_arm_no_image(self):
+        v4 = dict(self.v4(self.FIG), arm="deepseek")
+        self.assertTrue(v4["imgs"])
+        sent = []
+
+        def post(payload, key, timeout):
+            sent.append(payload)
+            raise OSError("stop")
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_or_post", side_effect=post):
+            with self.assertRaises(OSError):
+                list(serve._v4_deepseek_chunks(v4, "k", 100))
+        body = json.dumps(sent[0])
+        self.assertNotIn("image/png", body)
+        self.assertNotIn(v4["imgs"][0]["source"]["data"][:40], body)
+        self.assertTrue(all(isinstance(m["content"], str) for m in sent[0]["messages"]))
+
+    def test_identical_across_turns(self):
+        p = serve.problems()[self.FIG]
+        first = self.msgs(self.v4(self.FIG))
+        later = self.msgs(self.v4(self.FIG, [{"role": "user", "content": ["Q block " + p["code"], "dyn wish"]},
+                                             {"role": "assistant", "content": "Hi."},
+                                             {"role": "user", "content": ["Q block " + p["code"], "dyn why?"]}]))
+        self.assertTrue(self.imgs(first[:1]))
+        self.assertEqual(json.dumps(first[0], sort_keys=True), json.dumps(later[0], sort_keys=True))   # the question turn, image bytes and all
+        self.assertEqual(self.imgs(later[1:]), [])                                                     # only the first turn carries it

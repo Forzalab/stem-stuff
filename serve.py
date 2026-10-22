@@ -14,6 +14,7 @@
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
+import base64
 import datetime
 import errno
 import hashlib
@@ -1525,7 +1526,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         xyz = xyz_block(n)
         cluck_noted(p, sid, turn[0], xyz)
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz)}], reveal=turn[1], facts=leak_facts(p),
-                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer))
+                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
 
@@ -2156,6 +2157,32 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
         yield ("\n" if sent else "") + CLUCK_NUDGE
 
 
+FIG_DIR = os.path.join(ROOT, "banks", "figs")
+_FIG_PNG = {}                                   # name -> base64 str (None once logged missing): read once, every turn replays the same bytes
+
+
+def fig_images(p):
+    """the question's figures as image blocks (tools/fig_png.mjs: banks/figs/<code>-<i>.png, fits 400x300, ~100 tokens each), sent on the
+    Claude arm only (the non-vision arm gets graph_json alone). CLUCK_FIG_IMG=0: none. A missing PNG is skipped, logged once."""
+    if os.environ.get("CLUCK_FIG_IMG", "1") == "0":
+        return []
+    out = []
+    for i, b in enumerate(p.get("body", [])):
+        if b.get("type") != "graph":
+            continue
+        name = f"{p.get('code', '')}-{i}.png"
+        if name not in _FIG_PNG:
+            try:
+                with open(os.path.join(FIG_DIR, name), "rb") as f:
+                    _FIG_PNG[name] = base64.b64encode(f.read()).decode("ascii")
+            except OSError:
+                _FIG_PNG[name] = None
+                log(f"fig png missing: {name} (run node tools/fig_png.mjs)")
+        if _FIG_PNG[name]:
+            out.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": _FIG_PNG[name]}})
+    return out
+
+
 def _v4_claude_chunks(v4, max_tokens):
     # layer 1: the letter, 1h (~12 visitors a day: 5 min goes cold); layer 2: the bank's audience line; layer 3: the question block of the first
     # user turn; layer 4: the last assistant turn of a chat. Block B (the dynamic one) is never cached. 4 breakpoints at most.
@@ -2169,6 +2196,7 @@ def _v4_claude_chunks(v4, max_tokens):
             blocks = [{"type": "text", "text": st}, {"type": "text", "text": dyn}]
             if i == 0:
                 blocks[0]["cache_control"] = CACHE               # the question block: 5 min; every follow-up replays it
+                blocks = [dict(x) for x in v4.get("imgs", ())] + blocks   # the figures just ahead of it, inside the cached prefix
             msgs.append({"role": "user", "content": blocks})
         else:                                                    # always the block form, so a turn looks the same whether or not it is the marked one
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
@@ -2616,7 +2644,7 @@ def chat(cookie_header, body):
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
             v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p), code=p["code"], arm=cluck_arm(sid),
-                      bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True))
+                      bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
 
