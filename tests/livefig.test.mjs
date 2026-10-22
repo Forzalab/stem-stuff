@@ -18,3 +18,10 @@ test("live figure fixtures: the valid ones are SCHEMA graph blocks", () => {
 test("live figure fixtures: the schema rejects fail Ajv too", () => {
   for (const c of FIX.invalid.filter(c => c.why === "schema")) assert.equal(graph(c.fig), false, c.name);
 });
+
+test("geometry marks (right, dim, angle, circle): the valid fixtures are SCHEMA graph blocks, the schema rejects fail Ajv", () => {
+  for (const g of FIX.geom.valid) assert.ok(graph(g), `${g.kind}: ${ajv.errorsText(graph.errors)}`);
+  const bad = FIX.geom.invalid.filter(c => c.why === "schema");
+  assert.equal(bad.length, 4);
+  for (const c of bad) assert.equal(graph(c.fig), false, c.name);
+});
