@@ -272,6 +272,13 @@ for (const p of problems) {
       }
     }
   });
+  test(`${f}: form equals the answer (tools/slips.py)`, () => {
+    for (const u of units) {
+      if (!u.form) continue;
+      const tol = u.tol ?? 1e-6, ans = num(u.answer), v = num(u.form);
+      assert.ok(Math.abs(v - ans) <= tol * Math.max(1, Math.abs(ans)) || v.toPrecision(3) === ans.toPrecision(3), `${u.form} != ${u.answer}`);
+    }
+  });
 
   // loose on purpose (SCHEMA.md "Hint check"): only answers of 2+ chars the body doesn't already show
   test(`${f}: hints never state the answer`, () => {

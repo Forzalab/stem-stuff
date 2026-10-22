@@ -104,6 +104,8 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on any uncovered slip.
+
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
 Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components`, `misread`, `fallacy`, `quantifier`, `negation`, `counting`, `off-by-one`, `format`, `other`. Add to the enum (in the schema below) rather than overusing `other`.
@@ -601,6 +603,16 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           },
           "description": "multi: the answer boxes, in order"
         },
+        "form": {
+          "type": "string",
+          "minLength": 1,
+          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+        },
+        "ignore_slips": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+        },
         "answer": {
           "type": "string",
           "minLength": 1,
@@ -822,6 +834,16 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
       ],
       "additionalProperties": false,
       "properties": {
+          "form": {
+            "type": "string",
+            "minLength": 1,
+            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+          },
+          "ignore_slips": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+          },
         "label": {
           "type": "string",
           "minLength": 1,
