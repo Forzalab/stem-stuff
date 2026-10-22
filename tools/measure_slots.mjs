@@ -5,13 +5,16 @@
 // one row per slot {id, component, prop, role, wordClass, box:{x,y,w,h}, lines, maxChars}.
 //   component + prop: from the parsed program (the element whose prop holds the literal "$t.<id>", deep).
 //   role + wordClass: views/registry.json components.<C>.words.<prop>. A slot with no registry role -> exit 1.
-//   box: the content box of the element the filled text will sit in (the slot box's nearest non-inline parent).
+//   box: the content box of the element the filled text will sit in (the slot box's nearest non-inline parent). When that
+//        element is content-sized (a pill or chip that grows with its label), its width is the width the layout lets it grow
+//        to (probed with a long label), not the empty box's, so maxChars does not depend on the slot id's length.
 //   lines: body = ceil(prop maxLength / chars per line), else 3; heading = 2 when that parent wraps, else 1;
 //          button / label / chip = 1.
 //   maxChars: floor(box.w / average char width) * lines, capped by the prop's maxLength. The average char width is
 //          canvas measureText of a representative English sentence in the parent's computed font (the font the
 //          filled text inherits; the empty box itself is drawn smaller).
 // usage: node tools/measure_slots.mjs <view.oui> --out <dir> [--width 390] [--base <url>]
+//   measure(program, {css}) also takes extra CSS for the page (tests use it to pin a box to a fixed width).
 //   <view.oui> may also be "-" (stdin). No --base: starts python3 serve.py on a free port and stops it after.
 import { createRequire } from "node:module";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -51,7 +54,7 @@ async function startServer() {
 }
 
 /** Measure one program. Returns {rows, errors, png}; errors = slot ids with no registry role + render errors. */
-export async function measure(program, { out, width = 390, base, browser } = {}) {
+export async function measure(program, { out, width = 390, base, browser, css = "" } = {}) {
   let srv = null, own = null;
   if (!base) { srv = await startServer(); base = srv.base; }
   try {
@@ -62,11 +65,12 @@ export async function measure(program, { out, width = 390, base, browser } = {})
     // the lab page (its tokens, fonts and CSS); its demo views are swapped for one mount once it is ready
     await page.goto(`${base}/try/views-demo.html?fast=1`);
     await page.waitForFunction(() => document.documentElement.getAttribute("data-ready") === "1", null, { timeout: 15000 });
-    const res = await page.evaluate(async ({ program, SAMPLE }) => {
+    const res = await page.evaluate(async ({ program, SAMPLE, css }) => {
       const { render } = await import("/views.js");
       const { createParser } = await import("/vendor/openui-lang.mjs");
       const { LIB, toSchema } = await import("/views-lib.js");
       document.querySelector("main").innerHTML = '<section class="dq" aria-label="measure"><div id="vm" class="dmount"></div></section>';
+      if (css) document.head.appendChild(Object.assign(document.createElement("style"), { textContent: css }));
       const errs = [];
       render(program, document.getElementById("vm"), { onError: e => errs.push(`${e.code} ${e.statementId || ""} ${e.message}`) });
       await document.fonts.ready;
@@ -83,14 +87,21 @@ export async function measure(program, { out, width = 390, base, browser } = {})
       };
       walk(createParser(toSchema(LIB), LIB.root).parse(program).root);
       const cv = document.createElement("canvas").getContext("2d");
+      const PROBE = Array(12).fill(SAMPLE).join(" ");
       const rows = [...document.querySelectorAll(".vw-tslot[data-slot]")].map(el => {
         const id = el.getAttribute("data-slot");
         let fr = el.parentElement;
         while (fr && getComputedStyle(fr).display === "inline") fr = fr.parentElement;
         const cs = getComputedStyle(fr), r = fr.getBoundingClientRect();
         const pad = k => parseFloat(cs[`padding${k}`]) || 0, bw = k => parseFloat(cs[`border${k}Width`]) || 0;
+        // Content-sized boxes (pills, chips): probe with a long wrapping label and read the width the layout clamps it to;
+        // the browser applies every constraint (container width, siblings, gaps, max-width) and a fixed box does not move.
+        el.textContent = PROBE;
+        const pw = fr.getBoundingClientRect().width;
+        el.textContent = id;
+        const ow = pw > r.width + 0.5 ? pw : r.width;
         const box = { x: r.left + pad("Left") + bw("Left") + scrollX, y: r.top + pad("Top") + bw("Top") + scrollY,
-          w: r.width - pad("Left") - pad("Right") - bw("Left") - bw("Right"), h: r.height - pad("Top") - pad("Bottom") - bw("Top") - bw("Bottom") };
+          w: ow - pad("Left") - pad("Right") - bw("Left") - bw("Right"), h: r.height - pad("Top") - pad("Bottom") - bw("Top") - bw("Bottom") };
         for (const k in box) box[k] = Math.round(box[k] * 10) / 10;
         cv.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
         const avg = cv.measureText(SAMPLE).width / SAMPLE.length;
@@ -101,7 +112,7 @@ export async function measure(program, { out, width = 390, base, browser } = {})
         return { id, ...w, box, perLine: Math.max(0, Math.floor(box.w / avg)), maxLength, wraps, font: cv.font };
       });
       return { rows, errs };
-    }, { program, SAMPLE });
+    }, { program, SAMPLE, css });
 
     const errors = [...res.errs];
     const rows = res.rows.map(r => {
