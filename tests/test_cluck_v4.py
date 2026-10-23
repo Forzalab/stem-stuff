@@ -250,6 +250,33 @@ class Leaks(unittest.TestCase):
         p2 = prob(extra={"choices": [{"id": "a", "md": "4.0 W"}, {"id": "b", "md": "52.0 W"}, {"id": "c", "md": "56.0 W"}]})
         self.assertEqual(serve.leak_facts(p2)[1], [])                              # the answer 52.0 is in the question: cannot be told apart
 
+    MULTI = {"code": "T_G3D", "type": "multi", "body": [{"type": "text", "md": "A 4 m by 3 m room. (a) Its perimeter? (b) Its area plus 26?"}],
+             "parts": [{"type": "num", "answer": "14"}, {"type": "num", "answer": "38"}]}
+
+    def test_a_part_the_student_got_right_is_not_a_leak(self):
+        # bench v4 C2 CEK_G3D, pick [12, 38]: part b graded right, "your 38 is right" was swapped for the nudge
+        reply = "Your 38 is right, nice. Now walk around the room: add up all four sides."
+        self.assertEqual(serve.leak_kind(reply, serve.leak_facts(self.MULTI)), "number")                  # nothing done: still strict
+        with mock.patch.object(serve, "TRIES", os.path.join(tempfile.mkdtemp(), "tries.json")), mock.patch.object(serve, "KV", (None, None)):
+            serve._tries.clear()
+            self.assertEqual(serve.grade(self.MULTI, "sidG", {"part": 0, "answer": "12"})["verdict"], "wrong")
+            self.assertEqual(serve.grade(self.MULTI, "sidG", {"part": 1, "answer": "38"})["verdict"], "correct")
+            done = serve.units_done(self.MULTI, "sidG")
+            serve._tries.clear()
+        self.assertEqual(done, [False, True])
+        self.assertIsNone(serve.leak_kind(reply, serve.leak_facts(self.MULTI, done)))
+        self.assertEqual("".join(serve.v4_visible(iter([reply + "\n"]), False, serve.leak_facts(self.MULTI, done), "T")), reply + "\n")
+
+    def test_the_open_part_is_still_a_leak(self):
+        facts = serve.leak_facts(self.MULTI, [False, True])
+        self.assertEqual(serve.leak_kind("Your 38 is right. The perimeter is 14 m.", facts), "number")
+        self.assertEqual(serve.leak_kind("Your 14 is right, b is 38.", serve.leak_facts(self.MULTI, [True, False])), "number")
+        same = dict(self.MULTI, parts=[{"type": "num", "answer": "38"}, {"type": "num", "answer": "38"}])
+        self.assertEqual(serve.leak_kind("Your 38 is right.", serve.leak_facts(same, [False, True])), "number")   # the open part has it too
+        mc = dict(self.MULTI, parts=[prob(), {"type": "num", "answer": "38"}])
+        self.assertEqual(serve.leak_kind("Pick B.", serve.leak_facts(mc, [False, True])), "letter")       # an open mc part keeps its letter
+        self.assertIsNone(serve.leak_kind("Pick B.", serve.leak_facts(mc, [True, False])))
+
     def run_guard(self, parts, reveal):
         return "".join(serve.v4_visible(iter(parts), reveal, (LET, VAL), "T"))
 
