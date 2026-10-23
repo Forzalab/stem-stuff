@@ -1653,6 +1653,27 @@ class Explain(unittest.TestCase):
         self.assertEqual((status, [x["status"] for x in t]), (404, [404]), "an early answer too")
 
 
+class NoteField(unittest.TestCase):
+    """todo 48: the NOTE's field comes from the problem (bank profile subject, else the code prefix); the model's only when neither tells"""
+    def read(self, p, field, answer="a"):
+        said = json.dumps({"choices": [{"message": {"content": json.dumps(dict(Explain.NOTE, field=field))}}]}).encode()
+        with unittest.mock.patch.object(serve, "_or_post", lambda *a: io.BytesIO(said)), unittest.mock.patch.object(serve, "log") as log:
+            n = serve.note(dict(p, key="K"), answer, None, "k")                          # a key, no slip
+        return n["field"], [c.args[0] for c in log.call_args_list if "field=" in c.args[0]]
+
+    def test_a_physics_item_is_never_discrete_math(self):
+        self.assertEqual(self.read(BANK["PHYS_F3N"], "discrete_math", "1"), ("mechanics", ["note PHYS_F3N: gap=sign_direction field=mechanics confidence=medium"]))
+        self.assertEqual(self.read(BANK["PHYS_F3N"], "thermo", "1")[0], "thermo")          # PHYS says physics, not the branch: the model's stays
+        self.assertEqual(self.read(BANK["CALC1_X2P"], "discrete_math")[0], "calculus")
+
+    def test_the_bank_profile_subject_wins(self):
+        with unittest.mock.patch.dict(serve._index()["prof"], {"CALC1_X2P": {"subject": "physics.em"}}):
+            self.assertEqual(self.read(BANK["CALC1_X2P"], "calculus")[0], "electricity_magnetism")
+
+    def test_no_known_field_keeps_the_model_pick(self):
+        self.assertEqual(self.read(dict(BANK["CALC1_X2P"], code="BEAR_QAA"), "chemistry")[0], "chemistry")
+
+
 class FigBridge(unittest.TestCase):
     """H bridge (Oct 22): the model sees the question figure as compact JSON; a dropped live figure is asked for ONCE more"""
     GOOD = {"type": "graph", "kind": "scene", "alt": "Forces on the box on the ramp.", "marks": [
