@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Popover lab</title>
+<!-- design/POPOVER.md lab (Tony, Oct 23): every popover.js variant on the real app.css tokens. Open: python3 serve.py 8815, then
+     http://localhost:8815/design/popover-lab.html (serve.py serves design/), or open this file straight from disk. Try it at 360 and desktop.
+     Top: live triggers (tap one; one open at a time; Esc, an outside tap or a second tap closes). Bottom: the same five, drawn static, side by side.
+     The content here is author-time and static (the doc row is formula-sheet TORQUE, verbatim); nothing is fetched. tests/popover.pw.mjs drives this page. -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<link rel="stylesheet" href="../app.css">
+<style>
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
+h2 { margin: var(--s6) 0 var(--s3); font-size: var(--t-md); color: var(--muted); font-weight: var(--w-em); }
+.lede { margin: 0; color: var(--muted); font-size: var(--t-sm); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin: var(--s3) 0; font-size: var(--t-sm); }
+.tag { min-width: 4.5rem; color: var(--muted); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .04em; }
+.word { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }   /* a term: a dotted word, a real button */
+.chip { padding: 2px var(--s2); border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: var(--t-xs); cursor: pointer; }
+.word:focus-visible, .chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--s4); align-items: start; }
+.grid figure { margin: 0; }
+.grid figcaption { margin-bottom: var(--s2); color: var(--muted); font-size: var(--t-xs); }
+.pop.is-static { position: relative; z-index: auto; animation: none; }             /* the specimen: the same element, not anchored */
+</style>
+</head>
+<body>
+<main>
+<h1>Popover lab</h1>
+<p class="lede">One component, five presets (design/POPOVER.md). Tap to open; Esc, a tap outside or a second tap closes it.</p>
+
+<h2>Live</h2>
+<section class="fcard" id="fcard" role="note" aria-label="Key formulas"><span class="fc-notch" aria-hidden="true">Key formulas</span><ol>
+  <li class="f"><span class="fm" id="torqueFm"></span><button type="button" class="fq" id="tDoc" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button></li>
+  <li class="f mid"><span class="fm" id="midFm"></span><button type="button" class="chip" id="tMedia" aria-haspopup="dialog" aria-expanded="false">see it</button></li>
+</ol></section>
+<div class="row"><span class="tag">note</span><span>Level 4 <button type="button" class="chip" id="tNote" aria-haspopup="dialog" aria-expanded="false">how?</button></span></div>
+<div class="row"><span class="tag">term</span><span>The weight pulls at the rim, so it makes a <button type="button" class="word" id="tTerm" aria-haspopup="dialog" aria-expanded="false">torque</button>.</span></div>
+<div class="row"><span class="tag">action</span><span>Flagged: a sign slip <button type="button" class="chip" id="tAction" aria-haspopup="dialog" aria-expanded="false">why flagged?</button></span></div>
+
+<h2>All variants, static</h2>
+<div class="grid" id="grid"></div>
+</main>
+<script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/math.min.js"></script>
+<script src="../graph.js"></script>
+<script src="../popover.js"></script>
+<script>
+"use strict";
+const K = (t, el) => katex.render(t, el, { throwOnError: false });
+const P = (cls, text) => { const p = document.createElement("p"); if (cls) p.className = cls; p.textContent = text; return p; };
+const TORQUE = { tex: "\\tau = rF\\sin\\theta", doc: { purpose: "How hard a push or pull twists something. A wrench, a door, a pulley. Pull farther out, more twist.",
+  sym: [{ s: "\\tau", m: "torque", u: "N·m" }, { s: "r", m: "distance from pivot to force point", u: "m" }, { s: "F", m: "magnitude of applied force", u: "N" }, { s: "\\theta", m: "angle between r and F", u: "rad" }],
+  when: "Use to find the turning effect of a force about a pivot.", ex: "r=0.30 m, F=50 N, θ=90° → τ = 0.30·50·sin90° = 15 N·m" } };
+/* PHYS_BTV (Q11 Q1c): a pulley of radius R on a fixed axle, a weight m on a rope off its rim. A graph.js scene (SCHEMA.md kind "scene"): author-time JSON, drawn by our code */
+const PULLEY = { type: "graph", kind: "scene", alt: "A pulley of radius R on a fixed axle. A rope leaves its rim and holds a hanging weight m; its weight mg pulls straight down.", marks: [
+  { mark: "surface", from: [-0.8, 0.9], to: [0.8, 0.9], side: "left" },
+  { mark: "pulley", at: [0, 0], r: 0.5, mount: [0, 0.9] },
+  { mark: "text", at: [0.25, 0.1], text: "$R$" },
+  { mark: "rope", pts: [[0.5, 0], [0.5, -1.0]] },
+  { mark: "body", shape: "box", at: [0.5, -1.22], w: 0.42, h: 0.42, label: "$m$" },
+  { mark: "force", at: [0.5, -1.43], angle: 270, len: 0.6, label: "$m\\vec g$", anchor: "e" }] };
+
+/* one builder per variant: what app code would pass as build(el). All DOM, no markup strings from data */
+const V = {
+  doc: { label: "What this formula means", build(el) {
+    const h = document.createElement("div"); h.className = "pop-h"; K(TORQUE.tex, h); el.append(h, P("pop-t", TORQUE.doc.purpose));
+    const ul = document.createElement("ul"); ul.className = "fd-sym";
+    for (const y of TORQUE.doc.sym) { const li = document.createElement("li"), s = document.createElement("span"); s.className = "fd-s"; K(y.s, s);
+      li.append(s, Object.assign(document.createElement("span"), { className: "fd-m", textContent: y.m }), Object.assign(document.createElement("span"), { className: "fd-u", textContent: y.u })); ul.append(li); }
+    const w = P("fd-w", " " + TORQUE.doc.when), x = P("fd-x", " " + TORQUE.doc.ex);
+    w.prepend(Object.assign(document.createElement("b"), { textContent: "Use it" })); x.prepend(Object.assign(document.createElement("b"), { textContent: "Example" }));
+    el.append(ul, w, x);
+  } },
+  note: { label: "How levels work", build(el) { el.append(P("", "Each right answer gives XP. Fill the bar to reach the next level.")); } },
+  term: { label: "Torque", build(el) {
+    el.append(P("pop-t", "Torque"), P("", "How hard a push or pull twists something around a pivot."));
+    const x = P("pop-x", " A long wrench turns a bolt with less push."); x.prepend(Object.assign(document.createElement("b"), { textContent: "Like" })); el.append(x);
+  } },
+  action: { label: "Why this was flagged", build(el) {
+    el.append(P("pop-t", "A sign slip"), P("", "Your answer has the right size but the wrong sign. Check which way it points."));
+    const a = document.createElement("div"), b = document.createElement("button"); a.className = "pop-act"; b.type = "button"; b.className = "btn"; b.textContent = "Show the step";
+    b.addEventListener("click", () => Pop.close(true)); a.append(b); el.append(a);
+  } },
+  media: { label: "The pulley and the weight", build(el) {
+    const f = document.createElement("div"); f.className = "pop-fig fig"; f.setAttribute("role", "img"); f.setAttribute("aria-label", PULLEY.alt);
+    el.append(f, P("pop-cap", "The weight pulls at the rim, R from the center."));
+    Graph.render(f, PULLEY);
+  } }
+};
+K(TORQUE.tex, document.getElementById("torqueFm"));
+K("\\tau = mgR", document.getElementById("midFm"));
+const T = { tDoc: "doc", tNote: "note", tTerm: "term", tAction: "action", tMedia: "media" };
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[id]"); const v = b && T[b.id]; if (!v) return;
+  Pop.toggle(b, { variant: v, label: V[v].label, build: V[v].build, align: v === "doc" ? document.getElementById("torqueFm") : b });
+});
+const grid = document.getElementById("grid");
+for (const v of Object.keys(V)) {
+  const fig = document.createElement("figure"), cap = document.createElement("figcaption"), el = Pop.make({ variant: v, label: V[v].label });
+  cap.textContent = v; el.classList.add("is-static"); el.removeAttribute("tabindex"); el.removeAttribute("role"); el.id = "spec-" + v;
+  fig.append(cap, el); grid.append(fig); V[v].build(el);
+}
+</script>
+</body>
+</html>

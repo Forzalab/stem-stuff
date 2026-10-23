@@ -790,20 +790,23 @@ window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSte
    A mid piece's use/why (Oct 23) ride inside its piece's <li>, so they show when the piece pops */
 const docText = t => esc(t).replace(/([A-Za-zΔα-ω])_([A-Za-z0-9,]+)/g, "$1<sub>$2</sub>");
 /* Notes, light (Oct 23, brain ladder-ui-2026-10-23/RESEARCH.md): only the newest piece (.cur) shows them; an older one folds them behind an inline "why?"
-   that opens them in place (no hover bubble: touch + WCAG 1.4.13). Quiet "For"/"Why" run-in labels; the text is as authored */
+   that opens them in place (no hover bubble: touch + WCAG 1.4.13). Quiet "Use it for"/"Why this" run-in labels; the text is as authored */
 const midNotes = (m, cur) => m.use || m.why ? `<button type="button" class="fh-more" aria-expanded="false" aria-controls="fh-${m.i}"${cur ? " hidden" : ""}>why?</button>`
-  + `<span class="fhs" id="fh-${m.i}"${cur ? "" : " hidden"}>${[["use", "For"], ["why", "Why"]].map(([k, b]) => m[k] ? `<span class="fh fh-${k}"><b>${b}</b> ${docText(m[k])}</span>` : "").join("")}</span>` : "";
+  + `<span class="fhs" id="fh-${m.i}"${cur ? "" : " hidden"}>${[["use", "Use it for"], ["why", "Why this"]].map(([k, b]) => m[k] ? `<span class="fh fh-${k}"><b>${b}</b> ${docText(m[k])}</span>` : "").join("")}</span>` : "";
 function midOpen(li, cur) {                                                       // cur: the newest piece, notes open and no toggle; else folded
   li.classList.toggle("cur", cur);
   const b = li.querySelector(".fh-more"), n = li.querySelector(".fhs"); if (!b) return;
   b.hidden = cur; b.setAttribute("aria-expanded", "false"); n.hidden = !cur;
 }
-function docHTML(d, id) {
+/* the "?" popover (Tony, Oct 23): popover.js, variant "doc" (design/POPOVER.md). Built on open, removed on close. The row's formula again (same KaTeX,
+   same size, centred under the row's formula), the purpose as its bold title, then the muted body: symbols + units, when, example */
+function docHTML(d, tex) {
   const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
-  return `<li class="fdoc" id="${id}" role="group" aria-label="Symbols in this formula" hidden>${d.purpose ? `<p class="fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
-    + (d.when ? `<p class="fd-w"><b>Use it</b> ${esc(d.when)}</p>` : "") + (d.ex ? `<p class="fd-x"><b>Example</b> ${docText(d.ex)}</p>` : "") + "</li>";
+  return `<div class="pop-h">${renderMath(tex, false)}</div>${d.purpose ? `<p class="pop-t fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
+    + (d.when ? `<p class="fd-w"><b>Use it</b> ${esc(d.when)}</p>` : "") + (d.ex ? `<p class="fd-x"><b>Example</b> ${docText(d.ex)}</p>` : "");
 }
 function formulaCard() {
+  if (window.Pop && Pop.anchor()?.closest("#fcard")) Pop.close();
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
@@ -813,30 +816,19 @@ function formulaCard() {
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
   sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
     const arrow = steps.find(x => x.k === "arrow" && x.to === f.id);
-    const q = f.doc ? `<button type="button" class="fq" aria-expanded="false" aria-controls="fd-${i}" aria-label="What do the symbols in this formula mean?">?</button>` : "";
+    const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
     return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`
-      + (f.doc ? docHTML(f.doc, "fd-" + i) : "")
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
     const w = e.target.closest(".fh-more");
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
-    const d = sec.querySelector("#" + b.getAttribute("aria-controls")), open = d.hidden;
-    fdocClose(sec);
-    if (open) { d.hidden = false; b.setAttribute("aria-expanded", "true"); }
+    const f = S.prob.formulas[b.dataset.i];
+    Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => { el.innerHTML = docHTML(f.doc, f.tex); } });
   });
   $("#q").after(sec);
 }
-function fdocClose(sec = $("#fcard")) {
-  if (!sec) return;
-  sec.querySelectorAll(".fdoc").forEach(d => { d.hidden = true; });
-  sec.querySelectorAll(".fq").forEach(b => b.setAttribute("aria-expanded", "false"));
-}
-addEventListener("keydown", e => {                                                // Esc closes the "?" popup first (focus back on its "?")
-  if (e.key !== "Escape" || !$("#fcard .fdoc:not([hidden])")) return;
-  const b = $("#fcard .fq[aria-expanded=true]"); fdocClose(); b?.focus();
-});
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).
