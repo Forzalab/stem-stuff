@@ -2205,6 +2205,7 @@ async function clSend(msg) {
    an FX node or a stem-rw key. rewardGo() is the one funnel: every correct pays with the bells (XP, maybe a drop); a wrong try pays a
    quiet +1 (a small "+1" by the coin, no sound, no words: Cluck and the "one more try" toast own a wrong answer). State per bank. */
 const RW = () => window.Rewards || null, FXL = () => window.FX || {};
+const jevHeld = () => { const h = window.stemJev?.().hold; return !!(h && S && h.code === S.code && h.n > 0); };   // intent.js held(): a ladder nudge fired on this item
 const rewardOn = () => modeOf() === "sugar" && !!S && !!(S.prob.wish || S.prob.snack || S.prob.dead) && !!RW();
 const rwKey = () => bank ? bank.code : off() && window.stemOffline.fileName ? "file:" + (window.stemOffline.fileName(S.code) || "") : "solo";
 const rwTF = p => p.type === "mc" && maxTries(p) === 1 && (p.choices || []).length === 2;   // a True/False row: a coin flip pays less
@@ -2225,13 +2226,13 @@ function rewardTry(a, r) {
   if (r.verdict === "wrong" && window.stemRedo.has(S.code)) return;              // a redo round: no +1 farming on old misses
   const p = S.prob, multi = p.type === "multi";
   if (multi && r.verdict === "correct") return;                                 // a multi pays once every part is shut (rewardMulti)
-  const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part));
+  const firstTry = !S.tries.slice(0, -1).some(t => t.v === "wrong" && (!multi || t.part === a.part)) && !jevHeld();   // lane 4: a held-pick nudge on this item = no first-try bonus
   rewardGo(S, { correct: r.verdict === "correct", firstTry, open: r.verdict === "wrong" && r.triesLeft > 0,
     reveal: r.verdict !== "correct" && r.correct != null });                    // T19: the answer was shown = 0 XP, still a miss
 }
 function rewardMulti(mine) {
   if (!rewardOn() || S !== mine || !S.solved) return;
-  rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") });
+  rewardGo(S, { correct: true, firstTry: !S.tries.some(t => t.v === "wrong") && !jevHeld() });
 }
 function rewardGo(mine, o) {
   const p = mine.prob;

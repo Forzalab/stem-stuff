@@ -301,3 +301,14 @@ test("hold: the page wrapper reads #q's aria-checked (MutationObserver) and step
   assert.equal(mids, 1); assert.equal(calls.length, 1); assert.ok(LINES.hold_mid.includes(calls[0]));
   assert.deepEqual({ ...win.stemJev().hold }, { code: "A", n: 1, frozen: false });
 });
+
+test("hold: the farm rule swaps at HOLD.FARM (\"off\" = no freeze)", () => {
+  const was = API.HOLD.FARM;
+  try {
+    API.HOLD.FARM = "off";
+    const j = holder();
+    j.at(0).ev("q_open", { code: "A" }); j.ev("_hold", { choice: "B" });
+    j.tick(21); j.tick(42); j.tick(63);
+    assert.deepEqual(j.h(), { code: "A", n: 3, frozen: false });
+  } finally { API.HOLD.FARM = was; }
+});

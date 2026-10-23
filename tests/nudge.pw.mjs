@@ -27,7 +27,7 @@ writeFileSync(join(banks, "BANK_T95.json"), JSON.stringify({ v: 1, problems: PRO
 const LAD = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/ladder-pilot.json"), "utf8")).items.find(i => i.code === "PHYS_Z3X");
 writeFileSync(join(banks, "formula-sheet.json"), readFileSync(join(ROOT, "tests/fixtures/formula-sheet-pilot.json")));
 writeFileSync(join(banks, "BANK_T95L.json"), JSON.stringify({ v: 1, problems: [{ ...PROBS[0], code: "CALC1_T95L1", title: "T95 ladder",
-  saccharine: { title: LAD.title, part: LAD.part, ladder: LAD.ladder } }] }));
+  saccharine: { title: LAD.title, part: LAD.part, ladder: LAD.ladder, key: "Tick: a" } }] }));   // a key = wish = rewards on
 const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -135,6 +135,12 @@ await step("lane 4: a held pick past 20 s (no samples yet) pops one ladder piece
   await idle(page, 25000);
   assert.equal(await mids(), 1, "no input since the last: no second piece");
   assert.equal((await page.evaluate(() => window.stemJev().hold)).frozen, true);
+  /* a right pick after a nudge: the reward sees firstTry = false (no first-try bonus) */
+  await page.evaluate(() => { const R = window.Rewards, f = R.answer; window.__first = []; R.answer = o => { window.__first.push(o.firstTry); return f.call(R, o); }; });
+  await page.click("#q .opt[data-id=a]");
+  await page.keyboard.press("Enter");
+  for (let k = 0; k < 20 && !(await page.evaluate(() => window.__first.length)); k++) await page.clock.runFor(250);
+  assert.deepEqual(await page.evaluate(() => window.__first), [false], "no first-try bonus after a held-pick nudge");
   assert.equal(page.ai, 0, "no server call");
   assert.deepEqual(page.errs, [], "no console errors");
   await page.context().close();

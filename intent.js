@@ -34,7 +34,7 @@
    line (copy/nudge-lines.js hold_mid | hold_arrow | hold_end: what the ladder just did, never right vs wrong; the page can't tell). HOLD.CAP
    per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Farming (ours): the
    next one comes due with no input since the last → none, the ladder freezes for the item (silent, "jev hold farm"). state().hold
-   { code, n, frozen } is the seam for "no first-try XP bonus after a nudge" (app.js reads it). S2's own nudge keeps 2×p75 / 80 s.
+   { code, n, frozen }: app.js jevHeld() reads it (no first-try XP bonus after a nudge). S2's own nudge keeps 2×p75 / 80 s.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
    those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
 (function () {
@@ -47,7 +47,8 @@
   /* J6 seen constants, all "ours" (J3 bench start values) */
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
   var RING_CAP = 2000, TITLE_WORDS = 8;
-  var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"] };
+  /* FARM: the farming rule (ours; Tony still deciding, Oct 23): "idle" = the next one comes due with no input since the last · "off" = none */
+  var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"], FARM: "idle" };
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -232,13 +233,15 @@
       nudges();
       held();
     }
+    /* lane 4: is this hold farming? The one swap point for the rule (HOLD.FARM) */
+    function farmed(h) { return HOLD.FARM === "idle" && h.n > 0 && q.step <= h.at; }   // sat through the last piece without a touch
     /* lane 4: the held-pick nudge (see the head comment). The clock = the later of the last input and the last hold nudge */
     function held() {
       var h = q.hold, t = now();
       if (!h.on || h.frozen || h.n >= HOLD.CAP || q.solved || q.sheet || aw || (t - keyAt) / 1000 < NUDGE.TYPING_S) return;
       var lim = p75(hist[q.code], HOLD.FALLBACK_S);
       if ((t - Math.max(q.step, h.at)) / 1000 < lim) return;
-      if (h.n && q.step <= h.at) { h.frozen = true; log("jev", "hold farm n=" + h.n); return; }   // sat through the last piece: no more
+      if (farmed(h)) { h.frozen = true; log("jev", "hold farm n=" + h.n); return; }
       var k = "";
       try { k = o.step ? o.step() || "" : ""; } catch (e) { k = ""; }
       var kind = "hold_" + (k || "end"), line = pick(kind), shown = !!(line && o.say && o.say(line, kind));
