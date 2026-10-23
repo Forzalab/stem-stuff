@@ -2044,3 +2044,50 @@ class FigImage(unittest.TestCase):
         self.assertTrue(self.imgs(first[:1]))
         self.assertEqual(json.dumps(first[0], sort_keys=True), json.dumps(later[0], sort_keys=True))   # the question turn, image bytes and all
         self.assertEqual(self.imgs(later[1:]), [])                                                     # only the first turn carries it
+
+
+class DrawRule(unittest.TestCase):
+    """spec H: the letter says draw readily; the Claude arm gets the figure how-to (livefig.rule + the Geometry line) as a last, uncached
+    system block after the two cached ones, which stay byte-identical; the DeepSeek arm gets none"""
+    def ctx(self):
+        return serve.livefig.context("T_DR", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
+
+    def v4(self, fig):
+        return {"arm": "claude", "code": "T_DR", "bank": "B", "fig": fig, "turns": [{"role": "user", "content": ["Q block", "dyn"]}]}
+
+    def system(self, v4):
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_claude_one", return_value=iter(())) as one:
+            serve._v4_claude_chunks(v4, 100)
+        return one.call_args[0][0]
+
+    def test_letter_has_the_draw_line(self):
+        self.assertIn("- Draw readily: any distance, angle, pivot, lever arm, triangle, vector or position in your reply → draw it (one figure: an "
+                      "```openui Geometry view, else a ```fig block). Words only needs a reason.\n", serve.PROMPT_V4)
+
+    def test_claude_howto_last_and_uncached(self):
+        sys_ = self.system(self.v4(self.ctx()))
+        self.assertEqual(len(sys_), 3)
+        self.assertEqual(sys_[-1], {"type": "text", "text": serve.v4_fig_howto(self.ctx())})   # no cache_control
+        self.assertIn(serve.livefig.rule(self.ctx()), sys_[-1]["text"])
+        self.assertIn("- `Geometry(pts: string", sys_[-1]["text"])
+        self.assertTrue(serve.GEO_LINE.startswith("- `Geometry("))
+
+    def test_cached_blocks_unchanged(self):
+        before = [{"type": "text", "text": "LETTER", "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+                  {"type": "text", "text": "B", "cache_control": serve.CACHE}]
+        self.assertEqual(json.dumps(self.system(self.v4(self.ctx()))[:2]), json.dumps(before))
+        self.assertEqual(json.dumps(self.system(self.v4(None))), json.dumps(before))           # no fig ctx (kill switch): no how-to
+
+    def test_deepseek_no_howto(self):
+        sent = []
+
+        def post(payload, key, timeout):
+            sent.append(payload)
+            raise OSError("stop")
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_or_post", side_effect=post):
+            with self.assertRaises(OSError):
+                list(serve._v4_deepseek_chunks(dict(self.v4(self.ctx()), arm="deepseek"), "k", 100))
+        body = json.dumps(sent[0])
+        self.assertNotIn("FIGURE", body)
+        self.assertNotIn("Geometry(", body)
+        self.assertEqual(sent[0]["messages"][0]["content"], "LETTER\n\nB")
