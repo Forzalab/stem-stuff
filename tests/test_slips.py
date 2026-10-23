@@ -79,9 +79,12 @@ class Mutants(unittest.TestCase):
         self.assertNotIn(("drop", 4.0), m)                      # 4 is a sign flip first
 
     def test_bad_values_skipped(self):
-        for form in ("sqrt(1-4)", "1/(2-2)", "x"):
+        for form in ("sqrt(1-4)", "1/(2-2)"):
             for _, v in slips.mutants(form):
                 self.assertTrue(math.isfinite(v))
+        for form in ("x", "foo(2)", "2(3+4)", "lambda: 1", "1 < 2", "'a'"):   # D4: a name or syntax outside the form grammar raises
+            with self.assertRaises((ValueError, SyntaxError), msg=form):
+                slips.mutants(form)
 
     def test_distribute_wins_a_tie_with_sign(self):  # Tony, Oct 22: 10-(3+2) typed 9 is the minus that reached one term
         self.assertEqual(slips.FAMILIES[0], "distribute")
@@ -101,6 +104,70 @@ class Mutants(unittest.TestCase):
             self.assertEqual([f for f, _ in got], [f for f, _ in g["mutants"]], g["form"])
             for (_, a), (_, b) in zip(got, g["mutants"]):
                 self.assertLessEqual(abs(a - b), 1e-9 * max(1, abs(b)), g["form"])
+
+
+def shape(e):
+    return (e.func.__name__, tuple(shape(a) for a in e.args)) if e.args else repr(e)
+
+
+def same_mutants(test, got, want, form):
+    """the parity rule both suites use: same families in the same order, each value within 1e-9 relative (0 only equals 0)"""
+    test.assertEqual([f for f, _ in got], [f for f, _ in want], form)
+    for (f, a), (_, b) in zip(got, want):
+        test.assertLessEqual(abs(a - b), 1e-9 * abs(b), (form, f, a, b))
+
+
+class Parser(unittest.TestCase):
+    """D4 (todo 17): parse() is stdlib ast + a walker, the same tree parse_expr(..., evaluate=False) gave, except a unary minus on a
+    bracket stays Mul(-1, x) (S3). The shared fixture slips-golden-banks.json pins both ports on every live bank form + corners."""
+
+    def test_flattens_like_parse_expr(self):
+        from sympy import parse_expr
+        for f in ("1/2/3", "8/2*(2+2)", "(1+2)+3", "1-2-3", "10-2-(3+4)", "7-2*(2+3)", "5-(3+1)/2", "2*9.8*sin(30*pi/180)/150",
+                  "2^-2", "-2^2", "-3+4", "1e3/(2+3)", "2.0*(3+4)", "atan(3/4)*180/pi", "sqrt(9+16)", "5*(-1+2-3+8)/14", "2^3^2"):
+            self.assertEqual(shape(slips.parse(f)), shape(parse_expr(f.replace("^", "**"), evaluate=False)), f)
+        self.assertEqual(shape(slips.parse("1/2/3")), ("Mul", ("1", ("Pow", ("2", "-1")), ("Pow", ("3", "-1")))))
+        self.assertEqual([str(a) for a in slips.parse("1-2-3").args], ["1", "-1*2", "-1*3"])          # written order
+
+    def test_unary_minus_keeps_the_bracket(self):   # S3: -(3+4) was a bare -7, so sign/drop/distribute lost its terms
+        self.assertEqual(shape(slips.parse("-(3+4)")), ("Mul", ("-1", ("Add", ("3", "4")))))
+        self.assertEqual(fam("-(3+4)", "distribute"), (1.0,))
+        self.assertEqual(fam("-(3+4)", "drop"), (-4.0, -3.0))
+        self.assertEqual(fam("-(3+4)*2", "distribute"), (2.0,))
+        self.assertEqual(shape(slips.parse("-3")), "-3")                                                # a number still folds
+        self.assertEqual(shape(slips.parse("-(-3)")), "3")
+
+    def test_distribute_a_minus_k_bracket(self):   # S1 (review-227): a-k(b+c) is Mul(-1, Mul(k, b+c)); read the chain's coefficient
+        self.assertEqual(fam("7-2*(2+3)", "distribute"), (9.0,))          # 7 - 4 + 6
+        self.assertEqual(fam("5-(3+1)*2", "distribute"), (1.0,))          # 5 - 6 + 2
+        self.assertEqual(fam("5-(3+1)/2", "distribute"), (4.0,))          # 5 - 3/2 + 1/2
+        self.assertEqual(slips.match("7-2*(2+3)", 9), "distribute")
+        self.assertEqual(fam("5+2*(3+1)", "distribute"), ())               # no minus, no distribute
+
+    def test_float_vs_integer_literal(self):       # N1: "2.0" is a Float (sympy auto_number); only an exact coefficient distributes
+        from sympy import Float, Integer
+        self.assertIsInstance(slips.parse("2.0"), Float)
+        self.assertIsInstance(slips.parse("1e3"), Float)
+        self.assertIsInstance(slips.parse("12"), Integer)
+        self.assertEqual(fam("-2.0*(3+4)", "distribute"), ())
+        self.assertEqual(fam("-2*(3+4)", "distribute"), (2.0,))
+
+    def test_tiny_constant_slips_stay_apart(self):   # EPS * max(1, |v|) merged every value under 1e-9 into one
+        f = "6.67e-11*(3+2)/4"                          # = 8.3375e-11
+        self.assertEqual(len(fam(f, "sign")), 3)
+        self.assertEqual(len(fam(f, "drop")), 2)
+        self.assertEqual(len([v for _, v in slips.mutants(f) if abs(v) < 1e-9]), 10)   # 3 sign, 2 drop, 1 power, 2 factor, 2 units
+        self.assertTrue(slips._same(0.0, 0.0) and not slips._same(1e-20, 0.0) and slips._same(1 + 1e-12, 1))
+
+    def test_golden_banks_fixture(self):
+        """every live bank form is in the shared fixture (else: python3 tools/slips.py --golden) and slips.py still gives its values"""
+        with open(os.path.join(FIX, "slips-golden-banks.json"), encoding="utf-8") as f:
+            gold = json.load(f)
+        have = {g["form"] for g in gold}
+        self.assertEqual([f for f in cli.live_forms() if f not in have], [], "new bank form: run python3 tools/slips.py --golden")
+        self.assertTrue(set(cli.CORNERS) <= have)
+        for g in gold:
+            same_mutants(self, slips.mutants(g["form"]), g["mutants"], g["form"])
 
 
 class Gate(unittest.TestCase):

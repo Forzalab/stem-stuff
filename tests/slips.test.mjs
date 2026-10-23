@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -59,6 +59,54 @@ test("slip window is SLIP_WIN (Tony D2): 0.5% or 3 s.f., never the grading tol",
 });
 
 test("distribute wins a tie with sign: 10-(3+2) typed 9", () => assert.equal(match("10-(3+2)", 9, 1e-6), "distribute"));
+
+/* D4 (todo 17): every live bank form + parser corners, written by `python3 tools/slips.py --golden`; tests/test_slips.py runs the same file.
+   Same families in the same order, each value within 1e-9 relative (0 only equals 0): no absolute floor, so tiny-constant forms count. */
+const BANKS = JSON.parse(readFileSync(new URL("fixtures/slips-golden-banks.json", import.meta.url), "utf8"));
+test("golden banks fixture: slips.mjs gives slips.py's mutants on every form", () => {
+  assert.ok(BANKS.length >= 150, `${BANKS.length} forms`);
+  const bad = [];
+  for (const g of BANKS) {
+    let got;
+    try { got = mutants(g.form); } catch (e) { bad.push(`${g.form}: throws ${e.message}`); continue; }
+    const fams = got.map(([f]) => f).join(" "), want = g.mutants.map(([f]) => f).join(" ");
+    if (fams !== want) { bad.push(`${g.form}: families\n  js ${fams}\n  py ${want}`); continue; }
+    got.forEach(([f, v], i) => { const w = g.mutants[i][1]; if (!(Math.abs(v - w) <= 1e-9 * Math.abs(w))) bad.push(`${g.form}: ${f} ${v} vs ${w}`); });
+  }
+  assert.deepEqual(bad, []);
+});
+const fam = (form, f) => Object.fromEntries(raw(form))[f];
+test("S3: a unary minus on a bracket keeps its terms (-(3+4) is (-1)*(3+4), not -7); a number still folds", () => {
+  assert.deepEqual(parse("-(3+4)"), { t: "mul", a: [{ t: "num", v: -1, rat: true }, { t: "add", a: [{ t: "num", v: 3, rat: true }, { t: "num", v: 4, rat: true }], bin: true }] });
+  assert.deepEqual(fam("-(3+4)", "distribute"), [1]);
+  assert.deepEqual(fam("-(3+4)", "drop"), [-4, -3]);
+  assert.deepEqual(fam("-(3+4)*2", "distribute"), [2]);
+  assert.deepEqual(parse("-(-3)"), { t: "num", v: 3, rat: true });
+});
+test("S1: a-k(b+c) gives the distribute slip (7-2*(2+3) -> 7-4+6)", () => {
+  assert.deepEqual(fam("7-2*(2+3)", "distribute"), [9]);
+  assert.deepEqual(fam("5-(3+1)*2", "distribute"), [1]);
+  assert.deepEqual(fam("5-(3+1)/2", "distribute"), [4]);
+  assert.equal(match("7-2*(2+3)", 9), "distribute");
+  assert.deepEqual(fam("5+2*(3+1)", "distribute"), []);
+});
+test("N1: the literal 2.0 is a Float like sympy's, so -2.0*(3+4) is a sign slip, not distribute", () => {
+  assert.equal(parse("2.0").rat, false);
+  assert.equal(parse("1e3").rat, false);
+  assert.equal(parse("12").rat, true);
+  assert.deepEqual(fam("-2.0*(3+4)", "distribute"), []);
+  assert.deepEqual(fam("-2*(3+4)", "distribute"), [2]);
+});
+test("tiny-constant form: slips under 1e-9 stay apart (the merge is relative, not EPS * max(1, |v|))", () => {
+  const f = "6.67e-11*(3+2)/4";
+  assert.equal(fam(f, "sign").length, 3);
+  assert.equal(fam(f, "drop").length, 2);
+  assert.equal(mutants(f).filter(([, v]) => Math.abs(v) < 1e-9).length, 10);
+});
+test("a name or syntax outside the form grammar throws (slips.py raises too); match() is null", () => {
+  for (const f of ["x", "foo(2)", "2(3+4)", "e"]) assert.throws(() => mutants(f), /slips/, f);
+  assert.equal(match("x+1", 1), null);
+});
 
 test("close() parity with slips.py: ties round away from zero in both (tests/fixtures/slips-close.json, also run by test_slips.py)", () => {
   const cases = JSON.parse(readFileSync(new URL("fixtures/slips-close.json", import.meta.url), "utf8"));
