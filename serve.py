@@ -1671,7 +1671,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         xyz = xyz_block(n)
         rows = cluck_noted(p, sid, turn[0], xyz)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, answer, units_done(p, sid)),
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, units_done(p, sid)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
@@ -2133,27 +2133,14 @@ def v4_on():
     return PROMPT_V4 is not None and (bool(os.environ.get("CLAUDE_API")) or os.environ.get("CLUCK_ARM", "").strip().lower() == "deepseek")
 
 
-def _unit_right(u, a):
-    """the student's pick / typed text a is right for unit u (a problem or one multi part); unreadable or empty = not right"""
-    if a is None or a == "" or a == []:
-        return False
-    if u.get("type") == "mc":
-        return set(map(str, a)) == set(map(str, rights(u))) if isinstance(a, list) else str(a) == str(u.get("correct"))
-    try:
-        return unit_correct(u, signature(u, str(a)))
-    except (UNREADABLE + (KeyError,)):
-        return False
-
-
-def leak_facts(p, pick=None, done=()):
+def leak_facts(p, done=()):
     """(correct letters lower-case, answer numbers) the REVEAL-no reply may not say. A number the question or a wrong choice also shows is a
-    given, not a leak, so it is skipped. A unit the student already has right is not hidden from them: its letters and numbers are skipped
-    (bench v4 C2: "your 38 is right" on a multi with part b right). pick: the student's answer (a multi: one per part, a list); done: the
-    server's per-unit solved flags (state()). A number an unsolved unit also has stays a leak."""
+    given, not a leak, so it is skipped. done: the server's per-unit solved flags (units_done); a unit the student already got right is not
+    hidden from them, its letters and numbers are skipped (bench v4 C2 CEK_G3D: "your 38 is right" with part b done). A number an open unit
+    also has stays a leak. The flags come from graded tries, never from the chat's answer field, so chat cannot probe a value for free."""
     multi = p.get("type") == "multi"
     units = (p.get("parts") or []) if multi else [p]
-    picks = (pick if isinstance(pick, list) else []) if multi else [pick]
-    solved = [bool(i < len(done) and done[i]) or (i < len(picks) and _unit_right(u, picks[i])) for i, u in enumerate(units)]
+    solved = [i < len(done) and bool(done[i]) for i in range(len(units))]
     letters = set()
     for u, ok in zip(units, solved):
         if u.get("type") == "mc" and not ok:
@@ -2922,7 +2909,7 @@ def chat(cookie_header, body):
         v4 = None
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
-            v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p, b.get("answer"), units_done(p, sid)), code=p["code"], arm=cluck_arm(sid),
+            v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p, units_done(p, sid)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
