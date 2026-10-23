@@ -1,0 +1,92 @@
+# Throwaway CI bench (branch bench-ci-9h740x). Not for merge.
+name: bench
+on:
+  push:
+    branches: [bench-ci-9h740x]
+  workflow_dispatch:
+jobs:
+  bench-a:
+    name: A ${{ matrix.variant }} ${{ matrix.rep }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: ${{ matrix.variant == 'container' && fromJSON('{"image":"mcr.microsoft.com/playwright:v1.56.1-noble","options":"--ipc=host"}') || null }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [withdeps, nodeps, container]
+        rep: [1, 2, 3]
+    steps:
+      - run: echo "MARK checkout_begin $(date +%s.%N)"
+      - uses: actions/checkout@v4
+      - run: echo "MARK checkout_end $(date +%s.%N)"
+      - if: matrix.variant != 'container'
+        run: echo "MARK setup_begin $(date +%s.%N)"
+      - if: matrix.variant != 'container'
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - if: matrix.variant != 'container'
+        uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - if: matrix.variant != 'container'
+        run: echo "MARK setup_end $(date +%s.%N)"
+      - run: tools/bench/install-and-specs.sh ${{ matrix.variant }} ${{ matrix.rep }}
+  bench-b:
+    name: B lanes=${{ matrix.lanes }} rep=${{ matrix.rep }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        lanes: [1, 2, 3]
+        rep: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install sympy networkx
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - run: |
+          cd tests && npm ci
+          npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
+          npx playwright install --with-deps chromium
+      - name: machine
+        run: |
+          nproc
+          free -m
+          grep "model name" /proc/cpuinfo | head -1
+      - name: run lanes
+        env:
+          LANES: ${{ matrix.lanes }}
+          REP: ${{ matrix.rep }}
+        run: |
+          vmstat 5 > vmstat.log &
+          VM=$!
+          T0=$(date +%s.%N)
+          pids=()
+          for i in $(seq 1 "$LANES"); do
+            ( SHARD=$i/$LANES tests/run-all.sh 2>&1 | while IFS= read -r l; do printf '%s %s\n' "$(date +%s.%N)" "$l"; done > lane-$i.log; exit "${PIPESTATUS[0]}" ) &
+            pids+=($!)
+          done
+          codes=()
+          for p in "${pids[@]}"; do wait "$p"; codes+=($?); done
+          T1=$(date +%s.%N)
+          kill $VM 2>/dev/null || true
+          WALL=$(awk -v a="$T0" -v b="$T1" 'BEGIN{printf "%.0f", b-a}')
+          echo "total wall-clock seconds: $WALL"
+          FAILS=0
+          for i in $(seq 1 "$LANES"); do
+            echo "lane $i exit code: ${codes[$((i-1))]}"
+            grep -E '^[0-9.]+ FAIL ' lane-$i.log || true
+            FAILS=$((FAILS + $(grep -cE '^[0-9.]+ FAIL ' lane-$i.log || true)))
+          done
+          echo "vmstat summary:"
+          awk 'NR>2 && $1 ~ /^[0-9]+$/ { n++; cpu += $13 + $14; if ($1 > r) r = $1 } END { if (n) printf "avg us+sy CPU %%: %.1f, max run queue r: %d (samples %d)\n", cpu/n, r, n }' vmstat.log
+          echo "BENCH_B lanes=$LANES rep=$REP wall_s=$WALL fails=$FAILS"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-b-${{ matrix.lanes }}-${{ matrix.rep }}
+          path: |
+            lane-*.log
+            vmstat.log
