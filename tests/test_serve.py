@@ -73,7 +73,7 @@ class Grade(unittest.TestCase):
         self.assertEqual(self.g("CALC1_T6B", "other", answer="12")["verdict"], "correct")  # per browser
 
     def test_nudge_and_tol(self):
-        r = self.g("PHYS_F3N", "a3", answer="3.3")
+        r = self.g("PHYS_F3N", "a3", answer="3.5")                 # off every slip of its form (3.3 is g = 10: 3.27)
         self.assertEqual(r["verdict"], "wrong")
         self.assertNotIn("error", r)
         self.assertEqual(self.g("PHYS_F3N", "a3", answer="3.20")["verdict"], "correct")

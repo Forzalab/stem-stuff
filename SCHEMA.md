@@ -115,7 +115,7 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `tol` or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
 
 **Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
 - a new family in `slips.FAMILIES`;
@@ -661,12 +661,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "form": {
           "type": "string",
           "minLength": 1,
-          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. The 10 slip families of slips.py are derived from it (runtime hints + tools/slips.py)"
         },
         "ignore_slips": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
-          "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+          "description": "num (server only): slip values that get no family hint and need no wrong entry (exempt from SAME and CLASH)"
         },
         "answer": {
           "type": "string",
@@ -892,12 +892,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "form": {
             "type": "string",
             "minLength": 1,
-            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. The 10 slip families of slips.py are derived from it (runtime hints + tools/slips.py)"
           },
           "ignore_slips": {
             "type": "array",
             "items": {"type": "string", "minLength": 1},
-            "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+            "description": "num (server only): slip values that get no family hint and need no wrong entry (exempt from SAME and CLASH)"
           },
         "label": {
           "type": "string",
@@ -1716,10 +1716,10 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
 
 `saccharine.ladder` turns the Key formulas card into a ladder: `{ "mid": [{ "of": "KE", "tex": "v_2 = v_1\\frac{r_1}{r_2}" }], "arrows": [{ "from": "TORQUE", "to": "L_IW" }] }`.
 - Big pieces = the `part` rows; the card starts with only these. 
-- A `mid` piece may carry `use` and `why` (Tony, Oct 23), each 1–160 chars: `use` ("Use it for") names where this kind of relation applies, in general, not this question ("Spin of things going around a center. Orbits, a ball on a string, people spinning on a rope."); `why` ("Why this") says why this step ("Two people spin. mvr for one + mvr for the other."). Both show as two short labeled lines right under their piece, hidden until the piece pops. Authoring rules (brain feedback-specs-2026-10-21, "Tooltip authoring rules"): about grade-2 reading, 1–2 very short sentences; an abstract word gets concrete cases; compact math is written out (2mvr → mvr + mvr); every symbol named in words; never a final number, never a letter.
+- A `mid` piece may carry `use` and `why` (Tony, Oct 23), each 1–160 chars: `use` ("Use it for") names where this kind of relation applies, in general, not this question ("Spin of things going around a center. Orbits, a ball on a string, people spinning on a rope."); `why` ("Why this") says why this step ("Two people spin. mvr for one + mvr for the other."). They show as two quiet labeled lines ("Use it for", "Why this") right under their piece, hidden until the piece pops. Only the newest piece keeps them open: when the next step pops, the older piece folds them behind an inline "why?" button that opens them in place (no hover tooltip). Authoring rules (brain feedback-specs-2026-10-21, "Tooltip authoring rules"): about grade-2 reading, 1–2 very short sentences; an abstract word gets concrete cases; compact math is written out (2mvr → mvr + mvr); every symbol named in words; never a final number, never a letter.
 - `mid` pieces pop inside their `of` row, one per reveal, in order; then each `arrows` entry shows, one per reveal. When all are out the ladder is done.
 - Rules, checked by `ladderFaults` in `tests/schema.test.mjs`: needs `part`; `of`, `from` and `to` are `part` ids; an arrow joins two NEIGHBOURS of `part` (`from` is the row right before `to`), no repeats; `tex` renders in KaTeX. Aim for `mid` about 70% of the steps (Tony: "reveals up to like 70%, then arrows").
 - serve.py sends `ladder` to the browser in sugar only (`ladder()` drops entries `part` cannot show). app.js `window.stemLadder.step()` reveals the next piece (Jev, lane 4, calls it); without a caller nothing reveals.
 - An arrow listed in `arrows` starts hidden; a chain link the ladder does not list stays drawn as today. A card without a `ladder` is unchanged.
 
-Each formula row on the card has a small "?" that opens a static popup from the sheet's `doc`: `{ "purpose": "one plain line: what the formula is for", "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI. `purpose` (optional, Oct 23) shows first, above the symbols; it names its symbols in words. `purpose` follows the same tooltip authoring rules. `use`, `why` and `purpose`, when present, are non-empty strings (ladderFaults, docFaults).
+Each formula row on the card has a small "?" that opens a popover (popover.js, variant `doc`, design/POPOVER.md; tap only, built on open, removed on close, one at a time) from the sheet's `doc`; it shows the row's formula again, then `purpose` as its title, then the rest: `{ "purpose": "one plain line: what the formula is for", "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI. `purpose` (optional, Oct 23) is the title, above the symbols; it names its symbols in words. `purpose` follows the same tooltip authoring rules. `use`, `why` and `purpose`, when present, are non-empty strings (ladderFaults, docFaults).

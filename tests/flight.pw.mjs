@@ -125,7 +125,9 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   const size = JSON.stringify(b).length;
   assert.ok(size <= 16384, "under the hard cap: " + size);
   console.log("     report bytes:", size, "fr bytes:", JSON.stringify(b.fr).length, "page.at bytes:", JSON.stringify(at).length, "page.before bytes:", JSON.stringify(bf).length, "ring:", b.fr.ring.length, "kb:", b.fr.kb.length);
-  const line = logs.find(l => l.startsWith('{"incident":"' + b.code) && l.includes('"src":"client"'));
+  const cl = () => logs.find(l => l.startsWith('{"incident":"' + b.code) && l.includes('"src":"client"'));
+  for (let i = 0; i < 30 && !cl(); i++) await page.waitForTimeout(100);   // serve.py's stderr arrives on its own time (CI shard 2 raced it, Oct 23)
+  const line = cl();
   assert.ok(line && JSON.parse(line).fr && JSON.parse(line).fr.ring, "the server's line carries the snapshot");
   const hl = () => logs.some(l => /^health \{/.test(l) && / rid=\S+ trace=[0-9a-f]{32}$/.test(l));
   for (let i = 0; i < 30 && !hl(); i++) await page.waitForTimeout(100);   // serve.py's stderr arrives on its own time

@@ -10,6 +10,7 @@ from decimal import Context, Decimal, ROUND_HALF_UP
 from functools import lru_cache
 
 from sympy import Add, Float, Integer, Mul, Pow, Rational, S, cos, pi, sin, tan, parse_expr
+from sympy.parsing.sympy_parser import implicit_multiplication, standard_transformations
 
 # Adding a family, a variant, stacking or a wider close() raises false matches: ask Tony first (SCHEMA.md "Slip scaling risk")
 FAMILIES = ("distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g")   # hint priority; distribute first (Tony, Oct 22): on a tie with sign it names the real habit
@@ -20,6 +21,16 @@ EPS = 1e-9            # two mutant values within this (relative) are one value
 
 def parse(src):
     return parse_expr(str(src).replace("^", "**"), evaluate=False)
+
+
+_GRADER = standard_transformations + (implicit_multiplication,)
+
+
+def value(src):
+    """float of an authored `answer` / `ignore_slips` value, read as the grader reads it (serve.py evaluate): implicit * and `deg`
+    (sin(30 deg)). parse() is for `form` only (the JS port's syntax)."""
+    e = parse_expr(str(src).replace("^", "**"), local_dict={"deg": pi / 180}, transformations=_GRADER)
+    return float(e.doit())
 
 
 _R3 = Context(prec=3, rounding=ROUND_HALF_UP)
@@ -116,15 +127,15 @@ def _family(fam, e):
     elif fam == "factor":
         yield Mul(2, e, evaluate=False)
         yield Mul(S.Half, e, evaluate=False)
-    elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches one term only (each term in turn)
+    elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches the first term only (Tony, Oct 23)
         for path, n, _ in nodes:
             neg = [i for i, a in enumerate(n.args) if isinstance(a, Rational) and a < 0] if isinstance(n, Mul) else []   # -2*(..) is Mul(-2, ..)
             if neg and any(isinstance(a, Add) for a in n.args):
                 k, c = next(i for i, a in enumerate(n.args) if isinstance(a, Add)), neg[0]
                 rest = [(-a if i == c else a) for i, a in enumerate(n.args) if i != k and not (i == c and a == -1)]
-                for j, t in enumerate(n.args[k].args):
-                    s = Add(*(_neg(a) if i == j else a for i, a in enumerate(n.args[k].args)), evaluate=False)
-                    yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
+                t = n.args[k].args                                  # written order (evaluate=False keeps it)
+                s = Add(_neg(t[0]), *t[1:], evaluate=False)
+                yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
     elif fam == "dream":                                            # (a+b)^2 -> a^2+b^2; sqrt(a+b) -> sqrt(a)+sqrt(b)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5) and isinstance(n.base, Add):
@@ -198,21 +209,21 @@ def units(p):
 
 
 def _ignored(u):
-    return [float(parse(s).doit()) for s in u.get("ignore_slips", [])]
+    return [value(s) for s in u.get("ignore_slips", [])]
 
 
 def form_ok(u):
     """None when form equals answer (within tol or to 3 s.f.), else a report row."""
     if slow(u["form"]):
         return f"SLOW form takes over {SLOW_S:g} s to compute (exponent too big?)"
-    tol, ans, got = u.get("tol", 1e-6), float(parse(u["answer"]).doit()), float(parse(u["form"]).doit())
+    tol, ans, got = u.get("tol", 1e-6), value(u["answer"]), float(parse(u["form"]).doit())
     return None if close(got, ans, tol) else f"form = {got:.4g} but answer = {ans:.4g}"
 
 
 def gate(u):
     """Rule 7 rows for one num unit of a bank with v >= CUTOFF: no form; a slip equal to the answer (SAME); two families on one value.
     ignore_slips exempts a value from SAME and the clash rule. sign + distribute alone on one value is no clash: -(b+c) -> -b+c is a sign
-    flip of c by definition, so every a-(b+c) would need ignore_slips (the earlier family, sign, gets the hint)."""
+    flip of c by definition, so every a-(b+c) would need ignore_slips (the earlier family, distribute, gets the hint)."""
     if u.get("type") != "num":
         return []
     if not u.get("form"):
@@ -220,7 +231,7 @@ def gate(u):
     bad = form_ok(u)
     if bad:
         return [bad]
-    tol, ans, skip = u.get("tol", 1e-6), float(parse(u["answer"]).doit()), _ignored(u)
+    tol, ans, skip = u.get("tol", 1e-6), value(u["answer"]), _ignored(u)
     free = lambda v: not any(close(v, s, tol) for s in skip)
     rows = [f"SAME {v:.4g}  ({fam}) can't be told apart by number" for fam, v in mutants(u["form"]) if close(v, ans, tol) and free(v)]
     fams = [(fam, v) for fam, vals in raw(u["form"]) for v in vals]
@@ -235,6 +246,6 @@ def gate(u):
 
 def missing(u):
     """[(family, value)] not caught by a `wrong` entry or ignore_slips and not equal to the answer (the v1 report)."""
-    tol, ans = u.get("tol", 1e-6), float(parse(u["answer"]).doit())
+    tol, ans = u.get("tol", 1e-6), value(u["answer"])
     caught = [float(parse(w["match"]).doit()) for w in u.get("wrong", []) if "match" in w] + _ignored(u)
     return [(fam, v) for fam, v in mutants(u["form"]) if not close(v, ans, tol) and not any(close(v, c, tol) for c in caught)]
