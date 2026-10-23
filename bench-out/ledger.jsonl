@@ -1,0 +1,8 @@
+{"out": "/tmp/bench-out/B1/haiku", "arm": "claude:claude-haiku-5-5", "usd": 0.015045}
+{"out": "/tmp/bench-out/B1/sonnet", "arm": "claude:claude-sonnet-5-5", "usd": 0.269312}
+{"out": "/tmp/bench-out/B3/off", "arm": "deepseek:off", "usd": 0.011353}
+{"out": "/tmp/bench-out/B3/low", "arm": "deepseek:low", "usd": 0.02338}
+{"out": "/tmp/bench-out/C2/A-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.410427}
+{"out": "/tmp/bench-out/C2/B-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.487606}
+{"out": "/tmp/bench-out/C2/A-deepseek", "arm": "deepseek:low", "usd": 0.019798}
+{"out": "/tmp/bench-out/C2/B-deepseek", "arm": "deepseek:low", "usd": 0.017409}
