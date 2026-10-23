@@ -213,3 +213,16 @@ test("the file name never decides: offline.js ingest reads f.name only to label 
   // allowed: the .json filter, the label fallback, and bookkeeping of which files failed / were kept. Anything else is a decision on the name.
   for (const l of uses) assert.ok(/\.json\$|names\.set\(p\.code, s\.flag \|\| f\.name\)|bad\.push\(f\.name\)|keep\.push\(\{ name: f\.name/.test(l), "a decision on the file name? " + l.trim());
 });
+
+test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dropped line of GET /b/<code>.json", () => {
+  const msg = "BANK_PSY6 must be updated by 2026-11-05";
+  assert.deepEqual(C.bankNotice({ code: "BANK_PSY6", problems: [{ code: "PSY_A01" }], banner: msg }), { banner: msg, dropped: "" });
+  assert.deepEqual(C.bankNotice({ code: "BANK_PSY6", problems: [], dropped: msg }), { banner: "", dropped: msg });
+  assert.deepEqual(C.bankNotice({ code: "BANK_NEW1", problems: [{ code: "PSY_A01" }] }), { banner: "", dropped: "" });   // v >= 20261022: nothing
+  for (const b of [null, undefined, { banner: 1, dropped: {} }]) assert.deepEqual(C.bankNotice(b), { banner: "", dropped: "" });
+  assert.equal(C.BANNER_CLASS, "entry-msg warn bank-banner");   // the entry line's warn tone (app.css), no new style
+  const app = read("app.js");
+  assert.match(app, /if \(nb\.dropped\) \{ if \(!quiet\) entryMsg\(nb\.dropped, "warn"\); return false; \}/);   // the line, not "not found"
+  assert.match(app, /el\.className = codes\.BANNER_CLASS;[^\n]*panel\.prepend\(el\)/);                       // top of #qlist
+  assert.match(read("serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
+});

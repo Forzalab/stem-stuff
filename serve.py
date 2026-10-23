@@ -35,6 +35,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zoneinfo
 
 import sympy
 
@@ -110,7 +111,7 @@ def unfold(p):
 # design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
 _files = {}                  # path -> (mtime, [problems]): the last good copy of each file
-_bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "skipped": set()}
+_bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "notes": {}, "skipped": set()}
 _bank_lock = threading.Lock()
 
 
@@ -131,6 +132,8 @@ def _read(path):
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
+        v = doc.get("v", 1)
+        _versions[path] = v if isinstance(v, int) and not isinstance(v, bool) else 1   # SCHEMA.md Version table: no v (or a bad one) = 1
         log(f"loaded {len(ps)} problems from {path}")
     except Exception as e:  # noqa: BLE001
         log(f"{path} unreadable, keeping the last good copy: {e}")
@@ -141,6 +144,30 @@ def _read(path):
 
 _gaps = {}                                   # bank path -> its valid "burst_gap_s" (SCHEMA.md) or None
 _profiles = {}                               # bank path -> its "profile" (SCHEMA.md: subject, audience, skill_domains, kits) or None
+_versions = {}                               # bank path -> its "v" (1 or yyyymmdd), 1 when absent
+
+# ---------------- bank versions (SCHEMA.md Version table; design/HANDOFF-slips-v2.md rule 8) ----------------
+# A bank with v < CUTOFF (no v = 1) loads with a banner until SUNSET; from SUNSET on (Pacific date) it does not load, and
+# GET /b/<code>.json carries the same message instead of problems. problems.json (the built-in file) is not a bank: never dropped.
+CUTOFF = 20261022                            # = slips.CUTOFF: the newest Version-table row
+SUNSET = datetime.date(2026, 11, 5)          # older banks stop loading on this date
+try:
+    PT = zoneinfo.ZoneInfo("America/Los_Angeles")
+except zoneinfo.ZoneInfoNotFoundError:       # a host with no tz database: PST all year (at worst an hour late in summer)
+    PT = datetime.timezone(datetime.timedelta(hours=-8), "PST")
+
+
+def today():
+    """the date the sunset is checked against, in Pacific time (Tony's clock). Tests patch serve.today."""
+    return datetime.datetime.now(PT).date()
+
+
+def bank_notice(code, v):
+    """(message, dropped) for a bank: ("BANK_X must be updated by 2026-11-05", False) before SUNSET, (..., True) from it;
+    (None, False) for a bank at CUTOFF or newer."""
+    if v >= CUTOFF:
+        return None, False
+    return f"{code} must be updated by {SUNSET.isoformat()}", today() >= SUNSET
 
 
 def _bank_files():
@@ -168,10 +195,15 @@ def _index():
     with _bank_lock:
         bf = _bank_files()
         lists = [_read(BANK)] + [_read(p) for p in bf.values()]
-        sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]))
+        notes = {c: bank_notice(c, _versions.get(p, 1)) for c, p in bf.items()}
+        sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]), tuple(d for _, d in notes.values()))
         if sig != _bank["sig"]:
             by_code, prof = {}, {}
             gaps = {c: _gaps.get(p) for c, p in bf.items()}
+            dropped = {c for c, (_, d) in notes.items() if d}
+            lists = [lists[0]] + [[] if c in dropped else ps for c, ps in zip(bf, lists[1:])]   # a dropped bank does not load
+            for c in sorted(dropped):
+                log(f"{c}: {notes[c][0]}; not loaded")
             for path, ps in zip([BANK, *bf.values()], lists):
                 for p in ps:
                     if p["code"] not in by_code:
@@ -179,7 +211,8 @@ def _index():
                         prof[p["code"]] = _profiles.get(path)
                     elif by_code[p["code"]] != p:
                         log(f"{p['code']} is in two files with different content: the first one wins")
-            _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
+            _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps},
+                         notes={c: n for c, n in notes.items() if n[0]})
         return _bank
 
 
@@ -754,12 +787,16 @@ def snacks_placed(items):
 
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
-    Opening a bank makes it this browser's last one (design/BANK.md)."""
+    Opening a bank makes it this browser's last one (design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
+    from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
     all_banks = banks()
     if code == "last":
         with _tries_lock:
             _load_tries()
             code = _last.get(sid, {}).get("bank")
+    note, dropped = _index()["notes"].get(code, (None, False))
+    if dropped:
+        return {"code": code, "problems": [], "dropped": note}
     if code not in all_banks:
         return None
     by_code = problems()
@@ -785,6 +822,8 @@ def bank_payload(code, sid, mode="sugar"):
     gap = _index()["gaps"].get(code)
     if gap is not None:
         out["burst_gap_s"] = gap                 # T22: only when the bank sets it
+    if note:
+        out["banner"] = note                     # SCHEMA.md Version table: older than CUTOFF, before SUNSET
     return out
 
 

@@ -966,6 +966,86 @@ class Banks(unittest.TestCase):
         self.assertIsNone(serve.BANK_PATH.match("/b/bank_ab12.json"))
 
 
+class BankVersions(unittest.TestCase):
+    """SCHEMA.md Version table / HANDOFF-slips-v2 rule 8: a bank with v < 20261022 (no v = 1) loads with a banner before 2026-11-05
+    and does not load from that date (the same message instead). The clock is serve.today, patched here."""
+    MSG = "{} must be updated by 2026-11-05"
+
+    def setUp(self):
+        self.old = serve.BANKS, serve.TRIES
+        serve.BANKS = tempfile.mkdtemp(prefix="stem-bv-")
+        serve.TRIES = os.path.join(tempfile.mkdtemp(prefix="stem-bvt-"), "tries.json")
+        num = lambda c: {"code": c, "type": "num", "answer": "2", "form": "1+1", "body": [{"type": "text", "md": "1 + 1"}]}
+        for name, v, code in (("BANK_VONE", 1, "CALC1_VO1"), ("BANK_VNO", None, "CALC1_VN1"), ("BANK_VNEW", 20261022, "CALC1_VW1")):
+            doc = {"problems": [num(code)]}
+            if v is not None:
+                doc["v"] = v
+            with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
+                json.dump(doc, f)
+
+    def tearDown(self):
+        serve.BANKS, serve.TRIES = self.old
+
+    def on(self, y, m, d):
+        return unittest.mock.patch.object(serve, "today", lambda: serve.datetime.date(y, m, d))
+
+    def test_cutoff_matches_slips(self):
+        import importlib.util                                         # the root slips.py by path (tools/slips.py has the same name)
+        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "slips.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual(serve.CUTOFF, mod.CUTOFF)
+
+    def test_today_is_a_pacific_date(self):
+        self.assertEqual(getattr(serve.PT, "key", "America/Los_Angeles"), "America/Los_Angeles")
+        self.assertIsInstance(serve.today(), serve.datetime.date)
+
+    def test_before_the_sunset_old_banks_load_with_a_banner(self):
+        with self.on(2026, 11, 4):
+            for bank, code in (("BANK_VONE", "CALC1_VO1"), ("BANK_VNO", "CALC1_VN1")):
+                b = serve.bank_payload(bank, "s1")
+                self.assertEqual(b["banner"], self.MSG.format(bank))
+                self.assertNotIn("dropped", b)
+                self.assertEqual([p["code"] for p in b["problems"]], [code])
+                self.assertIn(code, serve.problems())
+            self.assertEqual(set(serve.banks()), {"BANK_VONE", "BANK_VNO", "BANK_VNEW"})
+
+    def test_from_the_sunset_old_banks_do_not_load(self):
+        with self.on(2026, 11, 5):
+            for bank, code in (("BANK_VONE", "CALC1_VO1"), ("BANK_VNO", "CALC1_VN1")):
+                b = serve.bank_payload(bank, "s2")
+                self.assertEqual(b, {"code": bank, "problems": [], "dropped": self.MSG.format(bank)})
+                self.assertNotIn(code, serve.problems())
+                self.assertEqual(json.loads(serve.dispatch("GET", f"/b/{bank}.json")[2])["dropped"], self.MSG.format(bank))
+                self.assertEqual(serve.dispatch("GET", f"/p/{code}.json")[0], 404)
+            self.assertEqual(set(serve.banks()), {"BANK_VNEW"})
+            self.assertIsNone(serve.bank_payload("last", "s2"))          # a dropped bank never becomes this browser's last one
+
+    def test_the_index_follows_the_clock(self):
+        with self.on(2026, 11, 4):
+            self.assertIn("BANK_VONE", serve.banks())
+        with self.on(2026, 11, 5):
+            self.assertNotIn("BANK_VONE", serve.banks())
+        with self.on(2026, 11, 4):
+            self.assertIn("BANK_VONE", serve.banks())
+
+    def test_a_current_bank_never_has_a_banner(self):
+        for day in ((2026, 10, 23), (2026, 11, 4), (2026, 11, 5), (2027, 1, 1)):
+            with self.on(*day):
+                b = serve.bank_payload("BANK_VNEW", "s3")
+                self.assertFalse({"banner", "dropped"} & set(b), day)
+                self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_VW1"])
+
+    def test_bank_notice(self):
+        with self.on(2026, 11, 4):
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 1), ("BANK_X1Y must be updated by 2026-11-05", False))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20261021), ("BANK_X1Y must be updated by 2026-11-05", False))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20261022), (None, False))
+        with self.on(2026, 11, 5):
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 1), ("BANK_X1Y must be updated by 2026-11-05", True))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20270101), (None, False))
+
+
 class Explain(unittest.TestCase):
     """Cluck the genie (design/EASY.md Phase 4): /explain relays a stubbed OpenRouter stream; ZDR, caps, easy only, no markdown."""
     def setUp(self):
