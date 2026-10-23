@@ -376,7 +376,7 @@ class CacheShape(unittest.TestCase):
         self.assertEqual(d["reasoning"], {"effort": "low"})
         self.assertEqual(d["messages"][0], {"role": "system", "content": serve.PROMPT_V4 + "\n\n" + serve.AUDIENCE_LINE})
         self.assertEqual(d["provider"]["order"], [serve.DS_PROVIDER])
-        self.assertTrue(d["provider"]["allow_fallbacks"])
+        self.assertFalse(d["provider"]["allow_fallbacks"])            # no other OpenRouter host (5 ZDR ones are fp4, never benched): Claude answers
         self.assertEqual(d["provider"]["zdr"], True)
         first = d["messages"][1]["content"]
         self.assertEqual(first, serve.explain_prompt(P1, "a") + serve.v4_dynamic("", False, serve.WISH_QUERY))   # the blocks joined: the same text
