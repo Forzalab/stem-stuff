@@ -1984,7 +1984,8 @@ LEAK_GUARD = {"n": 0}                        # replies the leak guard replaced o
 DS_MODEL = "deepseek/deepseek-v4.1-flash"
 # Pinned for prefix caching (one host keeps one cache): a ZDR endpoint of the model with cache-read pricing (GET /api/v1/endpoints/zdr). No other
 # host answers (allow_fallbacks off; Tony, Oct 23): 5 of the ZDR hosts are fp4, never benched; a failure goes to the Claude arm (the Anthropic API)
-# instead. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
+# instead. COST: that turn then runs at Claude prices on a cold Claude cache (the ~4.4K letter block written at 2x, plus the turn), where another
+# OpenRouter host would have stayed at DeepSeek prices. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
 DS_PROVIDER = os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8")
 _INJECT_RE = re.compile(r"reminder\s+from\s+lamp|reveal\s*:|</?xyz\s*>", re.I)
 
@@ -2706,6 +2707,7 @@ def wrap(text, tag):
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
 NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
 # NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
+# Only these hosts (allow_fallbacks off, as on the DeepSeek arm; Tony, Oct 23): no unbenched fp4 host. All three failing = no NOTE (fail open).
 NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
 NO_TEMP = ("anthropic/", "openai/")          # no endpoint takes temperature with require_parameters: OpenRouter 404s every call
 
@@ -2735,7 +2737,7 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
         user += "\n\nMESSAGE:\n" + wrap(text, tag)
     for m in OPENROUTER_NOTE_MODELS:
         payload = dict(_model_params(m, 400), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
-                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True},
+                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "note", "strict": True, "schema": NOTE_SCHEMA}},
                        messages=[{"role": "system", "content": CLUCK_NOTE}, {"role": "user", "content": user}])
         try:
