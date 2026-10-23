@@ -1430,7 +1430,7 @@ class FigBridge(unittest.TestCase):
             self.assertEqual(serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"), "")
         self.assertEqual(one.call_count, 1)
         self.assertEqual(one.call_args[0][2], serve.FIG_REASK_TOKENS)
-        self.assertIn("FIGURE", one.call_args[0][0][-1]["text"])           # the same fig rule
+        self.assertIs(one.call_args[0][0], system)                         # the reply's own system blocks, as given (cache hit)
         with unittest.mock.patch.object(serve, "_claude_one", return_value=iter(["```fig\n" + json.dumps(self.GOOD) + "\n```"])):
             self.assertIn('"kind":"scene"', serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"))
         with unittest.mock.patch.object(serve, "_claude_one", side_effect=OSError("down")):
@@ -1445,6 +1445,7 @@ class FigBridge(unittest.TestCase):
                 unittest.mock.patch.object(serve, "_claude_one", side_effect=lambda *a, **k: seq.pop(0)) as one:
             out = "".join(serve.v4_stream(v4, "k"))
         self.assertEqual(one.call_count, 2)                                # the reply + ONE re-ask
+        self.assertEqual(json.dumps(one.call_args_list[1][0][0]), json.dumps(one.call_args_list[0][0][0]))   # same system blocks: reads the cache
         self.assertNotIn("```", out)
         self.assertIn("Words.", out)
         with unittest.mock.patch.dict(os.environ, {"CLUCK_LIVE_FIGS": "0"}), unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), \
@@ -2049,7 +2050,7 @@ class FigImage(unittest.TestCase):
 class DrawRule(unittest.TestCase):
     """spec H: the letter says draw readily; the Claude arm gets the figure how-to split in two (Tony, Oct 22): the fixed part (livefig.RULE +
     the Geometry line) inside the cached letter block, the per-question tail (livefig.rule_tail) as a last, uncached block; the bank block stays
-    byte-identical; the DeepSeek arm gets none"""
+    byte-identical; the DeepSeek arm gets the same text in one system message (fixed part first, tail last)"""
     def ctx(self):
         return serve.livefig.context("T_DR", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
 
@@ -2088,7 +2089,7 @@ class DrawRule(unittest.TestCase):
                   {"type": "text", "text": "B", "cache_control": serve.CACHE}]
         self.assertEqual(json.dumps(self.system(self.v4(None))), json.dumps(before))           # no fig ctx (CLUCK_LIVE_FIGS=0): no how-to at all
 
-    def test_deepseek_no_howto(self):
+    def test_deepseek_gets_the_howto(self):
         sent = []
 
         def post(payload, key, timeout):
@@ -2097,7 +2098,9 @@ class DrawRule(unittest.TestCase):
         with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_or_post", side_effect=post):
             with self.assertRaises(OSError):
                 list(serve._v4_deepseek_chunks(dict(self.v4(self.ctx()), arm="deepseek"), "k", 100))
-        body = json.dumps(sent[0])
-        self.assertNotIn("FIGURE", body)
-        self.assertNotIn("Geometry(", body)
-        self.assertEqual(sent[0]["messages"][0]["content"], "LETTER\n\nB")
+        self.assertEqual(sent[0]["messages"][0]["content"], "LETTER" + serve.V4_FIG_FIXED + "\n\nB\n\n" + serve.v4_fig_howto(self.ctx()))
+        sent.clear()
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_or_post", side_effect=post):
+            with self.assertRaises(OSError):
+                list(serve._v4_deepseek_chunks(dict(self.v4(None), arm="deepseek"), "k", 100))
+        self.assertEqual(sent[0]["messages"][0]["content"], "LETTER\n\nB")                  # kill switch: no how-to
