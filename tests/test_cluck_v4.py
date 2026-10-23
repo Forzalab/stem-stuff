@@ -20,7 +20,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "d049f4965c0d3162bf42384218203e5cdea4877fdfdf43b2bc936640386fac23"
+SHA = "7e73b63a7b551bf3513f8bf5a21bf7903d26bfb23e1a9399e07cccc312edb363"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -71,6 +71,13 @@ class PromptFile(unittest.TestCase):
                 self.assertEqual(mine, f.read())                      # the brain copy, byte for byte
         self.assertEqual(hashlib.sha256(mine).hexdigest(), SHA)       # and pinned, where the brain is not mounted
         self.assertEqual(serve.PROMPT_V4.encode("utf-8"), mine)       # the server sends exactly the file
+
+    def test_rules_show_the_literal_xyz_tag(self):
+        # the rule part must spell the tag: "a tag named XYZ" alone let DeepSeek guess ```XYZ fences and "XYZ:" lines, which serve.Xyz
+        # never strips (bench B3, Oct 23: 13/42 replies showed the note)
+        rules = serve.PROMPT_V4.split("[ FORMATTING ]")[1].split("[ ENDFORMATTING ]")[0]
+        self.assertIn("<XYZ>", rules)
+        self.assertIn("</XYZ>", rules)
 
     def test_vercel_ships_it(self):
         with open(os.path.join(ROOT, "vercel.json")) as f:
@@ -394,19 +401,33 @@ class CacheShape(unittest.TestCase):
         bare = lambda ms: json.loads(json.dumps(ms).replace(', "cache_control": {"type": "ephemeral"}', ""))   # a marker is not part of the cache key
         self.assertEqual(bare(b["messages"][:len(a["messages"]) - 1]), bare(a["messages"][:-1]))
 
+    def test_deepseek_hosts(self):
+        self.assertEqual(serve.DS_PROVIDERS, ["deepinfra/fp8", "crusoe/fp8", "inference-net/fp8", "parasail/fp8", "siliconflow/fp8"])   # our list, our order
+        self.assertTrue(all(h.endswith("/fp8") for h in serve.DS_PROVIDERS))
+        t = serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "<XYZ>\n1\n</XYZ>")))
+        p = self.sent(self.v4(P1, t), "deepseek")["provider"]
+        self.assertEqual(p["order"], serve.DS_PROVIDERS)
+        self.assertIs(p["allow_fallbacks"], False)
+
     def test_deepseek_request(self):
         t = serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "<XYZ>\n1\n</XYZ>")))
         d = self.sent(self.v4(P1, t), "deepseek")
         self.assertEqual(d["model"], "deepseek/deepseek-v4.1-flash")
         self.assertEqual(d["reasoning"], {"effort": "low"})
         self.assertEqual(d["messages"][0], {"role": "system", "content": serve.PROMPT_V4 + "\n\n" + serve.AUDIENCE_LINE})
-        self.assertEqual(d["provider"]["order"], [serve.DS_PROVIDER])
-        self.assertTrue(d["provider"]["allow_fallbacks"])
+        self.assertEqual(d["provider"]["order"], serve.DS_PROVIDERS)
+        self.assertFalse(d["provider"]["allow_fallbacks"])            # no other OpenRouter host (5 ZDR ones are fp4, never benched): Claude answers
         self.assertEqual(d["provider"]["zdr"], True)
         first = d["messages"][1]["content"]
         self.assertEqual(first, serve.explain_prompt(P1, "a") + serve.v4_dynamic("", False, serve.WISH_QUERY))   # the blocks joined: the same text
         c = self.sent(self.v4(P1, t), "claude")
         self.assertEqual(first, "".join(b["text"] for b in c["messages"][0]["content"]))   # both arms see the same text
+
+    def test_deepseek_budget_leaves_room_after_reasoning(self):
+        # effort low takes up to 60% of max_tokens for reasoning (bench Oct 23: 840 of 1400, every cut reply hit it); the visible reply plus
+        # its <XYZ> note ran to 779 tokens, so the other 40% must hold at least 800
+        d = self.sent(self.v4(P1, serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "")))), "deepseek")
+        self.assertGreaterEqual(d["max_tokens"] * 0.4, 800)
 
 
 class Layers(unittest.TestCase):

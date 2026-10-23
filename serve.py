@@ -1983,9 +1983,11 @@ LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conv
 CLUCK_NUDGE = "quack (｀・ω・´) not yet! look at your slip one more time, the lamp says try again"
 LEAK_GUARD = {"n": 0}                        # replies the leak guard replaced or cut (this process)
 DS_MODEL = "deepseek/deepseek-v4.1-flash"
-# Pinned for prefix caching (one host keeps one cache): a ZDR endpoint of the model with cache-read pricing (GET /api/v1/endpoints/zdr). Others may
-# still answer (allow_fallbacks) but the cache goes cold then. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
-DS_PROVIDER = os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8")
+# Our own fallback list, tried in order, fp8 hosts only (picked Oct 23 by live probe + uptime; 5 of the ZDR hosts are fp4, never benched). deepinfra first:
+# its host holds our prompt cache (cache-read pricing, GET /api/v1/endpoints/zdr). No other host answers (allow_fallbacks off; Tony, Oct 23): if all 5 fail,
+# the Claude arm (the Anthropic API) answers. COST: that turn then runs at Claude prices on a cold Claude cache (the ~4.4K letter block written at 2x,
+# plus the turn), where another OpenRouter host would have stayed at DeepSeek prices. CLUCK_DS_PROVIDER overrides (comma-separated OpenRouter endpoint tags).
+DS_PROVIDERS = [h.strip() for h in os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8,crusoe/fp8,inference-net/fp8,parasail/fp8,siliconflow/fp8").split(",") if h.strip()]
 _INJECT_RE = re.compile(r"reminder\s+from\s+lamp|reveal\s*:|</?xyz\s*>", re.I)
 
 
@@ -2414,13 +2416,14 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
-    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
-                   provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
+    # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
+    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
+                   provider={"order": DS_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
     try:
         with _or_post(payload, key, 25) as r:
             for raw in r:
-                text_late(t0, said)                  # reasoning (low effort: 100-720 tokens) streams for 3-9 s before the first word
+                text_late(t0, said)                  # reasoning (low effort: 100-900 tokens) streams for 3-9 s before the first word
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -2760,6 +2763,7 @@ def wrap(text, tag):
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
 NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
 # NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
+# Only these hosts (allow_fallbacks off, as on the DeepSeek arm; Tony, Oct 23): no unbenched fp4 host. All three failing = no NOTE (fail open).
 NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
 NO_TEMP = ("anthropic/", "openai/")          # no endpoint takes temperature with require_parameters: OpenRouter 404s every call
 
@@ -2789,7 +2793,7 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
         user += "\n\nMESSAGE:\n" + wrap(text, tag)
     for m in OPENROUTER_NOTE_MODELS:
         payload = dict(_model_params(m, 400), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
-                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True},
+                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "note", "strict": True, "schema": NOTE_SCHEMA}},
                        messages=[{"role": "system", "content": CLUCK_NOTE}, {"role": "user", "content": user}])
         try:
