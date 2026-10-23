@@ -45,23 +45,39 @@ async function open(o = {}) {
   page.on("pageerror", e => page.errs.push(String(e)));
   page.on("console", m => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) page.errs.push(m.text()); });
   page.on("request", r => { if (/\/(explain|chat|nudge)$/.test(new URL(r.url()).pathname)) page.ai++; });
+  /* the page's fetch / XHR calls still out (until() holds the fake clock while any is) */
+  page.net = new Set();
+  const net = r => ["fetch", "xhr"].includes(r.resourceType());
+  page.on("request", r => { if (net(r)) page.net.add(r); });
+  for (const ev of ["requestfinished", "requestfailed"]) page.on(ev, r => page.net.delete(r));
   await page.addInitScript(() => { window.__stemJevRand = () => 0; });
-  await page.clock.install();
+  /* the clock is PAUSED from the first script on: only runFor moves it (as idle-peek.pw.mjs). A ticking clock's real-time sync fired
+     intent.js's 5 s Jev tick a ms off its grid (31190 then 51189: 19999 ms after the 1st held-pick nudge, < HOLD's 20 s), so lane 4's
+     2nd nudge slipped a whole tick, past the 21 s wait (CI PR #251; 1 run in ~12 under load, Playwright 1.56) */
+  const t0 = Date.now();
+  await page.clock.install({ time: t0 });
+  await page.clock.pauseAt(t0 + 1000);
   await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#" + (o.bank || "BANK_T95"));
   await page.clock.runFor(3000);
-  await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
-  await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  await until(page, () => !!window.stemDuck && !document.getElementById("splash"));
+  await until(page, () => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden);
   return page;
 }
-/* runFor can land short while the page is busy: top it up from the page's own clock (as idle-peek.pw.mjs) */
+/* wait for fn in the page while the paused clock steps 50 ms at a time; while a fetch / XHR is out the clock holds (real-time wait). 10 s real max */
+async function until(page, fn) {
+  const end = Date.now() + 10000;
+  while (!(await page.evaluate(fn))) {
+    if (Date.now() > end) throw new Error("timed out waiting for " + String(fn));
+    if (page.net.size) await new Promise(r => setTimeout(r, 20));
+    else await page.clock.runFor(50);
+  }
+}
+/* the clock is paused (open), so runFor is the only thing that moves it: every wait is exactly the time it says (checked) */
 async function idle(page, ms) {
   const t0 = await page.evaluate(() => performance.now());
   await page.clock.runFor(ms);
-  for (let k = 0; k < 5; k++) {
-    const left = ms - ((await page.evaluate(() => performance.now())) - t0);
-    if (left < 500) return;
-    await page.clock.runFor(Math.ceil(left));
-  }
+  const moved = (await page.evaluate(() => performance.now())) - t0;
+  assert.ok(Math.abs(moved - ms) < 1, `the page clock moved ${moved} ms, not ${ms}`);
 }
 const up = page => page.evaluate(() => window.stemDuck.up);
 const settle = page => page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) a.finish(); }));
