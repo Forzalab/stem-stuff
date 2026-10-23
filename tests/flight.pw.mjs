@@ -155,13 +155,13 @@ await step("chat fails after a typed question: its report has the chat field's k
   await busyThenWrong(page);
   await page.waitForFunction(() => window.__drill.page.wish?.end, null, { timeout: 8000 });
   if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
-  await page.waitForFunction(() => document.querySelector("#cluck .ask input") && !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 8000 });   // the reply is typed out: the field stays put
-  await page.click("#cluck .ask input");
-  await page.type("#cluck .ask input", SENTINEL + " why");
+  await page.waitForFunction(() => document.querySelector("#cluck .ask textarea") && !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 8000 });   // the reply is typed out: the field stays put
+  await page.click("#cluck .ask textarea");
+  await page.type("#cluck .ask textarea", SENTINEL + " why");
   await page.click("#cluck .ask .send");
   const [b] = await waitFor(page, x => x.where === "chat");
   assert.ok(b && b.fr && b.fr.ring, "a chat report with a snapshot: " + JSON.stringify(page.beacons).slice(0, 600) + await page.evaluate(() => document.querySelector("#cluck")?.innerText.slice(-300)));
-  assert.ok(b.fr.kb.some(e => /^input/.test(e[3] || "") && e[4] === "char"), "the chat field's keys, as classes: " + JSON.stringify(b.fr.kb.slice(-5)));
+  assert.ok(b.fr.kb.some(e => /^textarea/.test(e[3] || "") && e[4] === "char"), "the chat field's keys, as classes: " + JSON.stringify(b.fr.kb.slice(-5)));
   assert.ok(b.fr.ring.some(e => e[1] === "net" && e[2] === "chat" && e[3] === "h" && e[4] === 500));
   assert.equal(await page.evaluate(() => document.querySelectorAll(".inc-diag").length), 0, "no diag line outside debug mode");
   await noSentinel(page, "chat");

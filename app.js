@@ -1359,8 +1359,25 @@ function cueNext() {
   if (!painting) nx.focus({ preventScroll: true });
   if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
 }
-/* the held Enter that sent Check auto-repeats onto Next once it has focus: a repeat never presses Next (not a shortcut: it only drops repeats) */
-addEventListener("keydown", e => { if (e.repeat && (e.key === "Enter" || e.key === " ") && e.target.matches?.("#q .nx")) e.preventDefault(); }, true);
+/* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
+   after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
+addEventListener("keydown", e => {
+  if (!e.target.matches?.("#q .nx, #qnext")) return;
+  if (e.key === "Enter" || (e.repeat && e.key === " ")) e.preventDefault();
+}, true);
+/* → = Next, ← = Prev (the bar's own buttons: nav.js's queue), only when focus is not in a choice list (there the arrows move the pick,
+   and that handler takes the key first), a text box or the splitter. An overlay up: the first → only closes it (rewards/fx.js takes the
+   key on capture, same as Escape); while it fades out the arrows still do nothing. */
+const ARROW_OWN = "input, textarea, select, [contenteditable]:not([contenteditable=false]), .choices, [role=radiogroup], [role=listbox], [role=separator], #qlist";
+addEventListener("keydown", e => {
+  if ((e.key !== "ArrowRight" && e.key !== "ArrowLeft") || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (document.querySelector(".fx-ov")) { e.preventDefault(); return; }
+  if (!e.target.matches?.("#q .nx") && e.target.closest?.(ARROW_OWN)) return;   // Next in the Check slot sits inside the choice row
+  const nav = $("#qnav"), b = $(e.key === "ArrowRight" ? "#qnext" : "#qprev");
+  if (!nav || nav.hidden || !b || b.disabled || b.hidden) return;
+  e.preventDefault();
+  b.click();
+});
 /* ---------- T19 SUGAR REVEAL (Tony, Oct 12): out of tries in sugar shows the right answer ----------
    The server sends `correct` only with the lockout and only in sugar (serve.py answer_of; a reload gets it from /state).
    mc: the right row turns green with a check (class right + reveal), the picked wrong rows stay struck with their x.
@@ -1566,12 +1583,24 @@ const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
    wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
 const WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
 const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
-const stripFigs = t => t.replace(WFIG, "\n").replace(/```[\s\S]*$/, "");
+/* a view (P4.1, views_gate.py): the server sends at most one gated OpenUI Lang program per reply as "\n```openui\n<program>\n```\n", in the
+   same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
+const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
+const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
+const stripFigs = t => t.replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];
     if (done && !done.isConnected) { ph.replaceWith(done); continue; }
     ph.removeAttribute("data-f");
+    if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
+      const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { ph.replaceChildren(); ph.textContent = alt; ph.classList.add("fig-off"); };
+      ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
+      import("./views.js").then(V => { V.render(src, ph, {}); if (!ph.querySelector(".vw-slot.on:not(.vw-fallback) svg, .vw-slot.on:not(.vw-fallback) p")) off(); })
+        .catch(e => { console.error(e); off(); });
+      if (!done) figEl[k] = ph;
+      continue;
+    }
     let b = null; try { b = JSON.parse(figJSON[k]); } catch { /* the server checked it; a parse is still never trusted */ }
     if (!b || b.type !== "graph") { ph.remove(); continue; }
     ph._block = b; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", b.alt || "figure");
@@ -1588,7 +1617,7 @@ function wishHTML(t) {
     eqs = []; li = [];
   };
   const close = () => { flush(); if (step !== null) { out += step + "</div></div>"; step = null; } };
-  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
+  t = t.replace(WFIG, (m, j) => `\n\u0001FIG${figKey(j)}\n`).replace(WOUI, (m, p) => `\n\u0001FIG${figKey(OUI + p)}\n`).replace(/```[\s\S]*$/, "");   // a live figure: its placeholder; an open fence waits
   t = renumberSteps(t);                                                   // badges count 1, 2, 3 whatever digits the model typed ("1." every time is common)
   t = t.replace(/^\s*\$\$\s*\n([\s\S]*?)\n\s*\$\$\s*$/gm, (m, x) => "$$" + x.trim().replace(/\s*\n\s*/g, " ") + "$$");   // live models put $$ on lines of their own (Oct 5): one display line
   for (const l of t.split("\n")) {
@@ -1714,7 +1743,7 @@ function wishPaint() {
   if (!w || [404, 503].includes(w.failed)) {
     el.hidden = true;
     if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
-    return;
+    clBackSync(); return;
   }
   const off = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
     : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Similar solution steps" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
@@ -1725,7 +1754,7 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
@@ -1744,6 +1773,7 @@ function wishPaint() {
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
+  clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "ok but how?" up = no "Show him" row
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
@@ -1932,8 +1962,9 @@ function hkShow(b, roll) {
   t.textContent = set[hkI % set.length];
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
+function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "ok but how?" or "Compare with Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
 function clBackSync() {
-  const show = clGone && sideMQ.matches && !!S;
+  const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "ok but how?" wins
   let b = $("#clBack");
   if (!show) { if (b) b.hidden = true; hkStop(); return; }
   if (!b) {
@@ -2038,13 +2069,26 @@ function clAsk(build) {
   const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
   if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>That's ${CHAT_TURNS} questions on this one. On to the next!</p></div>`; return; }
   if (build || !ft.querySelector(".ask")) {
-    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><input type="text" maxlength="500" autocomplete="off" placeholder="Ask Cluck about a step"></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
-    ft.querySelector(".ask").addEventListener("submit", e => { e.preventDefault(); const i = e.currentTarget.querySelector("input"), m = i.value.trim(); if (m) { i.value = ""; clSend(m); } });
+    ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
+    const f = ft.querySelector(".ask"), inp = f.querySelector("textarea");   // inp: the typed fields' Enter (STYLE.md §5 list), no new shortcut
+    f.addEventListener("submit", e => { e.preventDefault(); const m = inp.value.trim(); if (m) { inp.value = ""; askFit(inp); clSend(m); } });
+    inp.addEventListener("keydown", e => {                                  // Enter sends (as the old one-line field did); Shift+Enter is a new line; never mid-IME
+      if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+      e.preventDefault(); if (!f.querySelector(".send").disabled) f.requestSubmit();
+    });
+    inp.addEventListener("input", () => askFit(inp));
   }
   const ready = wishTyped(w) && !w.busy;
   ft.querySelector(".left").textContent = `${left} left`;
-  ft.querySelector("input").disabled = !wishTyped(w);
+  ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;
+}
+/* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
+function askFit(ta) {
+  ta.style.height = "auto";
+  const h = ta.scrollHeight, max = parseFloat(getComputedStyle(ta).maxHeight) || Infinity;
+  ta.style.height = Math.min(h, max) + "px";
+  ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
 }
 async function clSend(msg) {
   const w = wish, t = S.tries.at(-1) || {};
@@ -2215,7 +2259,7 @@ function rewardTick(res, mine) {
 }
 const rwSeen = el => { const r = el && rwHud && !rwHud.hidden ? el.getBoundingClientRect() : null; return !!r && r.width > 0 && r.bottom > 0 && r.top < innerHeight; };
 async function rewardShow(mine, res) {
-  const fx = FXL(), wait = ms => new Promise(r => setTimeout(r, ms));
+  const fx = FXL();
   const at = $("#q .opt.right") || $("#ff.ok") || [...document.querySelectorAll("#q .part .ff.ok")].pop() || $("#q");
   fx.pop && fx.pop(at);                                                          // the bells on every correct: pop, sparks + confetti,
   fx.sparks && fx.sparks(at, mine.prob.snack || mine.prob.dead ? "small" : "medium");             // "+N XP" rising, coins to the HUD, a shine on the coin pill
@@ -2226,18 +2270,18 @@ async function rewardShow(mine, res) {
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
   say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
-  if (!res.drop && !res.burst && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
-  await wait(600);
-  if (res.drop && fx.slots) await fx.slots(res.drop);
-  if (res.burst && fx.burst) {
-    const opt = res.burst === "levelup" ? { title: "LEVEL UP", sub: `LEVEL ${res.level}` } : res.burst === "win" ? { title: "WIN!", sub: res.line }
-      : res.burst === "legend" ? { title: res.line, sub: "+50 XP" } : { title: "BONUS!", sub: res.sub || res.line };
-    await fx.burst(res.burst, opt);
+  if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
+  /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
+     it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
+  if (res.burst === "levelup" && fx.burst) {                                 // engine.js: a level up from a +1 or a dead-easy one stays quiet
+    await fx.burst("levelup", { title: "LEVEL UP", sub: `LEVEL ${res.level}`, drop: res.drop || null });
+    if (mine.rwBack) comeback();
+    return;
   }
-  const line = res.toast ? res.line : !res.drop ? res.streakNote : null;
+  const line = res.drop ? res.line : res.streakNote;
   if (mine.rwBack) comeback();                                                   // a right Redeem owns the one toast slot (G2c row 28); the streak still counts, say() read it
   else if (line === res.streakNote && res.streak === 3 && rwTip("three", $("#rwHud .rw-star"))) { /* T37: the onboarding line says "3 cracked" itself */ }
-  else if (line && fx.toast) { hideToast(); fx.toast(line, res.toast ? res.sub || res.streakNote : null); }
+  else if (line && fx.toast) { hideToast(); fx.toast(line, res.drop ? res.sub || res.streakNote : null, res.drop || null); }
   else if (!mine.prob.dead) rwTip("right", $("#rwCoin"));
 }
 /* T37 sugar onboarding (Tony, Oct 15; brain chat-redesign-2026-10-13/sugar-onboard, V1 toast trail): the HUD explains itself the first

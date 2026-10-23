@@ -1,5 +1,5 @@
 // One blink (STYLE.md §1.6, §2.8; design/shots/blink-fx-2026-10-12): after Check, a sugar right answer moves at most ONE group at a time
-// (the answer, the FX layer, the HUD, the slots, the burst, the drop banner, the Cluck chip, Next), sampled every 20 ms at 393x852;
+// (the answer, the FX layer, the HUD, the level-up overlay with its reels inside, the drop banner, the Cluck chip, Next; flow C: <= 1 overlay), sampled every 20 ms at 393x852;
 // nothing on the reward UI loops for ever; the Cluck chip wiggles at most twice; reduced motion = one fade, nothing else.
 // Starts its own serve.py (throwaway banks/ + tries.json) and a stub OpenRouter for the chip:
 //   node tests/blink-fx.pw.mjs [port] [--measure] [--log file] [--shots dir --tag before|after] [--serve-only]
@@ -120,6 +120,10 @@ const opened = (page, code) => page.waitForFunction(c => document.querySelector(
 const go = async (page, code) => { await page.evaluate(c => { location.hash = c; }, code); await opened(page, code); };
 const rig = (page, q) => page.evaluate(q => { const R = window.Rewards, A = R.answer; R.answer = o => { const r = Math.random; Math.random = () => q.length ? q.shift() : r();
   try { return A(o); } finally { Math.random = r; R.answer = A; } }; }, q);
+/* flow C curve (level 2 = 80 XP): put this bank's XP at xp, so the next right answer crosses a level (a 0 XP reveal makes the key first) */
+const seedXp = (page, xp) => page.evaluate(xp => { let k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:"));
+  if (!k) { window.Rewards.answer({ code: "__seed", correct: false, reveal: true }); k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); }
+  const s = JSON.parse(localStorage.getItem(k)); s.xp = xp; s.cv = 2; localStorage.setItem(k, JSON.stringify(s)); }, xp);
 const unCap = page => page.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); if (!k) return; const s = JSON.parse(localStorage.getItem(k)); s.lastBurst = 0; s.dry = 0; localStorage.setItem(k, JSON.stringify(s)); });
 async function pick(page, id, armed) {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
@@ -167,14 +171,14 @@ try {
   log(`# blink-fx ${TAG} ${new Date().toISOString()} · Chromium ${browser.version()} · 393x852 · 20 ms samples`);
   const { ctx, page } = await phone();
 
-  await step("a wrong try, then a right one with a drop (slots + WIN burst) while the Cluck chip is up: one group at a time", async () => {
+  await step("a wrong try, then a right one with a drop (flow C: the banner, no overlay) while the Cluck chip is up: one group at a time", async () => {
     await pick(page, "b");
     await page.waitForSelector("#wish:not([hidden]) .wchip, .cl-peek .cl-cta", { timeout: 6000 });
     await page.waitForTimeout(1500);                                            // re-picked while the chip may still shake: the tap settles it
     await unCap(page); await rig(page, [0, 0, 0, 0]);                          // 6 XP (try 2), a drop, common
     const r = await sampled(page, "a", 7000);
     report("wrong, then right + drop (chip up)", r);
-    check(r.anims.some(a => a.k.startsWith("slots#")) && r.anims.some(a => a.k.startsWith("burst#")), "the slots and the burst played");
+    check(r.anims.some(a => a.k === "banner") && !r.anims.some(a => /^(slots|burst)#/.test(a.k)), "the banner played, and no overlay (flow C)");
     check(r.peak <= 1, `peak ${r.peak} groups at once (one blink = 1)`);
     check(!r.loops.length, "no infinite animation on the reward UI: " + r.loops.join(", "));
     await quiet(page);
@@ -191,13 +195,16 @@ try {
     check(!c.infinite && !c.runningAtEnd, "the wiggle stops");
   });
 
-  await step("a first-try right with a level up (the bells + LEVEL UP burst): one group at a time", async () => {
+  await step("a first-try right with a level up AND a drop (the bells + ONE level-up overlay, the reels inside): one group at a time", async () => {
     await go(page, "CALC1_B03"); await page.waitForTimeout(800);               // the question has opened (the HUD's own catch-up has played)
-    await rig(page, [0.5, 0.99]);                                               // 14 XP, no drop; crosses level 2
+    await seedXp(page, 70); await rig(page, [0.5, 0, 0, 0]);                    // 14 XP (84): crosses level 2; a common drop
     const r = await sampled(page, "a", 6000);
     report("first-try right + level up", r);
     check(r.peak <= 1, `peak ${r.peak} groups at once (one blink = 1)`);
     check(r.anims.some(a => a.k === "fx-layer") && r.anims.some(a => a.k === "hud"), "the bells still play (FX layer, HUD)");
+    const ovs = new Set(r.anims.filter(a => /^(slots|burst)#/.test(a.k)).map(a => a.k));
+    check(ovs.size === 1 && [...ovs][0].startsWith("burst#"), "one overlay (the level up), never a reels overlay: " + [...ovs].join(", "));
+    check(!r.anims.some(a => a.k === "banner"), "no banner after the level-up overlay (one beat)");
     check(!r.loops.length, "no infinite animation on the reward UI: " + r.loops.join(", "));
     await quiet(page);
   });
@@ -210,7 +217,7 @@ try {
     await lp.waitForTimeout(1100); await rig(lp, [0.99, 0.99]);                 // 16 XP, no drop
     await pick(lp, "a");
     await lp.waitForFunction(() => !document.documentElement.classList.contains("fx-busy"), null, { timeout: 10000 });
-    await go(lp, "CALC1_B02"); await lp.waitForTimeout(1100); await rig(lp, [0.5, 0.99]);   // 14 XP: 30, level 2
+    await go(lp, "CALC1_B02"); await lp.waitForTimeout(1100); await seedXp(lp, 70); await rig(lp, [0.5, 0.99]);   // 14 XP: 84, level 2
     await lp.evaluate(() => { window.__lvl = false; new MutationObserver(() => { if (document.querySelector(".fx-ov.fx-levelup")) window.__lvl = true; }).observe(document.body, { childList: true, subtree: true }); });
     await pick(lp, "a");
     await lp.waitForTimeout(1000);
@@ -237,10 +244,10 @@ try {
       const p = await c.newPage();
       await p.goto(BASE + "/#CALC1_B01"); await opened(p, "CALC1_B01");
       await p.waitForSelector("#rwHud:not([hidden])", { timeout: 6000 });
-      await p.waitForTimeout(1100); await rig(p, [0, 0, 0, 0]);               // 12 XP, a drop, common: slots + WIN burst
+      await p.waitForTimeout(1100); await seedXp(p, 70); await rig(p, [0, 0, 0, 0]);   // 14 XP (84), a drop, common: the level-up overlay, reels inside
       await p.click('#q .opt[data-id="a"]');
       await p.evaluate(([mode, m]) => {
-        const T = window.setTimeout.bind(window), sel = { burst: ".fx-ov.fx-burst", slots: ".fx-ov.fx-slots-ov" }[mode];
+        const T = window.setTimeout.bind(window), sel = { burst: ".fx-ov.fx-burst", slots: ".fx-ov .fx-slots" }[mode];
         const freeze = () => { document.getAnimations().forEach(a => { try { a.pause(); } catch { /* */ } }); window.requestAnimationFrame = () => 0; window.setTimeout = () => 0; window.setInterval = () => 0; window.__frozen = true; };
         if (sel) { const mo = new MutationObserver(() => { if (document.querySelector(sel)) { mo.disconnect(); T(freeze, m); } }); mo.observe(document.body, { childList: true, subtree: true }); }
         document.querySelector('#q .ch[data-id="a"] .send').click();
@@ -255,7 +262,7 @@ try {
     for (let i = 0; i < jobs.length; i += 4) for (const f of await Promise.all(jobs.slice(i, i + 4).map(one))) log("   shot " + f);
   });
 
-  await step("reduced motion: a drop + burst is one fade, nothing else moves", async () => {
+  await step("reduced motion: a drop (the banner) is one fade, nothing else moves", async () => {
     const { ctx: rc, page: rp } = await phone("reduce");
     await rp.evaluate(() => window.__bf.wrapConf());
     await rp.waitForTimeout(1100);

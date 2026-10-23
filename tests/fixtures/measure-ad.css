@@ -1,0 +1,2 @@
+/* A–D regression (tests/measure-slots.pw.mjs): choice pills pinned to a fixed box made for "a)" (one tap target wide). */
+.vw-pill { width: var(--btn); padding: 0 var(--s1); }

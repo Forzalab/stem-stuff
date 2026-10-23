@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools"))
 import gen_views as gv  # noqa: E402
 
 REG = gv.load()
-P11 = ["View", "Head", "Text", "Legend", "Table", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph"]
+P11 = ["View", "Head", "Text", "Legend", "Table", "Callout", "Steps", "Step", "Hints", "Predict", "Reveal", "Answer", "Doodle", "Graph", "Geometry"]
 
 
 def outputs(reg=REG):

@@ -142,6 +142,35 @@ class Gate(unittest.TestCase):
         self.assertIn(2.5, c.givens)
 
 
+class Geom(unittest.TestCase):
+    """the geometry marks (right, dim, angle, circle): whitelisted in cartesian AND scene, checked like any mark"""
+    def test_each_geometry_mark_passes_in_both_kinds(self):
+        for g in FIX["geom"]["valid"]:
+            self.assertEqual({m["mark"] for m in g["marks"]} >= set(livefig.GEOM), True, g["kind"])
+            self.assertIsNone(livefig.check(g, ctx()), g["kind"])
+        for k in ("cartesian", "scene"):
+            self.assertTrue(set(livefig.GEOM) <= livefig.KINDS[k], k)
+
+    def test_bad_geometry_marks_fail_with_their_reason(self):
+        for case in FIX["geom"]["invalid"]:
+            why = livefig.check(case["fig"], ctx())
+            self.assertEqual(why.split(":")[0] if why else why, case["why"], case["name"])
+
+    def test_geometry_labels_count_toward_the_cap(self):
+        g = FIX["geom"]["valid"][0]
+        self.assertEqual(livefig._labels(g), 2)                          # the angle and the dim label
+        seven = next(c["fig"] for c in FIX["geom"]["invalid"] if c["why"] == "labels")
+        self.assertEqual(livefig._labels(seven), 7)
+
+    def test_dim_label_leak_names_the_field(self):
+        leak = next(c["fig"] for c in FIX["geom"]["invalid"] if c["why"] == "leak")
+        self.assertEqual(livefig.check(leak, ctx()), "leak:label=375")
+
+    def test_rule_lists_the_geometry_marks(self):
+        for m in ('right {"at"', 'dim {"from"', 'angle {"at"', 'circle {"c"'):
+            self.assertIn(m, livefig.RULE)
+
+
 class Stream(unittest.TestCase):
     def run_fence(self, pieces, c):
         g = livefig.Fence(c)

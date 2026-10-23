@@ -402,6 +402,66 @@ class Families(unittest.TestCase):
                 self.assertNotIn(b'"families"', raw); self.assertNotIn(b'"wrong"', raw); self.assertNotIn(b'"error"', raw)
 
 
+class SolvedReveals(unittest.TestCase):
+    """C (Tony, Oct 21): a solved item counts as REVEAL yes for Cluck: tries_out / cluck_begin treat `done` like out of tries"""
+    def setUp(self):
+        tmp = tempfile.mkdtemp()
+        self.ps = [unittest.mock.patch.object(serve, "TRIES", os.path.join(tmp, "t.json")), unittest.mock.patch.object(serve, "KV", (None, None)),
+                   unittest.mock.patch.dict(os.environ, {"CLAUDE_API": "k"})]
+        for m in self.ps:
+            m.start()
+        serve._gen.update(n=0, loaded=None)
+        serve._tries.clear()
+        serve._cluck_turns.clear()
+
+    def tearDown(self):
+        for m in self.ps:
+            m.stop()
+
+    def unit(self, key, done=False, out=False, p=None):
+        with serve._tries_lock:
+            serve._load_tries()
+            st = serve._entry(key)
+            st["done"] = done
+            if out:
+                st["wrong"] = [("w", i) for i in range(serve.max_tries(p))]
+
+    def test_single(self):
+        p = BANK["CALC1_T6B"]
+        self.assertEqual((serve.tries_out(p, "s1"), serve.item_solved(p, "s1")), (False, False))
+        self.unit(("s1", p["code"]), done=True)
+        self.assertEqual((serve.tries_out(p, "s1"), serve.item_solved(p, "s1")), (True, True))
+        self.assertEqual(serve.cluck_begin(p, "s1", "12"), (1, True))
+        self.assertEqual(serve._cluck_turns[("s1", p["code"])][-1][1], 2)
+        self.unit(("s2", p["code"]), out=True, p=p)                                   # out of tries: reveal, not solved
+        self.assertEqual((serve.tries_out(p, "s2"), serve.item_solved(p, "s2")), (True, False))
+        self.assertEqual(serve.cluck_begin(p, "s2", "5"), (1, True))
+        self.assertEqual(serve._cluck_turns[("s2", p["code"])][-1][1], 1)
+        self.unit(("s3", p["code"]))                                                  # tried, still open: no
+        self.assertEqual(serve.cluck_begin(p, "s3", "5"), (1, False))
+
+    def test_multi(self):
+        p = BANK["CSCI26_M5V"]
+        self.assertEqual(p["type"], "multi")
+        n = len(p["parts"])
+        self.assertGreaterEqual(n, 2)
+        self.unit(("m1", p["code"], 0), done=True)                                   # one part done, the rest open: no
+        self.assertEqual((serve.tries_out(p, "m1"), serve.item_solved(p, "m1")), (False, False))
+        self.assertEqual(serve.cluck_begin(p, "m1", "14"), (1, False))
+        for i in range(1, n):
+            self.unit(("m1", p["code"], i), out=True, p=p)                           # done + out: closed, reveal, not solved
+        self.assertEqual((serve.tries_out(p, "m1"), serve.item_solved(p, "m1")), (True, False))
+        self.assertEqual(serve.cluck_begin(p, "m1", "14"), (2, True))
+        for i in range(n):
+            self.unit(("m2", p["code"], i), done=True)                               # every part done: solved
+        self.assertEqual((serve.tries_out(p, "m2"), serve.item_solved(p, "m2")), (True, True))
+        self.assertEqual(serve.cluck_begin(p, "m2", "14"), (1, True))
+        self.assertTrue(serve.row_solved(serve._cluck_turns[("m2", p["code"])][-1]))
+        for i in range(n):
+            self.unit(("m3", p["code"], i), out=True, p=p)                           # every part out (the old rule): still reveal
+        self.assertEqual((serve.tries_out(p, "m3"), serve.item_solved(p, "m3")), (True, False))
+
+
 class SugarReveal(unittest.TestCase):
     """T19 (Tony, Oct 12): in sugar the server sends `correct` once a question is out of tries, never before; diet never."""
     SUGAR, DIET = "", "stem-mode=diet; stem-mode-v=2"
@@ -1313,6 +1373,93 @@ class Explain(unittest.TestCase):
         self.assertEqual((status, [x["status"] for x in t]), (404, [404]), "an early answer too")
 
 
+class FigBridge(unittest.TestCase):
+    """H bridge (Oct 22): the model sees the question figure as compact JSON; a dropped live figure is asked for ONCE more"""
+    GOOD = {"type": "graph", "kind": "scene", "alt": "Forces on the box on the ramp.", "marks": [
+        {"mark": "body", "at": [0, 0], "shape": "box", "w": 1, "h": 0.5}, {"mark": "force", "at": [0, 0], "angle": 270, "len": 1, "label": "$mg$"}]}
+
+    def test_figure_question_carries_its_graph_json(self):
+        p = dict(BANK["PHYS_F3N"], saccharine={"key": "k"})
+        out = serve.explain_prompt(p, "1")
+        line = next(x for x in out.split("\n") if x.startswith("Figure data: "))
+        g = json.loads(line[len("Figure data: "):])
+        self.assertEqual(g["kind"], "scene")
+        self.assertEqual(g["marks"][0]["angle"], 30)
+        self.assertNotIn("alt", g)                                      # the alt is the Figure line already
+        self.assertLessEqual(len(line), serve.FIG_JSON_MAX + 20)
+        self.assertNotIn("Figure data:", serve.explain_prompt(dict(BANK["CALC1_X2P"], saccharine={"key": "k"}), "a"))   # no figure: no JSON
+
+    def test_graph_json_drops_a_field_holding_the_answer(self):
+        g = {"type": "graph", "kind": "scene", "alt": "A block.", "marks": [
+            {"mark": "body", "at": [0, 0], "shape": "box", "w": 1, "h": 1, "label": "$7.25$ kg"}, {"mark": "force", "at": [0, 0], "angle": 90, "len": 1}]}
+        p = {"code": "T_GJ", "type": "num", "answer": "7.25", "body": [{"type": "text", "md": "Find the mass."}, g]}
+        out = json.loads(serve.graph_json(g, p, "Find the mass."))
+        self.assertNotIn("label", out["marks"][0])                        # the answer's field is gone
+        self.assertEqual(out["marks"][0]["w"], 1)                         # the rest stays
+        self.assertNotIn("7.25", serve.graph_json(g, p, "Find the mass."))
+        big = dict(g, marks=[dict(g["marks"][1], len=1 + i / 1000) for i in range(80)])
+        self.assertEqual(serve.graph_json(big, p), "")                    # over FIG_JSON_MAX: no JSON
+
+    def ctx(self):
+        return serve.livefig.context("T_FB", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
+
+    def visible(self, parts, reask_out):
+        calls = []
+
+        def reask(why):
+            calls.append(why)
+            return reask_out
+        return "".join(serve.v4_visible(iter(parts), True, ("", []), "T_FB", self.ctx(), reask)), calls
+
+    def test_dropped_figure_is_asked_for_once(self):
+        bad = "```fig\n{\"type\": \"graph\"\n```\n"
+        good = "\n```fig\n" + json.dumps(self.GOOD) + "\n```\n"
+        out, calls = self.visible(["Words first.\n", bad, "More words.\n"], good)
+        self.assertEqual(calls, ["json"])
+        self.assertIn("```fig", out)
+        self.assertIn("Words first.", out)
+        out, calls = self.visible(["Fine.\n", good, "Done.\n"], "x")       # a good figure: no re-ask
+        self.assertEqual(calls, [])
+        out, calls = self.visible(["No figure at all.\n"], "x")             # nothing drawn: no re-ask (the draw rule is the letter's job)
+        self.assertEqual(calls, [])
+
+    def test_reask_gates_again_then_gives_up(self):
+        system = [{"type": "text", "text": "S"}]
+        bad_again = ["```fig\n" + json.dumps(dict(self.GOOD, marks=[dict(self.GOOD["marks"][1], label="$9.0$ N")])) + "\n```"]   # the answer
+        with unittest.mock.patch.object(serve, "_claude_one", return_value=iter(bad_again)) as one:
+            self.assertEqual(serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"), "")
+        self.assertEqual(one.call_count, 1)
+        self.assertEqual(one.call_args[0][2], serve.FIG_REASK_TOKENS)
+        self.assertIn("FIGURE", one.call_args[0][0][-1]["text"])           # the same fig rule
+        with unittest.mock.patch.object(serve, "_claude_one", return_value=iter(["```fig\n" + json.dumps(self.GOOD) + "\n```"])):
+            self.assertIn('"kind":"scene"', serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"))
+        with unittest.mock.patch.object(serve, "_claude_one", side_effect=OSError("down")):
+            self.assertEqual(serve.fig_reask(system, "Q", self.ctx(), "json", "T_FB"), "")   # never an error to the student
+
+    def test_v4_stream_reasks_once_on_the_claude_arm_only(self):
+        bad = ["Words.\n", "```fig\n{bad\n```\n", "End.\n"]
+        v4 = {"arm": "claude", "code": "T_FB", "reveal": True, "facts": ("", []), "fig": self.ctx(), "bank": "B",
+              "turns": [{"role": "user", "content": ["Q block", "dyn"]}]}
+        seq = [iter(bad), iter(["```fig\n{still bad\n```"])]
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "claude_ready", return_value=True), \
+                unittest.mock.patch.object(serve, "_claude_one", side_effect=lambda *a, **k: seq.pop(0)) as one:
+            out = "".join(serve.v4_stream(v4, "k"))
+        self.assertEqual(one.call_count, 2)                                # the reply + ONE re-ask
+        self.assertNotIn("```", out)
+        self.assertIn("Words.", out)
+        with unittest.mock.patch.dict(os.environ, {"CLUCK_LIVE_FIGS": "0"}), unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), \
+                unittest.mock.patch.object(serve, "claude_ready", return_value=True), \
+                unittest.mock.patch.object(serve, "_claude_one", side_effect=lambda *a, **k: iter(bad)) as one:
+            "".join(serve.v4_stream(v4, "k"))
+        self.assertEqual(one.call_count, 1)                                # kill switch: no re-ask
+        ds = dict(v4, arm="deepseek")
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), \
+                unittest.mock.patch.object(serve, "_v4_deepseek_chunks", side_effect=lambda *a, **k: iter(bad)), \
+                unittest.mock.patch.object(serve, "_claude_one") as one:
+            "".join(serve.v4_stream(ds, "k"))
+        self.assertEqual(one.call_count, 0)                                # the non-vision arm: no re-ask
+
+
 class Incidents(unittest.TestCase):
     """POST /log/incident (incident.mjs's beacon): one JSON line, allowlisted fields only, rate-limited per browser"""
     def setUp(self):
@@ -1818,3 +1965,82 @@ class Guard(unittest.TestCase):
         self.assertIn(b"Kill them? [y/N] ", out)
         self.assertTrue(self.up(b))
         self.assertIsNone(pa.poll())                                             # A was not killed
+
+
+class FigImage(unittest.TestCase):
+    """the Claude arm sends each question figure as a pre-rendered PNG (tools/fig_png.mjs) with the question block; the non-vision arm,
+    CLUCK_FIG_IMG=0 and a figure-less question get none; the bytes are the same on every turn (the cached prefix replays them)"""
+    FIG, PLAIN = "CALC1_A9R", "CALC1_T6B"
+
+    def msgs(self, v4):
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_claude_one", return_value=iter(())) as one:
+            serve._v4_claude_chunks(v4, 100)
+        return one.call_args[0][1]
+
+    def v4(self, code, turns=None):
+        p = serve.problems()[code]
+        return {"arm": "claude", "code": code, "bank": "B", "imgs": serve.fig_images(p),
+                "turns": turns or [{"role": "user", "content": ["Q block " + p["code"], "dyn wish"]}]}
+
+    @staticmethod
+    def imgs(msgs):
+        return [b for m in msgs for b in m["content"] if b["type"] == "image"]
+
+    def test_every_bank_figure_has_png(self):
+        miss = [f"{c}-{i}.png" for c, p in serve.problems().items() for i, b in enumerate(p.get("body", []))
+                if b.get("type") == "graph" and not os.path.isfile(os.path.join(serve.FIG_DIR, f"{c}-{i}.png"))]
+        self.assertEqual(miss, [], "graph blocks with no figure PNG: run `node tools/fig_png.mjs` and commit banks/figs/")
+
+    def test_figure_question_has_image(self):
+        import base64
+        m = self.msgs(self.v4(self.FIG))
+        im = self.imgs(m)
+        self.assertEqual(len(im), sum(b.get("type") == "graph" for b in serve.problems()[self.FIG]["body"]))
+        self.assertGreater(len(im), 0)
+        self.assertEqual(im[0]["source"]["media_type"], "image/png")
+        self.assertEqual(im[0]["source"]["type"], "base64")
+        self.assertTrue(base64.b64decode(im[0]["source"]["data"]).startswith(b"\x89PNG"))
+        c = m[0]["content"]
+        self.assertEqual([b["type"] for b in c], ["image"] * len(im) + ["text", "text"])   # with the question block, just ahead of it
+        self.assertIn("cache_control", c[len(im)])                                       # the breakpoint still on the question block
+
+    def test_no_image_without_figure(self):
+        self.assertEqual(self.imgs(self.msgs(self.v4(self.PLAIN))), [])
+
+    def test_kill_switch(self):
+        with unittest.mock.patch.dict(os.environ, {"CLUCK_FIG_IMG": "0"}):
+            v4 = self.v4(self.FIG)
+        self.assertEqual(self.imgs(self.msgs(v4)), [])
+
+    def test_missing_png_skipped(self):
+        p = dict(serve.problems()[self.FIG], code="T_NOPNG")
+        with unittest.mock.patch.object(serve, "log") as lg:
+            self.assertEqual(serve.fig_images(p), [])
+            self.assertEqual(serve.fig_images(p), [])
+        self.assertEqual(lg.call_count, sum(b.get("type") == "graph" for b in p["body"]))   # once per PNG, not per call
+
+    def test_deepseek_arm_no_image(self):
+        v4 = dict(self.v4(self.FIG), arm="deepseek")
+        self.assertTrue(v4["imgs"])
+        sent = []
+
+        def post(payload, key, timeout):
+            sent.append(payload)
+            raise OSError("stop")
+        with unittest.mock.patch.object(serve, "PROMPT_V4", "LETTER"), unittest.mock.patch.object(serve, "_or_post", side_effect=post):
+            with self.assertRaises(OSError):
+                list(serve._v4_deepseek_chunks(v4, "k", 100))
+        body = json.dumps(sent[0])
+        self.assertNotIn("image/png", body)
+        self.assertNotIn(v4["imgs"][0]["source"]["data"][:40], body)
+        self.assertTrue(all(isinstance(m["content"], str) for m in sent[0]["messages"]))
+
+    def test_identical_across_turns(self):
+        p = serve.problems()[self.FIG]
+        first = self.msgs(self.v4(self.FIG))
+        later = self.msgs(self.v4(self.FIG, [{"role": "user", "content": ["Q block " + p["code"], "dyn wish"]},
+                                             {"role": "assistant", "content": "Hi."},
+                                             {"role": "user", "content": ["Q block " + p["code"], "dyn why?"]}]))
+        self.assertTrue(self.imgs(first[:1]))
+        self.assertEqual(json.dumps(first[0], sort_keys=True), json.dumps(later[0], sort_keys=True))   # the question turn, image bytes and all
+        self.assertEqual(self.imgs(later[1:]), [])                                                     # only the first turn carries it

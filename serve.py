@@ -14,6 +14,7 @@
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
 """
+import base64
 import datetime
 import errno
 import hashlib
@@ -37,6 +38,7 @@ import urllib.request
 import sympy
 
 import livefig
+import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
@@ -1436,10 +1438,35 @@ def network_data(b):
     return " Vertices: " + " ".join(ids) + ". Edges: " + ", ".join(es) + "."
 
 
+FIG_JSON_MAX = 3000
+
+
+def graph_json(b, p, text=""):
+    """the question's graph block as compact JSON for the model (H bridge, Oct 22: it saw the alt only, never the coordinates), the alt
+    left out (it is the Figure line), any field holding the hidden answer's value dropped (the same no-leak rule as a live figure:
+    livefig.context's answers, 3 sig figs, another unit); "" when it is still over FIG_JSON_MAX chars"""
+    ans = livefig.context(p.get("code", ""), text, "", hidden_values(p)).answers
+
+    def leaks(v):
+        return any(livefig._sig3(abs(x), a) for x in ([float(v)] if isinstance(v, (int, float)) and not isinstance(v, bool) else
+                                                       livefig.nums(v) if isinstance(v, str) else []) for a in ans)
+
+    def flat(x):                                       # a field with no object inside (a number, a label, a point): dropped whole
+        return not isinstance(x, (dict, list)) or not any(isinstance(y, (dict, list)) and not flat(y) or isinstance(y, dict) for y in x)
+
+    def clean(v):
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items() if k != "alt" and not (flat(x) and any(leaks(y) for _, y in livefig._walk(x, k, [])))}
+        return [clean(x) for x in v] if isinstance(v, list) else v
+    s = json.dumps(clean(b), ensure_ascii=False, separators=(",", ":"))
+    return s if len(s) <= FIG_JSON_MAX else ""
+
+
 def explain_prompt(p, answer):
     """the user turn: question, shown choices, the student's pick, the KEY, the SLIP for it, the sheet formulas."""
     text = "\n".join("\n".join(m) if isinstance(m, list) else m for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))   # md may be a list of lines
-    figs = "\n".join("Figure: " + b["alt"] + network_data(b) for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
+    figs = "\n".join("Figure: " + b["alt"] + network_data(b) + ("\nFigure data: " + gj if (gj := graph_json(b, p, text)) else "")
+                     for b in p.get("body", []) if b.get("type") == "graph" and b.get("alt"))
     lines = [f"QUESTION:\n{text}", figs]
     if p.get("type") == "mc":
         lines.append("CHOICES:\n" + "\n".join(f"{c['id']}) {c['md']}" for c in shown(p) if not c.get("lock")))
@@ -1498,9 +1525,10 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
-        cluck_noted(p, sid, turn[0], xyz)
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz)}], reveal=turn[1], facts=leak_facts(p),
-                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer))
+        rows = cluck_noted(p, sid, turn[0], xyz)
+        solved = any(row_solved(r) for r in rows if r[0] == turn[0])
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p),
+                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
 
@@ -1668,7 +1696,7 @@ def rewrite_on():
     return os.environ.get("CLUCK_REWRITE", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
-KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
+KEEP_RE = re.compile(r"\$\$[\s\S]+?\$\$|```fig\n[^\n]*\n```|```openui\n[\s\S]*?\n```|^Pick\b[^\n]*", re.M)   # what the editor must hand back byte-identical
 
 
 def _edit(draft, fig, max_tokens):
@@ -1678,7 +1706,7 @@ def _edit(draft, fig, max_tokens):
     if not draft.strip():
         return draft
     try:
-        gate = livefig.Fence(fig)
+        gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one([{"type": "text", "text": EDITOR, "cache_control": CACHE}], [{"role": "user", "content": draft}], max_tokens)) + gate.end()
     except Exception as e:  # noqa: BLE001
         log(f"rewrite: {e}")
@@ -1847,14 +1875,17 @@ def v4_dynamic(xyz, reveal, text):
     return "\n\n" + (xyz + "\n\n" if xyz else "") + LAMP + ("yes" if reveal else "no") + "\n\nUSER QUERY: " + (clean_query(text) or "...")
 
 
-def v4_user(p, pick, text, reveal, xyz=""):
-    """one user turn as two blocks: [explain_prompt(p, pick)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
-    return [explain_prompt(p, pick), v4_dynamic(xyz, reveal, text)]
+RESULT_OK = "RESULT: correct"                 # C (Tony, Oct 21): the item is solved; the letter's lamp rule turns it into "show your path, ask for theirs"
+
+
+def v4_user(p, pick, text, reveal, xyz="", solved=False):
+    """one user turn as two blocks: [explain_prompt(p, pick) (+ RESULT: correct on a solved item)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
+    return [explain_prompt(p, pick) + ("\n\n" + RESULT_OK if solved else ""), v4_dynamic(xyz, reveal, text)]
 
 
 def v4_chat_turns(p, pick, history, rows):
     """the messages for a chat follow-up. history: chat_history() (Cluck's box text first, the student last). rows: this item's stored turns
-    (cluck_begin), the newest = this turn. Every earlier user turn is rebuilt from what it was sent with (pick, REVEAL, NOTE) so the request
+    (cluck_begin), the newest = this turn. Every earlier user turn is rebuilt from what it was sent with (pick, REVEAL, solved, NOTE) so the request
     replays byte for byte; only the newest turn carries the new REVEAL / NOTE (rows[-1]). A turn with no stored row (another instance) is
     rebuilt without a NOTE: a cache miss, never a wrong answer."""
     users = [t for t in history if t["role"] == "user"]
@@ -1863,39 +1894,51 @@ def v4_chat_turns(p, pick, history, rows):
     def row(i):
         return rows[i] if 0 <= i < len(rows) else None
     w = row(len(rows) - m - 1)                                            # the wish turn this box came from
-    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "")})
+    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w))})
     for t in history:
         if t["role"] == "assistant":
             out.append({"role": "assistant", "content": livefig.strip(t["content"]) or "..."})
             continue
         r = row(len(rows) - m + j)
-        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "")})
+        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r))})
         j += 1
     return out
 
 
 def tries_out(p, sid):
-    """this browser's tries on the item are used up (sugar: state() carries `correct` once a unit is shut out); a multi: every part closed, one out"""
+    """the item is closed for this browser, so REVEAL may say yes: its tries are used up (sugar: state() carries `correct` once a unit is shut
+    out) OR it is solved (`done`; C, Tony Oct 21: a correct pick reveals); a multi: every part done or out, at least one"""
     st = state(p, sid, reveal=True)
-    if "parts" in st:
-        return all(u["done"] or "correct" in u for u in st["parts"]) and any("correct" in u for u in st["parts"])
-    return "correct" in st
+    us = st["parts"] if "parts" in st else [st]
+    return all(u["done"] or "correct" in u for u in us) and any(u["done"] or "correct" in u for u in us)
+
+
+def item_solved(p, sid):
+    """this browser solved the item (RESULT: correct): a single item `done`; a multi: every part done"""
+    st = state(p, sid)
+    us = st["parts"] if "parts" in st else [st]
+    return bool(us) and all(u["done"] for u in us)
+
+
+def row_solved(r):
+    """a stored Cluck turn row [n, reveal, note, pick]: reveal is 2 when the turn was sent on a solved item (RESULT: correct), else 1 / 0"""
+    return bool(r) and r[1] == 2
 
 
 def cluck_begin(p, sid, pick):
     """a Cluck turn starts on this item (the wish or a chat turn): (n, reveal). n = this browser's turns on the item so far, this one included,
     counted server-side in the tries blob (a refresh or a second wish counts: it is a turn). REVEAL (server decides): yes when the tries are
-    used up OR this is the 3rd turn or later; else no."""
+    used up OR solved (C) OR this is the 3rd turn or later; else no. The row keeps reveal as 2 on a solved item (row_solved)."""
     if not v4_on():                                          # the old path counts nothing (and writes nothing)
         return 0, False
-    out = tries_out(p, sid)
+    out, solved = tries_out(p, sid), item_solved(p, sid)
     key = (sid, p["code"])
     with _tries_lock:
         _load_tries()
         rows = _cluck_turns.setdefault(key, [])
         n = (rows[-1][0] + 1) if rows else 1
         reveal = out or n >= 3
-        rows.append([n, int(reveal), "", pick])
+        rows.append([n, 2 if solved else int(reveal), "", pick])
         del rows[:-CLUCK_KEEP]
         _save_tries()
     return n, reveal
@@ -2069,12 +2112,35 @@ def lamp_cut(text):
     return rest.lstrip() if not rest.split("\n", 1)[0].strip() else text[:len(text) - len(text.lstrip())] + rest
 
 
-def v4_visible(chunks, reveal, facts, code="-", fig=None):
+FIG_REASK_TOKENS = 600
+FIG_OUT_RE = re.compile(r"\n```fig\n[^\n]*\n```\n")
+FIG_OK = ("ok", "off", "second")
+
+
+def fig_reask(system, user_text, fig, why, code="-"):
+    """H bridge (Oct 22): the reply's figure was dropped by the gate (bad JSON, a leak, the caps): ask ONCE more for just the figure
+    (FIG_REASK_TOKENS, the same livefig rule), gate it again. Returns the checked fence, or "" (words only) with the reason logged.
+    Never an error to the student."""
+    ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
+           "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
+    try:
+        gate = views_gate.Fence(fig)
+        out = "".join(gate.feed(t) for t in _claude_one(system + [{"type": "text", "text": livefig.rule(fig)}],
+                                                         [{"role": "user", "content": ask}], FIG_REASK_TOKENS)) + gate.end()
+    except Exception as e:  # noqa: BLE001
+        log(f"fig {code} reask: {type(e).__name__}")
+        return ""
+    m = FIG_OUT_RE.search(out)
+    log(f"fig {code} reask: " + (",".join(gate.log) or "none") + ("" if m else " -> words only"))
+    return m.group(0) if m else ""
+
+
+def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
     livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
-    xyz, fence = Xyz(), livefig.Fence(fig)
+    xyz, fence = Xyz(), views_gate.Fence(fig)
     guard = None if reveal else LeakGuard(facts)
     sent, head = False, ""                       # head: the first visible line so far; None once it went on
     for t in chunks:
@@ -2089,6 +2155,11 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None):
             sent = True
             yield vis
     vis = fence.feed(xyz.end()) + fence.end()
+    bad = [x for x in fence.log if x not in FIG_OK]
+    if bad:
+        log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
+    if reask and fig is not None and livefig.on() and not fence.shown and bad:
+        vis += reask(bad[0].split(":")[0])                  # one more try, the figure only; "" = words only
     if head is not None:
         vis = lamp_cut(head + vis)
         vis = vis if vis.strip() else ""
@@ -2101,6 +2172,32 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None):
         LEAK_GUARD["n"] += 1
         log(f"cluck leak_guard {code}: kind={guard.kind} partial={sent} total={LEAK_GUARD['n']}")   # no text
         yield ("\n" if sent else "") + CLUCK_NUDGE
+
+
+FIG_DIR = os.path.join(ROOT, "banks", "figs")
+_FIG_PNG = {}                                   # name -> base64 str (None once logged missing): read once, every turn replays the same bytes
+
+
+def fig_images(p):
+    """the question's figures as image blocks (tools/fig_png.mjs: banks/figs/<code>-<i>.png, fits 400x300, ~100 tokens each), sent on the
+    Claude arm only (the non-vision arm gets graph_json alone). CLUCK_FIG_IMG=0: none. A missing PNG is skipped, logged once."""
+    if os.environ.get("CLUCK_FIG_IMG", "1") == "0":
+        return []
+    out = []
+    for i, b in enumerate(p.get("body", [])):
+        if b.get("type") != "graph":
+            continue
+        name = f"{p.get('code', '')}-{i}.png"
+        if name not in _FIG_PNG:
+            try:
+                with open(os.path.join(FIG_DIR, name), "rb") as f:
+                    _FIG_PNG[name] = base64.b64encode(f.read()).decode("ascii")
+            except OSError:
+                _FIG_PNG[name] = None
+                log(f"fig png missing: {name} (run node tools/fig_png.mjs)")
+        if _FIG_PNG[name]:
+            out.append({"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": _FIG_PNG[name]}})
+    return out
 
 
 def _v4_claude_chunks(v4, max_tokens):
@@ -2116,6 +2213,7 @@ def _v4_claude_chunks(v4, max_tokens):
             blocks = [{"type": "text", "text": st}, {"type": "text", "text": dyn}]
             if i == 0:
                 blocks[0]["cache_control"] = CACHE               # the question block: 5 min; every follow-up replays it
+                blocks = [dict(x) for x in v4.get("imgs", ())] + blocks   # the figures just ahead of it, inside the cached prefix
             msgs.append({"role": "user", "content": blocks})
         else:                                                    # always the block form, so a turn looks the same whether or not it is the marked one
             msgs.append({"role": "assistant", "content": [dict({"type": "text", "text": m["content"]}, **({"cache_control": CACHE} if i == last_asst else {}))]})
@@ -2175,7 +2273,12 @@ def v4_stream(v4, key, out=None):
         sent, t0 = False, time.time()
         try:
             chunks = _v4_claude_chunks(v4, V4_MAX) if name == "claude" else _v4_deepseek_chunks(v4, key, V4_MAX)
-            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig")):
+            reask = None
+            if name == "claude" and v4.get("fig") is not None and v4["turns"]:
+                first = v4["turns"][0]["content"]
+                reask = lambda why: fig_reask([{"type": "text", "text": PROMPT_V4}, {"type": "text", "text": v4["bank"]}],   # noqa: E731
+                                              first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
+            for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask):
                 sent = True
                 yield t
             if sent:
@@ -2211,7 +2314,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
         fig, edit = None, False                  # the old fallback below: no live figure rule for the letter-prompt turns
     elif claude_ready(out):
         said, live, edit, draft = False, fig is not None and livefig.on(), edit and rewrite_on(), []
-        gate, budget = livefig.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
+        gate, budget = views_gate.Fence(fig if live else None), max_tokens + (FIG_TOKENS if live else 0)
         try:
             msgs = [dict(messages[0], content=livefig.weave(messages[0]["content"]))] + messages[1:] if live else messages
             turns = msgs[1:]
@@ -2239,7 +2342,7 @@ def _cluck_stream(messages, key, max_tokens, fig=None, edit=False, v4=None, out=
             log(f"claude {CLAUDE_MODEL}: {e}")
             if not budget_hit(e, "claude", out, model=CLAUDE_MODEL):
                 incident("cluck", "upstream", provider="claude", model=CLAUDE_MODEL, status=getattr(e, "code", None), err=e, phase="stream" if said else "headers")
-    gate = livefig.Fence(None)
+    gate = views_gate.Fence(None)
     for t in _or_stream(messages, key, max_tokens, out):
         o = gate.feed(t)
         if o:
@@ -2558,7 +2661,7 @@ def chat(cookie_header, body):
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
             v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p), code=p["code"], arm=cluck_arm(sid),
-                      bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True))
+                      bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
 
