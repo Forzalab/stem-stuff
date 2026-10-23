@@ -232,14 +232,13 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
     assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await page.evaluate(() => window.stemLadder.left())], [1, 0, 2], "Q11 Q4e: KE only, 2 pieces waiting");
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0);
-    const hints = () => page.$$eval("#fcard li.f.mid .fh", hs => hs.map(h => h.checkVisibility() ? h.textContent : ""));
-    assert.deepEqual(await hints(), ["", ""], "hints wait with their pieces");
+    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : "")));
+    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`Use it for ${m.use}`, `Why this ${m.why}`]);
+    assert.deepEqual(await notes(), [["", ""], ["", ""]], "use/why wait with their pieces");
     for (const n of [1, 2]) {
       assert.equal(await page.evaluate(() => window.stemLadder.step()), true);
       assert.equal(await vis("li.f.mid"), n);
-      const h = await hints();
-      assert.deepEqual(h.map(Boolean), [true, n > 1], "a popped piece shows its hint; a waiting one does not");
-      assert.equal(h[0].replace(/\s+/g, ""), pilot.find(i => i.code === "PHYS_Z3X").ladder.mid[0].hint.replace(/_/g, "").replace(/\s+/g, ""), "the hint text, symbols subscripted");
+      assert.deepEqual(await notes(), want.map((w, i) => i < n ? w : ["", ""]), "a popped piece shows its use and why, as written; a waiting one does not");
     }
     assert.equal(await page.$$eval("#fcard li.f.mid .katex", k => k.length), 2, "mid pieces are KaTeX");
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");

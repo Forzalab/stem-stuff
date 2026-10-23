@@ -210,7 +210,7 @@ def ladder(sg, part):
     ld, part = sg.get("ladder"), list(part or [])
     if not isinstance(ld, dict) or not part:
         return None
-    mid = [{"of": m["of"], "tex": m["tex"], **({"hint": m["hint"]} if isinstance(m.get("hint"), str) and m["hint"].strip() else {})}
+    mid = [{"of": m["of"], "tex": m["tex"], **{k: m[k] for k in ("use", "why") if isinstance(m.get(k), str) and m[k].strip()}}
            for m in ld.get("mid") or [] if isinstance(m, dict) and m.get("of") in part and isinstance(m.get("tex"), str) and m["tex"].strip()]
     seen, arrows = set(), []
     for a in ld.get("arrows") or []:

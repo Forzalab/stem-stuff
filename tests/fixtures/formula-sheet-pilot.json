@@ -13,7 +13,7 @@
      "id": "KE",
      "tex": "KE = \\tfrac12 mv^2",
      "doc": {
-      "purpose": "Finds the energy an object has because it moves: kinetic energy KE, from its mass m and speed v.",
+      "purpose": "Energy of anything that moves. Cars, balls, people. Faster means much more, since v is squared.",
       "sym": [
        {
         "s": "KE",
@@ -39,7 +39,7 @@
      "id": "PE_G",
      "tex": "\\Delta PE = mg\\Delta y",
      "doc": {
-      "purpose": "Finds how much gravity energy ΔPE changes when a mass m moves up or down by a height Δy.",
+      "purpose": "Energy from height. Lift something up and it stores energy. Stairs, ramps, swings.",
       "sym": [
        {
         "s": "\\Delta PE",
@@ -78,7 +78,7 @@
      "id": "TORQUE",
      "tex": "\\tau = rF\\sin\\theta",
      "doc": {
-      "purpose": "Finds how hard a force F twists something about a pivot: the torque τ.",
+      "purpose": "How hard a push or pull twists something. A wrench, a door, a pulley. Pull farther out, more twist.",
       "sym": [
        {
         "s": "\\tau",
@@ -109,7 +109,7 @@
      "id": "I_SUM",
      "tex": "I = \\Sigma_i m_i r_i^2",
      "doc": {
-      "purpose": "Finds how hard a set of masses m_i is to spin about an axis: the moment of inertia I.",
+      "purpose": "How hard it is to start or stop a spin. Mass far from the center makes it harder. Add each piece.",
       "sym": [
        {
         "s": "I",
@@ -140,7 +140,7 @@
      "id": "KE_ROT",
      "tex": "KE_r = \\tfrac12 I\\omega^2",
      "doc": {
-      "purpose": "Finds the energy of a spinning object: rotational kinetic energy KE_r, from moment of inertia I and angular speed ω.",
+      "purpose": "Energy of anything spinning. Wheels, pulleys, a spinning stick.",
       "sym": [
        {
         "s": "KE_r",
@@ -166,7 +166,7 @@
      "id": "L_IW",
      "tex": "L = I\\omega",
      "doc": {
-      "purpose": "Finds how much spin a turning body carries: angular momentum L, from moment of inertia I and angular speed ω.",
+      "purpose": "Spin of anything turning. Wheels, pulleys, a spinning skater.",
       "sym": [
        {
         "s": "L",
@@ -192,7 +192,7 @@
      "id": "TAU_IALPHA",
      "tex": "\\Sigma\\tau = I\\alpha = \\frac{\\Delta L}{\\Delta t}",
      "doc": {
-      "purpose": "Links twist to spin change: the net torque Στ sets the angular acceleration α and how fast angular momentum L changes.",
+      "purpose": "Twist makes spin change. More twist, the spin changes faster.",
       "sym": [
        {
         "s": "\\Sigma\\tau",
@@ -228,7 +228,7 @@
      "id": "L_CONS",
      "tex": "L_f = L_i \\quad (\\text{no external torques})",
      "doc": {
-      "purpose": "Says the total angular momentum L stays the same, final L_f equal to initial L_i, when no outside torque acts.",
+      "purpose": "When nothing outside twists it, total spin stays the same. Skaters, orbits, things that stick together.",
       "sym": [
        {
         "s": "L_f",

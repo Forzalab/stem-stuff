@@ -362,7 +362,7 @@ function ladderFaults(p) {
     if (!part.includes(m.of)) out.push(`mid.of ${m.of} is not in part`);
     try { katex.renderToString(m.tex, { throwOnError: true }); } catch (e) { out.push(`mid tex does not render: ${m.tex}`); }
     if (/\$/.test(m.tex)) out.push(`mid tex has a $: ${m.tex}`);
-    if (m.hint !== undefined && !(typeof m.hint === "string" && m.hint.trim())) out.push(`mid hint is empty: ${m.tex}`);
+    for (const k of ["use", "why"]) if (m[k] !== undefined && !(typeof m[k] === "string" && m[k].trim())) out.push(`mid ${k} is empty or not a string: ${m.tex}`);
   }
   for (const a of ld.arrows ?? []) {
     const i = part.indexOf(a.to);
@@ -388,7 +388,7 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
       assert.ok(validate(mk(it.part, it.ladder)), `${it.code}: ${JSON.stringify(validate.errors)}`);
       assert.deepEqual(ladderFaults(prob(it.part, it.ladder)), [], it.code);
       for (const id of it.part) assert.ok(ids.has(id), `${it.code}: ${id} is not on the sheet excerpt`);
-      for (const m of it.ladder.mid) assert.ok(typeof m.hint === "string", `${it.code}: every pilot mid has a hint`);
+      for (const m of it.ladder.mid) for (const k of ["use", "why"]) assert.ok(typeof m[k] === "string" && m[k].length <= 160, `${it.code}: every pilot mid has a ${k}`);
     }
   });
   test("formula sheet doc.purpose: every pilot row has one; docFaults refuses an empty or non-string one", () => {
@@ -412,9 +412,14 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "TAU_IALPHA" }] })).length, 1, "not neighbours");
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "L_IW", to: "TORQUE" }] })).length, 1, "backwards");
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "L_IW" }, { from: "TORQUE", to: "L_IW" }] })).length, 1, "twice");
-    assert.ok(validate(mk(part, { mid: [{ of: "TORQUE", tex: "\\tau = mgR", hint: "Torque τ is the weight m g times the radius R." }] })), "hint is allowed");
-    assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", hint: 5 }] })));
-    assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", hint: "" }] })));
-    assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "x", hint: "  " }] })).length, 1, "blank hint");
+    assert.ok(validate(mk(part, { mid: [{ of: "TORQUE", tex: "\\tau = mgR", use: "How hard a pull twists something.", why: "Twist = pull × distance." }] })), "use and why are allowed");
+    assert.ok(validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", why: "Only a why." }] })), "each is optional");
+    assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", hint: "Old field." }] })), "hint is gone");
+    for (const k of ["use", "why"]) {
+      assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", [k]: 5 }] })), `${k}: not a string`);
+      assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", [k]: "" }] })), `${k}: empty`);
+      assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", [k]: "x".repeat(161) }] })), `${k}: over 160`);
+      for (const bad of ["  ", 5, null]) assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "x", [k]: bad }] })).length, 1, `${k}: ${JSON.stringify(bad)}`);
+    }
   });
 }
