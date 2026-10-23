@@ -1671,7 +1671,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         xyz = xyz_block(n)
         rows = cluck_noted(p, sid, turn[0], xyz)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
-        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p),
+        v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, answer, units_done(p, sid)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
@@ -2070,11 +2070,16 @@ def tries_out(p, sid):
     return all(u["done"] or "correct" in u for u in us) and any(u["done"] or "correct" in u for u in us)
 
 
+def units_done(p, sid):
+    """[done] per unit for this browser: one flag for a single item, one per part for a multi (leak_facts skips a solved part's answer)"""
+    st = state(p, sid)
+    return [u["done"] for u in (st["parts"] if "parts" in st else [st])]
+
+
 def item_solved(p, sid):
     """this browser solved the item (RESULT: correct): a single item `done`; a multi: every part done"""
-    st = state(p, sid)
-    us = st["parts"] if "parts" in st else [st]
-    return bool(us) and all(u["done"] for u in us)
+    us = units_done(p, sid)
+    return bool(us) and all(us)
 
 
 def row_solved(r):
@@ -2128,16 +2133,35 @@ def v4_on():
     return PROMPT_V4 is not None and (bool(os.environ.get("CLAUDE_API")) or os.environ.get("CLUCK_ARM", "").strip().lower() == "deepseek")
 
 
-def leak_facts(p):
+def _unit_right(u, a):
+    """the student's pick / typed text a is right for unit u (a problem or one multi part); unreadable or empty = not right"""
+    if a is None or a == "" or a == []:
+        return False
+    if u.get("type") == "mc":
+        return set(map(str, a)) == set(map(str, rights(u))) if isinstance(a, list) else str(a) == str(u.get("correct"))
+    try:
+        return unit_correct(u, signature(u, str(a)))
+    except (UNREADABLE + (KeyError,)):
+        return False
+
+
+def leak_facts(p, pick=None, done=()):
     """(correct letters lower-case, answer numbers) the REVEAL-no reply may not say. A number the question or a wrong choice also shows is a
-    given, not a leak, so it is skipped."""
+    given, not a leak, so it is skipped. A unit the student already has right is not hidden from them: its letters and numbers are skipped
+    (bench v4 C2: "your 38 is right" on a multi with part b right). pick: the student's answer (a multi: one per part, a list); done: the
+    server's per-unit solved flags (state()). A number an unsolved unit also has stays a leak."""
+    multi = p.get("type") == "multi"
+    units = (p.get("parts") or []) if multi else [p]
+    picks = (pick if isinstance(pick, list) else []) if multi else [pick]
+    solved = [bool(i < len(done) and done[i]) or (i < len(picks) and _unit_right(u, picks[i])) for i, u in enumerate(units)]
     letters = set()
-    for u in (p.get("parts") or [p]) if p.get("type") == "multi" else [p]:
-        if u.get("type") == "mc":
+    for u, ok in zip(units, solved):
+        if u.get("type") == "mc" and not ok:
             letters |= {str(x).lower() for x in rights(u)}
     givens = {n for b in p.get("body", []) if b.get("type") == "text" for n in livefig.nums("\n".join(b["md"]) if isinstance(b.get("md"), list) else b.get("md", ""))}
     givens |= {n for c in p.get("choices", []) if p.get("type") == "mc" and c["id"] not in rights(p) for n in livefig.nums(c["md"])}
-    vals = [v for v in hidden_values(p) if not any(livefig._eq(v, g) for g in givens)]
+    hidden = [n for u, ok in zip(units, solved) if not ok for n in livefig.nums(u.get("answer", ""))] if multi else [] if solved[0] else hidden_values(p)
+    vals = [v for v in hidden if not any(livefig._eq(v, g) for g in givens)]
     return letters, vals
 
 
@@ -2898,7 +2922,7 @@ def chat(cookie_header, body):
         v4 = None
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
-            v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p), code=p["code"], arm=cluck_arm(sid),
+            v4 = dict(turns=v4_chat_turns(p, b.get("answer"), history, rows), reveal=turn[1], facts=leak_facts(p, b.get("answer"), units_done(p, sid)), code=p["code"], arm=cluck_arm(sid),
                       bank=bank_block(p), fig=fig_ctx(p, b.get("answer"), chat=True), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, b.get("answer"), chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
