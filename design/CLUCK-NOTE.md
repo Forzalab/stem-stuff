@@ -100,7 +100,7 @@ The server, not the model, has the last word on how sure Cluck sounds (the model
 
 ## Cache, scratchpad, order (Oct 5 queue, brain topics/cluck-next-queue.md)
 
-- **Cache.** `saccharine.note` = choice id -> a full NOTE (every schema field but `on_topic`), written with the key at bank time. A single wrong pick with one skips the live call: 0 s, no made-up move. A chat message, a pick-all, or a pick without one still calls live.
+- **Cache.** `saccharine.note` = choice id -> a full NOTE (every schema field but `on_topic`), written with the key at bank time. A single wrong pick with one skips the live call: 0 s, no made-up move. A chat message, a pick-all, or a pick without one still calls live. Writer: `python3 tools/bank_notes.py BANK.json` lists the slip picks with no note; `--write` (OPENROUTER_API_KEY, one paid call each) runs the live NOTE once per pick, KEY and SLIP in view, and stores it (prompt audit B2).
 - **Scratchpad.** The browser sends the last 1500 chars of `#scratch`. Only the NOTE call reads it, inside the same random `<student_...>` tag; an `INJECT_RE` hit drops it (the wish still runs). Cluck never sees the raw pad.
 - **Order.** Static first (system, QUESTION, KEY, SLIP), the NOTE last: on `/chat` it follows the newest student turn, after its closing tag. The prompt cache keeps the head.
 - **Timeout.** 3 s, then Cluck answers without a NOTE.
