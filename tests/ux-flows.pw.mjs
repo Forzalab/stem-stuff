@@ -1,5 +1,6 @@
 // G2c-1: one Chromium walk of the student UX flows, phone 393x852 and desktop 1280x800, one screenshot per flow per width.
-// Inventory: 56 phone UX flows (brain projects/calc/_files/genui-g2c-flows.md); rows 32, 40, 53, 56 are skipped or out of scope.
+// Inventory: 56 phone UX flows (brain projects/calc/_files/genui-g2c-flows.md); rows 32, 40, 53, 56 are skipped or out of scope;
+// 27 (redeem-showing: flow 28 retry-tag, queue-walk.pw, shuffle.test) and 45 (notes-autosave: autosave.pw) are cut as covered elsewhere.
 //   node tests/ux-flows.pw.mjs [port | base-url] [outDir]       FLOWS=20,43 runs only those rows.
 // Always starts its own serve.py on a free port (the arg is only a port hint; tests/run-all.sh passes its base url, which is ignored)
 // on a temp banks folder of fixtures (no real bank needed) with $OPENROUTER_API_KEY empty and a throwaway tries.json.
@@ -327,25 +328,6 @@ flow(22, "cluck-chat-5", async (page, w) => {
   }
   await page.waitForFunction(() => /That's 5 questions on this one/.test(document.querySelector("#cluck .done-row")?.textContent || ""), null, { timeout: 3000 });
   return "stubbed /chat; 5 replies, then the done row";
-});
-
-flow(27, "redeem-showing", async (page, w) => {
-  await go(page, "BANK_QW5");
-  const first = await page.textContent("#pcode");
-  await dwell(page); assert.equal(await pick(page, ["b"]), "wrong");
-  for (let i = 0; i < 6; i++) {
-    await page.click("#qnext");
-    await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, await page.textContent("#pcode"), { timeout: 8000 }).catch(() => {});
-    await opened(page, "");
-    const { item } = await qstate(page);
-    if (item && item.redeem) {
-      assert.equal(await page.textContent("#pcode"), first, "the missed one comes back");
-      assert.ok(await page.$("#q .opt:not(:disabled)"), "answerable again (fresh round)");
-      return `${first} back as a Redeem after ${i} others, answerable`;
-    }
-    await dwell(page); await pick(page, ["a"]);
-  }
-  throw new Error("no Redeem showing within 6 Nexts");
 });
 
 flow(28, "retry-tag", async (page, w) => {
@@ -806,17 +788,6 @@ flow(44, "notes-pad", async (page, w) => {
   return w === 393 ? "button -> pad page" : "pad beside the question";
 }, { padPhone: true });
 
-flow(45, "notes-autosave", async (page, w) => {
-  await go(page, C.single);
-  if (w === 393) { await page.click("#padFab"); await page.waitForTimeout(500); }
-  await page.fill("#scratch", "draft 45");
-  await page.waitForTimeout(3600);
-  await page.reload(); await opened(page, C.single);
-  if (w === 393) { await page.click("#padFab"); await page.waitForTimeout(500); }
-  assert.equal(await page.inputValue("#scratch"), "draft 45");
-  return "draft back after reload";
-}, { padPhone: true });
-
 flow(47, "swap-keyboard", async (page, w) => {
   if (w === 1280) skip("phone-only (keyboard up); shot is the desktop free-form view");
   await go(page, C.num);
@@ -879,7 +850,7 @@ flow(55, "bfcache-resume", async (page, w) => {
 });
 
 /* priority: the ranked UNCOVERED list, then the covered rows in order */
-const PRIO = [43, 21, 20, 23, 28, 27, 38, 6, 8, 39, 24, 46, 50, 49, 52, 22];
+const PRIO = [43, 21, 20, 23, 28, 38, 6, 8, 39, 24, 46, 50, 49, 52, 22];
 const order = [...PRIO.map(n => F.find(f => f.n === n)), ...F.filter(f => !PRIO.includes(f.n)).sort((a, b) => a.n - b.n)].filter(f => f && (!ONLY || ONLY.has(f.n)));
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
@@ -903,7 +874,7 @@ try {
     }
     const custom = f.opts.noFinalShot && existsSync(png) || (f.opts.noFinalShot393 && phone && existsSync(png));
     if (!(custom && st === "ok")) await page.screenshot({ path: png }).catch(() => {});
-    if (errs.length) detail += `  [pageerror: ${errs.join(" | ")}]`;
+    if (errs.length) { if (st === "ok") st = "FAIL"; detail += `  [pageerror: ${errs.join(" | ")}]`; }   // a page JS error fails the flow
     log(f.n, f.slug, w, st, detail);
     await ctx.close();
   }

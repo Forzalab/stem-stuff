@@ -29,7 +29,7 @@ async function step(name, fn) {
 async function run(browserType, label, opts = {}) {
   let browser;
   try { browser = await browserType.launch(opts); }
-  catch (e) { console.log(`skip ${label}: ${e.message.split("\n")[0]}`); return; }
+  catch (e) { console.log(`NOT COVERED ${label}: no browser (${e.message.split("\n")[0]})`); return; }   // run-all counts these lines
   for (const [vname, viewport] of Object.entries(VIEWS)) {
     const ctx = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: vname !== "desktop", isMobile: vname === "phone" && label === "chromium" });
     /* every page load here starts with no uploaded bank: an upload now persists in IndexedDB (design/RELOAD.md,

@@ -106,7 +106,6 @@ try {
     await step(`${V}: DIET_BANK_P2X typed in the code box, Next 10x: every press moves`, async () => {
       const ctx = await ctxFor(browser, vp), page = await ctx.newPage();
       await page.goto(BASE + "/#BANK_P2X"); await settled(page);
-      if (!(await page.isVisible("#code"))) await page.click("#codeChip, #qlistBtn").catch(() => {});
       await page.evaluate(() => { const i = document.querySelector("#code"); i.value = "DIET_BANK_P2X"; i.form.requestSubmit(); });
       await page.waitForTimeout(800); await settled(page);
       const rows = await tenPresses(page, "DIET");
