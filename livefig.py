@@ -361,6 +361,7 @@ EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kind
 }
 
 
+
 def rule(ctx):
     """RULE for this question: the kinds it allows, one tiny example each, and (network) the vertex labels it may use"""
     return RULE + rule_tail(ctx)
@@ -395,3 +396,14 @@ The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never t
 - "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 6 nodes: the key subgraph).
 Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.
 The figure shows the SETUP: the objects, the forces or the given values, and the steps' inputs. Numbers in labels, text, values and expressions: copy them exactly as the QUESTION or the KEY writes them, never round or compute a new one; when unsure, use a symbol ("$mg$", "$d$") instead. Never the answer or the unknown's value, not even in another unit: label the unknown with its symbol and "?" ("$k = ?$")."""
+
+# RULE for the v4 letter (prompt audit R3/R4, Tony Oct 22): the letter decides WHEN to draw ("Draw readily"; words only needs a reason) and has
+# its own layout, so the old path's "every reply", "no code" exception and wish placement go; caps the tail or the gate already state go too.
+RULE_V4 = (RULE
+           .replace('FIGURE (the one exception to "no code" in Format: this fence is allowed): draw ONE figure (never two) in every reply unless the reply is pure arithmetic with nothing to picture.',
+                    'FIGURE: when you draw (the letter\'s "Draw readily" line), draw ONE figure (never two).')
+           .replace(' At most 6 nodes.', '', 1)
+           .replace('\nPhysics never uses "network"; a graph-theory question always does.', '')
+           .replace(' In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph.',
+                    ' Put it right after the line it pictures.'))
+

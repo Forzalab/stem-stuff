@@ -2212,9 +2212,9 @@ def _geo_line():
 GEO_LINE = _geo_line()
 
 
-# spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE + the OpenUI Geometry line) rides
+# spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
-V4_FIG_FIXED = ("\n" + livefig.RULE + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
+V4_FIG_FIXED = ("\n" + livefig.RULE_V4 + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
                 "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE)
 
 

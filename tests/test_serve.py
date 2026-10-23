@@ -2070,12 +2070,14 @@ class DrawRule(unittest.TestCase):
         sys_ = self.system(self.v4(self.ctx()))
         self.assertEqual(len(sys_), 3)
         self.assertEqual(sys_[0], {"type": "text", "text": "LETTER" + serve.V4_FIG_FIXED, "cache_control": {"type": "ephemeral", "ttl": "1h"}})
-        self.assertIn(serve.livefig.RULE, sys_[0]["text"])
+        self.assertIn(serve.livefig.RULE_V4, sys_[0]["text"])
+        for old in ("every reply", "no code", "numbered steps"):            # R3/R4: the old path's lines stay out of v4
+            self.assertNotIn(old, sys_[0]["text"])
         self.assertIn("- `Geometry(pts: string", sys_[0]["text"])
         self.assertTrue(serve.GEO_LINE.startswith("- `Geometry("))
         self.assertEqual(sys_[-1], {"type": "text", "text": serve.v4_fig_howto(self.ctx())})   # no cache_control
         self.assertTrue(sys_[-1]["text"].startswith("THIS question allows ONLY these kinds: scene"))
-        self.assertNotIn(serve.livefig.RULE, sys_[-1]["text"])
+        self.assertNotIn(serve.livefig.RULE_V4, sys_[-1]["text"])
         self.assertEqual(serve.livefig.rule(self.ctx()), serve.livefig.RULE + serve.livefig.rule_tail(self.ctx()))
 
     def test_cached_prefix_same_across_questions(self):
