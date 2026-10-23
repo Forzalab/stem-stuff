@@ -1963,7 +1963,8 @@ def claude_cost(used):
 
 # ---------------- Cluck prompt v4 (T62): Tony's letter as the system, the bench's user-turn layout, two arms, server guards ----------------
 # system = prompts/cluck-v4.txt BYTE FOR BYTE (nothing added: no bank line, no figure rule, no CLAUDE_DELTA); the same for every bank and
-# question, so it is one cache entry. Each user turn = [explain_prompt: static per question] + [XYZ note + REMINDER/REVEAL + USER QUERY: dynamic].
+# question, so it is one cache entry. Each user turn = [explain_prompt: static per question] + [XYZ note + REMINDER/REVEAL + USER QUERY: dynamic];
+# a chat follow-up sends the question block only when the pick changed (C2, the bench's chat layout), else just RESULT: correct when solved.
 # Arms: half the browsers (a hash of the cookie id) on Claude, half on DeepSeek v4.1 flash via OpenRouter; both get the same request and the
 # same guards, and each arm falls back to the other before any visible text; only if both fail does the old OpenRouter chain answer.
 def _read_prompt_v4():
@@ -2022,9 +2023,14 @@ def v4_dynamic(xyz, reveal, text):
 RESULT_OK = "RESULT: correct"                 # C (Tony, Oct 21): the item is solved; the letter's lamp rule turns it into "show your path, ask for theirs"
 
 
-def v4_user(p, pick, text, reveal, xyz="", solved=False):
-    """one user turn as two blocks: [explain_prompt(p, pick) (+ RESULT: correct on a solved item)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY]"""
-    return [explain_prompt(p, pick) + ("\n\n" + RESULT_OK if solved else ""), v4_dynamic(xyz, reveal, text)]
+def v4_user(p, pick, text, reveal, xyz="", solved=False, full=True):
+    """one user turn as two blocks: [explain_prompt(p, pick) (+ RESULT: correct on a solved item)] [<XYZ>note</XYZ> + REMINDER + REVEAL + USER QUERY].
+    full=False (C2: a chat follow-up on the same pick, the bench's layout): the question block is not sent again; block A is only "RESULT: correct"
+    on a solved item, else "" (and block B then starts with no blank line)"""
+    dyn = v4_dynamic(xyz, reveal, text)
+    if not full:
+        return [RESULT_OK, dyn] if solved else ["", dyn.lstrip("\n")]
+    return [explain_prompt(p, pick) + ("\n\n" + RESULT_OK if solved else ""), dyn]
 
 
 def v4_chat_turns(p, pick, history, rows):
@@ -2038,13 +2044,18 @@ def v4_chat_turns(p, pick, history, rows):
     def row(i):
         return rows[i] if 0 <= i < len(rows) else None
     w = row(len(rows) - m - 1)                                            # the wish turn this box came from
-    out.append({"role": "user", "content": v4_user(p, w[3] if w else pick, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w))})
+    last = w[3] if w else pick                                            # the pick the question block was last sent with
+    out.append({"role": "user", "content": v4_user(p, last, WISH_QUERY, bool(w[1]) if w else False, w[2] if w else "", row_solved(w))})
     for t in history:
         if t["role"] == "assistant":
             out.append({"role": "assistant", "content": livefig.strip(t["content"]) or "..."})
             continue
         r = row(len(rows) - m + j)
-        out.append({"role": "user", "content": v4_user(p, r[3] if r else pick, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r))})
+        k = r[3] if r else pick
+        # C2: the question block rides once (the wish turn); a follow-up resends it only when the pick changed (the new SLIP). The choice reads
+        # only stored rows (or the request pick when a row is missing), so a replay stays byte for byte
+        out.append({"role": "user", "content": v4_user(p, k, t["content"], bool(r[1]) if r else False, r[2] if r else "", row_solved(r), full=k != last)})
+        last = k
         j += 1
     return out
 
@@ -2358,8 +2369,10 @@ GEO_LINE = _geo_line()
 
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
-V4_FIG_FIXED = ("\n" + livefig.RULE_V4 + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
-                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE)
+# R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
+V4_FIG_FIXED = ("\nWhich fence: for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
+                "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
+                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4)
 
 
 def v4_fig_howto(fig):
@@ -2386,7 +2399,7 @@ def _v4_claude_chunks(v4, max_tokens):
     for i, m in enumerate(v4["turns"]):
         if m["role"] == "user":
             st, dyn = m["content"]
-            blocks = [{"type": "text", "text": st}, {"type": "text", "text": dyn}]
+            blocks = [{"type": "text", "text": x} for x in (st, dyn) if x]   # a follow-up's empty block A is not sent (the API rejects empty text)
             if i == 0:
                 blocks[0]["cache_control"] = CACHE               # the question block: 5 min; every follow-up replays it
                 blocks = [dict(x) for x in v4.get("imgs", ())] + blocks   # the figures just ahead of it, inside the cached prefix
