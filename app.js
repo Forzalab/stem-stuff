@@ -285,9 +285,13 @@ const numText = t => String(t).trim().replace(/(\d)\s*(?:[x×·*]\s*)?10\s*\^/gi
 const figures = u => Number.isInteger(u.sf) && u.sf > 0 ? u.sf : +((String(u.how || "").match(/(?<![≥>\d])(?<!at least )(\d+)\s*sig/i) || [])[1] || 3);   // serve.py figures(): "≥4" is the ask, not the grade
 const sigfig = (a, b, n) => typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
   && (u => Math.abs(a - Math.round(b / u) * u) <= u * (1 + 1e-9))(10 ** (Math.floor(Math.log10(Math.abs(b))) - (n - 1)));
-const same = (a, b, tol) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol))
+/* serve.py same() / tol_of(): relative to the key (tolerance 1b), a zero key gets the absolute ZERO window, expr points always do.
+   tolOf() is the grading window only: wrong-entry matches and repeats keep u.tol ?? 1e-6 (98 and 99 are two tries), slips use SLIP_WIN */
+const ZERO = 1e-9, TOL_NUM = 0.02, EXACT = 1e-4;          // slips.py ZERO / TOL_NUM / EXACT
+const same = (a, b, tol, floor = 0) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol, ZERO))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
-  : Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
+  : Math.abs(a - b) <= Math.max(tol * Math.abs(b), b === 0 ? ZERO : floor);
+const tolOf = u => u.tol ?? u.bank_tol ?? (u.type === "num" && !u.fixbox ? TOL_NUM : 1e-6);   // question > bank (offline.js bank_tol) > default
 /* right to 3 significant figures (serve.py sig3; Tony, Oct 3: the prompt asks for 4+): correctness only, never wrong-entry matching or repeats */
 const sig3 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => sig3(x, b[i]))
   : typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
@@ -295,9 +299,13 @@ const sig3 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.len
 function unitOk(u, g) {
   if (u.type === "text") return [u.answer, ...(u.accept || [])].map(squash).includes(g);
   const a = u.answer === "dne" ? "dne" : unitSig(u, u.answer);
-  if (u.fixbox && !Array.isArray(g)) return same(g, a, u.tol ?? 1e-6) || sigfig(g, a, figures(u));
-  return same(g, a, u.tol ?? 1e-6) || sig3(g, a);
+  if (u.fixbox && !Array.isArray(g)) return same(g, a, tolOf(u)) || sigfig(g, a, figures(u));
+  if (exactInt(u, a)) return same(g, a, Math.min(tolOf(u), 0.5 / Math.abs(a)));
+  return same(g, a, tolOf(u)) || sig3(g, a);
 }
+/* serve.py exact_int(): an exact integer key (question tol <= EXACT): no 3 s.f. pass, a window under half a unit (1023 is wrong for 1024,
+   9999 for 10000); 9*sqrt(3) keeps 3 s.f. */
+const exactInt = (u, a) => typeof a === "number" && a !== 0 && Number.isInteger(a) && (u.tol ?? 1) <= EXACT;
 function unitHit(u, t, g) {                               // re entries first, then match
   const w = u.wrong || [];
   return w.find(x => x.re && new RegExp(x.re, "i").test(t))
@@ -365,7 +373,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     if (!correct && !hit && u.type === "num" && u.form) {
       let skip;
       try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
-      const fam = skip && slipMatch(u.form, sig, u.tol ?? 1e-6, skip);
+      const fam = skip && slipMatch(u.form, sig, undefined, skip);   // undefined: slips.mjs SLIP_WIN, never the grading tol (Tony D2)
       if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
     }
   }

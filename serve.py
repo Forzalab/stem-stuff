@@ -88,6 +88,18 @@ BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
+def inherit_tol(doc):
+    """tolerance 1b: a bank-level `tol` (SCHEMA.md) rides on every unit as bank_tol, so tol_of() needs only the unit (codes.mjs inheritTol)."""
+    t = doc.get("tol")
+    if not (isinstance(t, (int, float)) and not isinstance(t, bool) and 0 < t <= 0.05):
+        return
+    for p in doc.get("problems", []):
+        if isinstance(p, dict):
+            for u in [p, *(p["parts"] if isinstance(p.get("parts"), list) else []), p.get("fix")]:
+                if isinstance(u, dict):
+                    u.setdefault("bank_tol", t)
+
+
 def unfold(p):
     """codes.mjs unfold(): a multi with mc parts becomes one mc question per part, code + A, B, C..., the shared body + the part's prompt."""
     parts = p.get("parts") if p.get("type") == "multi" else None
@@ -128,6 +140,7 @@ def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
+        inherit_tol(doc)
         ps = [q for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str) for q in unfold(p)]
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
@@ -590,14 +603,25 @@ def numtext(text):
     return re.sub(r"(?<=\d) (?=\d{3}(?!\d))", "", t)
 
 
-def same(a, b, tol):
+def same(a, b, tol, floor=0.0):
+    """relative: |a - b| <= tol*|b| (tolerance 1b, Tony Oct 23; max(1, |b|) made 0 right for a 0.00624 key). A zero key: |a| <= ZERO.
+    expr points (a tuple) all get the ZERO floor: a function value near 0 carries float dust (sin(pi) = 1.2e-16)."""
     if isinstance(a, str) or isinstance(b, str):
         return a == b
     if isinstance(a, tuple):
-        return len(a) == len(b) and all(same(x, y, tol) for x, y in zip(a, b))
+        return isinstance(b, tuple) and len(a) == len(b) and all(same(x, y, tol, slips.ZERO) for x, y in zip(a, b))
     if math.isinf(a) or math.isinf(b):
         return a == b
-    return abs(a - b) <= tol * max(1.0, abs(b))
+    return abs(a - b) <= max(tol * abs(b), slips.ZERO if b == 0 else floor)
+
+
+def tol_of(u):
+    """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test) > the bank's tol (bank_tol,
+    inherit_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box (sigfig() grades it). No topic level: the bank
+    schema has no topic grouping. app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches and
+    repeats keep tol or 1e-6 (98, 99: two tries); slips use slips.SLIP_WIN (Tony D2)."""
+    t = u.get("tol", u.get("bank_tol"))
+    return t if t is not None else slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6
 
 
 def sig3(a, b):
@@ -628,13 +652,21 @@ def figures(u):
 
 
 def unit_correct(u, sig):
-    tol = u.get("tol", 1e-6)
+    tol = tol_of(u)
     if u["type"] == "text":
         return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
     if u.get("fixbox") and not isinstance(sig, tuple):
         return same(sig, ans, tol) or sigfig(sig, ans, figures(u))
+    if exact_int(u, ans):
+        return same(sig, ans, min(tol, 0.5 / abs(ans)))
     return same(sig, ans, tol) or sig3(sig, ans)
+
+
+def exact_int(u, ans):
+    """an exact integer key (question tol <= slips.EXACT, the wiggle test's): no 3 s.f. pass and a window under half a unit, so 1023 is
+    wrong for 1024 and 9999 for 10000 (Tony, Oct 23). An irrational exact key (9*sqrt(3)) keeps 3 s.f. app.js exactInt() is the twin."""
+    return isinstance(ans, float) and ans != 0 and ans.is_integer() and u.get("tol", 1) <= slips.EXACT
 
 
 def unit_hit(u, text, sig):
@@ -651,14 +683,14 @@ def unit_hit(u, text, sig):
 
 
 @functools.lru_cache(maxsize=1024)
-def _slip_table(form, ans, tol, ignore):
+def _slip_table(form, ans, ignore):
     """((family, value), ...) of one unit's form, less every SAME (a slip on the answer: already right) and every ignore_slips value."""
     try:
         if slips.slow(form):          # bounded time: no slip, the nudge as before (cached below)
             return ()
         skip = [float(slips.parse(s).doit()) for s in ignore]
         return tuple((f, v) for f, v in slips.mutants(form)
-                     if not slips.close(v, ans, tol) and not any(slips.close(v, x, tol) for x in skip))
+                     if not slips.close(v, ans) and not any(slips.close(v, x) for x in skip))
     except Exception:  # noqa: BLE001  a form sympy can't read: no slips, the nudge as before
         return ()
 
@@ -672,8 +704,7 @@ def slip_hit(u, sig):
         ans = float(signature(u, u["answer"]))
     except (UNREADABLE, TypeError):
         return None
-    tol = u.get("tol", 1e-6)
-    fam = next((f for f, v in _slip_table(u["form"], ans, tol, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v, tol)), None)
+    fam = next((f for f, v in _slip_table(u["form"], ans, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v)), None)   # SLIP_WIN, never tol_of (D2)
     return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
 
 

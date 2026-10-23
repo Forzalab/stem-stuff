@@ -344,6 +344,7 @@
         if (s.fatal) { report.notbank++; bad.push(f.name); continue; }
         for (const k in s.skipped) report[k] += s.skipped[k];
         if (!s.kept.length) { bad.push(f.name); continue; }
+        C.inheritTol({ tol: doc.tol, problems: s.kept });   // tolerance 1b: bank tol -> bank_tol on every unit, after the shape check (app.js tolOf)
         pend.push([f, s]);
         report.kept += s.kept.length;
         keep.push({ name: f.name, text });

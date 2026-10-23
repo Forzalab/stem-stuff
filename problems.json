@@ -43,7 +43,9 @@
           "hint": "QUACK. $0/0$ says 'simplify first', not 'no limit'. What factor do top and bottom share?"
         }
       ],
-      "nudge": "QUACK. Does your number agree with the calculator table?"
+      "nudge": "QUACK. Does your number agree with the calculator table?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CALC1_A9R",
@@ -106,7 +108,9 @@
       "ignore_slips": [
         "-9/2"
       ],
-      "wrong": []
+      "wrong": [],
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CALC1_X2P",
@@ -449,7 +453,9 @@
               "error": "counting",
               "hint": "QUACK. You counted the overlap twice. How many times should it count?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "How many are in exactly one set?",
@@ -462,7 +468,9 @@
               "error": "misread",
               "hint": "QUACK. Exactly one. Should the overlap be in that count at all?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Draw the two circles. Fill the middle first."
@@ -830,7 +838,9 @@
           "hint": "QUACK. Two rules on this code. Write one number under each slot first."
         }
       ],
-      "nudge": "QUACK. Six slots. Write how many choices each slot has, then multiply."
+      "nudge": "QUACK. Six slots. Write how many choices each slot has, then multiply.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_Q4V",
@@ -1216,7 +1226,9 @@
               "error": "sign",
               "hint": "QUACK. Hotter tea is less cold. Which end of the ramp is 1?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "How cold is $85^\\circ\\text{F}$ tea?",
@@ -1232,7 +1244,9 @@
               "error": "domain",
               "hint": "QUACK. Membership lives in [0, 1]. Can tea be less than not cold?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Mark 40 and 70 on a line. Where does your temperature sit?"
@@ -1270,7 +1284,9 @@
           "hint": "QUACK. The middle sits in all three pairs. How many times did you take it out?"
         }
       ],
-      "nudge": "QUACK. Draw three circles. Fill the middle first, then each pair-only region."
+      "nudge": "QUACK. Draw three circles. Fill the middle first, then each pair-only region.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_B5M",
@@ -1301,7 +1317,9 @@
           "hint": "QUACK. How many can a month hold before it has 3?"
         }
       ],
-      "nudge": "QUACK. Worst case first. How many people fit with no month at 3?"
+      "nudge": "QUACK. Worst case first. How many people fit with no month at 3?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H9S",
@@ -1327,7 +1345,9 @@
           "hint": "QUACK. A slot holds whole keys. Round which way?"
         }
       ],
-      "nudge": "QUACK. Spread the keys as evenly as you can. Count the fullest slot."
+      "nudge": "QUACK. Spread the keys as evenly as you can. Count the fullest slot.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_M6V",
@@ -1353,7 +1373,9 @@
           "hint": "QUACK. Right idea. Now the range: 0 to 25. One more step."
         }
       ],
-      "nudge": "QUACK. Check it: your number times $-7$, then mod 26. Is it 1?"
+      "nudge": "QUACK. Check it: your number times $-7$, then mod 26. Is it 1?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_G5E",
@@ -1384,7 +1406,9 @@
           "hint": "QUACK. Did a row where both sides are 1 get counted twice?"
         }
       ],
-      "nudge": "QUACK. Count the A, B, C, D rows first. Then ask what E does to that count."
+      "nudge": "QUACK. Count the A, B, C, D rows first. Then ask what E does to that count.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_K4P",
@@ -1447,7 +1471,9 @@
           "hint": "QUACK. With $d = 1$, what is $c \\wedge \\neg d$?"
         }
       ],
-      "nudge": "QUACK. Fix $c$ and $d$ for the row. Then walk the four columns."
+      "nudge": "QUACK. Fix $c$ and $d$ for the row. Then walk the four columns.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_C2A",
@@ -3619,7 +3645,9 @@
           "hint": "QUACK. Ten books, three picks. Do the choices add or multiply?"
         }
       ],
-      "nudge": "QUACK. Count the picks in order first, then divide by how many orders three books have."
+      "nudge": "QUACK. Count the picks in order first, then divide by how many orders three books have.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J3B",
@@ -3650,7 +3678,9 @@
           "hint": "QUACK. You counted four spots. How many letters are in the word?"
         }
       ],
-      "nudge": "QUACK. Write a blank for each letter. How many letters can go in the first blank, then the next?"
+      "nudge": "QUACK. Write a blank for each letter. How many letters can go in the first blank, then the next?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J4C",
@@ -3681,7 +3711,9 @@
           "hint": "QUACK. Both O's are letters. Did you count six spots?"
         }
       ],
-      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J5D",
@@ -3712,7 +3744,9 @@
           "hint": "QUACK. LOBBY has five letters. Did you drop a B?"
         }
       ],
-      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J6E",
@@ -3743,7 +3777,9 @@
           "hint": "QUACK. Two pairs repeat. How many times should you divide by 2?"
         }
       ],
-      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing."
+      "nudge": "QUACK. Arrange as if every letter were different, then divide out the swaps that change nothing.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J7F",
@@ -3775,7 +3811,9 @@
           "hint": "QUACK. Count the slots again. There are seven, and every one multiplies."
         }
       ],
-      "nudge": "QUACK. Seven slots. Write how many choices each slot has, then multiply."
+      "nudge": "QUACK. Seven slots. Write how many choices each slot has, then multiply.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J8G",
@@ -3806,7 +3844,9 @@
           "hint": "QUACK. Did you forget the soups? Every part of the meal multiplies."
         }
       ],
-      "nudge": "QUACK. Three slots: soup, sandwich, drink. Multiply the choices."
+      "nudge": "QUACK. Three slots: soup, sandwich, drink. Multiply the choices.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_J9H",
@@ -3837,7 +3877,9 @@
           "hint": "QUACK. 8 toppings, 2 picks. Is it 8 × 2? List the pairs for 3 toppings and check."
         }
       ],
-      "nudge": "QUACK. Count ordered picks first, then divide by how many orders two toppings have."
+      "nudge": "QUACK. Count ordered picks first, then divide by how many orders two toppings have.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H2J",
@@ -3867,7 +3909,9 @@
               "error": "counting",
               "hint": "QUACK. Can one player be both captain and co-captain?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "How many ways can the coach pick 2 players to carry the water?",
@@ -3885,7 +3929,9 @@
               "error": "counting",
               "hint": "QUACK. Can one player be picked twice? And does order matter for carrying water?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Two picks from 12. Ask first: do the two jobs have different names?"
@@ -3921,7 +3967,9 @@
               "error": "op-swap",
               "hint": "QUACK. Each spot multiplies the count. Add or multiply?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "How many codes are there if no digit repeats?",
@@ -3939,7 +3987,9 @@
               "error": "counting",
               "hint": "QUACK. Is 1234 a different code from 4321? Then order matters. Don't divide."
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Four spots. Write how many digits each spot can take, then multiply."
@@ -3973,7 +4023,9 @@
           "hint": "QUACK. That is exactly one 0. At least one also allows two, three or four."
         }
       ],
-      "nudge": "QUACK. Count all codes, then the codes with no 0. What's the difference?"
+      "nudge": "QUACK. Count all codes, then the codes with no 0. What's the difference?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H5M",
@@ -4004,7 +4056,9 @@
           "hint": "QUACK. Count the friends again. How many seats are you filling?"
         }
       ],
-      "nudge": "QUACK. Fill the seats left to right. How many friends can take each seat?"
+      "nudge": "QUACK. Fill the seats left to right. How many friends can take each seat?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H6N",
@@ -4035,7 +4089,9 @@
           "hint": "QUACK. Did you glue the pair and still seat five things? How many things are left to seat?"
         }
       ],
-      "nudge": "QUACK. Treat Ana and Bo as one block. How many things are you seating now?"
+      "nudge": "QUACK. Treat Ana and Bo as one block. How many things are you seating now?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H7P",
@@ -4066,7 +4122,9 @@
           "hint": "QUACK. Does the order of the other members matter on a committee?"
         }
       ],
-      "nudge": "QUACK. Seat Maria first. Then count the ways to fill the rest."
+      "nudge": "QUACK. Seat Maria first. Then count the ways to fill the rest.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_H8Q",
@@ -4096,7 +4154,9 @@
               "error": "counting",
               "hint": "QUACK. Can one member hold two jobs? Each job has one fewer member left."
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "How many ways can the club pick a 3-person committee?",
@@ -4114,7 +4174,9 @@
               "error": "op-swap",
               "hint": "QUACK. 8 members and 3 seats. Is it 8 × 3? Try listing a few committees."
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Three picks from 8. Ask first: do the three seats have different names?"
@@ -4148,7 +4210,9 @@
           "hint": "QUACK. 10 × 10 counts pairs. Each topping is its own yes-or-no. Multiply those."
         }
       ],
-      "nudge": "QUACK. Walk down the topping list. For each one, how many choices do you have?"
+      "nudge": "QUACK. Walk down the topping list. For each one, how many choices do you have?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_P5S",
@@ -4179,7 +4243,9 @@
           "hint": "QUACK. Each person shakes more than one hand. How many does each person shake?"
         }
       ],
-      "nudge": "QUACK. Each person shakes hands with how many others? Then fix the double count."
+      "nudge": "QUACK. Each person shakes hands with how many others? Then fix the double count.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_P6T",
@@ -4210,7 +4276,9 @@
           "hint": "QUACK. Four slots, and each slot multiplies. Add or multiply?"
         }
       ],
-      "nudge": "QUACK. Fill the playlist slot by slot. How many songs are left for each slot?"
+      "nudge": "QUACK. Fill the playlist slot by slot. How many songs are left for each slot?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_P7U",
@@ -4241,7 +4309,9 @@
           "hint": "QUACK. Each day multiplies the count. Add or multiply?"
         }
       ],
-      "nudge": "QUACK. Write a blank for each day. How many breakfasts can go in each blank?"
+      "nudge": "QUACK. Write a blank for each day. How many breakfasts can go in each blank?",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_P8V",
@@ -4272,7 +4342,9 @@
           "hint": "QUACK. You arranged the questions. The order is fixed. How many answers does each question have?"
         }
       ],
-      "nudge": "QUACK. Each question is a slot. How many choices per slot? Multiply."
+      "nudge": "QUACK. Each question is a slot. How many choices per slot? Multiply.",
+      "tol": 0.0001,
+      "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
     },
     {
       "code": "CSCI26_L3G",
@@ -4435,7 +4507,9 @@
               "error": "counting",
               "hint": "QUACK. Walk once around the loop. How many times do you leave $c$ and come back?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "What is the sum of the degrees of all four vertices?",
@@ -4453,7 +4527,9 @@
               "error": "counting",
               "hint": "QUACK. Recheck the loop at $c$."
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Count edge ends at each vertex. A loop has two ends."
@@ -4523,7 +4599,9 @@
               "error": "misread",
               "hint": "QUACK. A leaf has no children. Does $b$ have any?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         },
         {
           "prompt": "What is the height of the tree?",
@@ -4541,7 +4619,9 @@
               "error": "misread",
               "hint": "QUACK. Follow every branch to its end. Which one goes deepest?"
             }
-          ]
+          ],
+          "tol": 0.0001,
+          "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
         }
       ],
       "nudge": "QUACK. Leaves: no children. Height: edges, root to the deepest leaf."

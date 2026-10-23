@@ -126,7 +126,7 @@ class Grade(unittest.TestCase):
 
     def test_three_sig_figs(self):                                              # Tony (Oct 3): right to 3 significant figures counts
         u = {"type": "num", "answer": "9*sqrt(3)"}
-        for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", False), ("15.65", False), ("dne", False)):
+        for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", True), ("15.2", False), ("15.95", False), ("dne", False)):   # no tol: 2% (tolerance 1b)
             self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
         e = {"type": "expr", "answer": "x/3", "points": [1, 2, 3]}
         self.assertTrue(serve.unit_correct(e, serve.signature(e, "0.33334x")))   # per point value, not per coefficient
@@ -134,6 +134,52 @@ class Grade(unittest.TestCase):
         self.assertFalse(serve.unit_correct(e, serve.signature(e, "0.33x")))
         self.assertTrue(serve.unit_correct({"type": "num", "answer": "190*9.8*(tan(16*pi/180)+0.25)/(1-0.25*tan(16*pi/180))/190"}, 5.665))   # 6BR: 5.665 vs 5.666
         self.assertTrue(serve.unit_correct({"type": "num", "answer": "0"}, 0.0))       # zero: exact (tol) only
+
+    def test_tolerance_relative(self):                                          # tolerance 1b (Tony, Oct 23): tol*max(1, |b|) was an absolute window
+        u = {"type": "num", "answer": "0.00624", "tol": 0.01}                   # PHYS_EX9
+        for text, ok in (("0", False), ("0.006", False), ("0.0063", True), ("0.00618", True), ("0.0062", True)):
+            self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
+        self.assertFalse(serve.unit_correct({"type": "num", "answer": "-0.00633", "tol": 0.01}, 0.0))   # PHYS_Y2V
+        z = {"type": "num", "answer": "0.0"}                                    # zero key (PHYS_8X3): absolute 1e-9
+        for v, ok in ((0.0, True), (3e-16, True), (-1e-10, True), (0.0003, False), (1e-8, False)):
+            self.assertEqual(serve.unit_correct(z, v), ok, v)
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "tol-of.json"), encoding="utf-8") as f:
+            for u, want in json.load(f):                                    # question > bank > default; app.js tolOf runs the same cases
+                self.assertEqual(serve.tol_of(u), want, u)
+        e = {"type": "expr", "answer": "sin(pi*x)", "points": [1, 2, 0.5]}       # expr points near 0: float dust passes
+        self.assertTrue(serve.unit_correct(e, serve.signature(e, "-sin(pi*x)+2*sin(pi*x)")))
+        self.assertFalse(serve.unit_correct(e, serve.signature(e, "sin(pi*x)+0.001")))
+
+    def test_tolerance_hierarchy(self):                                         # Tony (Oct 23): question tol > bank tol > 2%
+        doc = {"tol": 0.01, "problems": [{"code": "A", "type": "num", "answer": "0.5"},
+                                         {"code": "B", "type": "multi", "parts": [{"type": "num", "answer": "2", "tol": 1e-4}, {"type": "num", "answer": "3"}]},
+                                         {"code": "C", "type": "mc", "fix": {"answer": "6"}}]}
+        serve.inherit_tol(doc)
+        a, b, c = doc["problems"]
+        self.assertEqual([serve.tol_of(a), serve.tol_of(b["parts"][0]), serve.tol_of(b["parts"][1]), c["fix"]["bank_tol"]], [0.01, 1e-4, 0.01, 0.01])
+        self.assertFalse(serve.unit_correct(a, 0.494))                      # 1.2% off: 2% would pass it, the bank's 1% does not
+        self.assertTrue(serve.unit_correct(a, 0.496))
+        for bad in ({"tol": 0.5}, {"tol": True}, {}):
+            d = {**bad, "problems": [{"code": "A", "type": "num", "answer": "1"}]}
+            serve.inherit_tol(d)
+            self.assertNotIn("bank_tol", d["problems"][0])
+
+    def test_slip_window_d2(self):                                              # Tony D2: slips use SLIP_WIN (0.5% or 3 s.f.), not tol_of
+        u = {"type": "num", "answer": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "form": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "tol": 1e-3}
+        self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off
+        self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
+
+    def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/tol.py --write)
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "problems.json"), encoding="utf-8") as f:
+            units = {c: u for p in json.load(f)["problems"] for c, u in serve.slips.units(p)}
+        for code, typed in (("CSCI26_J2A", 119), ("CSCI26_J2A", 121), ("CSCI26_H5M", 719), ("CSCI26_J5D", 59), ("CALC1_T6B", 11.88), ("CSCI26_M5V#0", 13.9)):
+            self.assertFalse(serve.unit_correct(units[code], float(typed)), (code, typed))
+        for code, typed in (("CSCI26_H3K#1", 5039), ("CSCI26_P4R", 1023), ("CSCI26_H3K#0", 9999), ("CSCI26_P4R", 1020)):   # no 3 s.f. on an exact integer
+            self.assertFalse(serve.unit_correct(units[code], float(typed)), (code, typed))
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "9*sqrt(3)", "tol": 1e-4}, 15.6))   # irrational exact key: 3 s.f. stays
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "1024", "tol": 0.01}, 1023.0))     # an author tol: not exact
+        for code, typed in (("CSCI26_J2A", 120), ("CALC1_T6B", 12.0), ("CSCI26_F4R#0", 0.3)):
+            self.assertTrue(serve.unit_correct(units[code], float(typed)), (code, typed))
 
     def test_pick_all_fix(self):                                                # prove mode: X'd rows carry a graded fix
         for bad in ({"choices": ["a", "c"]}, {"choices": ["a", "c"], "fixes": {"b": "10"}},
@@ -402,7 +448,7 @@ class Slips(unittest.TestCase):
 
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
-        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, 1e-3, ())])
+        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, ())])
 
     def test_slow_form_gives_no_slip_fast(self):
         import time as _t

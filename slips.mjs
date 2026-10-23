@@ -22,7 +22,10 @@ export const FAMILY_HINT = {
   g: "QUACK. Check the value you used for g.",
 };
 
-export const close = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)) || g3(a) === g3(b);
+export const ZERO = 1e-9;
+export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol
+/* slips.py close(): relative to b (tolerance 1b); a zero b gets the absolute ZERO window. Or equal to 3 s.f. Slip matching uses the default. */
+export const close = (a, b, tol = SLIP_WIN) => Math.abs(a - b) <= (b ? tol * Math.abs(b) : ZERO) || g3(a) === g3(b);
 /* Python's f"{v:.3g}" */
 function g3(v) {
   if (!Number.isFinite(v)) return String(v);
@@ -178,7 +181,7 @@ export function mutants(form) {
 }
 /* the first family whose slip is close() to the typed value, else null (an unreadable form: null, never a throw) */
 /* skip: values that never get a family hint (serve.py _slip_table): the answer (a SAME slip is already right) and each ignore_slips value */
-export function match(form, value, tol, skip = []) {
+export function match(form, value, tol = SLIP_WIN, skip = []) {
   if (form == null || typeof value !== "number" || !Number.isFinite(value)) return null;
   try { return (mutants(form).find(([, v]) => close(value, v, tol) && !skip.some(x => close(v, x, tol))) || [null])[0]; } catch { return null; }
 }
