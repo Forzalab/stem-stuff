@@ -113,6 +113,11 @@ class Gate(unittest.TestCase):
         self.assertEqual(slips.gate({"type": "num", "answer": "2", "form": "7-(2+3)", "ignore_slips": ["4", "6", "8"]}), [])
         self.assertTrue(slips.gate({"type": "num", "answer": "6", "form": "2+3"})[0].startswith("form ="))
 
+    def test_answer_read_like_the_grader(self):   # PHYS_F3N: answer "sin(30 deg)" crashed form_ok (SyntaxError) in --strict
+        u = {"type": "num", "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))", "tol": 0.01, "form": "9.8*(sin(30*pi/180)-0.2*cos(30*pi/180))"}
+        self.assertIsNone(slips.form_ok(u))
+        self.assertAlmostEqual(slips.value("3pi"), 3 * math.pi)
+
     def test_sign_distribute_no_clash(self):
         """-(b+c) -> -b+c is a sign flip of c by definition: sign + distribute alone on one value is no CLASH."""
         form = "20-(3+4)"

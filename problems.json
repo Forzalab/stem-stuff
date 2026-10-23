@@ -1,5 +1,5 @@
 {
-  "v": 1,
+  "v": 20261022,
   "problems": [
     {
       "code": "CALC1_T6B",
@@ -25,6 +25,7 @@
         }
       ],
       "answer": "12",
+      "form": "2^2+2*2+4",
       "wrong": [
         {
           "match": "4",
@@ -101,6 +102,10 @@
         }
       ],
       "answer": "9/2",
+      "form": "3*3^2/2-3^3/3",
+      "ignore_slips": [
+        "-9/2"
+      ],
       "wrong": []
     },
     {
@@ -237,6 +242,7 @@
         }
       ],
       "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))",
+      "form": "9.8*(sin(30*pi/180)-0.2*cos(30*pi/180))",
       "tol": 0.01,
       "wrong": []
     },
@@ -348,6 +354,12 @@
         }
       ],
       "answer": "2.0*9.8*sin(25 deg)/150",
+      "form": "2.0*9.8*sin(25*pi/180)/150",
+      "ignore_slips": [
+        "0.05635",
+        "0.003049",
+        "0.1104"
+      ],
       "tol": 0.01,
       "wrong": []
     },
@@ -427,6 +439,10 @@
           "prompt": "How many are in $A \\cup B$?",
           "type": "num",
           "answer": "14",
+          "form": "10+7-3",
+          "ignore_slips": [
+            "7"
+          ],
           "wrong": [
             {
               "match": "17",
@@ -439,6 +455,7 @@
           "prompt": "How many are in exactly one set?",
           "type": "num",
           "answer": "11",
+          "form": "10+7-2*3",
           "wrong": [
             {
               "match": "14",
@@ -651,6 +668,10 @@
       ],
       "how": "A decimal, like .5",
       "answer": "0.25",
+      "form": "1-0.75",
+      "ignore_slips": [
+        "0.5"
+      ],
       "wrong": [
         {
           "match": "0.6",
@@ -791,6 +812,7 @@
       ],
       "how": "The full number, no commas.",
       "answer": "7800000",
+      "form": "26*25*24*10*10*5",
       "wrong": [
         {
           "match": "8788000",
@@ -1187,6 +1209,7 @@
           "prompt": "How cold is $61^\\circ\\text{F}$ tea?",
           "type": "num",
           "answer": "0.3",
+          "form": "(70-61)/(70-40)",
           "wrong": [
             {
               "match": "0.7",
@@ -1199,6 +1222,10 @@
           "prompt": "How cold is $85^\\circ\\text{F}$ tea?",
           "type": "num",
           "answer": "0",
+          "form": "0",
+          "ignore_slips": [
+            "0"
+          ],
           "wrong": [
             {
               "match": "-0.5",
@@ -1221,6 +1248,11 @@
         }
       ],
       "answer": "12",
+      "form": "7+6+5-3*2",
+      "ignore_slips": [
+        "24",
+        "6"
+      ],
       "wrong": [
         {
           "match": "14",
@@ -1251,6 +1283,7 @@
         }
       ],
       "answer": "25",
+      "form": "12*2+1",
       "wrong": [
         {
           "match": "24",
@@ -1281,6 +1314,7 @@
         }
       ],
       "answer": "9",
+      "form": "9",
       "wrong": [
         {
           "match": "8",
@@ -1306,6 +1340,7 @@
         }
       ],
       "answer": "11",
+      "form": "26-15",
       "wrong": [
         {
           "match": "15",
@@ -1331,6 +1366,7 @@
         }
       ],
       "answer": "14",
+      "form": "(4+4-1)*2",
       "wrong": [
         {
           "match": "7",
@@ -1390,6 +1426,10 @@
         }
       ],
       "answer": "2",
+      "form": "2",
+      "ignore_slips": [
+        "4"
+      ],
       "wrong": [
         {
           "match": "1",
@@ -3561,6 +3601,7 @@
         }
       ],
       "answer": "120",
+      "form": "10*9*8/(3*2*1)",
       "wrong": [
         {
           "match": "720",
@@ -3591,6 +3632,7 @@
         }
       ],
       "answer": "120",
+      "form": "5*4*3*2*1",
       "wrong": [
         {
           "match": "3125",
@@ -3621,6 +3663,7 @@
         }
       ],
       "answer": "360",
+      "form": "6*5*4*3*2*1/(2*1)",
       "wrong": [
         {
           "match": "720",
@@ -3651,6 +3694,7 @@
         }
       ],
       "answer": "60",
+      "form": "5*4*3*2*1/(2*1)",
       "wrong": [
         {
           "match": "120",
@@ -3681,6 +3725,7 @@
         }
       ],
       "answer": "180",
+      "form": "6*5*4*3*2*1/(2*1*2*1)",
       "wrong": [
         {
           "match": "720",
@@ -3712,6 +3757,7 @@
       ],
       "how": "The full number, no commas.",
       "answer": "158184000",
+      "form": "9*26^3*10^3",
       "wrong": [
         {
           "match": "175760000",
@@ -3742,6 +3788,7 @@
         }
       ],
       "answer": "72",
+      "form": "4*6*3",
       "wrong": [
         {
           "match": "13",
@@ -3772,6 +3819,7 @@
         }
       ],
       "answer": "28",
+      "form": "8*7/2",
       "wrong": [
         {
           "match": "56",
@@ -3807,6 +3855,7 @@
           "prompt": "How many ways can the coach pick a captain and a co-captain?",
           "type": "num",
           "answer": "132",
+          "form": "12*11",
           "wrong": [
             {
               "match": "66",
@@ -3824,6 +3873,7 @@
           "prompt": "How many ways can the coach pick 2 players to carry the water?",
           "type": "num",
           "answer": "66",
+          "form": "12*11/2",
           "wrong": [
             {
               "match": "132",
@@ -3856,6 +3906,10 @@
           "prompt": "How many codes are there if digits may repeat?",
           "type": "num",
           "answer": "10000",
+          "form": "10^4",
+          "ignore_slips": [
+            "100"
+          ],
           "wrong": [
             {
               "match": "5040",
@@ -3873,6 +3927,7 @@
           "prompt": "How many codes are there if no digit repeats?",
           "type": "num",
           "answer": "5040",
+          "form": "10*9*8*7",
           "wrong": [
             {
               "match": "10000",
@@ -3900,6 +3955,7 @@
         }
       ],
       "answer": "3439",
+      "form": "10^4-9^4",
       "wrong": [
         {
           "match": "4000",
@@ -3930,6 +3986,7 @@
         }
       ],
       "answer": "720",
+      "form": "6*5*4*3*2*1",
       "wrong": [
         {
           "match": "36",
@@ -3960,6 +4017,7 @@
         }
       ],
       "answer": "48",
+      "form": "4*3*2*1*2",
       "wrong": [
         {
           "match": "24",
@@ -3990,6 +4048,7 @@
         }
       ],
       "answer": "84",
+      "form": "9*8*7/(3*2*1)",
       "wrong": [
         {
           "match": "210",
@@ -4025,6 +4084,7 @@
           "prompt": "How many ways can the club pick a president, a treasurer and a secretary?",
           "type": "num",
           "answer": "336",
+          "form": "8*7*6",
           "wrong": [
             {
               "match": "56",
@@ -4042,6 +4102,7 @@
           "prompt": "How many ways can the club pick a 3-person committee?",
           "type": "num",
           "answer": "56",
+          "form": "8*7*6/(3*2*1)",
           "wrong": [
             {
               "match": "336",
@@ -4069,6 +4130,7 @@
         }
       ],
       "answer": "1024",
+      "form": "2^10",
       "wrong": [
         {
           "match": "10",
@@ -4099,6 +4161,7 @@
         }
       ],
       "answer": "45",
+      "form": "10*9/2",
       "wrong": [
         {
           "match": "90",
@@ -4129,6 +4192,7 @@
         }
       ],
       "answer": "3024",
+      "form": "9*8*7*6",
       "wrong": [
         {
           "match": "126",
@@ -4159,6 +4223,7 @@
         }
       ],
       "answer": "3125",
+      "form": "5^5",
       "wrong": [
         {
           "match": "120",
@@ -4189,6 +4254,7 @@
         }
       ],
       "answer": "64",
+      "form": "2^6",
       "wrong": [
         {
           "match": "12",
@@ -4359,6 +4425,10 @@
           "prompt": "What is $\\deg(c)$?",
           "type": "num",
           "answer": "4",
+          "form": "1+1+2",
+          "ignore_slips": [
+            "2"
+          ],
           "wrong": [
             {
               "match": "3",
@@ -4371,6 +4441,7 @@
           "prompt": "What is the sum of the degrees of all four vertices?",
           "type": "num",
           "answer": "12",
+          "form": "2*6",
           "wrong": [
             {
               "match": "6",
@@ -4445,6 +4516,7 @@
           "prompt": "How many leaves does the tree have?",
           "type": "num",
           "answer": "3",
+          "form": "3",
           "wrong": [
             {
               "match": "4",
@@ -4457,6 +4529,7 @@
           "prompt": "What is the height of the tree?",
           "type": "num",
           "answer": "3",
+          "form": "3",
           "wrong": [
             {
               "match": "4",
