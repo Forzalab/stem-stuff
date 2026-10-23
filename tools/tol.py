@@ -1,12 +1,15 @@
-"""Tolerance 1b (SCHEMA.md `tol`; brain topics/tolerance-1b-2026-10-23.md): the wiggle test. Authoring / gate time only: the grader
-never runs it, it reads the `tol` this writes.
+"""Tolerance 1b (SCHEMA.md `tol`; brain topics/tolerance-1b-2026-10-23.md): the wiggle test + the tol warnings. Authoring / gate time
+only: the grader never runs it, it reads the `tol` this writes.
 
-For each num item (or num part) with a `form` and no `tol`: recompute the key from `form` with g 9.8 <-> 9.81, pi 3.14 / 3.1416, and
-every other number +-1 in its last digit (exponents after ^ stay). Key unchanged every time -> definitive: tol 1e-4 (0.01%).
-A form that is one bare number gives nothing to wiggle: an integer (0 by symmetry, 1) is definitive, a decimal is a folded key (not).
-Not definitive, or no form -> no tol: the grader's 2% default (slips.TOL_NUM). An author `tol` always wins and is left alone.
+Wiggle (num item or part with a `form` and no `tol`): recompute the key from `form` with g 9.8 <-> 9.81, pi 3.14 / 3.1416, and every
+decimal number +-1 in its last digit. Integers and fractions are exact (the 5 in 5! is exactly 5), so they stay. Key unchanged every
+time -> definitive: tol 1e-4 (0.01%) with tol_why, at question level. Not definitive, or no form -> no tol: the bank's tol, else 2%.
+An author `tol` always wins and is left alone.
 
-Run: python3 tools/tol.py [banks/BANK_X.json ...]      (default: problems.json + banks/*.json; report only)
+Warnings (never an error): a bank with num units that have no tol at any level (question, bank; the schema has no topic level), and
+an off-by-one-prone unit (integer key, a form with integer inputs only, no tol: the wiggle test was not written).
+
+Run: python3 tools/tol.py [banks/BANK_X.json ...]      (default: problems.json + banks/*.json; report + warnings)
      python3 tools/tol.py --write ...                   (store tol + tol_why on each definitive unit)
 """
 import json
@@ -19,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 import slips  # noqa: E402
 
 EXACT = 1e-4
-WHY = "wiggle test: g, pi and every datum +-1 in its last digit leave the key unchanged"
+WHY = "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
 NUM = re.compile(r"(?<![\w.^])(\d+\.?\d*|\.\d+)(?![\w.])")      # a number literal, not an exponent, not part of a name (log10)
 
 
@@ -35,13 +38,12 @@ def wiggles(form):
     out += [re.sub(r"(?<![\d.])9\.8(?![\d])", "9.81", form)] if re.search(r"(?<![\d.])9\.8(?![\d])", form) else []
     out += [re.sub(r"\bpi\b", p, form) for p in ("3.14", "3.1416") if re.search(r"\bpi\b", form)]
     for m in NUM.finditer(form):
-        out += [form[:m.start()] + bump(m.group(1), d) + form[m.end():] for d in (1, -1)]
+        if "." in m.group(1):
+            out += [form[:m.start()] + bump(m.group(1), d) + form[m.end():] for d in (1, -1)]
     return out
 
 
 def definitive(form):
-    if NUM.fullmatch(form.strip()):
-        return "." not in form
     k = slips.value(form)
     for w in wiggles(form):
         try:
@@ -51,6 +53,26 @@ def definitive(form):
         if not abs(v - k) <= (1e-9 * abs(k) if k else slips.ZERO):
             return False
     return True
+
+
+def warnings(bank, path="bank"):
+    """the tol warnings for one bank (lines, never an error)."""
+    out, bare = [], []
+    for p in bank["problems"]:
+        for code, u in slips.units(p):
+            if u.get("type") != "num" or "tol" in u:
+                continue
+            bare.append(code)
+            f = u.get("form")
+            try:
+                whole = float(slips.value(u["answer"])).is_integer()
+            except Exception:  # noqa: BLE001  an unreadable answer: tests/schema.test.mjs reports it
+                whole = False
+            if whole and isinstance(f, str) and not any("." in m.group(1) for m in NUM.finditer(f)):
+                out.append(f"  WARN {code}: integer key, integer inputs, no tol: an off-by-one passes at 2%. Run tools/tol.py --write")
+    if bare and "tol" not in bank:
+        out.insert(0, f"  WARN {path}: {len(bare)} num unit(s) with no tol at any level: set tol for this bank or question (default 2% applies)")
+    return out
 
 
 def check(path, write=False):
@@ -68,6 +90,7 @@ def check(path, write=False):
                     u["tol"], u["tol_why"], n = EXACT, WHY, n + 1
             else:
                 rows.append(f"  {code}: default 2%")
+    rows += warnings(bank, Path(path).name)
     if n:
         Path(path).write_text(json.dumps(bank, ensure_ascii=False, indent=2) + "\n")
     return rows

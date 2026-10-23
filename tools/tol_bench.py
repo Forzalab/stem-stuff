@@ -16,7 +16,7 @@ REL = (1e-4, 1e-3, 5e-3, 0.01, 0.015, 0.019, 0.021, 0.03, 0.05, 0.1, 0.5)
 
 
 def old(u, a, b):
-    tol = u.get("tol", 1e-6)
+    tol = 1e-6 if str(u.get("tol_why", "")).startswith("wiggle") else u.get("tol", 1e-6)     # a wiggle-written tol is new: the old rule had none
     return abs(a - b) <= tol * max(1.0, abs(b)) or serve.sig3(a, b)
 
 

@@ -88,6 +88,18 @@ BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
+def inherit_tol(doc):
+    """tolerance 1b: a bank-level `tol` (SCHEMA.md) rides on every unit as bank_tol, so tol_of() needs only the unit (codes.mjs inheritTol)."""
+    t = doc.get("tol")
+    if not (isinstance(t, (int, float)) and not isinstance(t, bool) and 0 < t <= 0.05):
+        return
+    for p in doc.get("problems", []):
+        if isinstance(p, dict):
+            for u in [p, *(p["parts"] if isinstance(p.get("parts"), list) else []), p.get("fix")]:
+                if isinstance(u, dict):
+                    u.setdefault("bank_tol", t)
+
+
 def unfold(p):
     """codes.mjs unfold(): a multi with mc parts becomes one mc question per part, code + A, B, C..., the shared body + the part's prompt."""
     parts = p.get("parts") if p.get("type") == "multi" else None
@@ -128,6 +140,7 @@ def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
+        inherit_tol(doc)
         ps = [q for p in doc["problems"] if isinstance(p, dict) and isinstance(p.get("code"), str) for q in unfold(p)]
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
@@ -603,9 +616,12 @@ def same(a, b, tol, floor=0.0):
 
 
 def tol_of(u):
-    """the item's tol (author, or the wiggle test's, tools/tol.py), else 2% for num (WebAssign's default), 1e-6 for expr and for a
-    hard-mode fix box (sigfig() grades it). The grading window only: wrong matches, repeats and slips keep tol or 1e-6 (98, 99: two tries)."""
-    return u.get("tol", slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6)
+    """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test) > the bank's tol (bank_tol,
+    inherit_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box (sigfig() grades it). No topic level: the bank
+    schema has no topic grouping. app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches, repeats
+    and slips keep tol or 1e-6 (98, 99: two tries)."""
+    t = u.get("tol", u.get("bank_tol"))
+    return t if t is not None else slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6
 
 
 def sig3(a, b):

@@ -291,7 +291,7 @@ const ZERO = 1e-9, TOL_NUM = 0.02;                        // slips.py ZERO / TOL
 const same = (a, b, tol, floor = 0) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol, ZERO))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
   : Math.abs(a - b) <= Math.max(tol * Math.abs(b), b === 0 ? ZERO : floor);
-const tolOf = u => u.tol ?? (u.type === "num" && !u.fixbox ? TOL_NUM : 1e-6);
+const tolOf = u => u.tol ?? u.bank_tol ?? (u.type === "num" && !u.fixbox ? TOL_NUM : 1e-6);   // question > bank (offline.js bank_tol) > default
 /* right to 3 significant figures (serve.py sig3; Tony, Oct 3: the prompt asks for 4+): correctness only, never wrong-entry matching or repeats */
 const sig3 = (a, b) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => sig3(x, b[i]))
   : typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0

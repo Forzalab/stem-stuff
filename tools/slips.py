@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import slips  # noqa: E402  (the root module, not this file)
+import tol as tolwarn  # noqa: E402  (tools/tol.py: tol warnings, never a gate failure)
 
 
 def check(path):
@@ -47,7 +48,7 @@ def check(path):
             miss = slips.missing(u)
             rows += [f"  {code}: MISSING {v:.4g}  ({fam})" for fam, v in miss]
             bad += 0 if new else len(miss)
-    return bad, rows
+    return bad, rows + tolwarn.warnings(bank, Path(path).name)
 
 
 def main(argv):

@@ -1,0 +1,10 @@
+[
+  [{"type": "num"}, 0.02],
+  [{"type": "expr"}, 1e-6],
+  [{"type": "num", "fixbox": true}, 1e-6],
+  [{"type": "num", "tol": 1e-4}, 1e-4],
+  [{"type": "num", "bank_tol": 0.01}, 0.01],
+  [{"type": "num", "tol": 1e-4, "bank_tol": 0.01}, 1e-4],
+  [{"type": "expr", "bank_tol": 0.005}, 0.005],
+  [{"type": "num", "fixbox": true, "bank_tol": 0.01}, 0.01]
+]
