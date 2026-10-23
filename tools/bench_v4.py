@@ -234,6 +234,10 @@ def batch_deepseek(mode, payloads, poll=20, limit=24 * 3600):
                                          "provider": j.get("provider"), "stop": ch.get("finish_reason")})
         else:
             out[int(x["custom_id"])] = (None, 0.0, {"error": json.dumps(x.get("error"))[:200]})
+    total = float((b.get("usage") or {}).get("cost") or 0)                # $ is only on the batch: split it by each request's tokens
+    toks = [(r[2].get("in") or 0) + (r[2].get("out") or 0) if r and r[0] is not None else 0 for r in out]
+    if total and not any(r and r[1] for r in out) and sum(toks):
+        out = [(r[0], total * t / sum(toks), r[2]) if r and r[0] is not None else r for r, t in zip(out, toks)]
     return out
 
 
