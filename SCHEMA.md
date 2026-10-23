@@ -37,6 +37,17 @@ A bank file may add a `"burst_gap_s"` (optional, top level next to `profile`): a
 
 Keep problems in any order: the page shuffles the list per browser (design/NAV.md), so file order is never shown. Codes must be unique (tests enforce it).
 
+## Version table
+`v` is the file's schema version: `1` (the oldest) or a date as an 8-digit integer, `yyyymmdd` (e.g. `20261022`). Bigger = newer; no `v` counts as `1`.
+Each dated version is one row: what it requires, the check that proves it, and the sunset for banks older than it. Before the sunset an
+older bank still loads, with a banner on its question list: "BANK_X must be updated by 2026-11-05". From the sunset (Pacific date) it does
+not load, and opening it shows that same line instead (serve.py `bank_notice`, `today`; app.js; codes.mjs `bankNotice`). problems.json is
+not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION.md. Never change a row; fix a mistake with a new row.
+
+| `v` | Requires | Check | Sunset for older banks |
+|---|---|---|---|
+| `20261022` | `form` on every `num` item and every `num` part (and the slip gate, design/HANDOFF-slips-v2.md rule 7) | `python3 tools/slips.py --strict` | `2026-11-05` |
+
 ## Content rule (Tony, standing)
 - MINIMAL. Textbook language. State the givens and the ask, nothing else.
 - No table unless the data is a table (e.g. a limit table of x vs f(x)). Givens go in the sentence.
@@ -104,7 +115,7 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on any uncovered slip.
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
 
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
@@ -425,7 +436,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
   "type": "object",
   "required": ["v", "problems"],
   "additionalProperties": false,
-  "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
+  "properties": {"v": {"anyOf": [{"const": 1}, {"type": "integer", "minimum": 20000101, "maximum": 99991231}], "description": "1 (oldest) or yyyymmdd: the Version table row this file meets"}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
     "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
     "burst_gap_s": {"type": "number", "minimum": 60, "maximum": 600, "description": "optional, per bank file (T22): minimum seconds between two reward bursts; absent = 15"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
