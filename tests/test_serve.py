@@ -2047,8 +2047,9 @@ class FigImage(unittest.TestCase):
 
 
 class DrawRule(unittest.TestCase):
-    """spec H: the letter says draw readily; the Claude arm gets the figure how-to (livefig.rule + the Geometry line) as a last, uncached
-    system block after the two cached ones, which stay byte-identical; the DeepSeek arm gets none"""
+    """spec H: the letter says draw readily; the Claude arm gets the figure how-to split in two (Tony, Oct 22): the fixed part (livefig.RULE +
+    the Geometry line) inside the cached letter block, the per-question tail (livefig.rule_tail) as a last, uncached block; the bank block stays
+    byte-identical; the DeepSeek arm gets none"""
     def ctx(self):
         return serve.livefig.context("T_DR", "A box of $2$ kg on a ramp.", "", [9.0], subject="physics")
 
@@ -2064,19 +2065,28 @@ class DrawRule(unittest.TestCase):
         self.assertIn("- Draw readily: any distance, angle, pivot, lever arm, triangle, vector or position in your reply → draw it (one figure: an "
                       "```openui Geometry view, else a ```fig block). Words only needs a reason.\n", serve.PROMPT_V4)
 
-    def test_claude_howto_last_and_uncached(self):
+    def test_split_fixed_cached_tail_uncached(self):
         sys_ = self.system(self.v4(self.ctx()))
         self.assertEqual(len(sys_), 3)
-        self.assertEqual(sys_[-1], {"type": "text", "text": serve.v4_fig_howto(self.ctx())})   # no cache_control
-        self.assertIn(serve.livefig.rule(self.ctx()), sys_[-1]["text"])
-        self.assertIn("- `Geometry(pts: string", sys_[-1]["text"])
+        self.assertEqual(sys_[0], {"type": "text", "text": "LETTER" + serve.V4_FIG_FIXED, "cache_control": {"type": "ephemeral", "ttl": "1h"}})
+        self.assertIn(serve.livefig.RULE, sys_[0]["text"])
+        self.assertIn("- `Geometry(pts: string", sys_[0]["text"])
         self.assertTrue(serve.GEO_LINE.startswith("- `Geometry("))
+        self.assertEqual(sys_[-1], {"type": "text", "text": serve.v4_fig_howto(self.ctx())})   # no cache_control
+        self.assertTrue(sys_[-1]["text"].startswith("THIS question allows ONLY these kinds: scene"))
+        self.assertNotIn(serve.livefig.RULE, sys_[-1]["text"])
+        self.assertEqual(serve.livefig.rule(self.ctx()), serve.livefig.RULE + serve.livefig.rule_tail(self.ctx()))
 
-    def test_cached_blocks_unchanged(self):
+    def test_cached_prefix_same_across_questions(self):
+        net = serve.livefig.context("T_NET", "Graph A-B-C.", "", [], subject="graphs")
+        a, b = self.system(self.v4(self.ctx())), self.system(self.v4(net))
+        self.assertEqual(json.dumps(a[:2]), json.dumps(b[:2]))
+        self.assertEqual(json.dumps(a[1]), json.dumps({"type": "text", "text": "B", "cache_control": serve.CACHE}))
+
+    def test_kill_switch_no_howto(self):
         before = [{"type": "text", "text": "LETTER", "cache_control": {"type": "ephemeral", "ttl": "1h"}},
                   {"type": "text", "text": "B", "cache_control": serve.CACHE}]
-        self.assertEqual(json.dumps(self.system(self.v4(self.ctx()))[:2]), json.dumps(before))
-        self.assertEqual(json.dumps(self.system(self.v4(None))), json.dumps(before))           # no fig ctx (kill switch): no how-to
+        self.assertEqual(json.dumps(self.system(self.v4(None))), json.dumps(before))           # no fig ctx (CLUCK_LIVE_FIGS=0): no how-to at all
 
     def test_deepseek_no_howto(self):
         sent = []

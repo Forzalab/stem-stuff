@@ -2137,7 +2137,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
 
 def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
-    livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: v4_fig_howto), the
+    livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
     xyz, fence = Xyz(), views_gate.Fence(fig)
@@ -2212,19 +2212,25 @@ def _geo_line():
 GEO_LINE = _geo_line()
 
 
+# spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE + the OpenUI Geometry line) rides
+# in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
+V4_FIG_FIXED = ("\n" + livefig.RULE + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
+                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE)
+
+
 def v4_fig_howto(fig):
-    """spec H (the letter's "Draw readily" line): how to draw on the Claude arm: livefig.rule(fig) + the OpenUI Geometry component"""
-    return (livefig.rule(fig) + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
-            "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE)
+    """the per-question, uncached part of the figure how-to"""
+    return livefig.rule_tail(fig).lstrip("\n")
 
 
 def _v4_claude_chunks(v4, max_tokens):
     # layer 1: the letter, 1h (~12 visitors a day: 5 min goes cold); layer 2: the bank's audience line; layer 3: the question block of the first
     # user turn; layer 4: the last assistant turn of a chat. Block B (the dynamic one) is never cached. 4 breakpoints at most.
-    system = [{"type": "text", "text": PROMPT_V4, "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+    fig = v4.get("fig")
+    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
               {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
-    if v4.get("fig") is not None:                                # the figure how-to: last, uncached, so the cached prefix above stays the same
-        system.append({"type": "text", "text": v4_fig_howto(v4["fig"])})
+    if fig is not None:                                          # the per-question how-to tail: last, uncached, so the cached prefix stays the same
+        system.append({"type": "text", "text": v4_fig_howto(fig)})
     msgs = []
     last_asst = max((i for i, m in enumerate(v4["turns"]) if m["role"] == "assistant"), default=-1)
     for i, m in enumerate(v4["turns"]):

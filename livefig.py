@@ -363,8 +363,13 @@ EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kind
 
 def rule(ctx):
     """RULE for this question: the kinds it allows, one tiny example each, and (network) the vertex labels it may use"""
+    return RULE + rule_tail(ctx)
+
+
+def rule_tail(ctx):
+    """the part of rule(ctx) that changes per question (RULE itself is fixed, so a caller may cache it apart)"""
     ks = [k for k in ("scene", "cartesian", "bars", "network") if k in ctx.kinds]
-    out = RULE + "\nTHIS question allows ONLY these kinds: " + ", ".join(ks) + ". Any other kind is dropped. One tiny valid example each:"
+    out = "\nTHIS question allows ONLY these kinds: " + ", ".join(ks) + ". Any other kind is dropped. One tiny valid example each:"
     out += "".join(f"\n- {k}: {EXAMPLE[k]}" for k in ks)
     if "scene" in ks:
         out += "\nA scene is the forces on a body: at least one force arrow drawn at the body's own point."
