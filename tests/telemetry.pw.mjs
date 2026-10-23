@@ -185,6 +185,8 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 7 plain 
   assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
   assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");
   assert.match(await page.textContent("main"), /When something breaks, you see an error code\. With it we record what failed and some technical detail about your browser, only to fix that error\. What you type, your answers and your notes are never in an error report\./, "error reports listed (incident.mjs)");
+  assert.match(await page.textContent("main"), /On the site owner's own test devices only, we also record each answer typed and how long each try took, to study common mistakes; no one else's typing is recorded\. There is no screen replay\./, "owner-only typed log listed (T36), screen replay still denied");
+  assert.equal(/record what you type/.test(await page.textContent("main")), false, "T36: the old blanket 'we don't record what you type' is untrue on owner devices");
   assert.equal(/Clarity/.test(await page.textContent("main")), false, "Clarity is off: not named");
   await page.click("#offBtn");
   assert.equal(await page.evaluate(() => localStorage.getItem("stem-t-off")), "1");
