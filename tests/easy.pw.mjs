@@ -232,14 +232,24 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
     assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await page.evaluate(() => window.stemLadder.left())], [1, 0, 2], "Q11 Q4e: KE only, 2 pieces waiting");
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0);
-    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : "")));
-    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`Use it for ${m.use}`, `Why this ${m.why}`]);
-    assert.deepEqual(await notes(), [["", ""], ["", ""]], "use/why wait with their pieces");
+    /* per piece: [For, Why] as shown, and its "why?" toggle (null when hidden, else aria-expanded) */
+    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...[...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : ""),
+      m.querySelector(".fh-more").checkVisibility() ? m.querySelector(".fh-more").getAttribute("aria-expanded") : null]));
+    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`For ${m.use}`, `Why ${m.why}`]), shut = ["", ""];
+    assert.deepEqual(await notes(), [[...shut, null], [...shut, null]], "use/why wait with their pieces");
     for (const n of [1, 2]) {
       assert.equal(await page.evaluate(() => window.stemLadder.step()), true);
       assert.equal(await vis("li.f.mid"), n);
-      assert.deepEqual(await notes(), want.map((w, i) => i < n ? w : ["", ""]), "a popped piece shows its use and why, as written; a waiting one does not");
+      assert.deepEqual(await notes(), want.map((w, i) => i === n - 1 ? [...w, null] : i < n ? [...shut, "false"] : [...shut, null]),
+        "only the newest piece shows its use and why, as written; an older one folds to a why? toggle; a waiting one shows nothing");
     }
+    const lab = await page.$eval("#fcard li.f.mid.cur .fh", h => { const b = getComputedStyle(h.querySelector("b")), t = getComputedStyle(h); return [b.color === t.color, t.textAlign, +t.fontWeight]; });
+    assert.deepEqual(lab, [true, "start", 400], "notes are quiet captions: label in the note's colour (no blue), left-aligned, regular weight");
+    const more = page.locator("#fcard li.f.mid:not(.cur) .fh-more");
+    await more.click();
+    assert.deepEqual(await notes(), [[...want[0], "true"], [...want[1], null]], "why? opens an older piece's notes in place");
+    await more.focus(); await page.keyboard.press("Enter");
+    assert.deepEqual(await notes(), [[...shut, "false"], [...want[1], null]], "Enter on why? folds them again");
     assert.equal(await page.$$eval("#fcard li.f.mid .katex", k => k.length), 2, "mid pieces are KaTeX");
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");
     assert.equal(await page.evaluate(() => window.stemLadder.left()), 0);

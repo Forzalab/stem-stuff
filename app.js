@@ -780,15 +780,24 @@ function ladderStep() {
   const sec = $("#fcard"), steps = S && sec ? ladderSteps(S.prob) : [];
   if (!steps.length || (S.lad ||= 0) >= steps.length) return false;
   const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : `.to[data-to="${st.to}"]`);
-  if (el) { el.hidden = false; el.classList.add("lad-in"); }
-  const sr = $("#sr"); if (sr) sr.textContent = st.k === "mid" ? "A step was added to the key formulas." : "A link was added between key formulas.";
+  sec.querySelectorAll(".f.mid.cur").forEach(m => midOpen(m, false));                 // the last piece's notes fold to its "why?"
+  if (el) { el.hidden = false; el.classList.add("lad-in"); if (st.k === "mid") midOpen(el, true); }
+  const sr = $("#sr"); if (sr) sr.textContent = st.k === "mid" ? `A step was added to the key formulas${st.use || st.why ? ", with a note" : ""}.` : "A link was added between key formulas.";
   return true;
 }
 window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSteps(S.prob).length - (S.lad || 0) : 0 };
 /* "?" next to a formula (Tony, Oct 21): a static popup built from the sheet row's doc (what it is for, each symbol = meaning + unit, when to use it, one tiny example), like code docs. No AI.
    A mid piece's use/why (Oct 23) ride inside its piece's <li>, so they show when the piece pops */
 const docText = t => esc(t).replace(/([A-Za-zΔα-ω])_([A-Za-z0-9,]+)/g, "$1<sub>$2</sub>");
-const midNotes = m => [["use", "Use it for"], ["why", "Why this"]].map(([k, b]) => m[k] ? `<span class="fh fh-${k}"><b>${b}</b> ${docText(m[k])}</span>` : "").join("");
+/* Notes, light (Oct 23, brain ladder-ui-2026-10-23/RESEARCH.md): only the newest piece (.cur) shows them; an older one folds them behind an inline "why?"
+   that opens them in place (no hover bubble: touch + WCAG 1.4.13). Quiet "For"/"Why" run-in labels; the text is as authored */
+const midNotes = (m, cur) => m.use || m.why ? `<button type="button" class="fh-more" aria-expanded="false" aria-controls="fh-${m.i}"${cur ? " hidden" : ""}>why?</button>`
+  + `<span class="fhs" id="fh-${m.i}"${cur ? "" : " hidden"}>${[["use", "For"], ["why", "Why"]].map(([k, b]) => m[k] ? `<span class="fh fh-${k}"><b>${b}</b> ${docText(m[k])}</span>` : "").join("")}</span>` : "";
+function midOpen(li, cur) {                                                       // cur: the newest piece, notes open and no toggle; else folded
+  li.classList.toggle("cur", cur);
+  const b = li.querySelector(".fh-more"), n = li.querySelector(".fhs"); if (!b) return;
+  b.hidden = cur; b.setAttribute("aria-expanded", "false"); n.hidden = !cur;
+}
 function docHTML(d, id) {
   const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
   return `<li class="fdoc" id="${id}" role="group" aria-label="Symbols in this formula" hidden>${d.purpose ? `<p class="fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
@@ -798,7 +807,7 @@ function formulaCard() {
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
-  const steps = ladderSteps(S.prob), out = st => (S.lad || 0) > steps.indexOf(st);
+  const steps = ladderSteps(S.prob), out = st => (S.lad || 0) > steps.indexOf(st), cur = steps[(S.lad || 0) - 1];
   const sec = document.createElement("section");
   sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
@@ -807,9 +816,11 @@ function formulaCard() {
     const q = f.doc ? `<button type="button" class="fq" aria-expanded="false" aria-controls="fd-${i}" aria-label="What do the symbols in this formula mean?">?</button>` : "";
     return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`
       + (f.doc ? docHTML(f.doc, "fd-" + i) : "")
-      + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m)}</li>`).join("");
+      + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
+    const w = e.target.closest(".fh-more");
+    if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
     const d = sec.querySelector("#" + b.getAttribute("aria-controls")), open = d.hidden;
     fdocClose(sec);
