@@ -17,6 +17,7 @@
 import base64
 import datetime
 import errno
+import functools
 import hashlib
 import http.cookies
 import http.server
@@ -38,6 +39,7 @@ import urllib.request
 import sympy
 
 import livefig
+import slips
 import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
@@ -58,6 +60,19 @@ DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
 WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
+# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only: never a term, never a number.
+FAMILY_HINT = {
+    "sign": "QUACK. Check every sign. One of them flipped.",
+    "drop": "QUACK. Count your terms. One of them went missing.",
+    "reciprocal": "QUACK. Check what is on top and what is on the bottom.",
+    "power": "QUACK. Check your powers. A square or a root slipped.",
+    "factor": "QUACK. Check your factors. Something got doubled or halved.",
+    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
+    "dream": "QUACK. Check your square or root of a sum. It does not split.",
+    "trig": "QUACK. Check your trig. Sine or cosine, degrees or radians.",
+    "units": "QUACK. Check your units. A power of ten slipped.",
+    "g": "QUACK. Check the value you used for g.",
+}
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -570,6 +585,31 @@ def unit_hit(u, text, sig):
     return hit
 
 
+@functools.lru_cache(maxsize=1024)
+def _slip_table(form, ans, tol, ignore):
+    """((family, value), ...) of one unit's form, less every SAME (a slip on the answer: already right) and every ignore_slips value."""
+    try:
+        skip = [float(slips.parse(s).doit()) for s in ignore]
+        return tuple((f, v) for f, v in slips.mutants(form)
+                     if not slips.close(v, ans, tol) and not any(slips.close(v, x, tol) for x in skip))
+    except Exception:  # noqa: BLE001  a form sympy can't read: no slips, the nudge as before
+        return ()
+
+
+def slip_hit(u, sig):
+    """slips v2: a num unit's typed value that sits on a slip of its `form` -> {error: family, hint: FAMILY_HINT[family]}, else None.
+    Runs after the author's `wrong` entries miss and before the nudge. form, ignore_slips and slip values never leave the server."""
+    if u.get("type") != "num" or not isinstance(u.get("form"), str) or not isinstance(sig, float):
+        return None
+    try:
+        ans = float(signature(u, u["answer"]))
+    except (UNREADABLE, TypeError):
+        return None
+    tol = u.get("tol", 1e-6)
+    fam = next((f for f, v in _slip_table(u["form"], ans, tol, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v, tol)), None)
+    return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
+
+
 # (sid, code) -> {"wrong": [signatures], "done": bool, "gen": int}; a multi keeps one per part: (sid, code, i).
 # Saved to TRIES on every graded try, so a restart keeps them (design/DONE.md). File keys: "sid CODE" / "sid CODE i".
 # gen: a counter; every new entry takes the next one. The page caches it; a /state gen above the cached one means
@@ -872,7 +912,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
         except UNREADABLE:
             return reply({"verdict": "invalid", "triesLeft": left()})
         if not correct:
-            hit = unit_hit(u, text, sig)
+            hit = unit_hit(u, text, sig) or slip_hit(u, sig)
     if correct:
         st["done"] = True
         fams = sorted({w["error"] for w in (p["parts"][idx] if multi else p).get("wrong", []) if isinstance(w.get("error"), str)})
