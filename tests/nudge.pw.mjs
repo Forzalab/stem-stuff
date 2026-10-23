@@ -23,6 +23,11 @@ const txt = md => [{ type: "text", md }];
 const PROBS = [1, 2].map(n => ({ code: `CALC1_T95M${n}`, title: `T95 ${n}`, type: "mc", shuffle: false, body: txt(`Question ${n}: pick one.`), correct: "a",
   choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })) }));
 writeFileSync(join(banks, "BANK_T95.json"), JSON.stringify({ v: 1, problems: PROBS }));
+/* ladder lane 4: an MC item carrying the pilot's Q11 Q4e ladder (2 mid pieces) + the pilot sheet, so #fcard shows in sugar */
+const LAD = JSON.parse(readFileSync(join(ROOT, "tests/fixtures/ladder-pilot.json"), "utf8")).items.find(i => i.code === "PHYS_Z3X");
+writeFileSync(join(banks, "formula-sheet.json"), readFileSync(join(ROOT, "tests/fixtures/formula-sheet-pilot.json")));
+writeFileSync(join(banks, "BANK_T95L.json"), JSON.stringify({ v: 1, problems: [{ ...PROBS[0], code: "CALC1_T95L1", title: "T95 ladder",
+  saccharine: { title: LAD.title, part: LAD.part, ladder: LAD.ladder } }] }));
 const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -42,7 +47,7 @@ async function open(o = {}) {
   page.on("request", r => { if (/\/(explain|chat|nudge)$/.test(new URL(r.url()).pathname)) page.ai++; });
   await page.addInitScript(() => { window.__stemJevRand = () => 0; });
   await page.clock.install();
-  await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#BANK_T95");
+  await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#" + (o.bank || "BANK_T95"));
   await page.clock.runFor(3000);
   await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
   await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
@@ -109,6 +114,28 @@ await step("a tap on the nudge = taken (no back-off)", async () => {
   await page.click(".ck-peek");
   const N = await jev(page);
   assert.equal(N.taps, 1); assert.equal(N.dismissed, 0); assert.equal(N.gap, 180);
+  assert.deepEqual(page.errs, [], "no console errors");
+  await page.context().close();
+});
+
+await step("lane 4: a held pick past 20 s (no samples yet) pops one ladder piece + a hold_mid line; no input, the 2nd still fires", async () => {
+  const page = await open({ vp: { width: 1280, height: 800 }, bank: "BANK_T95L" });
+  const mids = () => page.$$eval("#fcard li.f.mid", ms => ms.filter(m => !m.hidden).length);
+  assert.equal(await mids(), 0, "the ladder starts as the big pieces");
+  await page.click("#q .opt[data-id=b]");
+  assert.equal(await page.getAttribute("#q .opt[data-id=b]", "aria-checked"), "true");
+  await idle(page, 15000);
+  assert.equal(await mids(), 0, "not before 20 s");
+  await idle(page, 10000);
+  assert.equal(await mids(), 1, "one piece out");
+  await settle(page);
+  const L = await look(page), H = await page.evaluate(() => window.stemJev().hold);
+  assert.ok(LINES.hold_mid.includes(L.say), "a hold_mid line: " + L.say);
+  assert.deepEqual(H, { code: "CALC1_T95L1", n: 1 });
+  await idle(page, 21000);
+  assert.equal(await mids(), 2, "no input since: the 2nd still fires (stalling = normal idling)");
+  assert.deepEqual(await page.evaluate(() => window.stemJev().hold), { code: "CALC1_T95L1", n: 2 });
+  assert.equal(page.ai, 0, "no server call");
   assert.deepEqual(page.errs, [], "no console errors");
   await page.context().close();
 });
