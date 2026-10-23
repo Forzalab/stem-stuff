@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import slips  # noqa: E402
 
-EXACT = 1e-4
+EXACT = slips.EXACT
 WHY = "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)"
 NUM = re.compile(r"(?<![\w.^])(\d+\.?\d*|\.\d+)(?![\w.])")      # a number literal, not an exponent, not part of a name (log10)
 

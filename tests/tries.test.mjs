@@ -117,6 +117,12 @@ test("num: 3 significant figures count as right", () => {
     assert.equal(gradeLocal({ type: "num", code: `T_s4_${t}`, answer: "9*sqrt(3)" }, { answer: t }).verdict, v, t);
 });
 
+test("exact integer key (tol <= 1e-4): no 3 s.f. pass, as serve.py exact_int; an irrational exact key keeps it", () => {
+  for (const [ans, t, v] of [["5040", "5039", "wrong"], ["1024", "1023", "wrong"], ["10000", "9999", "wrong"], ["1024", "1024", "correct"], ["9*sqrt(3)", "15.6", "correct"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_ex_${ans}_${t}`, answer: ans, tol: 1e-4 }, { answer: t }).verdict, v, `${ans} ${t}`);
+  assert.equal(gradeLocal({ type: "num", code: "T_ex_auth", answer: "1024", tol: 0.01 }, { answer: "1023" }).verdict, "correct");
+});
+
 test("tolOf: question > bank > default, same cases as serve.py tol_of (tests/fixtures/tol-of.json)", () => {
   for (const [u, want] of JSON.parse(readFileSync(new URL("fixtures/tol-of.json", import.meta.url), "utf8"))) assert.equal(tolOf(u), want, JSON.stringify(u));
   assert.equal(gradeLocal({ type: "num", code: "T_bt_a", answer: "0.5", bank_tol: 0.01 }, { answer: "0.494" }).verdict, "wrong");   // 2% would pass it

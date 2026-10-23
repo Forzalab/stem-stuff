@@ -658,7 +658,15 @@ def unit_correct(u, sig):
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])
     if u.get("fixbox") and not isinstance(sig, tuple):
         return same(sig, ans, tol) or sigfig(sig, ans, figures(u))
+    if exact_int(u, ans):
+        return same(sig, ans, min(tol, 0.5 / abs(ans)))
     return same(sig, ans, tol) or sig3(sig, ans)
+
+
+def exact_int(u, ans):
+    """an exact integer key (question tol <= slips.EXACT, the wiggle test's): no 3 s.f. pass and a window under half a unit, so 1023 is
+    wrong for 1024 and 9999 for 10000 (Tony, Oct 23). An irrational exact key (9*sqrt(3)) keeps 3 s.f. app.js exactInt() is the twin."""
+    return isinstance(ans, float) and ans != 0 and ans.is_integer() and u.get("tol", 1) <= slips.EXACT
 
 
 def unit_hit(u, text, sig):

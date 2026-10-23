@@ -20,6 +20,7 @@ EPS = 1e-9            # two mutant values within this (relative) are one value
 ZERO = 1e-9           # a zero key's window, absolute (tolerance 1b: calculator dust passes, 0.0003 fails). app.js / slips.mjs ZERO
 SLIP_WIN = 0.005      # a typed value sits on a slip within 0.5% of it (or equal at 3 s.f.). Tony D2, Oct 23: its own window, never the
                       # grading tol (2% there raised k=2 false matches 6.4% -> 10.3%). slips.mjs SLIP_WIN
+EXACT = 1e-4          # a definitive key's tol (tools/tol.py wiggle test). An integer key at EXACT gets no 3 s.f. pass (Tony, Oct 23: 1023 for 1024)
 TOL_NUM = 0.02        # a num item's tol when it has none: WebAssign's default, 2% relative (serve.py tol_of, app.js tolOf)
 
 

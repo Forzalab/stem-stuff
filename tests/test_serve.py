@@ -174,6 +174,10 @@ class Grade(unittest.TestCase):
             units = {c: u for p in json.load(f)["problems"] for c, u in serve.slips.units(p)}
         for code, typed in (("CSCI26_J2A", 119), ("CSCI26_J2A", 121), ("CSCI26_H5M", 719), ("CSCI26_J5D", 59), ("CALC1_T6B", 11.88), ("CSCI26_M5V#0", 13.9)):
             self.assertFalse(serve.unit_correct(units[code], float(typed)), (code, typed))
+        for code, typed in (("CSCI26_H3K#1", 5039), ("CSCI26_P4R", 1023), ("CSCI26_H3K#0", 9999), ("CSCI26_P4R", 1020)):   # no 3 s.f. on an exact integer
+            self.assertFalse(serve.unit_correct(units[code], float(typed)), (code, typed))
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "9*sqrt(3)", "tol": 1e-4}, 15.6))   # irrational exact key: 3 s.f. stays
+        self.assertTrue(serve.unit_correct({"type": "num", "answer": "1024", "tol": 0.01}, 1023.0))     # an author tol: not exact
         for code, typed in (("CSCI26_J2A", 120), ("CALC1_T6B", 12.0), ("CSCI26_F4R#0", 0.3)):
             self.assertTrue(serve.unit_correct(units[code], float(typed)), (code, typed))
 
