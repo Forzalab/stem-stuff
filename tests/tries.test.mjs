@@ -163,7 +163,7 @@ test("T19: gradeLocal sends `correct` only once shut, and only in sugar (twin of
 });
 
 // slips v2 (design/HANDOFF-slips-v2.md unit C): uploaded banks match a slip of `form` after the author's wrong entries, before the nudge
-const xzp = (extra = {}) => ({ type: "num", code: "PHYS_XZP", answer: "9/26", form: "1/((4/3)^2+(1/3)^2+(2/3)^2)", nudge: "QUACK. Nudge.", ...extra });
+const xzp = (extra = {}) => ({ type: "num", code: "PHYS_XZP", answer: "3/7", form: "1/((4/3)^2+(1/3)^2+(2/3)^2)", nudge: "QUACK. Nudge.", ...extra });
 test("slips: PHYS_XZP typed 0.692 -> sign, with the family hint, in diet and sugar", () => {
   try {
     for (const m of ["diet", "sugar"]) {
@@ -183,7 +183,14 @@ test("slips: no slip near the value -> the nudge; a unit without form grades as 
   const { form, ...bare } = xzp({ code: "PHYS_XZP_b" });
   const b = gradeLocal(bare, { answer: "0.692" });
   assert.deepEqual([b.verdict, b.error, b.hint], ["wrong", undefined, "QUACK. Nudge."]);
-  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_c" }), { answer: "0.346" }).verdict, "correct");
+  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_c" }), { answer: "0.4286" }).verdict, "correct");
+});
+test("slips: an ignore_slips value gets the nudge, never a family hint (parity with serve.py _slip_table)", () => {
+  const r = gradeLocal(xzp({ code: "PHYS_XZP_i", ignore_slips: ["9/17"] }), { answer: "0.5294" });
+  assert.equal(r.verdict, "wrong");
+  assert.equal(r.error, undefined);
+  assert.equal(r.hint, "QUACK. Nudge.");
+  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_j" }), { answer: "0.5294" }).error, "drop");
 });
 test("slips: a multi part with form gets its slip", () => {
   const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };

@@ -363,7 +363,9 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     if (!correct) hit = unitHit(u, text, sig);
     /* slips v2 (design/HANDOFF-slips-v2.md): author wrong -> a slip of `form` (family hint, same shape as a wrong hit) -> nudge */
     if (!correct && !hit && u.type === "num" && u.form) {
-      const fam = slipMatch(u.form, sig, u.tol ?? 1e-6);
+      let skip;
+      try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
+      const fam = skip && slipMatch(u.form, sig, u.tol ?? 1e-6, skip);
       if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
     }
   }

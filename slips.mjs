@@ -8,18 +8,18 @@
 
 export const FAMILIES = ["sign", "drop", "reciprocal", "power", "factor", "distribute", "dream", "trig", "units", "g"];
 export const EPS = 1e-9;
-/* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never names the term or the answer). Placeholders until unit B lands. */
+/* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never names the term or the answer). Keep byte-equal: tests/slips.test.mjs checks it against serve.py. */
 export const FAMILY_HINT = {
-  sign: "QUACK. sign placeholder.",
-  drop: "QUACK. drop placeholder.",
-  reciprocal: "QUACK. reciprocal placeholder.",
-  power: "QUACK. power placeholder.",
-  factor: "QUACK. factor placeholder.",
-  distribute: "QUACK. distribute placeholder.",
-  dream: "QUACK. dream placeholder.",
-  trig: "QUACK. trig placeholder.",
-  units: "QUACK. units placeholder.",
-  g: "QUACK. g placeholder.",
+  sign: "QUACK. Check every sign. One of them flipped.",
+  drop: "QUACK. Count your terms. One of them went missing.",
+  reciprocal: "QUACK. Check what is on top and what is on the bottom.",
+  power: "QUACK. Check your powers. A square or a root slipped.",
+  factor: "QUACK. Check your factors. Something got doubled or halved.",
+  distribute: "QUACK. Check the minus before the brackets. It goes to every term.",
+  dream: "QUACK. Check your square or root of a sum. It does not split.",
+  trig: "QUACK. Check your trig. Sine or cosine, degrees or radians.",
+  units: "QUACK. Check your units. A power of ten slipped.",
+  g: "QUACK. Check the value you used for g.",
 };
 
 export const close = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)) || g3(a) === g3(b);
@@ -179,7 +179,8 @@ export function mutants(form) {
   return out;
 }
 /* the first family whose slip is close() to the typed value, else null (an unreadable form: null, never a throw) */
-export function match(form, value, tol) {
+/* skip: values that never get a family hint (serve.py _slip_table): the answer (a SAME slip is already right) and each ignore_slips value */
+export function match(form, value, tol, skip = []) {
   if (form == null || typeof value !== "number" || !Number.isFinite(value)) return null;
-  try { return (mutants(form).find(([, v]) => close(value, v, tol)) || [null])[0]; } catch { return null; }
+  try { return (mutants(form).find(([, v]) => close(value, v, tol) && !skip.some(x => close(v, x, tol))) || [null])[0]; } catch { return null; }
 }

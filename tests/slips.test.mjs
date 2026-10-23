@@ -36,3 +36,16 @@ test("match: the first family within tol (or to 3 s.f.), else null; a bad form o
   assert.equal(match("2*3", NaN, 1e-6), null);
   assert.ok(close(0.6921, 0.6923, 1e-9) && !close(0.69, 0.6923, 1e-9) && close(1000.4, 1001, 1e-9));
 });
+
+test("FAMILY_HINT is byte-equal to serve.py's", () => {
+  const py = readFileSync(new URL("../serve.py", import.meta.url), "utf8").match(/FAMILY_HINT = \{([\s\S]*?)\n\}/)[1];
+  const want = Object.fromEntries([...py.matchAll(/"(\w+)":\s*"([^"]*)"/g)].map(m => [m[1], m[2]]));
+  assert.deepEqual(FAMILY_HINT, want);
+});
+
+test("match skips the answer and the ignore_slips values", () => {
+  const f = "1/((4/3)^2+(1/3)^2+(2/3)^2)";
+  assert.equal(match(f, 9 / 17, 1e-3), "drop");
+  assert.equal(match(f, 9 / 17, 1e-3, [3 / 7, 9 / 17]), null);
+  assert.equal(match(f, 9 / 13, 1e-3, [3 / 7, 9 / 17]), "sign");
+});
