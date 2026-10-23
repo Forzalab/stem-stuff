@@ -577,6 +577,19 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             "title": {"type": "string", "minLength": 3, "maxLength": 120, "description": "\"Practice Exam 2, Question X: [condition changed]\" (or \"Practice Exam 2, Question X\" when unchanged)"},
             "tip": {"type": "string", "minLength": 3, "maxLength": 160, "description": "one 'what to do' line on top: plain statements, never a question; plain text + $..$"},
             "part": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"}, "description": "formula-sheet.json row ids, in order of use: the formula card"},
+            "ladder": {"type": "object", "additionalProperties": false, "minProperties": 1,
+              "description": "the formula card's thinking ladder (Tony, Oct 21): `part` rows are the big pieces; `mid` pieces pop inside their row, one per Jev hit, then `arrows` chain the rows, one per later hit. Reveal order = mid in order, then arrows in order. Needs `part`; every id must be in `part` (tests/schema.test.mjs ladderFaults)",
+              "properties": {
+                "mid": {"type": "array", "minItems": 1, "maxItems": 6, "description": "middle pieces, in the order they pop",
+                  "items": {"type": "object", "required": ["of", "tex"], "additionalProperties": false, "properties": {
+                    "of": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$", "description": "the `part` row this piece pops inside"},
+                    "tex": {"type": "string", "minLength": 1, "maxLength": 120, "description": "one relation in LaTeX, no $ (like formula-sheet.json tex): a step, never the final number, never the answer's letter"},
+                    "use": {"type": "string", "minLength": 1, "maxLength": 160, "description": "optional \"Use it for\": where this kind of relation applies, named with concrete cases; shows under the piece when it pops"},
+                    "why": {"type": "string", "minLength": 1, "maxLength": 160, "description": "optional \"Why this\": why this step, compact math written out; shows under the piece when it pops"}}}},
+                "arrows": {"type": "array", "minItems": 1, "maxItems": 7, "description": "chain arrows between neighbouring `part` rows, in the order they pop",
+                  "items": {"type": "object", "required": ["from", "to"], "additionalProperties": false, "properties": {
+                    "from": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"},
+                    "to": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$", "description": "the next `part` row after `from`"}}}}}},
             "key": {"type": "string", "minLength": 3, "description": "server only: the full presolved solution, plain text + LaTeX; Cluck paraphrases it"},
             "slip": {"type": "object", "additionalProperties": {"type": "string", "minLength": 3}, "description": "server only: choice id -> the slip that gives it"},
             "skills": {"$ref": "#/$defs/skills"},
@@ -1698,3 +1711,15 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
   }
 }
 ```
+
+## Formula ladder and the "?" docs (sugar; Tony, Oct 21)
+
+`saccharine.ladder` turns the Key formulas card into a ladder: `{ "mid": [{ "of": "KE", "tex": "v_2 = v_1\\frac{r_1}{r_2}" }], "arrows": [{ "from": "TORQUE", "to": "L_IW" }] }`.
+- Big pieces = the `part` rows; the card starts with only these. 
+- A `mid` piece may carry `use` and `why` (Tony, Oct 23), each 1–160 chars: `use` ("Use it for") names where this kind of relation applies, in general, not this question ("Spin of things going around a center. Orbits, a ball on a string, people spinning on a rope."); `why` ("Why this") says why this step ("Two people spin. mvr for one + mvr for the other."). Both show as two short labeled lines right under their piece, hidden until the piece pops. Authoring rules (brain feedback-specs-2026-10-21, "Tooltip authoring rules"): about grade-2 reading, 1–2 very short sentences; an abstract word gets concrete cases; compact math is written out (2mvr → mvr + mvr); every symbol named in words; never a final number, never a letter.
+- `mid` pieces pop inside their `of` row, one per reveal, in order; then each `arrows` entry shows, one per reveal. When all are out the ladder is done.
+- Rules, checked by `ladderFaults` in `tests/schema.test.mjs`: needs `part`; `of`, `from` and `to` are `part` ids; an arrow joins two NEIGHBOURS of `part` (`from` is the row right before `to`), no repeats; `tex` renders in KaTeX. Aim for `mid` about 70% of the steps (Tony: "reveals up to like 70%, then arrows").
+- serve.py sends `ladder` to the browser in sugar only (`ladder()` drops entries `part` cannot show). app.js `window.stemLadder.step()` reveals the next piece (Jev, lane 4, calls it); without a caller nothing reveals.
+- An arrow listed in `arrows` starts hidden; a chain link the ladder does not list stays drawn as today. A card without a `ladder` is unchanged.
+
+Each formula row on the card has a small "?" that opens a static popup from the sheet's `doc`: `{ "purpose": "one plain line: what the formula is for", "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI. `purpose` (optional, Oct 23) shows first, above the symbols; it names its symbols in words. `purpose` follows the same tooltip authoring rules. `use`, `why` and `purpose`, when present, are non-empty strings (ladderFaults, docFaults).

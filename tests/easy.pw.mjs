@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,9 +35,14 @@ const P = {
     correct: ["a", "c"], wrong: [{ choice: "b", hint: "QUACK. times", fix: { answer: "9" } }], miss: "QUACK. Missing one.",
     key: "Tick: a, c", slip: { b: "3 times 3 is 9." } },
 };
+const pilotSheet = JSON.parse(readFileSync(join(ROOT, "tests", "fixtures", "formula-sheet-pilot.json"), "utf8"));   // 8 verbatim rows of sheet v3, docs included
+const pilot = JSON.parse(readFileSync(join(ROOT, "tests", "fixtures", "ladder-pilot.json"), "utf8")).items;
 mkdirSync(BANKS);
-writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 1, groups: [{ name: "Work and Energy",
-  rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }] }));
+writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: [{ name: "Work and Energy",
+  rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }, ...pilotSheet.groups] }));
+/* ladder lane 3: the pilot's one-formula item (Q11 Q4e: mid pieces only) and its 4-formula item (Q11 Q5: mid pieces + 3 chain arrows) as CALC1 numerics */
+const lad = (code, it) => ({ code, title: it.title, type: "num", body: [{ type: "text", md: "Ladder pilot." }], answer: "4", saccharine: { title: it.title, part: it.part, ladder: it.ladder } });
+writeFileSync(join(BANKS, "BANK_LAD.json"), JSON.stringify({ v: 1, problems: [lad("CALC1_LD1", pilot.find(i => i.code === "PHYS_Z3X")), lad("CALC1_LD2", pilot.find(i => i.code === "PHYS_PGX"))] }));
 P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: "Two rows." }, { type: "text", md: "Tap a row to tick it." }],
   choices: [row("a", "first"), row("b", "second")], correct: ["a"], miss: "QUACK. Missing one.",
   saccharine: { title: "Practice Exam 2, Question 4", key: "Tick: a", part: ["WE_THM"], split: [
@@ -219,6 +224,64 @@ try {
     asked = 0;
     await page.evaluate(() => localStorage.removeItem("stem-wish"));
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
+  });
+
+  await step("ladder (lane 3): a ladder card starts as the big pieces; stemLadder.step() pops the middle pieces, then the arrows, one each; then it stops", async () => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    const vis = sel => page.$$eval("#fcard " + sel, es => es.filter(e => !e.hidden && getComputedStyle(e).display !== "none").length);
+    await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
+    assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await page.evaluate(() => window.stemLadder.left())], [1, 0, 2], "Q11 Q4e: KE only, 2 pieces waiting");
+    assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0);
+    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : "")));
+    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`Use it for ${m.use}`, `Why this ${m.why}`]);
+    assert.deepEqual(await notes(), [["", ""], ["", ""]], "use/why wait with their pieces");
+    for (const n of [1, 2]) {
+      assert.equal(await page.evaluate(() => window.stemLadder.step()), true);
+      assert.equal(await vis("li.f.mid"), n);
+      assert.deepEqual(await notes(), want.map((w, i) => i < n ? w : ["", ""]), "a popped piece shows its use and why, as written; a waiting one does not");
+    }
+    assert.equal(await page.$$eval("#fcard li.f.mid .katex", k => k.length), 2, "mid pieces are KaTeX");
+    assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");
+    assert.equal(await page.evaluate(() => window.stemLadder.left()), 0);
+    await page.evaluate(() => { location.hash = "CALC1_LD2"; }); await opened(page, "CALC1_LD2");
+    assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await vis("li.to"), await page.$$eval("#fcard li.to", t => t.length)], [4, 0, 0, 3], "Q11 Q5: 4 big pieces, no arrows yet");
+    for (let i = 1; i <= 6; i++) {
+      assert.equal(await page.evaluate(() => window.stemLadder.step()), true, "step " + i);
+      assert.deepEqual([await vis("li.f.mid"), await vis("li.to")], [Math.min(i, 3), Math.max(0, i - 3)], "mid pieces first, then arrows, one per step");
+    }
+    assert.equal(await page.evaluate(() => window.stemLadder.step()), false);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
+    await page.evaluate(() => { location.hash = "CALC1_LD2"; location.reload(); }); await opened(page, "CALC1_LD2");
+    assert.equal(await vis("li.to"), 0, "a fresh visit starts at the big pieces again");
+  });
+
+  await step('"?" docs: a button per formula with a sheet doc; opens symbols (meaning + unit), when, example; one at a time; Esc and a second tap close; no doc, no "?"', async () => {
+    const open = () => page.$$eval("#fcard .fdoc", ds => ds.filter(d => !d.hidden).map(d => d.id));
+    assert.equal(await page.$$eval("#fcard .fq", b => b.length), 4);
+    assert.deepEqual(await page.$$eval("#fcard .fq", b => b.map(x => [x.textContent, x.getAttribute("aria-expanded"), !!document.getElementById(x.getAttribute("aria-controls"))])), Array(4).fill(["?", "false", true]));
+    assert.deepEqual(await open(), []);
+    const q = await page.$$("#fcard .fq");
+    await q[2].click();
+    assert.deepEqual(await open(), ["fd-2"]);
+    const d = await page.$eval("#fd-2", e => ({ syms: e.querySelectorAll(".fd-sym li").length, katex: e.querySelectorAll(".fd-s .katex").length, units: [...e.querySelectorAll(".fd-u")].every(u => u.textContent.trim()),
+      when: /^Use it\s+\S/.test(e.querySelector(".fd-w").textContent), ex: /^Example\s+\S/.test(e.querySelector(".fd-x").textContent), shown: getComputedStyle(e).display !== "none",
+      inCard: e.getBoundingClientRect().right <= document.querySelector("#fcard").getBoundingClientRect().right + 1 }));
+    assert.ok(d.syms >= 2 && d.katex === d.syms && d.units && d.when && d.ex && d.shown && d.inCard, JSON.stringify(d));
+    assert.equal(await page.$eval("#fd-2", e => e.firstElementChild.className + " " + e.firstElementChild.textContent.replace(/\s+/g, "")),
+      "fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "purpose comes first");
+    assert.equal(await q[2].getAttribute("aria-expanded"), "true");
+    await q[0].click();
+    assert.deepEqual(await open(), ["fd-0"], "one popup at a time");
+    await q[0].click();
+    assert.deepEqual(await open(), [], "a second tap closes");
+    await q[1].click(); await page.keyboard.press("Escape");
+    assert.deepEqual(await open(), [], "Escape closes");
+    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("fq")), true, "focus goes back to the ?");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
+    await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
+    assert.equal(await page.$$eval("#fcard .fq", b => b.length), 0, "rows without a doc have no ?");
+    assert.equal(await page.$$eval("#fcard li.to", t => t.length), 1, "no ladder: the arrow is drawn as before");
+    await page.setViewportSize({ width: 1280, height: 900 });
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {

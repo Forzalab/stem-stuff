@@ -698,6 +698,34 @@ html.side #work > .orig { margin: 0; }
 .fcard .f .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
+/* thinking ladder + "?" docs (Tony, Oct 21; SCHEMA.md "Formula ladder"): a formula row is the math + a small "?"; the "?" opens the sheet's doc for it
+   right under the row (static, no AI). Middle pieces pop inside the card, smaller, one per Jev hit. [hidden] must win over the display rules below */
+.fcard .f { display: flex; align-items: center; gap: var(--s2); }
+.fcard .f > :first-child { margin-left: auto; }
+.fcard .f > :last-child { margin-right: auto; }
+.fcard .f > .fm { flex: none; }
+.fcard .f.mid { font-size: var(--t-sm); color: var(--muted); }
+.fcard .f.mid:has(.fh) { flex-direction: column; gap: 0; }                         /* use/why sit under their piece (Oct 23) */
+.fcard .f.mid:has(.fh) > * { margin-inline: 0; }
+.fcard .fh { max-width: 32rem; font-size: var(--t-xs); line-height: 1.35; text-align: center; color: var(--ink); white-space: normal; }
+.fcard :is(.f, .to, .fdoc)[hidden] { display: none; }
+.fq { position: relative; flex: none; display: grid; place-items: center; width: 1.375rem; height: 1.375rem; padding: 0; border: 1px solid var(--c1); border-radius: 50%;
+  background: transparent; color: var(--c1); font: inherit; font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; cursor: pointer; }
+.fq::after { content: ""; position: absolute; inset: -11px; }                      /* the 44px tap target round a 22px mark */
+.fq[aria-expanded="true"] { background: var(--c1); color: var(--paper); }
+.fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.fcard .fdoc { justify-self: stretch; margin: var(--s1) 0 var(--s2); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: 8px; background: var(--paper);
+  color: var(--ink); font-size: var(--t-sm); line-height: 1.45; text-align: left; }
+.fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
+.fd-s { overflow-x: auto; overflow-y: hidden; }
+.fd-u { color: var(--muted); white-space: nowrap; }
+.fd-p { margin: 0 0 var(--s2); }
+.fd-w, .fd-x { margin: var(--s2) 0 0; }
+.fd-w b, .fd-x b, .fcard .fh b { font-weight: var(--w-em); color: var(--c1); margin-right: var(--s1); }
+.fd-x { overflow-wrap: anywhere; }
+@keyframes lad-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) { .fcard .lad-in { animation: lad-in var(--d-move, 200ms) ease-out both; } }
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }
