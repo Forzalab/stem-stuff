@@ -362,6 +362,7 @@ function ladderFaults(p) {
     if (!part.includes(m.of)) out.push(`mid.of ${m.of} is not in part`);
     try { katex.renderToString(m.tex, { throwOnError: true }); } catch (e) { out.push(`mid tex does not render: ${m.tex}`); }
     if (/\$/.test(m.tex)) out.push(`mid tex has a $: ${m.tex}`);
+    if (m.hint !== undefined && !(typeof m.hint === "string" && m.hint.trim())) out.push(`mid hint is empty: ${m.tex}`);
   }
   for (const a of ld.arrows ?? []) {
     const i = part.indexOf(a.to);
@@ -371,6 +372,8 @@ function ladderFaults(p) {
   }
   return out;
 }
+// the sheet row's doc (the "?" popup): `purpose`, when there, is one non-empty line
+const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "string" && d.purpose.trim()) ? ["doc purpose is empty"] : [];
 {
   const fx = JSON.parse(readFileSync(new URL("fixtures/ladder-pilot.json", import.meta.url), "utf8"));
   const sheet = JSON.parse(readFileSync(new URL("fixtures/formula-sheet-pilot.json", import.meta.url), "utf8"));
@@ -385,7 +388,16 @@ function ladderFaults(p) {
       assert.ok(validate(mk(it.part, it.ladder)), `${it.code}: ${JSON.stringify(validate.errors)}`);
       assert.deepEqual(ladderFaults(prob(it.part, it.ladder)), [], it.code);
       for (const id of it.part) assert.ok(ids.has(id), `${it.code}: ${id} is not on the sheet excerpt`);
+      for (const m of it.ladder.mid) assert.ok(typeof m.hint === "string", `${it.code}: every pilot mid has a hint`);
     }
+  });
+  test("formula sheet doc.purpose: every pilot row has one; docFaults refuses an empty or non-string one", () => {
+    for (const r of sheet.groups.flatMap(g => g.rows)) {
+      assert.ok(typeof r.doc.purpose === "string", r.id);
+      assert.deepEqual(docFaults(r.doc), [], r.id);
+    }
+    assert.deepEqual(docFaults({ sym: [] }), [], "purpose is optional");
+    for (const bad of ["", "  ", 5]) assert.equal(docFaults({ purpose: bad }).length, 1, JSON.stringify(bad));
   });
   test("saccharine.ladder: the schema refuses junk; ladderFaults catches the cross-checks", () => {
     const part = ["TORQUE", "L_IW", "TAU_IALPHA"], ok = { mid: [{ of: "TORQUE", tex: "\\tau = mgR" }], arrows: [{ from: "TORQUE", to: "L_IW" }] };
@@ -400,5 +412,9 @@ function ladderFaults(p) {
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "TAU_IALPHA" }] })).length, 1, "not neighbours");
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "L_IW", to: "TORQUE" }] })).length, 1, "backwards");
     assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "L_IW" }, { from: "TORQUE", to: "L_IW" }] })).length, 1, "twice");
+    assert.ok(validate(mk(part, { mid: [{ of: "TORQUE", tex: "\\tau = mgR", hint: "Torque τ is the weight m g times the radius R." }] })), "hint is allowed");
+    assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", hint: 5 }] })));
+    assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", hint: "" }] })));
+    assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "x", hint: "  " }] })).length, 1, "blank hint");
   });
 }

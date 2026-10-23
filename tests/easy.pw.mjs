@@ -232,9 +232,14 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
     assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await page.evaluate(() => window.stemLadder.left())], [1, 0, 2], "Q11 Q4e: KE only, 2 pieces waiting");
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0);
+    const hints = () => page.$$eval("#fcard li.f.mid .fh", hs => hs.map(h => h.checkVisibility() ? h.textContent : ""));
+    assert.deepEqual(await hints(), ["", ""], "hints wait with their pieces");
     for (const n of [1, 2]) {
       assert.equal(await page.evaluate(() => window.stemLadder.step()), true);
       assert.equal(await vis("li.f.mid"), n);
+      const h = await hints();
+      assert.deepEqual(h.map(Boolean), [true, n > 1], "a popped piece shows its hint; a waiting one does not");
+      assert.equal(h[0].replace(/\s+/g, ""), pilot.find(i => i.code === "PHYS_Z3X").ladder.mid[0].hint.replace(/_/g, "").replace(/\s+/g, ""), "the hint text, symbols subscripted");
     }
     assert.equal(await page.$$eval("#fcard li.f.mid .katex", k => k.length), 2, "mid pieces are KaTeX");
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");
@@ -263,6 +268,8 @@ try {
       when: /^Use it\s+\S/.test(e.querySelector(".fd-w").textContent), ex: /^Example\s+\S/.test(e.querySelector(".fd-x").textContent), shown: getComputedStyle(e).display !== "none",
       inCard: e.getBoundingClientRect().right <= document.querySelector("#fcard").getBoundingClientRect().right + 1 }));
     assert.ok(d.syms >= 2 && d.katex === d.syms && d.units && d.when && d.ex && d.shown && d.inCard, JSON.stringify(d));
+    assert.equal(await page.$eval("#fd-2", e => e.firstElementChild.className + " " + e.firstElementChild.textContent.replace(/\s+/g, "")),
+      "fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "purpose comes first");
     assert.equal(await q[2].getAttribute("aria-expanded"), "true");
     await q[0].click();
     assert.deepEqual(await open(), ["fd-0"], "one popup at a time");

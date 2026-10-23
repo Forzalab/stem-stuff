@@ -554,7 +554,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
                 "mid": {"type": "array", "minItems": 1, "maxItems": 6, "description": "middle pieces, in the order they pop",
                   "items": {"type": "object", "required": ["of", "tex"], "additionalProperties": false, "properties": {
                     "of": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$", "description": "the `part` row this piece pops inside"},
-                    "tex": {"type": "string", "minLength": 1, "maxLength": 120, "description": "one relation in LaTeX, no $ (like formula-sheet.json tex): a step, never the final number, never the answer's letter"}}}},
+                    "tex": {"type": "string", "minLength": 1, "maxLength": 120, "description": "one relation in LaTeX, no $ (like formula-sheet.json tex): a step, never the final number, never the answer's letter"},
+                    "hint": {"type": "string", "minLength": 1, "maxLength": 120, "description": "optional: one short plain line, what to do with this piece; names its symbols in words; shows under the piece when it pops"}}}},
                 "arrows": {"type": "array", "minItems": 1, "maxItems": 7, "description": "chain arrows between neighbouring `part` rows, in the order they pop",
                   "items": {"type": "object", "required": ["from", "to"], "additionalProperties": false, "properties": {
                     "from": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"},
@@ -1665,9 +1666,10 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
 
 `saccharine.ladder` turns the Key formulas card into a ladder: `{ "mid": [{ "of": "KE", "tex": "v_2 = v_1\\frac{r_1}{r_2}" }], "arrows": [{ "from": "TORQUE", "to": "L_IW" }] }`.
 - Big pieces = the `part` rows; the card starts with only these. 
+- A `mid` piece may carry a `hint` (Tony, Oct 23): one short plain line, what to do with this piece, every symbol named in words ("Set L before equal to L after"). It shows right under its piece, hidden until the piece pops. Never a final number, never a letter.
 - `mid` pieces pop inside their `of` row, one per reveal, in order; then each `arrows` entry shows, one per reveal. When all are out the ladder is done.
 - Rules, checked by `ladderFaults` in `tests/schema.test.mjs`: needs `part`; `of`, `from` and `to` are `part` ids; an arrow joins two NEIGHBOURS of `part` (`from` is the row right before `to`), no repeats; `tex` renders in KaTeX. Aim for `mid` about 70% of the steps (Tony: "reveals up to like 70%, then arrows").
 - serve.py sends `ladder` to the browser in sugar only (`ladder()` drops entries `part` cannot show). app.js `window.stemLadder.step()` reveals the next piece (Jev, lane 4, calls it); without a caller nothing reveals.
 - An arrow listed in `arrows` starts hidden; a chain link the ladder does not list stays drawn as today. A card without a `ladder` is unchanged.
 
-Each formula row on the card has a small "?" that opens a static popup from the sheet's `doc`: `{ "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI.
+Each formula row on the card has a small "?" that opens a static popup from the sheet's `doc`: `{ "purpose": "one plain line: what the formula is for", "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI. `purpose` (optional, Oct 23) shows first, above the symbols; it names its symbols in words. `hint` and `purpose`, when present, are non-empty (ladderFaults, docFaults).

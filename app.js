@@ -767,11 +767,12 @@ function ladderStep() {
   return true;
 }
 window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSteps(S.prob).length - (S.lad || 0) : 0 };
-/* "?" next to a formula (Tony, Oct 21): a static popup built from the sheet row's doc (each symbol = meaning + unit, when to use it, one tiny example), like code docs. No AI */
+/* "?" next to a formula (Tony, Oct 21): a static popup built from the sheet row's doc (what it is for, each symbol = meaning + unit, when to use it, one tiny example), like code docs. No AI.
+   A mid piece's hint (Oct 23) rides inside its piece's <li>, so it shows when the piece pops */
 const docText = t => esc(t).replace(/([A-Za-zΔα-ω])_([A-Za-z0-9,]+)/g, "$1<sub>$2</sub>");
 function docHTML(d, id) {
   const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
-  return `<li class="fdoc" id="${id}" role="group" aria-label="Symbols in this formula" hidden><ul class="fd-sym">${sym}</ul>`
+  return `<li class="fdoc" id="${id}" role="group" aria-label="Symbols in this formula" hidden>${d.purpose ? `<p class="fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
     + (d.when ? `<p class="fd-w"><b>Use it</b> ${esc(d.when)}</p>` : "") + (d.ex ? `<p class="fd-x"><b>Example</b> ${docText(d.ex)}</p>` : "") + "</li>";
 }
 function formulaCard() {
@@ -787,7 +788,7 @@ function formulaCard() {
     const q = f.doc ? `<button type="button" class="fq" aria-expanded="false" aria-controls="fd-${i}" aria-label="What do the symbols in this formula mean?">?</button>` : "";
     return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`
       + (f.doc ? docHTML(f.doc, "fd-" + i) : "")
-      + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span></li>`).join("");
+      + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${m.hint ? `<span class="fh">${docText(m.hint)}</span>` : ""}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
     const b = e.target.closest(".fq"); if (!b) return;
