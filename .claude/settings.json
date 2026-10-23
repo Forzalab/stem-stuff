@@ -4,7 +4,9 @@
       "Bash(git fetch *)",
       "mcp__github__pull_request_read",
       "SendMessage",
-      "mcp__claude-code-remote__send_message"
+      "mcp__claude-code-remote__send_message",
+      "mcp__claude-code-remote__create_trigger",
+      "mcp__claude-code-remote__delete_trigger"
     ],
     "deny": [
       "Bash(pkill)",
