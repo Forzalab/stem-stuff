@@ -51,3 +51,11 @@ test("match skips the answer and the ignore_slips values", () => {
 });
 
 test("distribute wins a tie with sign: 10-(3+2) typed 9", () => assert.equal(match("10-(3+2)", 9, 1e-6), "distribute"));
+
+test("close() parity with slips.py: ties round away from zero in both (tests/fixtures/slips-close.json, also run by test_slips.py)", () => {
+  const cases = JSON.parse(readFileSync(new URL("fixtures/slips-close.json", import.meta.url), "utf8"));
+  for (const [a, b, tol, want] of cases) {
+    assert.equal(close(a, b, tol), want, `${a} ${b}`);
+    assert.equal(close(b, a, tol), want, `${b} ${a}`);
+  }
+});

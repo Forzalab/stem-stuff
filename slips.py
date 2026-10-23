@@ -5,6 +5,8 @@ tests/fixtures/slips-golden.json). `form` is authored text only, never student i
 mutants(form) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value
 match(form, value, tol) -> family | None
 gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)"""
+import threading
+from decimal import Context, Decimal, ROUND_HALF_UP
 from functools import lru_cache
 
 from sympy import Add, Float, Integer, Mul, Pow, Rational, S, cos, pi, sin, tan, parse_expr
@@ -19,8 +21,44 @@ def parse(src):
     return parse_expr(str(src).replace("^", "**"), evaluate=False)
 
 
+_R3 = Context(prec=3, rounding=ROUND_HALF_UP)
+
+
+def _r3(v):
+    """v to 3 s.f., exact ties away from zero: the same rule as toExponential/toPrecision in slips.mjs. (f"{v:.3g}" rounds a tie to even:
+    1.125 -> 1.12 here but 1.13 in the browser.) Decimal(float) is the exact binary value, so only a true tie differs."""
+    return _R3.create_decimal(Decimal(v)) if v == v and abs(v) != float("inf") else v
+
+
 def close(a, b, tol):
-    return abs(a - b) <= tol * max(1, abs(b)) or f"{a:.3g}" == f"{b:.3g}"
+    return abs(a - b) <= tol * max(1, abs(b)) or _r3(a) == _r3(b)
+
+
+SLOW_S = 1.0          # a form whose mutants take longer than this is rejected (gate) / gives no slip (serve)
+BIG_EXP = 1e4         # a Pow exponent beyond this (10**10**10) is never a classroom form; sympy would grind on it
+
+
+def slow(form, limit=SLOW_S):
+    """True when `form` can't be mutated in `limit` s: an absurd exponent (checked first, nothing is computed), else mutants() run in a
+    daemon thread and given `limit`. No SIGALRM (serve.py runs in threads). A timed-out thread can't be killed; the size pre-check is what
+    keeps it from being left running for the usual 10**10**10. A result that finishes in time is cached by raw(), so the caller's own call is free."""
+    try:
+        for _, n, _ in _nodes(parse(form)):
+            if isinstance(n, Pow) and abs(float(n.exp.evalf())) > BIG_EXP:
+                return True
+    except Exception:  # noqa: BLE001  unreadable: not slow, the caller's own handling reports it
+        return False
+    t = threading.Thread(target=lambda: _quiet(mutants, form), daemon=True)
+    t.start()
+    t.join(limit)
+    return t.is_alive()
+
+
+def _quiet(fn, *a):
+    try:
+        fn(*a)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _nodes(e, path=(), parent=None):
@@ -164,6 +202,8 @@ def _ignored(u):
 
 def form_ok(u):
     """None when form equals answer (within tol or to 3 s.f.), else a report row."""
+    if slow(u["form"]):
+        return f"SLOW form takes over {SLOW_S:g} s to compute (exponent too big?)"
     tol, ans, got = u.get("tol", 1e-6), float(parse(u["answer"]).doit()), float(parse(u["form"]).doit())
     return None if close(got, ans, tol) else f"form = {got:.4g} but answer = {ans:.4g}"
 

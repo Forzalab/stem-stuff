@@ -21,6 +21,7 @@ sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 import tempfile  # noqa: E402
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json (the Http server inherits it)
+os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep loading (serve.today); the Http server inherits it
 import serve  # noqa: E402
 
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
@@ -402,6 +403,12 @@ class Slips(unittest.TestCase):
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
         self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, 1e-3, ())])
+
+    def test_slow_form_gives_no_slip_fast(self):
+        import time as _t
+        t0 = _t.time()
+        self.assertIsNone(serve.slip_hit({"type": "num", "answer": "5", "form": "10**10**10"}, 7.0))
+        self.assertLess(_t.time() - t0, 2)
 
     def test_family_hints(self):
         self.assertEqual(set(serve.FAMILY_HINT), set(serve.slips.FAMILIES))
@@ -1000,6 +1007,16 @@ class BankVersions(unittest.TestCase):
         self.assertEqual(getattr(serve.PT, "key", "America/Los_Angeles"), "America/Los_Angeles")
         self.assertIsInstance(serve.today(), serve.datetime.date)
 
+    def test_stem_today_pins_the_clock(self):
+        """STEM_TODAY=yyyy-mm-dd is the clock the sunset reads (no patching of serve.today): 11-06 drops a v:1 bank, 11-04 keeps it."""
+        for day, dropped in (("2026-11-06", True), ("2026-11-05", True), ("2026-11-04", False)):
+            with unittest.mock.patch.dict(os.environ, {"STEM_TODAY": day}):
+                self.assertEqual(serve.today(), serve.datetime.date.fromisoformat(day))
+                self.assertEqual("BANK_VONE" not in serve.banks(), dropped, day)
+                self.assertEqual(serve.bank_payload("BANK_VONE", "s9").get("dropped") is not None, dropped, day)
+        with unittest.mock.patch.dict(os.environ, {"STEM_TODAY": "not-a-date"}), contextlib.redirect_stderr(io.StringIO()):
+            self.assertIsInstance(serve.today(), serve.datetime.date)       # a bad pin falls back to the real clock
+
     def test_before_the_sunset_old_banks_load_with_a_banner(self):
         with self.on(2026, 11, 4):
             for bank, code in (("BANK_VONE", "CALC1_VO1"), ("BANK_VNO", "CALC1_VN1")):
@@ -1044,6 +1061,41 @@ class BankVersions(unittest.TestCase):
         with self.on(2026, 11, 5):
             self.assertEqual(serve.bank_notice("BANK_X1Y", 1), ("BANK_X1Y must be updated by 2026-11-05", True))
             self.assertEqual(serve.bank_notice("BANK_X1Y", 20270101), (None, False))
+
+
+class BankVField(unittest.TestCase):
+    """SCHEMA.md Version table: v is an int (1 or yyyymmdd). A string or float v is logged once (naming the file and the value) and read as 1,
+    the same as tools/slips.py; an int, or no v, is quiet."""
+    NUM = {"code": "CALC1_VF1", "type": "num", "answer": "2", "form": "1+1", "body": [{"type": "text", "md": "1 + 1"}]}
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="stem-vf-")
+
+    def read(self, name, doc):
+        path = os.path.join(self.dir, name)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(doc)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            serve._read(path)
+        return path, err.getvalue()
+
+    def test_bad_v_warns_and_reads_as_one(self):
+        for name, raw, shown in (("str.json", '"20261022"', "'20261022'"), ("float.json", "20261022.0", "20261022.0"),
+                                 ("bool.json", "true", "True")):
+            path, out = self.read(name, '{"v": %s, "problems": [%s]}' % (raw, json.dumps(self.NUM)))
+            self.assertEqual(serve._versions[path], 1, name)
+            self.assertEqual(out.count("v must be an int"), 1, out)
+            self.assertIn(path, out)
+            self.assertIn(shown, out)
+            self.assertIn("treated as 1", out)
+            self.assertEqual([p["code"] for p in serve._files[path][1]], ["CALC1_VF1"])   # still loads, as before
+
+    def test_int_v_and_no_v_are_quiet(self):
+        for name, head in (("int.json", '{"v": 20261022, '), ("one.json", '{"v": 1, '), ("none.json", "{")):
+            path, out = self.read(name, head + '"problems": [%s]}' % json.dumps(self.NUM))
+            self.assertEqual(serve._versions[path], 20261022 if name == "int.json" else 1, name)
+            self.assertNotIn("v must be an int", out)
 
 
 class Explain(unittest.TestCase):

@@ -7,6 +7,8 @@ import json
 import math
 import os
 import sys
+import tempfile
+import time
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -140,6 +142,61 @@ class Gate(unittest.TestCase):
         for w in ("NOFORM", "SAME", "CLASH"):
             self.assertIn(w, out)
         self.assertEqual(self.run_cli(os.path.join(FIX, "slips-bad.json"))[0], 0)   # report only without --strict
+
+    def test_close_parity_cases(self):
+        """close() rounds a tie away from zero, like slips.mjs (tests/slips.test.mjs runs the same cases)."""
+        with open(os.path.join(FIX, "slips-close.json"), encoding="utf-8") as f:
+            for a, b, tol, want in json.load(f):
+                self.assertEqual(slips.close(a, b, tol), want, (a, b))
+                self.assertEqual(slips.close(b, a, tol), want, (b, a))
+
+    def test_slow_form_rejected_fast(self):
+        t0 = time.time()
+        rc, out = self.run_cli("--strict", os.path.join(FIX, "slips-slow.json"))
+        self.assertEqual(rc, 1)
+        self.assertIn("SLOW", out)
+        row = slips.gate({"type": "num", "answer": "5", "form": "10**10**10"})
+        self.assertTrue(row and row[0].startswith("SLOW"), row)
+        self.assertTrue(slips.slow("10**10**10") and slips.slow("2**(10**9)") and not slips.slow("2**10+sqrt(9+16)"))
+        self.assertLess(time.time() - t0, 2)
+
+
+class BadVersion(unittest.TestCase):
+    """tools/slips.py reads v like serve.py _read: an int (1 or yyyymmdd) is used; a string or float v warns on stderr and reads as 1
+    (no TypeError). Only an int >= CUTOFF runs the rule-7 gate, so a num with no form fails only for an int v."""
+    NUM = {"code": "CALC1_BV1", "type": "num", "answer": "2", "body": [{"type": "text", "md": "1 + 1"}]}
+
+    def bank(self, v_text):
+        d = tempfile.mkdtemp(prefix="stem-slipsv-")
+        path = os.path.join(d, "BANK_BV.json")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write('{"v": %s, "problems": [%s]}' % (v_text, json.dumps(self.NUM)))
+        return path
+
+    def check(self, path):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            bad, _ = cli.check(path)
+        return bad, err.getvalue()
+
+    def test_string_and_float_v_warn_and_read_as_one(self):
+        for v_text, shown in (('"20261022"', "'20261022'"), ("20261022.0", "20261022.0")):
+            path = self.bank(v_text)
+            bad, err = self.check(path)
+            self.assertEqual(bad, 0)                       # read as 1: old-bank rules, no form = skipped
+            self.assertIn(path, err)
+            self.assertIn(shown, err)
+            self.assertIn("treated as 1", err)
+
+    def test_int_v_runs_the_gate(self):
+        bad, err = self.check(self.bank("20261022"))
+        self.assertEqual(bad, 1)                           # NOFORM on a v >= CUTOFF bank
+        self.assertEqual(err, "")
+
+    def test_cli_does_not_raise_on_a_string_v(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cli.main(["--strict", self.bank('"20261022"')]), 0)
 
 
 if __name__ == "__main__":

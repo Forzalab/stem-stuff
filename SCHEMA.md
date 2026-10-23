@@ -41,7 +41,7 @@ Keep problems in any order: the page shuffles the list per browser (design/NAV.m
 `v` is the file's schema version: `1` (the oldest) or a date as an 8-digit integer, `yyyymmdd` (e.g. `20261022`). Bigger = newer; no `v` counts as `1`.
 Each dated version is one row: what it requires, the check that proves it, and the sunset for banks older than it. Before the sunset an
 older bank still loads, with a banner on its question list: "BANK_X must be updated by 2026-11-05". From the sunset (Pacific date) it does
-not load, and opening it shows that same line instead (serve.py `bank_notice`, `today`; app.js; codes.mjs `bankNotice`). problems.json is
+not load, and opening it shows that same line instead (serve.py `bank_notice`, `today`; app.js; codes.mjs `bankNotice`). `STEM_TODAY=yyyy-mm-dd` pins that clock; tests/run-all.sh pins 2026-10-23 so the v:1 test banks survive the sunset. problems.json is
 not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION.md. Never change a row; fix a mistake with a new row.
 
 | `v` | Requires | Check | Sunset for older banks |

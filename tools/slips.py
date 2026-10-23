@@ -17,7 +17,12 @@ import slips  # noqa: E402  (the root module, not this file)
 
 def check(path):
     bank = json.loads(Path(path).read_text())
-    new = bank.get("v", 1) >= slips.CUTOFF
+    v = bank.get("v", 1)
+    if not (isinstance(v, int) and not isinstance(v, bool)):      # same fallback as serve.py _read: a bad v = 1, with a warning
+        if "v" in bank:
+            print(f"{path}: v must be an int (1 or yyyymmdd), got {v!r}; treated as 1", file=sys.stderr)
+        v = 1
+    new = v >= slips.CUTOFF
     bad, rows = 0, []
     for p in bank["problems"]:
         for code, u in slips.units(p):

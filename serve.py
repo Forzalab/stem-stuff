@@ -133,7 +133,10 @@ def _read(path):
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
         v = doc.get("v", 1)
-        _versions[path] = v if isinstance(v, int) and not isinstance(v, bool) else 1   # SCHEMA.md Version table: no v (or a bad one) = 1
+        v_ok = isinstance(v, int) and not isinstance(v, bool)
+        _versions[path] = v if v_ok else 1   # SCHEMA.md Version table: no v (or a bad one) = 1
+        if "v" in doc and not v_ok:
+            log(f"{path}: v must be an int (1 or yyyymmdd), got {v!r}; treated as 1")
         log(f"loaded {len(ps)} problems from {path}")
     except Exception as e:  # noqa: BLE001
         log(f"{path} unreadable, keeping the last good copy: {e}")
@@ -158,7 +161,14 @@ except zoneinfo.ZoneInfoNotFoundError:       # a host with no tz database: PST a
 
 
 def today():
-    """the date the sunset is checked against, in Pacific time (Tony's clock). Tests patch serve.today."""
+    """the date the sunset is checked against, in Pacific time (Tony's clock). STEM_TODAY=yyyy-mm-dd pins it (the test runners
+    pin a pre-sunset date so v:1 fixture banks keep loading after the real sunset). Unit tests may also patch serve.today."""
+    pinned = os.environ.get("STEM_TODAY", "").strip()
+    if pinned:
+        try:
+            return datetime.date.fromisoformat(pinned)
+        except ValueError:
+            log(f"serve: ignoring bad STEM_TODAY={pinned!r} (want yyyy-mm-dd)")
     return datetime.datetime.now(PT).date()
 
 
@@ -622,6 +632,8 @@ def unit_hit(u, text, sig):
 def _slip_table(form, ans, tol, ignore):
     """((family, value), ...) of one unit's form, less every SAME (a slip on the answer: already right) and every ignore_slips value."""
     try:
+        if slips.slow(form):          # bounded time: no slip, the nudge as before (cached below)
+            return ()
         skip = [float(slips.parse(s).doit()) for s in ignore]
         return tuple((f, v) for f, v in slips.mutants(form)
                      if not slips.close(v, ans, tol) and not any(slips.close(v, x, tol) for x in skip))

@@ -66,6 +66,9 @@ if [ "$list" -eq 1 ]; then
   exit 0
 fi
 
+# The slips v2 sunset (serve.today, SCHEMA.md) drops v:1 banks from 2026-11-05, and the fixture banks are v:1: pin the server clock to a
+# pre-sunset day for everything this script starts (unittest, npm, the servers the .pw specs spawn, and so CI, which calls this script).
+export STEM_TODAY=2026-10-23
 TMP="$(mktemp -d)"; export STEM_TRIES="$TMP/tries.json"      # never the real tries.json
 SRV=""; trap '[ -n "$SRV" ] && kill "$SRV" 2>/dev/null' EXIT
 fails=0
