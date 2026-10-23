@@ -1,9 +1,12 @@
 """T62 Cluck prompt v4: the prompt file, the user-turn layout, REVEAL, the <XYZ> stripper, the leak guard, the 50/50 arms, the prompt-cache
 shape and the arms' fallbacks. urllib is mocked: no network, no key."""
+import glob
 import hashlib
 import io
 import json
 import os
+import re
+import shutil
 import sys
 import tempfile
 import time
@@ -807,6 +810,51 @@ class LampCut(unittest.TestCase):
 
     def test_letter_and_reminder_unchanged(self):
         self.assertEqual(serve.LAMP, "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. REVEAL: ")
+
+
+# todo 49 (Tony): a bank's profile.audience goes into the system prompt as "Audience: ...", so an audience that named the owner made Cluck
+# greet every student "Hi Tony". Every bank serve.py can serve: the repo's (always) and the brain's (when mounted; $STEM_NAME_BANKS = another
+# folder to search for BANK_*.json, e.g. a scratch copy).
+BRAIN_BANKS = os.environ.get("STEM_NAME_BANKS") or "/home/claude/brain/projects"
+OWNER = re.compile(r"\bTony\b")
+
+
+def bank_paths(root):
+    return sorted(glob.glob(os.path.join(root, "**", "BANK_*.json"), recursive=True))
+
+
+class NoOwnerName(unittest.TestCase):
+    def audience_lines(self, path):
+        """(code, bank_block, system_for's last line) for one problem of the bank at path, served alone from a temp banks folder;
+        [] when serve.py does not load it (a dropped bank is never served)"""
+        with tempfile.TemporaryDirectory() as d:
+            shutil.copy(path, d)
+            with mock.patch.object(serve, "BANKS", d):
+                idx = serve._index()
+                codes = [c for cs in idx["banks"].values() for c in cs]
+                if not codes:
+                    return []
+                p = idx["by_code"][codes[0]]
+                return [(codes[0], serve.bank_block(p), serve.system_for("", p).strip())]
+
+    def check(self, paths):
+        self.assertTrue(paths)
+        hits = []
+        for path in paths:
+            for code, block, line in self.audience_lines(path):
+                if OWNER.search(block) or OWNER.search(line):
+                    hits.append(f"{os.path.basename(path)}: {block}")
+        self.assertEqual(hits, [], "the owner's name reaches the system prompt:\n" + "\n".join(hits))
+
+    def test_repo_banks(self):
+        self.check([serve.BANK] + bank_paths(serve.BANKS))
+        for path in [serve.BANK] + bank_paths(serve.BANKS):           # and the bank text itself (title, body, key) never names him
+            with open(path, encoding="utf-8") as f:
+                self.assertIsNone(OWNER.search(f.read()), path)
+
+    @unittest.skipUnless(bank_paths(BRAIN_BANKS), "no brain banks mounted")
+    def test_brain_banks(self):
+        self.check(bank_paths(BRAIN_BANKS))
 
 
 if __name__ == "__main__":
