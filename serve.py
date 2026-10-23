@@ -56,7 +56,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "wish", "snack", "dead", "before", "original")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original")
 DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
@@ -232,7 +232,8 @@ _sheet = {"mtime": None, "rows": {}}
 
 
 def sheet():
-    """formula id -> {"id", "group", "tex"}, from banks/formula-sheet.json; re-read when it changes; {} without one."""
+    """formula id -> {"id", "group", "tex"[, "doc"]}, from banks/formula-sheet.json; re-read when it changes; {} without one.
+    `doc` ({sym: [{s, m, u}], when, ex}, sheet v3) rides along for the "?" popup (ladder lane 3); a row without a dict doc has none."""
     path = os.path.join(BANKS, SHEET_NAME)
     try:
         mtime = os.path.getmtime(path)
@@ -242,7 +243,8 @@ def sheet():
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            _sheet["rows"] = {r["id"]: {"id": r["id"], "group": g["name"], "tex": r["tex"]} for g in data["groups"] for r in g["rows"]}
+            _sheet["rows"] = {r["id"]: {"id": r["id"], "group": g["name"], "tex": r["tex"], **({"doc": r["doc"]} if isinstance(r.get("doc"), dict) else {})}
+                              for g in data["groups"] for r in g["rows"]}
         except Exception as e:  # noqa: BLE001
             log(f"{path} unreadable, keeping the last good copy: {e}")
         _sheet["mtime"] = mtime
@@ -258,6 +260,23 @@ def formulas(code, part):
         else:
             log(f"{code}: part {i} is not on the formula sheet")
     return out
+
+
+def ladder(sg, part):
+    """sugar: the formula card's thinking ladder (SCHEMA.md saccharine.ladder), cut to what `part` can show: a middle piece needs its `of` row,
+    an arrow must join two neighbours of `part` (the chain the card draws). Bad entries are dropped, not guessed at; None when nothing is left."""
+    ld, part = sg.get("ladder"), list(part or [])
+    if not isinstance(ld, dict) or not part:
+        return None
+    mid = [{"of": m["of"], "tex": m["tex"], **{k: m[k] for k in ("use", "why") if isinstance(m.get(k), str) and m[k].strip()}}
+           for m in ld.get("mid") or [] if isinstance(m, dict) and m.get("of") in part and isinstance(m.get("tex"), str) and m["tex"].strip()]
+    seen, arrows = set(), []
+    for a in ld.get("arrows") or []:
+        to = a.get("to") if isinstance(a, dict) else None
+        if to in part and part.index(to) > 0 and a.get("from") == part[part.index(to) - 1] and to not in seen:
+            seen.add(to)
+            arrows.append({"from": a["from"], "to": to})
+    return {"mid": mid, "arrows": arrows} if mid or arrows else None
 
 
 def problems():
@@ -416,6 +435,9 @@ def view(p, mode):
             p["wish"] = True                                  # Cluck can answer this one (/explain); the key itself stays here
         if sg.get("part"):
             p["formulas"] = formulas(p["code"], sg["part"])
+            ld = ladder(sg, [f["id"] for f in p["formulas"]])
+            if ld:
+                p["ladder"] = ld
         if sg.get("dead"):                                    # T28 dead-easy: one try (the T19 reveal follows), nav.js places it
             p["dead"] = True
             p["tries"] = 1

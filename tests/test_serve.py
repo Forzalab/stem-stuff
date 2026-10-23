@@ -795,6 +795,29 @@ class Banks(unittest.TestCase):
         for out in (easy, hard, *serve.bank_payload("BANK_FK12", "f2", "sugar")["problems"]):
             self.assertFalse({"key", "slip", "part", "correct", "wrong"} & set(out), out.keys())
 
+    def test_sheet_doc_and_ladder_reach_the_browser(self):                      # ladder lane 3: the "?" popup + the thinking ladder
+        doc = {"sym": [{"s": "K", "m": "kinetic energy", "u": "J"}], "when": "Use for moving things.", "ex": "m = 2 kg, v = 3 m/s -> K = 9 J"}
+        rows = [{"id": "KE", "tex": "K = \\tfrac12 mv^2", "doc": doc}, {"id": "L_CONS", "tex": "L_f = L_i"}, {"id": "BADDOC", "tex": "x", "doc": "nope"}]
+        self.write("formula-sheet", {"v": 3, "groups": [{"name": "Energy", "rows": rows}]})
+        ld = {"mid": [{"of": "KE", "tex": "v_2 = v_1", "use": "Orbits, a ball on a string.", "why": "Spin stays the same.", "hint": "old"}, {"of": "KE", "tex": "K = 1", "use": " ", "why": 5}, {"of": "GONE", "tex": "x"}, {"of": "L_CONS", "tex": " "}],
+              "arrows": [{"from": "KE", "to": "L_CONS"}, {"from": "L_CONS", "to": "KE"}, {"from": "KE", "to": "KE"}, {"from": "KE", "to": "L_CONS"}]}
+        p = dict(BANK["CALC1_X2P"], code="CALC1_LD1", saccharine={"title": "Ladder", "part": ["KE", "L_CONS", "BADDOC"], "ladder": ld})
+        q = dict(BANK["CALC1_X2P"], code="CALC1_LD2", saccharine={"title": "No ladder", "part": ["KE"]})
+        r = dict(BANK["CALC1_X2P"], code="CALC1_LD3", saccharine={"title": "Dead ladder", "part": ["KE"], "ladder": {"arrows": [{"from": "KE", "to": "L_CONS"}]}})
+        self.write("BANK_LD12", {"v": 1, "problems": [p, q, r]})
+        fs = serve.sheet()
+        self.assertEqual(fs["KE"]["doc"], doc)
+        self.assertNotIn("doc", fs["L_CONS"]); self.assertNotIn("doc", fs["BADDOC"])      # no doc, or not a dict: none
+        a = serve.public(serve.view(serve.problems()["CALC1_LD1"], "sugar"), "l1")
+        self.assertEqual(a["formulas"][0]["doc"], doc)
+        self.assertEqual(a["ladder"], {"mid": [{"of": "KE", "tex": "v_2 = v_1", "use": "Orbits, a ball on a string.", "why": "Spin stays the same."}, {"of": "KE", "tex": "K = 1"}],   # bad entries (a blank use, a non-string why, an old hint) dropped, never guessed
+                                       "arrows": [{"from": "KE", "to": "L_CONS"}]})
+        self.assertNotIn("ladder", serve.public(serve.view(serve.problems()["CALC1_LD2"], "sugar"), "l1"))
+        self.assertNotIn("ladder", serve.public(serve.view(serve.problems()["CALC1_LD3"], "sugar"), "l1"))
+        self.assertNotIn("ladder", serve.public(serve.view(serve.problems()["CALC1_LD1"], "diet"), "l1"))
+        for out in (a, *serve.bank_payload("BANK_LD12", "l2", "sugar")["problems"]):
+            self.assertNotIn("saccharine", json.dumps(out))
+
     def test_saccharine_block_and_narration(self):                             # schema v2: one block, diet untouched
         self.write("formula-sheet", {"v": 1, "groups": [{"name": "Work and Energy", "rows": [{"id": "WE_THM", "tex": "W = \\Delta K"}]}]})
         p = dict(BANK["CALC1_X2P"], code="CALC1_SB1", title="Original", saccharine={"title": "Practice Exam 2, Question 7: mass doubled",
