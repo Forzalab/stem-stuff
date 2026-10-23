@@ -694,8 +694,9 @@ html.side #work > .orig { margin: 0; }
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
-.fcard .f { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); font-size: var(--t-md); line-height: 1.4; }   /* a long formula scrolls in its row, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249) */
-.fcard .f .katex { white-space: nowrap; }
+.fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
+.fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped */
+.fcard .fm .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
 /* thinking ladder + "?" docs (Tony, Oct 21; SCHEMA.md "Formula ladder"): a formula row is the math + a small "?"; the "?" opens the sheet's doc for it
@@ -703,29 +704,65 @@ html.side #work > .orig { margin: 0; }
 .fcard .f { display: flex; align-items: center; gap: var(--s2); }
 .fcard .f > :first-child { margin-left: auto; }
 .fcard .f > :last-child { margin-right: auto; }
-.fcard .f > .fm { flex: none; }
+.fcard .f > .fm { flex: 0 1 auto; min-width: 0; }
 .fcard .f.mid { font-size: var(--t-sm); color: var(--muted); }
-.fcard .f.mid:has(.fh) { flex-direction: column; gap: 0; }                         /* use/why sit under their piece (Oct 23) */
-.fcard .f.mid:has(.fh) > * { margin-inline: 0; }
-.fcard .fh { max-width: 32rem; font-size: var(--t-xs); line-height: 1.35; text-align: center; color: var(--ink); white-space: normal; }
-.fcard :is(.f, .to, .fdoc)[hidden] { display: none; }
-.fq { position: relative; flex: none; display: grid; place-items: center; width: 1.375rem; height: 1.375rem; padding: 0; border: 1px solid var(--c1); border-radius: 50%;
-  background: transparent; color: var(--c1); font: inherit; font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; cursor: pointer; }
-.fq::after { content: ""; position: absolute; inset: -11px; }                      /* the 44px tap target round a 22px mark */
-.fq[aria-expanded="true"] { background: var(--c1); color: var(--paper); }
+/* a piece's For/Why notes (Oct 23, brain ladder-ui-2026-10-23/RESEARCH.md): quiet captions, not a second headline (RUI p.33: softer colour, not
+   smaller). Muted 400, ragged-left in a ~34ch column 4px under the piece, 12px before the next (group gap > inner gap, RUI p.83). Under the piece on desktop too:
+   beside it pushed the piece off the card's centred spine (formula-use.html ?v=7), and 4px under already binds it */
+.fcard .f.mid:has(.fhs) { flex-wrap: wrap; justify-content: center; row-gap: 0; }
+.fcard .f.mid:has(.fhs) > * { margin-inline: 0; }
+.fcard .f.mid:has(.fhs:not([hidden])) { margin-bottom: var(--s3); }
+.fcard .fhs { flex: 1 0 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: var(--s1); }
+.fcard .fh { width: min(100%, 34ch); font-size: var(--t-xs); line-height: 1.35; text-align: start; color: var(--muted); white-space: normal; }
+.fcard .fh b { font-weight: var(--w-em); margin-right: var(--s1); }                    /* a quiet run-in label: weight only, no blue (blue = tap targets) */
+.fh-more { position: relative; flex: none; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: var(--t-xs);
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.fh-more::after { content: ""; position: absolute; inset: -11px -6px; }            /* a bigger tap target round a small word, like .fq */
+.fh-more[aria-expanded="true"] { color: var(--ink); }
+.fh-more:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.fcard :is(.f, .to, .fhs, .fh-more)[hidden] { display: none; }
+/* the "?" is small and quiet (Tony, Oct 23: "too big"): a 16px muted ring, blue on hover/focus/open; the 44px tap area is its ::after */
+.fq { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 1px solid currentColor; border-radius: 50%;
+  background: transparent; color: var(--muted); font: inherit; font-size: 0.6875rem; font-weight: var(--w-em); line-height: 1; cursor: pointer; }
+.fq::after { content: ""; position: absolute; inset: -14px; }                      /* the 44px tap target round a 16px mark */
+.fq:is(:hover, :focus-visible) { color: var(--c1); }
+.fq[aria-expanded="true"] { border-color: var(--c1); background: var(--c1); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
-.fcard .fdoc { justify-self: stretch; margin: var(--s1) 0 var(--s2); padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: 8px; background: var(--paper);
-  color: var(--ink); font-size: var(--t-sm); line-height: 1.45; text-align: left; }
 .fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
 .fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
-.fd-s { overflow-x: auto; overflow-y: hidden; }
+.fd-s { overflow-x: auto; overflow-y: hidden; color: var(--ink); }
 .fd-u { color: var(--muted); white-space: nowrap; }
-.fd-p { margin: 0 0 var(--s2); }
+.pop .fd-sym { margin-top: var(--s2); }
 .fd-w, .fd-x { margin: var(--s2) 0 0; }
-.fd-w b, .fd-x b, .fcard .fh b { font-weight: var(--w-em); color: var(--c1); margin-right: var(--s1); }
+.fd-w b, .fd-x b { font-weight: var(--w-em); color: var(--ink); margin-right: var(--s1); }
 .fd-x { overflow-wrap: anywhere; }
 @keyframes lad-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: no-preference) { .fcard .lad-in { animation: lad-in var(--d-move, 200ms) ease-out both; } }
+@media (prefers-reduced-motion: no-preference) { .fcard :is(.lad-in, .fhs) { animation: lad-in var(--d-move, 200ms) ease-out both; } }   /* .fhs: notes opened by "why?" slide in too */
+/* Popover (popover.js, design/POPOVER.md; Tony, Oct 23, after shadcn/ui Popover: rounded-md, 1px border, soft shadow, p-3, w-72, text-sm). App chrome on
+   the site's tokens: the raised --float surface, --line rim, --shadow-3; a bold --ink title, a --muted body. Fixed, placed by popover.js; over the bars */
+.pop { --pop-w: 18rem; --body: var(--float); --knock: color-mix(in srgb, var(--float) 85%, transparent);
+  position: fixed; z-index: 40; top: 0; left: 0; box-sizing: border-box; width: max-content; max-width: min(var(--pop-w), calc(100vw - 32px));
+  padding: var(--s3); border: 1px solid var(--line); border-radius: 6px; background: var(--float); box-shadow: var(--shadow-3);
+  color: var(--muted); font-size: var(--t-sm); line-height: 1.45; text-align: left; overflow-wrap: break-word; }
+.pop:focus { outline: none; }                                                       /* it takes focus for screen readers; its anchor shows the open state */
+.pop > :first-child { margin-top: 0; }
+.pop > :last-child { margin-bottom: 0; }
+.pop p { margin: var(--s1) 0 0; }
+.pop-h { margin: 0 0 var(--s2); overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); text-align: center; color: var(--ink); font-size: var(--t-md); line-height: 1.4; }   /* a formula header: the card row's size */
+.pop-h .katex { white-space: nowrap; }
+.pop .pop-t { margin: 0; color: var(--ink); font-weight: var(--w-em); }            /* the title line */
+.pop-x { color: var(--muted); }                                                     /* a tiny example, under the body */
+.pop-x b { color: var(--ink); font-weight: var(--w-em); margin-right: var(--s1); }
+.pop-act { display: flex; justify-content: flex-end; margin-top: var(--s3); }      /* action: ONE outlined button (STYLE.md §4: the filled one is the page's submit) */
+.pop-act .btn { width: auto; padding: 0 var(--s3); font: inherit; white-space: nowrap; }   /* the site's secondary .btn, sized to its words (.btn-tgl precedent) */
+.pop-fig { margin: 0 calc(-1 * var(--s1)); }                                        /* media: a graph.js figure, drawn at the popover's width */
+.pop-cap { font-size: var(--t-xs); text-align: center; }
+.pop[data-variant="note"] { --pop-w: 16rem; padding: var(--s2) var(--s3); }
+.pop[data-variant="term"] { --pop-w: 16rem; }
+.pop[data-variant="media"] { width: min(20rem, calc(100vw - 32px)); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) { .pop { animation: pop-in 120ms ease-out both; } .pop[data-side="top"] { animation-name: pop-up; } }
+@keyframes pop-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 /* Cluck the genie (design/EASY.md Phase 4): the chip under the hint, the streamed solution under it */
 .wish { margin-top: var(--s3); }
 .wbar { display: flex; gap: var(--s2); align-items: center; }

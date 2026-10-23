@@ -232,14 +232,24 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_LD1"; }); await opened(page, "CALC1_LD1");
     assert.deepEqual([await vis("li.f:not(.mid)"), await vis("li.f.mid"), await page.evaluate(() => window.stemLadder.left())], [1, 0, 2], "Q11 Q4e: KE only, 2 pieces waiting");
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 0);
-    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : "")));
-    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`Use it for ${m.use}`, `Why this ${m.why}`]);
-    assert.deepEqual(await notes(), [["", ""], ["", ""]], "use/why wait with their pieces");
+    /* per piece: [For, Why] as shown, and its "why?" toggle (null when hidden, else aria-expanded) */
+    const notes = () => page.$$eval("#fcard li.f.mid", ms => ms.map(m => [...[...m.querySelectorAll(".fh")].map(h => h.checkVisibility() ? h.textContent.replace(/\s+/g, " ").trim() : ""),
+      m.querySelector(".fh-more").checkVisibility() ? m.querySelector(".fh-more").getAttribute("aria-expanded") : null]));
+    const want = pilot.find(i => i.code === "PHYS_Z3X").ladder.mid.map(m => [`Use it for ${m.use}`, `Why this ${m.why}`]), shut = ["", ""];
+    assert.deepEqual(await notes(), [[...shut, null], [...shut, null]], "use/why wait with their pieces");
     for (const n of [1, 2]) {
       assert.equal(await page.evaluate(() => window.stemLadder.step()), true);
       assert.equal(await vis("li.f.mid"), n);
-      assert.deepEqual(await notes(), want.map((w, i) => i < n ? w : ["", ""]), "a popped piece shows its use and why, as written; a waiting one does not");
+      assert.deepEqual(await notes(), want.map((w, i) => i === n - 1 ? [...w, null] : i < n ? [...shut, "false"] : [...shut, null]),
+        "only the newest piece shows its use and why, as written; an older one folds to a why? toggle; a waiting one shows nothing");
     }
+    const lab = await page.$eval("#fcard li.f.mid.cur .fh", h => { const b = getComputedStyle(h.querySelector("b")), t = getComputedStyle(h); return [b.color === t.color, t.textAlign, +t.fontWeight]; });
+    assert.deepEqual(lab, [true, "start", 400], "notes are quiet captions: label in the note's colour (no blue), left-aligned, regular weight");
+    const more = page.locator("#fcard li.f.mid:not(.cur) .fh-more");
+    await more.click();
+    assert.deepEqual(await notes(), [[...want[0], "true"], [...want[1], null]], "why? opens an older piece's notes in place");
+    await more.focus(); await page.keyboard.press("Enter");
+    assert.deepEqual(await notes(), [[...shut, "false"], [...want[1], null]], "Enter on why? folds them again");
     assert.equal(await page.$$eval("#fcard li.f.mid .katex", k => k.length), 2, "mid pieces are KaTeX");
     assert.equal(await page.evaluate(() => window.stemLadder.step()), false, "all out: the ladder stops");
     assert.equal(await page.evaluate(() => window.stemLadder.left()), 0);
@@ -255,28 +265,42 @@ try {
     assert.equal(await vis("li.to"), 0, "a fresh visit starts at the big pieces again");
   });
 
-  await step('"?" docs: a button per formula with a sheet doc; opens symbols (meaning + unit), when, example; one at a time; Esc and a second tap close; no doc, no "?"', async () => {
-    const open = () => page.$$eval("#fcard .fdoc", ds => ds.filter(d => !d.hidden).map(d => d.id));
+  await step('"?" docs: a small button per formula with a sheet doc; a popover built on open (formula, purpose, symbols + units, when, example); one at a time; Esc, an outside tap and a second tap close it; no doc, no "?"', async () => {
+    /* which row's popover is open: the index of the "?" whose aria-controls names the one .pop in the page */
+    const open = () => page.evaluate(() => [...document.querySelectorAll(".pop")].map(p => [...document.querySelectorAll("#fcard .fq")].findIndex(q => q.getAttribute("aria-controls") === p.id)));
     assert.equal(await page.$$eval("#fcard .fq", b => b.length), 4);
-    assert.deepEqual(await page.$$eval("#fcard .fq", b => b.map(x => [x.textContent, x.getAttribute("aria-expanded"), !!document.getElementById(x.getAttribute("aria-controls"))])), Array(4).fill(["?", "false", true]));
-    assert.deepEqual(await open(), []);
+    assert.deepEqual(await page.$$eval("#fcard .fq", b => b.map(x => [x.textContent, x.getAttribute("aria-expanded"), x.getAttribute("aria-haspopup")])), Array(4).fill(["?", "false", "dialog"]));
+    assert.deepEqual(await open(), [], "lazy: no popover in the page until a ? is tapped");
+    await page.waitForFunction(() => !document.querySelector("#splash:not(.out)"));   // the last step reloaded: the splash goes first
+    await page.$eval("#fcard .fq", x => x.scrollIntoView({ block: "center" }));
+    const size = await page.$eval("#fcard .fq", x => { const r = x.getBoundingClientRect(), hit = (dx, dy) => { const e = document.elementFromPoint(r.left + r.width / 2 + dx, r.top + r.height / 2 + dy); return x.contains(e) || (e ? e.tagName + "." + e.className + "#" + e.id : "none"); };
+      return [r.width <= 16.5 && r.height <= 16.5, hit(20, 0), hit(-20, 0), hit(0, 20), hit(0, -20)]; });
+    assert.deepEqual(size, [true, true, true, true, true], "a 16px mark with a 44px tap area");
     const q = await page.$$("#fcard .fq");
     await q[2].click();
-    assert.deepEqual(await open(), ["fd-2"]);
-    const d = await page.$eval("#fd-2", e => ({ syms: e.querySelectorAll(".fd-sym li").length, katex: e.querySelectorAll(".fd-s .katex").length, units: [...e.querySelectorAll(".fd-u")].every(u => u.textContent.trim()),
-      when: /^Use it\s+\S/.test(e.querySelector(".fd-w").textContent), ex: /^Example\s+\S/.test(e.querySelector(".fd-x").textContent), shown: getComputedStyle(e).display !== "none",
-      inCard: e.getBoundingClientRect().right <= document.querySelector("#fcard").getBoundingClientRect().right + 1 }));
-    assert.ok(d.syms >= 2 && d.katex === d.syms && d.units && d.when && d.ex && d.shown && d.inCard, JSON.stringify(d));
-    assert.equal(await page.$eval("#fd-2", e => e.firstElementChild.className + " " + e.firstElementChild.textContent.replace(/\s+/g, "")),
-      "fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "purpose comes first");
+    assert.deepEqual(await open(), [2]);
+    const d = await page.$eval(".pop", e => { const r = e.getBoundingClientRect(), row = document.querySelectorAll("#fcard li.f:not(.mid)")[2], fm = e.firstElementChild.getBoundingClientRect(), rf = row.querySelector(".fm").getBoundingClientRect();
+      return { syms: e.querySelectorAll(".fd-sym li").length, katex: e.querySelectorAll(".fd-s .katex").length, units: [...e.querySelectorAll(".fd-u")].every(u => u.textContent.trim()),
+        when: /^Use it\s+\S/.test(e.querySelector(".fd-w").textContent), ex: /^Example\s+\S/.test(e.querySelector(".fd-x").textContent), dialog: e.getAttribute("role") === "dialog" && e.dataset.variant === "doc",
+        inView: r.left >= 0 && r.right <= innerWidth, formula: e.firstElementChild.className === "pop-h" && e.firstElementChild.textContent === row.querySelector(".fm").textContent,
+        sameSize: getComputedStyle(e.firstElementChild).fontSize === getComputedStyle(row).fontSize,
+        centred: Math.abs((fm.left + fm.right) / 2 - (rf.left + rf.right) / 2) < 2 || Math.round(r.left) === 16 || Math.round(r.right) === innerWidth - 16 };   // under its row's formula, unless the viewport clamp moved it
+    });
+    assert.deepEqual(d, { syms: d.syms, katex: d.syms, units: true, when: true, ex: true, dialog: true, inView: true, formula: true, sameSize: true, centred: true });
+    assert.ok(d.syms >= 2, JSON.stringify(d));
+    assert.equal(await page.$eval(".pop", e => e.children[1].className + " " + e.children[1].textContent.replace(/\s+/g, "")),
+      "pop-t fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "the formula, then the purpose as the title");
     assert.equal(await q[2].getAttribute("aria-expanded"), "true");
     await q[0].click();
-    assert.deepEqual(await open(), ["fd-0"], "one popup at a time");
+    assert.deepEqual(await open(), [0], "one popover at a time");
     await q[0].click();
-    assert.deepEqual(await open(), [], "a second tap closes");
+    assert.deepEqual(await open(), [], "a second tap closes (and removes it)");
+    assert.equal(await q[0].getAttribute("aria-expanded"), "false");
     await q[1].click(); await page.keyboard.press("Escape");
     assert.deepEqual(await open(), [], "Escape closes");
-    assert.equal(await page.evaluate(() => document.activeElement.classList.contains("fq")), true, "focus goes back to the ?");
+    assert.equal(await page.evaluate(() => document.activeElement === document.querySelectorAll("#fcard .fq")[1]), true, "focus goes back to its ?");
+    await q[1].click(); await page.click("#fcard .fc-notch");
+    assert.deepEqual(await open(), [], "a tap outside closes");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.equal(await page.$$eval("#fcard .fq", b => b.length), 0, "rows without a doc have no ?");
