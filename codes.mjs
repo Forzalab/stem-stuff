@@ -114,3 +114,12 @@ export function uploadMsg(r) {
   if (lost > 0) return { text: `Loaded ${r.kept}, skipped ${lost}`, tone: "warn" };
   return { text: "", tone: "ok" };   // Q11 = b: a clean upload says nothing (the opened question and the bank label are the proof)
 }
+
+/* ---------- bank versions (SCHEMA.md Version table): GET /b/<code>.json carries "banner" for a bank older than the newest row
+   (before its sunset) and "dropped" instead of problems from the sunset on; both say "BANK_X must be updated by 2026-11-05".
+   app.js shows banner at the top of the question list (#qlist) and dropped on the entry line, both in BANNER_CLASS. ---------- */
+export const BANNER_CLASS = "entry-msg warn bank-banner";
+export const bankNotice = b => ({
+  banner: b && typeof b.banner === "string" ? b.banner : "",
+  dropped: b && typeof b.dropped === "string" ? b.dropped : ""
+});

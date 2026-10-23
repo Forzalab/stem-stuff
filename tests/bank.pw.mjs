@@ -1,5 +1,5 @@
 // Practice banks (design/BANK.md): type BANK_XXX, the list button reads the code, the bank reopens where it was
-// (this browser's pointer, else the server's), upload vs bank, unknown bank.
+// (this browser's pointer, else the server's), upload vs bank, unknown bank, the old-bank banner (SCHEMA.md Version table).
 // Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/bank.pw.mjs [port] [shotDir]
 import { createRequire } from "node:module";
@@ -26,6 +26,8 @@ const BANK = { v: 1, problems: [num("CALC1_B01", "2", "Bank one: 1 + 1"), num("C
 const FILE = { v: 1, problems: [num("CALC1_U01", "1", "Upload one"), num("CALC1_U02", "2", "Upload two")] };
 (await import("node:fs")).mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_AB12.json"), JSON.stringify(BANK));
+/* a bank at the newest Version-table row: never a banner. BANK_AB12 (v 1) shows one until 2026-11-05 (the server's real clock) */
+writeFileSync(join(BANKS, "BANK_NW12.json"), JSON.stringify({ v: 20261022, problems: [{ ...num("CALC1_N01", "2", "New one: 1 + 1"), form: "1+1" }] }));
 
 /* the order is a per-bank queue with a random salt (design/plans/QUEUE.md): pin a salt that plays file order for both tiny banks,
    set again whenever it is missing (one step wipes storage) */
@@ -77,6 +79,7 @@ try {
       assert.equal((await page.innerText("#qlistName")).trim(), "BANK_AB12");
       assert.ok(await page.$("#qlistBtn svg.ico"), "the list icon stays");
       assert.deepEqual(await rowTexts(page), ["1Bank one: 1 + 1", "2Bank two: 1 + 2", "3Bank three: 2 + 2"]);
+      assert.equal(await page.textContent("#qlist .bank-banner.entry-msg.warn"), "BANK_AB12 must be updated by 2026-11-05");   // v 1: the banner tops the list
       const r = await page.locator("#qlistBtn").boundingBox();
       assert.ok(r.height >= 48, "list button under 48px");
       if (vname === "phone") {
@@ -114,6 +117,7 @@ try {
       await fc.setFiles({ name: "mine.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(FILE)) });
       await opened(page, "CALC1_U01");
       assert.equal(await label(page), "mine.json");
+      assert.equal(await page.$("#qlist .bank-banner"), null, "the bank's banner outlived the bank");
       await page.goto("about:blank"); await page.goto(BASE + "/"); await page.waitForTimeout(1200);
       assert.ok(!/^CALC1_B/.test(await page.textContent("#pcode")), "the bank took over after an upload");
       await page.goto("about:blank"); await page.goto(BASE + "/#CALC1_U02"); await opened(page, "CALC1_U02");
@@ -128,6 +132,13 @@ try {
     await step(`${vname}: #BANK_AB12 link opens the bank again`, async () => {
       await page.goto("about:blank"); await page.goto(BASE + "/#BANK_AB12"); await opened(page, "CALC1_B02");
       assert.equal(await label(page), "BANK_AB12");
+    });
+
+    await step(`${vname}: a v 20261022 bank has no banner`, async () => {
+      await typeCode(page, "BANK_NW12"); await opened(page, "CALC1_N01");
+      assert.deepEqual(await rowTexts(page), ["1New one: 1 + 1"]);
+      assert.equal(await page.$("#qlist .bank-banner"), null);
+      await page.click("#qlistBtn");
     });
     await ctx.close();
   }

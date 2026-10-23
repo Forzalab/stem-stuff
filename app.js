@@ -4,6 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
+import { match as slipMatch, FAMILY_HINT } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
@@ -360,6 +361,13 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     try { sig = unitSig(u, text); correct = unitOk(u, sig); }
     catch { return R({ verdict: "invalid", triesLeft: left() }); }
     if (!correct) hit = unitHit(u, text, sig);
+    /* slips v2 (design/HANDOFF-slips-v2.md): author wrong -> a slip of `form` (family hint, same shape as a wrong hit) -> nudge */
+    if (!correct && !hit && u.type === "num" && u.form) {
+      let skip;
+      try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
+      const fam = skip && slipMatch(u.form, sig, u.tol ?? 1e-6, skip);
+      if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
+    }
   }
   if (correct) { st.done = true; return R({ verdict: "correct", triesLeft: left() }); }
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
@@ -531,6 +539,14 @@ window.stemBank = {
   mark: c => (bank && bank.marks[c]) || null
 };
 const bankChanged = () => dispatchEvent(new CustomEvent("drill:bank"));
+/* an old bank's banner (SCHEMA.md Version table: "BANK_X must be updated by 2026-11-05") at the top of the question list */
+addEventListener("drill:bank", () => {
+  const panel = $("#qlist"), text = bank ? bank.banner : "";
+  let el = panel && panel.querySelector(".bank-banner");
+  if (!panel || !text) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("p"); el.className = codes.BANNER_CLASS; el.setAttribute("role", "status"); panel.prepend(el); }
+  el.textContent = text;
+});
 /* a re-showing (design/plans/QUEUE.md, D60/D61; replaces "Redo my misses", D50): the queue (nav.js) brings a question back (a
    Redeem when it owes a miss), graded fresh in its own server namespace (serve.py grade() round) and kept in its own done record (offline.js "r:"); the
    real history and marks stay as they were. One showing at a time, per bank; localStorage, so a reload stays in it. UI: the retry tag (retryTag) + the list's faded marks (nav.js). */
@@ -576,8 +592,10 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
     }
     return false;
   }
+  const nb = codes.bankNotice(b);
+  if (nb.dropped) { if (!quiet) entryMsg(nb.dropped, "warn"); return false; }   // past its sunset (SCHEMA.md Version table): the message, not "not found"
   if (!b || !b.problems.length) { if (!quiet) entryMsg(`${code} not found.`); return false; }
-  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s };
+  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s, banner: nb.banner };
   src(b.code);
   remembered(b.code);
   bankChanged();

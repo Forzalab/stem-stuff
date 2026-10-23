@@ -17,6 +17,7 @@
 import base64
 import datetime
 import errno
+import functools
 import hashlib
 import http.cookies
 import http.server
@@ -34,10 +35,12 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zoneinfo
 
 import sympy
 
 import livefig
+import slips
 import views_gate
 from sympy.parsing.sympy_parser import auto_number, parse_expr
 
@@ -58,6 +61,19 @@ DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
 WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
+# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only: never a term, never a number.
+FAMILY_HINT = {
+    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
+    "sign": "QUACK. Check every sign. One of them flipped.",
+    "drop": "QUACK. Count your terms. One of them went missing.",
+    "reciprocal": "QUACK. Check what is on top and what is on the bottom.",
+    "power": "QUACK. Check your powers. A square or a root slipped.",
+    "factor": "QUACK. Check your factors. Something got doubled or halved.",
+    "dream": "QUACK. Check your square or root of a sum. It does not split.",
+    "trig": "QUACK. Check your trig. Sine or cosine, degrees or radians.",
+    "units": "QUACK. Check your units. A power of ten slipped.",
+    "g": "QUACK. Check the value you used for g.",
+}
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
@@ -95,7 +111,7 @@ def unfold(p):
 # design/BANK.md: every file in banks/ named BANK_XXX.json is a practice bank (problems.json format). One global code
 # index: problems.json first, then banks A-Z; a code in two files is one problem (first copy wins, a differing copy warns).
 _files = {}                  # path -> (mtime, [problems]): the last good copy of each file
-_bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "skipped": set()}
+_bank = {"sig": None, "by_code": {}, "prof": {}, "banks": {}, "notes": {}, "skipped": set()}
 _bank_lock = threading.Lock()
 
 
@@ -116,6 +132,11 @@ def _read(path):
         _profiles[path] = doc.get("profile") if isinstance(doc.get("profile"), dict) else None
         g = doc.get("burst_gap_s")
         _gaps[path] = g if isinstance(g, (int, float)) and not isinstance(g, bool) and 60 <= g <= 600 else None   # T22: invalid = absent
+        v = doc.get("v", 1)
+        v_ok = isinstance(v, int) and not isinstance(v, bool)
+        _versions[path] = v if v_ok else 1   # SCHEMA.md Version table: no v (or a bad one) = 1
+        if "v" in doc and not v_ok:
+            log(f"{path}: v must be an int (1 or yyyymmdd), got {v!r}; treated as 1")
         log(f"loaded {len(ps)} problems from {path}")
     except Exception as e:  # noqa: BLE001
         log(f"{path} unreadable, keeping the last good copy: {e}")
@@ -126,6 +147,37 @@ def _read(path):
 
 _gaps = {}                                   # bank path -> its valid "burst_gap_s" (SCHEMA.md) or None
 _profiles = {}                               # bank path -> its "profile" (SCHEMA.md: subject, audience, skill_domains, kits) or None
+_versions = {}                               # bank path -> its "v" (1 or yyyymmdd), 1 when absent
+
+# ---------------- bank versions (SCHEMA.md Version table; design/HANDOFF-slips-v2.md rule 8) ----------------
+# A bank with v < CUTOFF (no v = 1) loads with a banner until SUNSET; from SUNSET on (Pacific date) it does not load, and
+# GET /b/<code>.json carries the same message instead of problems. problems.json (the built-in file) is not a bank: never dropped.
+CUTOFF = 20261022                            # = slips.CUTOFF: the newest Version-table row
+SUNSET = datetime.date(2026, 11, 5)          # older banks stop loading on this date
+try:
+    PT = zoneinfo.ZoneInfo("America/Los_Angeles")
+except zoneinfo.ZoneInfoNotFoundError:       # a host with no tz database: PST all year (at worst an hour late in summer)
+    PT = datetime.timezone(datetime.timedelta(hours=-8), "PST")
+
+
+def today():
+    """the date the sunset is checked against, in Pacific time (Tony's clock). STEM_TODAY=yyyy-mm-dd pins it (the test runners
+    pin a pre-sunset date so v:1 fixture banks keep loading after the real sunset). Unit tests may also patch serve.today."""
+    pinned = os.environ.get("STEM_TODAY", "").strip()
+    if pinned:
+        try:
+            return datetime.date.fromisoformat(pinned)
+        except ValueError:
+            log(f"serve: ignoring bad STEM_TODAY={pinned!r} (want yyyy-mm-dd)")
+    return datetime.datetime.now(PT).date()
+
+
+def bank_notice(code, v):
+    """(message, dropped) for a bank: ("BANK_X must be updated by 2026-11-05", False) before SUNSET, (..., True) from it;
+    (None, False) for a bank at CUTOFF or newer."""
+    if v >= CUTOFF:
+        return None, False
+    return f"{code} must be updated by {SUNSET.isoformat()}", today() >= SUNSET
 
 
 def _bank_files():
@@ -153,10 +205,15 @@ def _index():
     with _bank_lock:
         bf = _bank_files()
         lists = [_read(BANK)] + [_read(p) for p in bf.values()]
-        sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]))
+        notes = {c: bank_notice(c, _versions.get(p, 1)) for c, p in bf.items()}
+        sig = (tuple(bf), tuple(_files.get(p, (None,))[0] for p in [BANK, *bf.values()]), tuple(d for _, d in notes.values()))
         if sig != _bank["sig"]:
             by_code, prof = {}, {}
             gaps = {c: _gaps.get(p) for c, p in bf.items()}
+            dropped = {c for c, (_, d) in notes.items() if d}
+            lists = [lists[0]] + [[] if c in dropped else ps for c, ps in zip(bf, lists[1:])]   # a dropped bank does not load
+            for c in sorted(dropped):
+                log(f"{c}: {notes[c][0]}; not loaded")
             for path, ps in zip([BANK, *bf.values()], lists):
                 for p in ps:
                     if p["code"] not in by_code:
@@ -164,7 +221,8 @@ def _index():
                         prof[p["code"]] = _profiles.get(path)
                     elif by_code[p["code"]] != p:
                         log(f"{p['code']} is in two files with different content: the first one wins")
-            _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps})
+            _bank.update(sig=sig, by_code=by_code, prof=prof, gaps=gaps, banks={c: [p["code"] for p in ps] for c, ps in zip(bf, lists[1:]) if ps},
+                         notes={c: n for c, n in notes.items() if n[0]})
         return _bank
 
 
@@ -570,6 +628,33 @@ def unit_hit(u, text, sig):
     return hit
 
 
+@functools.lru_cache(maxsize=1024)
+def _slip_table(form, ans, tol, ignore):
+    """((family, value), ...) of one unit's form, less every SAME (a slip on the answer: already right) and every ignore_slips value."""
+    try:
+        if slips.slow(form):          # bounded time: no slip, the nudge as before (cached below)
+            return ()
+        skip = [float(slips.parse(s).doit()) for s in ignore]
+        return tuple((f, v) for f, v in slips.mutants(form)
+                     if not slips.close(v, ans, tol) and not any(slips.close(v, x, tol) for x in skip))
+    except Exception:  # noqa: BLE001  a form sympy can't read: no slips, the nudge as before
+        return ()
+
+
+def slip_hit(u, sig):
+    """slips v2: a num unit's typed value that sits on a slip of its `form` -> {error: family, hint: FAMILY_HINT[family]}, else None.
+    Runs after the author's `wrong` entries miss and before the nudge. form, ignore_slips and slip values never leave the server."""
+    if u.get("type") != "num" or not isinstance(u.get("form"), str) or not isinstance(sig, float):
+        return None
+    try:
+        ans = float(signature(u, u["answer"]))
+    except (UNREADABLE, TypeError):
+        return None
+    tol = u.get("tol", 1e-6)
+    fam = next((f for f, v in _slip_table(u["form"], ans, tol, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v, tol)), None)
+    return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
+
+
 # (sid, code) -> {"wrong": [signatures], "done": bool, "gen": int}; a multi keeps one per part: (sid, code, i).
 # Saved to TRIES on every graded try, so a restart keeps them (design/DONE.md). File keys: "sid CODE" / "sid CODE i".
 # gen: a counter; every new entry takes the next one. The page caches it; a /state gen above the cached one means
@@ -714,12 +799,16 @@ def snacks_placed(items):
 
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
-    Opening a bank makes it this browser's last one (design/BANK.md)."""
+    Opening a bank makes it this browser's last one (design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
+    from SUNSET it is {code, problems: [], dropped: <the same message>} and is not made the last one."""
     all_banks = banks()
     if code == "last":
         with _tries_lock:
             _load_tries()
             code = _last.get(sid, {}).get("bank")
+    note, dropped = _index()["notes"].get(code, (None, False))
+    if dropped:
+        return {"code": code, "problems": [], "dropped": note}
     if code not in all_banks:
         return None
     by_code = problems()
@@ -745,6 +834,8 @@ def bank_payload(code, sid, mode="sugar"):
     gap = _index()["gaps"].get(code)
     if gap is not None:
         out["burst_gap_s"] = gap                 # T22: only when the bank sets it
+    if note:
+        out["banner"] = note                     # SCHEMA.md Version table: older than CUTOFF, before SUNSET
     return out
 
 
@@ -872,7 +963,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
         except UNREADABLE:
             return reply({"verdict": "invalid", "triesLeft": left()})
         if not correct:
-            hit = unit_hit(u, text, sig)
+            hit = unit_hit(u, text, sig) or slip_hit(u, sig)
     if correct:
         st["done"] = True
         fams = sorted({w["error"] for w in (p["parts"][idx] if multi else p).get("wrong", []) if isinstance(w.get("error"), str)})
