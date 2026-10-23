@@ -17,3 +17,7 @@
 {"out": "/tmp/bench-out/C2v2/B-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.398448}
 {"out": "/tmp/bench-out/XT3/ds-edge-orbatch", "arm": "deepseek:low", "usd": 0.006838657, "note": "batch-level cost, parser fixed"}
 {"out": "/tmp/bench-out/XT3/sonnet-chat", "arm": "claude:claude-sonnet-5-5", "usd": 0.497161}
+{"out": "/tmp/bench-out/ds1017/0910-chat", "arm": "deepseek:low", "usd": 0.021412}
+{"out": "/tmp/bench-out/ds1017/0910-edge", "arm": "deepseek:low", "usd": 0.02344}
+{"out": "/tmp/bench-out/ds1017/1017-chat", "arm": "deepseek:low", "usd": 0.015586}
+{"out": "/tmp/bench-out/ds1017/1017-edge", "arm": "deepseek:low", "usd": 0.017986}

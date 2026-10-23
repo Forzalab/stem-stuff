@@ -428,8 +428,11 @@ def main():
     ap.add_argument("--est", type=float, default=0.03, help="$ estimate of one call, for the cap check")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--n", type=int, default=5)
+    ap.add_argument("--ds-model", help="the DeepSeek arm's OpenRouter model id (default: serve.DS_MODEL)")
     ap.add_argument("--batch", action="store_true", help="batch APIs (Anthropic / OpenRouter): cheaper, async; chat = one batch per turn")
     a = ap.parse_args()
+    if a.ds_model:
+        serve.DS_MODEL = a.ds_model                                  # the DeepSeek arm's payload reads it at call time
     if a.mode == "pairs":
         return do_pairs(a.files[0], a.files[1], a.out, a.n)
     if a.mode == "rescore":                                          # the scorer again over a saved raw.jsonl; no calls
