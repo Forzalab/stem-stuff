@@ -1271,7 +1271,7 @@ class Explain(unittest.TestCase):
         g = self.gates[0]
         self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.NOTE_SCHEMA)
         self.assertTrue(g["response_format"]["json_schema"]["strict"])
-        self.assertEqual((g["provider"], g["model"], g["temperature"]), ({"order": serve.NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True}, serve.OPENROUTER_NOTE_MODELS[0], 0))
+        self.assertEqual((g["provider"], g["model"], g["temperature"]), ({"order": serve.NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True}, serve.OPENROUTER_NOTE_MODELS[0], 0))
         self.assertNotIn("MESSAGE:", g["messages"][1]["content"])                       # a pick, no message
 
     def test_no_slip_caps_confidence_at_medium(self):
@@ -1427,7 +1427,7 @@ class Explain(unittest.TestCase):
         self.assertIn(text, serve.CANNED)
         self.assertEqual(self.seen, [])                                                 # Cluck never called
         g = self.gates[0]
-        self.assertEqual(g["provider"], {"order": serve.NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True})
+        self.assertEqual(g["provider"], {"order": serve.NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True})
         self.assertEqual(g["response_format"]["json_schema"]["schema"], serve.NOTE_SCHEMA)
         self.assertIn("why step 0?", g["messages"][1]["content"])
         self.assertIn("Answer: b) 3", g["messages"][1]["content"])                     # the KEY: "related" is judged against it

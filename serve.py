@@ -1994,9 +1994,11 @@ LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conv
 CLUCK_NUDGE = "quack (｀・ω・´) not yet! look at your slip one more time, the lamp says try again"
 LEAK_GUARD = {"n": 0}                        # replies the leak guard replaced or cut (this process)
 DS_MODEL = "deepseek/deepseek-v4.1-flash"
-# Pinned for prefix caching (one host keeps one cache): a ZDR endpoint of the model with cache-read pricing (GET /api/v1/endpoints/zdr). Others may
-# still answer (allow_fallbacks) but the cache goes cold then. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
-DS_PROVIDER = os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8")
+# Our own fallback list, tried in order, fp8 hosts only (picked Oct 23 by live probe + uptime; 5 of the ZDR hosts are fp4, never benched). deepinfra first:
+# its host holds our prompt cache (cache-read pricing, GET /api/v1/endpoints/zdr). No other host answers (allow_fallbacks off; Tony, Oct 23): if all 5 fail,
+# the Claude arm (the Anthropic API) answers. COST: that turn then runs at Claude prices on a cold Claude cache (the ~4.4K letter block written at 2x,
+# plus the turn), where another OpenRouter host would have stayed at DeepSeek prices. CLUCK_DS_PROVIDER overrides (comma-separated OpenRouter endpoint tags).
+DS_PROVIDERS = [h.strip() for h in os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8,crusoe/fp8,inference-net/fp8,parasail/fp8,siliconflow/fp8").split(",") if h.strip()]
 _INJECT_RE = re.compile(r"reminder\s+from\s+lamp|reveal\s*:|</?xyz\s*>", re.I)
 
 
@@ -2425,13 +2427,14 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
-    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
-                   provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
+    # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
+    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
+                   provider={"order": DS_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
     try:
         with _or_post(payload, key, 25) as r:
             for raw in r:
-                text_late(t0, said)                  # reasoning (low effort: 100-720 tokens) streams for 3-9 s before the first word
+                text_late(t0, said)                  # reasoning (low effort: 100-900 tokens) streams for 3-9 s before the first word
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -2615,12 +2618,55 @@ def _wish_problem(cookie_header, b):
 STOPPED = "\n(Cluck stopped early. Sorry!)".encode()
 
 
+# Cluck's replies carry no emoji (Tony, Oct 23: "regex and strip it out"; the v4 letter bans them, the models still send 🦆). Only real
+# pictographs go: 1F000-1FAFF (the emoji planes: pictographs, skin tones 1F3FB-1F3FF, regional-indicator flags), the BMP emoji whose default
+# presentation is emoji (Emoji_Presentation=Yes), any other symbol made emoji by FE0F, and what joins them (ZWJ, FE0F, keycap, tag chars).
+# Kaomoji stay byte-identical: ✧ ♡ ★ ☆ ♪ ◕ ‿ ｡ ω ヘ ┐ are text-presentation or not emoji at all.
+_EMO_BASE = ("\U0001F000-\U0001FAFF\u231A\u231B\u23E9-\u23EC\u23F0\u23F3\u25FD\u25FE\u2614\u2615\u2648-\u2653\u267F\u2693\u26A1\u26AA\u26AB"
+             "\u26BD\u26BE\u26C4\u26C5\u26CE\u26D4\u26EA\u26F2\u26F3\u26F5\u26FA\u26FD\u2705\u270A\u270B\u2728\u274C\u274E\u2753-\u2755\u2757"
+             "\u2795-\u2797\u27B0\u27BF\u2B1B\u2B1C\u2B50\u2B55")
+_EMO_TEXT = "\u00A9\u00AE\u203C\u2049\u2122\u2139\u2194-\u21AA\u2300-\u23FF\u24C2\u25AA-\u25FE\u2600-\u27BF\u2934\u2935\u2B05-\u2B55\u3030\u303D\u3297\u3299"
+_EMO_MOD = "\uFE0F\u20E3\U000E0020-\U000E007F"                     # VS16, keycap, tag chars (skin tones are inside 1F000-1FAFF)
+_EMO_ONE = f"(?:[{_EMO_BASE}]|[{_EMO_TEXT}]\uFE0F)[{_EMO_MOD}]*"
+_EMO_SEQ = f"{_EMO_ONE}(?:\u200D(?:{_EMO_ONE}|[{_EMO_TEXT}]))*"   # a ZWJ joins only after an emoji (🏃‍♀ with or without the FE0F)
+EMOJI_RE = re.compile(f"[ \\t]*(?:(?:{_EMO_SEQ}|\uFE0F)[ \\t]*)+")  # a stray FE0F goes too; the spaces around a run are settled in emoji_cut
+_EMO_TAIL = re.compile(f"[ \\t{_EMO_BASE}{_EMO_TEXT}{_EMO_MOD}\u200D]+$")
+
+
+def emoji_cut(text, before=""):
+    """text without emoji. A run with spaces around it between two words leaves one space ("nice 🦆 work" -> "nice work"); at a line's start or
+    end, or touching a word with no space ("ok🦆"), nothing is left. before: the text just before (a stream's last character sent)."""
+    def one(m):
+        a = (before + text[:m.start()])[-1:]
+        b = text[m.end():m.end() + 1]
+        sp = m.group(0)[:1] in " \t" or m.group(0)[-1:] in " \t"
+        return " " if sp and a and not a.isspace() and b and not b.isspace() else ""
+    return EMOJI_RE.sub(one, text)
+
+
+def emoji_strip(chunks):
+    """emoji_cut over a stream of text chunks: a chunk's tail that may still be part of an emoji sequence, or spaces an emoji may follow, is
+    HELD until the next chunk shows what it is (a ZWJ family or a flag split across chunks goes whole). Only non-empty pieces are yielded."""
+    buf, last = "", ""
+    for t in chunks:
+        buf += t
+        m = _EMO_TAIL.search(buf)
+        h = m.start() if m and (m.group(0).strip(" \t") == "" or EMOJI_RE.search(m.group(0)) or "\u200D" in m.group(0)) else len(buf)
+        out, buf = emoji_cut(buf[:h], last), buf[h:]
+        if out:
+            last = out[-1]
+            yield out
+    out = emoji_cut(buf, last)
+    if out:
+        yield out
+
+
 def _relay(p, chunks, what, head):
     """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
     (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
     is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket."""
     tr(q=p["code"])
-    t0, it = time.time(), iter(chunks())
+    t0, it = time.time(), emoji_strip(chunks())               # every arm, every reply: no emoji reaches the student (kaomoji stay)
     ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
         first = next(it, None)
@@ -2728,6 +2774,7 @@ def wrap(text, tag):
 NOTE_TIMEOUT = 3                             # seconds; past it Cluck answers without a NOTE (fail open)
 NOTE_EXPLAIN_S = 1.5                         # /explain waits this long (wall clock) for the NOTE, then Cluck starts without it (speed #3)
 # NOTE bench Oct 21 (brain _files/note-bench-2026-10-20): pinned, deepseek mean 0.66 s vs 1.51 s unpinned, same validity + quality
+# Only these hosts (allow_fallbacks off, as on the DeepSeek arm; Tony, Oct 23): no unbenched fp4 host. All three failing = no NOTE (fail open).
 NOTE_PROVIDERS = [h for h in os.environ.get("CLUCK_NOTE_PROVIDERS", "together,baseten/fast,deepinfra/fp8").split(",") if h.strip()]
 NO_TEMP = ("anthropic/", "openai/")          # no endpoint takes temperature with require_parameters: OpenRouter 404s every call
 
@@ -2757,7 +2804,7 @@ def note(p, answer, text, key, tag=None, scratch="", out=None):
         user += "\n\nMESSAGE:\n" + wrap(text, tag)
     for m in OPENROUTER_NOTE_MODELS:
         payload = dict(_model_params(m, 400), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
-                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": True, "zdr": True, "data_collection": "deny", "require_parameters": True},
+                       provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "note", "strict": True, "schema": NOTE_SCHEMA}},
                        messages=[{"role": "system", "content": CLUCK_NOTE}, {"role": "user", "content": user}])
         try:
