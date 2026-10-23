@@ -156,7 +156,11 @@ try {
   void missedBack;
   /* Fable fix 1: a 5-question bank answered all right; the 6th showing (a question already right) is a fresh round, not a closed card */
   if (OWN) await step("5-question bank, all right: the 6th showing can be answered again", async () => {
-    await page.goto(`${BASE}/#BANK_QW5`); await opened(page, "");
+    /* a hash-only goto: same document, so the walk's last question stays up until openBank() swaps in QW5. Wait for a QW5 code,
+       else the 1st "showing" read is that stale question (and its pick can land on either card) */
+    await page.goto(`${BASE}/#BANK_QW5`);
+    await page.waitForFunction(() => /^CALC1_W0[1-5]$/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 10000 });
+    await opened(page, "");
     await page.evaluate(() => window.Rewards && window.Rewards.config({ minDwell: 1e12 }));
     const five = [];
     for (let i = 1; i <= 6; i++) {
