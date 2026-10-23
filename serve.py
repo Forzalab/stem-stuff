@@ -2401,13 +2401,14 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
     head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
-    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
+    # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
+    payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
                    provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
     try:
         with _or_post(payload, key, 25) as r:
             for raw in r:
-                text_late(t0, said)                  # reasoning (low effort: 100-720 tokens) streams for 3-9 s before the first word
+                text_late(t0, said)                  # reasoning (low effort: 100-900 tokens) streams for 3-9 s before the first word
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue

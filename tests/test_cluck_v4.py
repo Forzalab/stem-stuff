@@ -383,6 +383,12 @@ class CacheShape(unittest.TestCase):
         c = self.sent(self.v4(P1, t), "claude")
         self.assertEqual(first, "".join(b["text"] for b in c["messages"][0]["content"]))   # both arms see the same text
 
+    def test_deepseek_budget_leaves_room_after_reasoning(self):
+        # effort low takes up to 60% of max_tokens for reasoning (bench Oct 23: 840 of 1400, every cut reply hit it); the visible reply plus
+        # its <XYZ> note ran to 779 tokens, so the other 40% must hold at least 800
+        d = self.sent(self.v4(P1, serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "")))), "deepseek")
+        self.assertGreaterEqual(d["max_tokens"] * 0.4, 800)
+
 
 class Layers(unittest.TestCase):
     """Tony's cache layers: system 1 (letter) | system 2 (bank) | block A (question) | block B (dynamic)"""
