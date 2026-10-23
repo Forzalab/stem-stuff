@@ -164,6 +164,25 @@ class Grade(unittest.TestCase):
             serve.inherit_tol(d)
             self.assertNotIn("bank_tol", d["problems"][0])
 
+    def test_tolerance_topic_level(self):                                      # todo 32 (a): question tol > topic tol > bank tol > 2%
+        doc = {"tol": 0.01, "topics": {"kin": {"tol": 0.005, "tol_why": "kinematics: g and one trig step"}, "bad": {"tol": 0.5}},
+               "problems": [{"code": "A", "type": "num", "answer": "0.5", "topic": "kin"},
+                            {"code": "B", "type": "multi", "topic": "kin", "parts": [{"type": "num", "answer": "2", "tol": 1e-4}, {"type": "num", "answer": "3"}]},
+                            {"code": "C", "type": "mc", "topic": "kin", "fix": {"answer": "6"}},
+                            {"code": "D", "type": "num", "answer": "1", "topic": "bad"},
+                            {"code": "E", "type": "num", "answer": "1", "topic": "nope"}]}
+        serve.inherit_tol(doc)
+        a, b, c, d, e = doc["problems"]
+        self.assertEqual([serve.tol_of(a), serve.tol_of(b["parts"][0]), serve.tol_of(b["parts"][1]), serve.tol_of(c["fix"]), serve.tol_of(d), serve.tol_of(e)],
+                         [0.005, 1e-4, 0.005, 0.005, 0.01, 0.01])
+        self.assertFalse(serve.unit_correct(a, 0.4965))                     # 0.7% off: the bank's 1% would pass it, the topic's 0.5% does not
+        self.assertTrue(serve.unit_correct(a, 0.498))
+        t = {"topics": {"kin": {"tol": 0.005}}, "problems": [{"code": "F", "type": "num", "answer": "1", "topic": "kin"}]}
+        serve.inherit_tol(t)                                                # a topic tol needs no bank tol
+        self.assertEqual(serve.tol_of(t["problems"][0]), 0.005)
+        m = serve.unfold({"code": "M", "type": "multi", "topic": "kin", "body": [], "parts": [{"type": "mc", "choices": [], "correct": "a"}]})
+        self.assertEqual(m[0]["topic"], "kin")                              # an unfolded mc part keeps its topic
+
     def test_slip_window_d2(self):                                              # Tony D2: slips use SLIP_WIN (0.5% or 3 s.f.), not tol_of
         u = {"type": "num", "answer": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "form": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "tol": 1e-3}
         self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off

@@ -77,8 +77,8 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
-| `tol` | `num`, `expr` | relative tolerance: right when \|typed − answer\| ≤ tol × \|answer\|. Child over parent (WebAssign-style): this question's `tol` > the bank's `tol` (top level, next to `v`) > `0.02` for `num` (WebAssign's default) / `1e-6` for `expr` and a hard-mode fix box. No topic level: banks have no topic grouping. A zero answer is absolute: \|typed\| ≤ 1e-9. Right to 3 s.f. still counts. `wrong` matches and repeats use the question's `tol` or `1e-6`. Slips use their own window, `SLIP_WIN` (slips.py / slips.mjs: within 0.5% of the slip or equal at 3 s.f.; Tony D2), never the grading tol. | **no** |
-| `tol_why` | with `tol` (question or bank) | one line: why this window fits the question and the topic quizzed ("counting: an off-by-one is the error"). `python3 tools/tol.py --write` writes `tol: 1e-4` with its own line on a definitive key (the wiggle test: g 9.8/9.81, π 3.14/3.1416, each decimal datum ±1 in its last digit leave the key unchanged; integers and fractions are exact, the 5 in 5! is 5). `tools/tol.py` and `tools/slips.py` warn (never fail) on a bank with num units and no `tol` at any level, and on an integer key with integer-only inputs and no `tol`. Why a rule at all: the old window `tol*max(1,|answer|)` was absolute below 1, so 0 was right for 0.00624. | **no** |
+| `tol` | `num`, `expr` | relative tolerance: right when \|typed − answer\| ≤ tol × \|answer\|. Child over parent (WebAssign-style): this question's `tol` > its topic's `tol` (the question's `topic` names an entry of the bank's top-level `topics`: `{"kin": {"tol": 0.01, "tol_why": "..."}}`) > the bank's `tol` (top level, next to `v`) > `0.02` for `num` (WebAssign's default) / `1e-6` for `expr` and a hard-mode fix box. A zero answer is absolute: \|typed\| ≤ 1e-9. Right to 3 s.f. still counts. `wrong` matches and repeats use the question's `tol` or `1e-6`. Slips use their own window, `SLIP_WIN` (slips.py / slips.mjs: within 0.5% of the slip or equal at 3 s.f.; Tony D2), never the grading tol. | **no** |
+| `tol_why` | with `tol` (question or bank) | one line: why this window fits the question and the topic quizzed ("counting: an off-by-one is the error"). `python3 tools/tol.py --write` writes `tol: 1e-4` with its own line on a definitive key (the wiggle test: g 9.8/9.81, π 3.14/3.1416, each decimal datum ±1 in its last digit leave the key unchanged; integers and fractions are exact, the 5 in 5! is 5). A form that is not definitive and has no author `tol` at any level gets the nested-wiggle tol with `tol_src: "auto"`: every student rounding profile (each rounding site kept or at 3 s.f., g 9.8/9.81, π 3.14/3.1416, the final at 3 or 4 s.f.) gives E, the worst miss 3 s.f. does not already pass; tol = min(cap, max(0.5%, 1.25 E)), cap = min(2%, half the gap to the nearest one-change slip). An author `tol` at question, topic or bank level beats auto. `tools/tol.py` and `tools/slips.py` warn (never fail) on a bank with num units and no `tol` at any level, and on an integer key with integer-only inputs and no `tol`; tol.py also warns CAP, CANCEL, NONLINEAR, FALLBACK and SF2 (a 2 s.f. student misses the tol: report only). Every warning prints and appends one JSONL line `{ts, bank, item, kind, tol, E, E2, top_site, note}` to `--log PATH` (tol.py default: brain `projects/calc/_files/tol-warnings.jsonl` when that dir exists, else `./tol-warnings.jsonl`; `--no-log` prints only; slips.py logs only with `--log`). Why a rule at all: the old window `tol*max(1,|answer|)` was absolute below 1, so 0 was right for 0.00624. | **no** |
 | `correct` | `mc` | id of the right choice | **no** |
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
@@ -456,6 +456,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
   "properties": {"v": {"anyOf": [{"const": 1}, {"type": "integer", "minimum": 20000101, "maximum": 99991231}], "description": "1 (oldest) or yyyymmdd: the Version table row this file meets"}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
     "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05, "description": "optional bank tol (tolerance 1b): every num/expr unit without its own tol uses it; absent = 2% num / 1e-6 expr"},
     "tol_why": {"type": "string", "minLength": 1, "description": "one line: why the bank tol fits this course"},
+    "topics": {"type": "object", "description": "optional topic tols (tolerance 1b, todo 32): topic id -> {tol, tol_why}; a problem's topic names one. Child over parent: question > topic > bank > default",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_-]{0,31}$"},
+      "additionalProperties": {"type": "object", "required": ["tol", "tol_why"], "additionalProperties": false, "properties": {
+        "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}}}},
     "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
     "burst_gap_s": {"type": "number", "minimum": 60, "maximum": 600, "description": "optional, per bank file (T22): minimum seconds between two reward bursts; absent = 15"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
@@ -524,7 +528,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
-    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
+    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "tol_src": {"const": "auto"}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
     "problem": {
       "type": "object",
       "required": [
@@ -537,6 +541,11 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "code": {
           "type": "string",
           "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$"
+        },
+        "topic": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "description": "optional: the bank topics entry whose tol this question (its parts and fix) inherits when it has no tol of its own"
         },
         "title": {
           "type": "string",
@@ -702,6 +711,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "string",
           "minLength": 1,
           "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
+        },
+        "tol_src": {
+          "const": "auto",
+          "description": "tools/tol.py --write's nested-wiggle tol (re-computed on each run); absent = an author tol (or the wiggle test's 1e-4). An author tol at any level beats auto."
         },
         "pick": {
           "enum": [
@@ -953,6 +966,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "string",
           "minLength": 1,
           "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
+        },
+        "tol_src": {
+          "const": "auto",
+          "description": "tools/tol.py --write's nested-wiggle tol (re-computed on each run); absent = an author tol (or the wiggle test's 1e-4). An author tol at any level beats auto."
         },
         "var": {
           "type": "string",

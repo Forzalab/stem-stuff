@@ -227,6 +227,19 @@ test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dro
   assert.match(read("serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
 });
 
+test("inheritTol: a topic tol rides on every unit of its problems as topic_tol; tolOf order question > topic > bank (todo 32)", () => {
+  const d = { tol: 0.01, topics: { kin: { tol: 0.005 }, bad: { tol: 0.5 } }, problems: [{ code: "A", type: "num", topic: "kin" },
+    { code: "B", type: "multi", topic: "kin", parts: [{ type: "num", tol: 1e-4 }, { type: "num" }] }, { code: "C", type: "mc", topic: "kin", fix: { answer: "6" } },
+    { code: "D", type: "num", topic: "bad" }, { code: "E", type: "num", topic: "toString" }] };
+  C.inheritTol(d);
+  const [a, b, c, e, f] = d.problems;
+  assert.deepEqual([a.topic_tol, b.parts[0].tol, b.parts[1].topic_tol, c.fix.topic_tol, e.topic_tol, f.topic_tol, a.bank_tol], [0.005, 1e-4, 0.005, 0.005, undefined, undefined, 0.01]);
+  const g = { topics: { kin: { tol: 0.005 } }, problems: [{ code: "G", type: "num", topic: "kin" }] };
+  C.inheritTol(g);
+  assert.equal(g.problems[0].topic_tol, 0.005);                  // a topic tol needs no bank tol
+  assert.equal(C.unfold({ code: "M", type: "multi", topic: "kin", body: [], parts: [{ type: "mc" }] })[0].topic, "kin");
+});
+
 test("inheritTol: a bank tol rides on every unit as bank_tol (serve.py inherit_tol); a question tol stays; a bad bank tol is ignored", () => {
   const d = { tol: 0.01, problems: [{ code: "A", type: "num" }, { code: "B", type: "multi", parts: [{ type: "num", tol: 1e-4 }, { type: "num" }] }, { code: "C", type: "mc", fix: { answer: "6" } }] };
   C.inheritTol(d);

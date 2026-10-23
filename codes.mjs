@@ -72,7 +72,7 @@ export function unfold(p) {
   return p.parts.slice(0, 26).map((u, i) => {
     const { label, prompt, ...q } = u && typeof u === "object" ? u : {};
     return { ...q, code: p.code + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[i], ...(p.title ? { title: `${p.title} (${label || i + 1})` } : {}),
-      ...(p.source ? { source: p.source } : {}), body: prompt ? [...body, { type: "text", md: prompt }] : body };
+      ...(p.source ? { source: p.source } : {}), ...(p.topic ? { topic: p.topic } : {}), body: prompt ? [...body, { type: "text", md: prompt }] : body };
   });
 }
 
@@ -80,14 +80,23 @@ export function unfold(p) {
    doc: the parsed JSON. shapeErr(p) -> a string when a problem is malformed (offline.js validate() without the code test).
    -> { flag, kept: [problem], skipped: { shape, noflag, badflag, mismatch, reserved }, fatal }
    flag: the valid "bank" value, else null. fatal: "notbank" (no problems array), else null. */
-/* tolerance 1b (SCHEMA.md tol): a bank-level tol rides on every unit (problem, part, fix) as bank_tol, so app.js tolOf() needs only the
-   unit. serve.py inherit_tol() is the twin. Never overwrites a bank_tol already there. */
+/* tolerance 1b (SCHEMA.md tol): a bank-level tol rides on every unit (problem, part, fix) as bank_tol, and the problem's topic tol
+   (topics[p.topic].tol) as topic_tol, so app.js tolOf() needs only the unit. serve.py inherit_tol() is the twin. Never overwrites one
+   already there. */
+const tolOk = t => typeof t === "number" && t > 0 && t <= 0.05;
 export function inheritTol(doc) {
-  const t = doc && doc.tol;
-  if (!(typeof t === "number" && t > 0 && t <= 0.05)) return;
-  for (const p of Array.isArray(doc.problems) ? doc.problems : [])
+  if (!doc || typeof doc !== "object") return;
+  const t = tolOk(doc.tol) ? doc.tol : undefined;
+  const topics = doc.topics && typeof doc.topics === "object" && !Array.isArray(doc.topics) ? doc.topics : {};
+  for (const p of Array.isArray(doc.problems) ? doc.problems : []) {
+    const tp = p && typeof p === "object" && typeof p.topic === "string" && Object.prototype.hasOwnProperty.call(topics, p.topic) ? topics[p.topic] : null;
+    const tt = tp && typeof tp === "object" && tolOk(tp.tol) ? tp.tol : undefined;
     for (const u of p && typeof p === "object" ? [p, ...(Array.isArray(p.parts) ? p.parts : []), p.fix] : [])
-      if (u && typeof u === "object" && u.bank_tol === undefined) u.bank_tol = t;
+      if (u && typeof u === "object") {
+        if (t !== undefined && u.bank_tol === undefined) u.bank_tol = t;
+        if (tt !== undefined && u.topic_tol === undefined) u.topic_tol = tt;
+      }
+  }
 }
 
 export function screenBank(doc, shapeErr) {

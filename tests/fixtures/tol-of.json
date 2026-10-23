@@ -6,5 +6,9 @@
   [{"type": "num", "bank_tol": 0.01}, 0.01],
   [{"type": "num", "tol": 1e-4, "bank_tol": 0.01}, 1e-4],
   [{"type": "expr", "bank_tol": 0.005}, 0.005],
-  [{"type": "num", "fixbox": true, "bank_tol": 0.01}, 0.01]
+  [{"type": "num", "fixbox": true, "bank_tol": 0.01}, 0.01],
+  [{"type": "num", "topic_tol": 0.005}, 0.005],
+  [{"type": "num", "topic_tol": 0.005, "bank_tol": 0.01}, 0.005],
+  [{"type": "num", "tol": 1e-4, "topic_tol": 0.005, "bank_tol": 0.01}, 1e-4],
+  [{"type": "expr", "topic_tol": 0.001}, 0.001]
 ]
