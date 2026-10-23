@@ -5,6 +5,7 @@ value (CLASH). ignore_slips exempts a value. MISSING there is report only: the g
 
 Run: python3 tools/slips.py [banks/BANK_X.json ...]     (default: problems.json + banks/*.json; report only)
      python3 tools/slips.py --strict ...                 (exit 1 on a gate failure; on an older bank, on any uncovered slip)
+     --log PATH: also append the tol warnings as JSONL (tools/tol.py's format). Only when given: CI and tests never write a log.
 """
 import json
 import sys
@@ -16,7 +17,7 @@ import slips  # noqa: E402  (the root module, not this file)
 import tol as tolwarn  # noqa: E402  (tools/tol.py: tol warnings, never a gate failure)
 
 
-def check(path):
+def check(path, log=None):
     bank = json.loads(Path(path).read_text())
     v = bank.get("v", 1)
     if not (isinstance(v, int) and not isinstance(v, bool)):      # same fallback as serve.py _read: a bad v = 1, with a warning
@@ -48,20 +49,27 @@ def check(path):
             miss = slips.missing(u)
             rows += [f"  {code}: MISSING {v:.4g}  ({fam})" for fam, v in miss]
             bad += 0 if new else len(miss)
-    return bad, rows + tolwarn.warnings(bank, Path(path).name)
+    evs = tolwarn.events(bank, Path(path).name)
+    if log is not None:
+        log += evs
+    return bad, rows + [tolwarn.line(e) for e in evs]
 
 
 def main(argv):
     strict = "--strict" in argv
+    logp = argv[argv.index("--log") + 1] if "--log" in argv and argv.index("--log") + 1 < len(argv) else None
+    argv = [a for i, a in enumerate(argv) if not (logp is not None and i == argv.index("--log") + 1)]
     paths = [a for a in argv if not a.startswith("--")] or [ROOT / "problems.json", *sorted((ROOT / "banks").glob("*.json"))]
-    total = 0
+    total, evs = 0, []
     for path in paths:
-        bad, rows = check(path)
+        bad, rows = check(path, evs)
         total += bad
         if rows:
             print(path)
             print("\n".join(rows))
     print(f"{total} gate failure(s) / uncovered slip(s)")
+    if logp is not None:
+        tolwarn.append_log(logp, evs)
     return 1 if strict and total else 0
 
 

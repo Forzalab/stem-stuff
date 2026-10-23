@@ -88,16 +88,25 @@ BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
 
 
+def _tol_ok(t):
+    return isinstance(t, (int, float)) and not isinstance(t, bool) and 0 < t <= 0.05
+
+
 def inherit_tol(doc):
-    """tolerance 1b: a bank-level `tol` (SCHEMA.md) rides on every unit as bank_tol, so tol_of() needs only the unit (codes.mjs inheritTol)."""
-    t = doc.get("tol")
-    if not (isinstance(t, (int, float)) and not isinstance(t, bool) and 0 < t <= 0.05):
-        return
+    """tolerance 1b: a bank-level `tol` (SCHEMA.md) rides on every unit as bank_tol, and the problem's topic tol (`topics[p.topic].tol`)
+    as topic_tol, so tol_of() needs only the unit (codes.mjs inheritTol). Never overwrites one already there."""
+    t = doc.get("tol") if _tol_ok(doc.get("tol")) else None
+    topics = doc.get("topics") if isinstance(doc.get("topics"), dict) else {}
     for p in doc.get("problems", []):
         if isinstance(p, dict):
+            tp = topics.get(p.get("topic")) if isinstance(p.get("topic"), str) else None
+            tt = tp["tol"] if isinstance(tp, dict) and _tol_ok(tp.get("tol")) else None
             for u in [p, *(p["parts"] if isinstance(p.get("parts"), list) else []), p.get("fix")]:
                 if isinstance(u, dict):
-                    u.setdefault("bank_tol", t)
+                    if t is not None:
+                        u.setdefault("bank_tol", t)
+                    if tt is not None:
+                        u.setdefault("topic_tol", tt)
 
 
 def unfold(p):
@@ -113,6 +122,8 @@ def unfold(p):
             q["title"] = f"{p['title']} ({(u.get('label') if isinstance(u, dict) else None) or i + 1})"
         if p.get("source"):
             q["source"] = p["source"]
+        if p.get("topic"):
+            q["topic"] = p["topic"]
         body = p.get("body") if isinstance(p.get("body"), list) else []
         q["body"] = body + [{"type": "text", "md": u["prompt"]}] if isinstance(u, dict) and u.get("prompt") else body
         out.append(q)
@@ -616,11 +627,11 @@ def same(a, b, tol, floor=0.0):
 
 
 def tol_of(u):
-    """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test) > the bank's tol (bank_tol,
-    inherit_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box (sigfig() grades it). No topic level: the bank
-    schema has no topic grouping. app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches and
+    """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test / auto tol) > the topic's tol
+    (topic_tol, inherit_tol) > the bank's tol (bank_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box
+    (sigfig() grades it). app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches and
     repeats keep tol or 1e-6 (98, 99: two tries); slips use slips.SLIP_WIN (Tony D2)."""
-    t = u.get("tol", u.get("bank_tol"))
+    t = next((u[k] for k in ("tol", "topic_tol", "bank_tol") if u.get(k) is not None), None)
     return t if t is not None else slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6
 
 
