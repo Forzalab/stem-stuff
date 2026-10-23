@@ -48,9 +48,11 @@ class Families(unittest.TestCase):
     def test_factor(self):
         self.eq(fam("3+4", "factor"), [3.5, 14])
 
-    def test_distribute(self):   # the minus reaches one term only
-        self.eq(fam("10-(1+2+4)", "distribute"), [9, 13, 15])
-        self.eq(fam("-2*(3+4)", "distribute"), [-2, 2])
+    def test_distribute(self):   # the minus reaches the first term only (Tony, Oct 23: -(b+c) -> -b+c; S2 of review-227)
+        self.eq(fam("10-(1+2+4)", "distribute"), [15])
+        self.eq(fam("-2*(3+4)", "distribute"), [2])
+        self.eq(fam("10-(4+1)", "distribute"), [7])          # written order: 10-4+1, not 10+4-1
+        self.assertNotEqual(slips.match("10-(1+2+4)", 13, 1e-6), "distribute")   # 10-1-2+4: no habit, no distribute hint
 
     def test_dream(self):
         self.eq(fam("sqrt(9+16)", "dream"), [7])
@@ -115,7 +117,7 @@ class Gate(unittest.TestCase):
         """-(b+c) -> -b+c is a sign flip of c by definition: sign + distribute alone on one value is no CLASH."""
         form = "20-(3+4)"
         shared = set(fam(form, "sign")) & set(fam(form, "distribute"))
-        self.assertEqual(shared, {19.0, 21.0})                  # the two families do land on the same values
+        self.assertEqual(shared, {21.0})                        # the two families do land on the same value
         self.assertEqual(slips.gate({"type": "num", "answer": "13", "form": form}), [])
         clash = slips.gate({"type": "num", "answer": "2", "form": "7-(2+3)"})   # a real clash (drop / power on 4) still fails
         self.assertEqual(clash, ["CLASH 4  (drop / power) one value, two hints"])

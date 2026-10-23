@@ -30,7 +30,9 @@ test("match: the first family within tol (or to 3 s.f.), else null; a bad form o
   assert.equal(match("1/((4/3)^2+(1/3)^2+(2/3)^2)", 0.692, 1e-6), "sign");
   assert.equal(match("2*9.8*3", 60, 1e-6), "g");
   assert.equal(match("sqrt(9+16)", 7, 1e-6), "dream");
-  assert.equal(match("10-(1+2+4)", 13, 1e-6), "distribute");
+  assert.equal(match("10-(1+2+4)", 15, 1e-6), "distribute");
+  assert.notEqual(match("10-(1+2+4)", 13, 1e-6), "distribute");   // the minus reaches the first term only (Tony, Oct 23)
+  assert.equal(match("10-(4+1)", 7, 1e-6), "distribute");          // written order: 10-4+1
   assert.equal(match("10-(1+2+4)", 3.5, 1e-6), null);
   assert.equal(match("1+", 1, 1e-6), null);
   assert.equal(match("2*3", NaN, 1e-6), null);
