@@ -66,13 +66,24 @@ async function open(vp, o = {}) {
   page.errs = []; page.ai = 0;
   page.on("pageerror", e => page.errs.push(String(e)));
   page.on("request", r => { if (/\/(explain|chat)$/.test(new URL(r.url()).pathname)) page.ai++; });
-  await page.clock.install();
+  const t0 = Date.now();
+  await page.clock.install({ time: t0 });
+  if (o.paused) await page.clock.pauseAt(t0 + 1000);   // only runFor / fastForward move it (idle-peek's open(): a ticking clock's real-time sync can set it back)
   await page.goto(BASE + "/#BANK_B7R");
   await page.clock.runFor(3000);
-  await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  const ready = () => !!window.stemDuck && !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden;
+  await (o.paused ? until(page, ready) : page.waitForFunction(ready, null, { timeout: 10000 }));
   if (o.spent) await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));   // this hour's 5 auto asks are used up
   asked = 0;
   return page;
+}
+/* a paused page: wait for fn while its clock steps 50 ms at a time (its own timers still run, in order); 10 s real time max, then FAIL */
+async function until(page, fn, arg) {
+  const end = Date.now() + 10000;
+  while (!(await page.evaluate(fn, arg))) {
+    if (Date.now() > end) throw new Error("timed out waiting for " + String(fn));
+    await page.clock.runFor(50);
+  }
 }
 const pick = async (page, id) => {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
@@ -146,7 +157,9 @@ for (const [tag, vp] of VPS) {
 /* app.js shouldPrefetch (Tony, Oct 18): only the first 2 questions opened this session prefetch; the 3rd asks when the student opens Cluck */
 const go = async (page, code) => { await page.evaluate(c => { location.hash = c; }, code); await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.getElementById("freeze").hidden, code, { timeout: 8000 }); };
 for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once each; Q3 wrong asks nothing; a duck tap opens Cluck with one request; the chip way still works`, async () => {
-  const page = await open(vp);
+  /* paused until Q3's rise (peek.js COOL is 2 min between rises): on a ticking clock the real-time sync's run could end after the
+     2 min jump and set the clock back to before it (idle-peek's open()), so Q3's 0.7 s rise timer fired inside COOL: no duck (5-10% of runs) */
+  const page = await open(vp, { paused: true });
   const first = await page.textContent("#pcode");                       // the bank's first question is Q1 of this session
   const order = [first, ...["CALC1_B7R1", "CALC1_B7R2", "CALC1_B7R3"].filter(c => c !== first)];
   for (const [i, code] of order.slice(0, 2).entries()) {
@@ -157,15 +170,15 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
     assert.equal(asked, i + 1, `${code}: exactly one prefetch`);
     assert.equal(await cluckOpen(page), false, `${code}: Cluck stays closed`);
   }
-  await page.clock.runFor(1000); await page.clock.fastForward(121000);   // past peek.js COOL (2 min between rises; Q1 / Q2 may have risen): flush Q2's 0.7 s rise timer first, then jump (a long runFor sometimes left performance.now behind; fastForward alone fired Q2's rise after the jump)
+  await page.clock.runFor(1000); await page.clock.fastForward(121000);   // past peek.js COOL (Q1 / Q2 may have risen): Q2's 0.7 s rise timer first, then jump
   await go(page, order[2]);
   await pick(page, "b");
-  await page.clock.runFor(1500);
+  await page.clock.runFor(1500);                                        // Q3's rise timer has fired: real time may tick again (Cluck's typing below)
+  await page.clock.resume();
   await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
   await page.waitForTimeout(800);
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
-  await page.waitForFunction(() => window.stemDuck.up, null, { timeout: 4000 }).catch(() => {});   // the verdict can land after runFor: the 0.7 s rise timer then runs on the flowing clock
   assert.equal(await up(page), true, "Q3: the duck rises");
   await page.click(".ck-peek");                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
   await page.clock.runFor(300);
