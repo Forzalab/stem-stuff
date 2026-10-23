@@ -29,6 +29,12 @@
    (the decision tree below; its wrong-pick and item-end branches are log only; trap_beaten reads the `families` the server sends with a right pick); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
    hidden) + MAX per session, a QUIET roll (silence is a valid pick), a kind (nod = the duck rises, no words · short · full), a line by the
    error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; peek.js stemDuck.say carries it.
+   Ladder lane 4, held pick (🔒 Tony Oct 21, brain feedback-specs-2026-10-21 B): a choice selected, not checked, no input for 1×p75 of this
+   item's steps (< 4 samples: HOLD.FALLBACK_S) → one hold nudge = the next ladder piece (app.js window.stemLadder.step()) + one breadcrumb
+   line (copy/nudge-lines.js hold_mid | hold_arrow | hold_end: what the ladder just did, never right vs wrong; the page can't tell). HOLD.CAP
+   per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Farming (ours): the
+   next one comes due with no input since the last → none, the ladder freezes for the item (silent, "jev hold farm"). state().hold
+   { code, n, frozen } is the seam for "no first-try XP bonus after a nudge" (app.js reads it). S2's own nudge keeps 2×p75 / 80 s.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
    those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
 (function () {
@@ -41,6 +47,7 @@
   /* J6 seen constants, all "ours" (J3 bench start values) */
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
   var RING_CAP = 2000, TITLE_WORDS = 8;
+  var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"] };
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -85,13 +92,14 @@
     function rate(l) { return l.filter(function (x) { return x.ok; }).length / l.length; }
   }
 
-  function p75(xs) {
-    if (!xs || xs.length < S2_MIN_N) return S2_FALLBACK_S;
+  function p75(xs, fallback) {
+    if (!xs || xs.length < S2_MIN_N) return fallback || S2_FALLBACK_S;
     var s = xs.slice().sort(function (a, b) { return a - b; });
     return s[Math.ceil(s.length * 0.75) - 1];
   }
 
   /* one learner session. now() = ms; hist = { code: [step seconds] } (the caller stores it).
+     o (lane 4, optional): step() → "mid" | "arrow" | "" (the ladder piece it showed; "" = none left / no ladder)
      o (J5, all optional): say(line, state) → true when the peek showed it · lines = { S2: [...], S6, Q } · on = the nudge states turned on
      (default all 3) · rand() in [0, 1) · quits = { code: times left unsolved } (the caller stores it)
      o (J6 streak signals, optional): size(code) → { w: stem words, ch: choices } for the q_open line (missing → no field)
@@ -144,7 +152,7 @@
         items++;
         q = { code: p.code, open: t, from: t, step: t, depth: 0, ok: false, bad: false, help: false, picks: [], fast: 0, errAt: 0,
           wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false,
-          errs: [], gaps: [], deep: 0, s5: false };
+          errs: [], gaps: [], deep: 0, s5: false, hold: { on: false, n: 0, at: -Infinity, frozen: false }, sheet: false };
         itemNo++;
         lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?") + dims(p.code));
         if (flowRun) hit("F", "run=" + flowRun);
@@ -170,14 +178,14 @@
           tlog(tree({ verdict: "wrong", wrong: q.wrong, fam: p.error ? String(p.error) : "", fams: Object.keys(fams) }));
         }
         else { q.solved = true; if (!q.bad && !q.help && sec(t) < FLOW_S) q.ok = true; }
-        q.from = q.step = t; q.depth = 0;
+        q.from = q.step = t; q.depth = 0; q.hold.on = false;               // checked: the held pick is gone
         if (!q.s6 && s6()) { q.s6 = true; hit("S6", "wrong=" + q.wrong); }
         nudges();
         return p.verdict === "correct" ? seen() : undefined;
       }
       if (name === "cluck_open") {
         if (p.auto) return;                                              // the desktop opens it by itself: not a help request
-        q.help = true; q.ok = false;
+        q.help = true; q.ok = false; q.sheet = true;
         if (nz.up) nudgeEnd(true);                                       // Cluck opened with the nudge still up: it worked
         else if ((t - nz.awayAt) / 1000 < NUDGE.TAKE_S) {                // the tap that opened Cluck put the nudge away first (Tony's dump, Oct 19): taken, not a dismiss
           nz.awayAt = -Infinity; nz.gap /= 2; nz.dismissed--; nz.taps++; log("jev", "nudge took cluck gap=" + nz.gap + "s");
@@ -186,7 +194,12 @@
         if (sec(t) < HELP_S) hit("S7", "cluck at " + sec(t).toFixed(1) + "s");
         return;
       }
-      if (name === "cluck_dwell") log("cluck", "close");
+      if (name === "cluck_dwell") { q.sheet = false; log("cluck", "close"); }
+      if (name === "_hold") {                                            // lane 4: the selected choice ("" = none), from the page's own aria-checked
+        var hc = p.choice == null ? "" : String(p.choice), was = q.hold.on;
+        q.hold.on = !!hc && !q.solved;
+        if (q.hold.on !== was || hc) log("hold", hc || "-");
+      }
       if (name === "cluck_more") log("cluck", "more " + (p.act || "?"));    // the sheet's scroll-down hint: shown / tap / bottom (app.js clMore), log only
       if (name === "_xmark") log("xmark", p.choice == null ? "-" : String(p.choice));   // the student's own X (prove mode); never the auto strike
       if (name === "_kept") log("kept", "n=" + (p.n | 0));              // sugar kept rows after a miss (app.js keep()); a count only, log only
@@ -217,6 +230,23 @@
       }
       if (!q.q && qRule()) { q.q = true; hit("Q", q.firstItem && !q.picks.length ? "first item, no pick" : "left before x" + quits[q.code]); }
       nudges();
+      held();
+    }
+    /* lane 4: the held-pick nudge (see the head comment). The clock = the later of the last input and the last hold nudge */
+    function held() {
+      var h = q.hold, t = now();
+      if (!h.on || h.frozen || h.n >= HOLD.CAP || q.solved || q.sheet || aw || (t - keyAt) / 1000 < NUDGE.TYPING_S) return;
+      var lim = p75(hist[q.code], HOLD.FALLBACK_S);
+      if ((t - Math.max(q.step, h.at)) / 1000 < lim) return;
+      if (h.n && q.step <= h.at) { h.frozen = true; log("jev", "hold farm n=" + h.n); return; }   // sat through the last piece: no more
+      var k = "";
+      try { k = o.step ? o.step() || "" : ""; } catch (e) { k = ""; }
+      var kind = "hold_" + (k || "end"), line = pick(kind), shown = !!(line && o.say && o.say(line, kind));
+      h.at = t;
+      if (!k && !shown) { log("jev", "hold busy"); return; }
+      h.n++;
+      last = { state: "hold", action: "ladder", src: "home", why: "hold n=" + h.n, line: shown ? line : "" };
+      log("jev", "hold n=" + h.n + " p75=" + lim + "s ladder=" + (k || "none") + " " + (shown ? "say" : "quiet"));
     }
     function vis(isHidden) {
       if (!q || hidden === isHidden) return;
@@ -328,11 +358,12 @@
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
           nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() },
-          seen: { n: sz.n, used: Object.keys(sz.used), last: sz.last } };
+          seen: { n: sz.n, used: Object.keys(sz.used), last: sz.last },
+          hold: q ? { code: q.code, n: q.hold.n, frozen: q.hold.frozen } : null };
       }
     };
   }
-  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, share: share, chance: chance, tree: tree, SEEN: SEEN };
+  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN };
 
   /* ---- on for all (art. 11); ?jev=0 = off on this device, ?jev=1 = back on ---- */
   var on = false;
@@ -372,6 +403,12 @@
       (p.body || []).forEach(function (x) { if (x && x.type === "text" && typeof x.md === "string") w += x.md.split(/\s+/).filter(Boolean).length; });
       return { w: w, ch: Array.isArray(p.choices) ? p.choices.length : null };
     },
+    step: function () {                                                // lane 4: the next ladder piece; which kind = the mid count before vs after
+      var L = W.stemLadder, mids = function () { return document.querySelectorAll ? document.querySelectorAll("#fcard li.mid:not([hidden])").length : 0; };
+      if (!L || !L.step) return "";
+      var m = mids();
+      return L.step() ? (mids() > m ? "mid" : "arrow") : "";
+    },
     rand: typeof W.__stemJevRand === "function" ? W.__stemJevRand : Math.random,   // tests pin the roll; the app never sets it
     say: function (line) {
       var d = W.stemDuck;
@@ -388,7 +425,7 @@
       } catch (e) { /* never break the app */ }
     }, r.delay);
   }
-  var old = W.stemT;
+  var old = W.stemT, heldId = "";
   /* the lines to PostHog: one "jev_item" per taken item, through telemetry.js's stemT (its gates + strip rules; a no-op without a key) */
   function ship(all) {
     try { jev.take(all).forEach(function (g) { if (old) old("jev_item", { sid: sid, i: g.i, code: g.c, lines: g.l }); }); } catch (e) { /* never break the app */ }
@@ -396,7 +433,7 @@
   W.stemT = function (name, props) {
     try {
       var r = jev.ev(name, props);
-      if (name === "q_open") ship(false);                                // the item before it ended
+      if (name === "q_open") { ship(false); heldId = ""; }               // the item before it ended; a new item holds nothing yet
       if (name === "pick") save();
       if (r && r.kind) seenShow(r, jev.state().code);
     } catch (e) { /* never break the app */ }
@@ -417,6 +454,16 @@
     W.addEventListener("pagehide", function () { if (jev.leave()) put(QK, quits); ship(true); });
     W.addEventListener("blur", function () { jev.away("blur", true); });
     W.addEventListener("focus", function () { jev.away("blur", false); });
+  }
+  /* lane 4: the held pick = the choice the page marks aria-checked inside #q (MC: one; pick all: any ticked) */
+  function holdNow() {
+    var x = document.querySelector && document.querySelector("#q .opt[aria-checked=true]");
+    return x ? x.getAttribute("data-id") || "?" : "";
+  }
+  if (W.MutationObserver && document.documentElement) {
+    new W.MutationObserver(function () {
+      try { var c = holdNow(); if (c !== heldId) { heldId = c; jev.ev("_hold", { choice: c }); } } catch (e) { /* never break the app */ }
+    }).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ["aria-checked"] });
   }
   setInterval(jev.tick, 5000);
   W.stemJev = jev.state; W.stemJev.dump = jev.dump;
