@@ -1891,13 +1891,36 @@ def claude_system(text, extra=""):
     return blocks + ([{"type": "text", "text": extra}] if extra else [])
 
 
-def text_late(t0, said):
-    """raises TimeoutError when no word came yet (said False) and CLUCK_FIRST_TEXT_S (default 6) went by since the request (t0): urlopen's
-    timeout is per read, so a stream that only thinks or pings never times out on its own (Tony, Oct 20: speed fix #6). The caller's
-    fallback (the other arm, then the old chain) answers instead. Once a word came: never."""
-    cap = _fenv("CLUCK_FIRST_TEXT_S", 6.0)
-    if not said and time.time() - t0 > cap:
-        raise TimeoutError(f"no text in {cap:g} s")
+class FirstTextLate(TimeoutError):
+    """no word in time: .reason "stuck" (the stream went quiet: no reasoning, no text) or "visible-cap" (it kept thinking, no word by the cap)"""
+    def __init__(self, reason, msg):
+        super().__init__(msg)
+        self.reason = reason
+
+
+def text_late(t0, said, last=None, arm="claude"):
+    """raises FirstTextLate when no word came yet (said False): urlopen's timeout is per read, so a stream that only thinks or pings never
+    times out on its own (Tony, Oct 20: speed fix #6). The caller's fallback (the other arm, then the old chain) answers instead. Once a word
+    came: never. Two caps (todo 47, bench Oct 23: DeepSeek's low-effort reasoning takes ~9.7 s median to its first word, 9/12 went past 6 s):
+    - stuck: CLUCK_FIRST_TEXT_S (default 6) since the last progress `last` (a reasoning or text delta; t0 when none yet; pings don't count);
+    - visible-cap: the first word by CLUCK_FIRST_TEXT_S since the request t0 on the Claude arm (as before), CLUCK_FIRST_TEXT_S_DEEPSEEK
+      (default 20) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning."""
+    if said:
+        return
+    stuck = _fenv("CLUCK_FIRST_TEXT_S", 6.0)
+    cap = _fenv("CLUCK_FIRST_TEXT_S_DEEPSEEK", 20.0) if arm == "deepseek" else stuck
+    now = time.time()
+    if now - (t0 if last is None else last) > stuck:
+        raise FirstTextLate("stuck", f"{arm}: no progress in {stuck:g} s")
+    if now - t0 > cap:
+        raise FirstTextLate("visible-cap", f"{arm}: no text in {cap:g} s")
+
+
+def fallback_reason(e):
+    """why an arm gave up before its first word, for the fallback log: FirstTextLate's reason; a socket read that timed out (nothing at all,
+    not even a ping, for urlopen's timeout) = stuck too; anything else (an HTTP error, a stream error event, a cut socket) = error"""
+    r = getattr(e, "reason", None)
+    return r if isinstance(r, str) and isinstance(e, FirstTextLate) else "stuck" if isinstance(e, TimeoutError) else "error"
 
 
 def _claude_one(system, messages, max_tokens, arm="-"):
@@ -1912,7 +1935,7 @@ def _claude_one(system, messages, max_tokens, arm="-"):
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             for raw in r:
-                text_late(t0, said)
+                text_late(t0, said)                  # the Claude arm: the first word by CLUCK_FIRST_TEXT_S (6 s), as before
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -2420,10 +2443,11 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
                    provider={"order": DS_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
+    last = t0                                    # the last progress: a reasoning or text delta (keepalive comments are not progress)
     try:
         with _or_post(payload, key, 25) as r:
             for raw in r:
-                text_late(t0, said)                  # reasoning (low effort: 100-900 tokens) streams for 3-9 s before the first word
+                text_late(t0, said, last, "deepseek")   # reasoning (low effort: 100-900 tokens) streams for 3-20 s before the first word
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
@@ -2437,9 +2461,12 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
                 if isinstance(j.get("usage"), dict):
                     usage = j["usage"]
                 try:
-                    delta = j["choices"][0]["delta"].get("content") or ""
+                    d = j["choices"][0]["delta"]
+                    delta = d.get("content") or ""
                 except (KeyError, IndexError, TypeError, AttributeError):
                     continue
+                if delta or d.get("reasoning") or d.get("reasoning_details"):
+                    last = time.time()
                 said = said or bool(delta.strip())
                 text = plain.feed(delta)
                 if text:
@@ -2458,11 +2485,14 @@ def v4_stream(v4, key, out=None):
         return
     out = set() if out is None else out
     order = ["claude", "deepseek"] if v4["arm"] == "claude" else ["deepseek", "claude"]
+    why = []                                     # each arm that gave up before its first word: "<arm>:<reason>" (the answered line names them)
     for i, name in enumerate(order):
         if name == "claude" and not claude_ready(out):
             log("cluck v4: claude arm off (no key, budget or cooldown)")
+            why.append("claude:off")
             continue
         if name == "deepseek" and (not key or "openrouter" in out):
+            why.append("deepseek:off")
             continue
         sent, t0 = False, time.time()
         try:
@@ -2476,14 +2506,17 @@ def v4_stream(v4, key, out=None):
                 sent = True
                 yield t
             if sent:
-                log(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}")
+                log(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}"
+                    + (f" why={','.join(why)}" if why else ""))
                 return
-            log(f"cluck v4: {name} empty reply")
+            log(f"cluck v4 {v4['code']}: fallback from={name} reason=empty")
+            why.append(name + ":empty")
             incident("cluck", "empty", provider=name, phase="stream", ms=(time.time() - t0) * 1000)
         except Exception as e:  # noqa: BLE001
             if sent:
                 raise
-            log(f"cluck v4: {name}: {e}")
+            log(f"cluck v4 {v4['code']}: fallback from={name} reason={fallback_reason(e)}: {e}")
+            why.append(name + ":" + fallback_reason(e))
             prov, ms = ("claude" if name == "claude" else "openrouter"), (time.time() - t0) * 1000
             if not budget_hit(e, prov, out, phase="headers", ms=ms):
                 incident("cluck", "upstream", provider=prov, model=CLAUDE_MODEL if name == "claude" else DS_MODEL, status=getattr(e, "code", None), err=e,
