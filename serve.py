@@ -1902,25 +1902,25 @@ def text_late(t0, said, last=None, arm="claude"):
     """raises FirstTextLate when no word came yet (said False): urlopen's timeout is per read, so a stream that only thinks or pings never
     times out on its own (Tony, Oct 20: speed fix #6). The caller's fallback (the other arm, then the old chain) answers instead. Once a word
     came: never. Two caps (todo 47, bench Oct 23: DeepSeek's low-effort reasoning takes ~9.7 s median to its first word, 9/12 went past 6 s):
-    - stuck: CLUCK_FIRST_TEXT_S (default 6) since the last progress `last` (a reasoning or text delta; t0 when none yet; pings don't count);
     - visible-cap: the first word by CLUCK_FIRST_TEXT_S since the request t0 on the Claude arm (as before), CLUCK_FIRST_TEXT_S_DEEPSEEK
-      (default 20) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning."""
+      (default 20) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning;
+    - stuck: CLUCK_FIRST_TEXT_S (default 6) since the last progress `last` (a reasoning or text delta, t0 before any; pings don't count),
+      when the caller tracks it (the DeepSeek arm; on the Claude arm both caps are the same 6 s since t0)."""
     if said:
         return
     stuck = _fenv("CLUCK_FIRST_TEXT_S", 6.0)
     cap = _fenv("CLUCK_FIRST_TEXT_S_DEEPSEEK", 20.0) if arm == "deepseek" else stuck
     now = time.time()
-    if now - (t0 if last is None else last) > stuck:
-        raise FirstTextLate("stuck", f"{arm}: no progress in {stuck:g} s")
     if now - t0 > cap:
         raise FirstTextLate("visible-cap", f"{arm}: no text in {cap:g} s")
+    if last is not None and now - last > stuck:
+        raise FirstTextLate("stuck", f"{arm}: no progress in {stuck:g} s")
 
 
 def fallback_reason(e):
     """why an arm gave up before its first word, for the fallback log: FirstTextLate's reason; a socket read that timed out (nothing at all,
     not even a ping, for urlopen's timeout) = stuck too; anything else (an HTTP error, a stream error event, a cut socket) = error"""
-    r = getattr(e, "reason", None)
-    return r if isinstance(r, str) and isinstance(e, FirstTextLate) else "stuck" if isinstance(e, TimeoutError) else "error"
+    return e.reason if isinstance(e, FirstTextLate) else "stuck" if isinstance(e, TimeoutError) else "error"
 
 
 def _claude_one(system, messages, max_tokens, arm="-"):
