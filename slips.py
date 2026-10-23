@@ -116,15 +116,14 @@ def _family(fam, e):
     elif fam == "factor":
         yield Mul(2, e, evaluate=False)
         yield Mul(S.Half, e, evaluate=False)
-    elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches one term only (each term in turn)
+    elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches the first term only (Tony, Oct 23)
         for path, n, _ in nodes:
             neg = [i for i, a in enumerate(n.args) if isinstance(a, Rational) and a < 0] if isinstance(n, Mul) else []   # -2*(..) is Mul(-2, ..)
             if neg and any(isinstance(a, Add) for a in n.args):
                 k, c = next(i for i, a in enumerate(n.args) if isinstance(a, Add)), neg[0]
                 rest = [(-a if i == c else a) for i, a in enumerate(n.args) if i != k and not (i == c and a == -1)]
-                for j, t in enumerate(n.args[k].args):
-                    s = Add(*(_neg(a) if i == j else a for i, a in enumerate(n.args[k].args)), evaluate=False)
-                    yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
+                s = Add(*(_neg(a) if i == 0 else a for i, a in enumerate(n.args[k].args)), evaluate=False)
+                yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
     elif fam == "dream":                                            # (a+b)^2 -> a^2+b^2; sqrt(a+b) -> sqrt(a)+sqrt(b)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5) and isinstance(n.base, Add):
@@ -212,7 +211,7 @@ def form_ok(u):
 def gate(u):
     """Rule 7 rows for one num unit of a bank with v >= CUTOFF: no form; a slip equal to the answer (SAME); two families on one value.
     ignore_slips exempts a value from SAME and the clash rule. sign + distribute alone on one value is no clash: -(b+c) -> -b+c is a sign
-    flip of c by definition, so every a-(b+c) would need ignore_slips (the earlier family, sign, gets the hint)."""
+    flip of c by definition, so every a-(b+c) would need ignore_slips (distribute is first in FAMILIES, so it gets the hint)."""
     if u.get("type") != "num":
         return []
     if not u.get("form"):
