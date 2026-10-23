@@ -2604,12 +2604,55 @@ def _wish_problem(cookie_header, b):
 STOPPED = "\n(Cluck stopped early. Sorry!)".encode()
 
 
+# Cluck's replies carry no emoji (Tony, Oct 23: "regex and strip it out"; the v4 letter bans them, the models still send 🦆). Only real
+# pictographs go: 1F000-1FAFF (the emoji planes: pictographs, skin tones 1F3FB-1F3FF, regional-indicator flags), the BMP emoji whose default
+# presentation is emoji (Emoji_Presentation=Yes), any other symbol made emoji by FE0F, and what joins them (ZWJ, FE0F, keycap, tag chars).
+# Kaomoji stay byte-identical: ✧ ♡ ★ ☆ ♪ ◕ ‿ ｡ ω ヘ ┐ are text-presentation or not emoji at all.
+_EMO_BASE = ("\U0001F000-\U0001FAFF\u231A\u231B\u23E9-\u23EC\u23F0\u23F3\u25FD\u25FE\u2614\u2615\u2648-\u2653\u267F\u2693\u26A1\u26AA\u26AB"
+             "\u26BD\u26BE\u26C4\u26C5\u26CE\u26D4\u26EA\u26F2\u26F3\u26F5\u26FA\u26FD\u2705\u270A\u270B\u2728\u274C\u274E\u2753-\u2755\u2757"
+             "\u2795-\u2797\u27B0\u27BF\u2B1B\u2B1C\u2B50\u2B55")
+_EMO_TEXT = "\u00A9\u00AE\u203C\u2049\u2122\u2139\u2194-\u21AA\u2300-\u23FF\u24C2\u25AA-\u25FE\u2600-\u27BF\u2934\u2935\u2B05-\u2B55\u3030\u303D\u3297\u3299"
+_EMO_MOD = "\uFE0F\u20E3\U000E0020-\U000E007F"                     # VS16, keycap, tag chars (skin tones are inside 1F000-1FAFF)
+_EMO_ONE = f"(?:[{_EMO_BASE}]|[{_EMO_TEXT}]\uFE0F)[{_EMO_MOD}]*"
+_EMO_SEQ = f"{_EMO_ONE}(?:\u200D(?:{_EMO_ONE}|[{_EMO_TEXT}]))*"   # a ZWJ joins only after an emoji (🏃‍♀ with or without the FE0F)
+EMOJI_RE = re.compile(f"[ \\t]*(?:(?:{_EMO_SEQ}|\uFE0F)[ \\t]*)+")  # a stray FE0F goes too; the spaces around a run are settled in emoji_cut
+_EMO_TAIL = re.compile(f"[ \\t{_EMO_BASE}{_EMO_TEXT}{_EMO_MOD}\u200D]+$")
+
+
+def emoji_cut(text, before=""):
+    """text without emoji. A run with spaces around it between two words leaves one space ("nice 🦆 work" -> "nice work"); at a line's start or
+    end, or touching a word with no space ("ok🦆"), nothing is left. before: the text just before (a stream's last character sent)."""
+    def one(m):
+        a = (before + text[:m.start()])[-1:]
+        b = text[m.end():m.end() + 1]
+        sp = m.group(0)[:1] in " \t" or m.group(0)[-1:] in " \t"
+        return " " if sp and a and not a.isspace() and b and not b.isspace() else ""
+    return EMOJI_RE.sub(one, text)
+
+
+def emoji_strip(chunks):
+    """emoji_cut over a stream of text chunks: a chunk's tail that may still be part of an emoji sequence, or spaces an emoji may follow, is
+    HELD until the next chunk shows what it is (a ZWJ family or a flag split across chunks goes whole). Only non-empty pieces are yielded."""
+    buf, last = "", ""
+    for t in chunks:
+        buf += t
+        m = _EMO_TAIL.search(buf)
+        h = m.start() if m and (m.group(0).strip(" \t") == "" or EMOJI_RE.search(m.group(0)) or "\u200D" in m.group(0)) else len(buf)
+        out, buf = emoji_cut(buf[:h], last), buf[h:]
+        if out:
+            last = out[-1]
+            yield out
+    out = emoji_cut(buf, last)
+    if out:
+        yield out
+
+
 def _relay(p, chunks, what, head):
     """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
     (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
     is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket."""
     tr(q=p["code"])
-    t0, it = time.time(), iter(chunks())
+    t0, it = time.time(), emoji_strip(chunks())               # every arm, every reply: no emoji reaches the student (kaomoji stay)
     ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
         first = next(it, None)
