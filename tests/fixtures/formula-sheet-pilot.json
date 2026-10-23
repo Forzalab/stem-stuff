@@ -1,0 +1,243 @@
+{
+ "v": 3,
+ "source": "EXCERPT of brain phys2a-exam3-bank/formula-sheet.json v3 (163 rows): the 8 rows the ladder pilot uses, verbatim. Test fixture only.",
+ "groups": [
+  {
+   "name": "Work and Conservation of Energy",
+   "exam": [
+    2,
+    3
+   ],
+   "rows": [
+    {
+     "id": "KE",
+     "tex": "KE = \\tfrac12 mv^2",
+     "doc": {
+      "sym": [
+       {
+        "s": "KE",
+        "m": "kinetic energy",
+        "u": "J"
+       },
+       {
+        "s": "m",
+        "m": "mass",
+        "u": "kg"
+       },
+       {
+        "s": "v",
+        "m": "speed",
+        "u": "m/s"
+       }
+      ],
+      "when": "Use for the energy of a moving object.",
+      "ex": "m = 2 kg, v = 3 m/s → KE = ½·2·3² = 9 J"
+     }
+    },
+    {
+     "id": "PE_G",
+     "tex": "\\Delta PE = mg\\Delta y",
+     "doc": {
+      "sym": [
+       {
+        "s": "\\Delta PE",
+        "m": "change in gravitational potential energy",
+        "u": "J"
+       },
+       {
+        "s": "m",
+        "m": "mass",
+        "u": "kg"
+       },
+       {
+        "s": "g",
+        "m": "free-fall acceleration, 9.80 m/s²",
+        "u": "m/s²"
+       },
+       {
+        "s": "\\Delta y",
+        "m": "height change, +y up",
+        "u": "m"
+       }
+      ],
+      "when": "Use near Earth surface for gravity energy change. +y is up.",
+      "ex": "+y up: m = 2 kg, Δy = 5 m → ΔPE = 2·9.80·5 = 98 J"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Torque, Moment of Inertia, Rotational Kinetic Energy, Angular Momentum",
+   "exam": [
+    3
+   ],
+   "rows": [
+    {
+     "id": "TORQUE",
+     "tex": "\\tau = rF\\sin\\theta",
+     "doc": {
+      "sym": [
+       {
+        "s": "\\tau",
+        "m": "torque",
+        "u": "N·m"
+       },
+       {
+        "s": "r",
+        "m": "distance from pivot to force point",
+        "u": "m"
+       },
+       {
+        "s": "F",
+        "m": "magnitude of applied force",
+        "u": "N"
+       },
+       {
+        "s": "\\theta",
+        "m": "angle between r and F",
+        "u": "rad"
+       }
+      ],
+      "when": "Use to find the turning effect of a force about a pivot.",
+      "ex": "r=0.30 m, F=50 N, θ=90° → τ = 0.30·50·sin90° = 15 N·m"
+     }
+    },
+    {
+     "id": "I_SUM",
+     "tex": "I = \\Sigma_i m_i r_i^2",
+     "doc": {
+      "sym": [
+       {
+        "s": "I",
+        "m": "moment of inertia",
+        "u": "kg·m²"
+       },
+       {
+        "s": "\\Sigma_i",
+        "m": "sum over all point masses",
+        "u": ""
+       },
+       {
+        "s": "m_i",
+        "m": "mass of particle i",
+        "u": "kg"
+       },
+       {
+        "s": "r_i",
+        "m": "distance of particle i from axis",
+        "u": "m"
+       }
+      ],
+      "when": "Use for a set of point masses around a fixed axis.",
+      "ex": "m=2 kg at r=0.5 m, m=1 kg at r=1.0 m → I = 2·0.25+1·1.0 = 1.5 kg·m²"
+     }
+    },
+    {
+     "id": "KE_ROT",
+     "tex": "KE_r = \\tfrac12 I\\omega^2",
+     "doc": {
+      "sym": [
+       {
+        "s": "KE_r",
+        "m": "rotational kinetic energy",
+        "u": "J"
+       },
+       {
+        "s": "I",
+        "m": "moment of inertia",
+        "u": "kg·m²"
+       },
+       {
+        "s": "\\omega",
+        "m": "angular speed",
+        "u": "rad/s"
+       }
+      ],
+      "when": "Use for the kinetic energy of an object that turns about an axis.",
+      "ex": "I=2.0 kg·m², ω=3.0 rad/s → KE_r = ½·2.0·3.0² = 9.0 J"
+     }
+    },
+    {
+     "id": "L_IW",
+     "tex": "L = I\\omega",
+     "doc": {
+      "sym": [
+       {
+        "s": "L",
+        "m": "angular momentum",
+        "u": "kg·m²/s"
+       },
+       {
+        "s": "I",
+        "m": "moment of inertia",
+        "u": "kg·m²"
+       },
+       {
+        "s": "\\omega",
+        "m": "angular speed",
+        "u": "rad/s"
+       }
+      ],
+      "when": "Use for the angular momentum of a rigid body about a fixed axis.",
+      "ex": "I=0.40 kg·m², ω=5.0 rad/s → L = 0.40·5.0 = 2.0 kg·m²/s"
+     }
+    },
+    {
+     "id": "TAU_IALPHA",
+     "tex": "\\Sigma\\tau = I\\alpha = \\frac{\\Delta L}{\\Delta t}",
+     "doc": {
+      "sym": [
+       {
+        "s": "\\Sigma\\tau",
+        "m": "net external torque",
+        "u": "N·m"
+       },
+       {
+        "s": "I",
+        "m": "moment of inertia",
+        "u": "kg·m²"
+       },
+       {
+        "s": "\\alpha",
+        "m": "angular acceleration",
+        "u": "rad/s²"
+       },
+       {
+        "s": "\\Delta L",
+        "m": "change in angular momentum",
+        "u": "kg·m²/s"
+       },
+       {
+        "s": "\\Delta t",
+        "m": "time interval",
+        "u": "s"
+       }
+      ],
+      "when": "Use to relate net torque to angular acceleration or change in L.",
+      "ex": "Στ=6.0 N·m, I=2.0 kg·m² → α = 6.0/2.0 = 3.0 rad/s²"
+     }
+    },
+    {
+     "id": "L_CONS",
+     "tex": "L_f = L_i \\quad (\\text{no external torques})",
+     "doc": {
+      "sym": [
+       {
+        "s": "L_f",
+        "m": "final angular momentum",
+        "u": "kg·m²/s"
+       },
+       {
+        "s": "L_i",
+        "m": "initial angular momentum",
+        "u": "kg·m²/s"
+       }
+      ],
+      "when": "Use when the net external torque on the system is zero.",
+      "ex": "I_i=4.0 kg·m², ω_i=2.0 rad/s, I_f=2.0 kg·m² → ω_f = 4.0·2.0/2.0 = 4.0 rad/s"
+     }
+    }
+   ]
+  }
+ ]
+}

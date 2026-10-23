@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "note": "Ladder pilot (lane 3, Tony Oct 21): the saccharine.part + saccharine.ladder for 4 BANK_P3Q items (brain phys2a-exam3-bank). The orc merges these into the brain bank; ids are formula-sheet.json v3 ids (tests/fixtures/formula-sheet-pilot.json has the 8 rows). Authored by Claude, needs Tony's read. No final numbers, no letters.",
+  "items": [
+    { "code": "PHYS_Z3X", "title": "Q11 Q4(e): new rotational energy", "part": ["KE"],
+      "ladder": { "mid": [ { "of": "KE", "tex": "v_2 = v_1\\,\\frac{r_1}{r_2}" }, { "of": "KE", "tex": "K = 2\\cdot\\tfrac12 m v_2^2" } ] } },
+    { "code": "PHYS_EPS", "title": "Q11 Q4(d): new speeds of the astronauts", "part": ["L_CONS"],
+      "ladder": { "mid": [ { "of": "L_CONS", "tex": "L = 2\\,m v r" }, { "of": "L_CONS", "tex": "m v_1 r_1 = m v_2 r_2" } ] } },
+    { "code": "PHYS_BTV", "title": "Q11 Q1(c): acceleration of the counterweight", "part": ["TORQUE", "L_IW", "TAU_IALPHA"],
+      "ladder": { "mid": [ { "of": "TORQUE", "tex": "\\tau = mgR" }, { "of": "L_IW", "tex": "L = mvR + MR^2\\,\\frac{v}{R}" }, { "of": "TAU_IALPHA", "tex": "a = \\frac{\\Delta v}{\\Delta t}" } ],
+        "arrows": [ { "from": "TORQUE", "to": "L_IW" }, { "from": "L_IW", "to": "TAU_IALPHA" } ] } },
+    { "code": "PHYS_PGX", "title": "Q11 Q5: minimum ball speed to swing over the top", "part": ["L_CONS", "I_SUM", "KE_ROT", "PE_G"],
+      "ladder": { "mid": [ { "of": "L_CONS", "tex": "L = m v \\ell" }, { "of": "I_SUM", "tex": "I = \\tfrac13 M\\ell^2 + m\\ell^2" }, { "of": "PE_G", "tex": "\\Delta PE = Mg\\ell + mg(2\\ell)" } ],
+        "arrows": [ { "from": "L_CONS", "to": "I_SUM" }, { "from": "I_SUM", "to": "KE_ROT" }, { "from": "KE_ROT", "to": "PE_G" } ] } }
+  ]
+}

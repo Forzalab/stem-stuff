@@ -750,17 +750,62 @@ function renderQuestion() {
 /* sugar: Key formulas (Tony, Oct 5, design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
    they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
 const FC_ARROW = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* The thinking ladder (SCHEMA.md "Formula ladder", Tony Oct 21): with p.ladder the card starts as the big pieces only (the part rows); S.lad pieces are out,
+   in order: the mid pieces (each pops inside its row), then the chain arrows. window.stemLadder.step() shows the next one (Jev's hit, lane 4) */
+const ladderSteps = p => {
+  const ld = p.ladder, ids = (p.formulas || []).map(f => f.id);
+  if (!ld) return [];
+  return [...(ld.mid || []).filter(m => ids.includes(m.of)).map((m, i) => ({ k: "mid", i, ...m })),
+    ...(ld.arrows || []).filter(a => ids.indexOf(a.to) > 0 && ids[ids.indexOf(a.to) - 1] === a.from).map(a => ({ k: "arrow", ...a }))];
+};
+function ladderStep() {
+  const sec = $("#fcard"), steps = S && sec ? ladderSteps(S.prob) : [];
+  if (!steps.length || (S.lad ||= 0) >= steps.length) return false;
+  const st = steps[S.lad++], el = sec.querySelector(st.k === "mid" ? `[data-mid="${st.i}"]` : `.to[data-to="${st.to}"]`);
+  if (el) { el.hidden = false; el.classList.add("lad-in"); }
+  const sr = $("#sr"); if (sr) sr.textContent = st.k === "mid" ? "A step was added to the key formulas." : "A link was added between key formulas.";
+  return true;
+}
+window.stemLadder = { step: ladderStep, left: () => S && $("#fcard") ? ladderSteps(S.prob).length - (S.lad || 0) : 0 };
+/* "?" next to a formula (Tony, Oct 21): a static popup built from the sheet row's doc (each symbol = meaning + unit, when to use it, one tiny example), like code docs. No AI */
+const docText = t => esc(t).replace(/([A-Za-zΔα-ω])_([A-Za-z0-9,]+)/g, "$1<sub>$2</sub>");
+function docHTML(d, id) {
+  const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
+  return `<li class="fdoc" id="${id}" role="group" aria-label="Symbols in this formula" hidden><ul class="fd-sym">${sym}</ul>`
+    + (d.when ? `<p class="fd-w"><b>Use it</b> ${esc(d.when)}</p>` : "") + (d.ex ? `<p class="fd-x"><b>Example</b> ${docText(d.ex)}</p>` : "") + "</li>";
+}
 function formulaCard() {
   $("#fcard")?.remove();
   const fs = S && S.prob.formulas;
   if (!fs || !fs.length || modeOf() !== "sugar") return;
+  const steps = ladderSteps(S.prob), out = st => (S.lad || 0) > steps.indexOf(st);
   const sec = document.createElement("section");
   sec.id = "fcard"; sec.className = "fcard"; sec.setAttribute("role", "note");
   sec.setAttribute("aria-label", fs.length > 1 ? "Key formulas, in order" : "Key formulas");
-  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) =>
-    `${i ? `<li class="to" aria-hidden="true">${FC_ARROW}</li>` : ""}<li class="f">${renderMath(f.tex, false)}</li>`).join("")}</ol>`;
+  sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
+    const arrow = steps.find(x => x.k === "arrow" && x.to === f.id);
+    const q = f.doc ? `<button type="button" class="fq" aria-expanded="false" aria-controls="fd-${i}" aria-label="What do the symbols in this formula mean?">?</button>` : "";
+    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`
+      + (f.doc ? docHTML(f.doc, "fd-" + i) : "")
+      + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span></li>`).join("");
+  }).join("")}</ol>`;
+  sec.addEventListener("click", e => {
+    const b = e.target.closest(".fq"); if (!b) return;
+    const d = sec.querySelector("#" + b.getAttribute("aria-controls")), open = d.hidden;
+    fdocClose(sec);
+    if (open) { d.hidden = false; b.setAttribute("aria-expanded", "true"); }
+  });
   $("#q").after(sec);
 }
+function fdocClose(sec = $("#fcard")) {
+  if (!sec) return;
+  sec.querySelectorAll(".fdoc").forEach(d => { d.hidden = true; });
+  sec.querySelectorAll(".fq").forEach(b => b.setAttribute("aria-expanded", "false"));
+}
+addEventListener("keydown", e => {                                                // Esc closes the "?" popup first (focus back on its "?")
+  if (e.key !== "Escape" || !$("#fcard .fdoc:not([hidden])")) return;
+  const b = $("#fcard .fq[aria-expanded=true]"); fdocClose(); b?.focus();
+});
 const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send"';
 /* the problem's "how to type the answer" line, right above the answer box */
 /* the default choose-all line is sugar only: diet shows the question as authored (Tony, Oct 3).

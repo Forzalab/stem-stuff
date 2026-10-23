@@ -351,3 +351,54 @@ test("saccharine.dead (T28): the 6 dead-easy fixtures validate; a non-boolean or
   assert.ok(!validate(one("dead", "yes")));
   assert.ok(!validate(one("deed", true)));
 });
+
+// saccharine.ladder (lane 3, SCHEMA.md "Formula ladder"): the schema shapes it; ladderFaults is the cross-check the schema cannot say
+function ladderFaults(p) {
+  const sg = p.saccharine ?? {}, ld = sg.ladder, out = [];
+  if (!ld) return out;
+  const part = sg.part ?? [], seen = new Set();
+  if (!part.length) out.push("ladder needs part");
+  for (const m of ld.mid ?? []) {
+    if (!part.includes(m.of)) out.push(`mid.of ${m.of} is not in part`);
+    try { katex.renderToString(m.tex, { throwOnError: true }); } catch (e) { out.push(`mid tex does not render: ${m.tex}`); }
+    if (/\$/.test(m.tex)) out.push(`mid tex has a $: ${m.tex}`);
+  }
+  for (const a of ld.arrows ?? []) {
+    const i = part.indexOf(a.to);
+    if (i < 1 || part[i - 1] !== a.from) out.push(`arrow ${a.from} -> ${a.to} does not join neighbours of part`);
+    if (seen.has(a.to)) out.push(`arrow into ${a.to} twice`);
+    seen.add(a.to);
+  }
+  return out;
+}
+{
+  const fx = JSON.parse(readFileSync(new URL("fixtures/ladder-pilot.json", import.meta.url), "utf8"));
+  const sheet = JSON.parse(readFileSync(new URL("fixtures/formula-sheet-pilot.json", import.meta.url), "utf8"));
+  const ids = new Set(sheet.groups.flatMap(g => g.rows.map(r => r.id)));
+  const base = problems.find(p => p.saccharine) ?? problems[0];
+  const mk = (part, ladder) => ({ ...B, problems: [{ ...base, saccharine: { ...(base.saccharine ?? { title: "Practice Exam 2, Question 1" }), part, ladder } }] });
+  const prob = (part, ladder) => ({ saccharine: { part, ladder } });
+  test("saccharine.ladder: the 4 pilot items (Q11 Q4e + 3) validate, use sheet ids, and pass ladderFaults", () => {
+    assert.equal(fx.items.length, 4);
+    assert.ok(fx.items.some(i => i.code === "PHYS_Z3X"), "Q11 Q4(e) is in the pilot");
+    for (const it of fx.items) {
+      assert.ok(validate(mk(it.part, it.ladder)), `${it.code}: ${JSON.stringify(validate.errors)}`);
+      assert.deepEqual(ladderFaults(prob(it.part, it.ladder)), [], it.code);
+      for (const id of it.part) assert.ok(ids.has(id), `${it.code}: ${id} is not on the sheet excerpt`);
+    }
+  });
+  test("saccharine.ladder: the schema refuses junk; ladderFaults catches the cross-checks", () => {
+    const part = ["TORQUE", "L_IW", "TAU_IALPHA"], ok = { mid: [{ of: "TORQUE", tex: "\\tau = mgR" }], arrows: [{ from: "TORQUE", to: "L_IW" }] };
+    assert.ok(validate(mk(part, ok)));
+    for (const bad of [{}, { mid: [] }, { mid: [{ of: "TORQUE" }] }, { mid: [{ of: "torque", tex: "x" }] }, { mid: [{ of: "TORQUE", tex: "x", why: 1 }] }, { arrows: [{ from: "TORQUE" }] }, { steps: [] }, "yes"])
+      assert.ok(!validate(mk(part, bad)), JSON.stringify(bad));
+    assert.deepEqual(ladderFaults(prob(part, ok)), []);
+    assert.equal(ladderFaults(prob([], ok)).length >= 1, true, "needs part");
+    assert.equal(ladderFaults(prob(part, { mid: [{ of: "KE", tex: "x" }] })).length, 1, "of not in part");
+    assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "\\frac{" }] })).length, 1, "tex that does not render");
+    assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "$x$" }] })).length >= 1, true, "$ in tex");
+    assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "TAU_IALPHA" }] })).length, 1, "not neighbours");
+    assert.equal(ladderFaults(prob(part, { arrows: [{ from: "L_IW", to: "TORQUE" }] })).length, 1, "backwards");
+    assert.equal(ladderFaults(prob(part, { arrows: [{ from: "TORQUE", to: "L_IW" }, { from: "TORQUE", to: "L_IW" }] })).length, 1, "twice");
+  });
+}
