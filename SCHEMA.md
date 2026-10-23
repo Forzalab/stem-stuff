@@ -115,7 +115,7 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `tol` or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
 
 **Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
 - a new family in `slips.FAMILIES`;
@@ -661,12 +661,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "form": {
           "type": "string",
           "minLength": 1,
-          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. The 10 slip families of slips.py are derived from it (runtime hints + tools/slips.py)"
         },
         "ignore_slips": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
-          "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+          "description": "num (server only): slip values that get no family hint and need no wrong entry (exempt from SAME and CLASH)"
         },
         "answer": {
           "type": "string",
@@ -892,12 +892,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "form": {
             "type": "string",
             "minLength": 1,
-            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. The 10 slip families of slips.py are derived from it (runtime hints + tools/slips.py)"
           },
           "ignore_slips": {
             "type": "array",
             "items": {"type": "string", "minLength": 1},
-            "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+            "description": "num (server only): slip values that get no family hint and need no wrong entry (exempt from SAME and CLASH)"
           },
         "label": {
           "type": "string",

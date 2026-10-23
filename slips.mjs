@@ -129,10 +129,8 @@ function* family(fam, e) {                                // slips.py _family, r
       if (!negs.length || k < 0) continue;
       const c = negs[0];
       const rest = n.a.flatMap((a, i) => i === k || (i === c && a.v === -1) ? [] : [i === c ? num(-a.v, a.rat) : a]);
-      for (const j of n.a[k].a.keys()) {
-        const s = add(n.a[k].a.map((a, i) => i === j ? neg(a) : a));
-        yield put(e, p, rest.length ? mul([...rest, s]) : s);
-      }
+      const s = add(n.a[k].a.map((a, i) => i === 0 ? neg(a) : a));   // the first term only (Tony, Oct 23)
+      yield put(e, p, rest.length ? mul([...rest, s]) : s);
     }
   } else if (fam === "dream") {
     for (const [p, n] of ns) if (isExp(n, 2, 0.5) && n.a[0].t === "add") yield put(e, p, add(n.a[0].a.map(t => pow(t, n.a[1]))));
