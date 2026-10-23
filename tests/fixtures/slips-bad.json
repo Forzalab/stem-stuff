@@ -1,0 +1,8 @@
+{
+  "v": 20261022,
+  "problems": [
+    {"code": "SLIP_NOFORM", "type": "num", "answer": "5"},
+    {"code": "SLIP_SAME", "type": "num", "answer": "0", "form": "4-4"},
+    {"code": "SLIP_CLASH", "type": "num", "answer": "2", "form": "7-(2+3)"}
+  ]
+}

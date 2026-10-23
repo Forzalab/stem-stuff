@@ -37,6 +37,17 @@ A bank file may add a `"burst_gap_s"` (optional, top level next to `profile`): a
 
 Keep problems in any order: the page shuffles the list per browser (design/NAV.md), so file order is never shown. Codes must be unique (tests enforce it).
 
+## Version table
+`v` is the file's schema version: `1` (the oldest) or a date as an 8-digit integer, `yyyymmdd` (e.g. `20261022`). Bigger = newer; no `v` counts as `1`.
+Each dated version is one row: what it requires, the check that proves it, and the sunset for banks older than it. Before the sunset an
+older bank still loads, with a banner on its question list: "BANK_X must be updated by 2026-11-05". From the sunset (Pacific date) it does
+not load, and opening it shows that same line instead (serve.py `bank_notice`, `today`; app.js; codes.mjs `bankNotice`). `STEM_TODAY=yyyy-mm-dd` pins that clock; tests/run-all.sh pins 2026-10-23 so the v:1 test banks survive the sunset. problems.json is
+not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION.md. Never change a row; fix a mistake with a new row.
+
+| `v` | Requires | Check | Sunset for older banks |
+|---|---|---|---|
+| `20261022` | `form` on every `num` item and every `num` part (and the slip gate, design/HANDOFF-slips-v2.md rule 7) | `python3 tools/slips.py --strict` | `2026-11-05` |
+
 ## Content rule (Tony, standing)
 - MINIMAL. Textbook language. State the givens and the ask, nothing else.
 - No table unless the data is a table (e.g. a limit table of x vs f(x)). Givens go in the sentence.
@@ -103,6 +114,24 @@ Author in this order:
 
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
+
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
+
+**Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
+- a new family in `slips.FAMILIES`;
+- more positions or variants inside a family (more `units` powers, more `factor` values, every-term `distribute`);
+- stacking (k ≥ 2, slips on slips);
+- a wider `close()` window.
+
+Bench (brain `projects/calc/_files/research-slips-bench-2026-10-23.md`, 31 forms, median / p90):
+
+| k | candidates per form | false match | stack named right |
+|---|---|---|---|
+| 1 | ~15 | 0.4% / 0.9% | 100% |
+| 2 | ~180 | 2.1% / 3.8% | 78% |
+| 3 | ~1900 | 7.8% / 13.3% | 37% |
+
+Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` uses `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
 
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
@@ -423,7 +452,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
   "type": "object",
   "required": ["v", "problems"],
   "additionalProperties": false,
-  "properties": {"v": {"const": 1}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
+  "properties": {"v": {"anyOf": [{"const": 1}, {"type": "integer", "minimum": 20000101, "maximum": 99991231}], "description": "1 (oldest) or yyyymmdd: the Version table row this file meets"}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
     "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
     "burst_gap_s": {"type": "number", "minimum": 60, "maximum": 600, "description": "optional, per bank file (T22): minimum seconds between two reward bursts; absent = 15"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
@@ -628,6 +657,16 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             "$ref": "#/$defs/part"
           },
           "description": "multi: the answer boxes, in order"
+        },
+        "form": {
+          "type": "string",
+          "minLength": 1,
+          "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+        },
+        "ignore_slips": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
         },
         "answer": {
           "type": "string",
@@ -850,6 +889,16 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
       ],
       "additionalProperties": false,
       "properties": {
+          "form": {
+            "type": "string",
+            "minLength": 1,
+            "description": "num (server only): the answer as one expression of plain numbers, e.g. 1/((4/3)^2+(1/3)^2+(2/3)^2). Must equal answer. tools/slips.py derives sign-flip and dropped-term slips from it"
+          },
+          "ignore_slips": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "description": "num (server only): slip values from tools/slips.py that need no wrong entry"
+          },
         "label": {
           "type": "string",
           "minLength": 1,

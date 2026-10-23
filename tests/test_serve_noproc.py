@@ -14,6 +14,7 @@ sys.path.insert(0, ROOT)
 sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json
+os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep loading (serve.today); the Http server inherits it
 import serve  # noqa: E402
 
 

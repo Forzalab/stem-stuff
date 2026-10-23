@@ -3,7 +3,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { evaluate, compile } from "mathjs";
+import * as mathjs from "mathjs";
+import { match as slipMatch, FAMILY_HINT } from "../slips.mjs";
+const { evaluate, compile } = mathjs;
+globalThis.math = mathjs;                                 // slips.mjs parses with the global math.js, as in the browser
 
 const src = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const cut = (a, b) => src.slice(src.indexOf(a), src.indexOf(b));
@@ -11,7 +14,7 @@ const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sug
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
 ${cut("function shown(p) {", "/* One row of pills")}
 return { maxTries, gradeLocal, shown, setMode: m => { MODE = m; } };`;
-const { maxTries, gradeLocal, shown, setMode } = new Function("math", code)({ compile, evaluate, number: Number });
+const { maxTries, gradeLocal, shown, setMode } = new Function("math", "slipMatch", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, slipMatch, FAMILY_HINT);
 
 const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Array.from({ length: n }, (_, i) => ({ id: "abcdefgh"[i], md: "x" })), correct: "a",
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
@@ -157,4 +160,40 @@ test("T19: gradeLocal sends `correct` only once shut, and only in sugar (twin of
     const dr = gradeLocal(d, { choice: "c" });
     assert.ok(!("correct" in dr) && !("correct" in gradeLocal(d, { choice: "a" })), "diet never");
   } finally { setMode("sugar"); }
+});
+
+// slips v2 (design/HANDOFF-slips-v2.md unit C): uploaded banks match a slip of `form` after the author's wrong entries, before the nudge
+const xzp = (extra = {}) => ({ type: "num", code: "PHYS_XZP", answer: "3/7", form: "1/((4/3)^2+(1/3)^2+(2/3)^2)", nudge: "QUACK. Nudge.", ...extra });
+test("slips: PHYS_XZP typed 0.692 -> sign, with the family hint, in diet and sugar", () => {
+  try {
+    for (const m of ["diet", "sugar"]) {
+      setMode(m);
+      const r = gradeLocal(xzp({ code: `PHYS_XZP_${m}` }), { answer: "0.692" });
+      assert.deepEqual([r.verdict, r.error, r.hint, r.triesLeft], ["wrong", "sign", FAMILY_HINT.sign, 1], m);
+    }
+  } finally { setMode("sugar"); }
+});
+test("slips: the author's wrong entry wins over a slip", () => {
+  const r = gradeLocal(xzp({ code: "PHYS_XZP_w", wrong: [{ match: "0.692", error: "double", hint: "QUACK. Author." }] }), { answer: "0.692" });
+  assert.deepEqual([r.error, r.hint], ["double", "QUACK. Author."]);
+});
+test("slips: no slip near the value -> the nudge; a unit without form grades as before", () => {
+  const r = gradeLocal(xzp({ code: "PHYS_XZP_n" }), { answer: "123" });
+  assert.deepEqual([r.verdict, r.error, r.hint], ["wrong", undefined, "QUACK. Nudge."]);
+  const { form, ...bare } = xzp({ code: "PHYS_XZP_b" });
+  const b = gradeLocal(bare, { answer: "0.692" });
+  assert.deepEqual([b.verdict, b.error, b.hint], ["wrong", undefined, "QUACK. Nudge."]);
+  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_c" }), { answer: "0.4286" }).verdict, "correct");
+});
+test("slips: an ignore_slips value gets the nudge, never a family hint (parity with serve.py _slip_table)", () => {
+  const r = gradeLocal(xzp({ code: "PHYS_XZP_i", ignore_slips: ["9/17"] }), { answer: "0.5294" });
+  assert.equal(r.verdict, "wrong");
+  assert.equal(r.error, undefined);
+  assert.equal(r.hint, "QUACK. Nudge.");
+  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_j" }), { answer: "0.5294" }).error, "drop");
+});
+test("slips: a multi part with form gets its slip", () => {
+  const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };
+  const r = gradeLocal(p, { part: 0, answer: "17" });
+  assert.deepEqual([r.error, r.hint, r.part], ["sign", FAMILY_HINT.sign, 0]);
 });

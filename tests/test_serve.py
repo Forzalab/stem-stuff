@@ -21,6 +21,7 @@ sys.argv = [sys.argv[0]]  # serve.py reads argv at import
 import tempfile  # noqa: E402
 TMP = tempfile.mkdtemp(prefix="stem-tries-")
 os.environ["STEM_TRIES"] = os.path.join(TMP, "tries.json")   # never write the real tries.json (the Http server inherits it)
+os.environ["STEM_TODAY"] = "2026-10-23"   # pre-sunset: v:1 fixture banks keep loading (serve.today); the Http server inherits it
 import serve  # noqa: E402
 
 BANK = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "problems.json")))["problems"]}
@@ -356,6 +357,72 @@ class Grade(unittest.TestCase):
             for u in pub["parts"]:
                 self.assertFalse({"answer", "accept", "points", "tol", "wrong"} & set(u), p["code"])
             self.assertEqual(pub["body"], p["body"])
+
+
+class Slips(unittest.TestCase):
+    """slips v2 unit B (design/HANDOFF-slips-v2.md): num grading is author `wrong` -> a slip of `form` (FAMILY_HINT) -> the nudge,
+    in diet and sugar; form, ignore_slips and slip values never reach the client."""
+    FORM = "1/((4/3)^2+(1/3)^2+(2/3)^2)"     # golden PHYS_XZP: 9/21; flipping +(2/3)^2 gives 9/13 = 0.692
+    ITEM = {"code": "PHYS_XZP", "title": "t", "type": "num", "body": "b", "answer": "9/21", "tol": 1e-3, "form": FORM,
+            "ignore_slips": ["2*9/21"]}
+    MULTI = {"code": "PHYS_XZQ", "title": "t", "type": "multi", "body": "b",
+             "parts": [{"label": "a", "type": "num", "answer": "9/21", "tol": 1e-3, "form": FORM, "ignore_slips": ["2*9/21"]},
+                       {"label": "b", "type": "num", "answer": "3"}]}
+
+    def modes(self, p):
+        return (("diet", serve.view(p, "diet"), False), ("sugar", serve.view(p, "sugar"), True))
+
+    def test_golden_sign_in_both_modes(self):
+        for mode, v, rv in self.modes(self.ITEM):
+            r = serve.grade(v, "sl1-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["triesLeft"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 1), mode)
+        for mode, v, rv in self.modes(self.MULTI):
+            r = serve.grade(v, "sl2-" + mode, {"part": 0, "answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["part"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 0), mode)
+            self.assertNotIn("error", serve.grade(v, "sl2-" + mode, {"part": 1, "answer": "0.692"}, reveal=rv))   # part b has no form
+
+    def test_author_wrong_wins(self):
+        p = dict(self.ITEM, wrong=[{"match": "9/13", "error": "flip", "hint": "QUACK. Mine."}])
+        for mode, v, rv in self.modes(p):
+            r = serve.grade(v, "sl3-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["error"], r["hint"]), ("flip", "QUACK. Mine."), mode)
+
+    def test_no_match_and_no_form_nudge(self):
+        bare = {k: v for k, v in self.ITEM.items() if k not in ("form", "ignore_slips")}
+        for p, sid in ((self.ITEM, "sl4"), (bare, "sl5")):
+            for mode, v, rv in self.modes(p):
+                r = serve.grade(v, f"{sid}-{mode}", {"answer": "0.1234"}, reveal=rv)
+                self.assertEqual((r["verdict"], r["hint"]), ("wrong", serve.DEFAULT_NUDGE), mode)
+                self.assertNotIn("error", r)
+        for mode, v, rv in self.modes(bare):                                    # no form: the slip value is just a wrong number
+            r = serve.grade(v, "sl6-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["hint"], "error" in r), (serve.DEFAULT_NUDGE, False), mode)
+        self.assertEqual(serve.grade(self.ITEM, "sl7", {"answer": "9/21"})["verdict"], "correct")
+        self.assertEqual(serve.grade(self.ITEM, "sl8", {"answer": "0.857"})["hint"], serve.DEFAULT_NUDGE)   # factor x2, listed in ignore_slips
+
+    def test_same_slip_is_skipped(self):
+        self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
+        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, 1e-3, ())])
+
+    def test_slow_form_gives_no_slip_fast(self):
+        import time as _t
+        t0 = _t.time()
+        self.assertIsNone(serve.slip_hit({"type": "num", "answer": "5", "form": "10**10**10"}, 7.0))
+        self.assertLess(_t.time() - t0, 2)
+
+    def test_family_hints(self):
+        self.assertEqual(set(serve.FAMILY_HINT), set(serve.slips.FAMILIES))
+        for fam, h in serve.FAMILY_HINT.items():
+            self.assertTrue(h.startswith("QUACK. "), fam)
+            self.assertLessEqual(len(h.split()) - 1, 12, fam)
+            self.assertIsNone(re.search(r"\d", h), fam)                       # no number at all, so never the answer
+
+    def test_public_drops_form(self):
+        for p in (self.ITEM, self.MULTI):
+            for mode in ("diet", "sugar"):
+                pub = json.dumps(serve.public(serve.view(p, mode), "s"))
+                for k in ("form", "ignore_slips", self.FORM, "0.69", "0.43"):
+                    self.assertNotIn(k, pub, (p["code"], mode))
 
 
 class Families(unittest.TestCase):
@@ -927,6 +994,131 @@ class Banks(unittest.TestCase):
         self.assertIn("/banks/", serve.BLOCK_PREFIX)
         self.assertIsNone(serve.BANK_PATH.match("/b/../banks/BANK_AB12.json"))
         self.assertIsNone(serve.BANK_PATH.match("/b/bank_ab12.json"))
+
+
+class BankVersions(unittest.TestCase):
+    """SCHEMA.md Version table / HANDOFF-slips-v2 rule 8: a bank with v < 20261022 (no v = 1) loads with a banner before 2026-11-05
+    and does not load from that date (the same message instead). The clock is serve.today, patched here."""
+    MSG = "{} must be updated by 2026-11-05"
+
+    def setUp(self):
+        self.old = serve.BANKS, serve.TRIES
+        serve.BANKS = tempfile.mkdtemp(prefix="stem-bv-")
+        serve.TRIES = os.path.join(tempfile.mkdtemp(prefix="stem-bvt-"), "tries.json")
+        num = lambda c: {"code": c, "type": "num", "answer": "2", "form": "1+1", "body": [{"type": "text", "md": "1 + 1"}]}
+        for name, v, code in (("BANK_VONE", 1, "CALC1_VO1"), ("BANK_VNO", None, "CALC1_VN1"), ("BANK_VNEW", 20261022, "CALC1_VW1")):
+            doc = {"problems": [num(code)]}
+            if v is not None:
+                doc["v"] = v
+            with open(os.path.join(serve.BANKS, name + ".json"), "w") as f:
+                json.dump(doc, f)
+
+    def tearDown(self):
+        serve.BANKS, serve.TRIES = self.old
+
+    def on(self, y, m, d):
+        return unittest.mock.patch.object(serve, "today", lambda: serve.datetime.date(y, m, d))
+
+    def test_cutoff_matches_slips(self):
+        import importlib.util                                         # the root slips.py by path (tools/slips.py has the same name)
+        spec = importlib.util.spec_from_file_location("slips_root", os.path.join(ROOT, "slips.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        self.assertEqual(serve.CUTOFF, mod.CUTOFF)
+
+    def test_today_is_a_pacific_date(self):
+        self.assertEqual(getattr(serve.PT, "key", "America/Los_Angeles"), "America/Los_Angeles")
+        self.assertIsInstance(serve.today(), serve.datetime.date)
+
+    def test_stem_today_pins_the_clock(self):
+        """STEM_TODAY=yyyy-mm-dd is the clock the sunset reads (no patching of serve.today): 11-06 drops a v:1 bank, 11-04 keeps it."""
+        for day, dropped in (("2026-11-06", True), ("2026-11-05", True), ("2026-11-04", False)):
+            with unittest.mock.patch.dict(os.environ, {"STEM_TODAY": day}):
+                self.assertEqual(serve.today(), serve.datetime.date.fromisoformat(day))
+                self.assertEqual("BANK_VONE" not in serve.banks(), dropped, day)
+                self.assertEqual(serve.bank_payload("BANK_VONE", "s9").get("dropped") is not None, dropped, day)
+        with unittest.mock.patch.dict(os.environ, {"STEM_TODAY": "not-a-date"}), contextlib.redirect_stderr(io.StringIO()):
+            self.assertIsInstance(serve.today(), serve.datetime.date)       # a bad pin falls back to the real clock
+
+    def test_before_the_sunset_old_banks_load_with_a_banner(self):
+        with self.on(2026, 11, 4):
+            for bank, code in (("BANK_VONE", "CALC1_VO1"), ("BANK_VNO", "CALC1_VN1")):
+                b = serve.bank_payload(bank, "s1")
+                self.assertEqual(b["banner"], self.MSG.format(bank))
+                self.assertNotIn("dropped", b)
+                self.assertEqual([p["code"] for p in b["problems"]], [code])
+                self.assertIn(code, serve.problems())
+            self.assertEqual(set(serve.banks()), {"BANK_VONE", "BANK_VNO", "BANK_VNEW"})
+
+    def test_from_the_sunset_old_banks_do_not_load(self):
+        with self.on(2026, 11, 5):
+            for bank, code in (("BANK_VONE", "CALC1_VO1"), ("BANK_VNO", "CALC1_VN1")):
+                b = serve.bank_payload(bank, "s2")
+                self.assertEqual(b, {"code": bank, "problems": [], "dropped": self.MSG.format(bank)})
+                self.assertNotIn(code, serve.problems())
+                self.assertEqual(json.loads(serve.dispatch("GET", f"/b/{bank}.json")[2])["dropped"], self.MSG.format(bank))
+                self.assertEqual(serve.dispatch("GET", f"/p/{code}.json")[0], 404)
+            self.assertEqual(set(serve.banks()), {"BANK_VNEW"})
+            self.assertIsNone(serve.bank_payload("last", "s2"))          # a dropped bank never becomes this browser's last one
+
+    def test_the_index_follows_the_clock(self):
+        with self.on(2026, 11, 4):
+            self.assertIn("BANK_VONE", serve.banks())
+        with self.on(2026, 11, 5):
+            self.assertNotIn("BANK_VONE", serve.banks())
+        with self.on(2026, 11, 4):
+            self.assertIn("BANK_VONE", serve.banks())
+
+    def test_a_current_bank_never_has_a_banner(self):
+        for day in ((2026, 10, 23), (2026, 11, 4), (2026, 11, 5), (2027, 1, 1)):
+            with self.on(*day):
+                b = serve.bank_payload("BANK_VNEW", "s3")
+                self.assertFalse({"banner", "dropped"} & set(b), day)
+                self.assertEqual([p["code"] for p in b["problems"]], ["CALC1_VW1"])
+
+    def test_bank_notice(self):
+        with self.on(2026, 11, 4):
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 1), ("BANK_X1Y must be updated by 2026-11-05", False))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20261021), ("BANK_X1Y must be updated by 2026-11-05", False))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20261022), (None, False))
+        with self.on(2026, 11, 5):
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 1), ("BANK_X1Y must be updated by 2026-11-05", True))
+            self.assertEqual(serve.bank_notice("BANK_X1Y", 20270101), (None, False))
+
+
+class BankVField(unittest.TestCase):
+    """SCHEMA.md Version table: v is an int (1 or yyyymmdd). A string or float v is logged once (naming the file and the value) and read as 1,
+    the same as tools/slips.py; an int, or no v, is quiet."""
+    NUM = {"code": "CALC1_VF1", "type": "num", "answer": "2", "form": "1+1", "body": [{"type": "text", "md": "1 + 1"}]}
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="stem-vf-")
+
+    def read(self, name, doc):
+        path = os.path.join(self.dir, name)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(doc)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            serve._read(path)
+        return path, err.getvalue()
+
+    def test_bad_v_warns_and_reads_as_one(self):
+        for name, raw, shown in (("str.json", '"20261022"', "'20261022'"), ("float.json", "20261022.0", "20261022.0"),
+                                 ("bool.json", "true", "True")):
+            path, out = self.read(name, '{"v": %s, "problems": [%s]}' % (raw, json.dumps(self.NUM)))
+            self.assertEqual(serve._versions[path], 1, name)
+            self.assertEqual(out.count("v must be an int"), 1, out)
+            self.assertIn(path, out)
+            self.assertIn(shown, out)
+            self.assertIn("treated as 1", out)
+            self.assertEqual([p["code"] for p in serve._files[path][1]], ["CALC1_VF1"])   # still loads, as before
+
+    def test_int_v_and_no_v_are_quiet(self):
+        for name, head in (("int.json", '{"v": 20261022, '), ("one.json", '{"v": 1, '), ("none.json", "{")):
+            path, out = self.read(name, head + '"problems": [%s]}' % json.dumps(self.NUM))
+            self.assertEqual(serve._versions[path], 20261022 if name == "int.json" else 1, name)
+            self.assertNotIn("v must be an int", out)
 
 
 class Explain(unittest.TestCase):

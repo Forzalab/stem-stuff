@@ -4,10 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
+# a new push to a PR cancels the run still going for its old commit (main keeps a result per commit)
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   shard:   # the suite in 2 halves that run at the same time (SHARD=N/2 in tests/run-all.sh)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30   # worst measured shard 17.7 min + install; 30 leaves room for a slow runner
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +27,8 @@ jobs:
       - run: |
           cd tests && npm ci
           npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
-          npx playwright install --with-deps chromium
+          # no --with-deps: ubuntu-latest already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
+          npx playwright install chromium
       - run: SHARD=${{ matrix.shard }}/2 tests/run-all.sh
   # the one required check: branch protection wants a check named exactly `all`; it is green only if both shards are
   all:
