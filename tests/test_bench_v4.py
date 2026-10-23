@@ -45,5 +45,32 @@ class Requests(unittest.TestCase):
         self.assertEqual(p["messages"][0]["role"], "system")
 
 
+class Runner(unittest.TestCase):
+    def setUp(self):
+        self.orig = b.item, b.run_call, b.batch_claude, b.EDGE_PICK, b.THREADS
+        b.item = lambda code: dict(P, code=code)
+        b.EDGE_PICK = dict.fromkeys(b.EDGE_PICK, "a")
+        b.THREADS = [("T1", "X", "a", ["?", "esl", "rage"], {}), ("T2", "Y", "a", ["?", "esl", "rage"], {2: ("b", True)})]
+
+    def tearDown(self):
+        b.item, b.run_call, b.batch_claude, b.EDGE_PICK, b.THREADS = self.orig
+
+    def test_chat_rounds_feed_each_reply_into_the_next_turn(self):
+        seen = []
+        b.run_call = lambda arm, v4, spend: (seen.append(v4["turns"]) or ("quack quack (・ω・) look again", 0.001, {"out": 9}, 0.1))
+        rows = b.do_chat("claude:m", 1, b.Spend(1.0, 0.01), 2)
+        self.assertEqual(len(rows), 8)
+        self.assertEqual([len(t) for t in seen if len(t) > 1][:2], [3, 3])       # follow-up 1: wish, reply, question
+        self.assertTrue(all(x["score"] for x in rows))
+
+    def test_batch_path_sends_only_what_fits_the_cap(self):
+        calls = []
+        b.batch_claude = lambda model, bodies: (calls.append(len(bodies)) or [("quack. Pick B.", 0.002, {"out": 5})] * len(bodies))
+        rows = b.do_edge("claude:claude-haiku-5-5", 1, b.Spend(0.05, 0.01), 2, batch=True)
+        self.assertEqual(calls, [5])                                            # 0.05 / 0.01: 5 fit, the rest is "cap"
+        self.assertEqual(sum(1 for x in rows if x["usage"].get("error") == "cap"), len(b.EDGE) - 5)
+        self.assertTrue(any(x["score"]["leak"] for x in rows if x.get("score")))
+
+
 if __name__ == "__main__":
     unittest.main()

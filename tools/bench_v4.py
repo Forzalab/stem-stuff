@@ -7,6 +7,7 @@ LeakGuard, lamp_cut and Plain), so a leak the guard would hide still counts. No 
     python3 tools/bench_v4.py chat --arm deepseek:low [--runs 2]                6 threads: a wish + 3 follow-ups (prompt audit 2026-10-23 §3.5)
     python3 tools/bench_v4.py pairs A/raw.jsonl B/raw.jsonl --out DIR [--n 5]   blind A/B pairs for a human read
 
+--batch: claude arms only, the Message Batches API (50% price; cache hits best-effort; chat runs one batch per turn).
 --arm: claude:<model> | deepseek:low (the prod payload) | deepseek:off (reasoning {"enabled": false}). DeepSeek is pinned to serve.DS_PROVIDER
 with no fallback (so no fp4 host answers). --root DIR: the checkout whose serve.py builds the requests (default: this one). --out DIR: raw.jsonl
 + summary.md. --cap USD: stop before the spend would pass it; --ledger FILE: $ already spent by earlier runs counts against --total-cap.
@@ -134,10 +135,16 @@ def _post(url, body, headers, timeout=150):
         return json.load(r)
 
 
-def call_claude(model, system, messages):
-    key = os.environ.get("CLAUDE_KEY") or os.environ.get("CLAUDE_API") or os.environ.get("ANTHROPIC_API_KEY") or ""
-    body = dict(serve.claude_params(model, serve.V4_MAX), system=system, messages=messages)
-    j = _post("https://api.anthropic.com/v1/messages", body, {"x-api-key": key, "anthropic-version": "2023-06-01"})
+def _claude_key():
+    return os.environ.get("CLAUDE_KEY") or os.environ.get("CLAUDE_API") or os.environ.get("ANTHROPIC_API_KEY") or ""
+
+
+def claude_body(model, system, messages):
+    return dict(serve.claude_params(model, serve.V4_MAX), system=system, messages=messages)
+
+
+def claude_result(model, j, scale=1.0):
+    """(text, $, usage) of one Messages response; scale 0.5 on the Batch API (half price on every token kind)"""
     u = j.get("usage") or {}
     used = {"input_tokens": u.get("input_tokens", 0), "cache_creation_input_tokens": u.get("cache_creation_input_tokens", 0),
             "cache_read_input_tokens": u.get("cache_read_input_tokens", 0), "out": u.get("output_tokens", 0),
@@ -145,9 +152,38 @@ def call_claude(model, system, messages):
     pi, po = serve.CLAUDE_PRICES[model]
     w1h = min(used["w1h"], used["cache_creation_input_tokens"])
     cost = (used["input_tokens"] * pi + (used["cache_creation_input_tokens"] - w1h) * pi * serve.CACHE_WRITE + w1h * pi * 2.0
-            + used["cache_read_input_tokens"] * pi * serve.CACHE_READ + used["out"] * po) / 1e6
+            + used["cache_read_input_tokens"] * pi * serve.CACHE_READ + used["out"] * po) / 1e6 * scale
     text = "".join(c.get("text", "") for c in j.get("content", []) if c.get("type") == "text")
     return text, cost, dict(used, stop=j.get("stop_reason"))
+
+
+def call_claude(model, system, messages):
+    j = _post("https://api.anthropic.com/v1/messages", claude_body(model, system, messages), {"x-api-key": _claude_key(), "anthropic-version": "2023-06-01"})
+    return claude_result(model, j)
+
+
+def batch_claude(model, bodies, poll=20, limit=6 * 3600):
+    """the Message Batches API: one batch of bodies, polled until it ends; [(text, $, usage) or None] in input order (custom_id = index)"""
+    h = {"x-api-key": _claude_key(), "anthropic-version": "2023-06-01"}
+    b = _post("https://api.anthropic.com/v1/messages/batches", {"requests": [{"custom_id": str(i), "params": x} for i, x in enumerate(bodies)]}, h)
+    print(f"batch {b['id']}: {len(bodies)} requests", file=sys.stderr, flush=True)
+    t0 = time.time()
+    while b.get("processing_status") != "ended":
+        if time.time() - t0 > limit:
+            raise TimeoutError(f"batch {b['id']} not ended after {limit} s")
+        time.sleep(poll)
+        with urllib.request.urlopen(urllib.request.Request(f"https://api.anthropic.com/v1/messages/batches/{b['id']}", headers=h), timeout=60) as r:
+            b = json.load(r)
+    out = [None] * len(bodies)
+    with urllib.request.urlopen(urllib.request.Request(b["results_url"], headers=h), timeout=300) as r:
+        for line in r:
+            if line.strip():
+                x = json.loads(line)
+                res = x["result"]
+                out[int(x["custom_id"])] = (claude_result(model, res["message"], 0.5) if res.get("type") == "succeeded"
+                                            else (None, 0.0, {"error": res.get("type") + " " + json.dumps(res.get("error"))[:200]}))
+    print(f"batch {b['id']}: ended in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
+    return out
 
 
 def call_deepseek(mode, payload):
@@ -201,6 +237,25 @@ def run_call(arm, v4, spend):
     return None, 0.0, {"error": err}, 0.0
 
 
+def run_many(arm, v4s, spend, workers, batch=False):
+    """run_call over a list (a thread pool), or one Batch API batch (claude arms only): [(text, $, usage, s)]"""
+    if not batch:
+        with cf.ThreadPoolExecutor(workers) as ex:
+            return list(ex.map(lambda v: run_call(arm, v, spend), v4s))
+    kind, _, model = arm.partition(":")
+    if kind != "claude":
+        sys.exit("--batch: claude arms only (OpenRouter has no batch API)")
+    fit = max(0, min(len(v4s), int((spend.cap - spend.spent) / spend.est)))
+    spend.stopped += len(v4s) - fit
+    res = batch_claude(model, [claude_body(model, *claude_request(v)) for v in v4s[:fit]]) if fit else []
+    out = []
+    for r in res:
+        text, cost, u = r if r else (None, 0.0, {"error": "missing"})
+        spend.add(cost)
+        out.append((text, cost, u, 0.0))
+    return out + [(None, 0.0, {"error": "cap"}, 0.0)] * (len(v4s) - fit)
+
+
 def item(code):
     p = serve._index()["by_code"].get(code)
     if not p:
@@ -208,63 +263,57 @@ def item(code):
     return p
 
 
-def edge_jobs(runs):
-    for r in range(runs):
-        for i, (tid, code, rv, q) in enumerate(EDGE):
-            yield (r, i, tid, code, rv, q)
-
-
-def do_edge(arm, runs, spend, workers):
+def do_edge(arm, runs, spend, workers, batch=False):
+    jobs = [(r, i, tid, code, rv == "yes", q) for r in range(runs) for i, (tid, code, rv, q) in enumerate(EDGE)]
+    v4s = [v4_dict(item(code), EDGE_PICK[code], [{"role": "user", "content": serve.v4_user(item(code), EDGE_PICK[code], q, rv)}], rv, arm)
+           for r, i, tid, code, rv, q in jobs]
     rows = []
-
-    def one(job):
-        r, i, tid, code, rv, q = job
-        p, reveal = item(code), rv == "yes"
-        pick = EDGE_PICK[code]
-        v4 = v4_dict(p, pick, [{"role": "user", "content": serve.v4_user(p, pick, q, reveal)}], reveal, arm)
-        text, cost, u, s = run_call(arm, v4, spend)
+    for (r, i, tid, code, reveal, q), (text, cost, u, s) in zip(jobs, run_many(arm, v4s, spend, workers, batch)):
         row = dict(case=f"{i+1}-{tid}", run=r, item=code, reveal=reveal, query=q, turn=0, raw=text, cost=cost, usage=u, sec=round(s, 2))
         if text is not None:
-            row["score"] = score(text, p, reveal, tid, False, serve.explain_prompt(p, pick))
-        return row
-    with cf.ThreadPoolExecutor(workers) as ex:
-        rows = list(ex.map(one, edge_jobs(runs)))
+            p = item(code)
+            row["score"] = score(text, p, reveal, tid, False, serve.explain_prompt(p, EDGE_PICK[code]))
+        rows.append(row)
     return rows
 
 
-def do_chat(arm, runs, spend, workers):
-    def thread(job):
-        r, (name, code, pick0, fus, changes) = job
-        p, out, hist, rows_ = item(code), [], [], []
-        pick, solved = pick0, False
-        for k in range(len(fus) + 1):                               # k = 0: the wish; k >= 1: follow-up k
-            if k in changes:
-                pick, solved = changes[k]
-            n = k + 1
-            reveal = solved or n >= 3                               # serve.cluck_begin: tries out / solved / 3rd turn on
-            rows_.append([n, 2 if solved else int(reveal), "", pick])
+def do_chat(arm, runs, spend, workers, batch=False):
+    """every thread one turn at a time, all threads per round (a round = one batch on --batch): a follow-up needs the reply before it"""
+    live = [dict(r=r, name=name, code=code, fus=fus, changes=changes, p=item(code), hist=[], rows=[], pick=pick0, solved=False)
+            for r in range(runs) for name, code, pick0, fus, changes in THREADS]
+    out = []
+    for k in range(max(len(t[3]) for t in THREADS) + 1):         # k = 0: the wish; k >= 1: follow-up k
+        todo, v4s = [], []
+        for t in live:
+            if k > len(t["fus"]):
+                continue
+            p = t["p"]
+            if k in t["changes"]:
+                t["pick"], t["solved"] = t["changes"][k]
+            reveal = t["solved"] or k + 1 >= 3                      # serve.cluck_begin: tries out / solved / 3rd turn on
+            t["rows"].append([k + 1, 2 if t["solved"] else int(reveal), "", t["pick"]])
             if k == 0:
-                turns = [{"role": "user", "content": serve.v4_user(p, pick, serve.WISH_QUERY, reveal, "", solved)}]
-                tid, q = "wish", serve.WISH_QUERY
+                turns, tid, q = [{"role": "user", "content": serve.v4_user(p, t["pick"], serve.WISH_QUERY, reveal, "", t["solved"])}], "wish", serve.WISH_QUERY
             else:
-                tid = fus[k - 1]
+                tid = t["fus"][k - 1]
                 q = FOLLOW[tid]
-                hist.append({"role": "user", "content": q})
-                turns = serve.v4_chat_turns(p, pick, hist, [list(x) for x in rows_])
-            v4 = v4_dict(p, pick, turns, reveal, arm, chat=k > 0)
-            text, cost, u, s = run_call(arm, v4, spend)
-            row = dict(case=f"{name}-{code}", run=r, item=code, reveal=reveal, solved=solved, pick=pick, query=q, tid=tid, turn=k, raw=text,
-                       cost=cost, usage=u, sec=round(s, 2), q_blocks=sum("QUESTION:" in json.dumps(m["content"]) for m in turns if m["role"] == "user"))
-            if text is None:
-                out.append(row)
-                break
-            row["score"] = score(text, p, reveal, tid, solved, serve.explain_prompt(p, pick))
+                t["hist"].append({"role": "user", "content": q})
+                turns = serve.v4_chat_turns(p, t["pick"], t["hist"], [list(x) for x in t["rows"]])
+            todo.append((t, turns, tid, q, reveal))
+            v4s.append(v4_dict(p, t["pick"], turns, reveal, arm, chat=k > 0))
+        nxt = []
+        for (t, turns, tid, q, reveal), (text, cost, u, s) in zip(todo, run_many(arm, v4s, spend, workers, batch)):
+            row = dict(case=f"{t['name']}-{t['code']}", run=t["r"], item=t["code"], reveal=reveal, solved=t["solved"], pick=t["pick"], query=q, tid=tid,
+                       turn=k, raw=text, cost=cost, usage=u, sec=round(s, 2),
+                       q_blocks=sum("QUESTION:" in json.dumps(m["content"]) for m in turns if m["role"] == "user"))
             out.append(row)
-            hist.append({"role": "assistant", "content": visible(text)})   # the box text the browser sends back (no XYZ)
-        return out
-    jobs = [(r, t) for r in range(runs) for t in THREADS]
-    with cf.ThreadPoolExecutor(workers) as ex:
-        return [row for rs in ex.map(thread, jobs) for row in rs]
+            if text is None:                                         # the thread stops here
+                continue
+            row["score"] = score(text, t["p"], reveal, tid, t["solved"], serve.explain_prompt(t["p"], t["pick"]))
+            t["hist"].append({"role": "assistant", "content": visible(text)})   # the box text the browser sends back (no XYZ)
+            nxt.append(t)
+        live = nxt
+    return sorted(out, key=lambda x: (x["run"], x["case"], x["turn"]))
 
 
 def summarize(rows, arm, label):
@@ -305,7 +354,8 @@ def replies_md(rows):
 def do_pairs(a, b, out, n):
     A = {(x["case"], x["run"], x.get("turn", 0)): x for x in map(json.loads, open(a)) if x.get("raw")}
     B = {(x["case"], x["run"], x.get("turn", 0)): x for x in map(json.loads, open(b)) if x.get("raw")}
-    keys = sorted(k for k in A.keys() & B.keys() if k[2] > 0)          # follow-ups only: the wish is the same layout on both
+    both = sorted(A.keys() & B.keys())
+    keys = [k for k in both if k[2] > 0] or both                       # chat: follow-ups only (the wish is the same layout on both)
     rnd = random.Random(7)
     md, key = [], []
     for i, k in enumerate(rnd.sample(keys, min(n, len(keys)))):
@@ -333,6 +383,7 @@ def main():
     ap.add_argument("--est", type=float, default=0.03, help="$ estimate of one call, for the cap check")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--n", type=int, default=5)
+    ap.add_argument("--batch", action="store_true", help="claude arms: the Message Batches API (half price, async; chat = one batch per turn)")
     a = ap.parse_args()
     if a.mode == "pairs":
         return do_pairs(a.files[0], a.files[1], a.out, a.n)
@@ -340,7 +391,7 @@ def main():
     if a.ledger and os.path.exists(a.ledger):
         before = sum(json.loads(l)["usd"] for l in open(a.ledger) if l.strip())
     spend = Spend(min(a.cap, a.total_cap - before), a.est)
-    rows = (do_edge if a.mode == "edge" else do_chat)(a.arm, a.runs, spend, a.workers)
+    rows = (do_edge if a.mode == "edge" else do_chat)(a.arm, a.runs, spend, a.workers, a.batch)
     os.makedirs(a.out, exist_ok=True)
     with open(os.path.join(a.out, "raw.jsonl"), "w") as f:
         for x in rows:
