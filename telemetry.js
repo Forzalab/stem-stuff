@@ -4,6 +4,7 @@
      - Do Not Track or Global Privacy Control is on;
      - the build stamped no key (<meta name="stem-t">: local runs, preview deploys, the offline download).
    Owner tag (Tony Oct 19, Jev constitution art. 11): Tony's own devices add me: "1" | "test" to every event; everyone else, nothing.
+   On those devices only, a graded pick also carries the try trail + slip family (T36, ownerTry); me "test" is marked gt: false.
    Before the libraries load, events wait in a small queue; a bail before then goes out as one raw beacon to PostHog.
    Recording is unmasked on purpose (D20/D24): no mask options here, Clarity masking is off in its dashboard. */
 (function () {
@@ -128,7 +129,7 @@
 
   /* ---- state ---- */
   var queue = [], ph = null, loading = false, bailed = false;
-  var st = { stage: "start", code: null, openAt: 0, picks: [], taps: [], askAt: 0, tokAt: 0, clAt: 0, clPct: 0, tries: null };
+  var st = { stage: "start", code: null, openAt: 0, picks: [], taps: [], askAt: 0, tokAt: 0, clAt: 0, clPct: 0, tries: null, own: {} };
   var lt = null;   // long tasks seen so far (null = the browser has no longtask timing, e.g. Safari)
   try {
     if (W.PerformanceObserver && (PerformanceObserver.supportedEntryTypes || []).indexOf("longtask") >= 0) {
@@ -173,6 +174,18 @@
     } catch (e) { /* ignore */ }
   }
 
+  /* T36 (Freeform T4, error mining): on a graded pick from Tony's own devices (me "1" | "test"), keep the matched slip family (error) and the
+     item's families, and add the try trail for this item (+ part): typed_seq = every typed value (or choice) in order, typed = this one,
+     try_ms = ms since the item opened or since the last try, tries = how many so far. gt = ground truth: false for me "test".
+     Everyone else never reaches this: their pick is stripped as before. */
+  function ownerTry(p, t) {
+    var k = p.part == null ? "-" : String(p.part), o = st.own[k] || (st.own[k] = { seq: [], at: st.openAt });
+    o.seq.push(p.typed != null ? String(p.typed).slice(0, 200) : p.choice == null ? null : p.choice);
+    p.typed_seq = o.seq.slice(); p.typed = o.seq[o.seq.length - 1];
+    p.try_ms = Math.round(t - o.at); o.at = t;
+    p.tries = o.seq.length; p.gt = me === "1";
+  }
+
   /* ---- what the app tells us (app.js hook lines) ---- */
   function stemT(name, props) {
     try {
@@ -182,12 +195,13 @@
         case "_ask": st.askAt = t; st.tokAt = 0; return;                                     // Cluck's stream asked
         case "_tok": if (!st.tokAt) st.tokAt = t; return;                                    // a chunk arrived
         case "q_open":
-          st.code = p.code || null; st.openAt = t; st.picks = []; st.tries = null; st.stage = "open"; break;
+          st.code = p.code || null; st.openAt = t; st.picks = []; st.tries = null; st.stage = "open"; st.own = {}; break;
         case "pick":
           st.tries = typeof p.tries_left === "number" ? p.tries_left : null;
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
-          delete p.error; delete p.families;                                                 // J6: the error family + the item's distractor families stay on device (intent.js reads them; PostHog never gets them)
+          if (me && (p.verdict === "correct" || p.verdict === "wrong")) ownerTry(p, t);        // T36: Tony's own devices only: the full try trail + slip family
+          else { delete p.error; delete p.families; delete p.typed; }                        // J6: the error family + the item's distractor families stay on device (intent.js reads them; PostHog never gets them); T36: so does what was typed
           if (p.verdict === "correct" || p.verdict === "wrong") {
             st.stage = p.right ? "right" : "wrong";
             var why = spamCheck(st.picks, t, p.ms_since_open);
