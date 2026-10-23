@@ -21,3 +21,11 @@
 {"out": "/tmp/bench-out/ds1017/0910-edge", "arm": "deepseek:low", "usd": 0.02344}
 {"out": "/tmp/bench-out/ds1017/1017-chat", "arm": "deepseek:low", "usd": 0.015586}
 {"out": "/tmp/bench-out/ds1017/1017-edge", "arm": "deepseek:low", "usd": 0.017986}
+{"out": "/tmp/bench-out/ds1017/1017-none-edge", "arm": "deepseek:none", "usd": 0.005793}
+{"out": "/tmp/bench-out/ds1017/1017-none-chat", "arm": "deepseek:none", "usd": 0.009462}
+{"out": "/tmp/bench-out/ds1017/1017-high-chat", "arm": "deepseek:high", "usd": 0.017615}
+{"out": "/tmp/bench-out/ds1017/1017-high-edge", "arm": "deepseek:high", "usd": 0.017442}
+{"out": "/tmp/bench-out/ds1017/0910-none-chat", "arm": "deepseek:none", "usd": 0.011043}
+{"out": "/tmp/bench-out/ds1017/0910-none-edge", "arm": "deepseek:none", "usd": 0.010878}
+{"out": "/tmp/bench-out/ds1017/0910-high-chat", "arm": "deepseek:high", "usd": 0.06461}
+{"out": "/tmp/bench-out/ds1017/0910-high-edge", "arm": "deepseek:high", "usd": 0.065817}

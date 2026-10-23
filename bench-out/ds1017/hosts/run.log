@@ -1,0 +1,37 @@
+inference-net/us p0 status=200 fin=stop t1=13.957 tot=15.995 chars=955 reason_tok=1248 cost=0.00083 fail=None spent=0.00083
+deepinfra/fp8 p0 status=200 fin=stop t1=11.536 tot=21.169 chars=1983 reason_tok=584 cost=0.00038 fail=None spent=0.00121
+inference-net/fp8 p0 status=200 fin=length t1=None tot=22.14 chars=0 reason_tok=2100 cost=0.00109 fail=short/empty content, finish=length spent=0.00230
+deepinfra/fp8/priority p0 status=200 fin=stop t1=14.421 tot=25.363 chars=2237 reason_tok=783 cost=0.00071 fail=None spent=0.00300
+morph/fp8 p0 status=200 fin=stop t1=27.078 tot=31.541 chars=903 reason_tok=1619 cost=0.00129 fail=None spent=0.00429
+novita/fp8 p0 status=200 fin=stop t1=10.883 tot=12.926 chars=970 reason_tok=1202 cost=0.00276 fail=None spent=0.00705
+deepinfra/fp8/flex p0 status=200 fin=length t1=22.024 tot=35.983 chars=3262 reason_tok=1260 cost=0.00051 fail=finish=length spent=0.00756
+nebius/fp8 p0 status=200 fin=length t1=None tot=12.935 chars=0 reason_tok=2099 cost=0.00418 fail=short/empty content, finish=length spent=0.01174
+crusoe/fp8 p0 status=200 fin=length t1=None tot=19.485 chars=0 reason_tok=2100 cost=0.00413 fail=short/empty content, finish=length spent=0.01587
+parasail/fp8 p0 status=200 fin=stop t1=7.182 tot=8.145 chars=694 reason_tok=1211 cost=0.00175 fail=None spent=0.01762
+siliconflow/fp8 p0 status=200 fin=stop t1=25.259 tot=26.569 chars=650 reason_tok=1828 cost=0.00248 fail=None spent=0.02010
+deepinfra/fp8/flex p1 status=200 fin=stop t1=9.118 tot=22.258 chars=2370 reason_tok=391 cost=0.00028 fail=None spent=0.02038
+deepinfra/fp8/priority p1 status=200 fin=stop t1=21.075 tot=23.913 chars=746 reason_tok=1109 cost=0.00062 fail=None spent=0.02100
+morph/fp8 p1 status=200 fin=error t1=None tot=51.538 chars=0 reason_tok=866 cost=0.00000 fail=error spent=0.02100
+deepinfra/fp8 p1 status=200 fin=stop t1=24.656 tot=31.35 chars=1426 reason_tok=1260 cost=0.00080 fail=None spent=0.02180
+inference-net/us p1 status=200 fin=length t1=None tot=55.79 chars=0 reason_tok=2100 cost=0.00149 fail=short/empty content, finish=length spent=0.02328
+inference-net/fp8 p1 status=200 fin=length t1=None tot=55.851 chars=0 reason_tok=2100 cost=0.00109 fail=short/empty content, finish=length spent=0.02437
+novita/fp8 p1 status=200 fin=length t1=14.025 tot=15.031 chars=612 reason_tok=1890 cost=0.00215 fail=finish=length spent=0.02653
+makora/fp8 p1 status=200 fin=stop t1=16.321 tot=18.992 chars=1226 reason_tok=1301 cost=0.00293 fail=None spent=0.02945
+nebius/fp8 p1 status=200 fin=stop t1=4.65 tot=6.6 chars=1656 reason_tok=733 cost=0.00173 fail=None spent=0.03119
+crusoe/fp8 p1 status=200 fin=length t1=None tot=18.103 chars=0 reason_tok=2098 cost=0.00269 fail=short/empty content, finish=length spent=0.03388
+parasail/fp8 p1 status=200 fin=stop t1=10.261 tot=11.956 chars=850 reason_tok=1048 cost=0.00327 fail=None spent=0.03715
+makora/fp8 p0 status=200 fin=length t1=None tot=100.948 chars=0 reason_tok=2099 cost=0.00334 fail=short/empty content, finish=length spent=0.04049
+deepinfra/fp8/flex p2 status=200 fin=stop t1=5.562 tot=14.554 chars=1301 reason_tok=282 cost=0.00018 fail=None spent=0.04067
+inference-net/us p2 status=200 fin=stop t1=12.427 tot=17.775 chars=1228 reason_tok=656 cost=0.00062 fail=None spent=0.04129
+morph/fp8 p2 status=200 fin=None t1=None tot=21.708 chars=0 reason_tok=None cost=0.00000 fail=error spent=0.04129
+siliconflow/fp8 p1 status=200 fin=length t1=26.365 tot=29.592 chars=905 reason_tok=1755 cost=0.00299 fail=finish=length spent=0.04428
+inference-net/fp8 p2 status=200 fin=stop t1=17.927 tot=19.508 chars=558 reason_tok=1125 cost=0.00069 fail=None spent=0.04496
+novita/fp8 p2 status=200 fin=stop t1=7.086 tot=8.81 chars=672 reason_tok=695 cost=0.00110 fail=None spent=0.04607
+makora/fp8 p2 status=200 fin=stop t1=9.161 tot=11.304 chars=1102 reason_tok=429 cost=0.00174 fail=None spent=0.04781
+deepinfra/fp8/priority p2 status=200 fin=stop t1=14.008 tot=22.193 chars=1635 reason_tok=744 cost=0.00056 fail=None spent=0.04837
+deepinfra/fp8 p2 status=200 fin=stop t1=23.548 tot=26.619 chars=879 reason_tok=1260 cost=0.00048 fail=None spent=0.04885
+crusoe/fp8 p2 status=200 fin=stop t1=14.87 tot=16.213 chars=609 reason_tok=1678 cost=0.00250 fail=None spent=0.05135
+nebius/fp8 p2 status=200 fin=length t1=None tot=12.496 chars=0 reason_tok=2100 cost=0.00418 fail=short/empty content, finish=length spent=0.05553
+parasail/fp8 p2 status=200 fin=stop t1=4.897 tot=10.55 chars=1420 reason_tok=266 cost=0.00254 fail=None spent=0.05807
+siliconflow/fp8 p2 status=200 fin=stop t1=12.117 tot=15.096 chars=1242 reason_tok=704 cost=0.00161 fail=None spent=0.05967
+TOTAL SPENT 0.059675 requests 36 of 36

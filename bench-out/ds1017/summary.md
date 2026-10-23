@@ -15,3 +15,27 @@ Our bench (same cases as B3/C2, DeepSeek arm, effort low, 2100 max_tokens, all r
 - 1017 per host (exam-panic case): parasail/fp8 and siliconflow/fp8 spent the WHOLE 2100 budget on reasoning: 4/4 cut, 3 empty replies. 0910 on the same hosts: 5/6 OK. So "effort low" is not honored for 1017 on those hosts.
 Verdict: stay on 0910. 1017 is the same or slightly better on our quality metrics and cheaper. But it is slower on DeepInfra, its fallback hosts #4/#5 give empty replies, and once it leaked reasoning text into the reply. Re-check in a week (host support for effort low on 1017, DeepInfra speed).
 Spend: ~$0.11 for this round (ledger $0.0784 + off-ledger streaming probes ~$0.03).
+
+## Round 2 (Tony: effort affects every bench; re-scout hosts for 1017)
+
+Effort sweep, PR #248 code, edge 42 + chat 48 per cell, leaks without the CEK_G3D artifact (edge /27, chat /20), mean seconds = whole reply:
+
+| model | effort | leaks edge | leaks chat | no Pick edge+chat | cut | mean s edge / chat | $ per call |
+|---|---|---|---|---|---|---|---|
+| 0910 | none | 3 | 0 | 8+5 | 0 | 6.7 / 4.3 | 0.00026 |
+| 0910 | low (prod) | 1 | 0 | 1+3 | 1 | 17.8 / 9.3 | 0.00050 |
+| 0910 | high | 0/21 | 0 | 1+0 | 1 | 46.8 / 42.5 | 0.0017 (hit my \$0.06 cap: 16 calls skipped, 6 timeouts) |
+| 1017 | none | 2 | 1 | 2+4 | 0 | 8.1 / 6.5 | 0.00017 |
+| 1017 | low | 0 | 0 | 0+3 | 1 | 25.8 / 12.7 | 0.00038 |
+| 1017 | high | 0 | 0 | 0+1 | 0 | 23.5 / 15.2 | 0.00039 |
+
+- Effort none is out for both models (more leaks, many missed final Picks).
+- 1017 at low or high is the best quality cell and costs less than 0910 low. 0910 high is slow and expensive.
+- Every reasoning setting is far over the 6 s first-word cap (todo 47). Only "none" comes close.
+
+1017 host re-scout (Haiku agent, our real payloads, 3 per host, 12 fp8+ZDR hosts, \$0.0597, 20% over its \$0.05 cap because it queued every job before costs came back):
+- 0 failures: parasail/fp8 (first token 7.2 s), deepinfra/fp8/priority (14.4 s, 1-day uptime 92%), deepinfra/fp8 (23.6 s).
+- 1 failure: deepinfra/fp8/flex, novita, makora, inference-net/us, siliconflow. 2 failures: nebius, crusoe, inference-net/fp8, morph.
+- Main failure: the reasoning ignores effort low and fills the 2100 budget (9/36 requests cut; 7 of them empty).
+- Scout top 5: parasail, deepinfra/priority, deepinfra, deepinfra/flex, novita. Only 3 samples per host.
+Verdict round 2: still stay on 0910 low for prod. If 1017 is adopted later, it needs a bigger budget (x4 or more) and its own host list (parasail first, losing the DeepInfra prompt cache), then a re-bench. Today's 5-host list is the right one for 0910 only.

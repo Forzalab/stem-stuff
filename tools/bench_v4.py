@@ -9,7 +9,8 @@ LeakGuard, lamp_cut and Plain), so a leak the guard would hide still counts. No 
 
 --batch: one batch per edge run / per chat turn: Anthropic's Message Batches API (50% price, cache hits best-effort) or OpenRouter's
 batch API (the provider's batch price; DeepInfra only, fp8).
---arm: claude:<model> | deepseek:low (the prod payload) | deepseek:off (reasoning {"enabled": false}). DeepSeek is pinned to serve.DS_PROVIDER
+--arm: claude:<model> | deepseek:low (the prod payload) | deepseek:off (reasoning {"enabled": false}) | deepseek:none / medium / high (that
+reasoning effort). --ds-model swaps the DeepSeek model id. DeepSeek is pinned to serve.DS_PROVIDER(S)
 with no fallback (so no fp4 host answers). --root DIR: the checkout whose serve.py builds the requests (default: this one). --out DIR: raw.jsonl
 + summary.md. --cap USD: stop before the spend would pass it; --ledger FILE: $ already spent by earlier runs counts against --total-cap.
 Keys: CLAUDE_KEY / CLAUDE_API / ANTHROPIC_API_KEY, OPENROUTER_API_KEY. STEM_BANKS: a banks dir that holds the items below.
@@ -191,8 +192,8 @@ def batch_claude(model, bodies, poll=20, limit=6 * 3600):
 def call_deepseek(mode, payload):
     body = dict(payload, stream=False, usage={"include": True})
     body["provider"] = dict(body["provider"], allow_fallbacks=False)
-    if mode == "off":
-        body["reasoning"] = {"enabled": False}
+    if mode != "low":                                                # off = {"enabled": false}; none / medium / high = that effort
+        body["reasoning"] = {"enabled": False} if mode == "off" else {"effort": mode}
     j = _post("https://openrouter.ai/api/v1/chat/completions", body, {"Authorization": "Bearer " + os.environ.get("OPENROUTER_API_KEY", "")})
     u = j.get("usage") or {}
     text = (j["choices"][0]["message"].get("content") or "") if j.get("choices") else ""
@@ -208,8 +209,8 @@ def batch_deepseek(mode, payloads, poll=20, limit=24 * 3600):
     reqs = []
     for i, p in enumerate(payloads):
         body = {k: v for k, v in p.items() if k not in ("stream", "provider", "model")}
-        if mode == "off":
-            body["reasoning"] = {"enabled": False}
+        if mode != "low":
+            body["reasoning"] = {"enabled": False} if mode == "off" else {"effort": mode}
         reqs.append({"custom_id": str(i), "body": body})
     b = _post("https://openrouter.ai/api/v1/batches", {"endpoint": "/v1/chat/completions", "model": payloads[0]["model"],
                                                          "provider": {"only": ["deepinfra"], "allow_fallbacks": False}, "requests": reqs}, h)
