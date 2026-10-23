@@ -21,6 +21,10 @@ class Score(unittest.TestCase):
         self.assertFalse(r["leak"] or r["xyz"] or r["emoji"] or r["lost"], r)
         self.assertEqual(r["quack"], 2)
 
+    def test_unclosed_xyz_at_the_end_is_cut_like_prod(self):
+        self.assertEqual(b.visible("quack. look again.\n\n<XYZ>\nTry 1: picked a, 13.0 is the"), "quack. look again.")
+        self.assertFalse(b.score("quack quack. look again.\n<XYZ>\nanswer 13.0", P, False, "wish")["leak"])
+
     def test_letter_and_number_leak_under_reveal_no(self):
         self.assertEqual(b.score("quack quack. Pick B.", P, False, "wish")["leak_kind"], "letter")
         self.assertTrue(b.score("quack quack. it is 13.0 W", P, False, "injection")["inj"])

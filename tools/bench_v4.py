@@ -70,8 +70,10 @@ PRICE_OR = "usage.cost (OpenRouter)"
 
 
 def visible(raw):
-    """what the student would see before the guards: <XYZ> notes and a leading NOTE line cut"""
-    t = re.sub(r"(?s)<XYZ>.*?</XYZ>", "", raw).strip()
+    """what the student would see before the leak guard: <XYZ> notes cut by serve.Xyz itself (an unclosed one at the end goes too), and a
+    leading NOTE line"""
+    x = serve.Xyz()
+    t = (x.feed(raw) + x.end()).strip()
     first, _, rest = t.partition("\n")
     return (rest if first.lstrip().startswith("NOTE:") else t).strip()
 
@@ -370,7 +372,7 @@ def do_pairs(a, b, out, n):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["edge", "chat", "pairs"])
+    ap.add_argument("mode", choices=["edge", "chat", "pairs", "rescore"])
     ap.add_argument("files", nargs="*")
     ap.add_argument("--arm", default="claude:claude-haiku-5-5")
     ap.add_argument("--runs", type=int, default=2)
@@ -387,6 +389,16 @@ def main():
     a = ap.parse_args()
     if a.mode == "pairs":
         return do_pairs(a.files[0], a.files[1], a.out, a.n)
+    if a.mode == "rescore":                                          # the scorer again over a saved raw.jsonl; no calls
+        rows = [json.loads(l) for l in open(a.files[0])]
+        for x in rows:
+            if x.get("raw") is not None:
+                p, pick = item(x["item"]), x.get("pick", EDGE_PICK.get(x["item"]))
+                x["score"] = score(x["raw"], p, x["reveal"], x.get("tid") or x["case"].split("-", 1)[1], x.get("solved", False), serve.explain_prompt(p, pick))
+        table, _ = summarize(rows, a.arm, a.label)
+        os.makedirs(a.out, exist_ok=True)
+        open(os.path.join(a.out, "table.md"), "w").write(table + "\n")
+        return print(table)
     before = 0.0
     if a.ledger and os.path.exists(a.ledger):
         before = sum(json.loads(l)["usd"] for l in open(a.ledger) if l.strip())
