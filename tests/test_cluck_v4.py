@@ -688,7 +688,7 @@ class Fallbacks(unittest.TestCase):
         self.assertEqual(self.calls, ["claude"])
 
     def test_no_word_by_the_cap_falls_back(self):
-        with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1"}):
+        with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S": "0.1", "CLUCK_FIRST_TEXT_S_DEEPSEEK": "0.1"}):   # DeepSeek's own cap (todo 47)
             self.claude = lambda: Slow(PING * 6 + sse_claude(["Too late.\n"]), {i: 0.03 for i in range(18)})   # pings only for 0.5 s
             self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
             self.assertEqual(self.calls, ["claude", "deepseek"])
@@ -749,6 +749,137 @@ class Fallbacks(unittest.TestCase):
     def test_no_prompt_means_old_path(self):
         with mock.patch.object(serve, "PROMPT_V4", None):
             self.assertEqual(self.run_arm("claude"), "Old chain.\n")
+
+
+class Clock:
+    """a fake serve.time: time() reads self.t, which the Clocked streams move on; the rest is the real time module"""
+    def __init__(self):
+        self.t = 1_000_000.0
+
+    def time(self):
+        return self.t
+
+    def __getattr__(self, k):
+        return getattr(time, k)
+
+
+class Clocked(Resp):
+    """a stream whose line i comes waits[i] fake seconds after the one before (no real sleep)"""
+    def __init__(self, data, waits, clock):
+        super().__init__(data)
+        self.waits, self.clock = waits, clock
+
+    def __iter__(self):
+        for i, line in enumerate(self.read().splitlines(True)):
+            self.clock.t += self.waits.get(i, 0)
+            yield line
+
+
+def think(n):
+    """n reasoning deltas, one SSE event (2 lines) each"""
+    return b"".join(b'data: {"choices": [{"delta": {"content": "", "reasoning": "hmm"}}]}\n\n' for _ in range(n))
+
+
+KEEPALIVE = b": OPENROUTER PROCESSING\n\n"
+
+
+class FirstWordCaps(unittest.TestCase):
+    """todo 47 (bench Oct 23): the DeepSeek arm thinks ~9.7 s (median) before its first word; reasoning is progress, so it is not cut at 6 s.
+    Stuck (nothing but pings for CLUCK_FIRST_TEXT_S) = fall back; thinking with no word by CLUCK_FIRST_TEXT_S_DEEPSEEK (20) = fall back.
+    The Claude arm keeps its 6 s. A fake clock: no real waits."""
+    fake, run_arm = Fallbacks.fake, Fallbacks.run_arm
+
+    def setUp(self):
+        Fallbacks.setUp(self)
+        self.caps = mock.patch.dict(os.environ, {})
+        self.caps.start()
+        for k in ("CLUCK_FIRST_TEXT_S", "CLUCK_FIRST_TEXT_S_DEEPSEEK"):
+            os.environ.pop(k, None)
+        self.clock, self.logs = Clock(), []
+        self.tm = mock.patch.object(serve, "time", self.clock)
+        self.lg = mock.patch.object(serve, "log", self.logs.append)
+        self.tm.start()
+        self.lg.start()
+
+    def tearDown(self):
+        self.lg.stop()
+        self.tm.stop()
+        self.caps.stop()
+        Fallbacks.tearDown(self)
+
+    def joined(self):
+        return "\n".join(self.logs)
+
+    def test_thinking_10s_then_text_is_not_cut(self):
+        # 20 reasoning deltas 0.5 s apart (10 s), then the words: before todo 47 this was cut at 6 s and Claude answered
+        waits = {i: 0.5 for i in range(0, 40, 2)}
+        self.ds = lambda: Clocked(think(20) + sse_or(["Deep thought.\n", "Try again."]), waits, self.clock)
+        self.assertEqual(self.run_arm("deepseek"), "Deep thought.\nTry again.")
+        self.assertEqual(self.calls, ["deepseek"])
+        self.assertIn("answered=deepseek fallback=False", self.joined())
+
+    def test_silence_7s_is_stuck(self):
+        # one reasoning delta, then only keepalive comments for 7 s (pings are not progress), then words that come too late
+        self.ds = lambda: Clocked(think(1) + KEEPALIVE * 2 + sse_or(["Too late.\n"]), {2: 3.5, 4: 3.5}, self.clock)
+        self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
+        self.assertEqual(self.calls, ["deepseek", "claude"])
+        self.assertIn("fallback from=deepseek reason=stuck", self.joined())
+        self.assertIn("answered=claude fallback=True reveal=no why=deepseek:stuck", self.joined())
+
+    def test_nothing_at_all_7s_is_stuck(self):
+        # no line at all for 7 s: the first line that comes finds the stream stuck
+        self.ds = lambda: Clocked(sse_or(["Too late.\n"]), {0: 7.0}, self.clock)
+        self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
+        self.assertIn("fallback from=deepseek reason=stuck", self.joined())
+
+    def test_thinking_past_20s_is_the_visible_cap(self):
+        # reasoning every 1 s (never stuck) for 21 s, no word: the DeepSeek visible cap (20 s)
+        waits = {i: 1.0 for i in range(0, 50, 2)}
+        self.ds = lambda: Clocked(think(25) + sse_or(["Too late.\n"]), waits, self.clock)
+        self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
+        self.assertEqual(self.calls, ["deepseek", "claude"])
+        self.assertIn("fallback from=deepseek reason=visible-cap", self.joined())
+        self.assertIn("why=deepseek:visible-cap", self.joined())
+        self.assertAlmostEqual(self.clock.t - 1_000_000.0, 21.0)        # cut on the first line past 20 s, not later
+
+    def test_deepseek_visible_cap_env(self):
+        with mock.patch.dict(os.environ, {"CLUCK_FIRST_TEXT_S_DEEPSEEK": "12"}):
+            self.ds = lambda: Clocked(think(20) + sse_or(["Too late.\n"]), {i: 1.0 for i in range(0, 40, 2)}, self.clock)
+            self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
+            self.assertAlmostEqual(self.clock.t - 1_000_000.0, 13.0)
+
+    def test_claude_arm_keeps_6s(self):
+        # pings every 1 s (the Claude guard counts only a word), the word at 7 s: cut at 6 s, DeepSeek answers
+        self.claude = lambda: Clocked(PING * 7 + sse_claude(["Too late.\n"]), {i: 1.0 for i in range(0, 21, 3)}, self.clock)
+        self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
+        self.assertEqual(self.calls, ["claude", "deepseek"])
+        self.assertIn("fallback from=claude reason=visible-cap", self.joined())
+        self.calls.clear()                                              # a Claude word at 5.5 s is in time
+        self.claude = lambda: Clocked(sse_claude(["In time.\n"]), {2: 5.5}, self.clock)
+        self.assertEqual(self.run_arm("claude"), "In time.\n")
+        self.assertEqual(self.calls, ["claude"])
+
+    def test_error_reason(self):
+        self.ds = lambda: http_error(502, "bad_gateway")
+        self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
+        self.assertIn("fallback from=deepseek reason=error", self.joined())
+        self.assertIn("why=deepseek:error", self.joined())
+
+    def test_guard_unit(self):
+        t0 = self.clock.t
+        self.clock.t = t0 + 15
+        serve.text_late(t0, False, t0 + 10, "deepseek")                  # thinking, the last delta 5 s ago: fine
+        with self.assertRaises(serve.FirstTextLate) as c:
+            serve.text_late(t0, False, t0 + 8, "deepseek")               # 7 s since the last delta
+        self.assertEqual(c.exception.reason, "stuck")
+        self.assertIsInstance(c.exception, TimeoutError)                  # the callers' except paths still read it as a timeout
+        self.clock.t = t0 + 21
+        with self.assertRaises(serve.FirstTextLate) as c:
+            serve.text_late(t0, False, t0 + 20.5, "deepseek")
+        self.assertEqual(c.exception.reason, "visible-cap")
+        serve.text_late(t0, True, t0, "deepseek")                         # a word came: never
+        self.assertEqual(serve.fallback_reason(TimeoutError("timed out")), "stuck")
+        self.assertEqual(serve.fallback_reason(urllib.error.URLError("refused")), "error")
 
 
 class Cooldown(unittest.TestCase):
