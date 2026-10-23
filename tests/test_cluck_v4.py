@@ -20,7 +20,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "d049f4965c0d3162bf42384218203e5cdea4877fdfdf43b2bc936640386fac23"
+SHA = "7e73b63a7b551bf3513f8bf5a21bf7903d26bfb23e1a9399e07cccc312edb363"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -71,6 +71,13 @@ class PromptFile(unittest.TestCase):
                 self.assertEqual(mine, f.read())                      # the brain copy, byte for byte
         self.assertEqual(hashlib.sha256(mine).hexdigest(), SHA)       # and pinned, where the brain is not mounted
         self.assertEqual(serve.PROMPT_V4.encode("utf-8"), mine)       # the server sends exactly the file
+
+    def test_rules_show_the_literal_xyz_tag(self):
+        # the rule part must spell the tag: "a tag named XYZ" alone let DeepSeek guess ```XYZ fences and "XYZ:" lines, which serve.Xyz
+        # never strips (bench B3, Oct 23: 13/42 replies showed the note)
+        rules = serve.PROMPT_V4.split("[ FORMATTING ]")[1].split("[ ENDFORMATTING ]")[0]
+        self.assertIn("<XYZ>", rules)
+        self.assertIn("</XYZ>", rules)
 
     def test_vercel_ships_it(self):
         with open(os.path.join(ROOT, "vercel.json")) as f:
