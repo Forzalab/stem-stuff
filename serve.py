@@ -1982,11 +1982,11 @@ LAMP = "REMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conv
 CLUCK_NUDGE = "quack (｀・ω・´) not yet! look at your slip one more time, the lamp says try again"
 LEAK_GUARD = {"n": 0}                        # replies the leak guard replaced or cut (this process)
 DS_MODEL = "deepseek/deepseek-v4.1-flash"
-# Pinned for prefix caching (one host keeps one cache): a ZDR endpoint of the model with cache-read pricing (GET /api/v1/endpoints/zdr). No other
-# host answers (allow_fallbacks off; Tony, Oct 23): 5 of the ZDR hosts are fp4, never benched; a failure goes to the Claude arm (the Anthropic API)
-# instead. COST: that turn then runs at Claude prices on a cold Claude cache (the ~4.4K letter block written at 2x, plus the turn), where another
-# OpenRouter host would have stayed at DeepSeek prices. CLUCK_DS_PROVIDER overrides (an OpenRouter endpoint tag).
-DS_PROVIDER = os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8")
+# Our own fallback list, tried in order, fp8 hosts only (picked Oct 23 by live probe + uptime; 5 of the ZDR hosts are fp4, never benched). deepinfra first:
+# its host holds our prompt cache (cache-read pricing, GET /api/v1/endpoints/zdr). No other host answers (allow_fallbacks off; Tony, Oct 23): if all 5 fail,
+# the Claude arm (the Anthropic API) answers. COST: that turn then runs at Claude prices on a cold Claude cache (the ~4.4K letter block written at 2x,
+# plus the turn), where another OpenRouter host would have stayed at DeepSeek prices. CLUCK_DS_PROVIDER overrides (comma-separated OpenRouter endpoint tags).
+DS_PROVIDERS = [h.strip() for h in os.environ.get("CLUCK_DS_PROVIDER", "deepinfra/fp8,crusoe/fp8,inference-net/fp8,parasail/fp8,siliconflow/fp8").split(",") if h.strip()]
 _INJECT_RE = re.compile(r"reminder\s+from\s+lamp|reveal\s*:|</?xyz\s*>", re.I)
 
 
@@ -2405,7 +2405,7 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
     msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
     # x3: reasoning (effort low) takes up to 60% of max_tokens; the reply + its <XYZ> note needs ~800 (bench Oct 23: x2 cut 10/90 mid-note)
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 3, reasoning={"effort": "low"}, stream=True, messages=msgs,
-                   provider={"order": [DS_PROVIDER], "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
+                   provider={"order": DS_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
     try:
         with _or_post(payload, key, 25) as r:

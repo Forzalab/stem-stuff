@@ -369,13 +369,21 @@ class CacheShape(unittest.TestCase):
         bare = lambda ms: json.loads(json.dumps(ms).replace(', "cache_control": {"type": "ephemeral"}', ""))   # a marker is not part of the cache key
         self.assertEqual(bare(b["messages"][:len(a["messages"]) - 1]), bare(a["messages"][:-1]))
 
+    def test_deepseek_hosts(self):
+        self.assertEqual(serve.DS_PROVIDERS, ["deepinfra/fp8", "crusoe/fp8", "inference-net/fp8", "parasail/fp8", "siliconflow/fp8"])   # our list, our order
+        self.assertTrue(all(h.endswith("/fp8") for h in serve.DS_PROVIDERS))
+        t = serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "<XYZ>\n1\n</XYZ>")))
+        p = self.sent(self.v4(P1, t), "deepseek")["provider"]
+        self.assertEqual(p["order"], serve.DS_PROVIDERS)
+        self.assertIs(p["allow_fallbacks"], False)
+
     def test_deepseek_request(self):
         t = serve.v4_chat_turns(P1, "a", self.hist(1), self.rows((False, ""), (False, "<XYZ>\n1\n</XYZ>")))
         d = self.sent(self.v4(P1, t), "deepseek")
         self.assertEqual(d["model"], "deepseek/deepseek-v4.1-flash")
         self.assertEqual(d["reasoning"], {"effort": "low"})
         self.assertEqual(d["messages"][0], {"role": "system", "content": serve.PROMPT_V4 + "\n\n" + serve.AUDIENCE_LINE})
-        self.assertEqual(d["provider"]["order"], [serve.DS_PROVIDER])
+        self.assertEqual(d["provider"]["order"], serve.DS_PROVIDERS)
         self.assertFalse(d["provider"]["allow_fallbacks"])            # no other OpenRouter host (5 ZDR ones are fp4, never benched): Claude answers
         self.assertEqual(d["provider"]["zdr"], True)
         first = d["messages"][1]["content"]
