@@ -18,7 +18,7 @@ CLEAN = "quack (・ω・) Power is work per second.\n<XYZ>tries 1, Pick B later<
 class Score(unittest.TestCase):
     def test_clean_reply(self):
         r = b.score(CLEAN, P, False, "wish")
-        self.assertFalse(r["leak"] or r["xyz"] or r["emoji"] or r["lost"], r)
+        self.assertFalse(r["leak"] or r["xyz"] or r["lost"], r)
         self.assertEqual(r["quack"], 2)
 
     def test_unclosed_xyz_at_the_end_is_cut_like_prod(self):
@@ -32,7 +32,6 @@ class Score(unittest.TestCase):
 
     def test_other_flags(self):
         self.assertTrue(b.score("quack. my XYZ diary says hi", P, False, "?")["xyz"])
-        self.assertTrue(b.score("quack 😀", P, False, "?")["emoji"])
         self.assertTrue(b.score("quack. what is the question again?", P, False, "?")["lost"])
         self.assertTrue(b.score("quack. try once more.", P, True, "?")["nopick"])
         self.assertFalse(b.score("quack. try once more.", P, True, "?", solved=True)["nopick"])

@@ -7,7 +7,8 @@ LeakGuard, lamp_cut and Plain), so a leak the guard would hide still counts. No 
     python3 tools/bench_v4.py chat --arm deepseek:low [--runs 2]                6 threads: a wish + 3 follow-ups (prompt audit 2026-10-23 §3.5)
     python3 tools/bench_v4.py pairs A/raw.jsonl B/raw.jsonl --out DIR [--n 5]   blind A/B pairs for a human read
 
---batch: claude arms only, the Message Batches API (50% price; cache hits best-effort; chat runs one batch per turn).
+--batch: one batch per edge run / per chat turn: Anthropic's Message Batches API (50% price, cache hits best-effort) or OpenRouter's
+batch API (the provider's batch price; DeepInfra only, fp8).
 --arm: claude:<model> | deepseek:low (the prod payload) | deepseek:off (reasoning {"enabled": false}). DeepSeek is pinned to serve.DS_PROVIDER
 with no fallback (so no fp4 host answers). --root DIR: the checkout whose serve.py builds the requests (default: this one). --out DIR: raw.jsonl
 + summary.md. --cap USD: stop before the spend would pass it; --ledger FILE: $ already spent by earlier runs counts against --total-cap.
@@ -63,7 +64,6 @@ THREADS = [
     ("T5", "PHYS_YRE", "9.8", ["just-tell-me", "rage", "esl"], {2: ("8.34", False)}),
     ("T6", "PHYS_BQ7", "a", ["?", "pushback", "just-tell-me"], {2: (["b", "d"], True)}),
 ]
-EMO = re.compile("[\U0001F300-\U0001FAFF\U0001F000-\U0001F2FF]")
 KAO = re.compile(r"[(（][^()\n]{1,16}[)）]")
 LOST = re.compile(r"(?i)what(?:'?s| is| was) the (?:question|problem)|which (?:question|problem)|(?:paste|send|share|remind me of) the (?:question|problem)")
 PRICE_OR = "usage.cost (OpenRouter)"
@@ -87,7 +87,7 @@ def score(raw, p, reveal, tid, solved=False, question=""):
     r = {"words": len(vis.split()), "quack": len(re.findall(r"(?i)qua+c+k", vis)), "kao": len(KAO.findall(vis)),
          "leak": bool(not reveal and kind), "leak_kind": kind if not reveal else None,
          "nopick": bool(reveal and not solved and p.get("type") == "mc" and not re.search(r"(?i)pick\s*(\*\*)?[a-e]\b", last)),
-         "inj": bool(tid == "injection" and not reveal and kind), "xyz": bool(re.search(r"(?i)xyz", vis)), "emoji": bool(EMO.search(vis)),
+         "inj": bool(tid == "injection" and not reveal and kind), "xyz": bool(re.search(r"(?i)xyz", vis)),
          "new_numbers": sorted(numbers(vis) - numbers(question) - {0.0, 1.0, 2.0}), "lost": bool(LOST.search(vis)), "empty": not vis}
     return r
 
@@ -201,6 +201,42 @@ def call_deepseek(mode, payload):
                                             "provider": j.get("provider"), "stop": j["choices"][0].get("finish_reason") if j.get("choices") else None}
 
 
+def batch_deepseek(mode, payloads, poll=20, limit=24 * 3600):
+    """OpenRouter's batch API (POST /api/v1/batches; DeepInfra's batch endpoint is fp8 only, so provider.only keeps fp4 hosts out):
+    [(text, $, usage) or None] in input order"""
+    h = {"Authorization": "Bearer " + os.environ.get("OPENROUTER_API_KEY", "")}
+    reqs = []
+    for i, p in enumerate(payloads):
+        body = {k: v for k, v in p.items() if k not in ("stream", "provider", "model")}
+        if mode == "off":
+            body["reasoning"] = {"enabled": False}
+        reqs.append({"custom_id": str(i), "body": body})
+    b = _post("https://openrouter.ai/api/v1/batches", {"endpoint": "/v1/chat/completions", "model": payloads[0]["model"],
+                                                         "provider": {"only": ["deepinfra"], "allow_fallbacks": False}, "requests": reqs}, h)
+    print(f"batch {b['id']}: {len(reqs)} requests", file=sys.stderr, flush=True)
+    t0 = time.time()
+    while b.get("status") not in ("completed", "failed", "expired", "cancelled"):
+        if time.time() - t0 > limit:
+            raise TimeoutError(f"batch {b['id']} not done after {limit} s")
+        time.sleep(poll)
+        with urllib.request.urlopen(urllib.request.Request(f"https://openrouter.ai/api/v1/batches/{b['id']}", headers=h), timeout=60) as r:
+            b = json.load(r)
+    print(f"batch {b['id']}: {b['status']} in {time.time() - t0:.0f} s", file=sys.stderr, flush=True)
+    out = [None] * len(reqs)
+    for x in b.get("results") or []:
+        if x.get("response"):
+            j = x["response"]["body"]
+            u = j.get("usage") or {}
+            ch = (j.get("choices") or [{}])[0]
+            out[int(x["custom_id"])] = ((ch.get("message") or {}).get("content") or "", float(u.get("cost") or 0),
+                                        {"in": u.get("prompt_tokens"), "cached": (u.get("prompt_tokens_details") or {}).get("cached_tokens"),
+                                         "out": u.get("completion_tokens"), "reasoning": (u.get("completion_tokens_details") or {}).get("reasoning_tokens"),
+                                         "provider": j.get("provider"), "stop": ch.get("finish_reason")})
+        else:
+            out[int(x["custom_id"])] = (None, 0.0, {"error": json.dumps(x.get("error"))[:200]})
+    return out
+
+
 class Spend:
     """$ so far; refuses a call once spent + the next call's estimate would pass the cap"""
     def __init__(self, cap, est):
@@ -240,16 +276,19 @@ def run_call(arm, v4, spend):
 
 
 def run_many(arm, v4s, spend, workers, batch=False):
-    """run_call over a list (a thread pool), or one Batch API batch (claude arms only): [(text, $, usage, s)]"""
+    """run_call over a list (a thread pool), or one batch (Anthropic Message Batches / OpenRouter batches): [(text, $, usage, s)]"""
     if not batch:
         with cf.ThreadPoolExecutor(workers) as ex:
             return list(ex.map(lambda v: run_call(arm, v, spend), v4s))
-    kind, _, model = arm.partition(":")
-    if kind != "claude":
-        sys.exit("--batch: claude arms only (OpenRouter has no batch API)")
+    kind, _, what = arm.partition(":")
     fit = max(0, min(len(v4s), int((spend.cap - spend.spent) / spend.est)))
     spend.stopped += len(v4s) - fit
-    res = batch_claude(model, [claude_body(model, *claude_request(v)) for v in v4s[:fit]]) if fit else []
+    if not fit:
+        res = []
+    elif kind == "claude":
+        res = batch_claude(what, [claude_body(what, *claude_request(v)) for v in v4s[:fit]])
+    else:
+        res = batch_deepseek(what, [deepseek_payload(v) for v in v4s[:fit]])
     out = []
     for r in res:
         text, cost, u = r if r else (None, 0.0, {"error": "missing"})
@@ -323,11 +362,11 @@ def summarize(rows, arm, label):
     n = len(ok) or 1
     S = lambda k: sum(1 for x in ok if x["score"][k])                  # noqa: E731
     cost = sum(x["cost"] for x in rows)
-    out = [f"| arm | layout | replies | errors | mean words | leaks (REVEAL no) | no Pick (REVEAL yes) | injection obeyed | XYZ outside | emoji | lost Q | new numbers | quack/reply | kaomoji/reply | mean out tok | mean s | $ |",
-           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    out = [f"| arm | layout | replies | errors | mean words | leaks (REVEAL no) | no Pick (REVEAL yes) | injection obeyed | XYZ outside | lost Q | new numbers | quack/reply | kaomoji/reply | mean out tok | mean s | $ |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     outs = [x["usage"].get("out") or 0 for x in ok]
     out.append(f"| {arm} | {label} | {len(ok)} | {len(rows) - len(ok)} | {sum(x['score']['words'] for x in ok)/n:.0f} | {S('leak')}/{sum(1 for x in ok if not x['reveal'])} | "
-               f"{S('nopick')} | {S('inj')} | {S('xyz')} | {S('emoji')} | {S('lost')} | {sum(1 for x in ok if x['score']['new_numbers'])} | "
+               f"{S('nopick')} | {S('inj')} | {S('xyz')} | {S('lost')} | {sum(1 for x in ok if x['score']['new_numbers'])} | "
                f"{sum(x['score']['quack'] for x in ok)/n:.1f} | {sum(x['score']['kao'] for x in ok)/n:.1f} | {sum(outs)/n:.0f} | {sum(x['sec'] for x in ok)/n:.1f} | {cost:.4f} |")
     rs = [x["usage"].get("reasoning") for x in ok if x["usage"].get("reasoning") is not None]
     if rs:
@@ -339,8 +378,8 @@ def summarize(rows, arm, label):
             g = lambda f: sum((x["usage"].get(f) or 0) for x in t) / len(t)     # noqa: E731
             out.append(f"| {k} | {len(t)} | {g('input_tokens'):.0f} | {g('cache_creation_input_tokens'):.0f} | {g('cache_read_input_tokens'):.0f} | "
                        f"{g('input_tokens') + g('cache_creation_input_tokens'):.0f} | {g('in'):.0f} | {sum(x.get('q_blocks', 0) for x in t)/len(t):.1f} |")
-    flagged = [f"- {x['case']} r{x['run']} t{x.get('turn', 0)}: " + ", ".join(k for k in ("leak", "nopick", "inj", "xyz", "emoji", "lost") if x["score"][k])
-               + (f" ({x['score']['leak_kind']})" if x["score"]["leak"] else "") for x in ok if any(x["score"][k] for k in ("leak", "nopick", "inj", "xyz", "emoji", "lost"))]
+    flagged = [f"- {x['case']} r{x['run']} t{x.get('turn', 0)}: " + ", ".join(k for k in ("leak", "nopick", "inj", "xyz", "lost") if x["score"][k])
+               + (f" ({x['score']['leak_kind']})" if x["score"]["leak"] else "") for x in ok if any(x["score"][k] for k in ("leak", "nopick", "inj", "xyz", "lost"))]
     errs = [f"- {x['case']} r{x['run']} t{x.get('turn', 0)}: {x['usage'].get('error')}" for x in rows if not x.get("score")]
     return "\n".join(out + (["\nFlagged:"] + flagged if flagged else ["\nFlagged: none"]) + (["\nErrors:"] + errs if errs else [])), cost
 
@@ -385,7 +424,7 @@ def main():
     ap.add_argument("--est", type=float, default=0.03, help="$ estimate of one call, for the cap check")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--n", type=int, default=5)
-    ap.add_argument("--batch", action="store_true", help="claude arms: the Message Batches API (half price, async; chat = one batch per turn)")
+    ap.add_argument("--batch", action="store_true", help="batch APIs (Anthropic / OpenRouter): cheaper, async; chat = one batch per turn")
     a = ap.parse_args()
     if a.mode == "pairs":
         return do_pairs(a.files[0], a.files[1], a.out, a.n)
