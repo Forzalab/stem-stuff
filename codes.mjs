@@ -80,6 +80,16 @@ export function unfold(p) {
    doc: the parsed JSON. shapeErr(p) -> a string when a problem is malformed (offline.js validate() without the code test).
    -> { flag, kept: [problem], skipped: { shape, noflag, badflag, mismatch, reserved }, fatal }
    flag: the valid "bank" value, else null. fatal: "notbank" (no problems array), else null. */
+/* tolerance 1b (SCHEMA.md tol): a bank-level tol rides on every unit (problem, part, fix) as bank_tol, so app.js tolOf() needs only the
+   unit. serve.py inherit_tol() is the twin. Never overwrites a bank_tol already there. */
+export function inheritTol(doc) {
+  const t = doc && doc.tol;
+  if (!(typeof t === "number" && t > 0 && t <= 0.05)) return;
+  for (const p of Array.isArray(doc.problems) ? doc.problems : [])
+    for (const u of p && typeof p === "object" ? [p, ...(Array.isArray(p.parts) ? p.parts : []), p.fix] : [])
+      if (u && typeof u === "object" && u.bank_tol === undefined) u.bank_tol = t;
+}
+
 export function screenBank(doc, shapeErr) {
   const skipped = { shape: 0, noflag: 0, badflag: 0, mismatch: 0, reserved: 0 };
   if (!doc || typeof doc !== "object" || !Array.isArray(doc.problems)) return { flag: null, kept: [], skipped, fatal: "notbank" };

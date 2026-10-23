@@ -77,7 +77,8 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
-| `tol` | `num`, `expr` | relative tolerance. Default 1e-6. Use `0.01` for physics numbers. | **no** |
+| `tol` | `num`, `expr` | relative tolerance: right when \|typed − answer\| ≤ tol × \|answer\|. Child over parent (WebAssign-style): this question's `tol` > the bank's `tol` (top level, next to `v`) > `0.02` for `num` (WebAssign's default) / `1e-6` for `expr` and a hard-mode fix box. No topic level: banks have no topic grouping. A zero answer is absolute: \|typed\| ≤ 1e-9. Right to 3 s.f. still counts. `wrong` matches and repeats use the question's `tol` or `1e-6`. Slips use their own window, `SLIP_WIN` (slips.py / slips.mjs: within 0.5% of the slip or equal at 3 s.f.; Tony D2), never the grading tol. | **no** |
+| `tol_why` | with `tol` (question or bank) | one line: why this window fits the question and the topic quizzed ("counting: an off-by-one is the error"). `python3 tools/tol.py --write` writes `tol: 1e-4` with its own line on a definitive key (the wiggle test: g 9.8/9.81, π 3.14/3.1416, each decimal datum ±1 in its last digit leave the key unchanged; integers and fractions are exact, the 5 in 5! is 5). `tools/tol.py` and `tools/slips.py` warn (never fail) on a bank with num units and no `tol` at any level, and on an integer key with integer-only inputs and no `tol`. Why a rule at all: the old window `tol*max(1,|answer|)` was absolute below 1, so 0 was right for 0.00624. | **no** |
 | `correct` | `mc` | id of the right choice | **no** |
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
@@ -115,7 +116,7 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `tol` or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `SLIP_WIN`, 0.5%, or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
 
 **Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
 - a new family in `slips.FAMILIES`;
@@ -131,7 +132,7 @@ Bench (brain `projects/calc/_files/research-slips-bench-2026-10-23.md`, 31 forms
 | 2 | ~180 | 2.1% / 3.8% | 78% |
 | 3 | ~1900 | 7.8% / 13.3% | 37% |
 
-Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` uses `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
+Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` used `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286); it is relative now (tolerance 1b). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
 
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
@@ -453,6 +454,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
   "required": ["v", "problems"],
   "additionalProperties": false,
   "properties": {"v": {"anyOf": [{"const": 1}, {"type": "integer", "minimum": 20000101, "maximum": 99991231}], "description": "1 (oldest) or yyyymmdd: the Version table row this file meets"}, "problems": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/problem"}},
+    "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05, "description": "optional bank tol (tolerance 1b): every num/expr unit without its own tol uses it; absent = 2% num / 1e-6 expr"},
+    "tol_why": {"type": "string", "minLength": 1, "description": "one line: why the bank tol fits this course"},
     "bank": {"type": "string", "pattern": "^BANK_[A-Z0-9]{3,6}$", "description": "optional bank flag, the bank's id: required exactly when the file uses a custom code prefix, which must equal this minus BANK_ (codes.mjs)"},
     "burst_gap_s": {"type": "number", "minimum": 60, "maximum": 600, "description": "optional, per bank file (T22): minimum seconds between two reward bursts; absent = 15"},
     "profile": {"type": "object", "additionalProperties": false, "description": "optional, per bank file (gen-UI step 5): who it is for and which visual kits fit; serve.py puts audience into Cluck's prompts",
@@ -521,7 +524,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
-    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
+    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
     "problem": {
       "type": "object",
       "required": [
@@ -693,8 +696,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "number",
           "exclusiveMinimum": 0,
           "maximum": 0.05,
-          "default": 1e-06,
-          "description": "Relative tolerance. ~0.01 for physics."
+          "description": "Relative tolerance. Default 0.02 for num, 1e-06 for expr. Zero key: absolute 1e-9."
+        },
+        "tol_why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
         },
         "pick": {
           "enum": [
@@ -940,8 +947,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "number",
           "exclusiveMinimum": 0,
           "maximum": 0.05,
-          "default": 1e-06,
-          "description": "Relative tolerance. ~0.01 for physics."
+          "description": "Relative tolerance. Default 0.02 for num, 1e-06 for expr. Zero key: absolute 1e-9."
+        },
+        "tol_why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
         },
         "var": {
           "type": "string",

@@ -3,7 +3,7 @@ expression, as values. Shared by serve.py (runtime matching), tools/slips.py (re
 tests/fixtures/slips-golden.json). `form` is authored text only, never student input. Parsed unfolded so terms survive.
 
 mutants(form) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value
-match(form, value, tol) -> family | None
+match(form, value) -> family | None       within SLIP_WIN (never the item's grading tol)
 gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)"""
 import threading
 from decimal import Context, Decimal, ROUND_HALF_UP
@@ -17,6 +17,11 @@ FAMILIES = ("distribute", "sign", "drop", "reciprocal", "power", "factor", "drea
 CUTOFF = 20261022     # banks with v >= CUTOFF pass gate()
 PAIRED = {"sign", "distribute"}   # gate(): these two alone on one value are not a CLASH (distribute is a sign flip by definition)
 EPS = 1e-9            # two mutant values within this (relative) are one value
+ZERO = 1e-9           # a zero key's window, absolute (tolerance 1b: calculator dust passes, 0.0003 fails). app.js / slips.mjs ZERO
+SLIP_WIN = 0.005      # a typed value sits on a slip within 0.5% of it (or equal at 3 s.f.). Tony D2, Oct 23: its own window, never the
+                      # grading tol (2% there raised k=2 false matches 6.4% -> 10.3%). slips.mjs SLIP_WIN
+EXACT = 1e-4          # a definitive key's tol (tools/tol.py wiggle test). An integer key at EXACT gets no 3 s.f. pass (Tony, Oct 23: 1023 for 1024)
+TOL_NUM = 0.02        # a num item's tol when it has none: WebAssign's default, 2% relative (serve.py tol_of, app.js tolOf)
 
 
 def parse(src):
@@ -42,8 +47,9 @@ def _r3(v):
     return _R3.create_decimal(Decimal(v)) if v == v and abs(v) != float("inf") else v
 
 
-def close(a, b, tol):
-    return abs(a - b) <= tol * max(1, abs(b)) or _r3(a) == _r3(b)
+def close(a, b, tol=SLIP_WIN):
+    """relative to b (tolerance 1b); a zero b gets the absolute ZERO window. Or equal to 3 s.f. Slip matching uses the default."""
+    return abs(a - b) <= (tol * abs(b) if b else ZERO) or _r3(a) == _r3(b)
 
 
 SLOW_S = 1.0          # a form whose mutants take longer than this is rejected (gate) / gives no slip (serve)
@@ -195,9 +201,9 @@ def mutants(form):
     return out
 
 
-def match(form, value, tol):
+def match(form, value, win=SLIP_WIN):
     """The first family whose slip is close() to the typed value, else None."""
-    return next((fam for fam, v in mutants(form) if close(value, v, tol)), None)
+    return next((fam for fam, v in mutants(form) if close(value, v, win)), None)
 
 
 def units(p):
@@ -231,14 +237,14 @@ def gate(u):
     bad = form_ok(u)
     if bad:
         return [bad]
-    tol, ans, skip = u.get("tol", 1e-6), value(u["answer"]), _ignored(u)
-    free = lambda v: not any(close(v, s, tol) for s in skip)
-    rows = [f"SAME {v:.4g}  ({fam}) can't be told apart by number" for fam, v in mutants(u["form"]) if close(v, ans, tol) and free(v)]
+    ans, skip = value(u["answer"]), _ignored(u)
+    free = lambda v: not any(close(v, s) for s in skip)
+    rows = [f"SAME {v:.4g}  ({fam}) can't be told apart by number" for fam, v in mutants(u["form"]) if close(v, ans) and free(v)]
     fams = [(fam, v) for fam, vals in raw(u["form"]) for v in vals]
     seen = []
     for i, (fa, a) in enumerate(fams):
         for fb, b in fams[i + 1:]:
-            if fa != fb and {fa, fb} != PAIRED and close(a, b, tol) and free(a) and free(b) and not close(a, ans, tol) and not any(close(a, s, tol) for s in seen):
+            if fa != fb and {fa, fb} != PAIRED and close(a, b) and free(a) and free(b) and not close(a, ans) and not any(close(a, s) for s in seen):
                 rows.append(f"CLASH {a:.4g}  ({fa} / {fb}) one value, two hints")
                 seen.append(a)
     return rows
@@ -246,6 +252,6 @@ def gate(u):
 
 def missing(u):
     """[(family, value)] not caught by a `wrong` entry or ignore_slips and not equal to the answer (the v1 report)."""
-    tol, ans = u.get("tol", 1e-6), value(u["answer"])
+    ans = value(u["answer"])
     caught = [float(parse(w["match"]).doit()) for w in u.get("wrong", []) if "match" in w] + _ignored(u)
-    return [(fam, v) for fam, v in mutants(u["form"]) if not close(v, ans, tol) and not any(close(v, c, tol) for c in caught)]
+    return [(fam, v) for fam, v in mutants(u["form"]) if not close(v, ans) and not any(close(v, c) for c in caught)]

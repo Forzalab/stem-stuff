@@ -13,8 +13,8 @@ const cut = (a, b) => src.slice(src.indexOf(a), src.indexOf(b));
 const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sugar"; const modeOf = () => MODE;
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
 ${cut("function shown(p) {", "/* One row of pills")}
-return { maxTries, gradeLocal, shown, setMode: m => { MODE = m; } };`;
-const { maxTries, gradeLocal, shown, setMode } = new Function("math", "slipMatch", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, slipMatch, FAMILY_HINT);
+return { maxTries, gradeLocal, shown, tolOf, setMode: m => { MODE = m; } };`;
+const { maxTries, gradeLocal, shown, tolOf, setMode } = new Function("math", "slipMatch", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, slipMatch, FAMILY_HINT);
 
 const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Array.from({ length: n }, (_, i) => ({ id: "abcdefgh"[i], md: "x" })), correct: "a",
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
@@ -113,8 +113,27 @@ test("pick all: shown() keeps every correct id and the locked ones from a pool o
 
 // typed numbers right to 3 significant figures (serve.py sig3; Tony, Oct 3): correctness only
 test("num: 3 significant figures count as right", () => {
-  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "correct"], ["15.55", "correct"], ["15.5", "wrong"], ["15.65", "wrong"]])
+  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "correct"], ["15.55", "correct"], ["15.5", "correct"], ["15.2", "wrong"], ["15.95", "wrong"]])   // no tol: 2% (tolerance 1b)
     assert.equal(gradeLocal({ type: "num", code: `T_s4_${t}`, answer: "9*sqrt(3)" }, { answer: t }).verdict, v, t);
+});
+
+test("exact integer key (tol <= 1e-4): no 3 s.f. pass, as serve.py exact_int; an irrational exact key keeps it", () => {
+  for (const [ans, t, v] of [["5040", "5039", "wrong"], ["1024", "1023", "wrong"], ["10000", "9999", "wrong"], ["1024", "1024", "correct"], ["9*sqrt(3)", "15.6", "correct"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_ex_${ans}_${t}`, answer: ans, tol: 1e-4 }, { answer: t }).verdict, v, `${ans} ${t}`);
+  assert.equal(gradeLocal({ type: "num", code: "T_ex_auth", answer: "1024", tol: 0.01 }, { answer: "1023" }).verdict, "correct");
+});
+
+test("tolOf: question > bank > default, same cases as serve.py tol_of (tests/fixtures/tol-of.json)", () => {
+  for (const [u, want] of JSON.parse(readFileSync(new URL("fixtures/tol-of.json", import.meta.url), "utf8"))) assert.equal(tolOf(u), want, JSON.stringify(u));
+  assert.equal(gradeLocal({ type: "num", code: "T_bt_a", answer: "0.5", bank_tol: 0.01 }, { answer: "0.494" }).verdict, "wrong");   // 2% would pass it
+  assert.equal(gradeLocal({ type: "num", code: "T_bt_b", answer: "0.5", bank_tol: 0.01 }, { answer: "0.496" }).verdict, "correct");
+});
+
+test("tolerance 1b: relative to the key, a zero key is absolute 1e-9 (PHYS_EX9: 0 was right for 0.00624)", () => {
+  for (const [t, v] of [["0", "wrong"], ["0.006", "wrong"], ["0.0063", "correct"], ["0.00618", "correct"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_tol_${t}`, answer: "0.00624", tol: 0.01 }, { answer: t }).verdict, v, t);
+  for (const [t, v] of [["0", "correct"], ["1e-10", "correct"], ["0.0003", "wrong"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_tz_${t}`, answer: "0.0", tol: 0.01 }, { answer: t }).verdict, v, t);
 });
 
 // pick all, prove mode (fix): every unlocked row not ticked carries a typed fix; a right set grades the fixes like parts

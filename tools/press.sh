@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
-# One button for the ship workflow: runs ship.yml on GitHub (demo|live), waits, and says plainly what went wrong.
-# usage: tools/press.sh [demo|live]     (default demo; works from any directory; needs `gh`, logged in)
-# It only queues + watches the GitHub run; the deploy itself is tools/ship.sh on the runner. Exit 1 = something failed (one line says what + the fix).
+# One button for the ship workflow: runs ship.yml on GitHub (demo|live) and returns in ~2 s; the run goes on without you.
+# usage: tools/press.sh [--wait] [demo|live]     (default demo; works from any directory; needs `gh`, logged in)
+# Default: queue and exit (ship.yml checks the secrets itself; a failed run = GitHub's failed-workflow notification).
+# --wait: the old way: also check the secrets, find the run, watch it (~2 min), and on red print the log tail.
+# It only queues (+ watches); the deploy itself is tools/ship.sh on the runner. Exit 1 = something failed (one line says what + the fix).
 # Secret values are never read or printed: `gh secret list` shows names only. design/DEPLOY.md ("Power button") has the why.
 set -euo pipefail
+WAIT=; [ "${1:-}" = --wait ] && { WAIT=1; shift; }
 MODE="${1:-demo}"; REPO="Forzalab/stem-stuff"
-case "$MODE" in demo|live) ;; *) echo "usage: tools/press.sh [demo|live]" >&2; exit 2 ;; esac
+case "$MODE" in demo|live) ;; *) echo "usage: tools/press.sh [--wait] [demo|live]" >&2; exit 2 ;; esac
 die() { echo "$*" >&2; exit 1; }
 
 command -v gh >/dev/null 2>&1 || die "gh is not installed. fix: pkg install gh"
+
+if [ -z "$WAIT" ]; then
+  gh workflow run ship.yml -R "$REPO" -f mode="$MODE" >/dev/null \
+    || die "could not queue ship.yml. fix: gh auth login; check that ship.yml is on main and your gh token has Actions write access"
+  echo "queued $MODE. it runs on GitHub (~2 min); a failure notifies you. watch: https://github.com/$REPO/actions/workflows/ship.yml"
+  exit 0
+fi
+
 gh auth status >/dev/null 2>&1 || die "gh is not logged in. fix: run: gh auth login"
 
 if NAMES="$(gh secret list -R "$REPO" 2>/dev/null | cut -f1)"; then

@@ -150,6 +150,12 @@ class Gate(unittest.TestCase):
             self.assertIn(w, out)
         self.assertEqual(self.run_cli(os.path.join(FIX, "slips-bad.json"))[0], 0)   # report only without --strict
 
+    def test_slip_window_d2(self):
+        """Tony D2 (Oct 23): a slip's own window, SLIP_WIN = 0.5% or equal at 3 s.f., never the item's grading tol (2% default)."""
+        self.assertEqual(slips.SLIP_WIN, 0.005)
+        self.assertEqual(slips.match("1/((4/3)^2+(1/3)^2+(2/3)^2)", 0.532), "drop")     # 9/17 = 0.5294: 0.49% off
+        self.assertIsNone(slips.match("12/(100+200+300)", 0.0609))                   # 0.06 (sign) is 1.5% off: a 2% window would hint it
+
     def test_close_parity_cases(self):
         """close() rounds a tie away from zero, like slips.mjs (tests/slips.test.mjs runs the same cases)."""
         with open(os.path.join(FIX, "slips-close.json"), encoding="utf-8") as f:

@@ -226,3 +226,15 @@ test("bank versions (SCHEMA.md Version table): bankNotice reads the banner / dro
   assert.match(app, /el\.className = codes\.BANNER_CLASS;[^\n]*panel\.prepend\(el\)/);                       // top of #qlist
   assert.match(read("serve.py"), /return f"\{code\} must be updated by \{SUNSET\.isoformat\(\)\}"/);
 });
+
+test("inheritTol: a bank tol rides on every unit as bank_tol (serve.py inherit_tol); a question tol stays; a bad bank tol is ignored", () => {
+  const d = { tol: 0.01, problems: [{ code: "A", type: "num" }, { code: "B", type: "multi", parts: [{ type: "num", tol: 1e-4 }, { type: "num" }] }, { code: "C", type: "mc", fix: { answer: "6" } }] };
+  C.inheritTol(d);
+  const [a, b, c] = d.problems;
+  assert.deepEqual([a.bank_tol, b.parts[0].tol, b.parts[0].bank_tol, b.parts[1].bank_tol, c.fix.bank_tol], [0.01, 1e-4, 0.01, 0.01, 0.01]);
+  for (const bad of [{ tol: 0.5 }, { tol: "0.01" }, {}]) {
+    const e = { ...bad, problems: [{ code: "A", type: "num" }] };
+    C.inheritTol(e);
+    assert.equal(e.problems[0].bank_tol, undefined);
+  }
+});
