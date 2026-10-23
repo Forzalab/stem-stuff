@@ -2346,6 +2346,13 @@ class DrawRule(unittest.TestCase):
         self.assertIn("- Draw readily: any distance, angle, pivot, lever arm, triangle, vector or position in your reply → draw it (one figure: an "
                       "```openui Geometry view, else a ```fig block). Words only needs a reason.\n", serve.PROMPT_V4)
 
+    def test_howto_matches_the_letter_order(self):                       # R6d: the letter says openui Geometry first, else fig; so does the how-to
+        fixed = serve.V4_FIG_FIXED
+        self.assertLess(fixed.index("```openui"), fixed.index("```fig"))
+        self.assertLess(fixed.index(serve.GEO_LINE), fixed.index(serve.livefig.RULE_V4))
+        self.assertNotIn("\nOr a ```openui", fixed)                            # openui is not the afterthought
+        self.assertTrue(fixed.endswith(serve.livefig.RULE_V4))
+
     def test_split_fixed_cached_tail_uncached(self):
         sys_ = self.system(self.v4(self.ctx()))
         self.assertEqual(len(sys_), 3)

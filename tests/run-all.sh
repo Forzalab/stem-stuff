@@ -8,7 +8,7 @@
 #                so two shards can run side by side. (--quick with shard 2 has nothing to run.)
 #   --list       print what this run would run (one name per line) and run nothing
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -32,31 +32,51 @@ if [ -n "$SHARD" ]; then
   if [ "$sm" -lt 1 ] || [ "$sn" -lt 1 ] || [ "$sn" -gt "$sm" ]; then echo "bad shard '$SHARD'" >&2; exit 2; fi
 fi
 
-# Rough seconds per .pw spec (measured Oct 12 on one machine; only the order of magnitude matters). Unlisted specs count as 5.
+# CI-measured seconds per .pw spec: median of 12 green CI runs, 2026-10-23 (timings-ci.json, brain projects/calc/_files/ci-plan-2026-10-23/); refresh with extract.py there on newer CI logs.
+# overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
 # Sharding deals the specs, slowest first, to whichever shard is lightest so far, so the halves finish about together.
 weight() {
   case "$1" in
-    ux-flows) echo 285 ;; next-cue) echo 262 ;; upload-replace) echo 153 ;; next-dead) echo 128 ;; swap) echo 85 ;;
-    rewards) echo 78 ;; render) echo 77 ;; blink-fx) echo 60 ;; queue-walk) echo 52 ;; prefix) echo 49 ;; easy) echo 41 ;;
-    flow) echo 40 ;; autosave) echo 35 ;; done|fab) echo 34 ;; update) echo 33 ;; disabled) echo 28 ;; bar|telemetry) echo 25 ;;
-    nav-stable) echo 22 ;; reload|choose-all) echo 21 ;; polish) echo 19 ;; bank) echo 17 ;; choose-all-spam) echo 14 ;;
-    splash) echo 13 ;; mode-reset) echo 10 ;; blind) echo 8 ;; mcclick|katex-wrap) echo 7 ;; *) echo 5 ;;
+    ux-flows) echo 241 ;; next-cue) echo 226 ;; upload-replace) echo 138 ;; next-dead) echo 116 ;; rewards) echo 78 ;; ticker) echo 70 ;;
+    swap) echo 69 ;; blink-fx) echo 59 ;; next-reset) echo 56 ;; queue-walk) echo 51 ;; redo-note|render) echo 46 ;; cluck-rise) echo 43 ;;
+    flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave|try-tries) echo 28 ;; done) echo 26 ;;
+    choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
+    bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; seen) echo 9 ;;
+    codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
+    popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
+    *) echo 5 ;;
   esac
 }
 
-# this run's share of the .pw specs (names, no path/extension): all of them unsharded, else its part of the balanced deal
+# the balanced deal: deal <shard-no> prints that shard's .pw spec names (names, no path/extension)
+deal() {
+  local load=() k best w n
+  for ((k = 0; k < sm; k++)); do load[k]=0; done
+  load[0]=55                                  # shard 1 also runs unittest + npm (CI median: unittest 50 s + npm 4 s)
+  while read -r w n; do
+    best=0; for ((k = 1; k < sm; k++)); do [ "${load[k]}" -lt "${load[best]}" ] && best=$k; done
+    load[best]=$((load[best] + w))
+    [ "$best" -eq $(($1 - 1)) ] && echo "$n"
+  done < <(for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
+}
+
+# schedule check: every spec has its own weight() line (not the default 5), and across all M shards each is dealt exactly once
+wsrc="$(declare -f weight)"; bad=0; dealt="$(for ((k = 1; k <= sm; k++)); do deal "$k"; done)"
+for f in tests/*.pw.mjs; do
+  n="$(basename "$f" .pw.mjs)"
+  [[ "$wsrc" =~ [[:space:]]"$n"[[:space:]\|\)] ]] || { echo "schedule check: $n has no weight() entry (add its CI seconds)" >&2; bad=1; }
+  c="$(grep -cxF "$n" <<<"$dealt")"
+  [ "$c" -eq 1 ] || { echo "schedule check: $n is scheduled in $c of $sm shards (want exactly 1)" >&2; bad=1; }
+done
+[ "$bad" -eq 0 ] || exit 1
+
+# this run's share of the .pw specs: all of them unsharded, else its part of the balanced deal
 specs=()
 if [ "$quick" -eq 0 ]; then
   if [ "$sm" -eq 1 ]; then
     for f in tests/*.pw.mjs; do specs+=("$(basename "$f" .pw.mjs)"); done
   else
-    load=(); for ((k = 0; k < sm; k++)); do load[k]=0; done
-    load[0]=20                                  # shard 1 also runs unittest + npm
-    while read -r w n; do
-      best=0; for ((k = 1; k < sm; k++)); do [ "${load[k]}" -lt "${load[best]}" ] && best=$k; done
-      load[best]=$((load[best] + w))
-      [ "$best" -eq $((sn - 1)) ] && specs+=("$n")
-    done < <(for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
+    mapfile -t specs < <(deal "$sn")
   fi
 fi
 base=0; [ "$sn" -eq 1 ] && base=1   # unittest + npm ride with shard 1
@@ -95,7 +115,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
   for name in "${specs[@]}"; do
     f="tests/$name.pw.mjs"
     case "$name" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui) run "$name" node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui) run "$name" node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

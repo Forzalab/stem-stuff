@@ -283,3 +283,76 @@ test("owner tag: a fingerprint in OWNER_FP sets stem-me=1 (sticky) and tags even
   await other.win.stemFP(); await new Promise(res => setTimeout(res, 50));   // its own digest has had time to land
   assert.equal(other.store["stem-me"], undefined, "another device: no tag");
 });
+
+/* ---- T36 (Freeform T4): owner-only wrong-try log. me=1 keeps the full try trail + the slip family; me=test is the same, never ground truth;
+   everyone else: the pick payload is exactly what it was before (typed values never leave the device). ---- */
+/* owner = this device's hash is in OWNER_FP (the T36 gate); "other" = OWNER_FP holds Tony's hash but this is another device; false = OWNER_FP empty */
+const OWN_DEV = { nav: { platform: "MacIntel", language: "en-US", hardwareConcurrency: 8 }, scr: { width: 1512, height: 982 } };
+const tries = async (store, { search = "", owner = true } = {}) => {
+  const h = await run(OWN_DEV).win.stemFP();
+  const src = owner ? SRC.replace("var OWNER_FP = [];", `var OWNER_FP = ["${h}"];`) : SRC;
+  const nav = owner === "other" ? { ...OWN_DEV.nav, platform: "Win32" } : OWN_DEV.nav;
+  const r = await beaconOf({ store, search, src, nav, scr: OWN_DEV.scr });
+  await r.win.stemFP(); await new Promise(res => setTimeout(res, 20));   // the gate's own digest (started at load) has landed
+  let t = 1; r.win.performance.now = () => t;
+  r.win.stemT("q_open", { code: "MF1", bank: "B", type: "num", mode: "sugar" });
+  t = 30001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: false, verdict: "wrong", tries_left: 2, error: "leftover-sum", families: undefined, typed: "19" });
+  t = 75001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: false, verdict: "wrong", tries_left: 1, error: undefined, families: undefined, typed: "43" });
+  t = 90001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: true, verdict: "correct", tries_left: 1, error: undefined, families: ["leftover-sum"], typed: "26" });
+  return (await r.flush()).filter(e => e.event === "pick").map(e => e.properties);
+};
+
+test("T36 owner me=1: every typed value in order, ms per try, tries, and the matched slip family (not stripped); gt=true", async () => {
+  const p = await tries({ "stem-me": "1" });
+  assert.equal(p.length, 3);
+  assert.deepEqual(p.map(x => x.typed_seq), [["19"], ["19", "43"], ["19", "43", "26"]]);
+  assert.deepEqual(p.map(x => x.typed), ["19", "43", "26"]);
+  assert.deepEqual(p.map(x => x.try_ms), [30000, 45000, 15000], "time per try: since open, then since the last try");
+  assert.deepEqual(p.map(x => x.tries), [1, 2, 3]);
+  assert.equal(p[0].error, "leftover-sum", "the matched slip family is kept for the owner");
+  assert.deepEqual(p[2].families, ["leftover-sum"]);
+  assert.ok(p.every(x => x.gt === true && x.me === "1" && x.code === "MF1"));
+});
+
+test("T36 owner me=test: same trail, flagged gt=false (never ground truth)", async () => {
+  const p = await tries({ "stem-me": "test" });
+  assert.deepEqual(p.map(x => x.typed_seq), [["19"], ["19", "43"], ["19", "43", "26"]]);
+  assert.equal(p[0].error, "leftover-sum");
+  assert.ok(p.every(x => x.gt === false && x.me === "test"));
+});
+
+test("T36 gate: ?me=1 / ?me=test / a hand-set stem-me on a device NOT in OWNER_FP logs no typed values; its me tag and the rest of its telemetry are unchanged", async () => {
+  for (const owner of [false, "other"]) for (const [store, search, me] of [[{}, "?me=1", "1"], [{}, "?me=test", "test"], [{ "stem-me": "1" }, "", "1"], [{ "stem-me": "test" }, "", "test"]]) {
+    const why = JSON.stringify([owner, store, search]);
+    const p = await tries(store, { search, owner });
+    const base = { code: "MF1", choice: null, part: null, sure: null, me, $lib: "stem-beacon", $current_url: "x" };
+    const strip = x => { const { distinct_id, ...rest } = x; return rest; };
+    assert.deepEqual(p.map(strip), [
+      { ...base, right: false, verdict: "wrong", tries_left: 2, ms_since_open: 30000 },
+      { ...base, right: false, verdict: "wrong", tries_left: 1, ms_since_open: 75000 },
+      { ...base, right: true, verdict: "correct", tries_left: 1, ms_since_open: 90000 }], why);
+    const b = JSON.stringify(p);
+    for (const s of ["typed", "leftover", "\"19\"", "\"43\"", "\"26\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s + " " + why);
+  }
+});
+
+test("T36 owner device with no stem-me yet: the fingerprint hit sets me=1 and the trail goes out", async () => {
+  const p = await tries({});
+  assert.deepEqual(p.map(x => x.typed_seq), [["19"], ["19", "43"], ["19", "43", "26"]]);
+  assert.ok(p.every(x => x.me === "1" && x.gt === true));
+});
+
+test("T36 non-owner: pick payload byte-for-byte as before (no typed / trail / family / gt), and the extra app prop changes nothing", async () => {
+  for (const [store, owner] of [[{}, false], [{ "stem-me": "0" }, false], [{ "stem-me": "0" }, true], [{}, "other"]]) {
+    const p = await tries(store, { owner });
+    const base = { code: "MF1", choice: null, part: null, sure: null, $lib: "stem-beacon", $current_url: "x" };
+    const strip = x => { const { distinct_id, ...rest } = x; return rest; };
+    assert.deepEqual(p.map(strip), [
+      { ...base, right: false, verdict: "wrong", tries_left: 2, ms_since_open: 30000 },
+      { ...base, right: false, verdict: "wrong", tries_left: 1, ms_since_open: 75000 },
+      { ...base, right: true, verdict: "correct", tries_left: 1, ms_since_open: 90000 }]);
+    assert.deepEqual(Object.keys(p[0]), ["code", "choice", "part", "right", "verdict", "tries_left", "ms_since_open", "sure", "distinct_id", "$current_url", "$lib"], "same keys in the same order as before T36");
+    const b = JSON.stringify(p);
+    for (const s of ["typed", "leftover", "\"19\"", "\"43\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s);
+  }
+});

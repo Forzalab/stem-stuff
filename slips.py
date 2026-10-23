@@ -5,18 +5,19 @@ tests/fixtures/slips-golden.json). `form` is authored text only, never student i
 mutants(form) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value
 match(form, value) -> family | None       within SLIP_WIN (never the item's grading tol)
 gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)"""
+import ast
 import threading
 from decimal import Context, Decimal, ROUND_HALF_UP
 from functools import lru_cache
 
-from sympy import Add, Float, Integer, Mul, Pow, Rational, S, cos, pi, sin, tan, parse_expr
+from sympy import Abs, Add, Float, Integer, Mul, Pow, Rational, S, acos, asin, atan, cos, exp, log, pi, sin, sqrt, tan, parse_expr
 from sympy.parsing.sympy_parser import implicit_multiplication, standard_transformations
 
 # Adding a family, a variant, stacking or a wider close() raises false matches: ask Tony first (SCHEMA.md "Slip scaling risk")
 FAMILIES = ("distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g")   # hint priority; distribute first (Tony, Oct 22): on a tie with sign it names the real habit
 CUTOFF = 20261022     # banks with v >= CUTOFF pass gate()
 PAIRED = {"sign", "distribute"}   # gate(): these two alone on one value are not a CLASH (distribute is a sign flip by definition)
-EPS = 1e-9            # two mutant values within this (relative) are one value
+EPS = 1e-9            # two mutant values within this, relative to the value, are one value (_same)
 ZERO = 1e-9           # a zero key's window, absolute (tolerance 1b: calculator dust passes, 0.0003 fails). app.js / slips.mjs ZERO
 SLIP_WIN = 0.005      # a typed value sits on a slip within 0.5% of it (or equal at 3 s.f.). Tony D2, Oct 23: its own window, never the
                       # grading tol (2% there raised k=2 false matches 6.4% -> 10.3%). slips.mjs SLIP_WIN
@@ -24,8 +25,47 @@ EXACT = 1e-4          # a definitive key's tol (tools/tol.py wiggle test). An in
 TOL_NUM = 0.02        # a num item's tol when it has none: WebAssign's default, 2% relative (serve.py tol_of, app.js tolOf)
 
 
+_BIN = {ast.Add: Add, ast.Sub: Add, ast.Mult: Mul, ast.Div: Mul}
+_FN = {"sin": sin, "cos": cos, "tan": tan, "asin": asin, "acos": acos, "atan": atan, "sqrt": sqrt, "exp": exp, "log": log, "ln": log,
+       "abs": Abs}                                   # = slips.mjs FN + sqrt; any other name raises (never a free Symbol)
+
+
 def parse(src):
-    return parse_expr(str(src).replace("^", "**"), evaluate=False)
+    """`form` -> the unfolded sympy tree (D4: stdlib ast + this walker, no parse_expr). Same shape parse_expr(..., evaluate=False) gave:
+    binary + - * / flattened across brackets (a - b = a + (-1)*b, a / b = a * b^-1; a - k*(..) stays Add(a, Mul(-1, Mul(k, ..)))), a literal
+    with no '.' or 'e' is an Integer, else a Float (its text, like sympy's auto_number). One change (S3, review-227): a unary minus on a
+    bracket is Mul(-1, x), never folded, so -(3+4) keeps its terms; -3 is still Integer(-3). slips.mjs toTree is the twin."""
+    text = str(src).replace("^", "**").replace("π", "pi")
+    tree = ast.parse(text.strip(), mode="eval")
+    return _walk(tree.body, text.strip())[0]
+
+
+def _walk(n, text):
+    """(sympy node, the binary op class that made it or None): only a binary + / * result is flattened into its parent."""
+    if isinstance(n, ast.BinOp) and type(n.op) in _BIN:
+        cls = _BIN[type(n.op)]
+        (a, ta), (b, tb) = _walk(n.left, text), _walk(n.right, text)
+        if isinstance(n.op, ast.Sub):
+            b, tb = Mul(S.NegativeOne, b, evaluate=False), None
+        elif isinstance(n.op, ast.Div):
+            b, tb = Pow(b, S.NegativeOne, evaluate=False), None
+        args = [x for y, t in ((a, ta), (b, tb)) for x in (y.args if t is cls else (y,))]
+        return cls(*args, evaluate=False), cls
+    if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Pow):
+        return Pow(_walk(n.left, text)[0], _walk(n.right, text)[0], evaluate=False), None
+    if isinstance(n, ast.UnaryOp) and isinstance(n.op, (ast.USub, ast.UAdd)):
+        x, t = _walk(n.operand, text)
+        if isinstance(n.op, ast.UAdd):
+            return x, t
+        return (-x if isinstance(x, (Integer, Float)) else Mul(S.NegativeOne, x, evaluate=False)), None
+    if isinstance(n, ast.Constant) and type(n.value) in (int, float):
+        raw = ast.get_source_segment(text, n)
+        return (Integer(raw) if raw.isdigit() else Float(raw)), None
+    if isinstance(n, ast.Name) and n.id == "pi":
+        return pi, None
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in _FN and len(n.args) == 1 and not n.keywords:
+        return _FN[n.func.id](_walk(n.args[0], text)[0], evaluate=False), None
+    raise ValueError(f"slips: cannot read {ast.dump(n)[:60]}")
 
 
 _GRADER = standard_transformations + (implicit_multiplication,)
@@ -98,6 +138,11 @@ def _neg(t):
     return Mul(S.NegativeOne, t, evaluate=False)
 
 
+def _flat_mul(m):
+    """a Mul's factors with nested Muls opened, in written order"""
+    return [f for a in m.args for f in (_flat_mul(a) if isinstance(a, Mul) else [a])]
+
+
 def _exp(p, *vals):
     return isinstance(p, Pow) and p.exp.is_number and any(abs(float(p.exp) - v) < EPS for v in vals)
 
@@ -134,14 +179,21 @@ def _family(fam, e):
         yield Mul(2, e, evaluate=False)
         yield Mul(S.Half, e, evaluate=False)
     elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches the first term only (Tony, Oct 23)
-        for path, n, _ in nodes:
-            neg = [i for i, a in enumerate(n.args) if isinstance(a, Rational) and a < 0] if isinstance(n, Mul) else []   # -2*(..) is Mul(-2, ..)
-            if neg and any(isinstance(a, Add) for a in n.args):
-                k, c = next(i for i, a in enumerate(n.args) if isinstance(a, Add)), neg[0]
-                rest = [(-a if i == c else a) for i, a in enumerate(n.args) if i != k and not (i == c and a == -1)]
-                t = n.args[k].args                                  # written order (evaluate=False keeps it)
-                s = Add(_neg(t[0]), *t[1:], evaluate=False)
-                yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
+        for path, n, up in nodes:                                   # a Mul chain read whole from its top: a-k(b+c) is Mul(-1, Mul(k, b+c)) (S1)
+            if not isinstance(n, Mul) or isinstance(up, Mul):
+                continue
+            flat = _flat_mul(n)
+            coef = [a for a in flat if isinstance(a, Rational)]     # exact numbers only: -2.0*(..) is a Float, no distribute (N1)
+            k = next((i for i, a in enumerate(flat) if isinstance(a, Add)), None)
+            c = Mul(*coef)                                          # the sign of the numeric coefficient
+            if k is None or not c < 0:
+                continue
+            first = next(i for i, a in enumerate(flat) if isinstance(a, Rational))
+            rest = [(-c if i == first else a) for i, a in enumerate(flat) if i != k and (i == first or not isinstance(a, Rational))]
+            rest = [a for a in rest if not (isinstance(a, Rational) and a == 1)]
+            t = flat[k].args                                        # written order (evaluate=False keeps it)
+            s = Add(_neg(t[0]), *t[1:], evaluate=False)
+            yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
     elif fam == "dream":                                            # (a+b)^2 -> a^2+b^2; sqrt(a+b) -> sqrt(a)+sqrt(b)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5) and isinstance(n.base, Add):
@@ -175,7 +227,8 @@ def _value(m):
 
 
 def _same(a, b):
-    return abs(a - b) <= EPS * max(1, abs(b))
+    """one value: relative to b (a tiny-constant form's slips ~1e-11 stay apart; EPS * max(1, |b|) merged them all). Exact zero: only 0."""
+    return abs(a - b) <= EPS * abs(b) if b else a == 0
 
 
 @lru_cache(maxsize=512)
