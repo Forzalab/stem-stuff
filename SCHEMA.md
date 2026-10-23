@@ -117,6 +117,22 @@ MC: exactly one `wrong` entry per distractor (tests enforce it).
 
 **Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). The grader sees only the typed number, so a slip is caught only when its value sits in `wrong`. `python3 tools/slips.py banks/BANK_X.json` flips the sign of each term of every sum (and the whole answer) and drops each term, one at a time, then lists every resulting value with no `wrong` entry. Give each one a `wrong` entry (`sign` for a flip, `misread` for a drop) or list it in `ignore_slips`. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
 
+**Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
+- a new family in `slips.FAMILIES`;
+- more positions or variants inside a family (more `units` powers, more `factor` values, every-term `distribute`);
+- stacking (k ≥ 2, slips on slips);
+- a wider `close()` window.
+
+Bench (brain `projects/calc/_files/research-slips-bench-2026-10-23.md`, 31 forms, median / p90):
+
+| k | candidates per form | false match | stack named right |
+|---|---|---|---|
+| 1 | ~15 | 0.4% / 0.9% | 100% |
+| 2 | ~180 | 2.1% / 3.8% | 78% |
+| 3 | ~1900 | 7.8% / 13.3% | 37% |
+
+Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` uses `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
+
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
 Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-factor`, `units`, `deg-rad`, `chain-rule`, `product-rule`, `quotient-rule`, `power-rule`, `limit-plug`, `domain`, `components`, `misread`, `fallacy`, `quantifier`, `negation`, `counting`, `off-by-one`, `format`, `other`. Add to the enum (in the schema below) rather than overusing `other`.
