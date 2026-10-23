@@ -252,18 +252,19 @@ test("hold: cap 3, a 4th never fires; an empty ladder still says the vague hold_
   assert.ok(j.said.every(([k, l]) => LINES[k].includes(l)));
 });
 
-test("hold: farming (the next one due with no input since the last) → none, the ladder freezes for the item", () => {
+test("hold: stalling is normal idling: a zero-input 2nd and 3rd still fire, each after another p75; no freeze (Tony Oct 23)", () => {
   const j = holder();
   j.at(0).ev("q_open", { code: "A" }); j.ev("_hold", { choice: "B" });
   j.tick(21); assert.equal(j.h().n, 1);
-  j.tick(42); j.tick(80);
-  assert.deepEqual(j.h(), { code: "A", n: 1, frozen: true });
-  assert.equal(j.did.length, 1);
-  j.at(81).input("pointerdown"); j.tick(120);
-  assert.equal(j.h().n, 1, "frozen stays for the item");
-  assert.ok(j.state().lines.some(l => /jev  hold farm/.test(l)));
-  j.at(121).ev("q_open", { code: "B" });
-  assert.deepEqual(j.h(), { code: "B", n: 0, frozen: false });
+  j.tick(40); assert.equal(j.h().n, 1, "not before another 20 s");
+  j.tick(42); assert.equal(j.h().n, 2);
+  j.tick(63); assert.equal(j.h().n, 3);
+  j.tick(200); assert.equal(j.h().n, 3, "cap 3");
+  assert.deepEqual(j.did, ["mid", "mid", "arrow"]);
+  assert.deepEqual(j.h(), { code: "A", n: 3 });
+  assert.ok(!j.state().lines.some(l => /farm/.test(l)));
+  j.at(201).ev("q_open", { code: "B" });
+  assert.deepEqual(j.h(), { code: "B", n: 0 });
 });
 
 test("hold: none without a held pick, after a check, while typing, hidden, or with Cluck's sheet open", () => {
@@ -299,16 +300,6 @@ test("hold: the page wrapper reads #q's aria-checked (MutationObserver) and step
   sel = { getAttribute: k => k === "data-id" ? "C" : null }; fire();
   clock.t = 21000; timers[0]();
   assert.equal(mids, 1); assert.equal(calls.length, 1); assert.ok(LINES.hold_mid.includes(calls[0]));
-  assert.deepEqual({ ...win.stemJev().hold }, { code: "A", n: 1, frozen: false });
+  assert.deepEqual({ ...win.stemJev().hold }, { code: "A", n: 1 });
 });
 
-test("hold: the farm rule swaps at HOLD.FARM (\"off\" = no freeze)", () => {
-  const was = API.HOLD.FARM;
-  try {
-    API.HOLD.FARM = "off";
-    const j = holder();
-    j.at(0).ev("q_open", { code: "A" }); j.ev("_hold", { choice: "B" });
-    j.tick(21); j.tick(42); j.tick(63);
-    assert.deepEqual(j.h(), { code: "A", n: 3, frozen: false });
-  } finally { API.HOLD.FARM = was; }
-});

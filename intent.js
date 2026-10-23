@@ -32,9 +32,8 @@
    Ladder lane 4, held pick (🔒 Tony Oct 21, brain feedback-specs-2026-10-21 B): a choice selected, not checked, no input for 1×p75 of this
    item's steps (< 4 samples: HOLD.FALLBACK_S) → one hold nudge = the next ladder piece (app.js window.stemLadder.step()) + one breadcrumb
    line (copy/nudge-lines.js hold_mid | hold_arrow | hold_end: what the ladder just did, never right vs wrong; the page can't tell). HOLD.CAP
-   per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Farming (ours): the
-   next one comes due with no input since the last → none, the ladder freezes for the item (silent, "jev hold farm"). state().hold
-   { code, n, frozen }: app.js jevHeld() reads it (no first-try XP bonus after a nudge). S2's own nudge keeps 2×p75 / 80 s.
+   per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Stalling = normal
+   idling (🔒 Tony Oct 23): no farm rule, no freeze, no XP cost. state().hold = { code, n }. S2's own nudge keeps 2×p75 / 80 s.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
    those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
 (function () {
@@ -47,8 +46,7 @@
   /* J6 seen constants, all "ours" (J3 bench start values) */
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
   var RING_CAP = 2000, TITLE_WORDS = 8;
-  /* FARM: the farming rule (ours; Tony still deciding, Oct 23): "idle" = the next one comes due with no input since the last · "off" = none */
-  var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"], FARM: "idle" };
+  var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"] };
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -153,7 +151,7 @@
         items++;
         q = { code: p.code, open: t, from: t, step: t, depth: 0, ok: false, bad: false, help: false, picks: [], fast: 0, errAt: 0,
           wrong: 0, first: null, solved: false, firstItem: items === 1, nudged: false, rolled: {}, s6: false, q: false,
-          errs: [], gaps: [], deep: 0, s5: false, hold: { on: false, n: 0, at: -Infinity, frozen: false }, sheet: false };
+          errs: [], gaps: [], deep: 0, s5: false, hold: { on: false, n: 0, at: -Infinity }, sheet: false };
         itemNo++;
         lines = []; log("q_open", (p.code || "?") + " " + (p.type || "?") + dims(p.code));
         if (flowRun) hit("F", "run=" + flowRun);
@@ -233,15 +231,12 @@
       nudges();
       held();
     }
-    /* lane 4: is this hold farming? The one swap point for the rule (HOLD.FARM) */
-    function farmed(h) { return HOLD.FARM === "idle" && h.n > 0 && q.step <= h.at; }   // sat through the last piece without a touch
     /* lane 4: the held-pick nudge (see the head comment). The clock = the later of the last input and the last hold nudge */
     function held() {
       var h = q.hold, t = now();
-      if (!h.on || h.frozen || h.n >= HOLD.CAP || q.solved || q.sheet || aw || (t - keyAt) / 1000 < NUDGE.TYPING_S) return;
+      if (!h.on || h.n >= HOLD.CAP || q.solved || q.sheet || aw || (t - keyAt) / 1000 < NUDGE.TYPING_S) return;
       var lim = p75(hist[q.code], HOLD.FALLBACK_S);
       if ((t - Math.max(q.step, h.at)) / 1000 < lim) return;
-      if (farmed(h)) { h.frozen = true; log("jev", "hold farm n=" + h.n); return; }
       var k = "";
       try { k = o.step ? o.step() || "" : ""; } catch (e) { k = ""; }
       var kind = "hold_" + (k || "end"), line = pick(kind), shown = !!(line && o.say && o.say(line, kind));
@@ -362,7 +357,7 @@
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
           nudge: { n: nz.n, gap: nz.gap, dismissed: nz.dismissed, taps: nz.taps, last: nz.last, p: pk, on: on.slice() },
           seen: { n: sz.n, used: Object.keys(sz.used), last: sz.last },
-          hold: q ? { code: q.code, n: q.hold.n, frozen: q.hold.frozen } : null };
+          hold: q ? { code: q.code, n: q.hold.n } : null };
       }
     };
   }
