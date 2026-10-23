@@ -164,6 +164,11 @@ class Grade(unittest.TestCase):
             serve.inherit_tol(d)
             self.assertNotIn("bank_tol", d["problems"][0])
 
+    def test_slip_window_d2(self):                                              # Tony D2: slips use SLIP_WIN (0.5% or 3 s.f.), not tol_of
+        u = {"type": "num", "answer": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "form": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "tol": 1e-3}
+        self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off
+        self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
+
     def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/tol.py --write)
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "problems.json"), encoding="utf-8") as f:
             units = {c: u for p in json.load(f)["problems"] for c, u in serve.slips.units(p)}
@@ -439,7 +444,7 @@ class Slips(unittest.TestCase):
 
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
-        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, 1e-3, ())])
+        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, ())])
 
     def test_slow_form_gives_no_slip_fast(self):
         import time as _t

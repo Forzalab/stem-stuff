@@ -618,8 +618,8 @@ def same(a, b, tol, floor=0.0):
 def tol_of(u):
     """the grading window, child over parent: the question's tol (author, or tools/tol.py's wiggle test) > the bank's tol (bank_tol,
     inherit_tol) > 2% for num (WebAssign's default) / 1e-6 for expr and a hard-mode fix box (sigfig() grades it). No topic level: the bank
-    schema has no topic grouping. app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches, repeats
-    and slips keep tol or 1e-6 (98, 99: two tries)."""
+    schema has no topic grouping. app.js tolOf() is the twin (tests/fixtures/tol-of.json). The grading window only: wrong matches and
+    repeats keep tol or 1e-6 (98, 99: two tries); slips use slips.SLIP_WIN (Tony D2)."""
     t = u.get("tol", u.get("bank_tol"))
     return t if t is not None else slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6
 
@@ -675,14 +675,14 @@ def unit_hit(u, text, sig):
 
 
 @functools.lru_cache(maxsize=1024)
-def _slip_table(form, ans, tol, ignore):
+def _slip_table(form, ans, ignore):
     """((family, value), ...) of one unit's form, less every SAME (a slip on the answer: already right) and every ignore_slips value."""
     try:
         if slips.slow(form):          # bounded time: no slip, the nudge as before (cached below)
             return ()
         skip = [float(slips.parse(s).doit()) for s in ignore]
         return tuple((f, v) for f, v in slips.mutants(form)
-                     if not slips.close(v, ans, tol) and not any(slips.close(v, x, tol) for x in skip))
+                     if not slips.close(v, ans) and not any(slips.close(v, x) for x in skip))
     except Exception:  # noqa: BLE001  a form sympy can't read: no slips, the nudge as before
         return ()
 
@@ -696,8 +696,7 @@ def slip_hit(u, sig):
         ans = float(signature(u, u["answer"]))
     except (UNREADABLE, TypeError):
         return None
-    tol = u.get("tol", 1e-6)
-    fam = next((f for f, v in _slip_table(u["form"], ans, tol, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v, tol)), None)
+    fam = next((f for f, v in _slip_table(u["form"], ans, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v)), None)   # SLIP_WIN, never tol_of (D2)
     return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
 
 

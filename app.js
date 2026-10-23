@@ -286,7 +286,7 @@ const figures = u => Number.isInteger(u.sf) && u.sf > 0 ? u.sf : +((String(u.how
 const sigfig = (a, b, n) => typeof a === "number" && typeof b === "number" && Number.isFinite(a) && Number.isFinite(b) && b !== 0
   && (u => Math.abs(a - Math.round(b / u) * u) <= u * (1 + 1e-9))(10 ** (Math.floor(Math.log10(Math.abs(b))) - (n - 1)));
 /* serve.py same() / tol_of(): relative to the key (tolerance 1b), a zero key gets the absolute ZERO window, expr points always do.
-   tolOf() is the grading window only: wrong-entry matches, repeats and slips keep u.tol ?? 1e-6 (98 and 99 are two tries) */
+   tolOf() is the grading window only: wrong-entry matches and repeats keep u.tol ?? 1e-6 (98 and 99 are two tries), slips use SLIP_WIN */
 const ZERO = 1e-9, TOL_NUM = 0.02;                        // slips.py ZERO / TOL_NUM
 const same = (a, b, tol, floor = 0) => Array.isArray(a) ? Array.isArray(b) && a.length === b.length && a.every((x, i) => same(x, b[i], tol, ZERO))
   : typeof a === "string" || typeof b === "string" || !Number.isFinite(a) || !Number.isFinite(b) ? a === b
@@ -369,7 +369,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
     if (!correct && !hit && u.type === "num" && u.form) {
       let skip;
       try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
-      const fam = skip && slipMatch(u.form, sig, u.tol ?? 1e-6, skip);
+      const fam = skip && slipMatch(u.form, sig, undefined, skip);   // undefined: slips.mjs SLIP_WIN, never the grading tol (Tony D2)
       if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
     }
   }

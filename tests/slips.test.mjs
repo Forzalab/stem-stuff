@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, FAMILIES, FAMILY_HINT, EPS } from "../slips.mjs";
+import { mutants, match, close, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -50,6 +50,12 @@ test("match skips the answer and the ignore_slips values", () => {
   assert.equal(match(f, 9 / 17, 1e-3), "drop");
   assert.equal(match(f, 9 / 17, 1e-3, [3 / 7, 9 / 17]), null);
   assert.equal(match(f, 9 / 13, 1e-3, [3 / 7, 9 / 17]), "sign");
+});
+
+test("slip window is SLIP_WIN (Tony D2): 0.5% or 3 s.f., never the grading tol", () => {
+  assert.equal(SLIP_WIN, 0.005);
+  assert.equal(match("1/((4/3)^2+(1/3)^2+(2/3)^2)", 0.532), "drop");
+  assert.equal(match("12/(100+200+300)", 0.0609), null);
 });
 
 test("distribute wins a tie with sign: 10-(3+2) typed 9", () => assert.equal(match("10-(3+2)", 9, 1e-6), "distribute"));
