@@ -105,14 +105,14 @@
     let free = false, raf = 0;
 
     function update() {
-      if (!el.isConnected) return;
+      if (!el.isConnected || !el.offsetWidth) return;
       const cs = getComputedStyle(el);
       const sb = Math.max(0, el.offsetWidth - el.clientWidth - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth));   // classic scrollbar
       btns[0].parentElement.style.setProperty("--xb-sb", sb + "px");
       if (!mirror.isConnected) document.body.appendChild(mirror);
       const ms = mirror.style;
       for (const k of COPY) ms[k] = cs[k];
-      Object.assign(ms, { position: "absolute", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid",
+      Object.assign(ms, { position: "fixed", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid",
         paddingBottom: opts.freePadding || "1.875rem", width: el.offsetWidth - sb + "px", height: "auto", overflow: "hidden" });
       const text = el.value || el.placeholder || "";
       mirror.textContent = text + "​";          // zero-width end marker: a trailing newline still makes a line
@@ -168,7 +168,7 @@
       if (!mirror.isConnected) document.body.appendChild(mirror);
       const ms = mirror.style;
       for (const k of COPY) ms[k] = cs[k];
-      Object.assign(ms, { position: "absolute", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid", borderTopWidth: "0", borderBottomWidth: "0",
+      Object.assign(ms, { position: "fixed", left: "-10000px", top: "0", visibility: "hidden", borderStyle: "solid", borderTopWidth: "0", borderBottomWidth: "0",
         paddingTop: "0", paddingBottom: "0", minHeight: "0", width: el.offsetWidth - sb + "px", height: "auto", overflow: "hidden" });
       mirror.textContent = "";
       const lines = el.value.split("\n");
