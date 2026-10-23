@@ -22,7 +22,9 @@ export const FAMILY_HINT = {
   g: "QUACK. Check the value you used for g.",
 };
 
-export const close = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(b)) || g3(a) === g3(b);
+export const ZERO = 1e-9;
+/* slips.py close(): relative to b (tolerance 1b); a zero b gets the absolute ZERO window. Or equal to 3 s.f. */
+export const close = (a, b, tol) => Math.abs(a - b) <= (b ? tol * Math.abs(b) : ZERO) || g3(a) === g3(b);
 /* Python's f"{v:.3g}" */
 function g3(v) {
   if (!Number.isFinite(v)) return String(v);

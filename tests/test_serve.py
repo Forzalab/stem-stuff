@@ -126,7 +126,7 @@ class Grade(unittest.TestCase):
 
     def test_three_sig_figs(self):                                              # Tony (Oct 3): right to 3 significant figures counts
         u = {"type": "num", "answer": "9*sqrt(3)"}
-        for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", False), ("15.65", False), ("dne", False)):
+        for text, ok in (("15.59", True), ("15.588", True), ("15.6", True), ("15.55", True), ("15.5", True), ("15.2", False), ("15.95", False), ("dne", False)):   # no tol: 2% (tolerance 1b)
             self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
         e = {"type": "expr", "answer": "x/3", "points": [1, 2, 3]}
         self.assertTrue(serve.unit_correct(e, serve.signature(e, "0.33334x")))   # per point value, not per coefficient
@@ -134,6 +134,21 @@ class Grade(unittest.TestCase):
         self.assertFalse(serve.unit_correct(e, serve.signature(e, "0.33x")))
         self.assertTrue(serve.unit_correct({"type": "num", "answer": "190*9.8*(tan(16*pi/180)+0.25)/(1-0.25*tan(16*pi/180))/190"}, 5.665))   # 6BR: 5.665 vs 5.666
         self.assertTrue(serve.unit_correct({"type": "num", "answer": "0"}, 0.0))       # zero: exact (tol) only
+
+    def test_tolerance_relative(self):                                          # tolerance 1b (Tony, Oct 23): tol*max(1, |b|) was an absolute window
+        u = {"type": "num", "answer": "0.00624", "tol": 0.01}                   # PHYS_EX9
+        for text, ok in (("0", False), ("0.006", False), ("0.0063", True), ("0.00618", True), ("0.0062", True)):
+            self.assertEqual(serve.unit_correct(u, serve.signature(u, text)), ok, text)
+        self.assertFalse(serve.unit_correct({"type": "num", "answer": "-0.00633", "tol": 0.01}, 0.0))   # PHYS_Y2V
+        z = {"type": "num", "answer": "0.0"}                                    # zero key (PHYS_8X3): absolute 1e-9
+        for v, ok in ((0.0, True), (3e-16, True), (-1e-10, True), (0.0003, False), (1e-8, False)):
+            self.assertEqual(serve.unit_correct(z, v), ok, v)
+        self.assertEqual(serve.tol_of({"type": "num"}), 0.02)
+        self.assertEqual(serve.tol_of({"type": "expr"}), 1e-6)
+        self.assertEqual(serve.tol_of({"type": "num", "tol": 1e-4}), 1e-4)
+        e = {"type": "expr", "answer": "sin(pi*x)", "points": [1, 2, 0.5]}       # expr points near 0: float dust passes
+        self.assertTrue(serve.unit_correct(e, serve.signature(e, "-sin(pi*x)+2*sin(pi*x)")))
+        self.assertFalse(serve.unit_correct(e, serve.signature(e, "sin(pi*x)+0.001")))
 
     def test_pick_all_fix(self):                                                # prove mode: X'd rows carry a graded fix
         for bad in ({"choices": ["a", "c"]}, {"choices": ["a", "c"], "fixes": {"b": "10"}},

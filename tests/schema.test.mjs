@@ -296,7 +296,7 @@ for (const p of problems) {
         }
         const ans = u.answer === "dne" ? NaN : num(u.answer), v = num(w.match);
         assert.ok(Number.isFinite(v), w.match);
-        assert.ok(!(Math.abs(v - ans) <= tol * Math.max(1, Math.abs(ans))), `${w.match} equals the answer`);
+        assert.ok(!(Math.abs(v - ans) <= (ans ? tol * Math.abs(ans) : 1e-9)), `${w.match} equals the answer`);
       }
     }
   });
@@ -304,7 +304,7 @@ for (const p of problems) {
     for (const u of units) {
       if (!u.form) continue;
       const tol = u.tol ?? 1e-6, ans = num(u.answer), v = num(u.form);
-      assert.ok(Math.abs(v - ans) <= tol * Math.max(1, Math.abs(ans)) || v.toPrecision(3) === ans.toPrecision(3), `${u.form} != ${u.answer}`);
+      assert.ok(Math.abs(v - ans) <= (ans ? tol * Math.abs(ans) : 1e-9) || v.toPrecision(3) === ans.toPrecision(3), `${u.form} != ${u.answer}`);
     }
   });
 

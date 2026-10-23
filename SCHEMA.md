@@ -77,7 +77,8 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
 | `points` | `expr` | at least 3 sample values of `var`, inside the domain | **no** |
-| `tol` | `num`, `expr` | relative tolerance. Default 1e-6. Use `0.01` for physics numbers. | **no** |
+| `tol` | `num`, `expr` | relative tolerance: right when \|typed − answer\| ≤ tol × \|answer\|. Default: `0.02` for `num` (WebAssign's default), `1e-6` for `expr` and a hard-mode fix box. A zero answer is absolute: \|typed\| ≤ 1e-9. Set it when the question needs another window, with `tol_why` (below). `wrong` matches, repeats and slips use `tol` or `1e-6`. | **no** |
+| `tol_why` | with `tol` | one line: why this window fits the question and the topic quizzed ("counting: an off-by-one is the error"). `python3 tools/tol.py --write` writes `tol: 1e-4` with its own line on a definitive key (the wiggle test: g 9.8/9.81, π 3.14/3.1416, each datum ±1 in its last digit leave the key unchanged). Why a rule at all: the old window `tol*max(1,|answer|)` was absolute below 1, so 0 was right for 0.00624. | **no** |
 | `correct` | `mc` | id of the right choice | **no** |
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
@@ -131,7 +132,7 @@ Bench (brain `projects/calc/_files/research-slips-bench-2026-10-23.md`, 31 forms
 | 2 | ~180 | 2.1% / 3.8% | 78% |
 | 3 | ~1900 | 7.8% / 13.3% | 37% |
 
-Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` uses `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
+Candidates grow about linearly with families at k = 1 and about with their square at k = 2. A 3 s.f. answer has 900 values per decade, so candidates near that count saturate. Short forms are worst: `12/(100+200+300)` reaches 27% at k = 2. `close()` used `tol*max(1,|b|)`, an absolute window when `|answer| < 1` (14.8% false match at k = 1 for 0.4286); it is relative now (tolerance 1b). Storing the trees more compactly (shared subtrees, e-graphs) saves time, but the number of distinct values, and with it the false match rate, stays the same. With the proposal, bring the bench delta (false match %, ms per form). Design notes: `projects/calc/_files/research-slips-diagnosis-2026-10-23.md`.
 
 Hint check (tests): a hint fails only if it contains the answer **and** the problem's body doesn't already show that text (answers of 1 character are skipped: too common).
 
@@ -521,7 +522,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
-    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
+    "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
     "problem": {
       "type": "object",
       "required": [
@@ -693,8 +694,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "number",
           "exclusiveMinimum": 0,
           "maximum": 0.05,
-          "default": 1e-06,
-          "description": "Relative tolerance. ~0.01 for physics."
+          "description": "Relative tolerance. Default 0.02 for num, 1e-06 for expr. Zero key: absolute 1e-9."
+        },
+        "tol_why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
         },
         "pick": {
           "enum": [
@@ -940,8 +945,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "number",
           "exclusiveMinimum": 0,
           "maximum": 0.05,
-          "default": 1e-06,
-          "description": "Relative tolerance. ~0.01 for physics."
+          "description": "Relative tolerance. Default 0.02 for num, 1e-06 for expr. Zero key: absolute 1e-9."
+        },
+        "tol_why": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line: why this tol fits the question and topic (author), or the wiggle test's line (tools/tol.py)."
         },
         "var": {
           "type": "string",

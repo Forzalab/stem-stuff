@@ -590,14 +590,22 @@ def numtext(text):
     return re.sub(r"(?<=\d) (?=\d{3}(?!\d))", "", t)
 
 
-def same(a, b, tol):
+def same(a, b, tol, floor=0.0):
+    """relative: |a - b| <= tol*|b| (tolerance 1b, Tony Oct 23; max(1, |b|) made 0 right for a 0.00624 key). A zero key: |a| <= ZERO.
+    expr points (a tuple) all get the ZERO floor: a function value near 0 carries float dust (sin(pi) = 1.2e-16)."""
     if isinstance(a, str) or isinstance(b, str):
         return a == b
     if isinstance(a, tuple):
-        return len(a) == len(b) and all(same(x, y, tol) for x, y in zip(a, b))
+        return isinstance(b, tuple) and len(a) == len(b) and all(same(x, y, tol, slips.ZERO) for x, y in zip(a, b))
     if math.isinf(a) or math.isinf(b):
         return a == b
-    return abs(a - b) <= tol * max(1.0, abs(b))
+    return abs(a - b) <= max(tol * abs(b), slips.ZERO if b == 0 else floor)
+
+
+def tol_of(u):
+    """the item's tol (author, or the wiggle test's, tools/tol.py), else 2% for num (WebAssign's default), 1e-6 for expr and for a
+    hard-mode fix box (sigfig() grades it). The grading window only: wrong matches, repeats and slips keep tol or 1e-6 (98, 99: two tries)."""
+    return u.get("tol", slips.TOL_NUM if u.get("type") == "num" and not u.get("fixbox") else 1e-6)
 
 
 def sig3(a, b):
@@ -628,7 +636,7 @@ def figures(u):
 
 
 def unit_correct(u, sig):
-    tol = u.get("tol", 1e-6)
+    tol = tol_of(u)
     if u["type"] == "text":
         return sig in {squash(t) for t in [u["answer"], *u.get("accept", [])]}
     ans = "dne" if u["answer"] == "dne" else signature(u, u["answer"])

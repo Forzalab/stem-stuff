@@ -17,6 +17,8 @@ FAMILIES = ("distribute", "sign", "drop", "reciprocal", "power", "factor", "drea
 CUTOFF = 20261022     # banks with v >= CUTOFF pass gate()
 PAIRED = {"sign", "distribute"}   # gate(): these two alone on one value are not a CLASH (distribute is a sign flip by definition)
 EPS = 1e-9            # two mutant values within this (relative) are one value
+ZERO = 1e-9           # a zero key's window, absolute (tolerance 1b: calculator dust passes, 0.0003 fails). app.js / slips.mjs ZERO
+TOL_NUM = 0.02        # a num item's tol when it has none: WebAssign's default, 2% relative (serve.py tol_of, app.js tolOf)
 
 
 def parse(src):
@@ -43,7 +45,8 @@ def _r3(v):
 
 
 def close(a, b, tol):
-    return abs(a - b) <= tol * max(1, abs(b)) or _r3(a) == _r3(b)
+    """relative to b (tolerance 1b); a zero b gets the absolute ZERO window. Or equal to 3 s.f."""
+    return abs(a - b) <= (tol * abs(b) if b else ZERO) or _r3(a) == _r3(b)
 
 
 SLOW_S = 1.0          # a form whose mutants take longer than this is rejected (gate) / gives no slip (serve)

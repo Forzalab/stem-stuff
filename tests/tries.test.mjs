@@ -113,8 +113,15 @@ test("pick all: shown() keeps every correct id and the locked ones from a pool o
 
 // typed numbers right to 3 significant figures (serve.py sig3; Tony, Oct 3): correctness only
 test("num: 3 significant figures count as right", () => {
-  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "correct"], ["15.55", "correct"], ["15.5", "wrong"], ["15.65", "wrong"]])
+  for (const [t, v] of [["15.59", "correct"], ["15.588", "correct"], ["15.6", "correct"], ["15.55", "correct"], ["15.5", "correct"], ["15.2", "wrong"], ["15.95", "wrong"]])   // no tol: 2% (tolerance 1b)
     assert.equal(gradeLocal({ type: "num", code: `T_s4_${t}`, answer: "9*sqrt(3)" }, { answer: t }).verdict, v, t);
+});
+
+test("tolerance 1b: relative to the key, a zero key is absolute 1e-9 (PHYS_EX9: 0 was right for 0.00624)", () => {
+  for (const [t, v] of [["0", "wrong"], ["0.006", "wrong"], ["0.0063", "correct"], ["0.00618", "correct"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_tol_${t}`, answer: "0.00624", tol: 0.01 }, { answer: t }).verdict, v, t);
+  for (const [t, v] of [["0", "correct"], ["1e-10", "correct"], ["0.0003", "wrong"]])
+    assert.equal(gradeLocal({ type: "num", code: `T_tz_${t}`, answer: "0.0", tol: 0.01 }, { answer: t }).verdict, v, t);
 });
 
 // pick all, prove mode (fix): every unlocked row not ticked carries a typed fix; a right set grades the fixes like parts
