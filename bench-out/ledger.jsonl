@@ -6,3 +6,14 @@
 {"out": "/tmp/bench-out/C2/B-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.487606}
 {"out": "/tmp/bench-out/C2/A-deepseek", "arm": "deepseek:low", "usd": 0.019798}
 {"out": "/tmp/bench-out/C2/B-deepseek", "arm": "deepseek:low", "usd": 0.017409}
+{"out": "/tmp/bench-out/B1v2/haiku", "arm": "claude:claude-haiku-5-5", "usd": 0.032134}
+{"out": "/tmp/bench-out/B1v2/sonnet", "arm": "claude:claude-sonnet-5-5", "usd": 0.097236}
+{"out": "/tmp/bench-out/XT/ds-chat", "arm": "deepseek:low", "usd": 0.022006}
+{"out": "/tmp/bench-out/XT/ds-edge", "arm": "deepseek:low", "usd": 0.020784}
+{"out": "/tmp/bench-out/XT/sonnet-edge", "arm": "claude:claude-sonnet-5-5", "usd": 0.12596}
+{"out": "/tmp/bench-out/XT3/ds-chat", "arm": "deepseek:low", "usd": 0.020802}
+{"out": "/tmp/bench-out/XT3/ds-edge", "arm": "deepseek:low", "usd": 0.026236}
+{"out": "/tmp/bench-out/C2v2/A-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.516264}
+{"out": "/tmp/bench-out/C2v2/B-claude", "arm": "claude:claude-sonnet-5-5", "usd": 0.398448}
+{"out": "/tmp/bench-out/XT3/ds-edge-orbatch", "arm": "deepseek:low", "usd": 0.006838657, "note": "batch-level cost, parser fixed"}
+{"out": "/tmp/bench-out/XT3/sonnet-chat", "arm": "claude:claude-sonnet-5-5", "usd": 0.497161}
