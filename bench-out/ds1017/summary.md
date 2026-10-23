@@ -39,3 +39,19 @@ Effort sweep, PR #248 code, edge 42 + chat 48 per cell, leaks without the CEK_G3
 - Main failure: the reasoning ignores effort low and fills the 2100 budget (9/36 requests cut; 7 of them empty).
 - Scout top 5: parasail, deepinfra/priority, deepinfra, deepinfra/flex, novita. Only 3 samples per host.
 Verdict round 2: still stay on 0910 low for prod. If 1017 is adopted later, it needs a bigger budget (x4 or more) and its own host list (parasail first, losing the DeepInfra prompt cache), then a re-bench. Today's 5-host list is the right one for 0910 only.
+
+## Round 3 (Tony): 1017 pinned to deepinfra/fp8/priority only (= provider.only + allow_fallbacks off), on origin/main@25f77cb (PR #248, #241, #245 merged)
+
+| effort | set | N | leaks (excl. CEK) | no Pick | cut | empty | mean s | $ |
+|---|---|---|---|---|---|---|---|---|
+| low | edge | 42 | 0/27 | 0 | 0 | 0 | 16.5 | 0.0254 |
+| low | chat | 48 | 0/20 | 0 | 0 | 0 | 8.7 | 0.0203 |
+| high | edge | 42 | 0/27 | 0 | 0 | 0 | 18.0 | 0.0278 |
+| high | chat | 48 | 0/20 | 1 | 0 | 0 | 10.2 | 0.0231 |
+All 180 replies were served by DeepInfra priority. Quality is the cleanest cell of the day.
+
+Time to first word, streaming, 12 each, run side by side (6 s = prod CLUCK_FIRST_TEXT_S):
+- 0910 prod (5-host list, deepinfra): median 4.5 s, 4/12 over 6 s, total median 8.8 s.
+- 1017 priority: median 20.0 s, 10/12 over 6 s, total median 24.2 s.
+- Sequential check (1017 priority): first reasoning token 0.9 s, then 1259 reasoning tokens (the effort-low cap, 60% of 2100) at ~61 tok/s, so ~21 s of thinking before the first word. The cause is the model's long reasoning, not concurrency.
+Verdict round 3: 1017 on priority is quality-clean but ~4x slower to the first word than 0910. With the 6 s cap, prod would hand most 1017 turns to Claude (Claude prices, cold cache). Stay on 0910. A 1017 switch only makes sense with a much longer first-word cap, or with streamed "thinking..." UI.

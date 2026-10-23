@@ -29,3 +29,7 @@
 {"out": "/tmp/bench-out/ds1017/0910-none-edge", "arm": "deepseek:none", "usd": 0.010878}
 {"out": "/tmp/bench-out/ds1017/0910-high-chat", "arm": "deepseek:high", "usd": 0.06461}
 {"out": "/tmp/bench-out/ds1017/0910-high-edge", "arm": "deepseek:high", "usd": 0.065817}
+{"out": "/tmp/bench-out/ds1017/prio-low-chat", "arm": "deepseek:low", "usd": 0.020264}
+{"out": "/tmp/bench-out/ds1017/prio-high-chat", "arm": "deepseek:high", "usd": 0.02306}
+{"out": "/tmp/bench-out/ds1017/prio-low-edge", "arm": "deepseek:low", "usd": 0.025382}
+{"out": "/tmp/bench-out/ds1017/prio-high-edge", "arm": "deepseek:high", "usd": 0.027766}
