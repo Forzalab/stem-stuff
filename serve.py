@@ -2119,13 +2119,13 @@ FIG_OK = ("ok", "off", "second")
 
 def fig_reask(system, user_text, fig, why, code="-"):
     """H bridge (Oct 22): the reply's figure was dropped by the gate (bad JSON, a leak, the caps): ask ONCE more for just the figure
-    (FIG_REASK_TOKENS, the same livefig rule), gate it again. Returns the checked fence, or "" (words only) with the reason logged.
+    (FIG_REASK_TOKENS; system = the reply's own system blocks, how-to and cache marks included), gate it again. Returns the checked fence, or "" (words only) with the reason logged.
     Never an error to the student."""
     ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
            "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
     try:
         gate = views_gate.Fence(fig)
-        out = "".join(gate.feed(t) for t in _claude_one(system + [{"type": "text", "text": livefig.rule(fig)}],
+        out = "".join(gate.feed(t) for t in _claude_one(system,
                                                          [{"role": "user", "content": ask}], FIG_REASK_TOKENS)) + gate.end()
     except Exception as e:  # noqa: BLE001
         log(f"fig {code} reask: {type(e).__name__}")
@@ -2137,7 +2137,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
 
 def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     """the model's text chunks -> what the student may see: the <XYZ> notes stripped, a code fence through livefig.Fence (fig = the question's
-    livefig Ctx: a valid figure the model draws on its own still shows; None strips every fence; the letter prompt never asks for one), the
+    livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
     xyz, fence = Xyz(), views_gate.Fence(fig)
@@ -2200,11 +2200,43 @@ def fig_images(p):
     return out
 
 
+def _geo_line():
+    """the Geometry line of views/prompt/all.md (OpenUI Lang, profile stem), "" when missing"""
+    try:
+        with open(os.path.join(ROOT, "views", "prompt", "all.md"), encoding="utf-8") as f:
+            return next((x.strip() for x in f if x.startswith("- `Geometry(")), "")
+    except OSError:
+        return ""
+
+
+GEO_LINE = _geo_line()
+
+
+# spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
+# in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
+V4_FIG_FIXED = ("\n" + livefig.RULE_V4 + "\nOr a ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
+                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE)
+
+
+def v4_fig_howto(fig):
+    """the per-question, uncached part of the figure how-to"""
+    return livefig.rule_tail(fig).lstrip("\n")
+
+
+def _v4_claude_system(v4):
+    """the Claude arm's system blocks; fig_reask sends the same ones, so it reads the cache the reply just wrote"""
+    fig = v4.get("fig")
+    system = [{"type": "text", "text": PROMPT_V4 + (V4_FIG_FIXED if fig is not None else ""), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+              {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
+    if fig is not None:                                          # the per-question how-to tail: last, uncached, so the cached prefix stays the same
+        system.append({"type": "text", "text": v4_fig_howto(fig)})
+    return system
+
+
 def _v4_claude_chunks(v4, max_tokens):
     # layer 1: the letter, 1h (~12 visitors a day: 5 min goes cold); layer 2: the bank's audience line; layer 3: the question block of the first
     # user turn; layer 4: the last assistant turn of a chat. Block B (the dynamic one) is never cached. 4 breakpoints at most.
-    system = [{"type": "text", "text": PROMPT_V4, "cache_control": {"type": "ephemeral", "ttl": "1h"}},
-              {"type": "text", "text": v4["bank"], "cache_control": CACHE}]
+    system = _v4_claude_system(v4)
     msgs = []
     last_asst = max((i for i, m in enumerate(v4["turns"]) if m["role"] == "assistant"), default=-1)
     for i, m in enumerate(v4["turns"]):
@@ -2222,7 +2254,9 @@ def _v4_claude_chunks(v4, max_tokens):
 
 def _v4_deepseek_chunks(v4, key, max_tokens):
     """DeepSeek v4.1 flash through OpenRouter, the same system and turns (blocks joined: the same text), prefix cache on one pinned host"""
-    msgs = [{"role": "system", "content": PROMPT_V4 + "\n\n" + v4["bank"]}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
+    fig = v4.get("fig")                                          # the figure how-to as on the Claude arm: the fixed part in the cached prefix, the tail last
+    head = PROMPT_V4 + (V4_FIG_FIXED if fig is not None else "") + "\n\n" + v4["bank"] + ("\n\n" + v4_fig_howto(fig) if fig is not None else "")
+    msgs = [{"role": "system", "content": head}] + [dict(m, content="".join(m["content"])) if m["role"] == "user" else m for m in v4["turns"]]
     payload = dict(model=DS_MODEL, max_tokens=max_tokens * 2, reasoning={"effort": "low"}, stream=True, messages=msgs,
                    provider={"order": [DS_PROVIDER], "allow_fallbacks": True, "zdr": True, "data_collection": "deny"})
     plain, usage, t0, said = Plain(), {}, time.time(), False
@@ -2276,7 +2310,7 @@ def v4_stream(v4, key, out=None):
             reask = None
             if name == "claude" and v4.get("fig") is not None and v4["turns"]:
                 first = v4["turns"][0]["content"]
-                reask = lambda why: fig_reask([{"type": "text", "text": PROMPT_V4}, {"type": "text", "text": v4["bank"]}],   # noqa: E731
+                reask = lambda why: fig_reask(_v4_claude_system(v4),   # noqa: E731
                                               first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
             for t in v4_visible(chunks, v4["reveal"], v4["facts"], v4["code"], v4.get("fig"), reask):
                 sent = True
