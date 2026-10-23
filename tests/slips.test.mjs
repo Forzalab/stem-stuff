@@ -22,7 +22,7 @@ for (const g of GOLDEN) {
   });
 }
 test("families and hints: the 10 families in handoff order, one QUACK. line each", () => {
-  assert.deepEqual(FAMILIES, ["sign", "drop", "reciprocal", "power", "factor", "distribute", "dream", "trig", "units", "g"]);
+  assert.deepEqual(FAMILIES, ["distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g"]);
   assert.deepEqual(Object.keys(FAMILY_HINT), FAMILIES);
   for (const f of FAMILIES) assert.match(FAMILY_HINT[f], /^QUACK\. /, f);
 });
@@ -49,3 +49,5 @@ test("match skips the answer and the ignore_slips values", () => {
   assert.equal(match(f, 9 / 17, 1e-3, [3 / 7, 9 / 17]), null);
   assert.equal(match(f, 9 / 13, 1e-3, [3 / 7, 9 / 17]), "sign");
 });
+
+test("distribute wins a tie with sign: 10-(3+2) typed 9", () => assert.equal(match("10-(3+2)", 9, 1e-6), "distribute"));

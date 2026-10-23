@@ -9,7 +9,7 @@ from functools import lru_cache
 
 from sympy import Add, Float, Integer, Mul, Pow, Rational, S, cos, pi, sin, tan, parse_expr
 
-FAMILIES = ("sign", "drop", "reciprocal", "power", "factor", "distribute", "dream", "trig", "units", "g")
+FAMILIES = ("distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g")   # hint priority; distribute first (Tony, Oct 22): on a tie with sign it names the real habit
 CUTOFF = 20261022     # banks with v >= CUTOFF pass gate()
 PAIRED = {"sign", "distribute"}   # gate(): these two alone on one value are not a CLASH (distribute is a sign flip by definition)
 EPS = 1e-9            # two mutant values within this (relative) are one value

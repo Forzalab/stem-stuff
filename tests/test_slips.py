@@ -79,6 +79,10 @@ class Mutants(unittest.TestCase):
             for _, v in slips.mutants(form):
                 self.assertTrue(math.isfinite(v))
 
+    def test_distribute_wins_a_tie_with_sign(self):  # Tony, Oct 22: 10-(3+2) typed 9 is the minus that reached one term
+        self.assertEqual(slips.FAMILIES[0], "distribute")
+        self.assertEqual(slips.match("10-(3+2)", 9, 1e-6), "distribute")
+
     def test_golden_sign(self):
         self.assertEqual(slips.match(GOLD, 0.692, 1e-6), "sign")
         self.assertIsNone(slips.match(GOLD, 0.3, 1e-6))

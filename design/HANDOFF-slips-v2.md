@@ -6,8 +6,8 @@ Branch: `ccr-668d9f68-cd1c9u`. PR: Forzalab/stem-stuff#227. Already there: `form
 Do not open a new PR. Push to this branch.
 
 ## Locked decisions (do not re-ask)
-1. **Families** (in this order, for hint priority): `sign` (flip one term or the whole answer), `drop` (lose one term), `reciprocal` (a/b→b/a, lose the final 1/x),
-   `power` (drop or add a square, drop or add a √), `factor` (whole answer ×2 or ×½), `distribute` (−(b+c)→−b+c),
+1. **Families** (in this order, for hint priority): `distribute` (−(b+c)→−b+c; moved first, Tony Oct 22: on a tie with `sign` it names the real habit), `sign` (flip one term or the whole answer), `drop` (lose one term), `reciprocal` (a/b→b/a, lose the final 1/x),
+   `power` (drop or add a square, drop or add a √), `factor` (whole answer ×2 or ×½),
    `dream` ((a+b)²→a²+b², √(a+b)→√a+√b), `trig` (sin↔cos, deg↔rad), `units` (whole answer ×10^±2, ×10^±3), `g` (9.8↔10).
 2. **Runtime matching, in both modes** (diet and sugar). After the author's `wrong` entries miss and before `nudge`, a typed value that matches a slip of `form` within `tol` gets that family's hint. It counts as a normal wrong try.
 3. **The hint names the family only.** It never names the term and never states the answer. One fixed Cluck line per family (`FAMILY_HINT`), starting `QUACK.`.

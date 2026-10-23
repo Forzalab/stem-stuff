@@ -63,12 +63,12 @@ NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u
 WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
 # slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only: never a term, never a number.
 FAMILY_HINT = {
+    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
     "sign": "QUACK. Check every sign. One of them flipped.",
     "drop": "QUACK. Count your terms. One of them went missing.",
     "reciprocal": "QUACK. Check what is on top and what is on the bottom.",
     "power": "QUACK. Check your powers. A square or a root slipped.",
     "factor": "QUACK. Check your factors. Something got doubled or halved.",
-    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
     "dream": "QUACK. Check your square or root of a sum. It does not split.",
     "trig": "QUACK. Check your trig. Sine or cosine, degrees or radians.",
     "units": "QUACK. Check your units. A power of ten slipped.",

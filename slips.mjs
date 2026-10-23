@@ -6,16 +6,16 @@
    a / b = a * b^-1, sqrt(x) = x^(1/2), unary minus applied at once). Values are float math here, exact-then-float in sympy:
    they agree to ~1e-15, far inside EPS. Within a family the values come out sorted, so the order matches slips.py too. */
 
-export const FAMILIES = ["sign", "drop", "reciprocal", "power", "factor", "distribute", "dream", "trig", "units", "g"];
+export const FAMILIES = ["distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g"];
 export const EPS = 1e-9;
 /* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never names the term or the answer). Keep byte-equal: tests/slips.test.mjs checks it against serve.py. */
 export const FAMILY_HINT = {
+  distribute: "QUACK. Check the minus before the brackets. It goes to every term.",
   sign: "QUACK. Check every sign. One of them flipped.",
   drop: "QUACK. Count your terms. One of them went missing.",
   reciprocal: "QUACK. Check what is on top and what is on the bottom.",
   power: "QUACK. Check your powers. A square or a root slipped.",
   factor: "QUACK. Check your factors. Something got doubled or halved.",
-  distribute: "QUACK. Check the minus before the brackets. It goes to every term.",
   dream: "QUACK. Check your square or root of a sum. It does not split.",
   trig: "QUACK. Check your trig. Sine or cosine, degrees or radians.",
   units: "QUACK. Check your units. A power of ten slipped.",
