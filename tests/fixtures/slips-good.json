@@ -1,0 +1,8 @@
+{
+  "v": 20261022,
+  "problems": [
+    {"code": "SLIP_OK", "type": "num", "answer": "5", "form": "sqrt(9+16)"},
+    {"code": "SLIP_MULTI", "type": "multi", "parts": [{"type": "num", "answer": "1.25", "form": "(12-7)/4"}]},
+    {"code": "SLIP_IGNORED", "type": "num", "answer": "2", "form": "7-(2+3)", "ignore_slips": ["4", "6", "8"]}
+  ]
+}

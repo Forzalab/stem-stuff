@@ -1,72 +1,47 @@
-"""Slips from the formula: for each num item (or num part) with a `form`, flip the sign of each term of every sum
-(and of the whole answer) and drop each term, one at a time. List every slip value that no `wrong` entry catches.
+"""Slips from the formula: for each num item (or num part) with a `form`, list every slip (the 10 families of slips.py at the repo root)
+that no `wrong` entry catches (MISSING), and every slip equal to the answer (SAME).
+Banks with v >= 20261022 also pass the gate (design/HANDOFF-slips-v2.md rule 7): every num has `form`; no SAME; no two families on one
+value (CLASH). ignore_slips exempts a value. MISSING there is report only: the grader matches slips at runtime.
 
 Run: python3 tools/slips.py [banks/BANK_X.json ...]     (default: problems.json + banks/*.json; report only)
-     python3 tools/slips.py --strict ...                 (exit 1 on any uncovered slip)
+     python3 tools/slips.py --strict ...                 (exit 1 on a gate failure; on an older bank, on any uncovered slip)
 """
-import json, sys
+import json
+import sys
 from pathlib import Path
-from sympy import Add, parse_expr
 
 ROOT = Path(__file__).resolve().parent.parent
-
-
-def parse(src):
-    return parse_expr(str(src).replace("^", "**"), evaluate=False)   # authored text only, never student input; unfolded so terms survive
-
-
-def mutants(expr):
-    """(label, expr) per slip: -whole, then per Add node each term flipped / dropped."""
-    out = [("flip whole", -expr)]
-    for node in {n for n in expr.atoms(Add)} | ({expr} if isinstance(expr, Add) else set()):
-        for t in node.args:
-            rest = [a for a in node.args if a is not t]
-            for label, repl in ((f"flip {t}", Add(*rest, -t)), (f"drop {t}", Add(*rest))):
-                out.append((label, expr.xreplace({node: repl})))
-    return out
-
-
-def close(a, b, tol):
-    return abs(a - b) <= tol * max(1, abs(b)) or f"{a:.3g}" == f"{b:.3g}"
-
-
-def units(p):
-    if p.get("type") == "multi":
-        for i, q in enumerate(p.get("parts", [])):
-            yield f"{p['code']}#{i}", q
-    else:
-        yield p["code"], p
+sys.path.insert(0, str(ROOT))
+import slips  # noqa: E402  (the root module, not this file)
 
 
 def check(path):
+    bank = json.loads(Path(path).read_text())
+    new = bank.get("v", 1) >= slips.CUTOFF
     bad, rows = 0, []
-    for p in json.loads(Path(path).read_text())["problems"]:
-        for code, u in units(p):
-            if u.get("type") != "num" or not u.get("form"):
+    for p in bank["problems"]:
+        for code, u in slips.units(p):
+            if u.get("type") != "num":
                 continue
-            tol = u.get("tol", 1e-6)
-            ans = float(parse(u["answer"]).doit())
-            got = float(parse(u["form"]).doit())
-            if not close(got, ans, tol):
-                rows.append(f"  {code}: form = {got:.4g} but answer = {ans:.4g}")
-                bad += 1
+            if new:
+                fails = slips.gate(u)
+                rows += [f"  {code}: {r}" for r in fails]
+                bad += len(fails)
+                if fails:
+                    continue
+            elif not u.get("form"):
                 continue
-            caught = [float(parse(w["match"]).doit()) for w in u.get("wrong", []) if "match" in w]
-            skip = [float(parse(s).doit()) for s in u.get("ignore_slips", [])]
-            seen = []
-            for label, m in mutants(parse(u["form"])):
-                try:
-                    v = float(m.doit())
-                except (TypeError, ValueError, ZeroDivisionError):
-                    continue
-                if v != v or abs(v) == float("inf") or any(close(v, s, tol) for s in seen):
-                    continue
-                seen.append(v)
-                if close(v, ans, tol):
-                    rows.append(f"  {code}: SAME {v:.4g}  ({label}) can't be told apart by number")
-                elif not any(close(v, c, tol) for c in caught + skip):
-                    rows.append(f"  {code}: MISSING {v:.4g}  ({label})")
+            else:
+                wrong = slips.form_ok(u)
+                if wrong:
+                    rows.append(f"  {code}: {wrong}")
                     bad += 1
+                    continue
+                tol, ans = u.get("tol", 1e-6), float(slips.parse(u["answer"]).doit())
+                rows += [f"  {code}: SAME {v:.4g}  ({fam}) can't be told apart by number" for fam, v in slips.mutants(u["form"]) if slips.close(v, ans, tol)]
+            miss = slips.missing(u)
+            rows += [f"  {code}: MISSING {v:.4g}  ({fam})" for fam, v in miss]
+            bad += 0 if new else len(miss)
     return bad, rows
 
 
@@ -80,7 +55,7 @@ def main(argv):
         if rows:
             print(path)
             print("\n".join(rows))
-    print(f"{total} uncovered slip(s)")
+    print(f"{total} gate failure(s) / uncovered slip(s)")
     return 1 if strict and total else 0
 
 
