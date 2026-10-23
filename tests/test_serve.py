@@ -358,6 +358,66 @@ class Grade(unittest.TestCase):
             self.assertEqual(pub["body"], p["body"])
 
 
+class Slips(unittest.TestCase):
+    """slips v2 unit B (design/HANDOFF-slips-v2.md): num grading is author `wrong` -> a slip of `form` (FAMILY_HINT) -> the nudge,
+    in diet and sugar; form, ignore_slips and slip values never reach the client."""
+    FORM = "1/((4/3)^2+(1/3)^2+(2/3)^2)"     # golden PHYS_XZP: 9/21; flipping +(2/3)^2 gives 9/13 = 0.692
+    ITEM = {"code": "PHYS_XZP", "title": "t", "type": "num", "body": "b", "answer": "9/21", "tol": 1e-3, "form": FORM,
+            "ignore_slips": ["2*9/21"]}
+    MULTI = {"code": "PHYS_XZQ", "title": "t", "type": "multi", "body": "b",
+             "parts": [{"label": "a", "type": "num", "answer": "9/21", "tol": 1e-3, "form": FORM, "ignore_slips": ["2*9/21"]},
+                       {"label": "b", "type": "num", "answer": "3"}]}
+
+    def modes(self, p):
+        return (("diet", serve.view(p, "diet"), False), ("sugar", serve.view(p, "sugar"), True))
+
+    def test_golden_sign_in_both_modes(self):
+        for mode, v, rv in self.modes(self.ITEM):
+            r = serve.grade(v, "sl1-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["triesLeft"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 1), mode)
+        for mode, v, rv in self.modes(self.MULTI):
+            r = serve.grade(v, "sl2-" + mode, {"part": 0, "answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["part"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 0), mode)
+            self.assertNotIn("error", serve.grade(v, "sl2-" + mode, {"part": 1, "answer": "0.692"}, reveal=rv))   # part b has no form
+
+    def test_author_wrong_wins(self):
+        p = dict(self.ITEM, wrong=[{"match": "9/13", "error": "flip", "hint": "QUACK. Mine."}])
+        for mode, v, rv in self.modes(p):
+            r = serve.grade(v, "sl3-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["error"], r["hint"]), ("flip", "QUACK. Mine."), mode)
+
+    def test_no_match_and_no_form_nudge(self):
+        bare = {k: v for k, v in self.ITEM.items() if k not in ("form", "ignore_slips")}
+        for p, sid in ((self.ITEM, "sl4"), (bare, "sl5")):
+            for mode, v, rv in self.modes(p):
+                r = serve.grade(v, f"{sid}-{mode}", {"answer": "0.1234"}, reveal=rv)
+                self.assertEqual((r["verdict"], r["hint"]), ("wrong", serve.DEFAULT_NUDGE), mode)
+                self.assertNotIn("error", r)
+        for mode, v, rv in self.modes(bare):                                    # no form: the slip value is just a wrong number
+            r = serve.grade(v, "sl6-" + mode, {"answer": "0.692"}, reveal=rv)
+            self.assertEqual((r["hint"], "error" in r), (serve.DEFAULT_NUDGE, False), mode)
+        self.assertEqual(serve.grade(self.ITEM, "sl7", {"answer": "9/21"})["verdict"], "correct")
+        self.assertEqual(serve.grade(self.ITEM, "sl8", {"answer": "0.857"})["hint"], serve.DEFAULT_NUDGE)   # factor x2, listed in ignore_slips
+
+    def test_same_slip_is_skipped(self):
+        self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
+        self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, 1e-3, ())])
+
+    def test_family_hints(self):
+        self.assertEqual(set(serve.FAMILY_HINT), set(serve.slips.FAMILIES))
+        for fam, h in serve.FAMILY_HINT.items():
+            self.assertTrue(h.startswith("QUACK. "), fam)
+            self.assertLessEqual(len(h.split()) - 1, 12, fam)
+            self.assertIsNone(re.search(r"\d", h), fam)                       # no number at all, so never the answer
+
+    def test_public_drops_form(self):
+        for p in (self.ITEM, self.MULTI):
+            for mode in ("diet", "sugar"):
+                pub = json.dumps(serve.public(serve.view(p, mode), "s"))
+                for k in ("form", "ignore_slips", self.FORM, "0.69", "0.43"):
+                    self.assertNotIn(k, pub, (p["code"], mode))
+
+
 class Families(unittest.TestCase):
     """J6 trap_beaten: /check names the item's distractor families, but only on a CORRECT reply; nothing served before grading carries them."""
 
