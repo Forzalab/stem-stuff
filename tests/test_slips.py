@@ -105,6 +105,23 @@ class Gate(unittest.TestCase):
         self.assertEqual(slips.gate({"type": "num", "answer": "2", "form": "7-(2+3)", "ignore_slips": ["4", "6", "8"]}), [])
         self.assertTrue(slips.gate({"type": "num", "answer": "6", "form": "2+3"})[0].startswith("form ="))
 
+    def test_sign_distribute_no_clash(self):
+        """-(b+c) -> -b+c is a sign flip of c by definition: sign + distribute alone on one value is no CLASH."""
+        form = "20-(3+4)"
+        shared = set(fam(form, "sign")) & set(fam(form, "distribute"))
+        self.assertEqual(shared, {19.0, 21.0})                  # the two families do land on the same values
+        self.assertEqual(slips.gate({"type": "num", "answer": "13", "form": form}), [])
+        clash = slips.gate({"type": "num", "answer": "2", "form": "7-(2+3)"})   # a real clash (drop / power on 4) still fails
+        self.assertEqual(clash, ["CLASH 4  (drop / power) one value, two hints"])
+
+    def test_xzp_fixture(self):  # the golden PHYS_XZP bank: 9/17 is drop and power at 3 s.f., so it is ignored; --strict passes
+        with open(os.path.join(FIX, "slips-xzp.json"), encoding="utf-8") as f:
+            u = json.load(f)["problems"][0]
+        self.assertEqual(u["form"], GOLD)
+        self.assertTrue(slips.gate({**u, "ignore_slips": []})[0].startswith("CLASH 0.5294"))
+        self.assertEqual(slips.gate(u), [])
+        self.assertEqual(slips.match(u["form"], 0.692, u["tol"]), "sign")
+
     def run_cli(self, *args):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

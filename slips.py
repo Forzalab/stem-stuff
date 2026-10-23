@@ -11,6 +11,7 @@ from sympy import Add, Float, Integer, Mul, Pow, Rational, S, cos, pi, sin, tan,
 
 FAMILIES = ("sign", "drop", "reciprocal", "power", "factor", "distribute", "dream", "trig", "units", "g")
 CUTOFF = 20261022     # banks with v >= CUTOFF pass gate()
+PAIRED = {"sign", "distribute"}   # gate(): these two alone on one value are not a CLASH (distribute is a sign flip by definition)
 EPS = 1e-9            # two mutant values within this (relative) are one value
 
 
@@ -169,7 +170,8 @@ def form_ok(u):
 
 def gate(u):
     """Rule 7 rows for one num unit of a bank with v >= CUTOFF: no form; a slip equal to the answer (SAME); two families on one value.
-    ignore_slips exempts a value from SAME and the clash rule."""
+    ignore_slips exempts a value from SAME and the clash rule. sign + distribute alone on one value is no clash: -(b+c) -> -b+c is a sign
+    flip of c by definition, so every a-(b+c) would need ignore_slips (the earlier family, sign, gets the hint)."""
     if u.get("type") != "num":
         return []
     if not u.get("form"):
@@ -184,7 +186,7 @@ def gate(u):
     seen = []
     for i, (fa, a) in enumerate(fams):
         for fb, b in fams[i + 1:]:
-            if fa != fb and close(a, b, tol) and free(a) and free(b) and not close(a, ans, tol) and not any(close(a, s, tol) for s in seen):
+            if fa != fb and {fa, fb} != PAIRED and close(a, b, tol) and free(a) and free(b) and not close(a, ans, tol) and not any(close(a, s, tol) for s in seen):
                 rows.append(f"CLASH {a:.4g}  ({fa} / {fb}) one value, two hints")
                 seen.append(a)
     return rows

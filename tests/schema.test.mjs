@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import katex from "katex";
 import { compile, evaluate } from "mathjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { validator, bank } from "./schemas.mjs";
 import { isBankId, isBuiltin, isReserved, prefixOf } from "../codes.mjs";
 
@@ -100,6 +102,32 @@ test("custom-prefix suffixes: 3 characters without O/0/I/1, unique inside the pr
       }
     });
   }
+}
+
+/* slips gate (design/HANDOFF-slips-v2.md rule 7): every bank with v >= 20261022 passes `python3 tools/slips.py --strict` (needs sympy, so
+   node shells out). The fixtures prove the wiring while no real bank is that new: good + the PHYS_XZP golden pass, bad fails. */
+{
+  const CUTOFF = 20261022, root = new URL("../", import.meta.url);
+  const slipsGate = file => spawnSync("python3", [fileURLToPath(new URL("tools/slips.py", root)), "--strict", fileURLToPath(file)], { encoding: "utf8" });
+  const said = r => `${r.error ?? ""}${r.stdout}${r.stderr}`;
+  const dir = new URL("banks/", root);
+  const all = [new URL("problems.json", root), ...(existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith(".json")).sort().map(f => new URL(f, dir)) : [])];
+  for (const file of all.filter(u => (JSON.parse(readFileSync(u, "utf8")).v ?? 1) >= CUTOFF)) {
+    test(`${fileURLToPath(file).slice(fileURLToPath(root).length)}: slips gate (tools/slips.py --strict)`, () => {
+      const r = slipsGate(file);
+      assert.equal(r.status, 0, said(r));
+    });
+  }
+  const fix = f => new URL(`tests/fixtures/${f}`, root);
+  test("slips gate wiring: slips-good.json and slips-xzp.json pass, slips-bad.json fails", () => {
+    for (const f of ["slips-good.json", "slips-xzp.json"]) {
+      const r = slipsGate(fix(f));
+      assert.equal(r.status, 0, `${f}: ${said(r)}`);
+    }
+    const r = slipsGate(fix("slips-bad.json"));
+    assert.equal(r.status, 1, said(r));
+    for (const w of ["NOFORM", "SAME", "CLASH"]) assert.match(r.stdout, new RegExp(w));
+  });
 }
 
 // kind: circuit wiring (SCHEMA.md): what the schema can't say. Returns a list of problems, [] if sound.
