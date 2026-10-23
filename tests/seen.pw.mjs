@@ -46,21 +46,38 @@ async function open(o = {}) {
   page.on("request", r => { const u = new URL(r.url()); if (/\/(explain|chat|nudge)$/.test(u.pathname)) page.ai++; if (u.origin !== BASE) { page.seenReq++; page.seenUrl = r.url(); } });
   /* the pinned rolls: window.__rs = [quiet, kind, template, delay] is spent by the seen moment; every other roll (J5) passes (0.99) */
   await page.addInitScript(() => { window.__rs = []; window.__stemJevRand = () => (window.__rs.length ? window.__rs.shift() : 0.99); });
-  await page.clock.install();
+  /* the page's fetch / XHR calls still out (until() holds the fake clock while any is) */
+  page.net = new Set();
+  const net = r => ["fetch", "xhr"].includes(r.resourceType());
+  page.on("request", r => { if (net(r)) page.net.add(r); });
+  for (const ev of ["requestfinished", "requestfailed"]) page.on(ev, r => page.net.delete(r));
+  /* the clock is PAUSED from the first script on: only runFor moves it (as idle-peek.pw.mjs, nudge.pw.mjs). A ticking clock adds the real
+     time a busy runner spends to every wait: a 7 s blur read "away 8s" (4 runs in 48 at 12 parallel, Playwright 1.56), and the seen step's
+     10 s gaps and 600 ms delay rode the same drift (CI PR #252) */
+  const t0 = Date.now();
+  await page.clock.install({ time: t0 });
+  await page.clock.pauseAt(t0 + 1000);
   await page.goto(BASE + "/" + (o.jev === false ? "?jev=0" : "") + "#BANK_T96");
   await page.clock.runFor(3000);
-  await page.waitForFunction(() => !!window.stemDuck && !document.getElementById("splash"), null, { timeout: 10000 });
-  await page.waitForFunction(() => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
+  await until(page, () => !!window.stemDuck && !document.getElementById("splash"));
+  await until(page, () => !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash) && !document.getElementById("freeze").hidden);
   return page;
 }
+/* wait for fn(arg) in the page while the paused clock steps 50 ms at a time; while a fetch / XHR is out the clock holds (real-time wait). 10 s real max */
+async function until(page, fn, arg) {
+  const end = Date.now() + 10000;
+  while (!(await page.evaluate(fn, arg))) {
+    if (Date.now() > end) throw new Error("timed out waiting for " + String(fn));
+    if (page.net.size) await new Promise(r => setTimeout(r, 20));
+    else await page.clock.runFor(50);
+  }
+}
+/* the clock is paused (open), so runFor is the only thing that moves it: every wait is exactly the time it says (checked) */
 async function idle(page, ms) {
   const t0 = await page.evaluate(() => performance.now());
   await page.clock.runFor(ms);
-  for (let k = 0; k < 5; k++) {
-    const left = ms - ((await page.evaluate(() => performance.now())) - t0);
-    if (left < 500) return;
-    await page.clock.runFor(Math.ceil(left));
-  }
+  const moved = (await page.evaluate(() => performance.now())) - t0;
+  assert.ok(Math.abs(moved - ms) < 1, `the page clock moved ${moved} ms, not ${ms}`);
 }
 const up = page => page.evaluate(() => window.stemDuck.up);
 const settle = page => page.evaluate(() => document.getAnimations().forEach(a => { if (a.effect?.target?.closest?.(".ck-rise")) a.finish(); }));
@@ -68,7 +85,7 @@ const pick = async (page, id) => {
   const n = await page.evaluate(() => window.__drill.state.tries.length);
   await page.click(`.opt[data-id="${id}"]`);
   await page.click(`.ch[data-id="${id}"] .send`);
-  await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 5000 });
+  await until(page, n => window.__drill.state.tries.length > n, n);
 };
 /* B7: the desktop turns Cluck's sheet to its text by itself, which keeps every peek down (peek.js ok()). Close it as the student would. */
 const closeCluck = async page => {
@@ -122,7 +139,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     assert.equal(st.s, "1"); assert.deepEqual(st.h, { f: 1, h: 1 }); assert.equal(st.off, null, "one hollow: not for good");
     for (let i = 0; i < 6; i++) { await idle(page, 40000); await page.keyboard.press("Shift"); }   // past the shared gap, never idle long enough for the 3 min peek
     await page.evaluate(() => { location.hash = "#CALC1_T96M2"; });
-    await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T96M2");
+    await until(page, () => document.querySelector("#pcode").textContent === "CALC1_T96M2");
     await earned(page);
     await idle(page, 4000); await closeCluck(page); await idle(page, 500);
     assert.equal(await up(page), false, "this session is off: no second peek");
@@ -142,7 +159,7 @@ await step("trap_beaten: a served item's families (sent with the right pick only
   await earned(page);
   await idle(page, 190000);
   await page.evaluate(() => { location.hash = "#CALC1_T96M2"; });
-  await page.waitForFunction(() => document.querySelector("#pcode").textContent === "CALC1_T96M2");
+  await until(page, () => document.querySelector("#pcode").textContent === "CALC1_T96M2");
   await page.evaluate(() => { window.__rs = [0.9, 0.5, 0, 0]; });
   await pick(page, "a");
   assert.match(await page.evaluate(() => window.stemJev.dump()), /seen {2}trap_beaten short /);
