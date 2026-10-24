@@ -326,6 +326,9 @@ function answerOf(u) {
   if (u.type !== "num") return a;
   try { return g4(unitSig(u, a)); } catch { return a; }
 }
+/* the hint the student sees for a reply: `spot` when record() let it through Jev's gate (r.shown), else the plain `hint`. gradeLocal
+   sets no `spot` yet; a local one later passes the same gate (record() guards on r.spot) */
+const hintOf = r => r.shown === "spot" && r.spot ? r.spot : r.hint;
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
   const multi = key.type === "multi", idx = answer.part;
   if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
@@ -1167,8 +1170,8 @@ function partFeedback(i, r, typed) {
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
-  if (r.hint) {
-    const hintWithQuack = quackHint(r.hint, S.code + ":part" + i + ":" + S.tries.length);
+  if (hintOf(r)) {
+    const hintWithQuack = quackHint(hintOf(r), S.code + ":part" + i + ":" + S.tries.length);
     h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   hint.innerHTML = h;
@@ -1211,8 +1214,11 @@ function record(a, r) {
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
   window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null, error: r.error, collide: r.collide, families: r.families, typed: a.c == null && typeof a.a === "string" ? a.a : null });   // telemetry (telemetry.js drops error + collide + families + typed: on device only, except Tony's own devices, T36)
+  /* SLIP_TIE spot: the reply's `spot` (a place in the formula) shows instead of `hint` only when Jev's gate says so (intent.js spotOk:
+     improving + nearly there). Asked once, after the pick line; Jev off (no stemJev) = the plain hint. hintOf(r) reads the result */
+  if (r.verdict === "wrong" && typeof r.spot === "string" && r.spot) r.shown = window.stemJev?.spot?.()?.ok === true ? "spot" : "hint";
   const mine = x => x.part === a.part;        // a multi counts wrong tries per part; the others have part undefined
-  if (r.verdict === "wrong" && r.hint && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.error || "nudge" });
+  if (r.verdict === "wrong" && hintOf(r) && !r.repeat) S.hints.push({ t, ...(a.part != null ? { part: a.part } : {}), n: S.tries.filter(x => x.v === "wrong" && mine(x)).length, kind: r.shown === "spot" ? "spot" : r.error || "nudge" });
   if (typeof r.triesLeft === "number") S.triesLeft = r.triesLeft;
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
@@ -1243,7 +1249,7 @@ function saveDone(r) {
   const p = S.prob, max = maxTries(p), i = p.type === "multi" ? r.part ?? 0 : 0, us = units(st.doneGet(S.code), p);
   const x = Math.max(0, max - (typeof r.triesLeft === "number" ? r.triesLeft : max)), u = us[i];
   Object.assign(u, { x, done: r.verdict === "correct" ? "correct" : x >= max ? "out" : "open" });
-  if (r.verdict === "wrong") u.hint = r.hint || null;                  // the hint for the student's own wrong answer
+  if (r.verdict === "wrong") u.hint = hintOf(r) || null;               // the hint the student saw for their own wrong answer (spot or plain)
   if (typeof r.gen === "number") u.gen = r.gen;
   if (off()) u.sigs = ((localState.get(p.type === "multi" ? `${S.code}#${i}` : S.code) || {}).wrong || []).slice();
   const rec = wrapRec(us, S.tries.filter(t => t.v === "correct" || t.v === "wrong"), S.hints.slice());
@@ -1516,14 +1522,14 @@ function feedback(r, typed) {
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
   let quackHtml = "";
-  if (r.hint) {
-    const hintWithQuack = quackHint(r.hint, S.code + ":" + S.tries.length);
+  if (hintOf(r)) {
+    const hintWithQuack = quackHint(hintOf(r), S.code + ":" + S.tries.length);
     quackHtml = `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
      Phones: the Scratchpad button sits on that row, so under the question. */
   const chk = $("#q .chk"); chk?.querySelector(".cluck")?.remove();
-  let inRow = !!(chk && r.hint && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
+  let inRow = !!(chk && hintOf(r) && r.verdict === "wrong" && r.triesLeft > 0 && !root.classList.contains("pad-off"));
   fb.innerHTML = h;
   if (inRow) {
     chk.insertAdjacentHTML("afterbegin", quackHtml);
