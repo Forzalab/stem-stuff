@@ -279,5 +279,46 @@ class BadVersion(unittest.TestCase):
             self.assertEqual(cli.main(["--strict", self.bank('"20261022"')]), 0)
 
 
+class K2(unittest.TestCase):
+    """k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; k=1 stays today's output."""
+
+    def test_flag_defaults_to_one(self):
+        self.assertEqual(slips.SLIP_K, int(os.environ.get("SLIP_K", "1")))
+        self.assertEqual(slips.match("10-(3+2)", -7), slips.match("10-(3+2)", -7, k=slips.SLIP_K))
+
+    def test_hand_cases_only_inner_plus_outer(self):
+        cases = (("10-(3+2)", -7, "drop+sign"),        # 10-3 = 7, then the whole answer's sign
+                 ("2*9.8*3", 120, "g+factor"),         # g = 10 gives 60, then doubled
+                 ("sqrt(9+16)", 49, "dream+power"),    # sqrt(9)+sqrt(16) = 7, then squared
+                 ("sqrt(9+16)", -7, "dream+sign"))
+        for form, typed, want in cases:
+            self.assertIsNone(slips.match(form, typed, k=1), form)
+            self.assertEqual(slips.match(form, typed, k=2), want, form)
+            self.assertIn((want, typed), slips.mutants(form, 2), form)
+
+    def test_k1_prefix_and_no_double_outer(self):
+        f = "10-(3+2)"
+        self.assertEqual(slips.mutants(f, 2)[:len(slips.mutants(f))], slips.mutants(f))
+        self.assertIsNone(slips.match("2*3", -12, k=2))      # -(2*6): two outer slips, and 2*3 has no inner site: not k=2
+        self.assertIsNone(slips.match(f, 0.4, k=2))          # 2 * 1/5: two outer slips
+        self.assertTrue(all(fam.split("+")[1] in slips.OUTER_FAMS for fam, _ in slips.mutants(f, 2) if "+" in fam))
+
+    def test_skip_and_k1_first(self):
+        self.assertEqual(slips.match("10-(3+2)", -7, k=2, skip=[-7]), None)
+        self.assertEqual(slips.match("10-(3+2)", 9, k=2), "distribute")   # a k=1 slip wins over any pair
+
+    def test_k2_golden_fixture(self):
+        """slips-golden-k2.json (python3 tools/slips.py --golden): the k=2 entries per bank form; slips.mjs runs the same file"""
+        with open(os.path.join(FIX, "slips-golden-k2.json"), encoding="utf-8") as f:
+            gold = json.load(f)
+        with open(os.path.join(FIX, "slips-golden-banks.json"), encoding="utf-8") as f:
+            self.assertEqual([g["form"] for g in gold], [g["form"] for g in json.load(f)])
+        for g in gold:
+            n = len(slips.mutants(g["form"]))
+            same_mutants(self, slips.mutants(g["form"], 2)[n:], g["pairs"], g["form"])
+            if g["pairs"]:
+                self.assertIsNotNone(slips.match(g["form"], g["pairs"][0][1], k=2), g["form"])
+
+
 if __name__ == "__main__":
     unittest.main()

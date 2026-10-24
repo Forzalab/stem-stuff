@@ -2,10 +2,13 @@
 expression, as values. Shared by serve.py (runtime matching), tools/slips.py (report + --strict gate) and app.js's port (golden fixture
 tests/fixtures/slips-golden.json). `form` is authored text only, never student input. Parsed unfolded so terms survive.
 
-mutants(form) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value
-match(form, value) -> family | None       within SLIP_WIN (never the item's grading tol)
+mutants(form, k=1) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value;
+                                     k=2 appends the "inner+outer" pairs (one inner slip + one whole-answer slip, Tony D1/D3) after them
+match(form, value, k=SLIP_K) -> family | None   within SLIP_WIN (never the item's grading tol); k=2 undoes the outer slip on the typed value
 gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)"""
 import ast
+import math
+import os
 import threading
 from decimal import Context, Decimal, ROUND_HALF_UP
 from functools import lru_cache
@@ -148,36 +151,37 @@ def _exp(p, *vals):
 
 
 def _family(fam, e):
-    """Mutant expressions of one family; whole = the answer."""
+    """(mutant expression, outer) of one family; whole = the answer. outer: a whole-answer slip (OUTER: sign / reciprocal / power / factor /
+    units wrapped round the answer); every other mutant is inner (a site in the tree, or g)."""
     nodes = list(_nodes(e))
     if fam == "sign":
-        yield _neg(e)
+        yield _neg(e), True
         for path, n, _ in nodes:
             if isinstance(n, Add):
                 for i, t in enumerate(n.args):
-                    yield _put(e, path + (i,), _neg(t))
+                    yield _put(e, path + (i,), _neg(t)), False
     elif fam == "drop":
         for path, n, _ in nodes:
             if isinstance(n, Add):
                 for i in range(len(n.args)):
                     rest = n.args[:i] + n.args[i + 1:]
-                    yield _put(e, path, rest[0] if len(rest) == 1 else Add(*rest, evaluate=False))
+                    yield _put(e, path, rest[0] if len(rest) == 1 else Add(*rest, evaluate=False)), False
     elif fam == "reciprocal":                                       # a/b -> b/a; a bare x^-1 -> x; 1/whole
-        yield Pow(e, -1, evaluate=False)
+        yield Pow(e, -1, evaluate=False), True
         for path, n, up in nodes:
             if isinstance(n, Mul) and any(_exp(a, -1) for a in n.args):
-                yield _put(e, path, Pow(n, -1, evaluate=False))
+                yield _put(e, path, Pow(n, -1, evaluate=False)), False
             elif _exp(n, -1) and not isinstance(up, Mul):
-                yield _put(e, path, n.base)
+                yield _put(e, path, n.base), False
     elif fam == "power":                                            # drop a square / root per Pow node; whole^2, sqrt(whole)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5, -2, -0.5):
-                yield _put(e, path, Pow(n.base, -1, evaluate=False) if float(n.exp) < 0 else n.base)
-        yield Pow(e, 2, evaluate=False)
-        yield Pow(e, S.Half, evaluate=False)
+                yield _put(e, path, Pow(n.base, -1, evaluate=False) if float(n.exp) < 0 else n.base), False
+        yield Pow(e, 2, evaluate=False), True
+        yield Pow(e, S.Half, evaluate=False), True
     elif fam == "factor":
-        yield Mul(2, e, evaluate=False)
-        yield Mul(S.Half, e, evaluate=False)
+        yield Mul(2, e, evaluate=False), True
+        yield Mul(S.Half, e, evaluate=False), True
     elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches the first term only (Tony, Oct 23)
         for path, n, up in nodes:                                   # a Mul chain read whole from its top: a-k(b+c) is Mul(-1, Mul(k, b+c)) (S1)
             if not isinstance(n, Mul) or isinstance(up, Mul):
@@ -193,29 +197,29 @@ def _family(fam, e):
             rest = [a for a in rest if not (isinstance(a, Rational) and a == 1)]
             t = flat[k].args                                        # written order (evaluate=False keeps it)
             s = Add(_neg(t[0]), *t[1:], evaluate=False)
-            yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s)
+            yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s), False
     elif fam == "dream":                                            # (a+b)^2 -> a^2+b^2; sqrt(a+b) -> sqrt(a)+sqrt(b)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5) and isinstance(n.base, Add):
-                yield _put(e, path, Add(*(Pow(t, n.exp, evaluate=False) for t in n.base.args), evaluate=False))
+                yield _put(e, path, Add(*(Pow(t, n.exp, evaluate=False) for t in n.base.args), evaluate=False)), False
     elif fam == "trig":                                             # sin <-> cos; the argument read as degrees vs radians
         for path, n, _ in nodes:
             if isinstance(n, (sin, cos, tan)):
                 x = n.args[0]
                 if isinstance(n, (sin, cos)):
-                    yield _put(e, path, (cos if isinstance(n, sin) else sin)(x, evaluate=False))
-                yield _put(e, path, n.func(Mul(x, pi, Pow(180, -1, evaluate=False), evaluate=False), evaluate=False))
-                yield _put(e, path, n.func(Mul(x, 180, Pow(pi, -1, evaluate=False), evaluate=False), evaluate=False))
+                    yield _put(e, path, (cos if isinstance(n, sin) else sin)(x, evaluate=False)), False
+                yield _put(e, path, n.func(Mul(x, pi, Pow(180, -1, evaluate=False), evaluate=False), evaluate=False)), False
+                yield _put(e, path, n.func(Mul(x, 180, Pow(pi, -1, evaluate=False), evaluate=False), evaluate=False)), False
     elif fam == "units":
         for k in (2, -2, 3, -3):
-            yield Mul(Pow(10, k, evaluate=False), e, evaluate=False)
+            yield Mul(Pow(10, k, evaluate=False), e, evaluate=False), True
     elif fam == "g":                                                # every 9.8 / 9.81 -> 10 (10 -> 9.8 is never sure: skipped)
         gs = [p for p, n, _ in nodes if isinstance(n, Float) and any(abs(float(n) - v) < EPS for v in (9.8, 9.81))]
         m = e
         for p in gs:
             m = _put(m, p, Integer(10))
         if gs:
-            yield m
+            yield m, False
 
 
 def _value(m):
@@ -232,31 +236,114 @@ def _same(a, b):
 
 
 @lru_cache(maxsize=512)
+def _raw2(form):
+    """(raw, inner): raw as raw() gives it; inner = the same per family over inner mutants only (outer=False in _family), one pass."""
+    e = parse(form)
+    out, inn = [], []
+    for fam in FAMILIES:
+        vals, ivals = [], []
+        for m, outer in _family(fam, e):
+            v = _value(m)
+            if v is None:
+                continue
+            if not any(_same(v, w) for w in vals):
+                vals.append(v)
+            if not outer and not any(_same(v, w) for w in ivals):
+                ivals.append(v)
+        out.append((fam, tuple(sorted(vals))))
+        inn.append((fam, tuple(sorted(ivals))))
+    return tuple(out), tuple(inn)
+
+
 def raw(form):
     """((family, (values ascending, distinct within the family)), ...) before families are merged: the clash gate needs it."""
-    e = parse(form)
+    return _raw2(form)[0]
+
+
+def inner(form):
+    """raw() over inner slips only (no whole-answer wrapper): the k=2 bag. slips.mjs inner"""
+    return _raw2(str(form))[1]
+
+
+# k=2 (Tony D1/D3, Oct 23): one inner slip + one whole-answer (outer) slip, never two of either; k=3 is not runtime. SLIP_K=1 (default)
+# = today exactly. A k=2 entry's family is "inner+outer" (e.g. "drop+sign"). OUTER: (family, forward on the inner value, undo on the typed
+# value -> candidate inner values), in FAMILIES order, the order _family yields them. Float math on both sides (slips.mjs OUTER).
+OUTER = (("sign", lambda v: -v, lambda y: [-y]),
+         ("reciprocal", lambda v: 1 / v if v else None, lambda y: [1 / y] if y else []),
+         ("power", lambda v: v * v, lambda y: [-math.sqrt(y), math.sqrt(y)] if y >= 0 else []),
+         ("power", lambda v: math.sqrt(v) if v >= 0 else None, lambda y: [y * y] if y >= 0 else []),
+         ("factor", lambda v: 2 * v, lambda y: [y / 2]),
+         ("factor", lambda v: v / 2, lambda y: [2 * y]),
+         ("units", lambda v: v * 100, lambda y: [y / 100]),
+         ("units", lambda v: v / 100, lambda y: [y * 100]),
+         ("units", lambda v: v * 1000, lambda y: [y / 1000]),
+         ("units", lambda v: v / 1000, lambda y: [y * 1000]))
+OUTER_FAMS = tuple(dict.fromkeys(f for f, _, _ in OUTER))
+SLIP_K = int(os.environ.get("SLIP_K", "1"))
+if SLIP_K not in (1, 2):
+    raise ValueError(f"SLIP_K={SLIP_K}: only 1 or 2 (k=3 is not runtime, Tony D1)")
+
+
+def _fin(v):
+    return v is not None and v == v and abs(v) != float("inf")
+
+
+@lru_cache(maxsize=512)
+def pairs(form):
+    """(("inner+outer", (values ascending, distinct within the pair)), ...): inner family in FAMILIES order, then outer in OUTER_FAMS
+    order. Before merging (mutants(form, 2) merges them after the k=1 entries)."""
     out = []
-    for fam in FAMILIES:
-        vals = []
-        for m in _family(fam, e):
-            v = _value(m)
-            if v is not None and not any(_same(v, w) for w in vals):
-                vals.append(v)
-        out.append((fam, tuple(sorted(vals))))
+    for fi, ivals in inner(form):
+        for fo in OUTER_FAMS:
+            vals = []
+            for f, fwd, _ in OUTER:
+                if f != fo:
+                    continue
+                for v in ivals:
+                    w = fwd(v)
+                    if _fin(w) and not any(_same(w, x) for x in vals):
+                        vals.append(w)
+            if vals:
+                out.append((f"{fi}+{fo}", tuple(sorted(vals))))
     return tuple(out)
 
 
-def mutants(form):
-    """[(family, value)]: one entry per distinct value, the earliest family wins."""
+def mutants(form, k=1):
+    """[(family, value)]: one entry per distinct value, the earliest family wins. k=2 appends the inner+outer entries after every k=1 one
+    (fewer slips first). k=1 is the static default (gate, fixtures); match() reads SLIP_K."""
     out = []
-    for fam, vals in raw(str(form)):
+    for fam, vals in raw(str(form)) + (pairs(str(form)) if k == 2 else ()):
         out += [(fam, v) for v in vals if not any(_same(v, w) for _, w in out)]
     return out
 
 
-def match(form, value, win=SLIP_WIN):
-    """The first family whose slip is close() to the typed value, else None."""
-    return next((fam for fam, v in mutants(form) if close(value, v, win)), None)
+def match(form, value, win=SLIP_WIN, k=None, skip=()):
+    """The first family whose slip is close() to the typed value, else None. skip: values never hinted (slips.mjs match). k (default
+    SLIP_K) = 2: no k=1 hit -> each outer slip is undone on the typed value and the result looked up in that inner family's bag (D3), pairs
+    in mutants(form, 2) order; a pair whose forward value is a k=1 slip or an earlier pair's is that entry's, not this one's."""
+    k = SLIP_K if k is None else k
+    free = lambda v: not any(close(v, x, win) for x in skip)
+    one = mutants(form)
+    hit = next((fam for fam, v in one if close(value, v, win) and free(v)), None)
+    if hit or k != 2 or not _fin(value):
+        return hit
+    seen = [v for _, v in one]
+    for fi, ivals in inner(str(form)):
+        for fo in OUTER_FAMS:
+            fresh = []
+            for f, fwd, undo in OUTER:
+                if f != fo:
+                    continue
+                us = undo(value)
+                for v in ivals:
+                    w = fwd(v)
+                    if not _fin(w) or any(_same(w, x) for x in seen):
+                        continue
+                    fresh.append(w)
+                    if free(w) and any(close(u, v, win) for u in us):
+                        return f"{fi}+{fo}"
+            seen += fresh
+    return None
 
 
 def units(p):

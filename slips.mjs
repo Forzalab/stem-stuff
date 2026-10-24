@@ -105,29 +105,29 @@ function put(e, path, nw) {
 const flatMul = m => m.a.flatMap(a => a.t === "mul" ? flatMul(a) : [a]);   // slips.py _flat_mul
 const isExp = (p, ...vs) => p.t === "pow" && isNum(p.a[1]) && vs.some(v => Math.abs(val(p.a[1]) - v) < EPS);
 
-function* family(fam, e) {                                // slips.py _family, rule for rule
+function* family(fam, e) {                                // slips.py _family, rule for rule: [mutant, outer (whole-answer slip)]
   const ns = [...nodes(e)];
   if (fam === "sign") {
-    yield neg(e);
-    for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) yield put(e, [...p, i], neg(n.a[i]));
+    yield [neg(e), true];
+    for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) yield [put(e, [...p, i], neg(n.a[i])), false];
   } else if (fam === "drop") {
     for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) {
       const rest = n.a.filter((_, j) => j !== i);
-      yield put(e, p, rest.length === 1 ? rest[0] : add(rest));
+      yield [put(e, p, rest.length === 1 ? rest[0] : add(rest)), false];
     }
   } else if (fam === "reciprocal") {
-    yield pow(e, num(-1));
+    yield [pow(e, num(-1)), true];
     for (const [p, n, up] of ns) {
-      if (n.t === "mul" && n.a.some(a => isExp(a, -1))) yield put(e, p, pow(n, num(-1)));
-      else if (isExp(n, -1) && !(up && up.t === "mul")) yield put(e, p, n.a[0]);
+      if (n.t === "mul" && n.a.some(a => isExp(a, -1))) yield [put(e, p, pow(n, num(-1))), false];
+      else if (isExp(n, -1) && !(up && up.t === "mul")) yield [put(e, p, n.a[0]), false];
     }
   } else if (fam === "power") {
-    for (const [p, n] of ns) if (isExp(n, 2, 0.5, -2, -0.5)) yield put(e, p, val(n.a[1]) < 0 ? pow(n.a[0], num(-1)) : n.a[0]);
-    yield pow(e, num(2));
-    yield pow(e, num(0.5));
+    for (const [p, n] of ns) if (isExp(n, 2, 0.5, -2, -0.5)) yield [put(e, p, val(n.a[1]) < 0 ? pow(n.a[0], num(-1)) : n.a[0]), false];
+    yield [pow(e, num(2)), true];
+    yield [pow(e, num(0.5)), true];
   } else if (fam === "factor") {
-    yield mul([num(2), e]);
-    yield mul([num(0.5), e]);
+    yield [mul([num(2), e]), true];
+    yield [mul([num(0.5), e]), true];
   } else if (fam === "distribute") {                    // a Mul chain read whole from its top: a-k(b+c) is (-1)*(k*(b+c)) (S1)
     for (const [p, n, up] of ns) {
       if (n.t !== "mul" || (up && up.t === "mul")) continue;
@@ -138,55 +138,117 @@ function* family(fam, e) {                                // slips.py _family, r
       const rest = flat.flatMap((a, i) => i === k || (i !== first && isRat(a)) ? [] : [i === first ? num(-c) : a])
         .filter(a => !(isRat(a) && a.v === 1));
       const s = add(flat[k].a.map((a, i) => i === 0 ? neg(a) : a));   // the first term only (Tony, Oct 23)
-      yield put(e, p, rest.length ? mul([...rest, s]) : s);
+      yield [put(e, p, rest.length ? mul([...rest, s]) : s), false];
     }
   } else if (fam === "dream") {
-    for (const [p, n] of ns) if (isExp(n, 2, 0.5) && n.a[0].t === "add") yield put(e, p, add(n.a[0].a.map(t => pow(t, n.a[1]))));
+    for (const [p, n] of ns) if (isExp(n, 2, 0.5) && n.a[0].t === "add") yield [put(e, p, add(n.a[0].a.map(t => pow(t, n.a[1])))), false];
   } else if (fam === "trig") {
     for (const [p, n] of ns) {
       if (n.t !== "fn" || !["sin", "cos", "tan"].includes(n.name)) continue;
       const x = n.a[0];
-      if (n.name !== "tan") yield put(e, p, fn(n.name === "sin" ? "cos" : "sin", x));
-      yield put(e, p, fn(n.name, mul([x, { t: "pi" }, pow(num(180), num(-1))])));
-      yield put(e, p, fn(n.name, mul([x, num(180), pow({ t: "pi" }, num(-1))])));
+      if (n.name !== "tan") yield [put(e, p, fn(n.name === "sin" ? "cos" : "sin", x)), false];
+      yield [put(e, p, fn(n.name, mul([x, { t: "pi" }, pow(num(180), num(-1))]))), false];
+      yield [put(e, p, fn(n.name, mul([x, num(180), pow({ t: "pi" }, num(-1))]))), false];
     }
   } else if (fam === "units") {
-    for (const k of [2, -2, 3, -3]) yield mul([pow(num(10), num(k)), e]);
+    for (const k of [2, -2, 3, -3]) yield [mul([pow(num(10), num(k)), e]), true];
   } else if (fam === "g") {
     const gs = ns.filter(([, n]) => n.t === "num" && !n.rat && [9.8, 9.81].some(v => Math.abs(n.v - v) < EPS)).map(([p]) => p);
     let m = e;
     for (const p of gs) m = put(m, p, num(10));
-    if (gs.length) yield m;
+    if (gs.length) yield [m, false];
   }
 }
 
 const same = (a, b) => b ? Math.abs(a - b) <= EPS * Math.abs(b) : a === 0;   // slips.py _same: relative (tiny-constant slips stay apart)
 const cache = new Map();
-/* [[family, [values ascending, distinct within the family]], ...] before families are merged (slips.py raw) */
-export function raw(form) {
+/* slips.py _raw2: [raw, inner] in one pass; inner = the same per family over inner mutants only (no whole-answer wrapper) */
+function raw2(form) {
   form = String(form);
   if (cache.has(form)) return cache.get(form);
-  const e = parse(form), out = FAMILIES.map(fam => {
-    const vs = [];
-    for (const m of family(fam, e)) {
+  const e = parse(form), out = [], inn = [];
+  for (const fam of FAMILIES) {
+    const vs = [], is = [];
+    for (const [m, outer] of family(fam, e)) {
       const v = val(m);
-      if (Number.isFinite(v) && !vs.some(w => same(v, w))) vs.push(v);
+      if (!Number.isFinite(v)) continue;
+      if (!vs.some(w => same(v, w))) vs.push(v);
+      if (!outer && !is.some(w => same(v, w))) is.push(v);
     }
-    return [fam, vs.sort((a, b) => a - b)];
-  });
+    out.push([fam, vs.sort((a, b) => a - b)]);
+    inn.push([fam, is.sort((a, b) => a - b)]);
+  }
+  const r = [out, inn, null];
   if (cache.size > 512) cache.clear();
-  cache.set(form, out);
-  return out;
+  cache.set(form, r);
+  return r;
 }
-/* [[family, value]]: one entry per distinct value, the earliest family wins */
-export function mutants(form) {
+/* [[family, [values ascending, distinct within the family]], ...] before families are merged (slips.py raw) */
+export const raw = form => raw2(form)[0];
+/* raw() over inner slips only: the k=2 bag (slips.py inner) */
+export const inner = form => raw2(form)[1];
+
+/* k=2 (Tony D1/D3): one inner slip + one whole-answer (outer) slip; k=3 is not runtime. SLIP_K = 1 is today exactly. A k=2 entry's family
+   is "inner+outer" (e.g. "drop+sign"). OUTER = slips.py OUTER: [family, forward on the inner value, undo on the typed value], float math. */
+export const SLIP_K = 1;
+const OUTER = [
+  ["sign", v => -v, y => [-y]],
+  ["reciprocal", v => v ? 1 / v : NaN, y => y ? [1 / y] : []],
+  ["power", v => v * v, y => y >= 0 ? [-Math.sqrt(y), Math.sqrt(y)] : []],
+  ["power", v => v >= 0 ? Math.sqrt(v) : NaN, y => y >= 0 ? [y * y] : []],
+  ["factor", v => 2 * v, y => [y / 2]],
+  ["factor", v => v / 2, y => [2 * y]],
+  ["units", v => v * 100, y => [y / 100]],
+  ["units", v => v / 100, y => [y * 100]],
+  ["units", v => v * 1000, y => [y / 1000]],
+  ["units", v => v / 1000, y => [y * 1000]],
+];
+export const OUTER_FAMS = [...new Set(OUTER.map(([f]) => f))];
+/* [["inner+outer", [values ascending, distinct within the pair]], ...]: inner family in FAMILIES order, then outer (slips.py pairs) */
+export function pairs(form) {
+  const r = raw2(form);
+  if (r[2]) return r[2];
   const out = [];
-  for (const [fam, vs] of raw(form)) for (const v of vs) if (!out.some(([, w]) => same(v, w))) out.push([fam, v]);
+  for (const [fi, ivs] of r[1]) for (const fo of OUTER_FAMS) {
+    const vs = [];
+    for (const [f, fwd] of OUTER) if (f === fo) for (const v of ivs) {
+      const w = fwd(v);
+      if (Number.isFinite(w) && !vs.some(x => same(w, x))) vs.push(w);
+    }
+    if (vs.length) out.push([`${fi}+${fo}`, vs.sort((a, b) => a - b)]);
+  }
+  return (r[2] = out);
+}
+/* [[family, value]]: one entry per distinct value, the earliest family wins; k = 2 appends the inner+outer entries after every k=1 one */
+export function mutants(form, k = 1) {
+  const out = [];
+  for (const [fam, vs] of [...raw(form), ...(k === 2 ? pairs(form) : [])]) for (const v of vs) if (!out.some(([, w]) => same(v, w))) out.push([fam, v]);
   return out;
 }
 /* the first family whose slip is close() to the typed value, else null (an unreadable form: null, never a throw) */
 /* skip: values that never get a family hint (serve.py _slip_table): the answer (a SAME slip is already right) and each ignore_slips value */
-export function match(form, value, tol = SLIP_WIN, skip = []) {
+/* k = 2 (default SLIP_K): no k=1 hit -> each outer slip undone on the typed value, looked up in that inner family's bag (slips.py match) */
+export function match(form, value, tol = SLIP_WIN, skip = [], k = SLIP_K) {
   if (form == null || typeof value !== "number" || !Number.isFinite(value)) return null;
-  try { return (mutants(form).find(([, v]) => close(value, v, tol) && !skip.some(x => close(v, x, tol))) || [null])[0]; } catch { return null; }
+  try {
+    const free = v => !skip.some(x => close(v, x, tol)), one = mutants(form);
+    const hit = one.find(([, v]) => close(value, v, tol) && free(v));
+    if (hit || k !== 2) return hit ? hit[0] : null;
+    const seen = one.map(([, v]) => v);
+    for (const [fi, ivs] of inner(form)) for (const fo of OUTER_FAMS) {
+      const fresh = [];
+      for (const [f, fwd, undo] of OUTER) {
+        if (f !== fo) continue;
+        const us = undo(value);
+        for (const v of ivs) {
+          const w = fwd(v);
+          if (!Number.isFinite(w) || seen.some(x => same(w, x))) continue;
+          fresh.push(w);
+          if (free(w) && us.some(u => close(u, v, tol))) return `${fi}+${fo}`;
+        }
+      }
+      seen.push(...fresh);
+    }
+    return null;
+  } catch { return null; }
 }
