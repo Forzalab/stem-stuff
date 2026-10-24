@@ -61,7 +61,7 @@ DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
 WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
-# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only: never a term, never a number.
+# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
 FAMILY_HINT = {
     "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
     "sign": "QUACK. Check every sign. One of them flipped.",

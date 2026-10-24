@@ -1647,7 +1647,7 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
           "kind": {
             "type": "string",
             "pattern": "^[a-z]+(-[a-z]+)*$",
-            "description": "error type from MC.md section 6, or nudge"
+            "description": "error type from MC.md section 6, or nudge, or spot (a SLIP_TIE collision hint that points to a place)"
           }
         }
       }
