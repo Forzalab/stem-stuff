@@ -7,7 +7,8 @@ Run: python3 tools/slips.py [banks/BANK_X.json ...]     (default: problems.json 
      python3 tools/slips.py --strict ...                 (exit 1 on a gate failure; on an older bank, on any uncovered slip)
      python3 tools/slips.py --golden                     (rewrite the parity fixtures both test suites read, from slips.py:
                                                           tests/fixtures/slips-golden.json (its own forms) and slips-golden-banks.json
-                                                          (CORNERS + every form already there + every live bank form). Run it when a
+                                                          (CORNERS + every form already there + every live bank form), plus
+                                                          slips-golden-k2.json (the k=2 inner+outer entries of those forms). Run it when a
                                                           bank gains a form or a slip rule changes; review the diff; the JS must match.)
      --log PATH: also append the tol warnings as JSONL (tools/tol.py's format). Only when given: CI and tests never write a log.
 """
@@ -83,6 +84,15 @@ def _write(path, forms):
     path.write_text("[\n  " + ",\n  ".join(rows) + "\n]\n", encoding="utf-8")
 
 
+def _write_k2(path, forms):
+    """k=2 parity (SLIP_K): per bank form, the entries mutants(form, 2) adds after the k=1 ones ("inner+outer" families, merged order)"""
+    rows = []
+    for f in forms:
+        n = len(slips.mutants(f))
+        rows.append(json.dumps({"form": f, "pairs": [[fam, v] for fam, v in slips.mutants(f, 2)[n:]]}, ensure_ascii=False))
+    path.write_text("[\n  " + ",\n  ".join(rows) + "\n]\n", encoding="utf-8")
+
+
 def golden():
     def had(name):
         p = FIX / name
@@ -90,7 +100,8 @@ def golden():
     _write(FIX / "slips-golden.json", had("slips-golden.json"))
     forms = list(dict.fromkeys([*CORNERS, *had("slips-golden-banks.json"), *live_forms()]))
     _write(FIX / "slips-golden-banks.json", forms)
-    print(f"wrote {FIX / 'slips-golden.json'} and {FIX / 'slips-golden-banks.json'} ({len(forms)} forms)")
+    _write_k2(FIX / "slips-golden-k2.json", forms)
+    print(f"wrote {FIX / 'slips-golden.json'}, {FIX / 'slips-golden-banks.json'} and {FIX / 'slips-golden-k2.json'} ({len(forms)} forms)")
     return 0
 
 
