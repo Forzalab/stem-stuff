@@ -8,14 +8,38 @@ on:
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  BLOCKS: 3   # runners for the .pw specs (GitHub Free: 20 jobs at once)
+  LANES: 3    # run-all.sh processes per runner (bench run 39915938764: 3 lanes 0 fails; a new flake → 2)
 jobs:
-  shard:   # the suite in 2 halves that run at the same time (SHARD=N/2 in tests/run-all.sh)
+  plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
     runs-on: ubuntu-latest
-    timeout-minutes: 30   # worst measured shard 17.7 min + install; 30 leaves room for a slow runner
+    outputs:
+      matrix: ${{ steps.p.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: p
+        run: echo "matrix=$(tests/run-all.sh --plan "$BLOCKS" "$LANES")" >> "$GITHUB_OUTPUT"
+  unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install sympy networkx
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - run: cd tests && npm ci
+      - run: tests/run-all.sh --quick
+  block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: block ${{ matrix.block }}/${{ matrix.of }}
     strategy:
       fail-fast: false
-      matrix:
-        shard: [1, 2]
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,11 +53,23 @@ jobs:
           npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
           # no --with-deps: ubuntu-latest already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
           npx playwright install chromium
-      - run: SHARD=${{ matrix.shard }}/2 tests/run-all.sh
-  # the one required check: branch protection wants a check named exactly `all`; it is green only if both shards are
+      - name: lanes
+        env:
+          LANE_SPECS: ${{ matrix.lanes }}
+        run: |
+          IFS='|' read -ra lane <<<"$LANE_SPECS"
+          for i in "${!lane[@]}"; do SPECS="${lane[$i]}" tests/run-all.sh >"lane-$((i + 1)).log" 2>&1 & pid[$i]=$!; done
+          rc=0
+          for i in "${!lane[@]}"; do
+            wait "${pid[$i]}" || rc=1
+            echo "::group::lane $((i + 1)): ${lane[$i]}"; cat "lane-$((i + 1)).log"; echo "::endgroup::"
+            grep -E '^(FAIL|NOT COVERED)|FAILED' "lane-$((i + 1)).log" | sed "s/^/lane $((i + 1)): /" || true
+          done
+          exit "$rc"
+  # the one required check: branch protection wants a check named exactly `all`; green only if plan, unit and every block are
   all:
-    needs: shard
+    needs: [plan, unit, block]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.shard.result }}" = success
+      - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && test "${{ needs.block.result }}" = success

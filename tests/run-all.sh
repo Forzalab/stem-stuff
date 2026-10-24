@@ -1,29 +1,38 @@
 #!/usr/bin/env bash
 # Every test, one command, one verdict. Exit 0 = all green, 1 = something failed (its log is printed).
-# usage: tests/run-all.sh [--quick] [--shard N/M | SHARD=N/M] [--list]
+# usage: tests/run-all.sh [--quick] [--shard N/M | SHARD=N/M] [--list] [--plan B L]   (or SPECS="a b c" tests/run-all.sh)
 #   --quick      unittest + npm test only (~10 s, the pre-push set)
 #   SHARD=1/2    run one slice so the halves can run at the same time (locally, or as the CI matrix jobs). No SHARD = everything, as before.
 #                Shard 1 = unittest + npm + part of the .pw specs, shard 2 = the rest; the split is a fixed greedy deal by the rough
 #                per-spec seconds in weight() below (new specs count 5), so it is the same on every machine and the halves end together. Together they run exactly the unsharded set. Each run has its own TMP, port and server,
 #                so two shards can run side by side. (--quick with shard 2 has nothing to run.)
 #   --list       print what this run would run (one name per line) and run nothing
+#   --plan B L   print the CI matrix (one JSON line) and run nothing: the specs dealt into B blocks x L lanes by the same deal
+#                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
+#   SPECS="..."  run exactly these .pw specs (names, space-separated) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
 # The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-quick=0; list=0; SHARD="${SHARD:-}"
+quick=0; list=0; plan=""; SHARD="${SHARD:-}"; SPECS="${SPECS:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --quick) quick=1 ;;
     --list) list=1 ;;
+    --plan) plan="${2:-} ${3:-}"; shift 2 ;;
     --shard) shift; SHARD="${1:-}" ;;
     --shard=*) SHARD="${1#--shard=}" ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
 done
-sn=1; sm=1
+sn=1; sm=1; lead=55   # lead: shard 1 also runs unittest + npm (CI median: unittest 50 s + npm 4 s)
+if [ -n "$plan" ]; then
+  read -r pb pl <<<"$plan"
+  [[ "$pb" =~ ^[1-9][0-9]*$ && "$pl" =~ ^[1-9][0-9]*$ ]] || { echo "bad --plan '$plan' (want B L, e.g. 3 3)" >&2; exit 2; }
+  sm=$((pb * pl)); lead=0
+fi
 if [ -n "$SHARD" ]; then
   case "$SHARD" in
     [0-9]*/[0-9]*) sn="${SHARD%/*}"; sm="${SHARD#*/}" ;;
@@ -52,7 +61,7 @@ weight() {
 deal() {
   local load=() k best w n
   for ((k = 0; k < sm; k++)); do load[k]=0; done
-  load[0]=55                                  # shard 1 also runs unittest + npm (CI median: unittest 50 s + npm 4 s)
+  load[0]=$lead
   while read -r w n; do
     best=0; for ((k = 1; k < sm; k++)); do [ "${load[k]}" -lt "${load[best]}" ] && best=$k; done
     load[best]=$((load[best] + w))
@@ -70,16 +79,33 @@ for f in tests/*.pw.mjs; do
 done
 [ "$bad" -eq 0 ] || exit 1
 
-# this run's share of the .pw specs: all of them unsharded, else its part of the balanced deal
+if [ -n "$plan" ]; then   # lane k of block b = deal no. (k-1)*B + b: the heaviest specs open different blocks
+  printf '{"include":['
+  for ((b = 1; b <= pb; b++)); do
+    lanes=""
+    for ((k = 1; k <= pl; k++)); do
+      l="$(deal $(((k - 1) * pb + b)) | paste -sd' ')"
+      [ -n "$l" ] || { echo "--plan $pb $pl: lane $k of block $b is empty (an empty SPECS runs everything): fewer lanes" >&2; exit 1; }
+      lanes+="$( [ "$k" -gt 1 ] && printf '|' )$l"
+    done
+    printf '%s{"block":%d,"of":%d,"lanes":"%s"}' "$( [ "$b" -gt 1 ] && printf ',' )" "$b" "$pb" "$lanes"
+  done
+  printf ']}\n'; exit 0
+fi
+
+# this run's share of the .pw specs: SPECS as given, all of them unsharded, else its part of the balanced deal
 specs=()
-if [ "$quick" -eq 0 ]; then
+if [ -n "$SPECS" ]; then
+  read -ra specs <<<"$SPECS"
+  for n in "${specs[@]}"; do [ -f "tests/$n.pw.mjs" ] || { echo "SPECS: no tests/$n.pw.mjs" >&2; exit 2; }; done
+elif [ "$quick" -eq 0 ]; then
   if [ "$sm" -eq 1 ]; then
     for f in tests/*.pw.mjs; do specs+=("$(basename "$f" .pw.mjs)"); done
   else
     mapfile -t specs < <(deal "$sn")
   fi
 fi
-base=0; [ "$sn" -eq 1 ] && base=1   # unittest + npm ride with shard 1
+base=0; [ "$sn" -eq 1 ] && [ -z "$SPECS" ] && base=1   # unittest + npm ride with shard 1 (never with a SPECS lane)
 if [ "$list" -eq 1 ]; then
   [ "$base" -eq 1 ] && printf '%s\n' unittest npm
   [ "${#specs[@]}" -gt 0 ] && printf '%s\n' "${specs[@]}"
