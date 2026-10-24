@@ -487,14 +487,25 @@ class Slips(unittest.TestCase):
         for i, env in enumerate(({}, {"SLIP_TIE": "0"}, {"SLIP_TIE": ""}, {"SLIP_TIE": "true"}, {"SLIP_TIE": "on"})):
             got = self.tie_grade(env, f"tie-off{i}")
             self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in today], env)
+            self.assertFalse(any("spot" in r or "collide" in r for r in got), env)                 # W-SPOT: no spot line with the flag off
+        with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):
+            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})
 
     def test_slip_tie_on_collide(self):                                        # flag on + 2 families: the plain nudge, no error, collide in FAMILIES order
         got = self.tie_grade({"SLIP_TIE": "1"}, "tie-on")
-        base = {"verdict": "wrong", "triesLeft": 1, "hint": serve.DEFAULT_NUDGE, "collide": ["sign", "drop"]}
+        base = {"verdict": "wrong", "triesLeft": 1, "hint": serve.DEFAULT_NUDGE, "collide": ["sign", "drop"],
+                "spot": "QUACK. Your pieces are fine but one. Redo the bottom of the fraction."}          # W-SPOT: sign on the 100 = drop the 200, both in the bottom
         self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in [base, base, {**base, "part": 0}, {**base, "part": 0}]])
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):
             self.assertEqual(serve.grade(dict(self.TIE, nudge="QUACK. Own nudge."), "tie-nudge", {"answer": "0.03"})["hint"], "QUACK. Own nudge.")   # the item's own nudge, as the no-family path
-            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"collide": ["drop", "factor"]})                       # 12/300 (drop 100) = 2*0.02 (factor)
+            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"collide": ["drop", "factor"],                       # 12/300 (drop 100) = 2*0.02 (factor)
+                                                               "spot": "QUACK. Redo the bottom of the fraction, then check your last step."})
+            self.assertEqual(serve.slip_hit(dict(self.TIE, answer="1+1", form="1+1"), 4.0),                       # (1+1)^2 = 2*(1+1): whole-answer only
+                             {"collide": ["power", "factor"], "spot": "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two."})
+            self.assertEqual(serve.slip_hit(dict(self.TIE, answer="(1+2)+3", form="(1+2)+3"), 4.0), {"collide": ["sign", "drop"]})   # LCA = root: no spot, the plain nudge
+            r = serve.grade(dict(self.TIE, code="PHYS_TIF", answer="(1+2)+3", form="(1+2)+3"), "tie-root", {"answer": "4"})
+            self.assertEqual((r["hint"], r["collide"], "spot" in r), (serve.DEFAULT_NUDGE, ["sign", "drop"], False))
+            self.assertFalse(any(ch.isdigit() for ch in got[0]["spot"]))
             r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
             self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
 

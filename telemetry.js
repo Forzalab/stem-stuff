@@ -205,7 +205,7 @@
           if (p.ms_since_open == null && st.openAt) p.ms_since_open = Math.round(t - st.openAt);
           if (!("sure" in p)) p.sure = null;                                                // the bet (D52) fills it later
           if (me && ownFP && (p.verdict === "correct" || p.verdict === "wrong")) ownerTry(p, t);   // T36: Tony's own devices only (me tag AND an OWNER_FP hit): the full try trail + slip family
-          else { delete p.error; delete p.families; delete p.typed; delete p.collide; }      // J6: the error family (SLIP_TIE: the colliding families too) + the item's distractor families stay on device (intent.js reads them; PostHog never gets them); T36: so does what was typed
+          else { delete p.error; delete p.families; delete p.typed; delete p.collide; delete p.spot; }      // J6: the error family (SLIP_TIE: the colliding families too, and the spot line) + the item's distractor families stay on device (intent.js reads them; PostHog never gets them); T36: so does what was typed
           if (p.verdict === "correct" || p.verdict === "wrong") {
             st.stage = p.right ? "right" : "wrong";
             var why = spamCheck(st.picks, t, p.ms_since_open);

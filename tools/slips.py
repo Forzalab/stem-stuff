@@ -8,7 +8,8 @@ Run: python3 tools/slips.py [banks/BANK_X.json ...]     (default: problems.json 
      python3 tools/slips.py --golden                     (rewrite the parity fixtures both test suites read, from slips.py:
                                                           tests/fixtures/slips-golden.json (its own forms) and slips-golden-banks.json
                                                           (CORNERS + every form already there + every live bank form), plus
-                                                          slips-golden-k2.json (the k=2 inner+outer entries of those forms). Run it when a
+                                                          slips-golden-k2.json (the k=2 inner+outer entries of those forms) and
+                                                          slips-golden-spots.json (each collision value's spot()). Run it when a
                                                           bank gains a form or a slip rule changes; review the diff; the JS must match.)
      --log PATH: also append the tol warnings as JSONL (tools/tol.py's format). Only when given: CI and tests never write a log.
 """
@@ -93,6 +94,29 @@ def _write_k2(path, forms):
     path.write_text("[\n  " + ",\n  ".join(rows) + "\n]\n", encoding="utf-8")
 
 
+def collisions(f):
+    """[(typed, cands, kind, region path, line)]: every k=1 slip value of `f` (not the answer) that 2+ families sit on, once per value,
+    with slips.spot() on it: the slips-golden-spots.json rows. typed = the slip value itself; the answer is skipped as serve.py skips it."""
+    e, ans, out = slips.parse(f), float(slips.parse(f).doit()), []
+    for _, vals in slips.raw(f):
+        for v in vals:
+            if slips.close(v, ans) or any(slips.close(v, t) for t, *_ in out):
+                continue
+            c = slips.cands(f, v, skip=(ans,))
+            if len(c) > 1:
+                kind, r, line = slips.spot(e, c)
+                out.append((v, c, kind, r, line))
+    return out
+
+
+def _write_spots(path, forms):
+    """W-SPOT parity: the spot copy table + per bank form every collision value, its candidates with paths, and spot()'s kind, path, line"""
+    rows = [json.dumps({"form": f, "answer": float(slips.parse(f).doit()), "spots": [[v, [[fam, [list(p) for p in ps]] for fam, ps in c], k, list(r), line]
+                                              for v, c, k, r, line in collisions(f)]}, ensure_ascii=False) for f in forms]
+    path.write_text('{"copy": ' + json.dumps(slips.SPOT_COPY, ensure_ascii=False) + ',\n "forms": [\n  ' + ",\n  ".join(rows) + "\n]}\n",
+                    encoding="utf-8")
+
+
 def golden():
     def had(name):
         p = FIX / name
@@ -101,7 +125,9 @@ def golden():
     forms = list(dict.fromkeys([*CORNERS, *had("slips-golden-banks.json"), *live_forms()]))
     _write(FIX / "slips-golden-banks.json", forms)
     _write_k2(FIX / "slips-golden-k2.json", forms)
-    print(f"wrote {FIX / 'slips-golden.json'}, {FIX / 'slips-golden-banks.json'} and {FIX / 'slips-golden-k2.json'} ({len(forms)} forms)")
+    _write_spots(FIX / "slips-golden-spots.json", forms)
+    print(f"wrote {FIX / 'slips-golden.json'}, {FIX / 'slips-golden-banks.json'}, {FIX / 'slips-golden-k2.json'} and "
+          f"{FIX / 'slips-golden-spots.json'} ({len(forms)} forms)")
     return 0
 
 

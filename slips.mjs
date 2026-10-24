@@ -10,7 +10,7 @@
 
 export const FAMILIES = ["distribute", "sign", "drop", "reciprocal", "power", "factor", "dream", "trig", "units", "g"];
 export const EPS = 1e-9;
-/* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never names the term or the answer). Keep byte-equal: tests/slips.test.mjs checks it against serve.py. */
+/* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never prints a number or the answer; may point to a place, SPOT_COPY). Keep byte-equal: tests/slips.test.mjs checks it against serve.py. */
 export const FAMILY_HINT = {
   distribute: "QUACK. Check the minus before the brackets. It goes to every term.",
   sign: "QUACK. Check every sign. One of them flipped.",
@@ -105,29 +105,29 @@ function put(e, path, nw) {
 const flatMul = m => m.a.flatMap(a => a.t === "mul" ? flatMul(a) : [a]);   // slips.py _flat_mul
 const isExp = (p, ...vs) => p.t === "pow" && isNum(p.a[1]) && vs.some(v => Math.abs(val(p.a[1]) - v) < EPS);
 
-function* family(fam, e) {                                // slips.py _family, rule for rule: [mutant, outer (whole-answer slip)]
+function* family(fam, e) {                                // slips.py _family, rule for rule: [mutant, outer (whole-answer slip), path changed (ROOT: outer)]
   const ns = [...nodes(e)];
   if (fam === "sign") {
-    yield [neg(e), true];
-    for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) yield [put(e, [...p, i], neg(n.a[i])), false];
+    yield [neg(e), true, ROOT];
+    for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) yield [put(e, [...p, i], neg(n.a[i])), false, [...p, i]];
   } else if (fam === "drop") {
     for (const [p, n] of ns) if (n.t === "add") for (const i of n.a.keys()) {
       const rest = n.a.filter((_, j) => j !== i);
-      yield [put(e, p, rest.length === 1 ? rest[0] : add(rest)), false];
+      yield [put(e, p, rest.length === 1 ? rest[0] : add(rest)), false, [...p, i]];
     }
   } else if (fam === "reciprocal") {
-    yield [pow(e, num(-1)), true];
+    yield [pow(e, num(-1)), true, ROOT];
     for (const [p, n, up] of ns) {
-      if (n.t === "mul" && n.a.some(a => isExp(a, -1))) yield [put(e, p, pow(n, num(-1))), false];
-      else if (isExp(n, -1) && !(up && up.t === "mul")) yield [put(e, p, n.a[0]), false];
+      if (n.t === "mul" && n.a.some(a => isExp(a, -1))) yield [put(e, p, pow(n, num(-1))), false, p];
+      else if (isExp(n, -1) && !(up && up.t === "mul")) yield [put(e, p, n.a[0]), false, p];
     }
   } else if (fam === "power") {
-    for (const [p, n] of ns) if (isExp(n, 2, 0.5, -2, -0.5)) yield [put(e, p, val(n.a[1]) < 0 ? pow(n.a[0], num(-1)) : n.a[0]), false];
-    yield [pow(e, num(2)), true];
-    yield [pow(e, num(0.5)), true];
+    for (const [p, n] of ns) if (isExp(n, 2, 0.5, -2, -0.5)) yield [put(e, p, val(n.a[1]) < 0 ? pow(n.a[0], num(-1)) : n.a[0]), false, p];
+    yield [pow(e, num(2)), true, ROOT];
+    yield [pow(e, num(0.5)), true, ROOT];
   } else if (fam === "factor") {
-    yield [mul([num(2), e]), true];
-    yield [mul([num(0.5), e]), true];
+    yield [mul([num(2), e]), true, ROOT];
+    yield [mul([num(0.5), e]), true, ROOT];
   } else if (fam === "distribute") {                    // a Mul chain read whole from its top: a-k(b+c) is (-1)*(k*(b+c)) (S1)
     for (const [p, n, up] of ns) {
       if (n.t !== "mul" || (up && up.t === "mul")) continue;
@@ -138,47 +138,51 @@ function* family(fam, e) {                                // slips.py _family, r
       const rest = flat.flatMap((a, i) => i === k || (i !== first && isRat(a)) ? [] : [i === first ? num(-c) : a])
         .filter(a => !(isRat(a) && a.v === 1));
       const s = add(flat[k].a.map((a, i) => i === 0 ? neg(a) : a));   // the first term only (Tony, Oct 23)
-      yield [put(e, p, rest.length ? mul([...rest, s]) : s), false];
+      yield [put(e, p, rest.length ? mul([...rest, s]) : s), false, p];
     }
   } else if (fam === "dream") {
-    for (const [p, n] of ns) if (isExp(n, 2, 0.5) && n.a[0].t === "add") yield [put(e, p, add(n.a[0].a.map(t => pow(t, n.a[1])))), false];
+    for (const [p, n] of ns) if (isExp(n, 2, 0.5) && n.a[0].t === "add") yield [put(e, p, add(n.a[0].a.map(t => pow(t, n.a[1])))), false, p];
   } else if (fam === "trig") {
     for (const [p, n] of ns) {
       if (n.t !== "fn" || !["sin", "cos", "tan"].includes(n.name)) continue;
       const x = n.a[0];
-      if (n.name !== "tan") yield [put(e, p, fn(n.name === "sin" ? "cos" : "sin", x)), false];
-      yield [put(e, p, fn(n.name, mul([x, { t: "pi" }, pow(num(180), num(-1))]))), false];
-      yield [put(e, p, fn(n.name, mul([x, num(180), pow({ t: "pi" }, num(-1))]))), false];
+      if (n.name !== "tan") yield [put(e, p, fn(n.name === "sin" ? "cos" : "sin", x)), false, p];
+      yield [put(e, p, fn(n.name, mul([x, { t: "pi" }, pow(num(180), num(-1))]))), false, p];
+      yield [put(e, p, fn(n.name, mul([x, num(180), pow({ t: "pi" }, num(-1))]))), false, p];
     }
   } else if (fam === "units") {
-    for (const k of [2, -2, 3, -3]) yield [mul([pow(num(10), num(k)), e]), true];
+    for (const k of [2, -2, 3, -3]) yield [mul([pow(num(10), num(k)), e]), true, ROOT];
   } else if (fam === "g") {
     const gs = ns.filter(([, n]) => n.t === "num" && !n.rat && [9.8, 9.81].some(v => Math.abs(n.v - v) < EPS)).map(([p]) => p);
     let m = e;
     for (const p of gs) m = put(m, p, num(10));
-    if (gs.length) yield [m, false];
+    if (gs.length) yield [m, false, lca(gs)];
   }
 }
 
 const same = (a, b) => b ? Math.abs(a - b) <= EPS * Math.abs(b) : a === 0;   // slips.py _same: relative (tiny-constant slips stay apart)
 const cache = new Map();
-/* slips.py _raw2: [raw, inner] in one pass; inner = the same per family over inner mutants only (no whole-answer wrapper) */
+/* slips.py _raw2: [raw, inner, pairs (filled by pairs()), sites, tree] in one pass; inner = the same per family over inner mutants only (no
+   whole-answer wrapper); sites = raw with each value's paths */
 function raw2(form) {
   form = String(form);
   if (cache.has(form)) return cache.get(form);
-  const e = parse(form), out = [], inn = [];
+  const e = parse(form), out = [], inn = [], sit = [];
   for (const fam of FAMILIES) {
-    const vs = [], is = [];
-    for (const [m, outer] of family(fam, e)) {
+    const vs = [], is = [], ps = [];
+    for (const [m, outer, path] of family(fam, e)) {
       const v = val(m);
       if (!Number.isFinite(v)) continue;
-      if (!vs.some(w => same(v, w))) vs.push(v);
+      const j = vs.findIndex(w => same(v, w));
+      if (j < 0) { vs.push(v); ps.push([path]); } else if (!ps[j].some(q => cmpPath(q, path) === 0)) ps[j].push(path);
       if (!outer && !is.some(w => same(v, w))) is.push(v);
     }
-    out.push([fam, vs.sort((a, b) => a - b)]);
+    const order = vs.map((_, j) => j).sort((a, b) => vs[a] - vs[b]);
+    out.push([fam, order.map(j => vs[j])]);
     inn.push([fam, is.sort((a, b) => a - b)]);
+    sit.push([fam, order.map(j => [vs[j], ps[j].sort(cmpPath)])]);
   }
-  const r = [out, inn, null];
+  const r = [out, inn, null, sit, e];
   if (cache.size > 512) cache.clear();
   cache.set(form, r);
   return r;
@@ -251,4 +255,107 @@ export function match(form, value, tol = SLIP_WIN, skip = [], k = SLIP_K) {
     }
     return null;
   } catch { return null; }
+}
+
+/* ---- spot (slips.py spot, rule for rule): on a collision, WHERE the slip is, never WHAT it is, never a number ------------------------- */
+export const ROOT = [];                                   // the root's path: a whole-answer (outer) slip has no place in the form
+function cmpPath(p, q) {                                  // Python tuple order
+  for (let i = 0; i < Math.min(p.length, q.length); i++) if (p[i] !== q[i]) return p[i] - q[i];
+  return p.length - q.length;
+}
+function lca(ps) {
+  let pre = ps[0];
+  for (const p of ps.slice(1)) { let n = 0; while (n < Math.min(pre.length, p.length) && pre[n] === p[n]) n++; pre = pre.slice(0, n); }
+  return pre;
+}
+/* ALL the spot copy, one table (Tony vets it): equal to slips.py SPOT_COPY (pinned by tests/fixtures/slips-golden-spots.json).
+   Structural words + written-order ordinals only: never a digit, never a literal of the form. */
+export const SPOT_COPY = {
+  region: "QUACK. Your pieces are fine but one. Redo {place}.",
+  finish: "QUACK. The pieces look right. Check your last step{what}.",
+  finish_what: ": {words}",
+  or: " or ",
+  dual: "QUACK. Redo {place}, then check your last step.",
+  word: { sign: "your sign", units: "your units", factor: "a factor of two", power: "a square or square root", reciprocal: "flipping it upside down" },
+  term: "the {nth} term",
+  term_br: "the term in brackets",
+  factor: "the {nth} factor",
+  factor_br: "what is in the brackets",
+  top: "the top of the fraction",
+  bottom: "the bottom of the fraction",
+  squared: "what is being squared",
+  root: "what is under the square root",
+  base: "the base of the power",
+  exponent: "the power",
+  fn: "what is inside {fn}",
+  fn_name: { sin: "the sine", cos: "the cosine", tan: "the tangent", asin: "the inverse sine", acos: "the inverse cosine", atan: "the inverse tangent",
+    exp: "the exponential", log: "the log", ln: "the log", abs: "the absolute value" },
+  in: "{place} in {ctx}",
+  in_short: { "what is in the brackets": "the brackets", "what is under the square root": "the square root", "what is being squared": "the square" },
+  nth: ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"],
+  nth_many: "one",
+};
+const fill = (t, o) => t.replace(/\{(\w+)\}/g, (_, k) => o[k]);
+const at = (e, p) => p.reduce((n, i) => n.a[i], e);
+const lit = n => !n.a;                                    // a number or pi: lifts to its parent
+const hasBr = n => n.t === "add" || (n.t === "mul" && n.a.some(a => (a.t === "add" || a.t === "mul") && hasBr(a)));
+const nth = (i, kind) => fill(SPOT_COPY[kind], { nth: i < SPOT_COPY.nth.length ? SPOT_COPY.nth[i] : SPOT_COPY.nth_many });
+function lift(e, p) {                                     // a bare literal -> its parent; the x of a subtraction's (-1)*x -> the term
+  while (p.length) {
+    const n = at(e, p), up = at(e, p.slice(0, -1));
+    if (lit(n) || (up.t === "mul" && up.a.length === 2 && p[p.length - 1] === 1 && up.a[0].t === "num" && up.a[0].v === -1)) { p = p.slice(0, -1); continue; }
+    break;
+  }
+  return p;
+}
+/* slips.py place: [lifted path, structural name], [ROOT, null] when it lifts to the root */
+export function place(e, path, ctx = true) {
+  const c = SPOT_COPY, p = lift(e, path);
+  if (!p.length) return [ROOT, null];
+  const n = at(e, p), up = at(e, p.slice(0, -1)), i = p[p.length - 1];
+  let name, isNth = false;
+  if (up.t === "add") {
+    const br = up.a.flatMap((a, j) => hasBr(a) ? [j] : []);
+    if (br.length === 1 && br[0] === i) name = c.term_br; else { name = nth(i, "term"); isNth = true; }
+  } else if (up.t === "mul") {
+    if (isExp(n, -1)) name = c.bottom;
+    else if (n.t === "add" && up.a.filter(a => a.t === "add").length === 1) name = c.factor_br;
+    else if (up.a.some(a => isExp(a, -1))) name = c.top;
+    else { name = nth(i, "factor"); isNth = true; }
+  } else if (up.t === "pow") {
+    name = i === 1 ? c.exponent : isExp(up, -1) ? c.bottom : isExp(up, 2, -2) ? c.squared : isExp(up, 0.5, -0.5) ? c.root : c.base;
+  } else { const fname = c.fn_name[up.name] || c.fn_name.log; name = ctx ? fill(c.fn, { fn: fname }) : fname; }
+  if (isNth && ctx && p.length > 1) {
+    const [, around] = place(e, p.slice(0, -1), false);
+    if (around) name = fill(c.in, { place: name, ctx: c.in_short[around] || around });
+  }
+  return [p, name];
+}
+/* slips.py spot: [kind "region" | "dual" | "finish" | null, lifted region path, line]; cands [[family, paths]] at one typed value */
+export function spot(e, cands) {
+  const c = SPOT_COPY, isRoot = p => p.length === 0;
+  const inner = cands.flatMap(([, ps]) => ps.filter(p => !isRoot(p)));
+  const whole = cands.filter(([, ps]) => ps.some(isRoot)).map(([f]) => f);
+  if (!inner.length) {
+    if (!whole.length) return [null, ROOT, null];
+    const words = [...new Set(whole.map(f => f.split("+").pop()).filter(f => f in c.word).map(f => c.word[f]))].slice(0, 2);
+    return ["finish", ROOT, fill(c.finish, { what: words.length ? fill(c.finish_what, { words: words.join(c.or) }) : "" })];
+  }
+  const [r, name] = place(e, lca(inner));
+  if (name === null) return [null, ROOT, null];          // LCA = root with inner slips: the caller keeps the plain nudge
+  return whole.length ? ["dual", r, fill(c.dual, { place: name })] : ["region", r, fill(c.region, { place: name })];
+}
+/* raw() with paths: [[family, [[value, [path, ...]], ...]], ...] (slips.py sites) */
+export const sites = form => raw2(form)[3];
+/* slips.py region: the spot line for one collision, or null (the plain nudge) */
+export const region = (cands, form) => spot(raw2(form)[4], cands)[2];
+/* slips.py cands: [[family, paths]] of every family with a slip close() to typed (not close to a skip value), FAMILIES order */
+export function cands(form, typed, skip = [], tol = SLIP_WIN) {
+  const out = [];
+  for (const [fam, vs] of sites(form)) {
+    const ps = [];
+    for (const [v, pp] of vs) if (close(typed, v, tol) && !skip.some(x => close(v, x, tol))) for (const p of pp) if (!ps.some(q => cmpPath(q, p) === 0)) ps.push(p);
+    if (ps.length) out.push([fam, ps.sort(cmpPath)]);
+  }
+  return out;
 }

@@ -279,6 +279,68 @@ class BadVersion(unittest.TestCase):
             self.assertEqual(cli.main(["--strict", self.bank('"20261022"')]), 0)
 
 
+class Spot(unittest.TestCase):
+    """W-SPOT: on a collision, region() says WHERE the slip is (a place in the form, or FINISH for whole-answer slips), never WHAT it is
+    and never a number. slips-golden-spots.json (python3 tools/slips.py --golden) pins slips.mjs to the same lines."""
+
+    def gold(self):
+        with open(os.path.join(FIX, "slips-golden-spots.json"), encoding="utf-8") as f:
+            return json.load(f)
+
+    def lines(self, c):
+        """every string in the copy table"""
+        return [c] if isinstance(c, str) else [x for v in (c.values() if isinstance(c, dict) else c) for x in self.lines(v)]
+
+    def test_hand_bottom_of_the_fraction(self):     # 12/600 = 0.02; typed 0.03 = 12/(-100+200+300) (sign) = 12/(100+300) (drop)
+        f = "12/(100+200+300)"
+        c = slips.cands(f, 0.03, skip=(0.02,))
+        self.assertEqual(c, [("sign", ((1, 0, 0),)), ("drop", ((1, 0, 1),))])
+        self.assertEqual(slips.spot(slips.parse(f), c)[:2], ("region", (1, 0)))
+        self.assertEqual(slips.region(c, f), "QUACK. Your pieces are fine but one. Redo the bottom of the fraction.")
+
+    def test_hand_whole_answer_finish(self):        # 1+1 typed 4: (1+1)^2 (power) = 2*(1+1) (factor), both round the whole answer
+        c = slips.cands("1+1", 4)
+        self.assertEqual(c, [("power", (slips.ROOT,)), ("factor", (slips.ROOT,))])
+        self.assertEqual(slips.region(c, "1+1"), "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two.")
+        self.assertEqual(slips.region([("sign", ((),)), ("units", ((),))], "1+1"),
+                         "QUACK. The pieces look right. Check your last step: your sign or your units.")
+
+    def test_hand_dual_term_and_none(self):
+        self.assertEqual(slips.region(slips.cands("8/2*(2+2)", 8), "8/2*(2+2)"),     # drop a 2 in the bracket = half the answer
+                         "QUACK. Redo what is in the brackets, then check your last step.")
+        self.assertEqual(slips.region(slips.cands("10-2-(3+4)", 9), "10-2-(3+4)"),   # distribute and sign, both on -(3+4)
+                         "QUACK. Your pieces are fine but one. Redo the term in brackets.")
+        self.assertIsNone(slips.region(slips.cands("(1+2)+3", 4), "(1+2)+3"))      # sign on the 1, drop the 2: LCA = root -> the plain nudge
+
+    def test_names_never_a_digit_or_literal(self):
+        for s in self.lines(slips.SPOT_COPY):
+            self.assertNotRegex(s, r"\d", s)
+        for g in self.gold()["forms"]:
+            for _, _, _, _, line in g["spots"]:
+                if line:
+                    self.assertNotRegex(line, r"\d", (g["form"], line))
+                    self.assertLessEqual(len(line.split()), 25, line)
+
+    def test_golden_spots_fixture(self):
+        """slips.py gives the fixture's collisions, paths and lines on every bank form; every region holds each planted inner slip's node"""
+        gold = self.gold()
+        self.assertEqual(gold["copy"], json.loads(json.dumps(slips.SPOT_COPY)))
+        with open(os.path.join(FIX, "slips-golden-banks.json"), encoding="utf-8") as f:
+            self.assertEqual([g["form"] for g in gold["forms"]], [g["form"] for g in json.load(f)])
+        n = 0
+        for g in gold["forms"]:
+            got = [[v, [[fam, [list(p) for p in ps]] for fam, ps in c], k, list(r), line] for v, c, k, r, line in cli.collisions(g["form"])]
+            self.assertEqual([x[1:] for x in got], [x[1:] for x in g["spots"]], g["form"])
+            for v, c, kind, r, _ in g["spots"]:
+                n += 1
+                if kind in ("region", "dual"):
+                    for fam_, ps in c:
+                        for p in ps:
+                            if p:
+                                self.assertEqual(p[:len(r)], r, (g["form"], v, fam_, p, r))   # the planted slip's node is inside the region
+        self.assertGreater(n, 20)
+
+
 class K2(unittest.TestCase):
     """k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; k=1 stays today's output."""
 
