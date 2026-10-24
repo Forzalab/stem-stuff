@@ -33,13 +33,13 @@ if [ -n "$SHARD" ]; then
 fi
 
 # CI-measured seconds per .pw spec: median of 12 green CI runs, 2026-10-23 (timings-ci.json, brain projects/calc/_files/ci-plan-2026-10-23/); refresh with extract.py there on newer CI logs.
-# overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
+# ux-flows / next-cue / next-dead / rewards = the CI median minus what S3 removed (estimates until the next CI timings). overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
 # Sharding deals the specs, slowest first, to whichever shard is lightest so far, so the halves finish about together.
 weight() {
   case "$1" in
-    ux-flows) echo 241 ;; next-cue) echo 226 ;; upload-replace) echo 138 ;; next-dead) echo 116 ;; rewards) echo 78 ;; ticker) echo 70 ;;
+    ux-flows) echo 205 ;; next-cue) echo 184 ;; upload-replace) echo 138 ;; next-dead) echo 56 ;; rewards) echo 60 ;;
     swap) echo 69 ;; blink-fx) echo 59 ;; next-reset) echo 56 ;; queue-walk) echo 51 ;; redo-note|render) echo 46 ;; cluck-rise) echo 43 ;;
-    flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave|try-tries) echo 28 ;; done) echo 26 ;;
+    flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave) echo 28 ;; done) echo 26 ;;
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
     bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; seen) echo 9 ;;
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
@@ -122,5 +122,8 @@ if [ "${#specs[@]}" -gt 0 ]; then
   done
 fi
 sfx=""; [ "$sm" -gt 1 ] && sfx=" (shard $sn/$sm)"
+# a spec that cannot launch an engine prints "NOT COVERED <engine>: …" and goes on (render, reload): list them, so a missing engine is never silent
+nc="$(grep -H "^NOT COVERED" "$TMP"/*.log 2>/dev/null | sed "s|^$TMP/||; s|\.log:NOT COVERED|:|; s|: no browser.*||")"
+[ -n "$nc" ] && { echo; echo "NOT COVERED ($(wc -l <<<"$nc") engine runs):"; sed "s/^/     /" <<<"$nc"; }
 echo; [ "$fails" -eq 0 ] && echo "ALL GREEN$sfx" || echo "$fails FAILED$sfx (logs: $TMP)"
 [ "$fails" -eq 0 ]

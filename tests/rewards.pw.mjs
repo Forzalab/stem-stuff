@@ -273,22 +273,33 @@ try {
     await pc.close();
   });
 
+  /* a fresh context: `page` already answered every real above (its sid's tries on the server + its done store), so there every
+     option is disabled and a click can never land (it used to time out, swallowed, so the FX asserts below tested nothing) */
   await step("diet: no HUD node, no FX, no stem-rw key, no snack anywhere", async () => {
-    await page.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw")) localStorage.removeItem(k); });
-    await typeCode(page, "DIET_BANK_RW12");
-    await page.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
-    await page.reload();
-    await page.waitForFunction(() => /^CALC1_R/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
-    await toggleList(page); const o = await listOrder(page); await toggleList(page);
+    const dc = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+    await dc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off");
+      for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    const dp = await dc.newPage();
+    await dp.goto(BASE + "/");
+    await dp.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw")) localStorage.removeItem(k); });
+    await typeCode(dp, "DIET_BANK_RW12");
+    await dp.waitForFunction(() => /stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
+    await dp.reload();
+    await dp.waitForFunction(() => /^CALC1_R/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await toggleList(dp); const o = await listOrder(dp); await toggleList(dp);
     assert.deepEqual([...o].sort(), ["CALC1_R01", "CALC1_R02", "CALC1_R03"]);
-    await go(page, "CALC1_R02");
-    await watchFx(page);
-    await page.click('#q .opt[data-id="a"]').catch(() => {});
-    assert.equal(await page.$$eval("#rwHud, .fx-layer, .fx-ov", e => e.length), 0);
-    assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("stem-rw")).length), 0);
+    await go(dp, "CALC1_R02");
+    await watchFx(dp);
+    await pick(dp, "b"); await pick(dp, "a");                                  // a wrong try, then the closing right one: sugar would pay +1, then 6 with the bells
+    assert.deepEqual(await dp.evaluate(() => window.__drill.state.tries.map(t => [t.c, t.v])), [["b", "wrong"], ["a", "correct"]], "both picks were graded");
+    await dp.waitForTimeout(1000);                                            // the FX nodes land a frame or so after a correct in sugar
+    assert.deepEqual(await dp.evaluate(() => window.__fxc), [], "no FX node in diet");
+    assert.equal(await dp.$$eval("#rwHud, .fx-layer, .fx-ov", e => e.length), 0);
+    assert.equal(await dp.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith("stem-rw")).length), 0);
     assert.equal((await fetch(BASE + "/p/CALC1_S01.json", { headers: { cookie: "stem-mode=diet; stem-mode-v=2" } })).status, 404);
-    await typeCode(page, "SUGAR_BANK_RW12");
-    await page.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
+    await typeCode(dp, "SUGAR_BANK_RW12");
+    await dp.waitForFunction(() => !/stem-mode=diet/.test(document.cookie), null, { timeout: 4000 });
+    await dc.close();
   });
 
   await step("phone 390x844: the HUD is its own row under the nav, clear of the nav, the code bar and the Scratchpad button", async () => {

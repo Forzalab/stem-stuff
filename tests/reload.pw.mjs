@@ -1,6 +1,6 @@
 // Reload / idle / stalled-network tests (design/RELOAD.md). Needs a running server and Playwright:
 //   python3 serve.py 8812 &   then   node tests/reload.pw.mjs http://localhost:8812 [shotDir]
-// Chromium always; Firefox too when Playwright has it installed (else "skip firefox").
+// Chromium always; Firefox too when Playwright has it installed (else "NOT COVERED firefox", which run-all counts).
 // Not part of `npm test` (that one needs no server or browser).
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -36,7 +36,7 @@ async function run(type, label, launchOpts) {
   const dir = mkdtempSync(join(tmpdir(), "reload-"));
   const launch = () => type.launchPersistentContext(dir, { ...launchOpts, viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   let ctx;
-  try { ctx = await launch(); } catch (e) { console.log(`skip ${label}: ${e.message.split("\n")[0]}`); return; }
+  try { ctx = await launch(); } catch (e) { console.log(`NOT COVERED ${label}: no browser (${e.message.split("\n")[0]})`); return; }   // run-all counts these lines
   const pin = c => c.addInitScript(s => { try { localStorage.setItem("stem-order", s); } catch { /* blocked */ } }, SEED);
   await pin(ctx);
   let page = ctx.pages()[0] || await ctx.newPage();

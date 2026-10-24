@@ -244,7 +244,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
 }
 
 /* sugar questions with Cluck's key: the duck chip, one line, no XP for a tap; diet: none of it */
-for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "diet"]) {
+for (const [W, H] of [[393, 852]]) for (const mode of ["sugar", "diet"]) {   // one height: no chip check reads it (the main loop above runs both)
   const O = { mode, W, H };
   for (const [type, code] of [["num", "PHYS_WNM"], ["mc", "PHYS_WMC"], ["multi", "PHYS_WMU"]]) for (const outcome of ["right", "out"]) {
     const T = `${mode} ${W}x${H} chip ${type} ${outcome}`;
