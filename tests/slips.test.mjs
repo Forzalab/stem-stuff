@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -114,4 +114,36 @@ test("close() parity with slips.py: ties round away from zero in both (tests/fix
     assert.equal(close(a, b, tol), want, `${a} ${b}`);
     assert.equal(close(b, a, tol), want, `${b} ${a}`);
   }
+});
+
+/* k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; tests/test_slips.py K2 is the twin */
+test("k=2: SLIP_K is 1, so the default match is today's", () => {
+  assert.equal(SLIP_K, 1);
+  assert.equal(match("10-(3+2)", -7), null);
+});
+test("k=2 hand cases: a typed value only inner + outer explains", () => {
+  for (const [form, typed, want] of [["10-(3+2)", -7, "drop+sign"], ["2*9.8*3", 120, "g+factor"], ["sqrt(9+16)", 49, "dream+power"], ["sqrt(9+16)", -7, "dream+sign"]]) {
+    assert.equal(match(form, typed, undefined, [], 1), null, form);
+    assert.equal(match(form, typed, undefined, [], 2), want, form);
+    assert.ok(mutants(form, 2).some(([f, v]) => f === want && v === typed), form);
+  }
+  assert.equal(match("2*3", -12, undefined, [], 2), null);         // two outer slips: not k=2
+  assert.equal(match("10-(3+2)", 0.4, undefined, [], 2), null);
+  assert.equal(match("10-(3+2)", -7, undefined, [-7], 2), null);   // skip holds at k=2
+  assert.equal(match("10-(3+2)", 9, undefined, [], 2), "distribute");
+  assert.deepEqual(mutants("10-(3+2)", 2).slice(0, mutants("10-(3+2)").length), mutants("10-(3+2)"));
+  assert.ok(mutants("10-(3+2)", 2).every(([f]) => !f.includes("+") || OUTER_FAMS.includes(f.split("+")[1])));
+});
+const K2 = JSON.parse(readFileSync(new URL("fixtures/slips-golden-k2.json", import.meta.url), "utf8"));
+test("golden k=2 fixture: slips.mjs gives slips.py's inner+outer entries on every bank form", () => {
+  assert.deepEqual(K2.map(g => g.form), BANKS.map(g => g.form));
+  const bad = [];
+  for (const g of K2) {
+    const got = mutants(g.form, 2).slice(mutants(g.form).length);
+    const fams = got.map(([f]) => f).join(" "), want = g.pairs.map(([f]) => f).join(" ");
+    if (fams !== want) { bad.push(`${g.form}: families\n  js ${fams}\n  py ${want}`); continue; }
+    got.forEach(([f, v], i) => { const w = g.pairs[i][1]; if (!(Math.abs(v - w) <= 1e-9 * Math.abs(w))) bad.push(`${g.form}: ${f} ${v} vs ${w}`); });
+    if (g.pairs.length && match(g.form, g.pairs[0][1], undefined, [], 2) === null) bad.push(`${g.form}: no k=2 match on ${g.pairs[0][1]}`);
+  }
+  assert.deepEqual(bad, []);
 });
