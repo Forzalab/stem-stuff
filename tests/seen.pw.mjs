@@ -169,6 +169,45 @@ await step("trap_beaten: a served item's families (sent with the right pick only
   await page.context().close();
 });
 
+/* SLIP_TIE spot gate (intent.js spotOk): /check's wrong reply is routed to carry `spot` beside `hint`. An improving session (5 finished items,
+   first-try 0 0 1 1 1, fed through stemT as the page would) and a first wrong 10 s in → the spot text shows, S.hints kind "spot", the done
+   record keeps it. A cold session (nothing finished) → the plain hint. The why line stays on device and carries no family */
+for (const warm of [true, false]) await step(`spot gate: ${warm ? "an improving session → the spot text" : "a cold session → the plain hint"}`, async () => {
+  const page = await open({ vp: { width: 1280, height: 800 } });
+  const SPOT = "QUACK. Look at the second term of the bottom.";
+  await page.route("**/check", async r => {
+    const res = await r.fetch(), j = await res.json();
+    if (j.verdict === "wrong") Object.assign(j, { spot: SPOT, collide: ["sign", "negation"] });
+    await r.fulfill({ response: res, json: j });
+  });
+  if (warm) await page.evaluate(code => {
+    [0, 0, 1, 1, 1].forEach((ok, i) => {
+      window.stemT("q_open", { code: "WARM" + i, type: "mc" });
+      if (!ok) window.stemT("pick", { code: "WARM" + i, choice: "b", verdict: "wrong", tries_left: 1 });
+      window.stemT("pick", { code: "WARM" + i, choice: "a", verdict: "correct" });
+    });
+    window.stemT("q_open", { code, type: "mc" });                       // back on the page's item: a fresh Jev item
+  }, await page.evaluate(() => window.__drill.state.code));
+  await idle(page, 10000); await pick(page, "b");
+  await closeCluck(page);
+  const got = await page.evaluate(() => ({ md: [...document.querySelectorAll(".cluck .md")].map(e => e.textContent).join(" | "), kind: window.__drill.state.hints.at(-1)?.kind,
+    rec: window.stemOffline?.doneGet?.(window.__drill.state.code)?.units?.[0]?.hint, dump: window.stemJev.dump() }));
+  const line = (got.dump.match(/jev {2}spot=[^"]*/) || [""])[0];
+  if (warm) {
+    assert.ok(got.md.includes("second term of the bottom"), "the spot text shows: " + got.md);
+    assert.ok(!got.md.includes("Look at the not"), "not the plain hint");
+    assert.equal(got.kind, "spot"); assert.equal(got.rec, SPOT, "the done record keeps what was shown");
+    assert.equal(line, "jev  spot=ok imp=0.67>0.00 n=5 d=1");
+  } else {
+    assert.ok(got.md.includes("Look at the not") && !got.md.includes("second term"), "the plain hint: " + got.md);
+    assert.equal(got.kind, "negation"); assert.equal(got.rec, "QUACK. Look at the not.");
+    assert.equal(line, "jev  spot=hold why=cold n=0");
+  }
+  assert.ok(!/ (err|fam)=/.test(line), "no family on the why line");
+  assert.deepEqual(page.errs, []);
+  await page.context().close();
+});
+
 await step("?jev=0 (off on this device): the same item, no peek, no stemJev", async () => {
   const page = await open({ jev: false });
   await earned(page);

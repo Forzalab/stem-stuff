@@ -25,6 +25,8 @@
      caps    max 1 per item · ≥ GAP_S (3 min) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
              typing (a key < TYPING_S ago) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
              without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none
+   Spot gate (SLIP_TIE): a wrong /check reply may carry `spot` (points at a place in the formula) beside `hint`; app.js record() asks
+   stemJev.spot() once → spotOk (pure, the `spot` seat, SPOT consts) + one "jev  spot=ok|hold ..." line. Off = no stemJev = the plain hint.
    J6 "seen", moments earned / trap_beaten (copy/seen-lines.js): on a correct pick, tree(state) → candidates {moment, fam, why}
    (the decision tree below; its wrong-pick and item-end branches are log only; trap_beaten reads the `families` the server sends with a right pick); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
    hidden) + MAX per session, a QUIET roll (silence is a valid pick), a kind (nod = the duck rises, no words · short · full), a line by the
@@ -47,6 +49,9 @@
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
   var RING_CAP = 2000, TITLE_WORDS = 8;
   var HOLD = { FALLBACK_S: 20, CAP: 3, KINDS: ["hold_mid", "hold_arrow", "hold_end"] };
+  /* the spot gate (Tony Oct 24, SLIP_TIE): /check's `spot` (a hint that points at a place in the formula) instead of the plain `hint`, only
+     when the student is (a) genuinely improving AND (b) nearly there. All "ours" (J3 bench start values) */
+  var SPOT = { MIN_N: 4, WIN: 3, IMP: 0, WRONG: 1, FAST_S: FAST_ERR_S };
   var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
@@ -89,6 +94,28 @@
     return [];
     function gap(x) { return x.gap; }
     function rate(l) { return l.filter(function (x) { return x.ok; }).length / l.length; }
+  }
+
+  /* The spot gate, homebrew: answers the `spot` seat (art. 8; a Jev model answers the same seat with the same shape later). Pure.
+     st = { items: [{ ok: first-try right, gap }] per finished item this session (tree()'s "end" data), wrong: wrong picks on this item
+     (after this pick), left: tries left, s5, help: this item, since: seconds from q_open / the last wrong to this pick, off: Jev off }.
+     ok = (a) improving: >= SPOT.MIN_N items finished, first-try rate of the last WIN beats the first WIN's by > IMP, no S5, no help on
+     this item, AND (b) nearly there: the item's first wrong (wrong === WRONG) with a try left, the pick not fast (since >= FAST_S).
+     why: "spot=ok imp=<d>><IMP> n=<items> d=<wrong>" | "spot=hold why=<off|cold|flat|s5|help|try|last|fast> ...". Never a family or text. */
+  function spotOk(st) {
+    var no = function (w, x) { return { ok: false, why: "spot=hold why=" + w + (x ? " " + x : "") }; };
+    if (!st || st.off) return no("off");
+    var xs = st.items || [], n = xs.length, d = st.wrong | 0;
+    if (n < SPOT.MIN_N) return no("cold", "n=" + n);
+    var rt = function (l) { return l.filter(function (x) { return x && x.ok; }).length / l.length; };
+    var imp = rt(xs.slice(-SPOT.WIN)) - rt(xs.slice(0, SPOT.WIN)), is = "imp=" + imp.toFixed(2) + (imp > SPOT.IMP ? ">" : "<=") + SPOT.IMP.toFixed(2);
+    if (!(imp > SPOT.IMP)) return no("flat", is + " n=" + n);
+    if (st.s5) return no("s5", "n=" + n);
+    if (st.help) return no("help", "n=" + n);
+    if (d !== SPOT.WRONG) return no("try", "n=" + n + " d=" + d);
+    if (!(st.left > 0)) return no("last", "n=" + n + " d=" + d);
+    if (!(st.since >= SPOT.FAST_S)) return no("fast", "n=" + n + " since=" + (st.since == null ? "-" : (+st.since).toFixed(1)));
+    return { ok: true, why: "spot=ok " + is + " n=" + n + " d=" + d };
   }
 
   function p75(xs, fallback) {
@@ -166,6 +193,7 @@
         if (hist[q.code].length > HIST_CAP) hist[q.code].shift();
         log("pick", (ch || "-") + " " + p.verdict + (p.tries_left != null ? " tries_left=" + p.tries_left : "") + (p.error ? " err=" + p.error : ""));
         q.gaps.push(Math.round(ds * 10) / 10);
+        q.since = (t - (q.errAt || q.open)) / 1000; q.left = p.tries_left;   // the spot gate: this pick's distance from q_open / the last wrong
         var fast = sec(t) < FAST_OPEN_S || (q.errAt && (t - q.errAt) / 1000 < FAST_ERR_S);
         var again = ch && q.picks.indexOf(ch) >= 0;
         q.fast = fast ? q.fast + 1 : 0;
@@ -344,6 +372,12 @@
       log("seen", cs[0].moment + " " + kind + (id ? " " + id : ""));
       return { kind: kind, line: line, delay: SEEN.JIT_MS[0] + Math.floor(rand() * (SEEN.JIT_MS[1] - SEEN.JIT_MS[0] + 1)), fam: cs[0].fam, id: id };
     }
+    /* the spot gate for the current item, after its pick: the page asks once per wrong reply that carries `spot`; one "jev  spot=..." line */
+    function spot() {
+      var r = spotOk(q ? { items: recs, wrong: q.wrong, left: q.left, s5: q.s5, help: q.help, since: q.since } : { items: recs });
+      log("jev", r.why);
+      return { ok: r.ok, why: r.why };
+    }
     /* the page goes with this item open and unsolved: one "left before" for Q next time */
     function leave() {
       if (!q || q.solved) return false;
@@ -351,7 +385,7 @@
       return true;
     }
     return {
-      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take,
+      ev: ev, input: input, tick: tick, vis: vis, away: away, nudgeEnd: nudgeEnd, leave: leave, take: take, spot: spot,
       dump: function () { return ring.map(function (e) { return JSON.stringify(e); }).join("\n"); },     // JSONL, for tools/bench_seen.mjs
       state: function () {
         return { last: last, counts: Object.assign({}, counts), flowRun: flowRun, lines: lines.slice(), code: q && q.code,
@@ -361,7 +395,7 @@
       }
     };
   }
-  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN };
+  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN, SPOT: SPOT, spotOk: spotOk };
 
   /* ---- on for all (art. 11); ?jev=0 = off on this device, ?jev=1 = back on ---- */
   var on = false;
@@ -465,4 +499,5 @@
   }
   setInterval(jev.tick, 5000);
   W.stemJev = jev.state; W.stemJev.dump = jev.dump;
+  W.stemJev.spot = function () { try { return jev.spot(); } catch (e) { return { ok: false, why: "spot=hold why=error" }; } };   // app.js asks (record); off = no stemJev = the plain hint
 })();
