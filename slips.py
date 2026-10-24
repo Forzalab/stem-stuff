@@ -5,7 +5,9 @@ tests/fixtures/slips-golden.json). `form` is authored text only, never student i
 mutants(form, k=1) -> [(family, value)]   families in FAMILIES order, values ascending within a family, one entry per distinct value;
                                      k=2 appends the "inner+outer" pairs (one inner slip + one whole-answer slip, Tony D1/D3) after them
 match(form, value, k=SLIP_K) -> family | None   within SLIP_WIN (never the item's grading tol); k=2 undoes the outer slip on the typed value
-gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)"""
+gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)
+sites(form) / cands(form, typed, skip) / region(cands, form) -> str | None   W-SPOT: on a collision, WHERE the slip is (structural words,
+                                     never a digit), FINISH for whole-answer slips; None when the place is the whole form (plain nudge)"""
 import ast
 import math
 import os
@@ -151,37 +153,38 @@ def _exp(p, *vals):
 
 
 def _family(fam, e):
-    """(mutant expression, outer) of one family; whole = the answer. outer: a whole-answer slip (OUTER: sign / reciprocal / power / factor /
-    units wrapped round the answer); every other mutant is inner (a site in the tree, or g)."""
+    """(mutant expression, outer, path) of one family; whole = the answer. outer: a whole-answer slip (OUTER: sign / reciprocal / power /
+    factor / units wrapped round the answer); every other mutant is inner (a site in the tree, or g). path: the node the slip changed (arg
+    indexes from the root; drop = the dropped term, g = the LCA of its 9.8s); ROOT for an outer slip (spot(): no place in the form)."""
     nodes = list(_nodes(e))
     if fam == "sign":
-        yield _neg(e), True
+        yield _neg(e), True, ROOT
         for path, n, _ in nodes:
             if isinstance(n, Add):
                 for i, t in enumerate(n.args):
-                    yield _put(e, path + (i,), _neg(t)), False
+                    yield _put(e, path + (i,), _neg(t)), False, path + (i,)
     elif fam == "drop":
         for path, n, _ in nodes:
             if isinstance(n, Add):
                 for i in range(len(n.args)):
                     rest = n.args[:i] + n.args[i + 1:]
-                    yield _put(e, path, rest[0] if len(rest) == 1 else Add(*rest, evaluate=False)), False
+                    yield _put(e, path, rest[0] if len(rest) == 1 else Add(*rest, evaluate=False)), False, path + (i,)
     elif fam == "reciprocal":                                       # a/b -> b/a; a bare x^-1 -> x; 1/whole
-        yield Pow(e, -1, evaluate=False), True
+        yield Pow(e, -1, evaluate=False), True, ROOT
         for path, n, up in nodes:
             if isinstance(n, Mul) and any(_exp(a, -1) for a in n.args):
-                yield _put(e, path, Pow(n, -1, evaluate=False)), False
+                yield _put(e, path, Pow(n, -1, evaluate=False)), False, path
             elif _exp(n, -1) and not isinstance(up, Mul):
-                yield _put(e, path, n.base), False
+                yield _put(e, path, n.base), False, path
     elif fam == "power":                                            # drop a square / root per Pow node; whole^2, sqrt(whole)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5, -2, -0.5):
-                yield _put(e, path, Pow(n.base, -1, evaluate=False) if float(n.exp) < 0 else n.base), False
-        yield Pow(e, 2, evaluate=False), True
-        yield Pow(e, S.Half, evaluate=False), True
+                yield _put(e, path, Pow(n.base, -1, evaluate=False) if float(n.exp) < 0 else n.base), False, path
+        yield Pow(e, 2, evaluate=False), True, ROOT
+        yield Pow(e, S.Half, evaluate=False), True, ROOT
     elif fam == "factor":
-        yield Mul(2, e, evaluate=False), True
-        yield Mul(S.Half, e, evaluate=False), True
+        yield Mul(2, e, evaluate=False), True, ROOT
+        yield Mul(S.Half, e, evaluate=False), True, ROOT
     elif fam == "distribute":                                       # -(b+c) -> -b+c: the minus reaches the first term only (Tony, Oct 23)
         for path, n, up in nodes:                                   # a Mul chain read whole from its top: a-k(b+c) is Mul(-1, Mul(k, b+c)) (S1)
             if not isinstance(n, Mul) or isinstance(up, Mul):
@@ -197,29 +200,29 @@ def _family(fam, e):
             rest = [a for a in rest if not (isinstance(a, Rational) and a == 1)]
             t = flat[k].args                                        # written order (evaluate=False keeps it)
             s = Add(_neg(t[0]), *t[1:], evaluate=False)
-            yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s), False
+            yield _put(e, path, Mul(*rest, s, evaluate=False) if rest else s), False, path
     elif fam == "dream":                                            # (a+b)^2 -> a^2+b^2; sqrt(a+b) -> sqrt(a)+sqrt(b)
         for path, n, _ in nodes:
             if _exp(n, 2, 0.5) and isinstance(n.base, Add):
-                yield _put(e, path, Add(*(Pow(t, n.exp, evaluate=False) for t in n.base.args), evaluate=False)), False
+                yield _put(e, path, Add(*(Pow(t, n.exp, evaluate=False) for t in n.base.args), evaluate=False)), False, path
     elif fam == "trig":                                             # sin <-> cos; the argument read as degrees vs radians
         for path, n, _ in nodes:
             if isinstance(n, (sin, cos, tan)):
                 x = n.args[0]
                 if isinstance(n, (sin, cos)):
-                    yield _put(e, path, (cos if isinstance(n, sin) else sin)(x, evaluate=False)), False
-                yield _put(e, path, n.func(Mul(x, pi, Pow(180, -1, evaluate=False), evaluate=False), evaluate=False)), False
-                yield _put(e, path, n.func(Mul(x, 180, Pow(pi, -1, evaluate=False), evaluate=False), evaluate=False)), False
+                    yield _put(e, path, (cos if isinstance(n, sin) else sin)(x, evaluate=False)), False, path
+                yield _put(e, path, n.func(Mul(x, pi, Pow(180, -1, evaluate=False), evaluate=False), evaluate=False)), False, path
+                yield _put(e, path, n.func(Mul(x, 180, Pow(pi, -1, evaluate=False), evaluate=False), evaluate=False)), False, path
     elif fam == "units":
         for k in (2, -2, 3, -3):
-            yield Mul(Pow(10, k, evaluate=False), e, evaluate=False), True
+            yield Mul(Pow(10, k, evaluate=False), e, evaluate=False), True, ROOT
     elif fam == "g":                                                # every 9.8 / 9.81 -> 10 (10 -> 9.8 is never sure: skipped)
         gs = [p for p, n, _ in nodes if isinstance(n, Float) and any(abs(float(n) - v) < EPS for v in (9.8, 9.81))]
         m = e
         for p in gs:
             m = _put(m, p, Integer(10))
         if gs:
-            yield m, False
+            yield m, False, _lca(gs)
 
 
 def _value(m):
@@ -237,22 +240,29 @@ def _same(a, b):
 
 @lru_cache(maxsize=512)
 def _raw2(form):
-    """(raw, inner): raw as raw() gives it; inner = the same per family over inner mutants only (outer=False in _family), one pass."""
+    """(raw, inner, sites): raw as raw() gives it; inner = the same per family over inner mutants only (outer=False in _family); sites =
+    raw with each value's paths (sites()), one pass."""
     e = parse(form)
-    out, inn = [], []
+    out, inn, sit = [], [], []
     for fam in FAMILIES:
-        vals, ivals = [], []
-        for m, outer in _family(fam, e):
+        vals, ivals, paths = [], [], []
+        for m, outer, path in _family(fam, e):
             v = _value(m)
             if v is None:
                 continue
-            if not any(_same(v, w) for w in vals):
+            j = next((j for j, w in enumerate(vals) if _same(v, w)), None)
+            if j is None:
                 vals.append(v)
+                paths.append({path})
+            else:
+                paths[j].add(path)
             if not outer and not any(_same(v, w) for w in ivals):
                 ivals.append(v)
-        out.append((fam, tuple(sorted(vals))))
+        order = sorted(range(len(vals)), key=lambda j: vals[j])
+        out.append((fam, tuple(vals[j] for j in order)))
         inn.append((fam, tuple(sorted(ivals))))
-    return tuple(out), tuple(inn)
+        sit.append((fam, tuple((vals[j], tuple(sorted(paths[j]))) for j in order)))
+    return tuple(out), tuple(inn), tuple(sit)
 
 
 def raw(form):
@@ -263,6 +273,12 @@ def raw(form):
 def inner(form):
     """raw() over inner slips only (no whole-answer wrapper): the k=2 bag. slips.mjs inner"""
     return _raw2(str(form))[1]
+
+
+def sites(form):
+    """raw() with paths: ((family, ((value, (path, ...)), ...)), ...), same families and values in the same order; each value's paths =
+    every node a slip of that family changed to give it (ROOT = a whole-answer slip). spot() reads it; slips.mjs sites"""
+    return _raw2(str(form))[2]
 
 
 # k=2 (Tony D1/D3, Oct 23): one inner slip + one whole-answer (outer) slip, never two of either; k=3 is not runtime. SLIP_K=1 (default)
@@ -344,6 +360,161 @@ def match(form, value, win=SLIP_WIN, k=None, skip=()):
                         return f"{fi}+{fo}"
             seen += fresh
     return None
+
+
+# ---- spot (W-SPOT): on a collision, WHERE the slip is, never WHAT it is, never a number (design/HANDOFF-slips-v2.md rule 3) ----------
+ROOT = ()             # the root's path: a whole-answer (outer) slip has no place in the form; a slip at the root is whole too
+# ALL the spot copy, one table (Tony vets it; slips.mjs SPOT_COPY is equal, pinned by tests/fixtures/slips-golden-spots.json).
+# Structural words + written-order ordinals only: never a digit, never a literal of the form (the form may hold numbers the student never saw).
+SPOT_COPY = {
+    "region": "QUACK. Your pieces are fine but one. Redo {place}.",
+    "finish": "QUACK. The pieces look right. Check your last step{what}.",
+    "finish_what": ": {words}",
+    "or": " or ",
+    "dual": "QUACK. Redo {place}, then check your last step.",
+    "word": {"sign": "your sign", "units": "your units", "factor": "a factor of two", "power": "a square or square root",
+             "reciprocal": "flipping it upside down"},
+    "term": "the {nth} term",
+    "term_br": "the term in brackets",
+    "factor": "the {nth} factor",
+    "factor_br": "what is in the brackets",
+    "top": "the top of the fraction",
+    "bottom": "the bottom of the fraction",
+    "squared": "what is being squared",
+    "root": "what is under the square root",
+    "base": "the base of the power",
+    "exponent": "the power",
+    "fn": "what is inside {fn}",
+    "fn_name": {"sin": "the sine", "cos": "the cosine", "tan": "the tangent", "asin": "the inverse sine", "acos": "the inverse cosine",
+                "atan": "the inverse tangent", "exp": "the exponential", "log": "the log", "ln": "the log", "abs": "the absolute value"},
+    "in": "{place} in {ctx}",
+    "in_short": {"what is in the brackets": "the brackets", "what is under the square root": "the square root",
+                 "what is being squared": "the square"},
+    "nth": ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"],
+    "nth_many": "one",
+}
+
+
+def _lca(paths):
+    paths = [tuple(p) for p in paths]
+    pre = paths[0]
+    for p in paths[1:]:
+        n = 0
+        while n < min(len(pre), len(p)) and pre[n] == p[n]:
+            n += 1
+        pre = pre[:n]
+    return pre
+
+
+def _at(e, path):
+    for i in path:
+        e = e.args[i]
+    return e
+
+
+def _lit(n):
+    return not n.args                                  # a number or pi: a bare literal names nothing (it lifts to its parent)
+
+
+def _has_br(n):
+    """n is (or multiplies) a bracketed sum"""
+    return isinstance(n, Add) or (isinstance(n, Mul) and any(_has_br(a) for a in n.args if isinstance(a, (Add, Mul))))
+
+
+def _fn_key(n):
+    return "abs" if isinstance(n, Abs) else type(n).__name__
+
+
+def _nth(i, kind):
+    c = SPOT_COPY
+    return c[kind].format(nth=c["nth"][i] if i < len(c["nth"]) else c["nth_many"])
+
+
+def _lift(e, path):
+    """a bare literal -> its parent; the x of a subtraction's (-1)*x -> the whole subtracted term"""
+    while path:
+        n, up = _at(e, path), _at(e, path[:-1])
+        if _lit(n) or (isinstance(up, Mul) and len(up.args) == 2 and path[-1] == 1 and up.args[0] == -1):
+            path = path[:-1]
+            continue
+        break
+    return path
+
+
+def place(e, path, ctx=True):
+    """(lifted path, structural name) of the node at `path` of the parsed form; (ROOT, None) when it lifts to the root. slips.mjs place"""
+    c = SPOT_COPY
+    path = _lift(e, tuple(path))
+    if not path:
+        return ROOT, None
+    n, up, i = _at(e, path), _at(e, path[:-1]), path[-1]
+    nth = False
+    if isinstance(up, Add):
+        br = [j for j, a in enumerate(up.args) if _has_br(a)]
+        name, nth = (c["term_br"], False) if br == [i] else (_nth(i, "term"), True)
+    elif isinstance(up, Mul):
+        if _exp(n, -1):
+            name = c["bottom"]
+        elif isinstance(n, Add) and sum(isinstance(a, Add) for a in up.args) == 1:
+            name = c["factor_br"]
+        elif any(_exp(a, -1) for a in up.args):
+            name = c["top"]
+        else:
+            name, nth = _nth(i, "factor"), True
+    elif isinstance(up, Pow):
+        if i == 1:
+            name = c["exponent"]
+        elif _exp(up, -1):
+            name = c["bottom"]
+        elif _exp(up, 2, -2):
+            name = c["squared"]
+        elif _exp(up, 0.5, -0.5):
+            name = c["root"]
+        else:
+            name = c["base"]
+    else:
+        fname = c["fn_name"].get(_fn_key(up), c["fn_name"]["log"])
+        name = c["fn"].format(fn=fname) if ctx else fname
+    if nth and ctx and len(path) > 1:
+        _, around = place(e, path[:-1], ctx=False)
+        if around:
+            name = c["in"].format(place=name, ctx=c["in_short"].get(around, around))
+    return path, name
+
+
+def spot(e, cands):
+    """(kind, lifted region path, line): kind "region" | "dual" | "finish" | None. cands: [(family, paths)] of the colliding families at
+    one typed value; e: the parsed form. inner = every non-root path; whole = a candidate with ROOT among its paths; R = LCA(inner).
+    R != root: region (no whole) or dual; no inner: FINISH from the first two whole families' words; R = root with inner: None."""
+    c = SPOT_COPY
+    inner = [tuple(p) for _, ps in cands for p in ps if tuple(p) != ROOT]
+    whole = [f for f, ps in cands if any(tuple(p) == ROOT for p in ps)]
+    if not inner:
+        if not whole:
+            return None, ROOT, None
+        words = list(dict.fromkeys(c["word"][f.split("+")[-1]] for f in whole if f.split("+")[-1] in c["word"]))[:2]
+        what = c["finish_what"].format(words=c["or"].join(words)) if words else ""
+        return "finish", ROOT, c["finish"].format(what=what)
+    r, name = place(e, _lca(inner))
+    if name is None:
+        return None, ROOT, None                        # LCA = root with inner slips: the caller keeps the plain nudge
+    return ("dual", r, c["dual"].format(place=name)) if whole else ("region", r, c["region"].format(place=name))
+
+
+def region(cands, form):
+    """the spot line for one collision (str), or None (the plain nudge). cands: [(family, paths)], form: the unit's `form`. slips.mjs region"""
+    return spot(parse(str(form)), cands)[2]
+
+
+def cands(form, typed, skip=(), win=SLIP_WIN):
+    """[(family, paths)]: every family with a slip close() to `typed` (and not close to a skip value), FAMILIES order, with the paths of
+    those slips (union, sorted). 2+ entries = a collision. slips.mjs cands"""
+    out = []
+    for fam, vs in sites(str(form)):
+        ps = sorted({p for v, pp in vs if close(typed, v, win) and not any(close(v, x, win) for x in skip) for p in pp})
+        if ps:
+            out.append((fam, tuple(ps)))
+    return out
 
 
 def units(p):

@@ -10,7 +10,7 @@ Do not open a new PR. Push to this branch.
    `power` (drop or add a square, drop or add a √), `factor` (whole answer ×2 or ×½),
    `dream` ((a+b)²→a²+b², √(a+b)→√a+√b), `trig` (sin↔cos, deg↔rad), `units` (whole answer ×10^±2, ×10^±3), `g` (9.8↔10).
 2. **Runtime matching, in both modes** (diet and sugar). After the author's `wrong` entries miss and before `nudge`, a typed value that matches a slip of `form` within `tol` gets that family's hint. It counts as a normal wrong try.
-3. **The hint names the family only.** It never names the term and never states the answer. One fixed Cluck line per family (`FAMILY_HINT`), starting `QUACK.`.
+3. **The hint names the family only.** It never prints a number or the answer; it may point to a place (amended, Tony Oct 24: on a `SLIP_TIE` collision the reply's `spot` line names where the slip is by structure, e.g. "the bottom of the fraction", never what it is; `slips.region`, `SPOT_COPY`). One fixed Cluck line per family (`FAMILY_HINT`), starting `QUACK.`.
 4. **Hand-written `wrong` entries always win.**
 5. **Uploads too.** Port the same mutants and matching to app.js `gradeLocal` (uploaded banks grade on the device). Tony: "JS doubles the code, who cares."
 6. **`v` = yyyymmdd integer.** `1` = oldest. Cutoff `20261022`. The schema allows `1` or an 8-digit date.
@@ -27,7 +27,7 @@ Do not open a new PR. Push to this branch.
 
 ## Must not
 - Edit existing bank items. Migrating old banks is a separate task.
-- Name the term or the answer in any slip hint.
+- Print a number or the answer in any slip hint (a hint may point to a place: rule 3).
 - Send `form`, `ignore_slips` or slip values to the client for hosted banks.
 - Change problem codes.
 

@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -146,4 +146,42 @@ test("golden k=2 fixture: slips.mjs gives slips.py's inner+outer entries on ever
     if (g.pairs.length && match(g.form, g.pairs[0][1], undefined, [], 2) === null) bad.push(`${g.form}: no k=2 match on ${g.pairs[0][1]}`);
   }
   assert.deepEqual(bad, []);
+});
+
+/* W-SPOT: on a collision, region() says WHERE the slip is, never WHAT it is, never a number; tests/test_slips.py Spot is the twin.
+   slips-golden-spots.json (python3 tools/slips.py --golden): per bank form, every collision value with its candidates' paths and the line. */
+const SPOTS = JSON.parse(readFileSync(new URL("fixtures/slips-golden-spots.json", import.meta.url), "utf8"));
+const strings = c => typeof c === "string" ? [c] : Object.values(c).flatMap(strings);
+test("spot copy: one table, equal to slips.py's, no digit anywhere", () => {
+  assert.deepEqual(SPOT_COPY, SPOTS.copy);
+  for (const s of strings(SPOT_COPY)) assert.doesNotMatch(s, /\d/, s);
+});
+test("golden spots fixture: slips.mjs gives slips.py's candidates, paths, region and line on every collision of every bank form", () => {
+  assert.deepEqual(SPOTS.forms.map(g => g.form), BANKS.map(g => g.form));
+  const bad = [];
+  let n = 0;
+  for (const g of SPOTS.forms) for (const [typed, want, kind, r, line] of g.spots) {
+    n++;
+    const c = cands(g.form, typed, [g.answer]);
+    if (JSON.stringify(c) !== JSON.stringify(want)) { bad.push(`${g.form} @${typed}: cands\n  js ${JSON.stringify(c)}\n  py ${JSON.stringify(want)}`); continue; }
+    const [k, rr, l] = spot(parse(g.form), c);
+    if (k !== kind || JSON.stringify(rr) !== JSON.stringify(r) || l !== line) bad.push(`${g.form} @${typed}: js ${k} ${JSON.stringify(rr)} ${l} / py ${kind} ${JSON.stringify(r)} ${line}`);
+    if (region(c, g.form) !== line) bad.push(`${g.form} @${typed}: region()`);
+    if (line && /\d/.test(line)) bad.push(`digit: ${line}`);
+    if (line && line.split(" ").length > 25) bad.push(`long: ${line}`);
+    if (kind === "region" || kind === "dual") for (const [, ps] of c) for (const p of ps) if (p.length && JSON.stringify(p.slice(0, r.length)) !== JSON.stringify(r)) bad.push(`${g.form}: ${p} not in ${r}`);
+  }
+  assert.deepEqual(bad, []);
+  assert.ok(n > 20, `${n} collisions`);
+});
+test("spot hand cases: the bottom of the fraction, FINISH on whole-answer slips, dual, and the root (plain nudge)", () => {
+  const f = "12/(100+200+300)", c = cands(f, 0.03, [0.02]);
+  assert.deepEqual(c, [["sign", [[1, 0, 0]]], ["drop", [[1, 0, 1]]]]);   // sign on the 100 = drop the 200: 12/400
+  assert.equal(region(c, f), "QUACK. Your pieces are fine but one. Redo the bottom of the fraction.");
+  assert.deepEqual(cands("1+1", 4), [["power", [ROOT]], ["factor", [ROOT]]]);
+  assert.equal(region(cands("1+1", 4), "1+1"), "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two.");
+  assert.equal(region([["sign", [[]]], ["units", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign or your units.");
+  assert.equal(region(cands("8/2*(2+2)", 8), "8/2*(2+2)"), "QUACK. Redo what is in the brackets, then check your last step.");
+  assert.equal(region(cands("10-2-(3+4)", 9), "10-2-(3+4)"), "QUACK. Your pieces are fine but one. Redo the term in brackets.");
+  assert.equal(region(cands("(1+2)+3", 4), "(1+2)+3"), null);
 });
