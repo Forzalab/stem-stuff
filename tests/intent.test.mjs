@@ -297,3 +297,78 @@ test("any input ends a blur (a missed focus can't pause S2 for good); input duri
   g.at(0).ev("q_open", { code: "A" }); g.at(5).vis(true); g.at(15).input("keydown"); g.at(20).vis(false);
   assert.ok(g.state().lines.includes("+20.0  away  15s via=hide"));
 });
+
+/* ---- the spot gate (SLIP_TIE): spotOk = (a) improving AND (b) nearly there; every edge of SPOT ---- */
+const SP = load().win.__stemJev, spotOk = st => ({ ...SP.spotOk(st) });
+const its = s => [...s].map(c => ({ ok: c === "1", gap: 10 }));            // "0111" = first try wrong, right, right, right
+const good = (o = {}) => ({ items: its("0111"), wrong: 1, left: 1, s5: false, help: false, since: 10, ...o });
+
+test("spotOk: the SPOT consts (one object), and ok at the improving + nearly-there default", () => {
+  assert.deepEqual({ ...SP.SPOT }, { MIN_N: 4, WIN: 3, IMP: 0, WRONG: 1, FAST_S: 8 });
+  assert.deepEqual(spotOk(good()), { ok: true, why: "spot=ok imp=0.33>0.00 n=4 d=1" });
+  assert.deepEqual(spotOk(good({ items: its("000111") })), { ok: true, why: "spot=ok imp=1.00>0.00 n=6 d=1" });
+});
+
+test("spotOk (a) improving: MIN_N items, last WIN's first-try rate > first WIN's, no S5, no help", () => {
+  assert.deepEqual(spotOk(good({ items: its("011") })), { ok: false, why: "spot=hold why=cold n=3" }, "3 < MIN_N");
+  assert.deepEqual(spotOk(good({ items: its("1111") })), { ok: false, why: "spot=hold why=flat imp=0.00<=0.00 n=4" }, "equal = no improvement");
+  assert.deepEqual(spotOk(good({ items: its("1110") })), { ok: false, why: "spot=hold why=flat imp=-0.33<=0.00 n=4" });
+  assert.equal(spotOk(good({ s5: true })).why, "spot=hold why=s5 n=4");
+  assert.equal(spotOk(good({ help: true })).why, "spot=hold why=help n=4");
+});
+
+test("spotOk (b) nearly there: the first wrong only, a try left, not a fast guess (since >= FAST_S)", () => {
+  assert.equal(spotOk(good({ wrong: 2 })).why, "spot=hold why=try n=4 d=2");
+  assert.equal(spotOk(good({ wrong: 0 })).why, "spot=hold why=try n=4 d=0");
+  assert.equal(spotOk(good({ left: 0 })).why, "spot=hold why=last n=4 d=1");
+  assert.equal(spotOk(good({ since: 7.9 })).why, "spot=hold why=fast n=4 since=7.9");
+  assert.equal(spotOk(good({ since: 8 })).ok, true, "FAST_S itself is not fast");
+  assert.equal(spotOk(good({ since: null })).ok, false);
+});
+
+test("spotOk: off / nothing → false", () => {
+  assert.deepEqual(spotOk(good({ off: true })), { ok: false, why: "spot=hold why=off" });
+  assert.equal(spotOk(null).ok, false);
+});
+
+/* a session: finished items by pattern ("1" = right first try, "0" = wrong at +10 s then right), then item X and a wrong pick at +wrongAt */
+function spotRun(p, wrongAt = 20) {
+  const j = session();
+  let t = 0;
+  [...p].forEach((c, i) => {
+    j.at(t).ev("q_open", { code: "I" + i });
+    if (c === "0") j.at(t + 10).ev("pick", { choice: "a", verdict: "wrong", tries_left: 1, error: "sign" });
+    j.at(t + 20).ev("pick", { choice: "b", verdict: "correct" });
+    t += 30;
+  });
+  j.at(t).ev("q_open", { code: "X" });
+  j.at(t + wrongAt).ev("pick", { choice: "a", verdict: "wrong", tries_left: 1, error: "sign" });
+  return j;
+}
+test("session spot(): asks about the current item after its pick; one 'jev  spot=' line, never err= / fam=", () => {
+  const j = spotRun("00111");
+  assert.deepEqual({ ...j.spot() }, { ok: true, why: "spot=ok imp=0.67>0.00 n=5 d=1" });
+  const l = j.state().lines.filter(x => x.includes("  jev  spot="));
+  assert.deepEqual(l, ["+20.0  jev  spot=ok imp=0.67>0.00 n=5 d=1"]);
+  assert.ok(!/ (err|fam)=/.test(l[0]));
+  assert.deepEqual({ ...spotRun("11").spot() }, { ok: false, why: "spot=hold why=cold n=2" }, "a cold session: the plain hint");
+});
+test("session spot(): a fast first wrong (< FAST_S after q_open) → hold; a second wrong → hold; Cluck by hand → hold", () => {
+  assert.equal(spotRun("00111", 6).spot().why, "spot=hold why=fast n=5 since=6.0");
+  const j = spotRun("00111");
+  j.at(200).ev("pick", { choice: "c", verdict: "wrong", tries_left: 0 });
+  assert.equal(j.spot().why, "spot=hold why=try n=5 d=2");
+  const k = spotRun("00111"); k.at(171).ev("cluck_open", { tab: "chat" });
+  assert.equal(k.spot().why, "spot=hold why=help n=5");
+  const s = spotRun("00111", 2); s.at(153).ev("pick", { choice: "a", verdict: "wrong", tries_left: 0 });
+  assert.match(s.spot().why, /^spot=hold why=s5 /, "a fast repeat pick = S5");
+});
+test("?jev=0 / DNT / stem-t-off: no stemJev.spot → the page shows the plain hint; on: stemJev.spot is the seam", () => {
+  const on = load();
+  assert.equal(typeof on.win.stemJev.spot, "function");
+  on.win.stemT("q_open", { code: "A" }); on.win.stemT("pick", { code: "A", verdict: "wrong", tries_left: 1 });
+  assert.equal(on.win.stemJev.spot().ok, false, "a cold session");
+  const tele = (nav, ls) => ({ optedOut: () => nav.doNotTrack === "1", userOff: () => ls["stem-t-off"] === "1" });
+  const offs = [load({ search: "?jev=0" }), load({ tele: tele({ doNotTrack: "1" }, {}) }), load({ store: { "stem-t-off": "1" }, tele: tele({}, { "stem-t-off": "1" }) })];
+  for (const L of offs) { assert.equal(L.win.stemJev, undefined); assert.equal(L.win.stemJev?.spot?.()?.ok === true, false); }
+});

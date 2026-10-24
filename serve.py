@@ -61,7 +61,7 @@ DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
 WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
-# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only: never a term, never a number.
+# slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
 FAMILY_HINT = {
     "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
     "sign": "QUACK. Check every sign. One of them flipped.",
@@ -720,13 +720,24 @@ def slip_hit(u, sig):
     if fam and slip_tie_on():
         tie = [f for f, vals in _slip_raw(u["form"], ans, ignore) if any(slips.close(sig, v) for v in vals)]
         if len(tie) > 1:              # 2+ families sit on this value: name none (the plain nudge), say which ones collide
-            return {"collide": tie}
+            line = _slip_spot(u["form"], ans, ignore, sig, tuple(tie))
+            return {"collide": tie, "spot": line} if line else {"collide": tie}   # spot: WHERE, never what or a number; the page picks
     return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
 
 
 def slip_tie_on():
     """SLIP_TIE: default off; "1" = a value on 2+ slip families gets the plain nudge + collide (FAMILIES order), not the first family's hint"""
     return os.environ.get("SLIP_TIE", "").strip() == "1"
+
+
+def _slip_spot(form, ans, ignore, sig, tie):
+    """W-SPOT: the safe "spot" line (slips.region: a place in the form, or FINISH for whole-answer slips; never a digit) for a SLIP_TIE
+    collision, or None (the plain nudge alone). Same skips as _slip_raw; a form that can't be read gives None."""
+    try:
+        skip = (ans, *(float(slips.parse(s).doit()) for s in ignore))
+        return slips.region([c for c in slips.cands(form, sig, skip) if c[0] in tie], form)
+    except Exception:  # noqa: BLE001  never let the spot line break a graded try
+        return None
 
 
 @functools.lru_cache(maxsize=1024)
@@ -1061,7 +1072,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
         st["wrong"].append(sig)
     out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit and "collide" not in hit else p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
     if hit:
-        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide") if k in hit})
+        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide", "spot") if k in hit})
     if repeat:
         out["repeat"] = True
     return reply(shut(out) if left() <= 0 else out)

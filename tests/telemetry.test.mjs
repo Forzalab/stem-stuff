@@ -55,12 +55,14 @@ test("J6: a pick's `error` family never reaches the queue / PostHog (intent.js r
   const { win, document, handlers } = run({ meta: { content: "phc_abc" }, nav });
   win.stemT("pick", { code: "A", verdict: "wrong", right: false, error: "sign" });
   win.stemT("pick", { code: "A", verdict: "correct", right: true, error: undefined, families: ["negation", "sign"] });
-  win.stemT("pick", { code: "A", verdict: "wrong", right: false, error: undefined, collide: ["drop", "factor"] });   // SLIP_TIE: a collide list is a family list too
+  win.stemT("pick", { code: "A", verdict: "wrong", right: false, error: undefined, collide: ["drop", "factor"], spot: "QUACK. Redo the bottom of the fraction, then check your last step." });   // SLIP_TIE: a collide list is a family list too; W-SPOT: the spot line names a place in the form
   document.visibilityState = "hidden"; handlers.visibilitychange();   // no PostHog yet: the queue goes out as one beacon
   const batch = JSON.parse(await sent[0].text()).batch.filter(e => e.event === "pick");
   assert.equal(batch.length, 3);
   for (const e of batch) assert.ok(!("error" in e.properties), "error stripped");
   for (const e of batch) assert.ok(!("collide" in e.properties), "SLIP_TIE collide stripped");
+  for (const e of batch) assert.ok(!("spot" in e.properties), "W-SPOT spot stripped");
+  assert.ok(!/fraction|last step/.test(JSON.stringify(batch)), "no spot text anywhere in the beacon");
   assert.ok(!/drop|factor/.test(JSON.stringify(batch)), "no colliding family name anywhere in the beacon");
   for (const e of batch) assert.ok(!("families" in e.properties), "the item's distractor families stripped");
   assert.ok(!JSON.stringify(batch).includes("negation"), "no family name anywhere in the beacon");
@@ -300,7 +302,7 @@ const tries = async (store, { search = "", owner = true } = {}) => {
   let t = 1; r.win.performance.now = () => t;
   r.win.stemT("q_open", { code: "MF1", bank: "B", type: "num", mode: "sugar" });
   t = 30001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: false, verdict: "wrong", tries_left: 2, error: "leftover-sum", families: undefined, typed: "19" });
-  t = 75001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: false, verdict: "wrong", tries_left: 1, error: undefined, collide: ["sign", "drop"], families: undefined, typed: "43" });
+  t = 75001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: false, verdict: "wrong", tries_left: 1, error: undefined, collide: ["sign", "drop"], spot: "QUACK. Your pieces are fine but one. Redo the bottom of the fraction.", families: undefined, typed: "43" });
   t = 90001; r.win.stemT("pick", { code: "MF1", choice: null, part: null, right: true, verdict: "correct", tries_left: 1, error: undefined, families: ["leftover-sum"], typed: "26" });
   return (await r.flush()).filter(e => e.event === "pick").map(e => e.properties);
 };
@@ -336,7 +338,7 @@ test("T36 gate: ?me=1 / ?me=test / a hand-set stem-me on a device NOT in OWNER_F
       { ...base, right: false, verdict: "wrong", tries_left: 1, ms_since_open: 75000 },
       { ...base, right: true, verdict: "correct", tries_left: 1, ms_since_open: 90000 }], why);
     const b = JSON.stringify(p);
-    for (const s of ["typed", "leftover", "collide", "drop", "\"19\"", "\"43\"", "\"26\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s + " " + why);
+    for (const s of ["typed", "leftover", "collide", "spot", "fraction", "drop", "\"19\"", "\"43\"", "\"26\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s + " " + why);
   }
 });
 
@@ -357,6 +359,6 @@ test("T36 non-owner: pick payload byte-for-byte as before (no typed / trail / fa
       { ...base, right: true, verdict: "correct", tries_left: 1, ms_since_open: 90000 }]);
     assert.deepEqual(Object.keys(p[0]), ["code", "choice", "part", "right", "verdict", "tries_left", "ms_since_open", "sure", "distinct_id", "$current_url", "$lib"], "same keys in the same order as before T36");
     const b = JSON.stringify(p);
-    for (const s of ["typed", "leftover", "collide", "drop", "\"19\"", "\"43\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s);
+    for (const s of ["typed", "leftover", "collide", "spot", "fraction", "drop", "\"19\"", "\"43\"", "try_ms", "\"gt\""]) assert.ok(!b.includes(s), s);
   }
 });
