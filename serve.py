@@ -715,8 +715,31 @@ def slip_hit(u, sig):
         ans = float(signature(u, u["answer"]))
     except (UNREADABLE, TypeError):
         return None
-    fam = next((f for f, v in _slip_table(u["form"], ans, tuple(map(str, u.get("ignore_slips", [])))) if slips.close(sig, v)), None)   # SLIP_WIN, never tol_of (D2)
+    ignore = tuple(map(str, u.get("ignore_slips", [])))
+    fam = next((f for f, v in _slip_table(u["form"], ans, ignore) if slips.close(sig, v)), None)   # SLIP_WIN, never tol_of (D2)
+    if fam and slip_tie_on():
+        tie = [f for f, vals in _slip_raw(u["form"], ans, ignore) if any(slips.close(sig, v) for v in vals)]
+        if len(tie) > 1:              # 2+ families sit on this value: name none (the plain nudge), say which ones collide
+            return {"collide": tie}
     return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
+
+
+def slip_tie_on():
+    """SLIP_TIE: default off; "1" = a value on 2+ slip families gets the plain nudge + collide (FAMILIES order), not the first family's hint"""
+    return os.environ.get("SLIP_TIE", "").strip() == "1"
+
+
+@functools.lru_cache(maxsize=1024)
+def _slip_raw(form, ans, ignore):
+    """((family, (values...)), ...) in FAMILIES order before mutants() merges equal values (slips.raw), less the same values as _slip_table."""
+    try:
+        if slips.slow(form):
+            return ()
+        skip = [float(slips.parse(s).doit()) for s in ignore]
+        return tuple((f, tuple(v for v in vals if not slips.close(v, ans) and not any(slips.close(v, x) for x in skip)))
+                     for f, vals in slips.raw(form))
+    except Exception:  # noqa: BLE001  same as _slip_table: a form sympy can't read has no slips
+        return ()
 
 
 # (sid, code) -> {"wrong": [signatures], "done": bool, "gen": int}; a multi keeps one per part: (sid, code, i).
@@ -1036,9 +1059,9 @@ def _grade(p, st, body, multi, idx, reveal=False):
     repeat = any(same(sig, x, tol) for x in st["wrong"])
     if not repeat:
         st["wrong"].append(sig)
-    out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit else p.get("nudge", DEFAULT_NUDGE)}
+    out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit and "collide" not in hit else p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
     if hit:
-        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept") if k in hit})
+        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide") if k in hit})
     if repeat:
         out["repeat"] = True
     return reply(shut(out) if left() <= 0 else out)

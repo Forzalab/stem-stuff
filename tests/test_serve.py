@@ -465,6 +465,39 @@ class Slips(unittest.TestCase):
         self.assertEqual(serve.grade(self.ITEM, "sl7", {"answer": "9/21"})["verdict"], "correct")
         self.assertEqual(serve.grade(self.ITEM, "sl8", {"answer": "0.857"})["hint"], serve.DEFAULT_NUDGE)   # factor x2, listed in ignore_slips
 
+    # SLIP_TIE: 12/(100+200+300) = 0.02; typed 0.03 is BOTH a sign slip (12/(100-200+300)) and a drop slip (12/(100+300)).
+    TIE = {"code": "PHYS_TIE", "title": "t", "type": "num", "body": "b", "answer": "12/(100+200+300)", "form": "12/(100+200+300)"}
+    TIE_MULTI = {"code": "PHYS_TIM", "title": "t", "type": "multi", "body": "b",
+                 "parts": [{"label": "a", "type": "num", "answer": "12/(100+200+300)", "form": "12/(100+200+300)"}]}
+
+    def test_tie_case_collides(self):
+        raw = dict(serve.slips.raw(self.TIE["form"]))
+        self.assertTrue(any(serve.slips.close(0.03, v) for v in raw["sign"]) and any(serve.slips.close(0.03, v) for v in raw["drop"]))
+
+    def tie_grade(self, env, sid):
+        with unittest.mock.patch.dict(os.environ, env):
+            if "SLIP_TIE" not in env:
+                os.environ.pop("SLIP_TIE", None)
+            return [{k: v for k, v in serve.grade(serve.view(p, mode), f"{sid}-{mode}-{p['code']}", {**body, "answer": "0.03"}, reveal=rv).items() if k != "gen"}
+                    for p, body in ((self.TIE, {}), (self.TIE_MULTI, {"part": 0})) for mode, rv in (("diet", False), ("sugar", True))]
+
+    def test_slip_tie_off_is_today(self):                                      # flag off (unset / 0 / anything but "1"): byte-identical to before SLIP_TIE
+        hint = serve.FAMILY_HINT["sign"]                                        # FAMILIES order picks sign
+        today = [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign"}] * 2 + [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign", "part": 0}] * 2
+        for i, env in enumerate(({}, {"SLIP_TIE": "0"}, {"SLIP_TIE": ""}, {"SLIP_TIE": "true"}, {"SLIP_TIE": "on"})):
+            got = self.tie_grade(env, f"tie-off{i}")
+            self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in today], env)
+
+    def test_slip_tie_on_collide(self):                                        # flag on + 2 families: the plain nudge, no error, collide in FAMILIES order
+        got = self.tie_grade({"SLIP_TIE": "1"}, "tie-on")
+        base = {"verdict": "wrong", "triesLeft": 1, "hint": serve.DEFAULT_NUDGE, "collide": ["sign", "drop"]}
+        self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in [base, base, {**base, "part": 0}, {**base, "part": 0}]])
+        with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):
+            self.assertEqual(serve.grade(dict(self.TIE, nudge="QUACK. Own nudge."), "tie-nudge", {"answer": "0.03"})["hint"], "QUACK. Own nudge.")   # the item's own nudge, as the no-family path
+            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"collide": ["drop", "factor"]})                       # 12/300 (drop 100) = 2*0.02 (factor)
+            r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
+            self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
+
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
         self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, ())])
