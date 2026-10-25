@@ -145,12 +145,12 @@ SRV=""; trap '[ -n "$SRV" ] && kill "$SRV" 2>/dev/null' EXIT
 fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
-run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0)
-  local name="$1"; shift
+run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
+  local name="$1" t0="$EPOCHREALTIME" s; shift
   if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE '^ *([0-9]+ )?FAIL' "$TMP/$name.log"; then
-    echo "ok   $name"
+    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
-    echo "FAIL $name"; grep -E -A3 '^ *([0-9]+ )?FAIL|Error' "$TMP/$name.log" | head -30 | sed 's/^/     /'
+    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"; grep -E -A3 '^ *([0-9]+ )?FAIL|Error' "$TMP/$name.log" | head -30 | sed 's/^/     /'
     fails=$((fails + 1))
   fi
 }

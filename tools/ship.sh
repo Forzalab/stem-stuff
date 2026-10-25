@@ -10,8 +10,11 @@
 # tools/brain_banks.py: GitLab's API lists and fetches only the BANK_*.json files with $BRAIN_TOKEN (read_api; see .env.example).
 # No clone: the brain is heavy and the phone has none. A hatch error (bad token, network, a file that is not a bank) stops the
 # deploy: a partial bank set never ships. The token is never printed.
+# Gate, before any Vercel step: every BANK_*.json that will deploy must pass `tools/slips.py --strict` and the SCHEMA.md "problems"
+# schema (tools/schema-check.mjs; needs node + tests/node_modules, else it fails). One failure = nothing deployed. A bank older than
+# slips.CUTOFF still ships, with one warning line: "BANK_X v1: stops loading <sunset>".
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
-#   (no worktree, no Vercel; demo|live optional).
+#   (no gate, no worktree, no Vercel; demo|live optional).
 # A checkout on main pulls itself first (fast-forward only; a new ship.sh restarts the run). A deploy still stops if
 # tools/ship.sh or brain_banks.py differs from origin/main's (local edits, another branch, offline).
 # A repo-root .env (gitignored; see .env.example) is loaded first. Vercel token: $VERCEL_TOKEN if set (cloud), else your
@@ -111,6 +114,33 @@ if [ -n "$PRINT" ]; then
   exit 0
 fi
 
+# --- gate: every BANK_*.json about to deploy passes slips.py --strict and the SCHEMA.md "problems" schema, or nothing deploys
+# (design/BANK-MIGRATION.md §1). This checkout's tools; no node / tests/node_modules = a failure, never a skip. ---
+GATE=()
+while IFS="$(printf '\t')" read -r name src path; do case "$name" in BANK_*.json) GATE+=("$path") ;; esac; done <<<"$CHOSEN"
+gate() {
+  [ "${#GATE[@]}" -gt 0 ] || return 0
+  if ! command -v node >/dev/null || [ ! -d "$ROOT/tests/node_modules/ajv" ]; then
+    warn "gate: needs node and tests/node_modules (cd tests && npm ci) to check the banks, nothing deployed"; return 1
+  fi
+  local out rc=0
+  out="$(python3 "$ROOT/tools/slips.py" --strict "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: slips.py --strict failed (above), nothing deployed"; rc=1; }
+  out="$(node "$ROOT/tools/schema-check.mjs" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: schema failed (above), nothing deployed"; rc=1; }
+  # v < slips.CUTOFF: still ships, with a warning (the sunset date is the Version-table row's, SCHEMA.md)
+  python3 - "$ROOT" "${GATE[@]}" <<'PY' >&2 || rc=1
+import json, re, sys
+sys.path.insert(0, sys.argv[1])
+import slips
+sunset = re.search(r"^\| `%d` \|.*\| `([0-9-]+)` \|$" % slips.CUTOFF, open(sys.argv[1] + "/SCHEMA.md", encoding="utf-8").read(), re.M)[1]
+for p in sys.argv[2:]:
+    v = json.load(open(p, encoding="utf-8")).get("v", 1)
+    v = v if isinstance(v, int) and not isinstance(v, bool) else 1
+    if v < slips.CUTOFF:
+        print(f"ship: {p.rsplit('/', 1)[-1][:-5]} v{v}: stops loading {sunset}")
+PY
+  return "$rc"
+}
+
 W="$(mktemp -d)"; LOG="$(mktemp)"   # the log stays outside the upload
 git -C "$ROOT" fetch -q origin main
 # This script runs from your checkout but deploys origin/main. A checkout that was never pulled runs an old ship.sh (Oct 3:
@@ -118,6 +148,7 @@ git -C "$ROOT" fetch -q origin main
 if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py tools/version.sh; then
   warn "this ship.sh is not origin/main's: run  git -C \"$ROOT\" pull --ff-only  then ship again"; exit 1
 fi
+gate || exit 1
 git -C "$ROOT" worktree add -q --detach "$W" origin/main
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
