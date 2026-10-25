@@ -315,5 +315,17 @@ class Gate(unittest.TestCase):
         self.assertFalse(self.deployed())
 
 
+class Workflow(unittest.TestCase):
+    """.github/workflows/ship.yml installs what the gate needs before tools/ship.sh runs (run 54 on 2026-10-25 stopped at the gate:
+    "needs node and tests/node_modules", nothing deployed)."""
+    def test_gate_deps_before_ship(self):
+        with open(os.path.join(ROOT, ".github", "workflows", "ship.yml")) as f:
+            y = f.read()
+        ship = y.index('tools/ship.sh "$MODE"')
+        for need in ("pip install sympy", "cd tests && npm ci"):
+            self.assertIn(need, y)
+            self.assertLess(y.index(need), ship, need)
+
+
 if __name__ == "__main__":
     unittest.main()
