@@ -29,13 +29,15 @@ async function step(name, fn) {
 }
 const opened = (page, code) => page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c && !document.querySelector("#freeze").hidden
   && (!document.querySelector("#splash") || getComputedStyle(document.querySelector("#splash")).opacity === "0"), code, { timeout: 8000 });
-/* type into part i, Enter, wait for this try to be graded (a can't-read is not recorded: wait for the row's line instead) */
+/* type into part i, Enter, wait for this try's line to render: a line new to the row, and the try recorded (a can't-read is not
+   recorded: its line says so). Every step changes its part's line, so a line left from the step before never passes the wait. */
 async function send(page, i, v) {
+  const row = `#q .part[data-i="${i}"]`, before = await page.textContent(`${row} .phint`);
   const n = await page.evaluate(() => window.__drill.state.tries.length);
-  await page.fill(`#q .part[data-i="${i}"] .ans`, v);
-  await page.press(`#q .part[data-i="${i}"] .ans`, "Enter");
-  await page.waitForFunction(([k, i]) => window.__drill.state.tries.length > k || document.querySelector(`#q .part[data-i="${i}"] .phint`).textContent.trim(), [n, i], { timeout: 4000 });
-  await page.waitForTimeout(150);
+  await page.fill(`${row} .ans`, v);
+  await page.press(`${row} .ans`, "Enter");
+  await page.waitForFunction(([k, row, before]) => { const l = document.querySelector(`${row} .phint`).textContent;
+    return l !== before && (window.__drill.state.tries.length > k || l.includes("Can't read")); }, [n, row, before], { timeout: 4000 });
 }
 const part = (page, i) => page.evaluate(i => {
   const r = document.querySelector(`#q .part[data-i="${i}"]`), box = r.querySelector(".ff");
@@ -63,7 +65,7 @@ try {
   await page.route("**/check", async r => {
     const res = await r.fetch(), j = await res.json();
     if (j.verdict === "wrong") Object.assign(j, { spot: SPOT, collide: ["sign", "drop"] });
-    await r.fulfill({ response: res, json: j });
+    await new Promise(z => setTimeout(z, 600)); await r.fulfill({ response: res, json: j });
   });
   const gate = ok => page.evaluate(ok => { window.stemJev.spot = () => ({ ok }); }, ok);
 
