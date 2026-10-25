@@ -977,6 +977,11 @@ class NoOwnerName(unittest.TestCase):
                     hits.append(f"{os.path.basename(path)}: {block}")
         self.assertEqual(hits, [], "the owner's name reaches the system prompt:\n" + "\n".join(hits))
 
+    def test_prompt_constants(self):
+        """every module-level string in serve.py (FORMAT, VOICE, IDENTITY, CLUCK_*, ...) is model-facing: attributions live in # comments"""
+        hits = [k for k, v in vars(serve).items() if isinstance(v, str) and k != "__doc__" and OWNER.search(v)]
+        self.assertEqual(hits, [], "the owner's name is in a prompt constant: " + ", ".join(hits))
+
     def test_repo_banks(self):
         self.check([serve.BANK] + bank_paths(serve.BANKS))
         for path in [serve.BANK] + bank_paths(serve.BANKS):           # and the bank text itself (title, body, key) never names him
