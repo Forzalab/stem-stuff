@@ -118,15 +118,20 @@ const tap = (page, sel) => page.$eval(sel, b => b.click());       // a DOM click
 const vis = (page, sel) => page.evaluate(s => { const e = document.querySelector(s); return !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden"; }, sel);
 const toastText = page => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });
 const qstate = page => page.evaluate(() => window.stemQueue && JSON.parse(JSON.stringify({ st: window.stemQueue.state(), item: window.stemQueue.item() })));
+const frames = page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // two painted frames
+/* a box's finite animations (transitions, keyframes, WAAPI; pseudo-elements too) have finished: an infinite one (caret blink) never does */
+const settled = (page, sel) => page.waitForFunction(s => { const e = document.querySelector(s);
+  return !!e && e.getAnimations({ subtree: true }).every(a => a.playState !== "running" || a.effect?.getComputedTiming().endTime === Infinity); }, sel, { timeout: 5000 });
 const dwell = page => page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
 /* one graded mc pick by ids; returns the verdict */
 async function pick(page, ids, all) {
   const n = await nTries(page);
   for (const id of ids) await tap(page, `#q .opt[data-id="${id}"]`);
-  await page.waitForTimeout(80);
+  await page.waitForFunction(([ids, all, id0]) => ids.every(i => document.querySelector(`#q .opt[data-id="${i}"]`)?.getAttribute("aria-checked") === "true")
+    && (all ? !document.querySelector("#mcGo")?.disabled : !document.querySelector(`#q .ch[data-id="${id0}"] .send`)?.hidden), [ids, all, ids[0]], { timeout: 3000 });
   if (all) await tap(page, "#mcGo"); else await tap(page, `#q .ch[data-id="${ids[0]}"] .send`);
   await page.waitForFunction(k => window.__drill.state.tries.length > k, n, { timeout: 8000 });
-  await page.waitForTimeout(150); await quiet(page);
+  await frames(page); await quiet(page);   // rewardGo shows the answer's reward in the next frame
   return lastV(page);
 }
 async function answerKey(page, code, right) {   // queue-walk.pw.mjs answer(): right = the key, wrong = one choice the key doesn't have
@@ -215,7 +220,6 @@ flow(20, "cluck-explain", async (page, w) => {
 });
 
 flow(21, "cluck-sheet", async (page, w) => {
-  const sheetHidden = () => page.evaluate(() => document.querySelector("#cluck").hidden);
   const closed = () => page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
   const opened_ = () => page.waitForFunction(() => !document.querySelector("#cluck").hidden, null, { timeout: 3000 });
   await stubCluck(page);
@@ -229,14 +233,14 @@ flow(21, "cluck-sheet", async (page, w) => {
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-open")), false, "html.cl-open cleared on close");
   await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
   await page.click(".cl-peek .cl-cta"); await opened_();
-  await page.click("#cluck .wtext").catch(() => {}); await page.waitForTimeout(300);
+  await page.click("#cluck .wtext").catch(() => {});
+  await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 8000 });
   await page.click("#cluck .cl-bar .cl-x"); await closed();         // B5: the bar's X on desktop too (no corner X)
   /* fold: a snack carries the original's worked solution under Cluck's text ("See reference solution") */
   await go(page, C.snack);
   assert.equal(await answerKey(page, C.snack, false), "wrong");
   await page.waitForFunction(() => !!document.querySelector("#origHd"), null, { timeout: 6000 });
-  await page.waitForTimeout(400);
-  if (await sheetHidden()) await page.click("#origHd");   // phone: the card is the one way in; desktop: it opens by itself
+  if (w === 393) await page.click("#origHd");   // phone: the card is the one way in; desktop: it opens by itself
   await opened_();
   await page.click("#cluck .wtext").catch(() => {});
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 8000 });
@@ -252,7 +256,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   await page.click("#clFold"); assert.equal(await fold(), start); assert.equal(await sol(), start === "true", "toggled back");
   await page.keyboard.press("Escape"); await closed();
   await page.click("#origHd"); await opened_();     // reopen for the final shot
-  await page.waitForTimeout(300);
+  await settled(page, "#cluck");
   return `${w === 393 ? `phone popup K1 ${r.w}x${r.h}, html.cl-open; ` : "desktop: sheet in the notes column; "}Esc closes, chip reopens, X closes; snack: fold ${start === "true" ? "starts open from the card" : "starts shut"}, toggles both ways, Esc closes`;
 });
 
@@ -278,7 +282,7 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.click("#wish .wchip");
   await page.waitForFunction(() => /Didn't load\. Tap to try again/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
   await page.waitForFunction(() => /Cluck didn't load\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 });
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 3000 });   // the wish loop has stopped
   assert.ok(!/typing/i.test(await sheetTxt()), "no 'typing' text left on a failure");
   assert.equal(await page.evaluate(() => document.querySelectorAll("#cluck .wtext .wcaret").length), 0, "no caret forever on a failure");
   assert.ok(await tappable("#cluck .wtext .wretry"), "the sheet's Try again is tappable");
@@ -300,7 +304,7 @@ flow(23, "cluck-errors", async (page, w) => {
   // (d) /chat 429 (hourly): the reply bubble says the same
   await page.unroute("**/explain");
   await stubCluck(page, { chat: 429, chatBody: "{}" });
-  if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForTimeout(200); }
+  if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
   await page.click("#wish .wchip");                       // started=false after a 429: this asks again, now stubbed ok
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden, null, { timeout: 4000 });
   await page.click("#cluck .wtext").catch(() => {});
@@ -369,7 +373,6 @@ async function walk28(page, seed) {
         .catch(async () => { throw new Error(`no 'Comeback!' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });
       const st = await page.evaluate(() => window.Rewards?.state()?.streak);
       if (seed) assert.equal(st, seed + 1, "the streak still counts the Redeem");
-      await page.waitForTimeout(300);
       const x1 = await xp(page);
       /* XP: app.js:1446 pays a never-paid code's first right as usual (+ the toast); "no XP" is only for a code already paid (!res.xp) */
       if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} cracked" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
@@ -411,7 +414,7 @@ flow(6, "code-suggestions", async (page, w) => {
 });
 
 flow(8, "bad-code", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await page.goto(BASE + "/"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 10000 });   // the splash goes once the boot is done
   await showCode(page);
   await page.fill("#code", "CALC1_ZZZ"); await page.press("#code", "Enter");
   await page.waitForFunction(() => /CALC1_ZZZ not found\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 8000 });
@@ -429,11 +432,15 @@ flow(39, "update-bar", async (page, w) => {
   try {
     await up(base);
     const css = join(copy, "app.css"), orig = readFileSync(css, "utf8");
+    const swCss = { on: 0, done: 0 }, isCss = r => !!r.serviceWorker() && new URL(r.url()).pathname === "/app.css";   // sw.js's own fetches of app.css
+    page.context().on("request", r => { if (isCss(r)) swCss.on++; });
+    for (const ev of ["requestfinished", "requestfailed"]) page.context().on(ev, r => { if (isCss(r)) swCss.done++; });
     await page.goto(base + "/");
     await page.evaluate(() => navigator.serviceWorker.ready);
     if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) await page.reload();
     await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
-    await page.waitForTimeout(1500);
+    /* no fetch of app.css by the worker still open (precache, the background refresh): one that read the edit would show the bar now, not after the reload */
+    for (const t0 = Date.now(); !(swCss.done && swCss.done === swCss.on); await new Promise(r => setTimeout(r, 50))) if (Date.now() - t0 > 8000) throw new Error(`sw.js app.css fetches never settled: ${JSON.stringify(swCss)}`);
     writeFileSync(css, orig + `\n/* g2c ${Date.now()} */\n`);
     await page.reload();
     await page.locator("#updateBar").waitFor({ state: "visible", timeout: 8000 });
