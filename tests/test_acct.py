@@ -34,7 +34,7 @@ class Store(unittest.TestCase):
 
     def test_unknown_or_junk_token_is_none(self):
         acct.mint(SID)
-        for t in (acct.mint.__name__ * 4, "", None, 7, "x" * 5000, "has space and more than twenty-two", "a" * 22):
+        for t in ("Zx9_-" * 5, "", None, 7, "x" * 5000, "has space and more than twenty-two", "a" * 22):
             self.assertIsNone(acct.login(t), t)
 
     def test_raw_token_never_stored_only_its_hash(self):
