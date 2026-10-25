@@ -38,8 +38,13 @@ jobs:
       # first-parent history for the PR number ("#83+1"); a shallow clone would stamp "?".
       - uses: actions/checkout@v4
         with: { ref: main, fetch-depth: 0 }
+      # the bank gate (tools/ship.sh, #261) runs slips.py --strict (sympy) and the schema check (tests/node_modules): no deps = nothing deployed
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install sympy
       - uses: actions/setup-node@v4
-        with: { node-version: "22" }
+        with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
+      - run: cd tests && npm ci
       # ship.sh runs every Vercel command as `npx -y vercel@latest`: warm that cache once (and log the version)
       - run: npx -y vercel@latest --version
       - name: tools/ship.sh
