@@ -27,6 +27,9 @@ const PORT = /^[1-9]\d*$/.test(ARG) ? Number(ARG) : await freePort(), BASE = `ht
 const tmp = mkdtempSync(join(tmpdir(), "uxf-"));
 const OUT = process.argv[3] || join(tmp, "out");
 const ONLY = process.env.FLOWS ? new Set(process.env.FLOWS.split(",").map(Number)) : null;
+// WIDTHS=393 or WIDTHS=1280 runs one width pass (run-all.sh's ux-flows@phone / ux-flows@desk lanes); default both. A bad value exits 2.
+const WIDTHS = (process.env.WIDTHS || "393,1280").split(",").map(x => x.trim()).filter(Boolean).map(Number);
+if (!WIDTHS.length || !WIDTHS.every(w => Number.isInteger(w) && w > 0)) { console.error(`bad WIDTHS='${process.env.WIDTHS}' (want a comma list of ints, e.g. 393,1280)`); process.exit(2); }
 const LOG = join(OUT, "ux-flows-chromium.log");
 mkdirSync(OUT, { recursive: true });
 
@@ -855,8 +858,8 @@ const order = [...PRIO.map(n => F.find(f => f.n === n)), ...F.filter(f => !PRIO.
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
-  for (const f of order) for (const w of [393, 1280]) {
-    const phone = w === 393;
+  for (const f of order) for (const w of WIDTHS) {
+    const phone = w === 393;   // keyed on 393, not w < 600: the flow bodies branch on w === 393 / w === 1280, so a phone context at another width would disagree with them
     const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 852 : 800 }, hasTouch: phone, isMobile: phone,
       serviceWorkers: f.opts.sw ? "allow" : "block", permissions: f.opts.perms || [], extraHTTPHeaders: f.opts.gpc ? { "Sec-GPC": "1", DNT: "1" } : undefined });
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
@@ -867,6 +870,7 @@ try {
     const errs = []; page.on("pageerror", e => errs.push(String(e).slice(0, 120)));
     const png = join(OUT, `${String(f.n).padStart(2, "0")}-${f.slug}-${w}-chromium.png`);
     let st = "ok", detail = "";
+    const t0 = Date.now();
     try {
       detail = await Promise.race([f.run(page, w, ctx), new Promise((_, no) => setTimeout(() => no(new Error("flow timeout 60 s")), 60000))]);
     } catch (e) {
@@ -875,7 +879,7 @@ try {
     const custom = f.opts.noFinalShot && existsSync(png) || (f.opts.noFinalShot393 && phone && existsSync(png));
     if (!(custom && st === "ok")) await page.screenshot({ path: png }).catch(() => {});
     if (errs.length) { if (st === "ok") st = "FAIL"; detail += `  [pageerror: ${errs.join(" | ")}]`; }   // a page JS error fails the flow
-    log(f.n, f.slug, w, st, detail);
+    log(f.n, f.slug, w, st, `t_ms=${Date.now() - t0}${detail ? "  " + detail : ""}`);   // t_ms after the status: run-all's '^ *N FAIL' match is unchanged
     await ctx.close();
   }
 } finally {
@@ -883,6 +887,6 @@ try {
   srv.kill();
 }
 const fails = results.filter(r => r.st === "FAIL").length, skips = results.filter(r => r.st === "SKIP").length;
-const tail = `# done: ${results.length} checks, ${results.length - fails - skips} ok, ${fails} FAIL, ${skips} SKIP`;
+const tail = `# done: widths ${WIDTHS.join(",")}, ${results.length} checks, ${results.length - fails - skips} ok, ${fails} FAIL, ${skips} SKIP`;
 appendFileSync(LOG, tail + "\n"); console.log(tail);
 process.exit(fails ? 1 : 0);

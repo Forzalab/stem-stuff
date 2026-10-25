@@ -9,7 +9,7 @@
 #   --list       print what this run would run (one name per line) and run nothing
 #   --plan B L   print the CI matrix (one JSON line) and run nothing: the specs dealt into B blocks x L lanes by the same deal
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
-#   SPECS="..."  run exactly these .pw specs (names, space-separated) and nothing else: one CI lane.
+#   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
 # The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui, which take a port and start their own server.
 set -uo pipefail
@@ -41,12 +41,26 @@ if [ -n "$SHARD" ]; then
   if [ "$sm" -lt 1 ] || [ "$sn" -lt 1 ] || [ "$sn" -gt "$sm" ]; then echo "bad shard '$SHARD'" >&2; exit 2; fi
 fi
 
+# Virtual specs: a name spec@part is its own schedulable unit (own weight() line, own lane slot); it runs tests/<spec>.pw.mjs with
+# the env below. This table is the one place parts are declared. A spec with parts is never scheduled whole; the schedule check
+# proves each spec file is scheduled exactly once, whole or as all of its parts. SPECS= takes part names too.
+declare -A PART_ENV=(
+  [ux-flows@phone]="WIDTHS=393"     # chunk key = width first (CEO plan PR 1); split a width further with FLOWS= only if it alone becomes the heaviest lane
+  [ux-flows@desk]="WIDTHS=1280"
+)
+parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && echo "$p"; done | LC_ALL=C sort; }
+units() {   # every schedulable name: a spec's parts if it has any, else the spec
+  local f n p
+  for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; p="$(parts_of "$n")"; if [ -n "$p" ]; then echo "$p"; else echo "$n"; fi; done
+}
+
 # CI-measured seconds per .pw spec: median of 12 green CI runs, 2026-10-23 (timings-ci.json, brain projects/calc/_files/ci-plan-2026-10-23/); refresh with extract.py there on newer CI logs.
 # ux-flows / next-cue / next-dead / rewards = the CI median minus what S3 removed (estimates until the next CI timings). overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
 # Sharding deals the specs, slowest first, to whichever shard is lightest so far, so the halves finish about together.
 weight() {
   case "$1" in
-    ux-flows) echo 205 ;; next-cue) echo 184 ;; upload-replace) echo 138 ;; next-dead) echo 56 ;; rewards) echo 60 ;;
+    ux-flows) echo 205 ;; ux-flows@phone) echo 113 ;; ux-flows@desk) echo 92 ;;   # parts: 205 split ~55/45 (estimate, not measured; refresh from t_ms in the CI log)
+    next-cue) echo 184 ;; upload-replace) echo 138 ;; next-dead) echo 56 ;; rewards) echo 60 ;;
     swap) echo 69 ;; blink-fx) echo 59 ;; next-reset) echo 56 ;; queue-walk) echo 51 ;; redo-note|render) echo 46 ;; cluck-rise) echo 43 ;;
     flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave) echo 28 ;; done) echo 26 ;;
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
@@ -66,16 +80,22 @@ deal() {
     best=0; for ((k = 1; k < sm; k++)); do [ "${load[k]}" -lt "${load[best]}" ] && best=$k; done
     load[best]=$((load[best] + w))
     [ "$best" -eq $(($1 - 1)) ] && echo "$n"
-  done < <(for f in tests/*.pw.mjs; do n="$(basename "$f" .pw.mjs)"; echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
+  done < <(units | while read -r n; do echo "$(weight "$n") $n"; done | LC_ALL=C sort -k1,1nr -k2,2)
 }
 
-# schedule check: every spec has its own weight() line (not the default 5), and across all M shards each is dealt exactly once
+# schedule check: every unit has its own weight() line (not the default 5), across all M shards each is dealt exactly once,
+# and each spec file is covered exactly once: dealt whole (no parts) or as all of its parts (never both, never a part missing)
 wsrc="$(declare -f weight)"; bad=0; dealt="$(for ((k = 1; k <= sm; k++)); do deal "$k"; done)"
-for f in tests/*.pw.mjs; do
-  n="$(basename "$f" .pw.mjs)"
+for p in "${!PART_ENV[@]}"; do [ -f "tests/${p%%@*}.pw.mjs" ] || { echo "schedule check: part $p has no tests/${p%%@*}.pw.mjs" >&2; bad=1; }; done
+while read -r n; do
   [[ "$wsrc" =~ [[:space:]]"$n"[[:space:]\|\)] ]] || { echo "schedule check: $n has no weight() entry (add its CI seconds)" >&2; bad=1; }
   c="$(grep -cxF "$n" <<<"$dealt")"
   [ "$c" -eq 1 ] || { echo "schedule check: $n is scheduled in $c of $sm shards (want exactly 1)" >&2; bad=1; }
+done < <(units)
+for f in tests/*.pw.mjs; do
+  n="$(basename "$f" .pw.mjs)"; want="$(parts_of "$n")"; [ -n "$want" ] || want="$n"
+  got="$(grep -xE "$(printf '%s' "$n" | sed 's/[.[\*^$]/\\&/g')(@.*)?" <<<"$dealt" | LC_ALL=C sort)"
+  [ "$got" = "$want" ] || { echo "schedule check: $n is covered by [$(paste -sd' ' <<<"$got")], want exactly [$(paste -sd' ' <<<"$want")]" >&2; bad=1; }
 done
 [ "$bad" -eq 0 ] || exit 1
 
@@ -97,10 +117,15 @@ fi
 specs=()
 if [ -n "$SPECS" ]; then
   read -ra specs <<<"$SPECS"
-  for n in "${specs[@]}"; do [ -f "tests/$n.pw.mjs" ] || { echo "SPECS: no tests/$n.pw.mjs" >&2; exit 2; }; done
+  for n in "${specs[@]}"; do
+    case "$n" in
+      *@*) [ -n "${PART_ENV[$n]+x}" ] || { echo "SPECS: no part '$n' (known: ${!PART_ENV[*]})" >&2; exit 2; } ;;
+      *) [ -f "tests/$n.pw.mjs" ] || { echo "SPECS: no tests/$n.pw.mjs" >&2; exit 2; } ;;
+    esac
+  done
 elif [ "$quick" -eq 0 ]; then
   if [ "$sm" -eq 1 ]; then
-    for f in tests/*.pw.mjs; do specs+=("$(basename "$f" .pw.mjs)"); done
+    mapfile -t specs < <(units)
   else
     mapfile -t specs < <(deal "$sn")
   fi
@@ -139,11 +164,12 @@ if [ "${#specs[@]}" -gt 0 ]; then
   python3 serve.py "$PORT" >"$TMP/serve.log" 2>&1 & SRV=$!
   for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && break; sleep 0.2; done
   for name in "${specs[@]}"; do
-    f="tests/$name.pw.mjs"
-    case "$name" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui) run "$name" node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+    base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
+    [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
+    case "$base_" in
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
-      *) run "$name" node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
+      *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
   done
 fi
