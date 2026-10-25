@@ -1,0 +1,8 @@
+QR Code Generator for JavaScript, vendored unchanged.
+
+  file:     qrcode.js  (= dist/qrcode.js of the npm package, 2,297 lines, zero dependencies)
+  upstream: https://github.com/kazuhikoarase/qrcode-generator
+  version:  qrcode-generator 2.0.4 (npm), sha256 79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c
+  license:  MIT, Copyright (c) 2009 Kazuhiko Arase (full text in LICENSE next to this file)
+
+Used by mycluck.mjs drawCluck(): encodes the login link at level H. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
