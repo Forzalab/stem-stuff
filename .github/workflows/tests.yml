@@ -9,12 +9,15 @@ on:
       mutant:
         description: "Fault to seed: applies tests/bench/mutants/<name>.patch from the run's branch (empty = none)"
         default: ""
-# a new push to a PR cancels the run still going for its old commit (main keeps a result per commit)
+# a new push to a PR cancels the run still going for its old commit. main (and dispatch) queues every run in order:
+# the default queue keeps 1 pending run and a newer one replaces it, so 3 quick merges left the middle one untested.
+# queue: max + cancel-in-progress: true is a validation error, so both flip on the event.
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  queue: ${{ github.event_name == 'pull_request' && 'single' || 'max' }}
 env:
-  BLOCKS: 3   # runners for the .pw specs (GitHub Free: 20 jobs at once)
+  BLOCKS: 5   # runners for the .pw specs (GitHub Free: 20 jobs at once)
   LANES: 2    # run-all.sh processes per runner. 3 lanes made flow.pw drop a touch 1 in 4 runs (Tony: a new flake → 2); 2 lanes cost ~nothing: ux-flows sets the floor
 jobs:
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
@@ -34,7 +37,7 @@ jobs:
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
@@ -54,7 +57,7 @@ jobs:
         env: { MUTANT: "${{ inputs.mutant }}" }
         run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
@@ -63,7 +66,7 @@ jobs:
           cd tests && npm ci
           npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
           # no --with-deps: ubuntu-latest already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
-          npx playwright install chromium
+          npx playwright install --only-shell chromium
       - name: lanes
         env:
           LANE_SPECS: ${{ matrix.lanes }}

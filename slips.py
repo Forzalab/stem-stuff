@@ -7,7 +7,8 @@ mutants(form, k=1) -> [(family, value)]   families in FAMILIES order, values asc
 match(form, value, k=SLIP_K) -> family | None   within SLIP_WIN (never the item's grading tol); k=2 undoes the outer slip on the typed value
 gate(u) -> [row]                      rule 7 (v >= CUTOFF): no form, SAME, two families on one value (ignore_slips exempts)
 sites(form) / cands(form, typed, skip) / region(cands, form) -> str | None   W-SPOT: on a collision, WHERE the slip is (structural words,
-                                     never a digit), FINISH for whole-answer slips; None when the place is the whole form (plain nudge)"""
+                                     never a digit), FINISH for whole-answer slips; None when the place is the whole form (plain nudge)
+pair_cands(form, typed, fam)          W-SPOT for a k=2 match: the inner slip's place + ROOT (region() -> "dual")"""
 import ast
 import math
 import os
@@ -515,6 +516,15 @@ def cands(form, typed, skip=(), win=SLIP_WIN):
         if ps:
             out.append((fam, tuple(ps)))
     return out
+
+
+def pair_cands(form, typed, fam, win=SLIP_WIN):
+    """[(fam, paths)] for a k=2 match `fam` ("inner+outer", match()): the places of the inner slip whose value an undone outer slip lands
+    on, plus ROOT (the outer slip is whole-answer), so region() gives "dual" (or None at the root). slips.mjs pairCands"""
+    fi, fo = fam.split("+")
+    us = [u for f, _, undo in OUTER if f == fo for u in undo(typed)]
+    ps = {p for v, pp in dict(sites(str(form)))[fi] if any(close(u, v, win) for u in us) for p in pp}
+    return [(fam, tuple(sorted(ps | {ROOT})))]
 
 
 def units(p):

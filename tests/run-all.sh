@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -47,6 +47,10 @@ fi
 declare -A PART_ENV=(
   [ux-flows@phone]="WIDTHS=393"     # chunk key = width first (CEO plan PR 1); split a width further with FLOWS= only if it alone becomes the heaviest lane
   [ux-flows@desk]="WIDTHS=1280"
+  [next-cue@1]="NC_MODE=sugar"      # by mode; the sugar-only restore check rides with sugar
+  [next-cue@2]="NC_MODE=diet"
+  [upload-replace@1]="UR_ONLY=^393:"   # by width (every step opens its own context); no spaces: the env is split on whitespace
+  [upload-replace@2]="UR_ONLY=^1280:"
 )
 parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && echo "$p"; done | LC_ALL=C sort; }
 units() {   # every schedulable name: a spec's parts if it has any, else the spec
@@ -55,17 +59,19 @@ units() {   # every schedulable name: a spec's parts if it has any, else the spe
 }
 
 # CI-measured seconds per .pw spec: median of 12 green CI runs, 2026-10-23 (timings-ci.json, brain projects/calc/_files/ci-plan-2026-10-23/); refresh with extract.py there on newer CI logs.
-# ux-flows / next-cue / next-dead / rewards = the CI median minus what S3 removed (estimates until the next CI timings). overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
+# ux-flows / next-cue / next-dead / rewards = the CI median minus what S3 removed (estimates until the next CI timings). overscroll and popover have no CI timing yet (25 = the median, a guess; popover 10 = its local run; part-feedback 5 = its local run, ~4 s). Unlisted (new) specs count 5, but the schedule check below fails until they get a line here.
 # Sharding deals the specs, slowest first, to whichever shard is lightest so far, so the halves finish about together.
 weight() {
   case "$1" in
     ux-flows) echo 205 ;; ux-flows@phone) echo 113 ;; ux-flows@desk) echo 92 ;;   # parts: 205 split ~55/45 (estimate, not measured; refresh from t_ms in the CI log)
-    next-cue) echo 184 ;; upload-replace) echo 138 ;; next-dead) echo 56 ;; rewards) echo 60 ;;
+    next-cue) echo 199 ;; next-cue@1) echo 105 ;; next-cue@2) echo 99 ;;   # whole = CI median of 3 A/A runs on main@1681169; parts = local
+    upload-replace) echo 141 ;; upload-replace@1) echo 70 ;; upload-replace@2) echo 73 ;;   # seconds x (CI whole / local whole): estimates, not CI-measured
+    next-dead) echo 56 ;; rewards) echo 60 ;;
     swap) echo 69 ;; blink-fx) echo 59 ;; next-reset) echo 56 ;; queue-walk) echo 51 ;; redo-note|render) echo 46 ;; cluck-rise) echo 43 ;;
     flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave) echo 28 ;; done) echo 26 ;;
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
     bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; seen) echo 9 ;;
-    codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
+    codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
     *) echo 5 ;;
   esac
@@ -145,12 +151,14 @@ SRV=""; trap '[ -n "$SRV" ] && kill "$SRV" 2>/dev/null' EXIT
 fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
+# a failed check line: "FAIL ...", "3 FAIL" (a count), or a ux-flows row "43 offline-sw  1280 FAIL t_ms=..." (CI showed no reason for that row before, tests/run-all.test.mjs)
+FAIL_RE='^ *([0-9]+ )?FAIL|^[0-9]+ [^ ]+ +[0-9]+ FAIL'
 run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
   local name="$1" t0="$EPOCHREALTIME" s; shift
-  if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE '^ *([0-9]+ )?FAIL' "$TMP/$name.log"; then
+  if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
-    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"; grep -E -A3 '^ *([0-9]+ )?FAIL|Error' "$TMP/$name.log" | head -30 | sed 's/^/     /'
+    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"; grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'
     fails=$((fails + 1))
   fi
 }
@@ -167,7 +175,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

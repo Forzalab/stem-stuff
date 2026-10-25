@@ -75,6 +75,12 @@ FAMILY_HINT = {
     "g": "QUACK. Check the value you used for g.",
 }
 
+
+def family_hint(fam):
+    """FAMILY_HINT's line; a k=2 "inner+outer" pair (slips.pairs) gets both lines in that order under one QUACK. (slips.mjs familyHint)"""
+    first, *rest = fam.split("+")
+    return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)])
+
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
 TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
@@ -717,12 +723,14 @@ def slip_hit(u, sig):
         return None
     ignore = tuple(map(str, u.get("ignore_slips", [])))
     fam = next((f for f, v in _slip_table(u["form"], ans, ignore) if slips.close(sig, v)), None)   # SLIP_WIN, never tol_of (D2)
+    if not fam and slips.SLIP_K == 2:
+        return _slip_pair(u["form"], ans, ignore, sig)
     if fam and slip_tie_on():
         tie = [f for f, vals in _slip_raw(u["form"], ans, ignore) if any(slips.close(sig, v) for v in vals)]
         if len(tie) > 1:              # 2+ families sit on this value: name none (the plain nudge), say which ones collide
             line = _slip_spot(u["form"], ans, ignore, sig, tuple(tie))
             return {"collide": tie, "spot": line} if line else {"collide": tie}   # spot: WHERE, never what or a number; the page picks
-    return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
+    return {"error": fam, "hint": family_hint(fam)} if fam else None
 
 
 def slip_tie_on():
@@ -737,6 +745,22 @@ def _slip_spot(form, ans, ignore, sig, tie):
         skip = (ans, *(float(slips.parse(s).doit()) for s in ignore))
         return slips.region([c for c in slips.cands(form, sig, skip) if c[0] in tie], form)
     except Exception:  # noqa: BLE001  never let the spot line break a graded try
+        return None
+
+
+def _slip_pair(form, ans, ignore, sig):
+    """k=2 (SLIP_K=2): no k=1 slip -> slips.match's "inner+outer" pair (as app.js gradeLocal) -> {error: pair, hint, spot?}: hint = family_hint's
+    two lines; spot = the inner slip's place, then the last step (slips.pair_cands). Same skips as _slip_table, else None."""
+    try:
+        if slips.slow(form):
+            return None
+        fam = slips.match(form, sig, k=2, skip=(ans, *(float(slips.parse(s).doit()) for s in ignore)))
+        if not fam:
+            return None
+        line = slips.region(slips.pair_cands(form, sig, fam), form)
+        o = {"error": fam, "hint": family_hint(fam)}
+        return {**o, "spot": line} if line else o
+    except Exception:  # noqa: BLE001  same as _slip_table: a form sympy can't read has no slips
         return None
 
 
@@ -1070,7 +1094,7 @@ def _grade(p, st, body, multi, idx, reveal=False):
     repeat = any(same(sig, x, tol) for x in st["wrong"])
     if not repeat:
         st["wrong"].append(sig)
-    out = {"verdict": "wrong", "triesLeft": left(), "hint": hit["hint"] if hit and "collide" not in hit else p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
+    out = {"verdict": "wrong", "triesLeft": left(), "hint": (hit or {}).get("hint") or p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
     if hit:
         out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide", "spot") if k in hit})
     if repeat:

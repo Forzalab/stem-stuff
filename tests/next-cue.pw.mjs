@@ -21,6 +21,11 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 const BASE = process.argv[2] || "http://localhost:8812";
 const SHOTS = process.argv[3] || "";
 if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
+// NC_MODE=sugar|diet runs one mode only (a CI part: next-cue@1 / next-cue@2 in tests/run-all.sh PART_ENV); unset = both. The sugar-only
+// restore check rides with sugar. Any other value exits 2.
+const NC_MODE = process.env.NC_MODE || "";
+if (!["", "sugar", "diet"].includes(NC_MODE)) { console.error(`bad NC_MODE '${NC_MODE}' (want sugar, diet or unset)`); process.exit(2); }
+const MODES = NC_MODE === "sugar" || NC_MODE === "diet" ? [NC_MODE] : ["sugar", "diet"];
 let failures = 0;
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
@@ -163,7 +168,7 @@ async function close(page, type, outcome, { code } = {}) {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const CASES = [["num", "PHYS_TNM"], ["text", "PHYS_TTX"], ["expr", "PHYS_TEX"], ["mc", "PHYS_TMC"], ["mc-pill", "PHYS_TTF"], ["multi", "PHYS_TMU"], ["pick-all", "PHYS_TPA"]];
 const field = "rgb(5, 12, 22)";   // --field = --page (unified v5)
-for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "diet"]) {
+for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of MODES) {
   const O = { mode, W, H };
   for (const [type, code] of CASES) for (const outcome of ["right", "out"]) {
     const T = `${mode} ${W}x${H} ${type} ${outcome}`;
@@ -244,7 +249,7 @@ for (const [W, H] of [[393, 852], [393, 659]]) for (const mode of ["sugar", "die
 }
 
 /* sugar questions with Cluck's key: the duck chip, one line, no XP for a tap; diet: none of it */
-for (const [W, H] of [[393, 852]]) for (const mode of ["sugar", "diet"]) {   // one height: no chip check reads it (the main loop above runs both)
+for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: no chip check reads it (the main loop above runs both)
   const O = { mode, W, H };
   for (const [type, code] of [["num", "PHYS_WNM"], ["mc", "PHYS_WMC"], ["multi", "PHYS_WMU"]]) for (const outcome of ["right", "out"]) {
     const T = `${mode} ${W}x${H} chip ${type} ${outcome}`;
@@ -291,7 +296,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of ["sugar", "diet"]) {   // 
 }
 
 /* reduced motion: only the g-next-fade (no transform), no nod */
-for (const mode of ["sugar", "diet"]) {
+for (const mode of MODES) {
   const O = { mode, W: 393, H: 852, rm: true };
   for (const [type, code] of [["num", "PHYS_WNM"], ["mc", "PHYS_TMC"], ["multi", "PHYS_TMU"]]) {
     const page = await pageFor(browser, O, code);
@@ -316,7 +321,7 @@ for (const mode of ["sugar", "diet"]) {
 }
 
 /* a restored question (reload): Next is there, still (no g-next-in), focus left alone */
-{
+if (MODES.includes("sugar")) {
   const page = await pageFor(browser, { mode: "sugar", W: 393, H: 852 }, "PHYS_TNM");
   await step("restore: a reloaded closed question shows Next in the slot, without the landing motion", async () => {
     await close(page, "num", "right", { code: "PHYS_TNM" }); await page.waitForSelector("#q .nx"); await stopSampler(page);

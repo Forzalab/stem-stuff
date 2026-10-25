@@ -509,6 +509,18 @@ class Slips(unittest.TestCase):
             r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
             self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
 
+    def test_slip_k2_pair_spot(self):                                          # SLIP_K=2: a pair reaches the spot path (k=1: no slip, as today)
+        p = {"code": "PHYS_K2P", "title": "t", "type": "num", "body": "b", "answer": "10-(3+2)", "form": "10-(3+2)"}   # -7 = -(10-3): drop the 2, then the sign
+        line = "QUACK. Redo the term in brackets, then check your last step."
+        with unittest.mock.patch.object(serve.slips, "SLIP_K", 1):
+            self.assertIsNone(serve.slip_hit(p, -7.0))
+        with unittest.mock.patch.object(serve.slips, "SLIP_K", 2):
+            self.assertEqual(serve.slip_hit(p, -7.0), {"error": "drop+sign", "hint": serve.family_hint("drop+sign"), "spot": line})
+            self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.FAMILY_HINT["distribute"]})   # a k=1 slip wins
+            self.assertIsNone(serve.slip_hit(dict(p, ignore_slips=["-7"]), -7.0))                                        # ignore_slips holds at k=2
+            r = serve.grade(p, "k2-pair", {"answer": "-7"})
+            self.assertEqual((r["hint"], r["error"], r["spot"]), (serve.family_hint("drop+sign"), "drop+sign", line))   # a pair: both family lines
+
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
         self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, ())])
@@ -525,6 +537,16 @@ class Slips(unittest.TestCase):
             self.assertTrue(h.startswith("QUACK. "), fam)
             self.assertLessEqual(len(h.split()) - 1, 12, fam)
             self.assertIsNone(re.search(r"\d", h), fam)                       # no number at all, so never the answer
+
+    def test_pair_hint_composes_family_lines(self):                          # k=2 "inner+outer": the two family lines in that order, one QUACK.
+        self.assertEqual(serve.family_hint("drop+sign"),
+                         "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.")   # slips.test.mjs pins the same text
+        self.assertEqual(serve.family_hint("sign"), serve.FAMILY_HINT["sign"])
+        for form in ("10-(3+2)", "2*9.8*3", "sqrt(9+16)"):
+            for fam, _ in serve.slips.pairs(form):
+                h = serve.family_hint(fam)
+                self.assertEqual((h.count("QUACK"), h.startswith("QUACK. ")), (1, True), fam)
+                self.assertIsNone(re.search(r"\d", h), fam)
 
     def test_public_drops_form(self):
         for p in (self.ITEM, self.MULTI):
