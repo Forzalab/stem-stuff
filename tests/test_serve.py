@@ -501,7 +501,7 @@ class Slips(unittest.TestCase):
             self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"collide": ["drop", "factor"],                       # 12/300 (drop 100) = 2*0.02 (factor)
                                                                "spot": "QUACK. Redo the bottom of the fraction, then check your last step."})
             self.assertEqual(serve.slip_hit(dict(self.TIE, answer="1+1", form="1+1"), 4.0),                       # (1+1)^2 = 2*(1+1): whole-answer only
-                             {"collide": ["power", "factor"], "spot": "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two."})
+                             {"collide": ["power", "factor"], "spot": "QUACK. The pieces look right. Check your last step."})   # 2+ finish words: no list
             self.assertEqual(serve.slip_hit(dict(self.TIE, answer="(1+2)+3", form="(1+2)+3"), 4.0), {"collide": ["sign", "drop"]})   # LCA = root: no spot, the plain nudge
             r = serve.grade(dict(self.TIE, code="PHYS_TIF", answer="(1+2)+3", form="(1+2)+3"), "tie-root", {"answer": "4"})
             self.assertEqual((r["hint"], r["collide"], "spot" in r), (serve.DEFAULT_NUDGE, ["sign", "drop"], False))
@@ -509,7 +509,8 @@ class Slips(unittest.TestCase):
             r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
             self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
 
-    def test_slip_k2_pair_spot(self):                                          # SLIP_K=2: a pair reaches the spot path (k=1: no slip, as today)
+    def test_slip_k2_pair_spot(self):                                          # SLIP_K=2 (the default): a pair reaches the spot path (k=1: no slip)
+        self.assertEqual(serve.slips.SLIP_K, int(os.environ.get("SLIP_K", "2")))
         p = {"code": "PHYS_K2P", "title": "t", "type": "num", "body": "b", "answer": "10-(3+2)", "form": "10-(3+2)"}   # -7 = -(10-3): drop the 2, then the sign
         line = "QUACK. Redo the term in brackets, then check your last step."
         with unittest.mock.patch.object(serve.slips, "SLIP_K", 1):

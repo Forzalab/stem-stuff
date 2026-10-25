@@ -33,7 +33,8 @@ test("match: the first family within tol (or to 3 s.f.), else null; a bad form o
   assert.equal(match("10-(1+2+4)", 15, 1e-6), "distribute");
   assert.notEqual(match("10-(1+2+4)", 13, 1e-6), "distribute");   // the minus reaches the first term only (Tony, Oct 23)
   assert.equal(match("10-(4+1)", 7, 1e-6), "distribute");          // written order: 10-4+1
-  assert.equal(match("10-(1+2+4)", 3.5, 1e-6), null);
+  assert.equal(match("10-(1+2+4)", 3.5, 1e-6, [], 1), null);          // no single slip gives 3.5 (k=1)
+  assert.equal(match("10-(1+2+4)", 3.5, 1e-6), "sign+factor");      // the default k=2: 10-(1-2+4) = 7 (sign), then halved
   assert.equal(match("1+", 1, 1e-6), null);
   assert.equal(match("2*3", NaN, 1e-6), null);
   assert.ok(close(0.6921, 0.6923, 1e-9) && !close(0.69, 0.6923, 1e-9) && close(1000.4, 1001, 1e-9));
@@ -117,9 +118,10 @@ test("close() parity with slips.py: ties round away from zero in both (tests/fix
 });
 
 /* k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; tests/test_slips.py K2 is the twin */
-test("k=2: SLIP_K is 1, so the default match is today's", () => {
-  assert.equal(SLIP_K, 1);
-  assert.equal(match("10-(3+2)", -7), null);
+test("k=2: SLIP_K is 2 (on by default), so the default match takes the pair; k=1 still gives none", () => {
+  assert.equal(SLIP_K, 2);
+  assert.equal(match("10-(3+2)", -7), "drop+sign");
+  assert.equal(match("10-(3+2)", -7, undefined, [], 1), null);
 });
 test("k=2 hand cases: a typed value only inner + outer explains", () => {
   for (const [form, typed, want] of [["10-(3+2)", -7, "drop+sign"], ["2*9.8*3", 120, "g+factor"], ["sqrt(9+16)", 49, "dream+power"], ["sqrt(9+16)", -7, "dream+sign"]]) {
@@ -190,13 +192,20 @@ test("golden spots fixture: slips.mjs gives slips.py's candidates, paths, region
   assert.deepEqual(bad, []);
   assert.ok(n > 20, `${n} collisions`);
 });
+test("spot FINISH: 2+ words -> the general line, no list; 1 word -> named (Tony, Oct 25; test_slips.py twin)", () => {
+  for (const c of [[["sign", [[]]], ["units", [[]]]], [["power", [[]]], ["factor", [[]]], ["reciprocal", [[]]]], [["drop+sign", [[]]], ["factor", [[]]]]])
+    assert.deepEqual(spot(parse("1+1"), c), ["finish", ROOT, "QUACK. The pieces look right. Check your last step."]);
+  assert.equal(region([["sign", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign.");
+  assert.equal(region([["sign", [[]]], ["drop+sign", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign.");
+  assert.equal("or" in SPOT_COPY, false);
+});
 test("spot hand cases: the bottom of the fraction, FINISH on whole-answer slips, dual, and the root (plain nudge)", () => {
   const f = "12/(100+200+300)", c = cands(f, 0.03, [0.02]);
   assert.deepEqual(c, [["sign", [[1, 0, 0]]], ["drop", [[1, 0, 1]]]]);   // sign on the 100 = drop the 200: 12/400
   assert.equal(region(c, f), "QUACK. Your pieces are fine but one. Redo the bottom of the fraction.");
   assert.deepEqual(cands("1+1", 4), [["power", [ROOT]], ["factor", [ROOT]]]);
-  assert.equal(region(cands("1+1", 4), "1+1"), "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two.");
-  assert.equal(region([["sign", [[]]], ["units", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign or your units.");
+  assert.equal(region(cands("1+1", 4), "1+1"), "QUACK. The pieces look right. Check your last step.");
+  assert.equal(region([["sign", [[]]], ["units", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step.");
   assert.equal(region(cands("8/2*(2+2)", 8), "8/2*(2+2)"), "QUACK. Redo what is in the brackets, then check your last step.");
   assert.equal(region(cands("10-2-(3+4)", 9), "10-2-(3+4)"), "QUACK. Your pieces are fine but one. Redo the term in brackets.");
   assert.equal(region(cands("(1+2)+3", 4), "(1+2)+3"), null);

@@ -317,9 +317,18 @@ class Spot(unittest.TestCase):
     def test_hand_whole_answer_finish(self):        # 1+1 typed 4: (1+1)^2 (power) = 2*(1+1) (factor), both round the whole answer
         c = slips.cands("1+1", 4)
         self.assertEqual(c, [("power", (slips.ROOT,)), ("factor", (slips.ROOT,))])
-        self.assertEqual(slips.region(c, "1+1"), "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two.")
-        self.assertEqual(slips.region([("sign", ((),)), ("units", ((),))], "1+1"),
-                         "QUACK. The pieces look right. Check your last step: your sign or your units.")
+        self.assertEqual(slips.region(c, "1+1"), "QUACK. The pieces look right. Check your last step.")
+        self.assertEqual(slips.region([("sign", ((),)), ("units", ((),))], "1+1"), "QUACK. The pieces look right. Check your last step.")
+
+    def test_finish_two_words_general_one_word_named(self):   # Tony, Oct 25: 2+ finish words -> the general line, no list; 1 word -> named
+        general = "QUACK. The pieces look right. Check your last step."
+        for c in ([("sign", ((),)), ("units", ((),))], [("power", ((),)), ("factor", ((),)), ("reciprocal", ((),))],
+                  [("drop+sign", ((),)), ("factor", ((),))]):
+            self.assertEqual(slips.spot(slips.parse("1+1"), c), ("finish", slips.ROOT, general), c)
+        self.assertEqual(slips.region([("sign", ((),))], "1+1"), "QUACK. The pieces look right. Check your last step: your sign.")
+        self.assertEqual(slips.region([("sign", ((),)), ("drop+sign", ((),))], "1+1"),     # one word twice: still one word
+                         "QUACK. The pieces look right. Check your last step: your sign.")
+        self.assertNotIn("or", slips.SPOT_COPY)
 
     def test_hand_dual_term_and_none(self):
         self.assertEqual(slips.region(slips.cands("8/2*(2+2)", 8), "8/2*(2+2)"),     # drop a 2 in the bracket = half the answer
@@ -358,11 +367,20 @@ class Spot(unittest.TestCase):
 
 
 class K2(unittest.TestCase):
-    """k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; k=1 stays today's output."""
+    """k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; on by default (Tony, Oct 25), env
+    SLIP_K=1 keeps the k=1-only output."""
 
-    def test_flag_defaults_to_one(self):
-        self.assertEqual(slips.SLIP_K, int(os.environ.get("SLIP_K", "1")))
+    def test_flag_defaults_to_two(self):
+        self.assertEqual(slips.SLIP_K, int(os.environ.get("SLIP_K", "2")))
         self.assertEqual(slips.match("10-(3+2)", -7), slips.match("10-(3+2)", -7, k=slips.SLIP_K))
+
+    def test_flag_env(self):                      # a fresh interpreter: no env -> k=2 (the pair); SLIP_K=1 -> k=1 (no slip, the old output)
+        import subprocess
+        code = "import slips; print(slips.SLIP_K, slips.match('10-(3+2)', -7))"
+        run = lambda env: subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=env, capture_output=True, text=True, check=True).stdout.split()
+        base = {k: v for k, v in os.environ.items() if k != "SLIP_K"}
+        self.assertEqual(run(base), ["2", "drop+sign"])
+        self.assertEqual(run({**base, "SLIP_K": "1"}), ["1", "None"])
 
     def test_hand_cases_only_inner_plus_outer(self):
         cases = (("10-(3+2)", -7, "drop+sign"),        # 10-3 = 7, then the whole answer's sign
