@@ -122,6 +122,14 @@ const frames = page => page.evaluate(() => new Promise(r => requestAnimationFram
 /* a box's finite animations (transitions, keyframes, WAAPI; pseudo-elements too) have finished: an infinite one (caret blink) never does */
 const settled = (page, sel) => page.waitForFunction(s => { const e = document.querySelector(s);
   return !!e && e.getAnimations({ subtree: true }).every(a => a.playState !== "running" || a.effect?.getComputedTiming().endTime === Infinity); }, sel, { timeout: 5000 });
+/* the boot is done: the splash goes once fonts, the saved-bank restore and the #CODE problem (stemFirst) are in (index.html:68) */
+const booted = page => page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 10000 });
+const home = async page => { await page.goto(BASE + "/"); await booted(page); };
+/* phone: the strip tap reveals the code bar (app.js barOpen, synchronous in the click); then its chevron turn and the layout it causes (ResizeObserver, rAF) settle */
+const barRevealed = async page => {
+  await page.waitForFunction(() => document.documentElement.classList.contains("bar-open") && document.querySelector("#barTab").getAttribute("aria-expanded") === "true", null, { timeout: 3000 });
+  await settled(page, "#dock"); await frames(page);
+};
 const dwell = page => page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
 /* one graded mc pick by ids; returns the verdict */
 async function pick(page, ids, all) {
@@ -453,8 +461,22 @@ flow(39, "update-bar", async (page, w) => {
     const r = await page.$eval("#updateBar", b => { const x = b.getBoundingClientRect(); return { l: x.left, r: x.right, vw: innerWidth, h: x.height }; });
     assert.ok(r.l >= 0 && r.r <= r.vw + 0.5, `bar inside the viewport: ${JSON.stringify(r)}`);
     await page.screenshot({ path: join(OUT, `39-update-bar-${w}-chromium.png`) });
+    /* "bar gone" needs every background refresh the worker starts for the new load done (one that finds a changed file posts stem-update
+       and the bar comes back). Counted inside the worker (its waitUntil promises), never from Playwright's SW request events (PW 1.56: not in CI) */
+    const sw = page.context().serviceWorkers().find(x => new URL(x.url()).pathname === "/sw.js");
+    assert.ok(sw, "sw.js runs");
+    await sw.evaluate(() => { if (self.__bg) return; self.__bg = { open: 0, n: 0 }; const wu = ExtendableEvent.prototype.waitUntil;
+      ExtendableEvent.prototype.waitUntil = function (p) { self.__bg.open++; self.__bg.n++; Promise.resolve(p).finally(() => self.__bg.open--); return wu.call(this, p); }; });
+    const n0 = await sw.evaluate(() => self.__bg.n);
     await Promise.all([page.waitForEvent("load", { timeout: 15000 }), page.click("#updateBar")]);
-    await page.waitForTimeout(1500);
+    for (let t0 = Date.now(), bg = null; !(bg && bg.n > n0 && !bg.open); await new Promise(r => setTimeout(r, 50))) {
+      if (Date.now() - t0 > 8000) throw new Error(`sw.js background refreshes after the reload never settled: ${JSON.stringify(bg)} (started before: ${n0})`);
+      bg = await sw.evaluate(() => self.__bg);
+    }
+    /* a stem-update those refreshes posted reaches the page before a later message from the same worker: post one, wait for it */
+    await page.evaluate(() => navigator.serviceWorker.addEventListener("message", e => { if (e.data?.type === "uxf-probe") window.__probe = 1; }));
+    await sw.evaluate(async () => { for (const c of await self.clients.matchAll({ type: "window" })) c.postMessage({ type: "uxf-probe" }); });
+    await page.waitForFunction(() => window.__probe === 1, null, { timeout: 5000 });
     assert.equal(await page.locator("#updateBar").count(), 0, "bar gone after one tap");
     return `bar ${Math.round(r.r - r.l)}x${Math.round(r.h)} inside ${r.vw}px; one tap reloads, bar gone (shot taken with the bar up; edited a temp copy of the app, not the worktree)`;
   } finally { s2.kill(); }
@@ -468,7 +490,9 @@ flow(46, "copy-my-work", async (page, w) => {
     document.execCommand = (c, ...a) => { if (c === "copy") { const s = document.activeElement; window.__copied.push(s && "value" in s ? s.value : String(getSelection())); return true; } return ex(c, ...a); };
   });
   await go(page, C.single);
-  if (w === 393) { await page.click("#padFab"); await page.waitForTimeout(500); }
+  if (w === 393) {   // the pad page (openMT: html.mt, synchronous in the click), then its fade-in settled
+    await page.click("#padFab"); await page.waitForFunction(() => document.documentElement.classList.contains("mt"), null, { timeout: 3000 }); await settled(page, "#work");
+  }
   await page.waitForSelector("#scratch", { state: "visible", timeout: 4000 });
   await page.fill("#scratch", "my work: F = ma, so a = 2");
   await page.waitForSelector("#copy:not([hidden])", { timeout: 3000 });
@@ -493,16 +517,16 @@ flow(50, "record-again", async (page, w) => {
 });
 
 flow(49, "footer-privacy", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await home(page);
   assert.ok(await vis(page, "#privacy"), "start page: the privacy link shows");
   assert.equal(await page.$eval("#privacy", e => getComputedStyle(e, "::after").content), '"privacy"');
   await go(page, C.single);
   const over = await vis(page, "#privacy");
   if (w === 393) assert.equal(over, false, "phone over a question: no footer link");
-  await page.goto(BASE + "/"); await page.waitForTimeout(600);
+  await home(page);
   await Promise.all([page.waitForURL(/privacy\.html/), page.click("#privacy")]);
   assert.ok(await page.$("#offBtn"));
-  await page.goBack(); await page.waitForTimeout(500);
+  await page.goBack(); await page.waitForFunction(() => location.pathname === "/" && !document.querySelector("#splash"), null, { timeout: 10000 });   // the start page is back (a load or a bfcache restore)
   return `start page link shown; over a question ${over ? "shown" : "hidden"}; tap opens privacy.html`;
 });
 
@@ -513,14 +537,14 @@ flow(1, "splash", async (page, w) => {
 }, { ob: true });
 
 flow(2, "start-page", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(900);
+  await home(page);
   assert.equal((await page.textContent("#startTitle")).trim(), "Type a code to start.");
   assert.ok(await vis(page, "#startTitle"));
   return "'Type a code to start.'";
 }, { ob: true });
 
 flow(3, "pick-bank-typed", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await home(page);
   await showCode(page);
   await page.fill("#code", "uxs"); await page.press("#code", "Enter");
   await opened(page, "");
@@ -543,7 +567,7 @@ flow(5, "open-by-code", async (page, w) => {
 });
 
 flow(7, "paste-code", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await home(page);
   await page.evaluate(c => navigator.clipboard.writeText(c), C.single2);
   await showCode(page);
   await page.click("#codePaste");
@@ -564,7 +588,7 @@ flow(9, "slow-load-retry", async (page, w) => {
 
 flow(10, "change-code", async (page, w) => {
   await go(page, C.single);
-  if (w === 393 && !(await vis(page, "#codeChip")) && await vis(page, "#barTab")) { await page.click("#barTab"); await page.waitForTimeout(450); }
+  if (w === 393 && !(await vis(page, "#codeChip")) && await vis(page, "#barTab")) { await page.click("#barTab"); await barRevealed(page); }
   if (await vis(page, "#codeChip")) await page.click("#codeChip"); else await showCode(page);
   await page.waitForSelector("#code", { state: "visible", timeout: 3000 });
   if (w === 393 && !(await page.evaluate(() => document.activeElement?.id === "code"))) await page.tap("#code");   // phone: the strip brings the box; a tap focuses it
@@ -579,7 +603,7 @@ flow(11, "code-bar-strip", async (page, w) => {
   if (w === 1280) { assert.ok(!(await vis(page, "#barTab")), "desktop: no strip handle"); assert.ok(await vis(page, "#codeChip") || await vis(page, "#code"), "desktop: whole bar"); return "desktop: whole bar, no strip"; }
   const fz0 = await page.$eval("#freeze", e => e.getBoundingClientRect().top);
   assert.ok(await vis(page, "#barTab"), "the strip handle");
-  await page.click("#barTab"); await page.waitForTimeout(450);
+  await page.click("#barTab"); await barRevealed(page);
   assert.ok(await vis(page, "#code"), "bar slid out with the code box");
   const fz1 = await page.$eval("#freeze", e => e.getBoundingClientRect().top);
   assert.ok(Math.abs(fz1 - fz0) <= 1, `no reflow: ${fz0} -> ${fz1}`);
