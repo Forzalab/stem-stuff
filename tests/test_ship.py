@@ -129,6 +129,17 @@ class PrintBanks(unittest.TestCase):
         self.assertEqual(self.chosen(r), {"BANK_ZZ1.json": ("brain", os.path.join(self.brain, self.NEW))})
         self.assertIn("banks: BANK_ZZ1(brain)", r.stdout)
 
+    def test_stray_brain_banks_warn_but_do_not_ship(self):
+        put(self.brain, "projects/calc/_files/px2/BANK_P2XA.json", "{}")
+        put(self.brain, "projects/alpha/_files/quiz-bank/old/BANK_ZZ3.json", "{}")   # nested below a *-bank dir: not shipped either
+        r = self.ship()
+        self.assertEqual(sorted(self.chosen(r)), ["BANK_ZZ1.json"])
+        for rel in ("projects/beta/_files/notes/BANK_NOPE.json", "projects/calc/_files/px2/BANK_P2XA.json",
+                    "projects/alpha/_files/quiz-bank/old/BANK_ZZ3.json"):
+            self.assertIn("ship: brain: %s is not in a projects/*/_files/*-bank/ folder, not shipped" % rel, r.stderr)
+        self.assertNotIn(self.NEW, r.stderr)
+        self.assertNotIn(self.OLD, r.stderr)
+
     def test_newest_by_commit_not_by_path(self):
         put(self.brain, self.OLD, '{"v": "newest"}')
         git(self.brain, "commit", "-q", "-am", "touch beta", when="2026-03-01T00:00:00Z")
