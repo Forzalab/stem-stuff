@@ -77,6 +77,25 @@ weight() {
   esac
 }
 
+# Tags per schedulable unit (CI plan PR 3, CEO-arch-2026-10-25 bullet 8): one engine tag and one time tag, optional @quarantine.
+#   engine: @engine = hits a measured engine divergence (engines-report.md S1-S10: scroll height, focus scroll, fonts, resize, keyboard),
+#           @layout = UI / visual geometry, @logic = state and wiring.   time: @fast-time = installs page.clock, else @real-time.
+#   @quarantine:<#issue or URL>:<YYYY-MM-DD> = runs but does not block; at most 14 days out, red past the date.
+# Checked by tests/lint-tags.mjs (in npm test): every unit (a spec, or each of its PART_ENV parts) has a line, closed vocab, no lies.
+# Nothing reads these yet: the fast-time fixture (PR 3) and engine rotation (PR 7) will.
+tags() {
+  case "$1" in
+    blur|fab|flow|font|katex-wrap|measure-slots|overscroll|polish|reload|swap) echo "@engine @real-time" ;;
+    bar|blink-fx|cluck-more|codeblock|disabled|dismiss|geomarks|livefig|popover|privacy-reach|render|views|views-oui) echo "@layout @real-time" ;;
+    ux-flows@phone|ux-flows@desk|next-cue@1|next-cue@2) echo "@layout @real-time" ;;
+    autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|next-dead|prefix) echo "@logic @real-time" ;;
+    part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
+    queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
+    cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
+    *) echo "" ;;
+  esac
+}
+
 # the balanced deal: deal <shard-no> prints that shard's .pw spec names (names, no path/extension)
 deal() {
   local load=() k best w n
