@@ -16,7 +16,7 @@ test("full path: miss -> repair -> twin a -> (wrong) alt -> twin a -> (wrong) so
   assert.equal(st.t.Q7.conquered, false);
 });
 
-test("twin wrong twice never returns repair (never a third ladder), even on the b twin", () => {
+test("twin wrong twice never returns repair; a b twin miss gets one more ladder at most (never a third)", () => {
   const st = rNew();
   ev(st, "miss", "Q7", { b: true }); ev(st, "ladder_done");
   const acts = [ev(st, "twin", "Q7", { ok: false }), ev(st, "ladder_done"), ev(st, "twin", "Q7", { ok: false })];
@@ -24,7 +24,7 @@ test("twin wrong twice never returns repair (never a third ladder), even on the 
   assert.equal(acts[2].do, "solution");
   // a fresh template: a ok, then the b twin wrong -> a second ladder at most, then the solution
   ev(st, "miss", "Q8", { b: true }); ev(st, "ladder_done", "Q8"); ev(st, "twin", "Q8", { ok: true });
-  for (let i = 0; i < B_GAP + 1; i++) rEvent(st, { type: "shown" });
+  for (let i = 0; i < B_GAP; i++) rEvent(st, { type: "shown" });
   assert.deepEqual(rDue(st), ["Q8"]);
   assert.equal(ev(st, "twin", "Q8", { ok: false }).do, "repair");
   ev(st, "ladder_done", "Q8");
@@ -37,8 +37,8 @@ test("b twin queued at least B_GAP items later; conquered only after the solo b 
   ev(st, "miss", "Q7", { b: true }); ev(st, "ladder_done");
   assert.deepEqual(ev(st, "twin", "Q7", { ok: true }), { do: "queue", which: "b", gap: B_GAP });
   assert.equal(st.t.Q7.conquered, false);
-  for (let i = 0; i < B_GAP; i++) { rEvent(st, { type: "shown" }); assert.deepEqual(rDue(st), [], "not before " + B_GAP + " items"); }
-  rEvent(st, { type: "shown" });
+  // rDue asks about the NEXT slot (like qPick): after B_GAP other items shown, the b twin may take the slot after them
+  for (let i = 0; i < B_GAP; i++) { assert.deepEqual(rDue(st), [], "not before " + B_GAP + " other items"); rEvent(st, { type: "shown" }); }
   assert.deepEqual(rDue(st), ["Q7"]);
   assert.deepEqual(ev(st, "twin", "Q7", { ok: true }), { do: "conquered" });
   assert.equal(st.t.Q7.conquered, true);
@@ -52,21 +52,22 @@ test("no b twin: repaired + solo a twin = conquered", () => {
   assert.equal(st.t.Q7.conquered, true);
 });
 
-test("back-off: after BACKOFF solo-twin wins in a row the next miss is an offer; a miss resets it", () => {
+/* the run is over solo-twin tries: the original miss must not reset it (every twin follows one, so the back-off could never
+   trigger); a twin miss resets it, and that twin's alt ladder auto-opens again */
+test("back-off: after BACKOFF solo-twin wins in a row the next ladder is an offer; a twin miss resets it", () => {
   assert.equal(BACKOFF, 2);
   const st = rNew();
-  for (const q of ["Q1", "Q2"]) { ev(st, "miss", q, { b: false }); ev(st, "ladder_done", q); ev(st, "twin", q, { ok: true }); }
-  assert.deepEqual(ev(st, "miss", "Q3", { b: false }), { do: "repair", open: "offer" });
-  assert.equal(st.wins, 0);
-  assert.deepEqual(ev(st, "miss", "Q4", { b: false }), { do: "repair", open: "auto" });
-  // the alt ladder after a twin miss backs off too, and that twin miss resets the run
-  ev(st, "miss", "Q5", { b: false });
-  ev(st, "ladder_done", "Q4"); ev(st, "twin", "Q4", { ok: true });
-  ev(st, "ladder_done", "Q3"); ev(st, "twin", "Q3", { ok: true });
+  ev(st, "miss", "Q1", { b: false });
+  ev(st, "ladder_done", "Q1"); ev(st, "twin", "Q1", { ok: true });
+  assert.deepEqual(ev(st, "miss", "Q2", { b: false }), { do: "repair", open: "auto" });
+  ev(st, "ladder_done", "Q2"); ev(st, "twin", "Q2", { ok: true });
   assert.equal(st.wins, 2);
-  ev(st, "ladder_done", "Q5");
-  assert.deepEqual(ev(st, "twin", "Q5", { ok: false }), { do: "alt", open: "offer" });
+  assert.deepEqual(ev(st, "miss", "Q3", { b: false }), { do: "repair", open: "offer" });
+  assert.deepEqual(ev(st, "miss", "Q4", { b: false }), { do: "repair", open: "offer" });
+  ev(st, "ladder_done", "Q3");
+  assert.deepEqual(ev(st, "twin", "Q3", { ok: false }), { do: "alt", open: "auto" });
   assert.equal(st.wins, 0);
+  assert.deepEqual(ev(st, "miss", "Q5", { b: false }), { do: "repair", open: "auto" });
 });
 
 test("pure: a JSON round trip of the state changes nothing; stray events are no-ops", () => {
