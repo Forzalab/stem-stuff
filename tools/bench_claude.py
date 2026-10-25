@@ -94,12 +94,12 @@ def cases():
     return out
 
 
-def call(model, messages, max_tokens):
-    """(raw text, seconds to first text, usd) for one streamed call"""
-    body = dict(serve.claude_params(model, max_tokens), stream=True, system=messages[0]["content"] + serve.CLAUDE_DELTA, messages=messages[1:])
-    req = urllib.request.Request(serve.CLAUDE_BASE + "/v1/messages", data=json.dumps(body).encode(), method="POST",
+def stream_claude(body):
+    """POST one streamed /v1/messages body. Returns {text, ttft, secs, tin (all input tokens), cr, cw (cache read / write), tout}.
+    Shared with tools/bench_arms.py."""
+    req = urllib.request.Request(serve.CLAUDE_BASE + "/v1/messages", data=json.dumps(dict(body, stream=True)).encode(), method="POST",
                                  headers={"x-api-key": os.environ["CLAUDE_API"], "anthropic-version": "2023-06-01", "content-type": "application/json"})
-    t0, ttft, text, tin, tout = time.time(), None, "", 0, 0
+    t0, ttft, text, tin, tout, cr, cw = time.time(), None, "", 0, 0, 0, 0
     with urllib.request.urlopen(req, timeout=60) as r:
         for raw in r:
             line = raw.decode("utf-8", "replace").strip()
@@ -108,7 +108,8 @@ def call(model, messages, max_tokens):
             ev = json.loads(line[5:])
             if ev.get("type") == "message_start":
                 u = ev["message"].get("usage") or {}
-                tin = sum(int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+                cr, cw = int(u.get("cache_read_input_tokens") or 0), int(u.get("cache_creation_input_tokens") or 0)
+                tin = int(u.get("input_tokens") or 0) + cr + cw
             elif ev.get("type") == "message_delta":
                 tout = int((ev.get("usage") or {}).get("output_tokens") or tout)
             elif ev.get("type") == "content_block_delta" and ev["delta"].get("type") == "text_delta":
@@ -116,8 +117,14 @@ def call(model, messages, max_tokens):
                 text += ev["delta"]["text"]
             elif ev.get("type") == "error":
                 raise OSError(str(ev.get("error")))
+    return {"text": text, "ttft": ttft or float("nan"), "secs": time.time() - t0, "tin": tin, "cr": cr, "cw": cw, "tout": tout}
+
+
+def call(model, messages, max_tokens):
+    """(raw text, seconds to first text, usd) for one streamed call"""
+    u = stream_claude(dict(serve.claude_params(model, max_tokens), system=messages[0]["content"] + serve.CLAUDE_DELTA, messages=messages[1:]))
     pi, po = serve.claude_price(model)
-    return text, ttft or float("nan"), (tin * pi + tout * po) / 1e6
+    return u["text"], u["ttft"], (u["tin"] * pi + u["tout"] * po) / 1e6
 
 
 def row(model, name, r, ttft, usd):

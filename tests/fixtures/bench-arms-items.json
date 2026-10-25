@@ -1,0 +1,452 @@
+{
+ "needs_tony_check": true,
+ "note": "DRAFT gold labels written by a bench-prep worker from bank slip families (slips.py FAMILIES), bench_claude cases and the known-misconception list; none human-verified. Tony: check every `gold` (esp. 'new', 'no_signal', 'round'). Rows with swap_of are number-swapped twins of a base row: same gold, used for cache-key stability. All synthetic so far: no real slips-log rows (brain P3: report real vs synthetic separately once real ones exist).",
+ "labels": "serve.GAPS + 'new'",
+ "items": [
+  {
+   "id": "cart",
+   "origin": "bench_claude",
+   "q": "A 2.0 kg cart moving at 3.0 m/s hits a 1.0 kg cart at rest and they stick. Find their speed after.",
+   "ch": [
+    "3.0 m/s",
+    "2.0 m/s",
+    "1.5 m/s"
+   ],
+   "correct": "b",
+   "key": "Momentum is kept: $p = 2.0 \\cdot 3.0 = 6.0$. After: $v = 6.0 / 3.0 = 2.0\\ \\text{m/s}$.\nAnswer: b) 2.0 m/s",
+   "pick": "a",
+   "gold": "missing_piece",
+   "needs_tony_check": true,
+   "note": "pick a = second cart never enters"
+  },
+  {
+   "id": "cart_s1",
+   "origin": "synthetic-swap",
+   "q": "A 3.0 kg cart moving at 4.0 m/s hits a 1.0 kg cart at rest and they stick. Find their speed after.",
+   "ch": [
+    "4.0 m/s",
+    "3.0 m/s",
+    "2.0 m/s"
+   ],
+   "correct": "b",
+   "key": "Momentum is kept: $p = 3.0 \\cdot 4.0 = 12.0$. After: $v = 12.0 / 4.0 = 3.0\\ \\text{m/s}$.\nAnswer: b) 3.0 m/s",
+   "pick": "a",
+   "gold": "missing_piece",
+   "needs_tony_check": true,
+   "swap_of": "cart"
+  },
+  {
+   "id": "power",
+   "origin": "bench_claude",
+   "q": "A motor does 52.0 J of work in 4.0 s. What is its power?",
+   "ch": [
+    "208 W",
+    "13.0 W",
+    "56.0 W"
+   ],
+   "correct": "b",
+   "key": "$P = W/t = 52.0 / 4.0 = 13.0\\ \\text{W}$.\nAnswer: b) 13.0 W",
+   "pick": "a",
+   "gold": "formula_hunting",
+   "needs_tony_check": true,
+   "note": "multiplied by time"
+  },
+  {
+   "id": "power_s1",
+   "origin": "synthetic-swap",
+   "q": "A motor does 60.0 J of work in 5.0 s. What is its power?",
+   "ch": [
+    "300 W",
+    "12.0 W",
+    "65.0 W"
+   ],
+   "correct": "b",
+   "key": "$P = W/t = 60.0 / 5.0 = 12.0\\ \\text{W}$.\nAnswer: b) 12.0 W",
+   "pick": "a",
+   "gold": "formula_hunting",
+   "needs_tony_check": true,
+   "swap_of": "power"
+  },
+  {
+   "id": "work",
+   "origin": "bench_claude",
+   "q": "Friction slows a 4.0 kg box from 3.0 m/s to rest. Find the work done by friction.",
+   "ch": [
+    "18 J",
+    "-18 J",
+    "-12 J"
+   ],
+   "correct": "b",
+   "key": "$W = \\Delta K = 0 - \\frac{1}{2} \\cdot 4.0 \\cdot 3.0^2 = -18\\ \\text{J}$.\nAnswer: b) -18 J",
+   "pick": "a",
+   "gold": "sign_direction",
+   "needs_tony_check": true
+  },
+  {
+   "id": "work_s1",
+   "origin": "synthetic-swap",
+   "q": "Friction slows a 5.0 kg box from 2.0 m/s to rest. Find the work done by friction.",
+   "ch": [
+    "10 J",
+    "-10 J",
+    "-5 J"
+   ],
+   "correct": "b",
+   "key": "$W = \\Delta K = 0 - \\frac{1}{2} \\cdot 5.0 \\cdot 2.0^2 = -10\\ \\text{J}$.\nAnswer: b) -10 J",
+   "pick": "a",
+   "gold": "sign_direction",
+   "needs_tony_check": true,
+   "swap_of": "work"
+  },
+  {
+   "id": "slope",
+   "origin": "bench_claude",
+   "q": "Find the slope of $f(x) = x^2$ at $x = 3$.",
+   "ch": [
+    "9",
+    "6",
+    "3"
+   ],
+   "correct": "b",
+   "key": "$f'(x) = 2x$, so $f'(3) = 6$.\nAnswer: b) 6",
+   "pick": "a",
+   "gold": "definition_mixup",
+   "needs_tony_check": true,
+   "note": "plugged into f, not f'"
+  },
+  {
+   "id": "lin",
+   "origin": "slip-family:sign",
+   "q": "Solve $3x - 5 = 10$.",
+   "ch": [
+    "$x = 5/3$",
+    "$x = 5$",
+    "$x = -5$"
+   ],
+   "correct": "b",
+   "key": "Add 5: $3x = 15$. Divide: $x = 5$.\nAnswer: b) 5",
+   "pick": "a",
+   "gold": "algebra_slip",
+   "needs_tony_check": true,
+   "note": "moved 5 the wrong way"
+  },
+  {
+   "id": "lin_s1",
+   "origin": "synthetic-swap",
+   "q": "Solve $4x - 6 = 14$.",
+   "ch": [
+    "$x = 2$",
+    "$x = 5$",
+    "$x = -5$"
+   ],
+   "correct": "b",
+   "key": "Add 6: $4x = 20$. Divide: $x = 5$.\nAnswer: b) 5",
+   "pick": "a",
+   "gold": "algebra_slip",
+   "needs_tony_check": true,
+   "swap_of": "lin"
+  },
+  {
+   "id": "square",
+   "origin": "slip-family:distribute",
+   "q": "Expand $(x+3)^2$.",
+   "ch": [
+    "$x^2 + 9$",
+    "$x^2 + 6x + 9$",
+    "$x^2 + 3x + 9$"
+   ],
+   "correct": "b",
+   "key": "$(x+3)(x+3) = x^2 + 3x + 3x + 9$.\nAnswer: b) $x^2 + 6x + 9$",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "(a+b)^2 = a^2+b^2, a listed known one"
+  },
+  {
+   "id": "km",
+   "origin": "slip-family:units",
+   "q": "How many meters are in 2.5 km?",
+   "ch": [
+    "250 m",
+    "2500 m",
+    "0.0025 m"
+   ],
+   "correct": "b",
+   "key": "1 km = 1000 m, so $2.5 \\cdot 1000 = 2500$ m.\nAnswer: b) 2500 m",
+   "pick": "a",
+   "gold": "units_scale",
+   "needs_tony_check": true
+  },
+  {
+   "id": "km_s1",
+   "origin": "synthetic-swap",
+   "q": "How many meters are in 3.2 km?",
+   "ch": [
+    "320 m",
+    "3200 m",
+    "0.0032 m"
+   ],
+   "correct": "b",
+   "key": "1 km = 1000 m, so $3.2 \\cdot 1000 = 3200$ m.\nAnswer: b) 3200 m",
+   "pick": "a",
+   "gold": "units_scale",
+   "needs_tony_check": true,
+   "swap_of": "km"
+  },
+  {
+   "id": "par",
+   "origin": "slip-family:reciprocal",
+   "q": "Two resistors, 6 ohm and 3 ohm, are in parallel. Find the total resistance.",
+   "ch": [
+    "9 ohm",
+    "2 ohm",
+    "4.5 ohm"
+   ],
+   "correct": "b",
+   "key": "$1/R = 1/6 + 1/3 = 1/2$, so $R = 2$ ohm.\nAnswer: b) 2 ohm",
+   "pick": "a",
+   "gold": "wrong_model",
+   "needs_tony_check": true,
+   "note": "added them as if in series"
+  },
+  {
+   "id": "chain",
+   "origin": "slip-family:factor",
+   "q": "Differentiate $\\sin(2x)$.",
+   "ch": [
+    "$\\cos(2x)$",
+    "$2\\cos(2x)$",
+    "$-2\\cos(2x)$"
+   ],
+   "correct": "b",
+   "key": "Chain rule: $\\frac{d}{dx}\\sin(2x) = \\cos(2x)\\cdot 2$.\nAnswer: b) $2\\cos(2x)$",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "chain rule dropped (listed)"
+  },
+  {
+   "id": "exp",
+   "origin": "slip-family:power",
+   "q": "Simplify $2^3 \\cdot 2^4$.",
+   "ch": [
+    "$4^7$",
+    "$2^7$",
+    "$2^{12}$"
+   ],
+   "correct": "b",
+   "key": "Same base: add exponents. $2^{3+4} = 2^7$.\nAnswer: b) $2^7$",
+   "pick": "a",
+   "gold": "algebra_slip",
+   "needs_tony_check": true
+  },
+  {
+   "id": "rad",
+   "origin": "slip-family:trig",
+   "q": "Evaluate $\\sin(\\pi/6)$ exactly, with the angle in radians.",
+   "ch": [
+    "0.0091",
+    "0.5",
+    "0.866"
+   ],
+   "correct": "b",
+   "key": "$\\pi/6$ radians is 30 degrees; $\\sin 30^\\circ = 0.5$.\nAnswer: b) 0.5",
+   "pick": "a",
+   "gold": "units_scale",
+   "needs_tony_check": true,
+   "note": "calculator in degree mode"
+  },
+  {
+   "id": "fall",
+   "origin": "slip-family:g",
+   "q": "A stone falls from rest for 2.0 s ($g = 9.8$ m/s^2). How far does it fall?",
+   "ch": [
+    "39.2 m",
+    "19.6 m",
+    "9.8 m"
+   ],
+   "correct": "b",
+   "key": "$d = \\frac{1}{2} g t^2 = 0.5 \\cdot 9.8 \\cdot 4.0 = 19.6$ m.\nAnswer: b) 19.6 m",
+   "pick": "a",
+   "gold": "missing_piece",
+   "needs_tony_check": true,
+   "note": "dropped the 1/2"
+  },
+  {
+   "id": "fall_s1",
+   "origin": "synthetic-swap",
+   "q": "A stone falls from rest for 3.0 s ($g = 9.8$ m/s^2). How far does it fall?",
+   "ch": [
+    "88.2 m",
+    "44.1 m",
+    "29.4 m"
+   ],
+   "correct": "b",
+   "key": "$d = \\frac{1}{2} g t^2 = 0.5 \\cdot 9.8 \\cdot 9.0 = 44.1$ m.\nAnswer: b) 44.1 m",
+   "pick": "a",
+   "gold": "missing_piece",
+   "needs_tony_check": true,
+   "swap_of": "fall"
+  },
+  {
+   "id": "vec",
+   "origin": "bench_claude-style",
+   "q": "A 3 N force pulls east and a 4 N force pulls north on a box. How big is the net force?",
+   "ch": [
+    "7 N",
+    "5 N",
+    "1 N"
+   ],
+   "correct": "b",
+   "key": "The forces are at right angles: $\\sqrt{3^2 + 4^2} = 5$ N.\nAnswer: b) 5 N",
+   "pick": "a",
+   "gold": "vector_as_scalar",
+   "needs_tony_check": true
+  },
+  {
+   "id": "vec_s1",
+   "origin": "synthetic-swap",
+   "q": "A 6 N force pulls east and an 8 N force pulls north on a box. How big is the net force?",
+   "ch": [
+    "14 N",
+    "10 N",
+    "2 N"
+   ],
+   "correct": "b",
+   "key": "The forces are at right angles: $\\sqrt{6^2 + 8^2} = 10$ N.\nAnswer: b) 10 N",
+   "pick": "a",
+   "gold": "vector_as_scalar",
+   "needs_tony_check": true,
+   "swap_of": "vec"
+  },
+  {
+   "id": "disp",
+   "origin": "bench_claude-style",
+   "q": "A walker goes 3 m east, then 3 m back west. How far is she from the start?",
+   "ch": [
+    "6 m",
+    "0 m",
+    "3 m"
+   ],
+   "correct": "b",
+   "key": "Displacement is the net change in position: $+3 - 3 = 0$ m.\nAnswer: b) 0 m",
+   "pick": "a",
+   "gold": "definition_mixup",
+   "needs_tony_check": true,
+   "note": "distance vs displacement"
+  },
+  {
+   "id": "top",
+   "origin": "bench_claude-style",
+   "q": "A 1.0 kg ball is at the very top of its flight ($g = 9.8$ m/s^2). What is the net force on it?",
+   "ch": [
+    "0 N",
+    "9.8 N",
+    "19.6 N"
+   ],
+   "correct": "b",
+   "key": "Gravity still pulls: $F = mg = 1.0 \\cdot 9.8 = 9.8$ N.\nAnswer: b) 9.8 N",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "no motion = no force (listed)"
+  },
+  {
+   "id": "corr",
+   "origin": "slip-family:field",
+   "q": "Ice cream sales and drownings both rise in summer. What can we conclude?",
+   "ch": [
+    "Ice cream causes drowning",
+    "A third thing (heat) drives both",
+    "Drowning raises sales"
+   ],
+   "correct": "b",
+   "key": "Correlation is not causation: warm weather raises both.\nAnswer: b)",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "correlation as causation (listed)"
+  },
+  {
+   "id": "deg",
+   "origin": "slip-family:discrete",
+   "q": "A graph has degrees summing to 12. How many edges does it have?",
+   "ch": [
+    "12",
+    "6",
+    "3"
+   ],
+   "correct": "b",
+   "key": "Handshake lemma: degree sum = 2E, so $E = 12/2 = 6$.\nAnswer: b) 6",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "degree sum taken as edge count (listed)"
+  },
+  {
+   "id": "deg_s1",
+   "origin": "synthetic-swap",
+   "q": "A graph has degrees summing to 20. How many edges does it have?",
+   "ch": [
+    "20",
+    "10",
+    "5"
+   ],
+   "correct": "b",
+   "key": "Handshake lemma: degree sum = 2E, so $E = 20/2 = 10$.\nAnswer: b) 10",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "swap_of": "deg"
+  },
+  {
+   "id": "reinf",
+   "origin": "slip-family:psych",
+   "q": "A car buzzer stops when you buckle your seatbelt. This is an example of:",
+   "ch": [
+    "Punishment",
+    "Negative reinforcement",
+    "Positive reinforcement"
+   ],
+   "correct": "b",
+   "key": "Something unpleasant is removed and buckling goes up: negative reinforcement.\nAnswer: b)",
+   "pick": "a",
+   "gold": "field_misconception",
+   "needs_tony_check": true,
+   "note": "negative reinforcement as punishment (listed)"
+  },
+  {
+   "id": "round",
+   "origin": "new",
+   "q": "What is $\\frac{1}{3} + \\frac{1}{3} + \\frac{1}{3}$ ?",
+   "ch": [
+    "0.9",
+    "1",
+    "0.99"
+   ],
+   "correct": "b",
+   "key": "Three thirds make one whole.\nAnswer: b) 1",
+   "pick": "a",
+   "gold": "new",
+   "needs_tony_check": true,
+   "note": "rounded each third early; maybe algebra_slip or new: Tony decides"
+  },
+  {
+   "id": "noidea",
+   "origin": "new",
+   "q": "A 2.0 kg cart moving at 3.0 m/s hits a 1.0 kg cart at rest and they stick. Find their speed after.",
+   "ch": [
+    "3.0 m/s",
+    "2.0 m/s",
+    "1.5 m/s"
+   ],
+   "correct": "b",
+   "key": "Momentum is kept: $p = 2.0 \\cdot 3.0 = 6.0$. After: $v = 6.0 / 3.0 = 2.0\\ \\text{m/s}$.\nAnswer: b) 2.0 m/s",
+   "pick": "c",
+   "gold": "no_signal",
+   "needs_tony_check": true,
+   "msg": "idk lol i just guessed",
+   "note": "message says guess: nothing shows the move"
+  }
+ ]
+}
