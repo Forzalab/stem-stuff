@@ -4,7 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
-import { match as slipMatch, FAMILY_HINT } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
+import { match as slipMatch, familyHint } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
@@ -377,7 +377,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
       let skip;
       try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
       const fam = skip && slipMatch(u.form, sig, undefined, skip);   // undefined: slips.mjs SLIP_WIN, never the grading tol (Tony D2)
-      if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
+      if (fam) hit = { error: fam, hint: familyHint(fam) };
     }
   }
   if (correct) { st.done = true; return R({ verdict: "correct", triesLeft: left() }); }

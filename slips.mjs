@@ -23,6 +23,8 @@ export const FAMILY_HINT = {
   units: "QUACK. Check your units. A power of ten slipped.",
   g: "QUACK. Check the value you used for g.",
 };
+/* FAMILY_HINT's line; a k=2 "inner+outer" pair (pairs) gets both lines in that order under one QUACK. (serve.py family_hint) */
+export const familyHint = fam => fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" ");
 
 export const ZERO = 1e-9;
 export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol

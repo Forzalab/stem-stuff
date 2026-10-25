@@ -75,6 +75,12 @@ FAMILY_HINT = {
     "g": "QUACK. Check the value you used for g.",
 }
 
+
+def family_hint(fam):
+    """FAMILY_HINT's line; a k=2 "inner+outer" pair (slips.pairs) gets both lines in that order under one QUACK. (slips.mjs familyHint)"""
+    first, *rest = fam.split("+")
+    return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)])
+
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")
 TRIES = os.environ.get("STEM_TRIES") or os.path.join(ROOT, "tries.json")
@@ -722,7 +728,7 @@ def slip_hit(u, sig):
         if len(tie) > 1:              # 2+ families sit on this value: name none (the plain nudge), say which ones collide
             line = _slip_spot(u["form"], ans, ignore, sig, tuple(tie))
             return {"collide": tie, "spot": line} if line else {"collide": tie}   # spot: WHERE, never what or a number; the page picks
-    return {"error": fam, "hint": FAMILY_HINT[fam]} if fam else None
+    return {"error": fam, "hint": family_hint(fam)} if fam else None
 
 
 def slip_tie_on():

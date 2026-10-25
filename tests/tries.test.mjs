@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { match as slipMatch, FAMILY_HINT } from "../slips.mjs";
+import { match as slipMatch, FAMILY_HINT, familyHint } from "../slips.mjs";
 const { evaluate, compile } = mathjs;
 globalThis.math = mathjs;                                 // slips.mjs parses with the global math.js, as in the browser
 
@@ -14,7 +14,7 @@ const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sug
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
 ${cut("function shown(p) {", "/* One row of pills")}
 return { maxTries, gradeLocal, shown, tolOf, setMode: m => { MODE = m; } };`;
-const { maxTries, gradeLocal, shown, tolOf, setMode } = new Function("math", "slipMatch", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, slipMatch, FAMILY_HINT);
+const { maxTries, gradeLocal, shown, tolOf, setMode } = new Function("math", "slipMatch", "familyHint", code)({ compile, evaluate, number: Number }, slipMatch, familyHint);
 
 const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Array.from({ length: n }, (_, i) => ({ id: "abcdefgh"[i], md: "x" })), correct: "a",
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
