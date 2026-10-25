@@ -47,6 +47,10 @@ fi
 declare -A PART_ENV=(
   [ux-flows@phone]="WIDTHS=393"     # chunk key = width first (CEO plan PR 1); split a width further with FLOWS= only if it alone becomes the heaviest lane
   [ux-flows@desk]="WIDTHS=1280"
+  [next-cue@1]="NC_MODE=sugar"      # by mode; the sugar-only restore check rides with sugar
+  [next-cue@2]="NC_MODE=diet"
+  [upload-replace@1]="UR_ONLY=^393:"   # by width (every step opens its own context); no spaces: the env is split on whitespace
+  [upload-replace@2]="UR_ONLY=^1280:"
 )
 parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && echo "$p"; done | LC_ALL=C sort; }
 units() {   # every schedulable name: a spec's parts if it has any, else the spec
@@ -60,7 +64,9 @@ units() {   # every schedulable name: a spec's parts if it has any, else the spe
 weight() {
   case "$1" in
     ux-flows) echo 205 ;; ux-flows@phone) echo 113 ;; ux-flows@desk) echo 92 ;;   # parts: 205 split ~55/45 (estimate, not measured; refresh from t_ms in the CI log)
-    next-cue) echo 184 ;; upload-replace) echo 138 ;; next-dead) echo 56 ;; rewards) echo 60 ;;
+    next-cue) echo 199 ;; next-cue@1) echo 105 ;; next-cue@2) echo 99 ;;   # whole = CI median of 3 A/A runs on main@1681169; parts = local
+    upload-replace) echo 141 ;; upload-replace@1) echo 70 ;; upload-replace@2) echo 73 ;;   # seconds x (CI whole / local whole): estimates, not CI-measured
+    next-dead) echo 56 ;; rewards) echo 60 ;;
     swap) echo 69 ;; blink-fx) echo 59 ;; next-reset) echo 56 ;; queue-walk) echo 51 ;; redo-note|render) echo 46 ;; cluck-rise) echo 43 ;;
     flow) echo 36 ;; easy) echo 34 ;; dismiss|fab|prefix|update) echo 31 ;; autosave) echo 28 ;; done) echo 26 ;;
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
