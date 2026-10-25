@@ -10,6 +10,7 @@ Read this whole file before you edit a bank. Follow the steps in order.
 - Each dated version has a row in the **Version table** (SCHEMA.md). The row lists what that version adds or requires.
 - Old banks load until their **sunset date**. Before it, they show a banner. After it, they do not load.
 - `tools/slips.py --strict <bank>` and `cd tests && npm test` are the gates. A migration is done only when both pass.
+  `tools/ship.sh` refuses to deploy a bank that fails `--strict` or the SCHEMA.md `problems` schema (`node tools/schema-check.mjs <bank>`).
 
 ## 2. Inputs you need
 

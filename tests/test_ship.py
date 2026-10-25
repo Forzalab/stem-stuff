@@ -226,5 +226,83 @@ class PrintBanks(unittest.TestCase):
         self.assertIn("BANK_ZZ1.json", self.chosen(r))
 
 
+class Gate(unittest.TestCase):
+    """The bank gate: a bank set with one bank failing slips.py --strict or the "problems" schema stops before any Vercel step; a clean
+    set (an older bank only warns) gets to `vercel deploy`. Vercel is a fake npx on PATH that logs its args; the root is a git repo with
+    an origin, so the run gets as far as a real one."""
+    FILES = ("tools/ship.sh", "tools/brain_banks.py", "tools/version.sh", "tools/slips.py", "tools/tol.py", "tools/schema-check.mjs",
+             "slips.py", "SCHEMA.md", "tests/schemas.mjs")
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.root = os.path.join(self.tmp, "root")
+        for f in self.FILES:
+            os.makedirs(os.path.dirname(os.path.join(self.root, f)), exist_ok=True)
+            shutil.copy(os.path.join(ROOT, f), os.path.join(self.root, f))
+        os.symlink(os.path.join(ROOT, "tests", "node_modules"), os.path.join(self.root, "tests", "node_modules"))
+        put(self.root, ".gitignore", "tests/node_modules\n")
+        put(self.root, "banks/.keep", "")
+        os.makedirs(os.path.join(self.root, ".vercel"))                    # linked: no `vercel link`
+        origin = os.path.join(self.tmp, "origin.git")
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", origin], check=True)
+        git(self.root, "init", "-q", "-b", "side")                          # not main: no self-update
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "root")
+        git(self.root, "remote", "add", "origin", origin)
+        git(self.root, "push", "-q", "origin", "side:main")
+        self.bin, self.log = os.path.join(self.tmp, "bin"), os.path.join(self.tmp, "npx.log")
+        put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) echo https://t.vercel.app ;; esac\n' % self.log)
+        os.chmod(os.path.join(self.bin, "npx"), 0o755)
+        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+            self.num = next(p for p in json.load(f)["problems"] if p["type"] == "num" and p.get("form"))
+
+    def bank(self, d, name, v=20261022, **change):
+        p = {k: x for k, x in {**self.num, **change}.items() if x is not None}
+        return put(os.path.join(self.tmp, d), name + ".json", json.dumps({"v": v, "problems": [p]}))
+
+    def ship(self, banks, path=None):
+        e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "VERCEL_"))}
+        e.update(HOME=self.tmp, SHIP_NO_BRAIN="1", PATH=path or self.bin + os.pathsep + e["PATH"])
+        return subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo", os.path.join(self.tmp, banks)],
+                              capture_output=True, text=True, env=e, timeout=120)
+
+    def deployed(self):
+        if not os.path.exists(self.log):
+            return False
+        with open(self.log) as f:
+            return " deploy" in f.read()
+
+    def test_a_clean_set_deploys_and_an_old_bank_only_warns(self):
+        self.bank("ok", "BANK_GOOD")
+        self.bank("ok", "BANK_OLD", v=1, form=None)                       # v1, no form: still ships
+        r = self.ship("ok")
+        self.assertIn("BANK_OLD v1: stops loading 2026-11-05", r.stderr)
+        self.assertNotIn("BANK_GOOD v", r.stderr)
+        self.assertIn("demo ready: https://t.vercel.app", r.stdout, r.stderr)
+        self.assertTrue(self.deployed())
+
+    def test_a_failing_bank_stops_before_vercel(self):
+        for name, change, why in (("BANK_NOFORM", {"form": None}, "NOFORM"), ("BANK_LONG", {"title": "x" * 61}, "BANK_LONG: /problems/0/title")):
+            with self.subTest(name):
+                d = "bad-" + name
+                self.bank(d, "BANK_GOOD")
+                self.bank(d, name, **change)
+                r = self.ship(d)
+                self.assertEqual(r.returncode, 1, r.stderr)
+                self.assertIn(why, r.stderr)
+                self.assertIn("nothing deployed", r.stderr)
+                self.assertNotIn("deploying", r.stdout)
+                self.assertFalse(self.deployed())
+
+    def test_no_ajv_fails_closed(self):
+        os.remove(os.path.join(self.root, "tests", "node_modules"))
+        self.bank("ok", "BANK_GOOD")
+        r = self.ship("ok")
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("needs node and tests/node_modules", r.stderr)
+        self.assertFalse(self.deployed())
+
+
 if __name__ == "__main__":
     unittest.main()
