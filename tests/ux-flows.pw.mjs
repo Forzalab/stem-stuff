@@ -138,14 +138,17 @@ const barRevealed = async page => {
 const gateDone = () => Date.now() - window.__drill.state.start > 2100;
 async function dwell(page) {
   if (page.__time !== "fast") return page.waitForFunction(gateDone, null, { timeout: 6000 });
-  if (await page.evaluate(() => !!globalThis.__pwClock)) {
-    const now = await page.evaluate(() => Date.now());
+  if (!(await page.evaluate(() => !!globalThis.__pwClock))) throw new Error("fast-time dwell: no page.clock on this page (the fixture installs it before the first load)");
+  /* jump from the CURRENT question's start: a bank route opens a problem, then the queue opens its first question (load() again, a new
+     S.start), later on a slow 393 lane than the jump (CI #278). So: jump, and if the gate is still shut because start moved, jump again. */
+  for (let k = 0; k < 3; k++) {
+    const { now, start } = await page.evaluate(() => ({ now: Date.now(), start: window.__drill.state.start }));
     await page.clock.pauseAt(now + 500);   // a little ahead: pauseAt into the past throws, and the flowing clock moves between the two calls
-    await page.clock.fastForward(2100);
+    await page.clock.fastForward(Math.max(0, start + 2200 - (now + 500)));
     await page.clock.resume();
+    if (await page.waitForFunction(gateDone, null, { timeout: 400 }).then(() => true, () => false)) return;   // shut = start moved: jump again
   }
-  await page.waitForFunction(gateDone, null, { timeout: 1000 })
-    .catch(e => { throw new Error(`fast-time dwell: the 2.1 s gate never passed (a page.clock installed before load? ${e.message.split("\n")[0]})`); });
+  throw new Error("fast-time dwell: the 2.1 s gate never passed after 3 jumps (start keeps moving, or the jump does not move the app's time)");
 }
 /* one graded mc pick by ids; returns the verdict */
 async function pick(page, ids, all) {
