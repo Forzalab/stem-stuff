@@ -102,8 +102,10 @@ jobs:
             | [$t, .name, .conclusion, ((.started_at|fromdate) - (.created_at|fromdate)), ((.completed_at|fromdate) - (.started_at|fromdate))] | @csv' jobs.json | tr -d '"' >>jobs.csv
           echo "run,attempt,sha,mutant,job,lane,spec,result,s" >specs.csv
           jq -r '.jobs[] | select(.name | startswith("block ")) | "\(.id) \(.name)"' jobs.json | while read -r id name; do
-            gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" | sed 's/^[^ ]* //' |
+            # curl, not gh api: gh refuses to print a log that holds terminal escape codes (run 40151630168: 0 spec rows)
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" | sed 's/^[^ ]* //' |
               awk -v t="$TAG" -v j="$name" '/^##\[group\]lane [0-9]+:/ { split($2, a, ":"); lane = a[1] } lane && /^(ok|FAIL) +[^ ]+ [0-9.]+ s$/ { print t "," j "," lane "," $2 "," $1 "," $3 }' >>specs.csv
           done
           { echo '```'; cat jobs.csv; echo; cat specs.csv; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
           cat jobs.csv specs.csv
+          test "$(wc -l <specs.csv)" -gt 1 || { echo "::error::no spec rows read from the block logs"; exit 1; }
