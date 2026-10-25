@@ -194,9 +194,10 @@ export const raw = form => raw2(form)[0];
 /* raw() over inner slips only: the k=2 bag (slips.py inner) */
 export const inner = form => raw2(form)[1];
 
-/* k=2 (Tony D1/D3): one inner slip + one whole-answer (outer) slip; k=3 is not runtime. SLIP_K = 1 is today exactly. A k=2 entry's family
-   is "inner+outer" (e.g. "drop+sign"). OUTER = slips.py OUTER: [family, forward on the inner value, undo on the typed value], float math. */
-export const SLIP_K = 1;
+/* k=2 (Tony D1/D3): one inner slip + one whole-answer (outer) slip; k=3 is not runtime. SLIP_K = 2 is the runtime
+   default (Tony, Oct 25; slips.py env SLIP_K=1 = k=1 only). A k=2 entry's family is "inner+outer" (e.g. "drop+sign"). OUTER = slips.py
+   OUTER: [family, forward on the inner value, undo on the typed value], float math. */
+export const SLIP_K = 2;
 const OUTER = [
   ["sign", v => -v, y => [-y]],
   ["reciprocal", v => v ? 1 / v : NaN, y => y ? [1 / y] : []],
@@ -276,7 +277,6 @@ export const SPOT_COPY = {
   region: "QUACK. Your pieces are fine but one. Redo {place}.",
   finish: "QUACK. The pieces look right. Check your last step{what}.",
   finish_what: ": {words}",
-  or: " or ",
   dual: "QUACK. Redo {place}, then check your last step.",
   word: { sign: "your sign", units: "your units", factor: "a factor of two", power: "a square or square root", reciprocal: "flipping it upside down" },
   term: "the {nth} term",
@@ -340,8 +340,8 @@ export function spot(e, cands) {
   const whole = cands.filter(([, ps]) => ps.some(isRoot)).map(([f]) => f);
   if (!inner.length) {
     if (!whole.length) return [null, ROOT, null];
-    const words = [...new Set(whole.map(f => f.split("+").pop()).filter(f => f in c.word).map(f => c.word[f]))].slice(0, 2);
-    return ["finish", ROOT, fill(c.finish, { what: words.length ? fill(c.finish_what, { words: words.join(c.or) }) : "" })];
+    const words = [...new Set(whole.map(f => f.split("+").pop()).filter(f => f in c.word).map(f => c.word[f]))];   // 2+ words: no list
+    return ["finish", ROOT, fill(c.finish, { what: words.length === 1 ? fill(c.finish_what, { words: words[0] }) : "" })];
   }
   const [r, name] = place(e, lca(inner));
   if (name === null) return [null, ROOT, null];          // LCA = root with inner slips: the caller keeps the plain nudge
@@ -367,8 +367,8 @@ export function pairCands(form, typed, fam, tol = SLIP_WIN) {
   for (const [v, pp] of sites(form).find(([f]) => f === fi)[1]) if (us.some(u => close(u, v, tol))) for (const p of pp) if (!ps.some(q => cmpPath(q, p) === 0)) ps.push(p);
   return [[fam, ps.sort(cmpPath)]];
 }
-/* SLIP_TIE (serve.py slip_tie_on()): off; the device has no env, so it is a const here, like SLIP_K */
-export const SLIP_TIE = false;
+/* SLIP_TIE (serve.py slip_tie_on()): on (Tony, Oct 25); the device has no env, so it is a const here, like SLIP_K */
+export const SLIP_TIE = true;
 /* serve.py slip_hit after match() gave `fam` (app.js gradeLocal): a k=2 pair -> {error, hint, spot?} (hint = familyHint, both lines); with
    SLIP_TIE, 2+ families on the value -> {collide, spot?}; else null (the family hint as before). spot: WHERE, never what or a number */
 export function slipSpot(form, typed, skip, fam, tie = SLIP_TIE) {

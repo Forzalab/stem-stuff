@@ -210,9 +210,11 @@ test("slips: an ignore_slips value gets the nudge, never a family hint (parity w
   assert.equal(r.verdict, "wrong");
   assert.equal(r.error, undefined);
   assert.equal(r.hint, "QUACK. Nudge.");
-  assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_j" }), { answer: "0.5294" }).error, "drop");
+  assert.deepEqual(gradeLocal(xzp({ code: "PHYS_XZP_j" }), { answer: "0.5294" }).collide, ["drop", "power"]);   // SLIP_TIE on: 9/17 is drop and power
+  const off = load(undefined, (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;
+  assert.equal(off(xzp({ code: "PHYS_XZP_k" }), { answer: "0.5294" }).error, "drop");
 });
-test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair; SLIP_TIE collide); defaults are today's", () => {
+test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair, the default; SLIP_TIE collide); k=1 still has no pair", () => {
   const k2 = load((f, v, t, s) => slipMatch(f, v, t, s, 2)).gradeLocal, tie = load(undefined, (...a) => slipSpot(...a.slice(0, 4), true)).gradeLocal;
   const p = { type: "num", code: "T_k2", answer: "10-(3+2)", form: "10-(3+2)", nudge: "QUACK. Nudge." };   // test_serve.py test_slip_k2_pair_spot
   const r = k2(p, { answer: "-7" });
@@ -220,8 +222,13 @@ test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair; SLIP_TI
   const t = { type: "num", code: "T_tie", answer: "12/(100+200+300)", form: "12/(100+200+300)" };       // test_serve.py test_slip_tie_on_collide
   assert.deepEqual(tie(t, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: "QUACK. Put your answer back in. Does it work?", collide: ["sign", "drop"],
     spot: "QUACK. Your pieces are fine but one. Redo the bottom of the fraction." });
-  assert.deepEqual(gradeLocal({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: FAMILY_HINT.sign, error: "sign" });   // SLIP_TIE off
-  assert.deepEqual([gradeLocal({ ...p, code: "T_k20" }, { answer: "-7" }).spot, gradeLocal({ ...p, code: "T_k20" }, { answer: "9" }).error], [undefined, "distribute"]);   // SLIP_K 1
+  assert.deepEqual(gradeLocal({ ...t, code: "T_tied" }, { answer: "0.03" }), tie({ ...t, code: "T_tie1" }, { answer: "0.03" }));   // SLIP_TIE on: the default
+  const off = load(undefined, (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;
+  assert.deepEqual(off({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: FAMILY_HINT.sign, error: "sign" });   // SLIP_TIE off
+  assert.deepEqual([gradeLocal({ ...p, code: "T_k2d" }, { answer: "-7" }).spot, off({ ...p, code: "T_k2d" }, { answer: "9" }).error],
+    ["QUACK. Redo the term in brackets, then check your last step.", "distribute"]);   // default SLIP_K 2 (9: distribute = sign, off-tie names distribute)
+  const k1 = load((f, v, t, s) => slipMatch(f, v, t, s, 1), (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;   // k=1 + tie off: before #268
+  assert.deepEqual([k1({ ...p, code: "T_k20" }, { answer: "-7" }).spot, k1({ ...p, code: "T_k20" }, { answer: "9" }).error], [undefined, "distribute"]);   // k=1
 });
 test("slips: a multi part with form gets its slip", () => {
   const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };

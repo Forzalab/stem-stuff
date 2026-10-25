@@ -282,9 +282,9 @@ def sites(form):
     return _raw2(str(form))[2]
 
 
-# k=2 (Tony D1/D3, Oct 23): one inner slip + one whole-answer (outer) slip, never two of either; k=3 is not runtime. SLIP_K=1 (default)
-# = today exactly. A k=2 entry's family is "inner+outer" (e.g. "drop+sign"). OUTER: (family, forward on the inner value, undo on the typed
-# value -> candidate inner values), in FAMILIES order, the order _family yields them. Float math on both sides (slips.mjs OUTER).
+# k=2 (Tony D1/D3, Oct 23): one inner slip + one whole-answer (outer) slip, never two of either; k=3 is not runtime. SLIP_K=2 is the
+# runtime default (Tony, Oct 25); env SLIP_K=1 = k=1 only. A k=2 entry's family is "inner+outer" (e.g. "drop+sign"). OUTER: (family,
+# forward on the inner value, undo on the typed value -> candidate inner values), in FAMILIES order, the order _family yields them. Float math on both sides (slips.mjs OUTER).
 OUTER = (("sign", lambda v: -v, lambda y: [-y]),
          ("reciprocal", lambda v: 1 / v if v else None, lambda y: [1 / y] if y else []),
          ("power", lambda v: v * v, lambda y: [-math.sqrt(y), math.sqrt(y)] if y >= 0 else []),
@@ -296,7 +296,7 @@ OUTER = (("sign", lambda v: -v, lambda y: [-y]),
          ("units", lambda v: v * 1000, lambda y: [y / 1000]),
          ("units", lambda v: v / 1000, lambda y: [y * 1000]))
 OUTER_FAMS = tuple(dict.fromkeys(f for f, _, _ in OUTER))
-SLIP_K = int(os.environ.get("SLIP_K", "1"))
+SLIP_K = int(os.environ.get("SLIP_K", "2"))
 if SLIP_K not in (1, 2):
     raise ValueError(f"SLIP_K={SLIP_K}: only 1 or 2 (k=3 is not runtime, Tony D1)")
 
@@ -371,7 +371,6 @@ SPOT_COPY = {
     "region": "QUACK. Your pieces are fine but one. Redo {place}.",
     "finish": "QUACK. The pieces look right. Check your last step{what}.",
     "finish_what": ": {words}",
-    "or": " or ",
     "dual": "QUACK. Redo {place}, then check your last step.",
     "word": {"sign": "your sign", "units": "your units", "factor": "a factor of two", "power": "a square or square root",
              "reciprocal": "flipping it upside down"},
@@ -486,15 +485,16 @@ def place(e, path, ctx=True):
 def spot(e, cands):
     """(kind, lifted region path, line): kind "region" | "dual" | "finish" | None. cands: [(family, paths)] of the colliding families at
     one typed value; e: the parsed form. inner = every non-root path; whole = a candidate with ROOT among its paths; R = LCA(inner).
-    R != root: region (no whole) or dual; no inner: FINISH from the first two whole families' words; R = root with inner: None."""
+    R != root: region (no whole) or dual; no inner: FINISH, naming the whole family's word only when exactly one word is in play (2+: the
+    general "check your last step", no list); R = root with inner: None."""
     c = SPOT_COPY
     inner = [tuple(p) for _, ps in cands for p in ps if tuple(p) != ROOT]
     whole = [f for f, ps in cands if any(tuple(p) == ROOT for p in ps)]
     if not inner:
         if not whole:
             return None, ROOT, None
-        words = list(dict.fromkeys(c["word"][f.split("+")[-1]] for f in whole if f.split("+")[-1] in c["word"]))[:2]
-        what = c["finish_what"].format(words=c["or"].join(words)) if words else ""
+        words = list(dict.fromkeys(c["word"][f.split("+")[-1]] for f in whole if f.split("+")[-1] in c["word"]))
+        what = c["finish_what"].format(words=words[0]) if len(words) == 1 else ""
         return "finish", ROOT, c["finish"].format(what=what)
     r, name = place(e, _lca(inner))
     if name is None:

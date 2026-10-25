@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -33,7 +33,8 @@ test("match: the first family within tol (or to 3 s.f.), else null; a bad form o
   assert.equal(match("10-(1+2+4)", 15, 1e-6), "distribute");
   assert.notEqual(match("10-(1+2+4)", 13, 1e-6), "distribute");   // the minus reaches the first term only (Tony, Oct 23)
   assert.equal(match("10-(4+1)", 7, 1e-6), "distribute");          // written order: 10-4+1
-  assert.equal(match("10-(1+2+4)", 3.5, 1e-6), null);
+  assert.equal(match("10-(1+2+4)", 3.5, 1e-6, [], 1), null);          // no single slip gives 3.5 (k=1)
+  assert.equal(match("10-(1+2+4)", 3.5, 1e-6), "sign+factor");      // the default k=2: 10-(1-2+4) = 7 (sign), then halved
   assert.equal(match("1+", 1, 1e-6), null);
   assert.equal(match("2*3", NaN, 1e-6), null);
   assert.ok(close(0.6921, 0.6923, 1e-9) && !close(0.69, 0.6923, 1e-9) && close(1000.4, 1001, 1e-9));
@@ -117,9 +118,10 @@ test("close() parity with slips.py: ties round away from zero in both (tests/fix
 });
 
 /* k=2 (SLIP_K, Tony D1/D3): one inner slip + one whole-answer (outer) slip, family "inner+outer"; tests/test_slips.py K2 is the twin */
-test("k=2: SLIP_K is 1, so the default match is today's", () => {
-  assert.equal(SLIP_K, 1);
-  assert.equal(match("10-(3+2)", -7), null);
+test("k=2: SLIP_K is 2 (on by default), so the default match takes the pair; k=1 still gives none", () => {
+  assert.equal(SLIP_K, 2);
+  assert.equal(match("10-(3+2)", -7), "drop+sign");
+  assert.equal(match("10-(3+2)", -7, undefined, [], 1), null);
 });
 test("k=2 hand cases: a typed value only inner + outer explains", () => {
   for (const [form, typed, want] of [["10-(3+2)", -7, "drop+sign"], ["2*9.8*3", 120, "g+factor"], ["sqrt(9+16)", 49, "dream+power"], ["sqrt(9+16)", -7, "dream+sign"]]) {
@@ -139,8 +141,9 @@ test("k=2 spot: pairCands = slips.py pair_cands (the inner slip's place + ROOT),
     ["12/(100+200+300)", -0.03, "sign+sign", [[], [1, 0, 0]]]]) assert.deepEqual(pairCands(form, typed, fam), [[fam, want]], form);
   assert.equal(slipSpot("10-(3+2)", -7, [5], "drop+sign").spot, "QUACK. Redo the term in brackets, then check your last step.");
   assert.equal(slipSpot("sqrt(9+16)", -7, [5], "dream+sign").spot, "QUACK. The pieces look right. Check your last step: your sign.");
-  assert.equal(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign"), null);                          // SLIP_TIE off: no collide, the family hint
-  assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign", true).collide, ["sign", "drop"]);
+  assert.equal(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign", false), null);                   // SLIP_TIE off: no collide, the family hint
+  assert.equal(SLIP_TIE, true);                                                                       // on by default (Tony, Oct 25)
+  assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign").collide, ["sign", "drop"]);
 });
 test("k=2 hint: an inner+outer pair is the two family lines in that order, one QUACK. (serve.py family_hint)", () => {
   assert.equal(familyHint("drop+sign"), "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.");   // test_serve.py pins the same text
@@ -190,13 +193,20 @@ test("golden spots fixture: slips.mjs gives slips.py's candidates, paths, region
   assert.deepEqual(bad, []);
   assert.ok(n > 20, `${n} collisions`);
 });
+test("spot FINISH: 2+ words -> the general line, no list; 1 word -> named (Tony, Oct 25; test_slips.py twin)", () => {
+  for (const c of [[["sign", [[]]], ["units", [[]]]], [["power", [[]]], ["factor", [[]]], ["reciprocal", [[]]]], [["drop+sign", [[]]], ["factor", [[]]]]])
+    assert.deepEqual(spot(parse("1+1"), c), ["finish", ROOT, "QUACK. The pieces look right. Check your last step."]);
+  assert.equal(region([["sign", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign.");
+  assert.equal(region([["sign", [[]]], ["drop+sign", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign.");
+  assert.equal("or" in SPOT_COPY, false);
+});
 test("spot hand cases: the bottom of the fraction, FINISH on whole-answer slips, dual, and the root (plain nudge)", () => {
   const f = "12/(100+200+300)", c = cands(f, 0.03, [0.02]);
   assert.deepEqual(c, [["sign", [[1, 0, 0]]], ["drop", [[1, 0, 1]]]]);   // sign on the 100 = drop the 200: 12/400
   assert.equal(region(c, f), "QUACK. Your pieces are fine but one. Redo the bottom of the fraction.");
   assert.deepEqual(cands("1+1", 4), [["power", [ROOT]], ["factor", [ROOT]]]);
-  assert.equal(region(cands("1+1", 4), "1+1"), "QUACK. The pieces look right. Check your last step: a square or square root or a factor of two.");
-  assert.equal(region([["sign", [[]]], ["units", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step: your sign or your units.");
+  assert.equal(region(cands("1+1", 4), "1+1"), "QUACK. The pieces look right. Check your last step.");
+  assert.equal(region([["sign", [[]]], ["units", [[]]]], "1+1"), "QUACK. The pieces look right. Check your last step.");
   assert.equal(region(cands("8/2*(2+2)", 8), "8/2*(2+2)"), "QUACK. Redo what is in the brackets, then check your last step.");
   assert.equal(region(cands("10-2-(3+4)", 9), "10-2-(3+4)"), "QUACK. Your pieces are fine but one. Redo the term in brackets.");
   assert.equal(region(cands("(1+2)+3", 4), "(1+2)+3"), null);
