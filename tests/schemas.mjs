@@ -13,3 +13,4 @@ export function schema(name) {
 
 export const validator = name => new Ajv2020({ allErrors: true, strict: true, strictRequired: false, strictTypes: false }).compile(schema(name));
 export const bank = () => JSON.parse(readFileSync(new URL("problems.json", root), "utf8"));
+export const repairFaults = () => [];   // stub: the gate lands with SCHEMA.md "Repair ladder"
