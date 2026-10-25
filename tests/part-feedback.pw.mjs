@@ -65,7 +65,7 @@ try {
   await page.route("**/check", async r => {
     const res = await r.fetch(), j = await res.json();
     if (j.verdict === "wrong") Object.assign(j, { spot: SPOT, collide: ["sign", "drop"] });
-    await new Promise(z => setTimeout(z, 600)); await r.fulfill({ response: res, json: j });
+    await r.fulfill({ response: res, json: j });
   });
   const gate = ok => page.evaluate(ok => { window.stemJev.spot = () => ({ ok }); }, ok);
 
