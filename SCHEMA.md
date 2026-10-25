@@ -72,7 +72,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
-| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). | label + prompt + type only |
+| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). 2–4 boxes. A part may instead be `"type": "mc"` with the mc fields (`choices`, `correct`, `wrong`, `shuffle`, `pick`, `miss`, `fix`; `how` on pick all only), the same rules as a top-level `mc`; a multi with an mc part may have up to 26 parts, since each part is loaded as its own mc question (code + A, B, C..., `unfold`). | label + prompt + type only |
 | `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it), each box with its own submit arrow. Put the shared givens in `body` and each question in its part's `prompt`. A part without a `prompt` is just its "a)" and its box. Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
@@ -529,6 +529,23 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
     "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "tol_src": {"const": "auto"}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
+    "mc_pick": {"description": "an mc's pick rules (a problem, or a multi's mc part): pick all needs miss and a correct list; how only on pick all", "allOf": [
+        {
+          "if": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]},
+          "then": {"required": ["miss"], "properties": {"type": {"const": "mc"}, "correct": {"type": "array"}}},
+          "else": {"properties": {"miss": false, "fix": false, "correct": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
+          "then": {"properties": {"how": false}}
+        }]},
+    "mcpart": {"type": "object", "required": ["type", "choices", "correct", "wrong"], "additionalProperties": false,
+      "description": "a multi part that is a choice: loaded as its own mc question, code + A, B, C... (codes.mjs / serve.py unfold); its fields are the mc problem's",
+      "properties": {"label": {"$ref": "#/$defs/part/properties/label"}, "prompt": {"$ref": "#/$defs/part/properties/prompt"}, "type": {"const": "mc"},
+        "how": {"$ref": "#/$defs/problem/properties/how"}, "choices": {"$ref": "#/$defs/problem/properties/choices"}, "shuffle": {"$ref": "#/$defs/problem/properties/shuffle"},
+        "pick": {"$ref": "#/$defs/problem/properties/pick"}, "correct": {"$ref": "#/$defs/problem/properties/correct"}, "fix": {"$ref": "#/$defs/problem/properties/fix"},
+        "miss": {"$ref": "#/$defs/problem/properties/miss"}, "wrong": {"$ref": "#/$defs/problem/properties/wrong"}},
+      "allOf": [{"$ref": "#/$defs/mc_pick"}]},
     "problem": {
       "type": "object",
       "required": [
@@ -664,11 +681,13 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "parts": {
           "type": "array",
           "minItems": 2,
-          "maxItems": 4,
+          "maxItems": 26,
           "items": {
-            "$ref": "#/$defs/part"
+            "if": {"properties": {"type": {"const": "mc"}}, "required": ["type"]},
+            "then": {"$ref": "#/$defs/mcpart"},
+            "else": {"$ref": "#/$defs/part"}
           },
-          "description": "multi: the answer boxes, in order"
+          "description": "multi: the answer boxes, in order (2-4; up to 26 when a part is an mc: unfold makes one mc question per part)"
         },
         "form": {
           "type": "string",
@@ -791,14 +810,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             }
           }
         },
+        {"$ref": "#/$defs/mc_pick"},
         {
-          "if": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]},
-          "then": {"required": ["miss"], "properties": {"type": {"const": "mc"}, "correct": {"type": "array"}}},
-          "else": {"properties": {"miss": false, "fix": false, "correct": {"type": "string"}}}
-        },
-        {
-          "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
-          "then": {"properties": {"how": false}}
+          "if": {"not": {"properties": {"parts": {"contains": {"properties": {"type": {"const": "mc"}}, "required": ["type"]}}}}},
+          "then": {"properties": {"parts": {"maxItems": 4}}}
         },
         {
           "if": {"not": {"properties": {"type": {"const": "mc"}}}},
