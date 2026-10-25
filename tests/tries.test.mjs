@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { match as slipMatch, FAMILY_HINT } from "../slips.mjs";
+import { match as slipMatch, slipSpot, FAMILY_HINT } from "../slips.mjs";
 const { evaluate, compile } = mathjs;
 globalThis.math = mathjs;                                 // slips.mjs parses with the global math.js, as in the browser
 
@@ -14,7 +14,8 @@ const code = `const MAX_TRIES = 2; const localState = new Map(); let MODE = "sug
 ${cut("/* mirror of serve.py grade()", "/* ================= entry box")}
 ${cut("function shown(p) {", "/* One row of pills")}
 return { maxTries, gradeLocal, shown, tolOf, setMode: m => { MODE = m; } };`;
-const { maxTries, gradeLocal, shown, tolOf, setMode } = new Function("math", "slipMatch", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, slipMatch, FAMILY_HINT);
+const load = (match = slipMatch, spot = slipSpot) => new Function("math", "slipMatch", "slipSpot", "FAMILY_HINT", code)({ compile, evaluate, number: Number }, match, spot, FAMILY_HINT);
+const { maxTries, gradeLocal, shown, tolOf, setMode } = load();
 
 const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Array.from({ length: n }, (_, i) => ({ id: "abcdefgh"[i], md: "x" })), correct: "a",
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
@@ -210,6 +211,17 @@ test("slips: an ignore_slips value gets the nudge, never a family hint (parity w
   assert.equal(r.error, undefined);
   assert.equal(r.hint, "QUACK. Nudge.");
   assert.equal(gradeLocal(xzp({ code: "PHYS_XZP_j" }), { answer: "0.5294" }).error, "drop");
+});
+test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair; SLIP_TIE collide); defaults are today's", () => {
+  const k2 = load((f, v, t, s) => slipMatch(f, v, t, s, 2)).gradeLocal, tie = load(undefined, (...a) => slipSpot(...a.slice(0, 4), true)).gradeLocal;
+  const p = { type: "num", code: "T_k2", answer: "10-(3+2)", form: "10-(3+2)", nudge: "QUACK. Nudge." };   // test_serve.py test_slip_k2_pair_spot
+  const r = k2(p, { answer: "-7" });
+  assert.deepEqual([r.hint, r.error, r.spot, r.collide], ["QUACK. Nudge.", "drop+sign", "QUACK. Redo the term in brackets, then check your last step.", undefined]);
+  const t = { type: "num", code: "T_tie", answer: "12/(100+200+300)", form: "12/(100+200+300)" };       // test_serve.py test_slip_tie_on_collide
+  assert.deepEqual(tie(t, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: "QUACK. Put your answer back in. Does it work?", collide: ["sign", "drop"],
+    spot: "QUACK. Your pieces are fine but one. Redo the bottom of the fraction." });
+  assert.deepEqual(gradeLocal({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: FAMILY_HINT.sign, error: "sign" });   // SLIP_TIE off
+  assert.deepEqual([gradeLocal({ ...p, code: "T_k20" }, { answer: "-7" }).spot, gradeLocal({ ...p, code: "T_k20" }, { answer: "9" }).error], [undefined, "distribute"]);   // SLIP_K 1
 });
 test("slips: a multi part with form gets its slip", () => {
   const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };

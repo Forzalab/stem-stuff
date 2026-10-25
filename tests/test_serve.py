@@ -509,6 +509,18 @@ class Slips(unittest.TestCase):
             r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
             self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
 
+    def test_slip_k2_pair_spot(self):                                          # SLIP_K=2: a pair reaches the spot path (k=1: no slip, as today)
+        p = {"code": "PHYS_K2P", "title": "t", "type": "num", "body": "b", "answer": "10-(3+2)", "form": "10-(3+2)"}   # -7 = -(10-3): drop the 2, then the sign
+        line = "QUACK. Redo the term in brackets, then check your last step."
+        with unittest.mock.patch.object(serve.slips, "SLIP_K", 1):
+            self.assertIsNone(serve.slip_hit(p, -7.0))
+        with unittest.mock.patch.object(serve.slips, "SLIP_K", 2):
+            self.assertEqual(serve.slip_hit(p, -7.0), {"error": "drop+sign", "spot": line})
+            self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.FAMILY_HINT["distribute"]})   # a k=1 slip wins
+            self.assertIsNone(serve.slip_hit(dict(p, ignore_slips=["-7"]), -7.0))                                        # ignore_slips holds at k=2
+            r = serve.grade(p, "k2-pair", {"answer": "-7"})
+            self.assertEqual((r["hint"], r["error"], r["spot"]), (serve.DEFAULT_NUDGE, "drop+sign", line))           # no family line for a pair
+
     def test_same_slip_is_skipped(self):
         self.assertIsNone(serve.slip_hit({"type": "num", "answer": "0", "form": "2-2"}, 0.0))               # -(2-2) is the answer itself
         self.assertNotIn(9 / 21, [v for _, v in serve._slip_table(self.FORM, 9 / 21, ())])
