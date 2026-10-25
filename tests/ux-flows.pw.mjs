@@ -130,7 +130,23 @@ const barRevealed = async page => {
   await page.waitForFunction(() => document.documentElement.classList.contains("bar-open") && document.querySelector("#barTab").getAttribute("aria-expanded") === "true", null, { timeout: 3000 });
   await settled(page, "#dock"); await frames(page);
 };
-const dwell = page => page.waitForFunction(() => Date.now() - window.__drill.state.start > 2100, null, { timeout: 6000 });
+/* the 2 s anti-spam gate (nav.js SPAM_MS = 2000): a pick counts once Date.now() - the question's start > 2100.
+   real-time row: wait it out. fast-time row (time: "fast", the fixture installed page.clock flowing before load): jump it. The clock is
+   paused through the jump (pauseAt, fastForward, resume): a flowing clock's real-time sync can set a fastForward back (PW 1.56,
+   bug class fake-clock-timing-flake; cluck-rise.pw.mjs). Never paused before load: that would stall the 300 ms splash and every app timer.
+   A fast-time row whose page has no clock (or a jump that did not move the app's time) times out loudly in 1 s, well short of the gate. */
+const gateDone = () => Date.now() - window.__drill.state.start > 2100;
+async function dwell(page) {
+  if (page.__time !== "fast") return page.waitForFunction(gateDone, null, { timeout: 6000 });
+  if (await page.evaluate(() => !!globalThis.__pwClock)) {
+    const now = await page.evaluate(() => Date.now());
+    await page.clock.pauseAt(now + 500);   // a little ahead: pauseAt into the past throws, and the flowing clock moves between the two calls
+    await page.clock.fastForward(2100);
+    await page.clock.resume();
+  }
+  await page.waitForFunction(gateDone, null, { timeout: 1000 })
+    .catch(e => { throw new Error(`fast-time dwell: the 2.1 s gate never passed (a page.clock installed before load? ${e.message.split("\n")[0]})`); });
+}
 /* one graded mc pick by ids; returns the verdict */
 async function pick(page, ids, all) {
   const n = await nTries(page);
@@ -177,9 +193,18 @@ async function cluckOpen(page, w) {
 }
 
 /* ---------- the flows ---------- */
-// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly, padPhone (393 runs in diet: phone sugar has no pad, Tony Oct 14) } }
+// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly, padPhone (393 runs in diet: phone sugar has no pad, Tony Oct 14),
+//   time: "real" (default) | "fast" } }
+// time (CI plan PR 3, per-row time tag, CEO-arch Grill 5a): "fast" = the fixture installs page.clock (flowing) before the row's first load and
+// dwell() jumps the 2 s gate; "real" = the real clock. Rows 9 (slow-load-retry) and 43 (offline-sw) are real-time by design: they wait on the
+// app's real network timeouts and the service worker.
 const F = [];
-const flow = (n, slug, run, opts = {}) => F.push({ n, slug, run, opts });
+const TIMES = ["real", "fast"];
+const flow = (n, slug, run, opts = {}) => {
+  const time = opts.time ?? "real";
+  if (!TIMES.includes(time)) throw new Error(`row ${n} ${slug}: time "${time}" (want ${TIMES.join(" | ")})`);
+  F.push({ n, slug, run, opts: { ...opts, time } });
+};
 
 flow(43, "offline-sw", async (page, w, ctx) => {
   const failed = []; page.on("requestfailed", r => { const u = new URL(r.url()); if (u.origin === new URL(BASE).origin) failed.push(u.pathname); });
@@ -216,7 +241,7 @@ flow(43, "offline-sw", async (page, w, ctx) => {
   await page.goto(`${BASE}/#${C.single}`).catch(() => {});
   await opened(page, C.single).catch(() => {});
   return `${need.length} shell urls cached (incl. privacy.html, telemetry.js); offline reload renders the question, privacy.html opens offline, no shell asset fails${dyn.length ? `; network-only (not cached by design): ${dyn.join(",")}` : ""}`;
-}, { sw: true, noFinalShot: true });
+}, { sw: true, noFinalShot: true, time: "real" });   // real-time by design: the worker, the network and offline
 
 flow(20, "cluck-explain", async (page, w) => {
   await stubCluck(page);
@@ -353,7 +378,7 @@ flow(28, "retry-tag", async (page, w) => {
   await page.evaluate(() => localStorage.clear()); await page.goto("about:blank");   // a real reload: same-hash goto would keep the old queue
   const b = await walk28(page, 4);
   return `${a} | streak sub-check: ${b}`;
-});
+}, { time: "fast" });   // 26 dwells of 2.1 s each, jumped (CEO-arch idea 12)
 async function walk28(page, seed) {
   await go(page, C.bank);
   await page.evaluate(() => { window.__toasts = []; new MutationObserver(() => { for (const t of document.querySelectorAll(".fx-toast-t")) if (!t.__seen) { t.__seen = 1; window.__toasts.push(t.textContent); } }).observe(document.body, { childList: true, subtree: true }); });
@@ -584,7 +609,7 @@ flow(9, "slow-load-retry", async (page, w) => {
   await page.screenshot({ path: join(OUT, `09-slow-load-retry-${w}-chromium.png`) });
   stall = false; await page.click("#retryLoad"); await opened(page, C.single);
   return "'Too slow. Tap Try again.' + retry button (shot), retry opens the question";
-}, { noFinalShot: true });
+}, { noFinalShot: true, time: "real" });   // real-time by design: the app's own load timeout ("Too slow") on a stalled fetch
 
 flow(10, "change-code", async (page, w) => {
   await go(page, C.single);
@@ -903,6 +928,8 @@ try {
     if (f.opts.padPhone && phone) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     if (f.opts.gpc) await ctx.addInitScript(() => { try { Object.defineProperty(navigator, "globalPrivacyControl", { value: true }); } catch { /* */ } });
     const page = await ctx.newPage();
+    page.__time = f.opts.time;
+    if (f.opts.time === "fast") await page.clock.install();   // fast-time fixture: flowing from before the first load; dwell() pauses only around its jumps
     const errs = []; page.on("pageerror", e => errs.push(String(e).slice(0, 120)));
     const png = join(OUT, `${String(f.n).padStart(2, "0")}-${f.slug}-${w}-chromium.png`);
     let st = "ok", detail = "";
