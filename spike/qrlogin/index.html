@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Cluck login (spike)</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#f4efe6;margin:0;padding:16px;color:#2b2118;text-align:center}
+canvas{max-width:100%;height:auto;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,.15)}
+button,label.btn{display:inline-block;margin:10px 6px;padding:12px 18px;border:0;border-radius:12px;background:#2b2118;color:#fff;font:600 16px system-ui;cursor:pointer}
+#out{min-height:1.5em;font-weight:600} a{color:#2b2118}
+</style></head><body>
+<h1>My Cluck</h1>
+<p><canvas id="card"></canvas></p>
+<p><button id="save">Save my Cluck</button>
+<label class="btn">Log in with my Cluck<input id="file" type="file" accept="image/*" hidden></label>
+<button id="new">New Cluck</button></p>
+<p id="dl"></p><p id="out"></p>
+<script src="../../vendor/qrcode-generator/qrcode.js"></script>
+<script src="../../vendor/jsqr/jsQR.js"></script>
+<script src="qrlogin.js"></script>
+<script>
+var Q = QRLogin, card = document.getElementById('card'), out = document.getElementById('out');
+var token;
+function fresh() { token = Q.makeToken(); window.__token = token; Q.drawCard(card, token); }
+fresh();
+document.getElementById('new').onclick = fresh;
+document.getElementById('save').onclick = async function () {
+  var blob = await Q.toBlob(card, 'image/png');
+  var file = new File([blob], 'my-cluck.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'My Cluck' }); out.textContent = 'Saved'; return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  var u = URL.createObjectURL(blob);
+  document.getElementById('dl').innerHTML = '<a download="my-cluck.png" href="' + u + '">Download my-cluck.png</a>';
+};
+var inp = document.getElementById('file');
+inp.onchange = async function () {
+  var f = inp.files && inp.files[0]; if (!f) return;
+  try {
+    var t = await Q.decodeBlob(f);
+    out.textContent = t ? 'token ok: ' + t.slice(0, 6) : 'no Cluck found in that image';
+    window.__decoded = t;
+  } catch (e) { out.textContent = 'could not read image'; window.__decoded = null; }
+  inp.value = ''; // image never sent anywhere; drop it
+};
+</script></body></html>
