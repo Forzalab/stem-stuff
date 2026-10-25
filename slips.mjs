@@ -23,6 +23,8 @@ export const FAMILY_HINT = {
   units: "QUACK. Check your units. A power of ten slipped.",
   g: "QUACK. Check the value you used for g.",
 };
+/* FAMILY_HINT's line; a k=2 "inner+outer" pair (pairs) gets both lines in that order under one QUACK. (serve.py family_hint) */
+export const familyHint = fam => fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" ");
 
 export const ZERO = 1e-9;
 export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol
@@ -367,13 +369,13 @@ export function pairCands(form, typed, fam, tol = SLIP_WIN) {
 }
 /* SLIP_TIE (serve.py slip_tie_on()): off; the device has no env, so it is a const here, like SLIP_K */
 export const SLIP_TIE = false;
-/* serve.py slip_hit after match() gave `fam` (app.js gradeLocal): a k=2 pair -> {error, spot?} (no family line: the plain nudge); with
+/* serve.py slip_hit after match() gave `fam` (app.js gradeLocal): a k=2 pair -> {error, hint, spot?} (hint = familyHint, both lines); with
    SLIP_TIE, 2+ families on the value -> {collide, spot?}; else null (the family hint as before). spot: WHERE, never what or a number */
 export function slipSpot(form, typed, skip, fam, tie = SLIP_TIE) {
   try {
     const pair = fam.includes("+"), c = pair ? pairCands(form, typed, fam) : tie ? cands(form, typed, skip) : [];
     if (!pair && c.length < 2) return null;
-    const line = region(c, form), o = pair ? { error: fam } : { collide: c.map(([f]) => f) };
+    const line = region(c, form), o = pair ? { error: fam, hint: familyHint(fam) } : { collide: c.map(([f]) => f) };
     return line ? { ...o, spot: line } : o;
   } catch { return null; }                                // never let the spot line break a graded try
 }

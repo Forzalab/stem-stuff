@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -141,6 +141,14 @@ test("k=2 spot: pairCands = slips.py pair_cands (the inner slip's place + ROOT),
   assert.equal(slipSpot("sqrt(9+16)", -7, [5], "dream+sign").spot, "QUACK. The pieces look right. Check your last step: your sign.");
   assert.equal(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign"), null);                          // SLIP_TIE off: no collide, the family hint
   assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign", true).collide, ["sign", "drop"]);
+});
+test("k=2 hint: an inner+outer pair is the two family lines in that order, one QUACK. (serve.py family_hint)", () => {
+  assert.equal(familyHint("drop+sign"), "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.");   // test_serve.py pins the same text
+  assert.equal(familyHint("sign"), FAMILY_HINT.sign);
+  for (const form of ["10-(3+2)", "2*9.8*3", "sqrt(9+16)"]) for (const [fam] of pairs(form)) {
+    const h = familyHint(fam);
+    assert.ok(h.startsWith("QUACK. ") && h.split("QUACK").length === 2 && !/\d/.test(h), fam);
+  }
 });
 const K2 = JSON.parse(readFileSync(new URL("fixtures/slips-golden-k2.json", import.meta.url), "utf8"));
 test("golden k=2 fixture: slips.mjs gives slips.py's inner+outer entries on every bank form", () => {
