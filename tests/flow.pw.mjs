@@ -199,7 +199,13 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await touch("touchEnd"); await page.waitForTimeout(400);
     const r2 = +(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3);
     assert.ok([0, 0.333, 0.5].includes(r2), `snapped to an anchor (${r2})`);
-    await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
+    const PROBE = () => { const e = document.querySelector("#mtExp"), b = e.getBoundingClientRect(), x = b.x + b.width / 2, y = b.y + b.height / 2, h = document.elementFromPoint(x, y);
+      return { t: Math.round(performance.now()), box: [b.x, b.y, b.width, b.height].map(Math.round), hit: h ? (h.id || h.tagName) + (e.contains(h) ? "(in)" : "") : null, pe: getComputedStyle(e).pointerEvents,
+        anims: document.getAnimations().map(a => (a.effect && a.effect.pseudoElement || a.effect?.target?.id || "?") + ":" + a.playState).join(","), ev: window.__ev.join(",") }; };
+    await page.evaluate(() => { window.__ev = []; for (const t of ["touchstart", "pointerdown", "click"]) document.addEventListener(t, e => window.__ev.push(t + ">" + (e.target.id || e.target.tagName) + "@" + Math.round(performance.now())), true); });
+    const pre = await page.evaluate(PROBE);
+    await page.locator("#mtExp").tap(); const post = await page.evaluate(PROBE); await page.waitForTimeout(300);
+    if (process.env.PROBE || await has("mt")) console.log("PROBE", W, JSON.stringify({ pre, post, after: await page.evaluate(PROBE) }));
     assert.equal(await has("mt"), false, "collapse closes");
   });
 
