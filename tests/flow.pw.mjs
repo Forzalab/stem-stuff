@@ -203,17 +203,15 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await touch("touchStart", y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", y0 + i * (H * 0.3) / 8);
     assert.ok(await has("mt-drag"), "follows the finger");
+    /* the finger rests before it lifts: a lift while still moving is a flick, Chrome starts a touchscreen fling, and the next tap (the
+       #mtExp one) only stops that fling: no click (todo 55 cause 2). The fling outlives a short gap, longer under CPU load. A rest of
+       >= 40 ms reads as velocity 0 (no fling); load can only make it longer. */
+    await touch("touchMove", y0 + H * 0.3); await page.waitForTimeout(150);
     n0 = await vtN();
     await touch("touchEnd"); await vtDone(n0);
     const r2 = +(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3);
     assert.ok([0, 0.333, 0.5].includes(r2), `snapped to an anchor (${r2})`);
-    await page.evaluate(() => { window.__ev = []; for (const t of ["touchstart", "touchend", "pointerdown", "pointerup", "pointercancel", "contextmenu", "click"]) document.addEventListener(t, e => window.__ev.push(t + ">" + (e.target.id || e.target.tagName) + "@" + Math.round(performance.now())), true); });
-    const P = () => page.evaluate(() => { const e = document.querySelector("#mtExp"), b = e.getBoundingClientRect(), h = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
-      return { t: Math.round(performance.now()), box: [b.x, b.y, b.width, b.height].map(Math.round), hit: h && (h.id || h.tagName) + (e.contains(h) ? "(in)" : ""), vt: window.__vt, vtN: window.__vtN,
-        anims: document.getAnimations().filter(a => a.playState === "running").map(a => a.effect?.pseudoElement || a.effect?.target?.id || a.effect?.target?.tagName).join(","), ev: window.__ev.join(","), cls: document.documentElement.className }; });
-    const pre = await P();
     await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
-    if (await has("mt")) console.log("PROBE", JSON.stringify({ pre, after: await P() }));
     assert.equal(await has("mt"), false, "collapse closes");
   });
 
