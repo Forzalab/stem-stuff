@@ -186,7 +186,14 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await openPad();
     const look = await page.evaluate(() => { const p = getComputedStyle(document.querySelector("#sash"), "::before"); return [p.width, p.height]; });
     assert.deepEqual(look, ["32px", "3px"], "thin bar");
-    await page.locator("#sash").tap(); await page.waitForTimeout(400);
+    /* a snap (setRatio) runs in a view transition: while it runs, the ::view-transition overlay takes every touch (it hit-tests as <html>),
+       so the next touch must wait until it is over. Under CPU load it outlives a fixed sleep (todo 55: the #mtExp tap / the drag never landed). */
+    await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0; window.__vtN = 0;
+      document.startViewTransition = cb => { const t = st(cb); window.__vt++; window.__vtN++; t.finished.finally(() => window.__vt--); return t; }; });
+    const vtN = () => page.evaluate(() => window.__vtN);   // the handler can run after the input is acked: wait for its transition to start, then to end
+    const vtDone = n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n);
+    let n0 = await vtN();
+    await page.locator("#sash").tap(); await vtDone(n0);
     assert.equal(await has("mt-fit"), false, "a tap ends the hug");
     const r = await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"));
     assert.ok([0, 0.333, 0.5].includes(+r.toFixed(3)), `anchor ${r}`);
@@ -196,7 +203,12 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await touch("touchStart", y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", y0 + i * (H * 0.3) / 8);
     assert.ok(await has("mt-drag"), "follows the finger");
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    /* the finger rests before it lifts: a lift while still moving is a flick, Chrome starts a touchscreen fling, and the next tap (the
+       #mtExp one) only stops that fling: no click (todo 55 cause 2). The fling outlives a short gap, longer under CPU load. A rest of
+       >= 40 ms reads as velocity 0 (no fling); load can only make it longer. */
+    await touch("touchMove", y0 + H * 0.3); await page.waitForTimeout(150);
+    n0 = await vtN();
+    await touch("touchEnd"); await vtDone(n0);
     const r2 = +(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3);
     assert.ok([0, 0.333, 0.5].includes(r2), `snapped to an anchor (${r2})`);
     await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
