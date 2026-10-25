@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
   queue: ${{ github.event_name == 'pull_request' && 'single' || 'max' }}
 env:
-  BLOCKS: 5   # runners for the .pw specs (GitHub Free: 20 jobs at once)
-  LANES: 2    # run-all.sh processes per runner. 3 lanes made flow.pw drop a touch 1 in 4 runs (Tony: a new flake → 2); 2 lanes cost ~nothing: ux-flows sets the floor
+  BLOCKS: 4   # runners for the .pw specs (GitHub Free: 20 jobs at once)
+  LANES: 3    # run-all.sh processes per runner. 3 lanes once made flow.pw drop a touch 1 in 4 runs (todo 55, fixed in #276), so back to 3: 4 x 3 = 12 lanes on 4 runners
 jobs:
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
     runs-on: ubuntu-latest
