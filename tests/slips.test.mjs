@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -141,8 +141,9 @@ test("k=2 spot: pairCands = slips.py pair_cands (the inner slip's place + ROOT),
     ["12/(100+200+300)", -0.03, "sign+sign", [[], [1, 0, 0]]]]) assert.deepEqual(pairCands(form, typed, fam), [[fam, want]], form);
   assert.equal(slipSpot("10-(3+2)", -7, [5], "drop+sign").spot, "QUACK. Redo the term in brackets, then check your last step.");
   assert.equal(slipSpot("sqrt(9+16)", -7, [5], "dream+sign").spot, "QUACK. The pieces look right. Check your last step: your sign.");
-  assert.equal(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign"), null);                          // SLIP_TIE off: no collide, the family hint
-  assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign", true).collide, ["sign", "drop"]);
+  assert.equal(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign", false), null);                   // SLIP_TIE off: no collide, the family hint
+  assert.equal(SLIP_TIE, true);                                                                       // on by default (Tony, Oct 25)
+  assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign").collide, ["sign", "drop"]);
 });
 test("k=2 hint: an inner+outer pair is the two family lines in that order, one QUACK. (serve.py family_hint)", () => {
   assert.equal(familyHint("drop+sign"), "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.");   // test_serve.py pins the same text

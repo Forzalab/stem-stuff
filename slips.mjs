@@ -367,8 +367,8 @@ export function pairCands(form, typed, fam, tol = SLIP_WIN) {
   for (const [v, pp] of sites(form).find(([f]) => f === fi)[1]) if (us.some(u => close(u, v, tol))) for (const p of pp) if (!ps.some(q => cmpPath(q, p) === 0)) ps.push(p);
   return [[fam, ps.sort(cmpPath)]];
 }
-/* SLIP_TIE (serve.py slip_tie_on()): off; the device has no env, so it is a const here, like SLIP_K */
-export const SLIP_TIE = false;
+/* SLIP_TIE (serve.py slip_tie_on()): on (Tony, Oct 25); the device has no env, so it is a const here, like SLIP_K */
+export const SLIP_TIE = true;
 /* serve.py slip_hit after match() gave `fam` (app.js gradeLocal): a k=2 pair -> {error, hint, spot?} (hint = familyHint, both lines); with
    SLIP_TIE, 2+ families on the value -> {collide, spot?}; else null (the family hint as before). spot: WHERE, never what or a number */
 export function slipSpot(form, typed, skip, fam, tie = SLIP_TIE) {

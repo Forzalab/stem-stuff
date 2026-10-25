@@ -734,8 +734,9 @@ def slip_hit(u, sig):
 
 
 def slip_tie_on():
-    """SLIP_TIE: default off; "1" = a value on 2+ slip families gets the plain nudge + collide (FAMILIES order), not the first family's hint"""
-    return os.environ.get("SLIP_TIE", "").strip() == "1"
+    """SLIP_TIE: default on (Tony, Oct 25): a value on 2+ slip families gets the plain nudge + collide (FAMILIES order), not the first
+    family's hint; "0" = off (the first family's hint, as before SLIP_TIE)"""
+    return os.environ.get("SLIP_TIE", "1").strip() != "0"
 
 
 def _slip_spot(form, ans, ignore, sig, tie):

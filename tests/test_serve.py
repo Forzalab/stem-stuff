@@ -185,7 +185,10 @@ class Grade(unittest.TestCase):
 
     def test_slip_window_d2(self):                                              # Tony D2: slips use SLIP_WIN (0.5% or 3 s.f.), not tol_of
         u = {"type": "num", "answer": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "form": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "tol": 1e-3}
-        self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off
+        with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):                                   # 0.532 also sits on power: the tie is not this test
+            self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off
+        with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):                                   # SLIP_TIE on (the default): both, in the window
+            self.assertEqual(serve.slip_hit(u, 0.532)["collide"], ["drop", "power"])
         self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
 
     def test_off_by_one_wrong(self):                                            # problems.json carries the wiggle test's tol (tools/tol.py --write)
@@ -481,21 +484,22 @@ class Slips(unittest.TestCase):
             return [{k: v for k, v in serve.grade(serve.view(p, mode), f"{sid}-{mode}-{p['code']}", {**body, "answer": "0.03"}, reveal=rv).items() if k != "gen"}
                     for p, body in ((self.TIE, {}), (self.TIE_MULTI, {"part": 0})) for mode, rv in (("diet", False), ("sugar", True))]
 
-    def test_slip_tie_off_is_today(self):                                      # flag off (unset / 0 / anything but "1"): byte-identical to before SLIP_TIE
+    def test_slip_tie_off_is_old(self):                                        # SLIP_TIE=0: byte-identical to before SLIP_TIE
         hint = serve.FAMILY_HINT["sign"]                                        # FAMILIES order picks sign
         today = [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign"}] * 2 + [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign", "part": 0}] * 2
-        for i, env in enumerate(({}, {"SLIP_TIE": "0"}, {"SLIP_TIE": ""}, {"SLIP_TIE": "true"}, {"SLIP_TIE": "on"})):
+        for i, env in enumerate(({"SLIP_TIE": "0"}, {"SLIP_TIE": " 0 "})):
             got = self.tie_grade(env, f"tie-off{i}")
             self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in today], env)
             self.assertFalse(any("spot" in r or "collide" in r for r in got), env)                 # W-SPOT: no spot line with the flag off
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):
             self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})
 
-    def test_slip_tie_on_collide(self):                                        # flag on + 2 families: the plain nudge, no error, collide in FAMILIES order
-        got = self.tie_grade({"SLIP_TIE": "1"}, "tie-on")
+    def test_slip_tie_on_collide(self):                                        # flag on (the default: unset / "" / "1") + 2 families: the plain nudge, no error, collide
         base = {"verdict": "wrong", "triesLeft": 1, "hint": serve.DEFAULT_NUDGE, "collide": ["sign", "drop"],
                 "spot": "QUACK. Your pieces are fine but one. Redo the bottom of the fraction."}          # W-SPOT: sign on the 100 = drop the 200, both in the bottom
-        self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in [base, base, {**base, "part": 0}, {**base, "part": 0}]])
+        for i, env in enumerate(({}, {"SLIP_TIE": ""}, {"SLIP_TIE": "1"})):
+            got = self.tie_grade(env, f"tie-on{i}")
+            self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in [base, base, {**base, "part": 0}, {**base, "part": 0}]], env)
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):
             self.assertEqual(serve.grade(dict(self.TIE, nudge="QUACK. Own nudge."), "tie-nudge", {"answer": "0.03"})["hint"], "QUACK. Own nudge.")   # the item's own nudge, as the no-family path
             self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"collide": ["drop", "factor"],                       # 12/300 (drop 100) = 2*0.02 (factor)
@@ -517,7 +521,10 @@ class Slips(unittest.TestCase):
             self.assertIsNone(serve.slip_hit(p, -7.0))
         with unittest.mock.patch.object(serve.slips, "SLIP_K", 2):
             self.assertEqual(serve.slip_hit(p, -7.0), {"error": "drop+sign", "hint": serve.family_hint("drop+sign"), "spot": line})
-            self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.FAMILY_HINT["distribute"]})   # a k=1 slip wins
+            with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):
+                self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.FAMILY_HINT["distribute"]})   # a k=1 slip wins
+            with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):
+                self.assertEqual(serve.slip_hit(p, 9.0)["collide"], ["distribute", "sign"])                               # k=1 tie: still no pair
             self.assertIsNone(serve.slip_hit(dict(p, ignore_slips=["-7"]), -7.0))                                        # ignore_slips holds at k=2
             r = serve.grade(p, "k2-pair", {"answer": "-7"})
             self.assertEqual((r["hint"], r["error"], r["spot"]), (serve.family_hint("drop+sign"), "drop+sign", line))   # a pair: both family lines
