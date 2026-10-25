@@ -5,7 +5,7 @@
 #   live  = `vercel deploy --prod` → the public site
 # It deploys origin/main (never your working tree) plus the exam banks, which are not on GitHub. Banks, per file name, first hit
 # wins: [banks-dir] > the brain repo (projects/*/_files/*-bank/BANK_*.json; if one name sits at several brain paths, the one
-# with the newest commit) > banks/*.json in this checkout (only banks the brain does not have, e.g. BANK_PSY6). One line says where each bank came from: `banks: BANK_X(brain) ...`.
+# with the newest commit; a clone's BANK_*.json elsewhere gets a "not shipped" warning) > banks/*.json in this checkout (only banks the brain does not have, e.g. BANK_PSY6). One line says where each bank came from: `banks: BANK_X(brain) ...`.
 # Brain: a local clone if there is one ($BRAIN_DIR, ~/brain, /home/claude/brain; pulled, best effort). Else the bank hatch,
 # tools/brain_banks.py: GitLab's API lists and fetches only the BANK_*.json files with $BRAIN_TOKEN (read_api; see .env.example).
 # No clone: the brain is heavy and the phone has none. A hatch error (bad token, network, a file that is not a bank) stops the
@@ -96,6 +96,9 @@ if [ -z "$NOBRAIN" ]; then
       t="$(git -C "$BRAIN" log -1 --format=%ct -- "${f#"$BRAIN"/}" 2>/dev/null || true)"
       add 1 "${t:-0}" brain "$f"
     done
+    # a BANK_*.json anywhere else in the clone never ships: one warning line each (builder copies like px2/BANK_P2X.json are expected)
+    (cd "$BRAIN" && find . -name .git -prune -o -name 'BANK_*.json' -print) | sed 's|^\./||' | LC_ALL=C sort |
+      awk '!/^projects\/[^\/]+\/_files\/[^\/]+-bank\/BANK_[^\/]*\.json$/ { print "ship: brain: " $0 " is not in a projects/*/_files/*-bank/ folder, not shipped" }' >&2
   elif [ -n "${BRAIN_TOKEN:+x}" ]; then
     BTMP="$(mktemp -d)"; rc=0
     HATCH="$(python3 "$ROOT/tools/brain_banks.py" "$BTMP")" || rc=$?
