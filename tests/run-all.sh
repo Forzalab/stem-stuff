@@ -151,12 +151,14 @@ SRV=""; trap '[ -n "$SRV" ] && kill "$SRV" 2>/dev/null' EXIT
 fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
+# a failed check line: "FAIL ...", "3 FAIL" (a count), or a ux-flows row "43 offline-sw  1280 FAIL t_ms=..." (CI showed no reason for that row before, tests/run-all.test.mjs)
+FAIL_RE='^ *([0-9]+ )?FAIL|^[0-9]+ [^ ]+ +[0-9]+ FAIL'
 run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
   local name="$1" t0="$EPOCHREALTIME" s; shift
-  if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE '^ *([0-9]+ )?FAIL' "$TMP/$name.log"; then
+  if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
-    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"; grep -E -A3 '^ *([0-9]+ )?FAIL|Error' "$TMP/$name.log" | head -30 | sed 's/^/     /'
+    s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"; grep -E -A3 "$FAIL_RE|Error" "$TMP/$name.log" | head -30 | sed 's/^/     /'
     fails=$((fails + 1))
   fi
 }
