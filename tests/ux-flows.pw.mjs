@@ -432,15 +432,20 @@ flow(39, "update-bar", async (page, w) => {
   try {
     await up(base);
     const css = join(copy, "app.css"), orig = readFileSync(css, "utf8");
-    const swCss = { on: 0, done: 0 }, isCss = r => !!r.serviceWorker() && new URL(r.url()).pathname === "/app.css";   // sw.js's own fetches of app.css
-    page.context().on("request", r => { if (isCss(r)) swCss.on++; });
-    for (const ev of ["requestfinished", "requestfailed"]) page.context().on(ev, r => { if (isCss(r)) swCss.done++; });
     await page.goto(base + "/");
     await page.evaluate(() => navigator.serviceWorker.ready);
     if (!(await page.evaluate(() => !!navigator.serviceWorker.controller))) await page.reload();
     await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 8000 });
-    /* no fetch of app.css by the worker still open (precache, the background refresh): one that read the edit would show the bar now, not after the reload */
-    for (const t0 = Date.now(); !(swCss.done && swCss.done === swCss.on); await new Promise(r => setTimeout(r, 50))) if (Date.now() - t0 > 8000) throw new Error(`sw.js app.css fetches never settled: ${JSON.stringify(swCss)}`);
+    /* no fetch of app.css by the worker still open: one that read the edit would show the bar now, not after the reload. The worker starts
+       1 (precache) + 1 per page load of app.css it served (the background refresh); its own resource timing lists the finished ones.
+       Counted inside the worker: Playwright's service-worker request events miss the precache in CI (PW 1.56, no experimental flag) */
+    for (let t0 = Date.now(), n = -1, want = 0; n < want; await new Promise(r => setTimeout(r, 50))) {
+      if (Date.now() - t0 > 8000) throw new Error(`sw.js app.css fetches never settled: ${n} of ${want} done`);
+      const sw = page.context().serviceWorkers().find(x => new URL(x.url()).pathname === "/sw.js");
+      if (!sw) continue;
+      n = await sw.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/app.css").length);
+      want = 1 + await page.evaluate(() => performance.getEntriesByType("resource").filter(e => new URL(e.name).pathname === "/app.css" && e.workerStart > 0).length);
+    }
     writeFileSync(css, orig + `\n/* g2c ${Date.now()} */\n`);
     await page.reload();
     await page.locator("#updateBar").waitFor({ state: "visible", timeout: 8000 });
