@@ -186,7 +186,12 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await openPad();
     const look = await page.evaluate(() => { const p = getComputedStyle(document.querySelector("#sash"), "::before"); return [p.width, p.height]; });
     assert.deepEqual(look, ["32px", "3px"], "thin bar");
-    await page.locator("#sash").tap(); await page.waitForTimeout(400);
+    /* a snap (setRatio) runs in a view transition: while it runs, the ::view-transition overlay takes every touch (it hit-tests as <html>),
+       so the next touch must wait until it is over. Under CPU load it outlives a fixed sleep (todo 55: the #mtExp tap / the drag never landed). */
+    await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0;
+      document.startViewTransition = cb => { const t = st(cb); window.__vt++; t.finished.finally(() => window.__vt--); return t; }; });
+    const vtIdle = () => page.waitForFunction(() => !window.__vt);
+    await page.locator("#sash").tap(); await vtIdle();
     assert.equal(await has("mt-fit"), false, "a tap ends the hug");
     const r = await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"));
     assert.ok([0, 0.333, 0.5].includes(+r.toFixed(3)), `anchor ${r}`);
@@ -196,16 +201,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await touch("touchStart", y0);
     for (let i = 1; i <= 8; i++) await touch("touchMove", y0 + i * (H * 0.3) / 8);
     assert.ok(await has("mt-drag"), "follows the finger");
-    await touch("touchEnd"); await page.waitForTimeout(400);
+    await touch("touchEnd"); await vtIdle();
     const r2 = +(await page.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--r"))).toFixed(3);
     assert.ok([0, 0.333, 0.5].includes(r2), `snapped to an anchor (${r2})`);
-    const PROBE = () => { const e = document.querySelector("#mtExp"), b = e.getBoundingClientRect(), x = b.x + b.width / 2, y = b.y + b.height / 2, h = document.elementFromPoint(x, y);
-      return { t: Math.round(performance.now()), box: [b.x, b.y, b.width, b.height].map(Math.round), hit: h ? (h.id || h.tagName) + (e.contains(h) ? "(in)" : "") : null, pe: getComputedStyle(e).pointerEvents,
-        anims: document.getAnimations().map(a => (a.effect && a.effect.pseudoElement || a.effect?.target?.id || "?") + ":" + a.playState).join(","), ev: window.__ev.join(",") }; };
-    await page.evaluate(() => { window.__ev = []; for (const t of ["touchstart", "pointerdown", "click"]) document.addEventListener(t, e => window.__ev.push(t + ">" + (e.target.id || e.target.tagName) + "@" + Math.round(performance.now())), true); });
-    const pre = await page.evaluate(PROBE);
-    await page.locator("#mtExp").tap(); const post = await page.evaluate(PROBE); await page.waitForTimeout(300);
-    if (process.env.PROBE || await has("mt")) console.log("PROBE", W, JSON.stringify({ pre, post, after: await page.evaluate(PROBE) }));
+    await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
     assert.equal(await has("mt"), false, "collapse closes");
   });
 
