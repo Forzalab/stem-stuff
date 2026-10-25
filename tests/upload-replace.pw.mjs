@@ -45,10 +45,14 @@ const junk = [
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
-let failures = 0;
+let failures = 0, ran = 0;
+// UR_ONLY=<regex>: run only the steps whose name matches. The CI parts (tests/run-all.sh PART_ENV) split by width: upload-replace@1 =
+// "^393: ", upload-replace@2 = "^1280: "; every step opens its own context, so a half needs nothing from the other. A regex that
+// matches no step fails (a typo must not pass green). The last line says how many steps ran (the union check adds the halves).
 const ONLY = process.env.UR_ONLY ? new RegExp(process.env.UR_ONLY) : null;
 async function step(name, fn) {
   if (ONLY && !ONLY.test(name)) return;
+  ran++;
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
@@ -256,5 +260,7 @@ try {
 } finally {
   await browser.close(); srv.kill();
 }
+if (ONLY && !ran) { failures++; console.log(`FAIL UR_ONLY /${process.env.UR_ONLY}/ matches no step`); }
+console.log(`steps run: ${ran}`);
 console.log(failures ? `\n${failures} failing` : "\nall passed");
 process.exit(failures ? 1 : 0);

@@ -217,6 +217,22 @@ class Gate(unittest.TestCase):
             self.assertIn(w, out)
         self.assertEqual(self.run_cli(os.path.join(FIX, "slips-bad.json"))[0], 0)   # report only without --strict
 
+    def test_coverage_line_and_folded_rows(self):
+        """per bank: `BANK_X: <n> num units, <n> with form, <n> folded`; FOLDED = whole-answer slips only. Report only: --strict stays 0."""
+        d = tempfile.mkdtemp(prefix="stem-slipsc-")
+        path = os.path.join(d, "BANK_COV.json")
+        nums = [{"code": "COV_AAA", "type": "num", "answer": "3", "form": "3"},                 # a count: folded, and fine
+                {"code": "COV_BBB", "type": "num", "answer": "5", "form": "sqrt(9+16)"},
+                {"code": "COV_CCC", "type": "multi", "parts": [{"type": "num", "answer": "12", "form": "4*3"}, {"type": "mc"}]}]
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"v": 20261022, "problems": nums}, f)
+        rc, out = self.run_cli("--strict", path)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("BANK_COV: 3 num units, 3 with form, 2 folded", out)
+        self.assertIn("COV_AAA: FOLDED 3  whole-answer slips only", out)
+        self.assertIn("COV_CCC#0: FOLDED 4*3  whole-answer slips only", out)
+        self.assertNotIn("COV_BBB: FOLDED", out)
+
     def test_slip_window_d2(self):
         """Tony D2 (Oct 23): a slip's own window, SLIP_WIN = 0.5% or equal at 3 s.f., never the item's grading tol (2% default)."""
         self.assertEqual(slips.SLIP_WIN, 0.005)

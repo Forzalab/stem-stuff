@@ -2,6 +2,9 @@
 that no `wrong` entry catches (MISSING), and every slip equal to the answer (SAME).
 Banks with v >= 20261022 also pass the gate (design/HANDOFF-slips-v2.md rule 7): every num has `form`; no SAME; no two families on one
 value (CLASH). ignore_slips exempts a value. MISSING there is report only: the grader matches slips at runtime.
+Per bank one coverage line, `BANK_X: <n> num units, <n> with form, <n> folded`, and a FOLDED row per folded unit: a form whose k=1
+slips are whole-answer only (no inner slip; fine for a count like "3"). Report only: never a gate failure, never --strict's exit code.
+tools/ship.sh runs --strict on every bank it deploys.
 
 Run: python3 tools/slips.py [banks/BANK_X.json ...]     (default: problems.json + banks/*.json; report only)
      python3 tools/slips.py --strict ...                 (exit 1 on a gate failure; on an older bank, on any uncovered slip)
@@ -33,11 +36,13 @@ def check(path, log=None):
             print(f"{path}: v must be an int (1 or yyyymmdd), got {v!r}; treated as 1", file=sys.stderr)
         v = 1
     new = v >= slips.CUTOFF
-    bad, rows = 0, []
+    bad, rows, nums, formed, folded = 0, [], 0, 0, 0
     for p in bank["problems"]:
         for code, u in slips.units(p):
             if u.get("type") != "num":
                 continue
+            nums += 1
+            formed += bool(u.get("form"))
             if new:
                 fails = slips.gate(u)
                 rows += [f"  {code}: {r}" for r in fails]
@@ -54,13 +59,17 @@ def check(path, log=None):
                     continue
                 ans = slips.value(u["answer"])
                 rows += [f"  {code}: SAME {v:.4g}  ({fam}) can't be told apart by number" for fam, v in slips.mutants(u["form"]) if slips.close(v, ans)]
+            if not any(vals for _, vals in slips.inner(u["form"])):     # every k=1 slip is an outer (whole-answer) one
+                rows.append(f"  {code}: FOLDED {u['form']}  whole-answer slips only")
+                folded += 1
             miss = slips.missing(u)
             rows += [f"  {code}: MISSING {v:.4g}  ({fam})" for fam, v in miss]
             bad += 0 if new else len(miss)
     evs = tolwarn.events(bank, Path(path).name)
     if log is not None:
         log += evs
-    return bad, rows + [tolwarn.line(e) for e in evs]
+    cover = f"{Path(path).stem}: {nums} num units, {formed} with form, {folded} folded"
+    return bad, [cover, *rows, *(tolwarn.line(e) for e in evs)]
 
 
 FIX = ROOT / "tests" / "fixtures"

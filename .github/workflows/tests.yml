@@ -4,12 +4,20 @@ on:
   pull_request:
   push:
     branches: [main]
-# a new push to a PR cancels the run still going for its old commit (main keeps a result per commit)
+  workflow_dispatch:   # CI bench (brain _files/ci-plan-2026-10-23/arch-research-E-bench.md): run a bench/* branch, optionally with a seeded fault
+    inputs:
+      mutant:
+        description: "Fault to seed: applies tests/bench/mutants/<name>.patch from the run's branch (empty = none)"
+        default: ""
+# a new push to a PR cancels the run still going for its old commit. main (and dispatch) queues every run in order:
+# the default queue keeps 1 pending run and a newer one replaces it, so 3 quick merges left the middle one untested.
+# queue: max + cancel-in-progress: true is a validation error, so both flip on the event.
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  queue: ${{ github.event_name == 'pull_request' && 'single' || 'max' }}
 env:
-  BLOCKS: 3   # runners for the .pw specs (GitHub Free: 20 jobs at once)
+  BLOCKS: 5   # runners for the .pw specs (GitHub Free: 20 jobs at once)
   LANES: 2    # run-all.sh processes per runner. 3 lanes made flow.pw drop a touch 1 in 4 runs (Tony: a new flake → 2); 2 lanes cost ~nothing: ux-flows sets the floor
 jobs:
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
@@ -25,8 +33,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - if: inputs.mutant   # bench only: seed the fault this run must catch
+        env: { MUTANT: "${{ inputs.mutant }}" }
+        run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
@@ -42,8 +53,11 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
+      - if: inputs.mutant   # bench only: seed the fault this run must catch
+        env: { MUTANT: "${{ inputs.mutant }}" }
+        run: git apply "tests/bench/mutants/$MUTANT.patch"
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with: { python-version: "3.12", cache: pip }
       - run: pip install sympy networkx
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
@@ -52,7 +66,7 @@ jobs:
           cd tests && npm ci
           npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
           # no --with-deps: ubuntu-latest already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
-          npx playwright install chromium
+          npx playwright install --only-shell chromium
       - name: lanes
         env:
           LANE_SPECS: ${{ matrix.lanes }}
@@ -73,3 +87,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && test "${{ needs.block.result }}" = success
+  # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
+  bench:
+    needs: [plan, unit, block]
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions: { actions: read }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN: ${{ github.run_id }}/${{ github.run_attempt }}
+      TAG: ${{ github.run_id }},${{ github.run_attempt }},${{ github.sha }},${{ inputs.mutant }}
+    steps:
+      - run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/${RUN%/*}/attempts/${RUN#*/}/jobs?per_page=50" >jobs.json
+          echo "run,attempt,sha,mutant,job,conclusion,queue_s,run_s" >jobs.csv
+          jq -r --arg t "$TAG" '.jobs[] | select(.name != "bench" and .completed_at != null)
+            | [$t, .name, .conclusion, ((.started_at|fromdate) - (.created_at|fromdate)), ((.completed_at|fromdate) - (.started_at|fromdate))] | @csv' jobs.json | tr -d '"' >>jobs.csv
+          echo "run,attempt,sha,mutant,job,lane,spec,result,s" >specs.csv
+          jq -r '.jobs[] | select(.name | startswith("block ")) | "\(.id) \(.name)"' jobs.json | while read -r id name; do
+            # curl, not gh api: gh refuses to print a log that holds terminal escape codes (run 40151630168: 0 spec rows)
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/jobs/$id/logs" | sed 's/^[^ ]* //' |
+              awk -v t="$TAG" -v j="$name" '/^##\[group\]lane [0-9]+:/ { split($2, a, ":"); lane = a[1] } lane && /^(ok|FAIL) +[^ ]+ [0-9.]+ s$/ { print t "," j "," lane "," $2 "," $1 "," $3 }' >>specs.csv
+          done
+          { echo '```'; cat jobs.csv; echo; cat specs.csv; echo '```'; } >>"$GITHUB_STEP_SUMMARY"
+          cat jobs.csv specs.csv
+          test "$(wc -l <specs.csv)" -gt 1 || { echo "::error::no spec rows read from the block logs"; exit 1; }

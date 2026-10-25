@@ -23,6 +23,8 @@ export const FAMILY_HINT = {
   units: "QUACK. Check your units. A power of ten slipped.",
   g: "QUACK. Check the value you used for g.",
 };
+/* FAMILY_HINT's line; a k=2 "inner+outer" pair (pairs) gets both lines in that order under one QUACK. (serve.py family_hint) */
+export const familyHint = fam => fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" ");
 
 export const ZERO = 1e-9;
 export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol
@@ -358,4 +360,22 @@ export function cands(form, typed, skip = [], tol = SLIP_WIN) {
     if (ps.length) out.push([fam, ps.sort(cmpPath)]);
   }
   return out;
+}
+/* slips.py pair_cands: [[fam, paths]] for a k=2 match "inner+outer": the inner slip's places an undone outer slip lands on, plus ROOT */
+export function pairCands(form, typed, fam, tol = SLIP_WIN) {
+  const [fi, fo] = fam.split("+"), us = OUTER.filter(([f]) => f === fo).flatMap(([, , undo]) => undo(typed)), ps = [ROOT];
+  for (const [v, pp] of sites(form).find(([f]) => f === fi)[1]) if (us.some(u => close(u, v, tol))) for (const p of pp) if (!ps.some(q => cmpPath(q, p) === 0)) ps.push(p);
+  return [[fam, ps.sort(cmpPath)]];
+}
+/* SLIP_TIE (serve.py slip_tie_on()): off; the device has no env, so it is a const here, like SLIP_K */
+export const SLIP_TIE = false;
+/* serve.py slip_hit after match() gave `fam` (app.js gradeLocal): a k=2 pair -> {error, hint, spot?} (hint = familyHint, both lines); with
+   SLIP_TIE, 2+ families on the value -> {collide, spot?}; else null (the family hint as before). spot: WHERE, never what or a number */
+export function slipSpot(form, typed, skip, fam, tie = SLIP_TIE) {
+  try {
+    const pair = fam.includes("+"), c = pair ? pairCands(form, typed, fam) : tie ? cands(form, typed, skip) : [];
+    if (!pair && c.length < 2) return null;
+    const line = region(c, form), o = pair ? { error: fam, hint: familyHint(fam) } : { collide: c.map(([f]) => f) };
+    return line ? { ...o, spot: line } : o;
+  } catch { return null; }                                // never let the spot line break a graded try
 }

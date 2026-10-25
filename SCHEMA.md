@@ -72,7 +72,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
-| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). | label + prompt + type only |
+| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). 2–4 boxes. A part may instead be `"type": "mc"` with the mc fields (`choices`, `correct`, `wrong`, `shuffle`, `pick`, `miss`, `fix`; `how` on pick all only), the same rules as a top-level `mc`; a multi with an mc part may have up to 26 parts, since each part is loaded as its own mc question (code + A, B, C..., `unfold`). | label + prompt + type only |
 | `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it), each box with its own submit arrow. Put the shared givens in `body` and each question in its part's `prompt`. A part without a `prompt` is just its "a)" and its box. Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
@@ -116,7 +116,7 @@ Author in this order:
 `wrong` entry: `{ "choice": "a" }` (mc) or `{ "match": "4" }` (`num`/`expr`: a value, equal within `tol`; `text`: text, compared like the answer) or `{ "re": "^dne$" }` (case-insensitive regex on the typed text), plus `"error"` and `"hint"`.
 MC: exactly one `wrong` entry per distractor (tests enforce it).
 
-**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). Its syntax is numbers, `+ - * / ^` (or `**`), brackets, `pi` and `sin cos tan asin acos atan sqrt exp log ln abs`: no implicit `*`, no `deg`, no other names (both slip engines refuse them). A literal with a `.` or an `e` (`2.0`, `1e3`) is a decimal, so it never counts as the exact factor in `distribute`. The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `SLIP_WIN`, 0.5%, or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only; never prints a number or the answer; may point to a place: with `SLIP_TIE` on, a value two families share gets the plain nudge plus a `spot` line naming where in the form, e.g. "the bottom of the fraction"), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip.
+**Slips from the formula** (`num`, optional `form`): write the answer as one plain-number expression in `form` (`"form": "1/((4/3)^2+(1/3)^2+(2/3)^2)"`; tests check it equals `answer`). Its syntax is numbers, `+ - * / ^` (or `**`), brackets, `pi` and `sin cos tan asin acos atan sqrt exp log ln abs`: no implicit `*`, no `deg`, no other names (both slip engines refuse them). A literal with a `.` or an `e` (`2.0`, `1e3`) is a decimal, so it never counts as the exact factor in `distribute`. The grader sees only the typed number. After the `wrong` entries miss and before `nudge`, a typed value that sits on a slip of `form` (within `SLIP_WIN`, 0.5%, or to 3 s.f.) gets that family's fixed hint (`FAMILY_HINT`; names the family only; never prints a number or the answer; may point to a place: with `SLIP_TIE` on, a value two families share gets the plain nudge plus a `spot` line naming where in the form, e.g. "the bottom of the fraction"), in both modes and on the device for an upload. The slips are the 10 families of `slips.py` (`slips.FAMILIES`, in hint priority: `distribute` first, where −(b+c) → −b+c, the minus on the first term only), one change at a time. `python3 tools/slips.py banks/BANK_X.json` lists every slip value with no `wrong` entry (`MISSING`). Give a value a hand-written `wrong` entry when it needs a better hint (it wins), or list it in `ignore_slips` to stop its family hint. A slip that lands on the answer itself can't be told apart by number: the checker prints it as `SAME`. `--strict` exits 1 on a gate failure. For a bank with `v` ≥ `20261022` the gate is: a `num` item or part with no `form`, a slip equal to the answer (`SAME`), two families on one value (`CLASH`), or a `form` that does not equal `answer`; `MISSING` (a slip with no `wrong` entry) is only reported there, since the grader matches slips at runtime. An older bank is checked only where it has `form`, and there it fails on `form` ≠ `answer`, a `SAME`, or any `MISSING` slip. `tools/ship.sh` runs `--strict` (and this file's `problems` schema) on every bank it deploys: one failure, no deploy. The report also prints one coverage line per bank (num units, with `form`, folded) and a `FOLDED` row for a `form` whose slips are whole-answer only; neither is a gate failure.
 
 **Slip scaling risk (Tony, Oct 23: ask Tony first).** The grader sees one number. Every extra slip candidate is another way for a random wrong answer to match by luck and get a wrong hint. Stop and ask Tony before any change that adds candidates:
 - a new family in `slips.FAMILIES`;
@@ -529,6 +529,23 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
     "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "tol_src": {"const": "auto"}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
+    "mc_pick": {"description": "an mc's pick rules (a problem, or a multi's mc part): pick all needs miss and a correct list; how only on pick all", "allOf": [
+        {
+          "if": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]},
+          "then": {"required": ["miss"], "properties": {"type": {"const": "mc"}, "correct": {"type": "array"}}},
+          "else": {"properties": {"miss": false, "fix": false, "correct": {"type": "string"}}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
+          "then": {"properties": {"how": false}}
+        }]},
+    "mcpart": {"type": "object", "required": ["type", "choices", "correct", "wrong"], "additionalProperties": false,
+      "description": "a multi part that is a choice: loaded as its own mc question, code + A, B, C... (codes.mjs / serve.py unfold); its fields are the mc problem's",
+      "properties": {"label": {"$ref": "#/$defs/part/properties/label"}, "prompt": {"$ref": "#/$defs/part/properties/prompt"}, "type": {"const": "mc"},
+        "how": {"$ref": "#/$defs/problem/properties/how"}, "choices": {"$ref": "#/$defs/problem/properties/choices"}, "shuffle": {"$ref": "#/$defs/problem/properties/shuffle"},
+        "pick": {"$ref": "#/$defs/problem/properties/pick"}, "correct": {"$ref": "#/$defs/problem/properties/correct"}, "fix": {"$ref": "#/$defs/problem/properties/fix"},
+        "miss": {"$ref": "#/$defs/problem/properties/miss"}, "wrong": {"$ref": "#/$defs/problem/properties/wrong"}},
+      "allOf": [{"$ref": "#/$defs/mc_pick"}]},
     "problem": {
       "type": "object",
       "required": [
@@ -664,11 +681,13 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "parts": {
           "type": "array",
           "minItems": 2,
-          "maxItems": 4,
+          "maxItems": 26,
           "items": {
-            "$ref": "#/$defs/part"
+            "if": {"properties": {"type": {"const": "mc"}}, "required": ["type"]},
+            "then": {"$ref": "#/$defs/mcpart"},
+            "else": {"$ref": "#/$defs/part"}
           },
-          "description": "multi: the answer boxes, in order"
+          "description": "multi: the answer boxes, in order (2-4; up to 26 when a part is an mc: unfold makes one mc question per part)"
         },
         "form": {
           "type": "string",
@@ -791,14 +810,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             }
           }
         },
+        {"$ref": "#/$defs/mc_pick"},
         {
-          "if": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]},
-          "then": {"required": ["miss"], "properties": {"type": {"const": "mc"}, "correct": {"type": "array"}}},
-          "else": {"properties": {"miss": false, "fix": false, "correct": {"type": "string"}}}
-        },
-        {
-          "if": {"properties": {"type": {"const": "mc"}}, "not": {"properties": {"pick": {"const": "all"}}, "required": ["pick"]}},
-          "then": {"properties": {"how": false}}
+          "if": {"not": {"properties": {"parts": {"contains": {"properties": {"type": {"const": "mc"}}, "required": ["type"]}}}}},
+          "then": {"properties": {"parts": {"maxItems": 4}}}
         },
         {
           "if": {"not": {"properties": {"type": {"const": "mc"}}}},

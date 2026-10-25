@@ -4,7 +4,7 @@ import { build, stringify } from "./copy/payload.mjs";
 import { shuffled, seed } from "./shuffle.mjs";
 import * as codes from "./codes.mjs";
 import { suggest, remember, isBank, normalize, normalizeLink, entry } from "./suggest.mjs";
-import { match as slipMatch, FAMILY_HINT } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
+import { match as slipMatch, slipSpot, familyHint } from "./slips.mjs";   // slips v2 unit C: runtime slip matching for uploaded banks
 import { modeOf, setMode, modePrefix, forceSugarOnce, view as modeView, hidden as modeHidden } from "./mode.mjs";
 import { quack, withQuack } from "./quack.mjs";
 import { speakable } from "./speak.mjs";
@@ -326,8 +326,8 @@ function answerOf(u) {
   if (u.type !== "num") return a;
   try { return g4(unitSig(u, a)); } catch { return a; }
 }
-/* the hint the student sees for a reply: `spot` when record() let it through Jev's gate (r.shown), else the plain `hint`. gradeLocal
-   sets no `spot` yet; a local one later passes the same gate (record() guards on r.spot) */
+/* the hint the student sees for a reply: `spot` when record() let it through Jev's gate (r.shown), else the plain `hint`. gradeLocal's
+   `spot` (slips.mjs slipSpot) passes the same gate (record() guards on r.spot) */
 const hintOf = r => r.shown === "spot" && r.spot ? r.spot : r.hint;
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
   const multi = key.type === "multi", idx = answer.part;
@@ -377,7 +377,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
       let skip;
       try { skip = [unitSig(u, String(u.answer)), ...(u.ignore_slips || []).map(s => Number(math.evaluate(String(s).replace(/\*\*/g, "^"))))]; } catch { skip = null; }
       const fam = skip && slipMatch(u.form, sig, undefined, skip);   // undefined: slips.mjs SLIP_WIN, never the grading tol (Tony D2)
-      if (fam) hit = { error: fam, hint: FAMILY_HINT[fam] };
+      if (fam) hit = slipSpot(u.form, sig, skip, fam) || { error: fam, hint: familyHint(fam) };   // serve.py slip_hit: a k=2 pair / SLIP_TIE collide may carry `spot`
     }
   }
   if (correct) { st.done = true; return R({ verdict: "correct", triesLeft: left() }); }
@@ -389,6 +389,8 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
   if (hit && hit.kept) out.kept = hit.kept;
+  if (hit && hit.collide) out.collide = hit.collide;
+  if (hit && hit.spot) out.spot = hit.spot;
   if (repeat) out.repeat = true;
   return R(left() <= 0 ? shut(out) : out);
 }

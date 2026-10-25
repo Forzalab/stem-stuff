@@ -34,6 +34,25 @@ test("part.prompt: string or lines validate; other types and unknown keys do not
   assert.ok(!validate(withPart({ ...base, prompt: "" })));
   assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
 });
+test("multi with mc parts: each part an mc (unfold: code + A, B, C...), up to 26; other multis keep 4", () => {
+  const multi = B.problems.find(p => p.type === "multi");
+  const withParts = parts => ({ ...B, problems: [{ ...multi, parts }] });
+  const mc = i => ({ label: "Q" + i, prompt: "Which one?", type: "mc", choices: [{ id: "a", md: "up" }, { id: "b", md: "down" }], correct: "a",
+    wrong: [{ choice: "b", error: "sign", hint: "QUACK. Which way does it point?" }] });
+  const all = mc(0), { miss: _m, ...noMiss } = { ...mc(0), pick: "all", correct: ["a"], miss: "QUACK. One more is right." };
+  assert.ok(validate(withParts([mc(0), mc(1)])), JSON.stringify(validate.errors));
+  assert.ok(validate(withParts(Array.from({ length: 26 }, (_, i) => mc(i)))), JSON.stringify(validate.errors));
+  assert.ok(validate(withParts([mc(0), { ...all, pick: "all", correct: ["a"], miss: "QUACK. One more is right.", how: "Tick every one." }])), JSON.stringify(validate.errors));
+  assert.ok(!validate(withParts(Array.from({ length: 27 }, (_, i) => mc(i)))), "27 mc parts: past unfold's A-Z");
+  const { choices: _c, ...noChoices } = mc(1);
+  assert.ok(!validate(withParts([mc(0), noChoices])), "an mc part needs its choices");
+  assert.ok(!validate(withParts([mc(0), { ...mc(1), answer: "a" }])), "an mc part takes no answer");
+  assert.ok(!validate(withParts([mc(0), { ...mc(1), how: "Pick one." }])), "how only on a pick-all mc part, as at the top");
+  assert.ok(!validate(withParts([mc(0), noMiss])), "a pick-all mc part needs miss");
+  const box = { type: "num", answer: "1" };
+  assert.ok(validate(withParts([box, box, box, box])), JSON.stringify(validate.errors));
+  assert.ok(!validate(withParts([box, box, box, box, box])), "a typed multi keeps 2-4 boxes");
+});
 test("problems.json: has problems", () => assert.ok(problems.length > 0));
 /* the bank flag rule (SCHEMA.md "Codes"), as a list of faults: [] = sound. id = the flag, else the file stem (hosted banks need no flag).
    Built-in prefixes are free; every other prefix must equal the id minus BANK_ and may not be reserved. */
