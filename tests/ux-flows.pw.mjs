@@ -136,15 +136,24 @@ const barRevealed = async page => {
    bug class fake-clock-timing-flake; cluck-rise.pw.mjs). Never paused before load: that would stall the 300 ms splash and every app timer.
    A fast-time row whose page has no clock (or a jump that did not move the app's time) times out loudly in 1 s, well short of the gate. */
 const gateDone = () => Date.now() - window.__drill.state.start > 2100;
+/* pause the flowing page.clock a little ahead of its time. pauseAt into the past throws, and the clock flows between the read and the
+   pauseAt call: on a loaded CI runner more than 500 ms of it went by ("Cannot fast-forward to the past", #290). Read again, aim further. */
+async function pauseSoon(page) {
+  for (const ahead of [500, 2000, 5000]) {
+    const now = await page.evaluate(() => Date.now());
+    try { return await page.clock.pauseAt(now + ahead); } catch (e) { if (!/to the past/.test(e.message)) throw e; }
+  }
+  throw new Error("fast-time dwell: pauseAt kept landing in the past (the page clock runs > 5 s ahead between two calls)");
+}
 async function dwell(page) {
   if (page.__time !== "fast") return page.waitForFunction(gateDone, null, { timeout: 6000 });
   if (!(await page.evaluate(() => !!globalThis.__pwClock))) throw new Error("fast-time dwell: no page.clock on this page (the fixture installs it before the first load)");
   /* jump from the CURRENT question's start: a bank route opens a problem, then the queue opens its first question (load() again, a new
      S.start), later on a slow 393 lane than the jump (CI #278). So: jump, and if the gate is still shut because start moved, jump again. */
   for (let k = 0; k < 3; k++) {
-    const { now, start } = await page.evaluate(() => ({ now: Date.now(), start: window.__drill.state.start }));
-    await page.clock.pauseAt(now + 500);   // a little ahead: pauseAt into the past throws, and the flowing clock moves between the two calls
-    await page.clock.fastForward(Math.max(0, start + 2200 - (now + 500)));
+    await pauseSoon(page);
+    const { now, start } = await page.evaluate(() => ({ now: Date.now(), start: window.__drill.state.start }));   // paused: now holds still
+    await page.clock.fastForward(Math.max(0, start + 2200 - now));
     await page.clock.resume();
     if (await page.waitForFunction(gateDone, null, { timeout: 400 }).then(() => true, () => false)) return;   // shut = start moved: jump again
   }

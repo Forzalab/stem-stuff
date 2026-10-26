@@ -177,7 +177,15 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
       <svg class="ico" aria-hidden="true"><use href="#i-next"/></svg>
     </button>
   </nav>
-  <div class="qlist" id="qlist" hidden><ol></ol></div>
+  <div class="qlist" id="qlist" hidden>
+    <!-- the front bank only (nav.js FRONT, DESIGN-v3 §1): the order is ours (noob) until the student mixes it up; a small way out to other banks -->
+    <div class="qmodes" id="qmodes" hidden>
+      <button type="button" class="btn btn-label" id="qmix">Mix it up</button>
+      <button type="button" class="btn btn-label" id="qskip">Skip ahead</button>
+      <button type="button" class="qbanks" id="qbanks">Other banks</button>
+    </div>
+    <ol></ol>
+  </div>
 </header>
 <!-- the dim behind the open question list (nav.css); a tap on it is an outside tap, so it closes the list (nav.js) -->
 <div class="ql-dim" id="qlDim" aria-hidden="true"></div>
