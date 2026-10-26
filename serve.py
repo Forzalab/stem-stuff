@@ -2560,7 +2560,17 @@ LEAK_WORDS = re.compile(r"(?i:straight|right|from|according|to|as|per|based|on|g
 
 _LEAK_START = re.compile(r"(?i:straight|right|from|according|as|per|based|going|by|using|via|like|the|your|our|my|this|that)")   # key_from /
 # key_says start with no \b: a match may start inside a stream word ("paper the KEY"), so such a word's tail waits
-_LEAK_PUNCT = re.compile(r"[^\w\s<\[>*~-]*")       # what may follow that word out: no match starts on it (all start on a word, "<", "[", a line)
+
+
+def _leak_after(text, i):
+    """the end of what may follow a settled word out: no match starts on it (every match starts on a word, "<", "[" or a line's
+    [ \t>*~-] lead-in). One newline goes (the next line's start stays: "\nKey:"), a second waits (the note's cut keeps one)."""
+    while i < len(text):
+        c, p = text[i], text[i - 1]
+        if c.isalnum() or c in "_<[ \t" or c == "\n" and p == "\n" or c in ">*~-" and p in "\n>*~-":
+            break
+        i += 1
+    return i
 
 
 
@@ -2590,7 +2600,7 @@ class PromptGuard:
         if not w:
             return k, seen, upto
         end = next((i for i in range(w.start() + 1, w.end()) if _LEAK_START.fullmatch(text, i, w.end())), None)
-        end = end if end is not None else _LEAK_PUNCT.match(text, w.end()).end()   # "wish." goes out whole: no match starts at the "."
+        end = end if end is not None else _leak_after(text, w.end())   # "wish.\n" and "$$\n" go out whole: no match starts on them
         seen, upto = max(seen, end - n), max(upto, w.end() - n)
         tail = text[end:]
         if any(m.end() < len(tail) for m in re.finditer(r"\w+", tail)):           # a LEAK_WORD after it: the sentence waits
@@ -2603,7 +2613,8 @@ class PromptGuard:
         k = len(self.buf) if final else self._safe()[1]
         m = XYZ_TAIL.search(self.ctx + self.buf, len(self.ctx))
         if m and (final or m.start() - len(self.ctx) < k or m.end() + self.MARGIN <= len(self.ctx + self.buf)):   # its lookahead seen
-            self.buf, final, self.done = self.buf[:m.start() - len(self.ctx)].rstrip() + "\n", True, True      # ("XYZ" + " plane" is no note)
+            head = self.buf[:m.start() - len(self.ctx)].rstrip()      # ("XYZ" + " plane" is no note); one newline ends the reply
+            self.buf, final, self.done = head + ("" if not head and self.ctx.endswith("\n") else "\n"), True, True
             self.cut.append("xyz_tail")
         for _ in range(5):                       # a cut can move the next stream word: cut again until nothing more is whole
             self.buf, ids = leak_cut(self.buf, self.ctx, None if final else self._safe()[2])

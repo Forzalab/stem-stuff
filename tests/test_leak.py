@@ -130,13 +130,23 @@ class Stream(unittest.TestCase):
 
     def test_a_line_goes_out_when_it_lands(self):      # W92b round 2: easy.pw's peek read "POOF! A wish is a wi" (the line held for MARGIN)
         g = serve.PromptGuard()
-        self.assertEqual(g.feed("POOF! A wish is a wish.\n"), "POOF! A wish is a wish.")
-        self.assertEqual(g.feed("Push it harder no"), "\nPush it harder")
+        self.assertEqual(g.feed("POOF! A wish is a wish.\n"), "POOF! A wish is a wish.\n")   # the line, its newline too
+        self.assertEqual(g.feed("Push it harder no"), "Push it harder")
+        self.assertEqual(g.feed("w\n$$\nv = 2\n$$\n"), " now\n$$\nv = 2\n$$\n", "a display formula goes out closed, with its line")
+        self.assertEqual(g.feed("\n\n- Key: 3"), "", "a second newline and a line's lead-in wait")
         g = serve.PromptGuard()
         self.assertEqual(g.feed("Look at the SL"), "", "a LEAK_WORD trails: the sentence waits")
-        for t in ("Check the paper the KEY: 3 N.\n", "Use the XYZ plane.\n", "So the KEY says 3.\n"):   # a match may start inside a word
-            whole = run_guard([t])
-            self.assertEqual(run_guard(list(t)), whole, t)
+        def run(chunks):
+            try:
+                return run_guard(chunks)
+            except serve.PromptLeak as e:
+                return "stop " + str(e)
+        for t in ("Check the paper the KEY: 3 N.\n", "Use the XYZ plane.\n", "So the KEY says 3.\n",   # a match may start inside a word
+                  "Ok then.\nKey: P = W / t\n", "Pick B.\n- concept: power\n", "Fine.\n  NOTE: close\n", "Done.\n> evidence: 208\n",
+                  "Pick B.\n\n**XYZ** tries = 1\n", "So $$v = 2$$.\n\nXYZ: close\n"):              # or on a line's start
+            whole = run(["x" + t])
+            self.assertEqual(run(list("x" + t)), whole, t)
+            self.assertEqual(run(["x" + t[:t.index("\n") + 1], t[t.index("\n") + 1:]]), whole, t)
 
     def test_every_leak_split_anywhere(self):          # a phrase split at any char is caught as if it came whole
         pad = "Quack! The push is shared once they stick, so check it again. "
