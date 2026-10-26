@@ -2558,6 +2558,11 @@ LEAK_WORDS = re.compile(r"(?i:straight|right|from|according|to|as|per|based|on|g
                         r"letter|external|classifier|trade|secret|censor(?:ed|s|ing)?|sandbox(?:ed)?|evil|ma(?:c|h|ch|hc)h?ine|presolved|"
                         r"saccharine)")
 
+_LEAK_START = re.compile(r"(?i:straight|right|from|according|as|per|based|going|by|using|via|like|the|your|our|my|this|that)")   # key_from /
+# key_says start with no \b: a match may start inside a stream word ("paper the KEY"), so such a word's tail waits
+_LEAK_PUNCT = re.compile(r"[^\w\s<\[>*~-]*")       # what may follow that word out: no match starts on it (all start on a word, "<", "[", a line)
+
+
 
 class PromptGuard:
     """the prompt-leak guard on a stream: a chunk passes once nothing after it can still change it. Every match is made of LEAK_WORDS, so
@@ -2574,17 +2579,24 @@ class PromptGuard:
         self.buf, self.ctx, self.cut, self.done = "", "", [], False
 
     def _safe(self):
-        """(k, seen, upto) on buf: a match starting in buf[:seen] is whole (lookahead too), buf[:k] may go out (seen less MARGIN, past
-        HOLD), a LEAK_CUT phrase ending by upto is whole"""
+        """(k, seen, upto) on buf: a match starting in buf[:seen] is whole (lookahead too); buf[:k] may go out (seen, or the sentence's
+        start while LEAK_WORDS trail it: "Look at the SL" waits for "IP"; past HOLD in any case); a LEAK_CUT phrase ending by upto is whole"""
         n, text, w = len(self.ctx), self.ctx + self.buf, None
         for m in re.finditer(r"\w+", text):
             if m.end() < len(text) and m.start() >= n and not LEAK_WORDS.fullmatch(m.group()):
                 w = m                                # the last whole stream word no match can hold
         k = seen = max(0, len(self.buf) - self.HOLD)
         upto = max(0, len(self.buf) - self.MARGIN)
-        if w:
-            seen, upto = max(seen, w.start() - n), max(upto, w.end() - n)
-            k = max(k, min(seen, len(self.buf) - self.MARGIN))
+        if not w:
+            return k, seen, upto
+        end = next((i for i in range(w.start() + 1, w.end()) if _LEAK_START.fullmatch(text, i, w.end())), None)
+        end = end if end is not None else _LEAK_PUNCT.match(text, w.end()).end()   # "wish." goes out whole: no match starts at the "."
+        seen, upto = max(seen, end - n), max(upto, w.end() - n)
+        tail = text[end:]
+        if any(m.end() < len(tail) for m in re.finditer(r"\w+", tail)):           # a LEAK_WORD after it: the sentence waits
+            k = max(k, min(seen, max([m.end() for m in re.finditer(r"[.!?]+(?=\s)|\n", self.buf[:seen])], default=0)))
+        else:
+            k = max(k, seen)
         return k, seen, upto
 
     def _step(self, final):

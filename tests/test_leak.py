@@ -128,6 +128,16 @@ class Stream(unittest.TestCase):
         g = serve.PromptGuard()
         self.assertGreater(len([p for p in short if g.feed(p)]), 1, "a short reply goes out as it streams, not all at the end")
 
+    def test_a_line_goes_out_when_it_lands(self):      # W92b round 2: easy.pw's peek read "POOF! A wish is a wi" (the line held for MARGIN)
+        g = serve.PromptGuard()
+        self.assertEqual(g.feed("POOF! A wish is a wish.\n"), "POOF! A wish is a wish.")
+        self.assertEqual(g.feed("Push it harder no"), "\nPush it harder")
+        g = serve.PromptGuard()
+        self.assertEqual(g.feed("Look at the SL"), "", "a LEAK_WORD trails: the sentence waits")
+        for t in ("Check the paper the KEY: 3 N.\n", "Use the XYZ plane.\n", "So the KEY says 3.\n"):   # a match may start inside a word
+            whole = run_guard([t])
+            self.assertEqual(run_guard(list(t)), whole, t)
+
     def test_every_leak_split_anywhere(self):          # a phrase split at any char is caught as if it came whole
         pad = "Quack! The push is shared once they stick, so check it again. "
         for pid, texts in LEAKS.items():
