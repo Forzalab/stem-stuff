@@ -183,6 +183,50 @@ try {
     assert.equal((await ev()).some(e => e[0] === "repair_done" && e[1].variant === "alt"), true);
   });
 
+  // #33 A: /check takes {value, n} (n = the 1-based try on that step); after the 2nd miss it sends the answer's display string, and the
+  // card turns into the worked solution: the problem with the answer filled in, the student's wrong answer crossed out, no green / red
+  await step("the answer step counts its tries: opts.grade gets n = 1, 2 (a repeated value counts too)", async () => {
+    await mount({ variant: "repair", error: null, remote: true });
+    await act('.rp-why .rp-chip[data-why="0"]');
+    for (const k of [1, 2]) {
+      await page.fill('.rp-step[data-state="active"] input', "5");
+      await act(".rp-check");
+      await page.waitForFunction(k => window.__graded.length === k, k);
+      await page.waitForTimeout(120);                                           // the stub's round trip lands
+    }
+    assert.deepEqual(await page.evaluate(() => window.__ns), [1, 2]);
+  });
+
+  await step("2nd miss with an answer: the line becomes the problem + the answer, the wrong one crossed out, the ladder neutral", async () => {
+    await mount({ variant: "repair", error: null, remote: true });
+    await act('.rp-why .rp-chip[data-why="0"]');
+    await page.fill('.rp-step[data-state="active"] input', "5");
+    await act(".rp-check");
+    await page.waitForSelector('.rp-step[data-id="answer"] .rp-miss');
+    assert.equal(await page.$$eval(".rp-solved", x => x.length), 0, "a 1st miss is a plain miss");
+    await page.fill('.rp-step[data-state="active"] input', "7");
+    await act(".rp-check");
+    await page.waitForSelector(".rp-solved");
+    assert.deepEqual(await page.evaluate(() => window.__ns), [1, 2]);
+    assert.equal(await page.$$eval(".rp-line", x => x.length), 0, "Cluck's opening line is gone");
+    assert.match(await page.textContent(".rp-solved .rp-stem"), /2\.0 kg cart/, "the problem");
+    assert.equal(await page.textContent(".rp-solved del"), "7", "the student's wrong answer");
+    assert.match(await page.textContent(".rp-solved del").then(() => page.$eval(".rp-solved del", d => getComputedStyle(d).textDecorationLine)), /line-through/);
+    assert.equal(await page.textContent(".rp-solved .rp-ans"), "1.0 m/s", "the answer filled in");
+    assert.equal(await page.$$eval(".rp-step", s => s.every(x => x.dataset.state === "done")), true, "the full solution");
+    assert.equal(await page.textContent('.rp-step[data-id="answer"] .rp-val'), "1.0 m/s", "the answer step shows it too (no unit twice)");
+    assert.equal(await page.$$eval('.rp-step[data-id="answer"] .rp-miss', x => x.length), 0, "no miss / auto line under it");
+    assert.equal(await page.getAttribute(".rp", "data-solved"), "", "the card is marked solved");
+    const [ok, n] = await page.$$eval(".rp-ok, .rp-n", x => [getComputedStyle(x.find(e => e.matches(".rp-ok"))).color, getComputedStyle(x.find(e => e.matches(".rp-n"))).color]);
+    assert.equal(ok, n, "✓ in the neutral ink, not green");
+    assert.equal(await page.$eval(".rp-solved del", d => getComputedStyle(d).color), await page.$eval(".rp-solved", d => getComputedStyle(d).color), "the crossed-out answer is not red");
+    const done = (await ev()).filter(e => e[0] === "repair_done");
+    assert.equal(done.length, 1);
+    assert.equal(done[0][1].auto, 1, "the answer step counts as filled in");
+    assert.equal(await page.$$eval(".rp-skip", x => x.length), 0);
+    await noSideScroll();
+  });
+
   await step("a step that still carries ok grades locally: opts.grade is never called", async () => {
     await mount({ variant: "repair", error: "sign", grade: true });
     await act('.rp-val-opts .rp-chip[data-v="−"]');
