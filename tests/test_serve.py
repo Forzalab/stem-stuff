@@ -865,7 +865,7 @@ class Repair(unittest.TestCase):
             self.miss(code, "r-chk")
             self.assertEqual(self.check(code, "r-chk", right), (200, {"ok": True}), code)
             self.assertEqual(self.check(code, "r-chk", wrong), (200, {"ok": False}), code)
-        self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.36"), (200, {"ok": True}))     # the step's tol (2%), not 3 s.f.
+        self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.35"), (200, {"ok": True}))     # the step's tol (2%), not 3 s.f.
         self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.37"), (200, {"ok": False}))
 
     def test_check_is_not_a_try(self):

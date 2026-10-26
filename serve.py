@@ -12,6 +12,7 @@
   multi (design/DONE.md). No answer, no hints.
 - GET /repair/<CODE>   -> the item's repair ladder {steps, alt?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
   this browser has a recorded wrong try on it; `alt` only once a twin of the template was missed. Never in /p or /b.
+  The answer step never carries its key (ok/tol/opts/miss): POST /repair/<CODE>/check {value} -> {ok} grades it (same 403/404; not a try).
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
@@ -92,6 +93,7 @@ BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
 REPAIR_PATH = re.compile(r"^/repair/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
+REPAIR_CHECK_PATH = re.compile(r"^/repair/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})/check$")
 BANK_CODE = re.compile(r"^BANK_[A-Z0-9]{3,6}$")
 BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
@@ -979,10 +981,12 @@ def seen(code, sid):
             _save_tries()
 
 
-def repair_of(p, sid):
-    """GET /repair/<code>: (status, body). The ladder is the template's (a twin names it in parent_template); 404 when there is none,
-    403 until this browser (any redo round too) has a wrong try recorded on p. `alt` rides only once a twin of the template was missed.
-    A twin's answer step loses the template's key (ok/tol/opts/miss): the twin's own key grades it (SCHEMA.md)."""
+KEY_STEP = ("ok", "tol", "opts", "miss")    # the answer step's key: never served (Tony #29.7), POST /repair/<code>/check grades it
+
+
+def _ladder(p, sid):
+    """(template, ladder, missed codes) for p, or (status, error body) when /repair may not serve it: 404 when there is none,
+    403 until this browser (any redo round too) has a wrong try recorded on p."""
     t = problems().get(p["parent_template"]) if p.get("twin") else p
     rp = (t or {}).get("repair")
     if not isinstance(rp, dict) or not rp.get("steps"):
@@ -992,12 +996,48 @@ def repair_of(p, sid):
         missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
     if p["code"] not in missed:
         return 403, {"error": "no wrong try yet"}
+    return t, rp, missed
+
+
+def repair_of(p, sid):
+    """GET /repair/<code>: (status, body). The ladder is the template's (a twin names it in parent_template); 404 / 403 as _ladder.
+    `alt` rides only once a twin of the template was missed. Every answer step loses its key (KEY_STEP): /repair/<code>/check grades it."""
+    got = _ladder(p, sid)
+    if len(got) == 2:
+        return got
+    t, rp, missed = got
     def mine(steps):
-        return steps if t is p else steps[:-1] + [{k: v for k, v in steps[-1].items() if k not in ("ok", "tol", "opts", "miss")}]
+        return steps[:-1] + [{k: v for k, v in steps[-1].items() if k not in KEY_STEP}]
     out = {"code": p["code"], "steps": mine(rp["steps"])}
     if rp.get("alt") and any((problems().get(c) or {}).get("parent_template") == t["code"] for c in missed):
         out["alt"] = {"steps": mine(rp["alt"]["steps"])}
     return 200, out
+
+
+def repair_check(p, u, sid, body):
+    """POST /repair/<code>/check {value}: (status, {ok}), the same 404 / 403 as GET /repair. Not a try (tries.json is untouched).
+    p: the item, u: its mode view (what /check grades). The template's own answer step grades by its ok (num: its tol, else the item's
+    rule); a twin, or a step with no ok, by the item's own key (/check's unit_correct and tol rules; mc: the right id, pick all: "a,c")."""
+    got = _ladder(p, sid)
+    if len(got) == 2:
+        return got
+    t, rp, _ = got
+    value = body.get("value") if isinstance(body, dict) else None
+    if not isinstance(value, str) or not value.strip() or len(value) > 200:
+        return 400, {"error": "invalid"}
+    step = rp["steps"][-1]
+    if t is p and "ok" in step:
+        if step.get("kind") != "num":
+            return 200, {"ok": value.strip() == step["ok"]}
+        u = {**u, "type": "num", "answer": step["ok"], **({"tol": step["tol"]} if "tol" in step else {})}
+    if u["type"] == "mc":
+        return 200, {"ok": {x.strip() for x in value.split(",") if x.strip()} == rights(u)}
+    if u["type"] == "multi":
+        return 400, {"error": "invalid"}
+    try:
+        return 200, {"ok": unit_correct(u, signature(u, value))}
+    except UNREADABLE:
+        return 400, {"error": "invalid"}
 
 
 def answer_of(u):
@@ -3088,7 +3128,8 @@ def _dispatch(method, path, cookie_header, body, ua):
     if method == "POST" and path == "/log/incident":
         return log_incident(cookie_header, body, ua)
     if method == "POST":
-        if path not in ("/check", "/narrate"):
+        rc = REPAIR_CHECK_PATH.match(path)
+        if path not in ("/check", "/narrate") and not rc:
             return None
         sid, cookie = new_sid(cookie_header)
         try:
@@ -3098,12 +3139,14 @@ def _dispatch(method, path, cookie_header, body, ua):
         if not isinstance(b, dict):
             return _json(400, {"verdict": "invalid"}, cookie)
         mode = mode_of(cookie_header)
-        p = lookup(str(b.get("code", "")), mode)
+        p = lookup(rc.group(1) if rc else str(b.get("code", "")), mode)
         if path == "/narrate":                       # the pre-written voiceover (saccharine.narration): sugar mode only
             text = sugar(p).get("narration") if p is not None and mode == "sugar" and not hidden(p, mode) else None
             return _json(200, {"text": text or ""}, cookie)   # none written: empty, not an error
         if p is None or hidden(p, mode):
             return _json(404, {"verdict": "invalid"}, cookie)
+        if rc:
+            return _json(*repair_check(p, view(p, mode), sid, b), cookie)
         return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
     if path == "/health":
         return health()
