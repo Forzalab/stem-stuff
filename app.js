@@ -1604,9 +1604,9 @@ function ckPut(key, text) {
   try { localStorage.setItem(CK, JSON.stringify(Object.fromEntries([...ckAll().filter(([k]) => k !== key), [key, { text, t: Date.now() }]].slice(-CK_MAX)))); } catch { /* blocked or full */ }
 }
 function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
-  const text = S && S.code === w.code ? ckGet(ckKey(w.code, S.tries.at(-1))) : "";
+  const key = S && S.code === w.code ? ckKey(w.code, S.tries.at(-1)) : "", text = key ? ckGet(key) : "";
   if (!text) return false;
-  Object.assign(w, { text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  Object.assign(w, { key, text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
   return true;
 }
 function wishEl() {
@@ -1639,6 +1639,7 @@ function wishOnWrong() {
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
   const w = wish, t = S.tries.at(-1) || {}, key = ckKey(w.code, t);
+  w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
@@ -1881,6 +1882,7 @@ function wishPaint() {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
+    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", "#wish .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
@@ -2204,6 +2206,42 @@ function askFit(ta) {
   const h = ta.scrollHeight, max = parseFloat(getComputedStyle(ta).maxHeight) || Infinity;
   ta.style.height = Math.min(h, max) + "px";
   ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
+}
+/* "Compare with Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
+   right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
+   sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
+   chat history (that alternates turns) */
+async function clCompare(w) {
+  const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
+  const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
+  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.el); return; }
+  const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply">${WCARET}</div>`;
+  const re = box.lastChild;
+  w.cmp = { key, el: box };
+  th.append(box); top(box);
+  const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
+  if (ty.text) { ty.done = true; typed.then(() => top(box)); return; }    // this browser has it: no call
+  w.busy = true; clAsk();
+  const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
+  let r = null, bytes = 0, inc = null;
+  const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
+  try {
+    r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto: false, scratch: scratchTail() }) });
+    fr.h(r);
+    if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) { const { value, done } = await rd.read(); if (done) break; bytes += value.length; fr.f(); ty.text += dec.decode(value, { stream: true }); }
+      fr.e(bytes);
+      if (!ty.text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
+    }
+  } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  if (wish !== w) return;
+  const ok = !!r && r.ok && ty.text.trim() && !inc;
+  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(box); say(speakable(stripFigs(ty.text))); }
+  else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
+  w.busy = false; clAsk();
 }
 async function clSend(msg) {
   const w = wish, t = S.tries.at(-1) || {};
