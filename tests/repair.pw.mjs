@@ -132,14 +132,15 @@ try {
 
   // W71 copy lane: a k>1 slip (drop+sign) says "mistakes" (intro.repairMany, intro.repair until it lands); a leading *...* is an italic action
   await step("intro: repairMany for a multi-family slip, intro.repair for one family or while repairMany is undefined", async () => {
-    await page.evaluate(() => { window.__intro0 = { ...__stemRepairLines.intro }; __stemRepairLines.intro.repairMany = "MANY"; });
+    await page.evaluate(() => { window.__intro0 = { ...__stemRepairLines.intro };   // injected: no step relies on the repair-lines.js on disk
+      Object.assign(__stemRepairLines.intro, { repair: "ONE", repairMany: "MANY" }); });
     await mount({ variant: "repair", error: "drop+sign" });
     assert.equal(await page.textContent(".rp-line"), "MANY");
     await mount({ variant: "repair", error: "sign" });
-    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.repair));
+    assert.equal(await page.textContent(".rp-line"), "ONE");
     await page.evaluate(() => { delete __stemRepairLines.intro.repairMany; });
     await mount({ variant: "repair", error: "drop+sign" });
-    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.repair), "falls back");
+    assert.equal(await page.textContent(".rp-line"), "ONE", "falls back");
   });
 
   await step("intro: a leading *action* is <em>, the rest lands as text", async () => {
@@ -336,13 +337,16 @@ try {
   });
 
   await step("old shape: the full card keeps its intro line + the answer filled in; the auto line still shows, no badge state", async () => {
+    await v2({ intro: { full: "FULL" }, auto: "AUTO" });                          // the old shape, injected (main's strings)
+    await page.evaluate(() => { delete __stemRepairLines.doneBy; delete __stemRepairLines.hintBy; });
     await mount({ variant: "full", error: "sign" });
-    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.full));
+    assert.equal(await page.textContent(".rp-line"), "FULL");
     assert.equal(await page.textContent(".rp-solved .rp-ans"), "1.0 m/s");
     await mount({ variant: "repair", error: "sign" });
     await act('.rp-val-opts .rp-chip[data-v="+"]'); await act('.rp-val-opts .rp-chip[data-v="×"]');
-    assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-miss'), await page.evaluate(() => __stemRepairLines.auto));
+    assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-miss'), "AUTO");
     assert.equal(await page.$eval('.rp-step[data-id="signs"] .rp-n', n => n.hasAttribute("data-auto")), false);
+    await v2off();
   });
 
   await step("no page errors", async () => assert.deepEqual(errs, []));
