@@ -24,7 +24,7 @@
      budget  one shared budget: P_ONE = the fire chance when one trigger is on; with k of the 3 on, each live state rolls p_k once per
              item so that P(any | all k fire) = P_ONE × share(k); share(3) = SHARE_ALL = 0.85 (ours, J3 tunes), share(1) = 1, linear between
      caps    max 1 per item · ≥ GAP_S (90 s; W96 180→90) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
-             typing (a key < TYPING_S ago) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
+             typing (a key < TYPING_S ago) · never < MISS_S (5 s) after a wrong pick (the page raises its own miss duck then) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
              without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none
    Spot gate (SLIP_TIE): a wrong /check reply may carry `spot` (points at a place in the formula) beside `hint`; app.js record() asks
    stemJev.spot() once → spotOk (pure, the `spot` seat, SPOT consts) + one "jev  spot=ok|hold ..." line. Off = no stemJev = the plain hint.
@@ -57,7 +57,7 @@
   /* the spot gate (Tony Oct 24, SLIP_TIE): /check's `spot` (a hint that points at a place in the formula) instead of the plain `hint`, only
      when the student is (a) genuinely improving AND (b) nearly there. All "ours" (J3 bench start values) */
   var SPOT = { MIN_N: 4, WIN: 3, IMP: 0, WRONG: 1, FAST_S: FAST_ERR_S };
-  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
+  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2, MISS_S: 5 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
   function share(k, n) { n = n || NUDGE.STATES.length; return k <= 1 ? 1 : 1 - (1 - NUDGE.SHARE_ALL) * (k - 1) / (n - 1); }
@@ -336,6 +336,7 @@
       if (hidden) return "hidden";
       if (flowRun > 0 && !q.bad) return "flow";
       if ((t - keyAt) / 1000 < NUDGE.TYPING_S) return "typing";
+      if (q.errAt && (t - q.errAt) / 1000 < NUDGE.MISS_S) return "miss";   // W96 r2: the page's own miss duck (Cluck's reply) rises then; a nudge on the miss raced it (cluck-rise 393x659)
       if ((t - nz.at) / 1000 < nz.gap) return "gap";
       return "";
     }

@@ -473,3 +473,13 @@ test("W96 (d) the page's size(): a P3X bank item opens with its real w= (was w=0
   assert.ok(win.stemJev().lines[0].endsWith("PHYS_Y2V num w=11"), win.stemJev().lines[0]);
   assert.ok(args.length >= 1);
 });
+
+test("W96 r2: no nudge in the MISS_S right after a wrong pick (the page's own miss duck rises then: cluck-rise 393x659 cl-cta x ck-peek); it may go on a later tick", () => {
+  const said = [];
+  const j = session({}, { on: ["S6"], rand: lowRoll, lines: { S6: ["x"] }, say: (l, st) => { said.push(st); return true; } });
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).ev("pick", { choice: "A", verdict: "wrong" });
+  assert.deepEqual(said, [], "not on the miss itself");
+  j.at(10 + W96.NUDGE.MISS_S - 0.5).tick(); assert.deepEqual(said, [], "still inside MISS_S");
+  j.at(10 + W96.NUDGE.MISS_S).tick(); assert.deepEqual(said, ["S6"], "after it: the roll was held, not spent");
+});

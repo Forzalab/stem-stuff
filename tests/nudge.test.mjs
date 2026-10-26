@@ -106,10 +106,11 @@ test("never in F flow, while typing, or hidden; a busy peek spends that roll", (
 
   const k = session({ rand: () => 0 });
   k.at(0).ev("q_open", { code: "A" });
-  k.at(29).input("keydown"); k.at(30).ev("pick", { choice: "A", verdict: "wrong" });
-  assert.equal(k.state().counts.S6, 1); assert.equal(k.n(), 0, "a key 1 s ago");
-  k.at(31.9).tick(); assert.equal(k.n(), 0);
-  k.at(33).tick(); assert.equal(k.n(), 1); assert.equal(k.said[0][0], "S6");
+  k.at(10).ev("pick", { choice: "A", verdict: "wrong" });
+  assert.equal(k.state().counts.S6, 1); assert.equal(k.n(), 0, "never on the miss itself (MISS_S, W96 r2)");
+  k.at(19).input("keydown"); k.at(20).tick(); assert.equal(k.n(), 0, "a key 1 s ago");
+  k.at(21.9).tick(); assert.equal(k.n(), 0);
+  k.at(23).tick(); assert.equal(k.n(), 1); assert.equal(k.said[0][0], "S6");
 
   const h = session({ rand: () => 0 });
   h.at(0).ev("q_open", { code: "A" }); h.at(1).vis(true); h.at(900).tick();

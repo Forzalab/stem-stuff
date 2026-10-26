@@ -230,8 +230,9 @@ test("caps: shared gap (GAP_S 90 s, W96) with J5 and between seen lines; MAX per
   assert.ok(earned(j, 120, "C"), "a comeback 55 s after the last one still shows");
   assert.ok(earned(j, 400, "D"));
   assert.equal(earned(j, 700, "E"), null, "MAX = " + SEEN.MAX); assert.equal(j.state().seen.n, SEEN.MAX);
-  const n = session({ rand: () => 0, on: ["S6"], lines: NUDGE, say: () => true });   // S6 nudges at the 1st wrong pick (roll 0 < p)
-  assert.ok(earned(n, 0, "A"), "the nudge does not eat the comeback"); assert.equal(n.state().nudge.n, 1);
+  const n = session({ rand: () => 0, on: ["S6"], lines: NUDGE, say: () => true });   // S6 nudges on the tick after the 1st wrong pick (roll 0 < p; MISS_S)
+  n.at(0).ev("q_open", { code: "A" }); n.at(10).ev("pick", { choice: "A", verdict: "wrong" }); n.at(16).tick(); assert.equal(n.state().nudge.n, 1);
+  assert.ok(n.at(30).ev("pick", { choice: "B", verdict: "correct" }), "the nudge does not eat the comeback");
   const m = session({ rand: script(0, 0), on: ["S2"], lines: NUDGE, say: () => true });   // an S2 nudge takes a depth-only item
   assert.equal(deepItem(m, 0, "A"), null); assert.equal(m.state().nudge.n, 1); assert.deepEqual(plain(seenLog(m)), [], "the item cap, not a quiet roll");
 });
@@ -258,7 +259,7 @@ test("off: seenOff() → nothing; no seenLines → inert; the J5 nudge rules are
   assert.equal(earned(j, 0, "A"), null); off = false;
   assert.ok(earned(j, 200, "B"));
   assert.equal(earned(session({ rand: () => 0.9, seenLines: undefined }), 0, "A"), null);
-  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2, MISS_S: 5 });
 });
 test("dump: the ring is JSONL of every log line (sid, item, code, line), pick lines carry err=", () => {
   const j = session({ rand: R(), sid: "sX" });
@@ -273,7 +274,7 @@ test("dump: the ring is JSONL of every log line (sid, item, code, line), pick li
 /* ---- wiring: ?jev=1 → intent.js → stemDuck.say, the off switches, the hollow tap ---- */
 const wired = (extra = {}) => {
   const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.99, 0.9, 0.5, 0, 0), bank: { get: () => ({ title: "T" }) }, ...extra });
+  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.5, 0, 0), bank: { get: () => ({ title: "T" }) }, ...extra });
   const pick = (t, ch, v, error) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: ch, verdict: v, error }); };
   L.win.stemT("q_open", { code: "A" });
   pick(10, "A", "wrong", "negation"); pick(20, "B", "wrong", "sign"); pick(30, "C", "correct");
@@ -317,7 +318,7 @@ test("wiring: 2 hollows spread past the first 5 fires do not switch it off for g
 });
 test("wiring: a nod → say(\"\", { nod: true })", () => {
   const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.99, 0.9, 0.1, 0, 0) });
+  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.1, 0, 0) });
   L.win.stemT("q_open", { code: "A" });
   [[10, "A", "wrong"], [20, "B", "wrong"], [30, "C", "correct"]].forEach(([t, c, v]) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: c, verdict: v }); });
   L.later[0][0]();
