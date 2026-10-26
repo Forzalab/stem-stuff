@@ -14,7 +14,8 @@ TARGET = os.path.join(ROOT, "brainrot.js")
 PLAYLISTS = [("Parkour", "PLmSs-0cFIbfVWhkZx0i4UMiZdr2C0Z8w7"),          # Tony, Oct 5
              ("Brainrot", "PLGgy9JJbLirtf32CrMSCLiGcBqKAj0WRL"),
              ("Subway Surfers", "PLGspExVREA9D1_jjA77wSmxdzlw1E507h")]
-# Hand-curated categories with no playlist (Tony, Oct 26, todo 78: "hydraulic press and soap squeezing/cutting videos"): written after the
+# Hand-curated categories with no playlist (Tony, Oct 26, todo 78: "hydraulic press and soap squeezing/cutting videos"; then Kinetic Sand,
+# Pressure Washing, Marble Run = marble runs + domino chains): written after the
 # playlists on every run. Each id passed YouTube oEmbed (embeddable); title = oEmbed's, verbatim; short = 1 when oEmbed is taller than wide.
 STATIC = [
     ("Hydraulic Press", [
@@ -44,6 +45,48 @@ STATIC = [
         ["K6H6peOuMPA", "Soap Carving ASMR ! Relaxing Sounds ! Satisfying ASMR Video | P974", 0],
         ["orD6yIilR0A", "ASMR Soap carving", 0],
         ["6S28fH1qUNc", "Relaxing Soap Cutting ASMR. Satisfying Soap and lipstick cutting. Corte de jabón - 859", 0],
+    ]),
+    ("Kinetic Sand", [
+        ["3clqk2U3T9Y", "Very Satisfying and Relaxing Compilation 148 Kinetic Sand ASMR", 0],
+        ["mjMW51EFNVw", "Very Satisfying Video Compilation 63 Kinetic Sand Cutting ASMR", 0],
+        ["rF6awqlStl4", "Very Satisfying and Relaxing Compilation 275 Kinetic Sand ASMR", 0],
+        ["8BYrvVeejzg", "Very Satisfying and Relaxing Compilation 109 Kinetic Sand ASMR", 0],
+        ["rI7lhVuWPuU", "Crunchy Kinetic Sand Cutting Video Compilation ASMR", 0],
+        ["4iBqx-LrG7I", "The Most Satisfying Kinetic Sand ASMR Ever", 0],
+        ["C6Nsmyi0hmk", "Very Satisfying and Relaxing Compilation 302 Kinetic Sand ASMR", 0],
+        ["C_PWdv5Bluw", "Very Satisfying and Relaxing Compilation 298 Kinetic Sand ASMR", 0],
+        ["WEzBCiP6jLg", "Very Satisfying CRUNCHY Compilation Kinetic Sand ASMR", 0],
+        ["etp46Aca_UM", "*1 HOUR* All of Very Satisfying ASMR Videos - Kinetic Sand Cutting ASMR Compilation", 0],
+        ["T87KwRk9IvE", "1 Hour Kinetic Sand ASMR! Satisfying Sand ASMR Cutting! Relaxing Kinetic Sand ASMR #13", 0],
+        ["USRtMtLHkfY", "3 Hour Kinetic Sand ASMR Marathon | No Talking, Just Satisfaction", 0],
+    ]),
+    ("Pressure Washing", [
+        ["oTWeDOhm4_c", "Extremely Satisfying Pressure Washing ▶ 1", 0],
+        ["iJaw4nP2VS0", "Extremely Satisfying Pressure Washing ▶ 2", 0],
+        ["vX--cenq70I", "INGENIOUS & Oddly Satisfying Pressure Washing  Videos #74", 0],
+        ["MuubW9KBNw8", "Oddly Satisfying Pressure Washing  Videos #2", 0],
+        ["j0vh9e_wPMI", "Oddly Satisfying Pressure Washing  Videos #3", 0],
+        ["pAQ9bAoUkZg", "7 Hours Oddly Satisfying Pressure Washing To Get You Out Of Any Event", 0],
+        ["sZ8T9sQcQ4Q", "Best Pressure/Power Washing Video Compilation Ever! [1080p HD]", 0],
+        ["fnjOmFVavxc", "Worst Patio Ever! Extreme ASMR Pressure Washing, #satisfying, #asmr, #pressurewashing, #viral,", 0],
+        ["Z8LSeCgzFmU", "Super Muddy Pressure Washing Compilation Vol 1 | The Most Satisfying Video You'll Ever Watch!", 0],
+        ["plSsCNEmRmA", "Pressure washing in real time - Satisfying pressure washing ASMR to help you relax and sleep!", 0],
+        ["rKMojw8tdds", "Pressure Washing 15 Years Of NEGLECT... Real Speed Pure ASMR No Talking", 0],
+        ["ni-hoolFhKo", "ASMR Pressure Washing 💦 Relaxing Power Wash Sounds (No Talking) Can I save this Expensive driveway?🤔", 0],
+    ]),
+    ("Marble Run", [
+        ["_y-G5YM6paE", "Magic Marble Run Compilation", 0],
+        ["E1NyZ5PtnAk", "Marble Run Race ASMR 1000 Marbles Rain Gutter VS Mega Whirlpool ASMR Amakandu 1H", 0],
+        ["Z6GnsxR7c18", "Marble run race ASMR ☆ Summary video of over 10 types of marble runs.Compilation Long video!", 0],
+        ["BIybpXKovDA", "Marble Run ASMR ☆ Colorful Marble Race　22 piece winding course", 0],
+        ["QkGjmDTqSzE", "Marble Run Race ☆ HABA Slope + Cuboro + Bornelund Quadrilla + Transparent pipe", 0],
+        ["tbxZd-Ea43I", "The World's Largest marble run race", 0],
+        ["dRYav_fwBW4", "Non-Stop Wooden Marble Run! Endless Chain Reaction ASMR ♾️ Compilation", 0],
+        ["VMrg-cvhXto", "250,000 DOMINOES - Most Relaxing/Satisfying Domino Falldown Compilation (No Music)", 0],
+        ["MK1VPyx0gXg", "1 HOUR of the Most Satisfying Domino Falldowns [No Music]", 0],
+        ["NlHAW1YTWiM", "75,000 Dominoes Falling to Relax Your Mind (ODDLY SATISFYING)", 0],
+        ["nTLQluEp1Nw", "Satisfying Domino & Marble Tricks! (Relaxing Compilation)", 0],
+        ["i-Oqf-f8FjU", "The World's Largest marble run race compilation video", 0],
     ]),
 ]
 FEED = "https://www.youtube.com/feeds/videos.xml?playlist_id="

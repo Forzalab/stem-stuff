@@ -40,11 +40,11 @@ class BrainrotList(unittest.TestCase):
             self.assertIn(f'["{name}", [["', src)
 
     def test_static_categories_ship_and_survive_a_rerun(self):
-        """todo 78 (Tony, Oct 26): Hydraulic Press + Soap Cutting, curated by hand (no playlists), after the 3 playlist categories."""
-        want = ["Parkour", "Brainrot", "Subway Surfers", "Hydraulic Press", "Soap Cutting"]
+        """todo 78 (Tony, Oct 26): 5 categories curated by hand (no playlists), after the 3 playlist categories."""
+        want = ["Parkour", "Brainrot", "Subway Surfers", "Hydraulic Press", "Soap Cutting", "Kinetic Sand", "Pressure Washing", "Marble Run"]
         self.assertEqual([n for n, _ in brainrot_list.PLAYLISTS] + [n for n, _ in brainrot_list.STATIC], want)
         for name, rows in brainrot_list.STATIC:
-            self.assertTrue(8 <= len(rows) <= 12, name)
+            self.assertEqual(len(rows), 12, name)
             self.assertEqual(len({r[0] for r in rows}), len(rows), f"{name}: duplicate id")
             for r in rows:
                 self.assertTrue(isinstance(r, list) and len(r) == 3, r)
