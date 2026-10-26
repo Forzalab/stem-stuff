@@ -50,7 +50,7 @@ async function fresh(browser, share = "none", keep = "ok", { motion = "no-prefer
   return { ctx, page, reqs, errs, release, keeps: () => reqs.filter(r => new URL(r.url).pathname === "/acct/keep") };
 }
 const status = page => page.textContent("#lgStatus");
-const SECRET = "Keep this image secret, and do not show to others.", FAILED = 'Save failed! Tap "Save my Cluck" to try again.';
+const SECRET = "Keep your key secret, like your private story on Snapchat.", FAILED = "Oops, save didn't work! Try again!";
 const isSaved = () => !!document.querySelector("dialog.lg .lg-saved");
 /* the saved state: the ✓ sits where Save was (Save gone), green (--correct), named; flashes unless reduced motion */
 async function savedState(page) {
@@ -70,7 +70,7 @@ try {
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
-    assert.equal((await page.textContent("dialog.lg .lg-cap")).replace(/\s+/g, " ").trim(), "This is your key 🔑 Don't post it.");
+    assert.equal((await page.textContent("dialog.lg .lg-cap")).replace(/\s+/g, " ").trim(), "Use this key for any future logins.");
     const mint = reqs.filter(r => r.url.includes("/acct/"));
     assert.deepEqual(mint.map(r => [r.method, new URL(r.url).pathname]), [["POST", "/acct/new"]]);
     const back = await page.evaluate(async () => { const { decode } = await import("../mycluck.mjs"); const c = document.querySelector("canvas.lg-cluck");
@@ -136,7 +136,8 @@ try {
     const before = reqs.length;
     const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#lgHave")]);
     await chooser.setFiles({ name: "cat.png", mimeType: "image/png", buffer: Buffer.from(png) });
-    await page.waitForFunction(() => /couldn.t find/i.test(document.querySelector("#lgStatus").textContent), null, { timeout: 5000 });
+    await page.waitForFunction(() => document.querySelector("#lgStatus").textContent !== "", null, { timeout: 5000 });
+    assert.equal(await status(page), "No valid Cluck code found.");
     assert.deepEqual(reqs.slice(before), []);
     const u = await page.evaluate(() => window.__urls);
     assert.deepEqual(u.made.filter(x => !u.revoked.includes(x)), []);
@@ -195,6 +196,7 @@ try {
     const s = await savedState(page);
     assert.deepEqual([s.save, s.text, s.name, s.inPlace, s.green], [false, "✓", "Saved", true, true], "a green ✓ in place of Save");
     assert.notEqual(s.anim, "none", "it flashes");
+    assert.equal(await status(page), "", "no secret line after a share-sheet save: download only (Tony #36)");
     assert.equal(keeps().length, 1);
     await ctx.close();
   });

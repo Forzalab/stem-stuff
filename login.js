@@ -64,8 +64,7 @@
     const x = el("button", { type: "button", class: "lg-x", "aria-label": "Close" }, "×");
     const h = el("h2", { id: "lgTitle", class: "lg-title" }, store.get() ? "My Cluck" : "Keep your progress");
     const c = el("canvas", { class: "lg-cluck", role: "img", "aria-label": "Your Cluck: a QR code that signs you in", width: "600", height: "600" });
-    const cap = el("p", { class: "lg-cap" });
-    cap.append(el("span", null, "This is your key 🔑"), " ", el("span", null, "Don't post it."));
+    const cap = el("p", { class: "lg-cap" }, "Use this key for any future logins.");          // Tony #36
     const save = el("button", { type: "button", id: "lgSave", class: "lg-btn lg-go", disabled: "" }, "Save my Cluck");
     const have = el("button", { type: "button", id: "lgHave", class: "lg-btn" }, "I have my Cluck");
     const file = el("input", { type: "file", id: "lgFile", class: "lg-file", accept: "image/*", tabindex: "-1", "aria-label": "Pick your Cluck from your photos" });
@@ -110,14 +109,14 @@
     const u = URL.createObjectURL(f), a = el("a", { href: u, download: f.name });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(u), 1000);
-    keep("Keep this image secret, and do not show to others.");                         // Tony #32
+    keep("Keep your key secret, like your private story on Snapchat.");                 // Tony #36
   }
   async function keep(done) {                                                           // done: what to say beside the ✓ once the account is permanent
     const me = cur, t = store.get();
     if (!me || !t) return;
     me.unkept = null;
     try { await post("acct/keep", { token: t }); }
-    catch { if (cur === me) { me.unkept = done; say('Save failed! Tap "Save my Cluck" to try again.'); } return; }   // Tony #32
+    catch { if (cur === me) { me.unkept = done; say("Oops, save didn't work! Try again!"); } return; }   // Tony #36
     if (cur !== me) return;
     const save = me.d.querySelector("#lgSave"), ok = el("p", { class: "lg-saved", role: "img", "aria-label": "Saved", tabindex: "-1" }, "✓");   // COPY-PENDING: "Saved"
     const had = document.activeElement === save;
@@ -144,7 +143,7 @@
       c.width = c.height = 0; im.src = "";
     } catch {} finally { URL.revokeObjectURL(u); input.value = ""; }
     const t = tokenOf(text);
-    if (!t) return say("Couldn't find a Cluck in that picture. Pick the one you saved.");
+    if (!t) return say("No valid Cluck code found.");
     say("Checking…");
     try {
       await login(t, "image");
