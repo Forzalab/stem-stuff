@@ -261,7 +261,10 @@ flow(20, "cluck-explain", async (page, w) => {
   const parent = await page.$eval("#cluck", e => e.parentElement.id || e.parentElement.tagName);
   assert.equal(parent, w === 393 ? "BODY" : "work", "phone: over the page; desktop: the notes column");
   assert.ok(await vis(page, "#cluck .cl-verify"), "verify line");
-  return `stubbed /explain; sheet in ${parent}, text typed, verify line shown`;
+  /* a manual open moves focus into the sheet (W90 r2 item 4): desktop, the ask field once Cluck's text is typed (phone: row 57; the tap on the text above blurs it here) */
+  if (w !== 393) await page.waitForFunction(() => document.activeElement?.matches("#cluck .ask textarea"), null, { timeout: 4000 })
+    .catch(async () => { throw new Error("manual open: focus not in the ask field: " + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))); });
+  return `stubbed /explain; sheet in ${parent}, text typed, verify line shown${w !== 393 ? ", focus in the ask field" : ""}`;
 });
 
 flow(21, "cluck-sheet", async (page, w) => {
@@ -948,6 +951,39 @@ flow(55, "bfcache-resume", async (page, w) => {
   assert.ok(s, "no splash on resume");
   await opened(page, C.single);
   return "pageshow persisted: no splash, question stays";
+});
+
+/* Compare after a miss (W90 r2 item 2, Tony Oct 26: "the chatbox stays as is, when i expect it to update when compare button is clicked"):
+   wrong once (Cluck explains the miss), right on the 2nd try, then "Compare with Cluck's steps" -> Cluck's solution for the RIGHT answer
+   comes as a new message under the miss's text (kept above as history), scrolled into view inside the sheet (the page does not jump),
+   and the manual open moves focus into the sheet (W90 r2 item 4: desktop, the ask field once the text is typed) */
+const STUB_OK = "SOLUTION-RIGHT full steps.\nAnswer: a.";
+flow(57, "cluck-compare", async (page, w) => {
+  const asks = [];
+  await page.route("**/explain", r => { const b = JSON.parse(r.request().postData() || "{}"); asks.push(b.answer);
+    r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: b.answer === "a" ? STUB_OK : STUB_EX }); });
+  await page.route("**/chat", r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "Stub reply." }));
+  await cluckOpen(page, w);
+  await page.click("#cluck .cl-bar .cl-x");                         // closed (desktop: the X folds the column; Compare brings it back)
+  await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
+  assert.equal(await answerKey(page, C.single, true), "correct");
+  await page.waitForFunction(() => !!document.querySelector("#wish .cue-ok")?.getClientRects().length, null, { timeout: 6000 })
+    .catch(() => { throw new Error("no Compare chip after the right try"); });
+  await page.waitForTimeout(1000);                                  // past doneExit's beat (900 ms): it must not undo the open's focus either
+  await page.click("#wish .cue-ok");
+  await page.waitForFunction(() => /SOLUTION-RIGHT/.test(document.querySelector("#cluck:not([hidden]) #clTabEP")?.textContent || ""), null, { timeout: 8000 })
+    .catch(async () => { throw new Error("Compare: no new solution message in the sheet; sheet text: " + JSON.stringify((await page.textContent("#cluck #clTabEP").catch(() => "")).slice(0, 160))); });
+  assert.match(await page.textContent("#cluck #clTabEP > .msg .wtext"), /Egg-cellent/, "the miss's explanation stays above as history");
+  await page.waitForFunction(() => /Answer: a/.test(document.querySelector("#cluck .cl-cmp .wtext")?.textContent || "") && !document.querySelector("#cluck .cl-cmp .wcaret"), null, { timeout: 8000 });
+  const inView = await page.evaluate(() => { const m = document.querySelector("#cluck .cl-cmp"), bd = document.querySelector("#cluck .cl-bd"); const a = m.getBoundingClientRect(), b = bd.getBoundingClientRect();
+    return a.top >= b.top - 1 && a.top < b.bottom - 20; });
+  assert.ok(inView, "the new message is scrolled into view in the sheet");
+  await page.waitForFunction(() => { const a = document.querySelector("#cluck .cl-cmp").getBoundingClientRect(); return a.top >= 0 && a.top < innerHeight - 20; }, null, { timeout: 3000 })
+    .catch(() => { throw new Error("the new message is not on screen"); });
+  await page.waitForFunction(w => w === 393 ? !!document.activeElement?.closest("#cluck") : document.activeElement?.matches("#cluck .ask textarea"), w, { timeout: 4000 })
+    .catch(async () => { throw new Error("Compare: focus not in the sheet's ask field (desktop) / the sheet (phone): " + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))); });
+  assert.equal(asks.filter(a => a === "a").length, 1, "one /explain for the right answer");
+  return "wrong, right, Compare: a new solution message under the miss's text, in view in the sheet, focus moves into the sheet";
 });
 
 /* priority: the ranked UNCOVERED list, then the covered rows in order */

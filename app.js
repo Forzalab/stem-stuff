@@ -1136,6 +1136,7 @@ function wireFF() {
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
       try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
+      pvFit(pv);
     });
     /* Enter: next empty box first, submit when all are filled */
     inp.addEventListener("keydown", e => {
@@ -1146,6 +1147,20 @@ function wireFF() {
     });
   }
   go.addEventListener("click", submitFF);
+}
+/* W91: the preview's room. One line is reserved (app.css); taller math ratchets it up (150 ms), it never shrinks while this question is open (the element is
+   rebuilt per question), and past 3 lines the math scales down inside it: typing never moves the page more than the ratchet steps */
+function pvFit(pv) {
+  let w = pv.querySelector(":scope > .pvi");
+  if (!w) { w = document.createElement("div"); w.className = "pvi"; w.append(...pv.childNodes); pv.append(w); }
+  w.style.transform = "";
+  const line = parseFloat(getComputedStyle(pv).minHeight) || 0, cap = 3 * line, nat = w.getBoundingClientRect().height;
+  let need = nat;
+  if (cap && nat > cap) { w.style.transform = `scale(${cap / nat})`; need = cap; }
+  const room = pv._room || line;                             // unlocked, the box is the reserved line (its height: auto already grew with the new math)
+  if (need <= room + 0.5) return;
+  if (!pv._room) { pv.style.height = room + "px"; void pv.offsetHeight; }   // lock it at the line first, so the first step animates too
+  pv._room = need; pv.style.height = need + "px";
 }
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
@@ -1285,7 +1300,7 @@ function saveDone(r) {
 function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
-    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx")) a.blur();   // Next in the Check slot keeps focus (T17b-1)
+    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat)
     if (mtOpen) closeMT(false);
     if (swapOn) setSwap(false);
     root.classList.remove("dock-away", "bar-off");
@@ -1508,6 +1523,7 @@ function reveal(r, part) {
   host.querySelector(".ansl")?.remove();
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b></p>`);
+  if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
 }
@@ -1604,9 +1620,9 @@ function ckPut(key, text) {
   try { localStorage.setItem(CK, JSON.stringify(Object.fromEntries([...ckAll().filter(([k]) => k !== key), [key, { text, t: Date.now() }]].slice(-CK_MAX)))); } catch { /* blocked or full */ }
 }
 function wishFromCache(w) {                                                // a hit: the wish is finished already, shown whole (no fetch, no caret, no typing)
-  const text = S && S.code === w.code ? ckGet(ckKey(w.code, S.tries.at(-1))) : "";
+  const key = S && S.code === w.code ? ckKey(w.code, S.tries.at(-1)) : "", text = key ? ckGet(key) : "";
   if (!text) return false;
-  Object.assign(w, { text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
+  Object.assign(w, { key, text, done: true, started: true, failed: 0, shown: text.length, pos: text.length, skip: true, at: 1 });
   return true;
 }
 function wishEl() {
@@ -1639,6 +1655,7 @@ function wishOnWrong() {
 const scratchTail = () => ($("#scratch")?.value || "").slice(-1500);      // the newest work: the NOTE reads the move (serve.py SCRATCH_MAX)
 async function wishStart(auto) {
   const w = wish, t = S.tries.at(-1) || {}, key = ckKey(w.code, t);
+  w.key = key;                                                             // the try this text explains (Compare: a later right one needs its own)
   w.started = true; w.ctl = new AbortController();
   window.stemT?.("_ask");   // telemetry: cluck_stream's first_token_ms starts here
   if (auto) wishLogAdd();
@@ -1881,6 +1898,7 @@ function wishPaint() {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
+    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", "#wish .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
@@ -2028,7 +2046,7 @@ function clClose(dismiss) {
   if (!cl || !cl.open) return;
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
-  cl.open = false; cl.el.hidden = true; cl.sheetReset?.();
+  cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
@@ -2148,7 +2166,12 @@ function clTab(tab, focus) {
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
   clMore();
-  if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
+  if (focus) {                                                              // a manual open: focus goes into the sheet (an auto open never moves it)
+    const ta = cl.el.querySelector(".ask textarea");
+    if (has.steps && tab === "steps") fold.focus();
+    else if (sideMQ.matches && ta && !ta.disabled && !cl.el.querySelector(".cl-ft").hidden) ta.focus({ preventScroll: true });
+    else { cl.wantAsk = sideMQ.matches; [...cl.el.querySelectorAll(".cl-x")].find(b => b.getClientRects().length)?.focus({ preventScroll: true }); }   // desktop: the ask field once the text is typed; phone: no keyboard pop
+  }
 }
 /* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
    the student's words in a bubble. The speaker's name stays for screen readers */
@@ -2197,6 +2220,11 @@ function clAsk(build) {
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;
+  if (cl.wantAsk && cl.open && wishTyped(w)) {                              // the manual open's focus, now that the field takes it; not if the student moved on
+    cl.wantAsk = false;
+    const a = document.activeElement;
+    if (!a || a === document.body || (a.matches(".cl-x") && cl.el.contains(a))) ft.querySelector("textarea").focus({ preventScroll: true });
+  }
 }
 /* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
 function askFit(ta) {
@@ -2204,6 +2232,42 @@ function askFit(ta) {
   const h = ta.scrollHeight, max = parseFloat(getComputedStyle(ta).maxHeight) || Infinity;
   ta.style.height = Math.min(h, max) + "px";
   ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
+}
+/* "Compare with Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
+   right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
+   sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
+   chat history (that alternates turns) */
+async function clCompare(w) {
+  const t = S.tries.at(-1) || {}, key = ckKey(w.code, t), th = cl.el.querySelector(".cl-thread");
+  const bd = cl.el.querySelector(".cl-bd"), top = el => { bd.scrollTop += el.getBoundingClientRect().top - bd.getBoundingClientRect().top - 8; };   // the message's top at the body's top
+  if (w.cmp && w.cmp.key === key && w.cmp.el.isConnected) { top(w.cmp.el); return; }
+  const box = document.createElement("div"); box.className = "msg cl-cmp"; box.innerHTML = clWho(false) + `<div class="wtext wreply">${WCARET}</div>`;
+  const re = box.lastChild;
+  w.cmp = { key, el: box };
+  th.append(box); top(box);
+  const ty = { text: ckGet(key), pos: 0, shown: 0, done: false }, typed = wishType(re, ty);
+  if (ty.text) { ty.done = true; typed.then(() => top(box)); return; }    // this browser has it: no call
+  w.busy = true; clAsk();
+  const t0 = Date.now(), tp = traceparent(), fr = frReq("explain", tp);
+  let r = null, bytes = 0, inc = null;
+  const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
+  try {
+    r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto: false, scratch: scratchTail() }) });
+    fr.h(r);
+    if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
+    else {
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      for (;;) { const { value, done } = await rd.read(); if (done) break; bytes += value.length; fr.f(); ty.text += dec.decode(value, { stream: true }); }
+      fr.e(bytes);
+      if (!ty.text.trim()) fail({ why: "empty", phase: "stream", bytes, status: r.status });
+    }
+  } catch (e) { fr.x(e); fail(r ? { e, phase: "stream", bytes, status: r.status } : { e }); }
+  if (wish !== w) return;
+  const ok = !!r && r.ok && ty.text.trim() && !inc;
+  if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(box); say(speakable(stripFigs(ty.text))); }
+  else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
+  w.busy = false; clAsk();
 }
 async function clSend(msg) {
   const w = wish, t = S.tries.at(-1) || {};
@@ -2247,7 +2311,7 @@ async function clSend(msg) {
   } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
-  if (!w.out) cl.el.querySelector(".ask input")?.focus();
+  if (!w.out) cl.el.querySelector(".ask textarea")?.focus();
 }
 
 /* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
