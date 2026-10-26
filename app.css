@@ -692,7 +692,7 @@ html.side #work > .orig { margin: 0; }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
-.fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; justify-items: center; }
+.fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
 .fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped */
 .fcard .fm .katex { white-space: nowrap; }

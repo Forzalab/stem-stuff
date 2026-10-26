@@ -322,9 +322,11 @@ try {
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 1, "no ladder: the arrow is drawn as before");
     /* orc v23 round 2: a doc popover never runs past the screen (a tall one scrolls inside), and a long formula is never cut: the popover
        widens to it up to the viewport, and past that the header scrolls sideways */
-    for (const [w, h] of [[390, 844], [1280, 720]]) {
+    for (const [w, h] of [[390, 844], [360, 640], [1280, 720]]) {
       await page.setViewportSize({ width: w, height: h });
       await page.evaluate(() => { location.hash = "CALC1_BU1"; }); await opened(page, "CALC1_BU1");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true,
+        `${w}x${h}: BUOY's card row is wider than the screen; it scrolls in its box, never the page (KaTeX's hidden MathML stays inside .fm)`);
       for (const [i, id] of [[0, "BUOY"], [1, "I_SUM"]]) {
         const b = page.locator("#fcard .fq").nth(i);
         await b.evaluate(x => x.scrollIntoView({ block: "center" }));
