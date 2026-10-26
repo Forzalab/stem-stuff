@@ -9,7 +9,7 @@ const read = f => readFileSync(new URL(f, import.meta.url), "utf8");
 const w = {}; w.window = w;
 vm.runInNewContext(read("../copy/repair-lines.js"), w);
 vm.runInNewContext(read("../copy/pops.js"), w);
-const R = w.__stemRepairLines, POPS = w.__stemPopLines;
+const R = w.__stemRepairLines, POPS = JSON.parse(JSON.stringify(w.__stemPopLines));   // out of the vm realm, as pops.test.mjs
 
 test("repair open (vet-repair-open): one fault vs more than one; *waddles to you* is the italic aside", () => {
   assert.equal(R.intro.repair, "*waddles to you* Let's fix our mistake—QUACKK— step-by-step.");
