@@ -129,7 +129,7 @@ try {
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: Key formulas, in order of use; the brainrot corner: one muted player per category", async () => {
+  await step("sugar: Key formulas, in order of use; the brainrot corner: 3 muted players, 3 different categories", async () => {
     assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
       return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
@@ -139,11 +139,11 @@ try {
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src));
     assert.equal(srcs.length, 3);
-    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots (Tony, Oct 5): all 3 playlists, one video each
-    assert.equal(cats.length, 3);
+    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots: 3 playlists (Tony, Oct 5) + 5 hand-curated (Oct 26); 3 random categories per load, one video each
+    assert.equal(cats.length, 8);
     const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
     for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
-    assert.equal(new Set(srcs.map(catOf)).size, 3, "one per playlist");
+    assert.equal(new Set(srcs.map(catOf)).size, 3, "3 different categories");
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
