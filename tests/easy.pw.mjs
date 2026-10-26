@@ -292,6 +292,13 @@ try {
     assert.equal(await page.$eval(".pop", e => e.children[1].className + " " + e.children[1].textContent.replace(/\s+/g, "")),
       "pop-t fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "the formula, then the purpose as the title");
     assert.equal(await q[2].getAttribute("aria-expanded"), "true");
+    assert.equal(await page.$$eval(".pop .fig, .pop .fd-fig", f => f.length), 0, "a row with no picture (KE_ROT) has no figure");
+    await q[1].click();                                                     // I = Σ m r²: formula-figs.js has its picture (design/FORMULA-FIGS.md)
+    await page.waitForFunction(() => document.querySelector(".pop .fd-fig svg"), null, { timeout: 3000 });
+    const fig = await page.$eval(".pop", e => { const f = e.querySelector(".fd-fig"), r = e.getBoundingClientRect(), fr = f.getBoundingClientRect(), s = f.querySelector("svg").getBoundingClientRect();
+      return { at: [...e.children].indexOf(f), role: f.getAttribute("role"), alt: f.getAttribute("aria-label") === window.FormulaFigs.I_SUM.alt, drawn: s.height > 60 && s.width > 150,
+        inside: fr.left >= r.left - 0.5 && fr.right <= r.right + 0.5, labels: f.querySelectorAll(".lbl .katex").length >= 3, inView: r.left >= 0 && r.right <= innerWidth }; });
+    assert.deepEqual(fig, { at: 1, role: "img", alt: true, drawn: true, inside: true, labels: true, inView: true }, "the picture sits under the formula: graph.js, role img, its alt as the label, KaTeX labels, inside the popover");
     await q[0].click();
     assert.deepEqual(await open(), [0], "one popover at a time");
     await q[0].click();

@@ -735,6 +735,11 @@ html.side #work > .orig { margin: 0; }
 .fd-w, .fd-x { margin: var(--s2) 0 0; }
 .fd-w b, .fd-x b { font-weight: var(--w-em); color: var(--ink); margin-right: var(--s1); }
 .fd-x { overflow-wrap: anywhere; }
+/* the row's picture (formula-figs.js, design/FORMULA-FIGS.md): under the formula, at the popover's full width (graph.js measures it, so the
+   popover is fixed-width when it has one); calm: no frame, the surface's own tokens (.pop sets --body/--knock), labels at --t-xs */
+.pop.fd-has-fig { width: min(var(--pop-w), calc(100vw - 32px)); }
+.pop .fd-fig { margin: var(--s1) 0 var(--s2); }
+.pop .fd-fig .lbl { font-size: var(--t-xs); }
 @keyframes lad-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: no-preference) { .fcard :is(.lad-in, .fhs) { animation: lad-in var(--d-move, 200ms) ease-out both; } }   /* .fhs: notes opened by "why?" slide in too */
 /* Popover (popover.js, design/POPOVER.md; Tony, Oct 23, after shadcn/ui Popover: rounded-md, 1px border, soft shadow, p-3, w-72, text-sm). App chrome on

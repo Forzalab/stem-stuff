@@ -813,10 +813,20 @@ function midOpen(li, cur) {                                                     
 }
 /* the "?" popover (Tony, Oct 23): popover.js, variant "doc" (design/POPOVER.md). Built on open, removed on close. The row's formula again (same KaTeX,
    same size, centred under the row's formula), the purpose as its bold title, then the muted body: symbols + units, when, example */
-function docHTML(d, tex) {
+/* a row's picture (formula-figs.js, design/FORMULA-FIGS.md; Tony, Oct 26): under the formula, drawn by graph.js once the popover is in the page */
+function docHTML(d, tex, fig) {
   const sym = (d.sym || []).map(y => `<li><span class="fd-s">${renderMath(y.s, false)}</span><span class="fd-m">${esc(y.m || "")}</span>${y.u ? `<span class="fd-u">${esc(y.u)}</span>` : ""}</li>`).join("");
-  return `<div class="pop-h">${renderMath(tex, false)}</div>${d.purpose ? `<p class="pop-t fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
+  return `<div class="pop-h">${renderMath(tex, false)}</div>${fig ? `<div class="pop-fig fig fd-fig" role="img" aria-label="${esc(fig.alt)}"></div>` : ""}${d.purpose ? `<p class="pop-t fd-p">${docText(d.purpose)}</p>` : ""}<ul class="fd-sym">${sym}</ul>`
     + (d.when ? `<p class="fd-w"><b>Use it</b> ${esc(d.when)}</p>` : "") + (d.ex ? `<p class="fd-x"><b>Example</b> ${docText(d.ex)}</p>` : "");
+}
+/* at most FIG_H tall, so the popover stays a glance: a taller scene is redrawn narrower and centred (graph.js's own phone rule, tighter) */
+const FIG_H = 168;
+function drawDocFig(g, fig) {
+  Graph.render(g, fig);
+  const W = g.clientWidth, H = g.offsetHeight;
+  if (!(H > FIG_H && W)) return;
+  g.style.width = Math.max(Math.round(0.6 * W), Math.floor(W * FIG_H / H)) + "px";
+  Graph.render(g, fig); g.style.marginInline = "auto";
 }
 function formulaCard() {
   if (window.Pop && Pop.anchor()?.closest("#fcard")) Pop.close();
@@ -838,7 +848,12 @@ function formulaCard() {
     if (w) { const open = w.getAttribute("aria-expanded") !== "true"; w.setAttribute("aria-expanded", String(open)); sec.querySelector("#" + w.getAttribute("aria-controls")).hidden = !open; return; }
     const b = e.target.closest(".fq"); if (!b) return;
     const f = S.prob.formulas[b.dataset.i];
-    Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => { el.innerHTML = docHTML(f.doc, f.tex); } });
+    Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
+      const fig = window.FormulaFigs?.[f.id];
+      el.innerHTML = docHTML(f.doc, f.tex, fig); el.classList.toggle("fd-has-fig", !!fig);   // a figure needs a fixed width to draw at
+      const g = fig && el.querySelector(".fd-fig");
+      if (g) try { drawDocFig(g, fig); } catch (e) { console.error(e); g.textContent = fig.alt; g.classList.add("fig-off"); }
+    } });
   });
   $("#q").after(sec);
 }
