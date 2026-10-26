@@ -191,10 +191,30 @@ test("burst_gap_s (T22): dead-easy never touches lastBurst, whatever the gap", (
   R.gap();
 });
 
+/* Tony #36: one praise rotation (reusable), the common line "Duck approves. Rare." rotates through it; LINES[7] swapped */
+test("praise: four Cluck lines, picked by Math.random; a common drop on LINES[3] says one of them", () => {
+  assert.deepEqual(R.PRAISE, ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"]);
+  R.PRAISE.forEach((l, i) => { script = [(i + 0.5) / 4]; assert.equal(R.praise(), l); });
+  assert.equal(R.LINES[7], "You nailed that one!");
+  assert.ok(!R.LINES.includes("Duck approves. Rare."));
+  const at = i => (i + 0.5) / R.LINES.length;                                   // the common line's index roll
+  assert.ok(R.LINES.slice(0, 2).includes(one("C0", {}, [0, 0, 0.5, at(0), at(1)]).line));   // the last line is now 0 or 1 (earlier tests rolled at random), so 3 takes no re-roll
+  assert.equal(one("C3", {}, [0, 0, 0.5, at(3), 0.9]).line, "Cluck thinks that deserves a quack!");
+});
+
+/* Tony #36: the 3-in-a-row note is his line; 5 and every 10 stay "N cracked" */
+test("streak notes: 3 = Tony's line, 5 and 10 = N cracked, others none", () => {
+  const notes = [];
+  for (let i = 1; i <= 10; i++) { script = [0.99, 0.99]; notes.push(ok("S" + i).streakNote ?? null); }
+  assert.deepEqual(notes, [null, null, "Baby a tripleeee, QUACKKKK", null, "5 cracked", null, null, null, null, "10 cracked"]);
+});
+
 /* B4 conquered (DESIGN-v3 §5; Tony #1, #10, #25.5): repaired + solo `a` twin + solo `b` twin where one exists */
 const M = (type, tpl, x = {}) => R.mastery({ type, tpl, ...x });
 test("conquered: miss -> repair_done -> twin_a ok (no b) = conquered.Q7, 1/20, a short line with no topic name", () => {
-  assert.equal(M("miss", "Q7").note, "Q7 isn't conquered yet");
+  const m = M("miss", "Q7");
+  assert.equal(m.note, "Let's give Q7 another whirl!");          // Tony #36
+  assert.equal(m.miss, "Close call, let's retry next turn!");     // Tony #36
   assert.equal(M("repair_done", "Q7").conquered, false);
   const r = M("twin_a", "Q7", { ok: true });
   assert.deepEqual([r.conquered, r.newly, r.count, r.goal], [true, true, 1, 20]);
@@ -231,4 +251,17 @@ test("conquered: twins without a miss + ladder never count; the goal follows con
   const g = { localStorage: globalThis.localStorage };
   new Function("window", src)(g);
   assert.equal(g.Rewards.mastery({ type: "miss", tpl: "Q1" }).conquered, false);
+});
+
+/* the stage line replaces "N/20 conquered" (Tony #32): p = done / total; p < 1/3 early, 1/3 <= p <= 2/3 halfway, p > 2/3 late */
+test("stage line: start, early, halfway, late, done, with the edges at a goal of 20", () => {
+  const at = { 0: "Ready when you are.", 1: "1 question done. Keep it up!", 6: "6 questions done. Keep it up!", 7: "Halfway there!",
+    10: "Halfway there!", 13: "Halfway there!", 14: "Only 6 to go, you got this!", 19: "Only 1 to go, you got this!", 20: "🎉 All done!", 21: "🎉 All done!" };
+  for (const d in at) assert.equal(R.stage(+d, 20), at[d], "done " + d);
+  assert.equal(R.stage(1, 3), "Halfway there!", "exactly 1/3 is halfway");
+  assert.equal(R.stage(2, 3), "Halfway there!", "exactly 2/3 is halfway");
+  assert.equal(R.stage(2, 6), "Halfway there!");
+  assert.equal(R.stage(5, 6), "Only 1 to go, you got this!");
+  M("miss", "Q1"); M("repair_done", "Q1"); M("twin_a", "Q1", { ok: true });
+  assert.equal(R.state().stage, "1 question done. Keep it up!", "state() carries the line for the bar's own done count");
 });

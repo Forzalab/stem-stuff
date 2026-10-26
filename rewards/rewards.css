@@ -65,14 +65,13 @@ html.start .rw-hud { display: none; }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
 .rw-counts { display: none; }
 .rw-hud.rw-z-xp .rw-coin, .rw-hud.rw-z-st .rw-streak { display: none; }   /* C1: a 0 balance / 0 count stays hidden until the first reward */   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
-/* B4 mastery (DESIGN-v3 §5; Kivetz 2006 goal gradient): "N/20 conquered" over a short bar whose right end is a finish line (a light post).
+/* B4 mastery (DESIGN-v3 §5; Kivetz 2006 goal gradient): the stage line (engine.js stage(), Tony #32) over a short bar whose right end is a finish line (a light post).
    Hidden at 0 like the other counts (C1); the popover always shows it. No score screen anywhere (Tony #1): this is the only readout. */
 .rw-won { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 4px; font: 600 var(--t-sm, 0.9375rem)/1 var(--rw-font); color: var(--muted); white-space: nowrap; }
 .rw-won b, .rw-pop-won b { color: var(--reward); font-variant-numeric: tabular-nums; }
 .rw-goal { position: relative; display: block; height: 6px; border-radius: var(--rw-pill); background: var(--page); }
 .rw-goal i { display: block; height: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left; background: var(--reward); transition: transform .75s cubic-bezier(.16, 1, .3, 1); }
 .rw-goal::after { content: ""; position: absolute; right: -1px; top: -4px; bottom: -4px; width: 3px; border-radius: 2px; background: var(--ink); }   /* the finish line */
-.rw-hud.rw-z-won .rw-won { display: none; }
 .rw-pop .rw-pop-won { margin: 12px 0 0; display: grid; gap: 8px; }
 .rw-pop .rw-pop-won .rw-goal { height: 10px; }
 @container (max-width: 560px) { .rw-won { display: none; } }

@@ -15,17 +15,21 @@
      { type: "twin_b", tpl, ok }       the `b` twin, solo, graded
    conquered[tpl] = repaired, then `a` solo right, then `b` solo right where one exists (redo.mjs's action "conquered"). A solo twin
    wrong resets: a new ladder, then that twin again (an `a` win stands after a `b` miss). Conquered stays conquered (never goes down).
-   The HUD shows "N/20 conquered" (cfg.goal) by the level bar, with a finish line; app.js shows r.line with FX.conquered(). */
+   The HUD shows a stage line (stage(): Tony #32, no "N/20 conquered") over a bar to cfg.goal with a finish line; app.js shows r.line
+   with FX.conquered(). */
 (function (g) {
   'use strict';
   var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000, goal: 20 };
-  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
-    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You did not guess that. Nice.",
+  /* one praise rotation (Tony #36): reuse it wherever praise is needed; LINES[3] says one of these */
+  var PRAISE = ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"];
+  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", PRAISE,
+    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You nailed that one!",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
     "Friction cannot stop you.", "Net force: forward.", "Quack quack, combo pack.", "Golden feather incoming…",
     "Torque? More like talk less, solve more.", "Spring loaded. Released.", "Centripetal? Central to the win.",
     "Exam 2 just got nervous."];
   var LEGEND = ["THE GOLDEN DUCK HAS NOTICED YOU.", "Achievement: Physics Goblin.", "Cluck sheds one proud tear."];
+  var MISS = "Close call, let's retry next turn!";   // Tony #36
   var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0;
 
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
@@ -60,14 +64,24 @@
   function oldLevelOf(xp) { var L = 1; while (20 * L + 5 * L * (L - 1) <= xp) L++; return L; }   // the pre-Oct-21 curve, migration only
   function levelOf(xp) { return Math.max(curveLevel(xp), (s && s.keep) || 1); }
   function rate() { return s.hist.length ? s.hist.reduce(function (a, b) { return a + b; }, 0) / s.hist.length : null; }
-  function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i]; }
+  function praise() { return PRAISE[ri(0, PRAISE.length - 1)]; }
+  function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i] === PRAISE ? praise() : LINES[i]; }
   var reduced = function () { try { return !!(g.matchMedia && g.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } };
 
   function state() {
     if (!s) return null;
     var L = levelOf(s.xp), f = Math.min(floorOf(L), s.xp), n = floorOf(L + 1);   // a kept level (old save) fills its bar from today's XP
     return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate(),
-      won: Object.keys(s.won).length, goal: cfg.goal };
+      won: Object.keys(s.won).length, goal: cfg.goal, stage: stage(Object.keys(s.won).length, cfg.goal) };
+  }
+  /* the bar's stage line (Tony #32), p = done / total: 0 start, p < 1/3 early, 1/3 <= p <= 2/3 halfway, p > 2/3 late, all done */
+  function stage(done, total) {
+    var p = done / total;
+    if (!done) return "Ready when you are.";                                                           // Tony #32, #36
+    if (p >= 1) return "🎉 All done!";                                                                 // COPY-PENDING (Tony: an emoji is fine, a reward)
+    if (p < 1 / 3) return done + (done === 1 ? " question" : " questions") + " done. Keep it up!";   // COPY-PENDING
+    if (p <= 2 / 3) return "Halfway there!";                                                           // COPY-PENDING
+    return "Only " + (total - done) + " to go, you got this!";                                        // COPY-PENDING
   }
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
   function skipSnack() { if (!s) return false; s = load(); return s.hist.length >= 10 && rate() > 0.9; }
@@ -107,7 +121,8 @@
       if (r.drop === 'common') { r.line = commonLine(); big = 'win'; }
       else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
-      if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
+      if (s.streak === 3) r.streakNote = "Baby a tripleeee, QUACKKKK";   // Tony #36
+      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;
@@ -120,16 +135,16 @@
     return r;
   }
 
-  /* mastery: ev = { type: miss | repair_done | twin_a | twin_b, tpl, b, ok } (the header) -> { conquered, newly, count, goal, line, note }.
-     line: the one conquered line, only on the event that conquers; note: the miss helper copy. s.mt[tpl] = { b, rep, a } while on its track */
+  /* mastery: ev = { type: miss | repair_done | twin_a | twin_b, tpl, b, ok } (the header) -> { conquered, newly, count, goal, line, note, miss }.
+     line: the one conquered line, only on the event that conquers; note + miss: the miss copy (the template's next stop, the miss line). s.mt[tpl] = { b, rep, a } while on its track */
   function mastery(ev) {
     ev = ev || {};
-    var tpl = String(ev.tpl || ''), r = { conquered: false, newly: false, count: 0, goal: cfg.goal, line: null, note: null };
+    var tpl = String(ev.tpl || ''), r = { conquered: false, newly: false, count: 0, goal: cfg.goal, line: null, note: null, miss: null };
     if (!s || !tpl) return r;
     s = load();
     var t = s.mt[tpl], won = !!s.won[tpl];
     if (!won) {
-      if (ev.type === 'miss') { t = s.mt[tpl] = { b: !!ev.b, rep: false, a: false }; r.note = tpl + " isn't conquered yet"; }
+      if (ev.type === 'miss') { t = s.mt[tpl] = { b: !!ev.b, rep: false, a: false }; r.note = "Let's give " + tpl + " another whirl!"; r.miss = MISS; }   // Tony #36
       else if (t && ev.type === 'repair_done') t.rep = true;
       else if (t && (ev.type === 'twin_a' || ev.type === 'twin_b')) {
         var w = ev.type === 'twin_a' ? 'a' : 'b';
@@ -218,9 +233,9 @@
     }
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
-    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak); ui.el.classList.toggle('rw-z-won', !st.won);
+    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
     var gp = Math.min(1, st.won / st.goal);                                  // the finish line is the bar's right end (rewards.css .rw-goal::after)
-    ui.goal.style.setProperty('--p', gp); ui.won.innerHTML = '<b>' + st.won + '/' + st.goal + '</b> conquered';
+    ui.goal.style.setProperty('--p', gp); ui.won.textContent = st.stage;
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
     ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
@@ -228,13 +243,13 @@
       '<dt>Next level</dt><dd>' + st.toNext + ' XP to go</dd><dt>Points</dt><dd>' + st.xp + ' XP</dd>' +
       '<dt>Cracked</dt><dd>' + st.streak + ' right answers</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
       '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>' +
-      '<p class="rw-pop-won"><span class="rw-goal"><i style="--p:' + gp + '"></i></span><b>' + st.won + '/' + st.goal + '</b> conquered</p>';
+      '<p class="rw-pop-won"><span class="rw-goal"><i style="--p:' + gp + '"></i></span><b>' + st.stage + '</b></p>';
     ui.pop.querySelector('.rw-bar i').style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
-      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved, ' + st.won + ' of ' + st.goal + ' conquered');
+      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved, ' + st.stage);
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
   g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
-    origSolved: origSolved, mastery: mastery, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND };
+    origSolved: origSolved, mastery: mastery, stage: stage, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
 })(typeof window !== 'undefined' ? window : globalThis);
