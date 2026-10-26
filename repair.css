@@ -40,6 +40,13 @@
 .rp-miss { color: var(--help-on); }
 .rp-because { margin-left: calc(1.25rem + var(--s2)); color: var(--muted); font-size: var(--t-xs); }
 .rp-because::before { content: "why: "; }
+/* solved (#33 A: the server sent the answer after the 2nd miss): the problem with the answer in, the wrong try struck; the ladder neutral */
+.rp-solved { margin: 0 0 var(--s3); }
+.rp-stem, .rp-a { margin: 0 0 var(--s2); }
+.rp-a { font-size: var(--t-md); }
+.rp-wrong { color: inherit; text-decoration: line-through; }
+.rp-ans { font-weight: var(--w-em); }
+.rp[data-solved] .rp-ok { color: var(--muted); }
 .rp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: var(--s3); }
 .rp-foot:empty { display: none; }
 .rp-done { margin: 0; font-weight: var(--w-em); }

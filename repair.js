@@ -2,10 +2,11 @@
    data (item.repair, SCHEMA.md), drawn by our code; nothing Cluck says goes through here. Graded on the device: the item is already a miss.
 
    Repair.mount(host, item, opts)   draws the ladder into host (replacing what is there); returns { el, destroy() }
-       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value), on(name, data) }
+       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value, n), on(name, data) }
        error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
-       grade(value) -> Promise<boolean>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7; the
-       host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
+       grade(value, n) -> Promise<{ ok, answer? }>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7;
+       the host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
+       n = the 1-based try on that step; an `answer` (display string, 2nd miss, #33 A) = the worked solution: stem + answer, try struck, no hue
        on: repair_done { why_ok, variant, ladder, auto } · repair_skip { variant } · repair_next { } (full, after the study pause)
    Repair.blankStep(item, error)    the step id the slip lives in, or null (= the fallback ladder). stemJev.repairBlank's signature
 
@@ -63,7 +64,7 @@
       st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));
-    let whyOk = true, autos = 0, finished = full, timer = 0, gone = false;
+    let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it
     const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
 
@@ -91,8 +92,15 @@
       const st = s.st;
       if (st.ok == null && o.grade) {                                            // the key is on the server: one grade in flight at a time
         if (s.busy) return;
-        s.busy = true;
-        Promise.resolve(o.grade(v)).then(ok => { s.busy = false; if (!gone) judge(s, v, ok === true); }, () => { s.busy = false; });
+        s.busy = true; s.n = (s.n || 0) + 1;
+        Promise.resolve(o.grade(v, s.n)).then(r => {
+          s.busy = false;
+          if (gone) return;
+          if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true);
+          const p = st.kind === "pick" && optsOf(st).find(p => p.id === v);         // the step fills in with it; no miss / auto line under it
+          solved = { wrong: p ? p.md : String(v), answer: String(r.answer) };
+          fillIn(s); s.miss = ""; s.shown = solved.answer; settle();
+        }, () => { s.busy = false; });
         return;
       }
       judge(s, v, st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
@@ -126,6 +134,7 @@
 
     /* ---- drawing ---- */
     function shown(s) {                                                          // a step's worked value, as text / $math$
+      if (s.shown != null) return s.shown;                                     // the server's display string, as is
       const st = s.st, ok = st.ok != null ? st.ok : s.val;                     // no key here: the value the server took (none if it filled in)
       if (ok == null) return "";
       if (st.kind === "pick") { const p = optsOf(st).find(p => p.id === ok); return p ? p.md : ""; }
@@ -187,8 +196,16 @@
       if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
       return li;
     }
+    function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
+      const box = h("div", "rp-solved"), a = h("p", "rp-a");
+      if (item.stem) box.append(h("p", "rp-stem", item.stem));
+      a.append(h("del", "rp-wrong", solved.wrong), " ", h("span", "rp-ans", solved.answer));
+      box.append(a);
+      return box;
+    }
     function draw() {
-      const kids = [h("p", "rp-line", (L().intro || {})[variant === "repair" && !blank ? "fallback" : variant] || "")];
+      if (solved) el.dataset.solved = "";
+      const kids = [solved ? solvedEl() : h("p", "rp-line", (L().intro || {})[variant === "repair" && !blank ? "fallback" : variant] || "")];
       const ol = h("ol", "rp-steps");
       for (const s of S) ol.append(stepEl(s));
       kids.push(ol);
