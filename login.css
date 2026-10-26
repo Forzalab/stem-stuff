@@ -23,3 +23,10 @@ dialog.lg::backdrop { background: color-mix(in srgb, var(--scrim) 60%, transpare
 .lg-x:focus-visible, .lg-btn:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .lg-file { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); border: 0; }   /* the picker: real, reachable via its button */
 .lg-status { min-height: calc(var(--t-sm) * var(--lh-ui)); margin: var(--s3) 0 0; color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.lg-saved { box-sizing: border-box; display: flex; align-items: center; justify-content: center; min-height: var(--btn); margin: 0;
+  border: var(--bw) solid var(--correct); border-radius: 8px; background: var(--correct); color: var(--correct-ink); font-size: var(--t-lg); font-weight: var(--w-em); }
+.lg-saved:focus { outline: none; }   /* focused only so it is not lost when Save goes; nothing to do on it */
+@media (prefers-reduced-motion: no-preference) { .lg-saved { animation: lg-flash 600ms ease-out both; } }   /* reduce: the green ✓, still */
+@keyframes lg-flash { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--correct) 70%, transparent); transform: scale(0.96); }
+  40% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--correct) 25%, transparent); transform: scale(1); }
+  to { box-shadow: 0 0 0 12px transparent; } }

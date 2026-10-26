@@ -2,7 +2,8 @@
    The account is a token; the token is a QR inside a Cluck image drawn on this device (mycluck.mjs). The image never leaves it:
    saving goes to the share sheet / a download, logging in decodes the picked photo here and POSTs only {token}.
    The account starts ephemeral (it lives as long as the sid cookie); Save makes it permanent: once the share sheet resolves or the
-   download fires, POST acct/keep {token} (Tony #29.9). "Saved ✓" only after keep answers ok.
+   download fires, POST acct/keep {token} (Tony #29.9). Only once keep answers ok, a green ✓ flashes in place of the Save button
+   (Tony #32; login.css: no flash under reduced motion).
 
    stemLogin.open()       the dialog: mints a token on first use (POST acct/new), draws MY Cluck, [Save my Cluck], [I have my Cluck].
                           Signed in, the same call is "Show my Cluck": it re-draws the stored token, no new mint
@@ -100,24 +101,29 @@
   function onSave() {
     const f = cur && cur.file;
     if (!f) return;
-    if (cur.unkept) return keep(cur.unkept);
+    if (cur.unkept != null) return keep(cur.unkept);                                  // "" (share: the ✓ says it all) is a pending keep too
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] }))
-      navigator.share({ files: [f] }).then(() => keep("Saved ✓"), e => { if (!e || e.name !== "AbortError") download(f); });   // cancelled: no keep, say nothing
+      navigator.share({ files: [f] }).then(() => keep(""), e => { if (!e || e.name !== "AbortError") download(f); });   // cancelled: no keep, say nothing
     else download(f);
   }
   function download(f) {                                                                // desktop: a plain download (on iOS it would open a tab)
     const u = URL.createObjectURL(f), a = el("a", { href: u, download: f.name });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(u), 1000);
-    keep("Saved ✓ Keep it where only you can see it.");                                 // COPY-PENDING
+    keep("Keep this image secret, and do not show to others.");                         // Tony #32
   }
-  async function keep(done) {                                                           // done: what to say once the account is permanent
+  async function keep(done) {                                                           // done: what to say beside the ✓ once the account is permanent
     const me = cur, t = store.get();
     if (!me || !t) return;
     me.unkept = null;
     try { await post("acct/keep", { token: t }); }
-    catch { if (cur === me) { me.unkept = done; say("Not saved yet. Tap Save to try again."); } return; }   // COPY-PENDING
-    if (cur === me) say(done);
+    catch { if (cur === me) { me.unkept = done; say('Save failed! Tap "Save my Cluck" to try again.'); } return; }   // Tony #32
+    if (cur !== me) return;
+    const save = me.d.querySelector("#lgSave"), ok = el("p", { class: "lg-saved", role: "img", "aria-label": "Saved", tabindex: "-1" }, "✓");   // COPY-PENDING: "Saved"
+    const had = document.activeElement === save;
+    save.replaceWith(ok);                                                               // the ✓ takes Save's place: nothing left to tap
+    if (had) ok.focus();                                                                // focus stays in the dialog
+    say(done);
   }
 
   /* I have my Cluck: decode the picked photo here, send only the token, drop the image */
@@ -146,7 +152,7 @@
       cur.d.querySelector("#lgTitle").textContent = "My Cluck";
       say("Signed in ✓ Your progress is back.");
       draw(t).catch(() => {});
-    } catch { say("That Cluck didn't work. Try again in a minute."); }
+    } catch { say("Cluck didn't cluck! Come back in a minute."); }                     // Tony #32
   }
 
   async function open() {
