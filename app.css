@@ -683,7 +683,6 @@ html.side .rot-hd .xb-label { margin-bottom: 0; }                          /* th
 .orig-sol li > * { min-width: 0; }
 .orig-sol li[hidden] { display: none; }
 .orig-peek { margin-top: var(--s2); }
-.orig-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--t-sm); }
 html.side #work > .orig { margin: 0; }
 /* Key formulas (Tony, Oct 5: a textbook recap block, "hybrid of 4 and 5", design/mockups/formula-use.html ?v=7): the site's blue, a 1px
    --c1 frame on a 10% --c1 tint, the bulb + "Key formulas" notched into the top border (its background is the page above the line and the

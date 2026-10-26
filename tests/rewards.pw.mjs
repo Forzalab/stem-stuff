@@ -235,7 +235,7 @@ try {
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
     await d.click("#cluck .orig-peek");
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);
-    assert.equal(await d.$$eval("#cluck .orig-note", l => l.length), 0,"no peek-cost note (Tony #36: guilt based is bad); the 2 XP rule stays");
+    assert.equal(await d.$$eval("#cluck .orig-note", l => l.length), 0, "no peek-cost note (Tony #36: guilt based is bad); the 2 XP rule stays");
     const x0 = await xp(d);
     await pick(d, "a");
     await d.waitForFunction(x => window.Rewards.state().xp > x, x0, { timeout: 4000 });
