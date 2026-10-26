@@ -18,6 +18,15 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
+/* a snap (setRatio) runs in a view transition: while it runs, the ::view-transition overlay takes every touch and click (it hit-tests as <html>),
+   so the next raw input must wait until it is over (locator actions wait on their own). Under CPU load it outlives a fixed sleep
+   (todo 55: the #mtExp tap / the drag never landed; the 1440 drag after the dblclick, CI plan item 1). vtN() before the input, vtDone(n) after:
+   the handler can run after the input is acked, so wait for its transition to start, then to end. */
+async function vtHook(page) {
+  await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0; window.__vtN = 0;
+    document.startViewTransition = cb => { const t = st(cb); window.__vt++; window.__vtN++; t.finished.finally(() => window.__vt--); return t; }; });
+  return { vtN: () => page.evaluate(() => window.__vtN), vtDone: n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n) };
+}
 const lorem = n => Array.from({ length: n }, (_, i) => `Claim ${i + 1}: a block of ${i + 2} kg slides along a rough track, and the friction force on it changes as the angle of the track is changed.`);
 /* choose-all, prove mode, with the long fix.how that clipped at 390px (BANK_P2X) */
 const CA = { code: "CSCI26_FW1", type: "mc", pick: "all", shuffle: false, body: [{ type: "text", md: lorem(5).join("\n\n") }],
@@ -186,12 +195,7 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await openPad();
     const look = await page.evaluate(() => { const p = getComputedStyle(document.querySelector("#sash"), "::before"); return [p.width, p.height]; });
     assert.deepEqual(look, ["32px", "3px"], "thin bar");
-    /* a snap (setRatio) runs in a view transition: while it runs, the ::view-transition overlay takes every touch (it hit-tests as <html>),
-       so the next touch must wait until it is over. Under CPU load it outlives a fixed sleep (todo 55: the #mtExp tap / the drag never landed). */
-    await page.evaluate(() => { const st = document.startViewTransition.bind(document); window.__vt = 0; window.__vtN = 0;
-      document.startViewTransition = cb => { const t = st(cb); window.__vt++; window.__vtN++; t.finished.finally(() => window.__vt--); return t; }; });
-    const vtN = () => page.evaluate(() => window.__vtN);   // the handler can run after the input is acked: wait for its transition to start, then to end
-    const vtDone = n => page.waitForFunction(n => window.__vtN > n && !window.__vt, n);
+    const { vtN, vtDone } = await vtHook(page);
     let n0 = await vtN();
     await page.locator("#sash").tap(); await vtDone(n0);
     assert.equal(await has("mt-fit"), false, "a tap ends the hug");
@@ -286,7 +290,8 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
     await tap(); assert.ok(await page.locator("#pstrip").isVisible(), "strip"); assert.equal(Math.round((await page.locator("#pstrip").boundingBox()).width), 52);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("#pstrip span")).writingMode), "vertical-rl");
     await tap(); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) * 2 / 3) < 2, `2/3 (${g.fW})`);
-    await page.locator("#sash").dblclick(); await page.waitForTimeout(400); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `dblclick 1/2 (${g.fW})`);
+    const { vtN, vtDone } = await vtHook(page); const n0 = await vtN();
+    await page.locator("#sash").dblclick(); await vtDone(n0); g = await geo(); assert.ok(Math.abs(g.fW - (g.inner - 32) / 2) < 2, `dblclick 1/2 (${g.fW})`);
     const s = await page.locator("#sash").boundingBox(), y = s.y + 200;
     await page.mouse.move(s.x + 8, y); await page.mouse.down();
     await page.mouse.move(s.x - 200, y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(400);
