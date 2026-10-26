@@ -1,0 +1,204 @@
+/* repair.js: the Repair ladder (brain design-round-66 DESIGN-v3 §3, v2 §B). App chrome, not a reply format: the steps are author-time
+   data (item.repair, SCHEMA.md), drawn by our code; nothing Cluck says goes through here. Graded on the device: the item is already a miss.
+
+   Repair.mount(host, item, opts)   draws the ladder into host (replacing what is there); returns { el, destroy() }
+       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, on(name, data) }
+       error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
+       on: repair_done { why_ok, variant, ladder, auto } · repair_skip { variant } · repair_next { } (full, after the study pause)
+   Repair.blankStep(item, error)    the step id the slip lives in, or null (= the fallback ladder). stemJev.repairBlank's signature
+
+   Which steps are blank (v2 §B):
+     repair   family matched → that `fam` step blank + its why; the steps before and after worked; `answer` blank
+              no family / SLIP_TIE → fallback: all worked, `answer` blank, why on step 1. Never only a red box
+     alt      the item's `alt` ladder by the same rule (no authored alt → the main ladder, fallback only: never the same blank twice)
+     welcome  every step blank, why on the fam step (else step 1); unfailable: a wrong tap is a hint, no red, no auto-fill
+     full     the worked solution, every step ✓; Next dim for STUDY_MS, then "come back later" is the student's call
+   A step: reveal one at a time (done = one ✓ line, active = open, future = a dim label). A wrong try: ✗ on it + the miss line; TRIES
+   wrong → it fills itself in with its why shown and moves on. ✓ / ✗ are glyphs, never hue alone. All text lands as textContent;
+   `$..$` math goes through Graph.tex (escapes the text around it).
+*/
+(function (root) {
+  "use strict";
+  const TRIES = 2;            // TUNABLE (v2 §B): wrong tries on one step before it fills itself in
+  const STUDY_MS = 10000;     // TUNABLE (DESIGN-v3 §3): the full solution's study pause before Next is live
+  const TOL = 0.02;           // a `num` step's relative tolerance when it names none
+  const L = () => root.__stemRepairLines || {};
+
+  const ladderOf = item => (item && item.repair && item.repair.steps) || [];
+  function blankOf(steps, error) {
+    if (!error || error === "SLIP_TIE") return null;
+    const fams = String(error).split("+");
+    const s = steps.find(s => s.fam && s.id !== "answer" && fams.includes(s.fam));
+    return s ? s.id : null;
+  }
+  const blankStep = (item, error) => blankOf(ladderOf(item), error);
+
+  /* ---- small DOM helpers: text only, math through Graph.tex ---- */
+  function h(tag, cls, text) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) put(el, text);
+    return el;
+  }
+  function put(el, s) {
+    s = String(s);
+    if (s.includes("$") && root.Graph && root.Graph.tex) el.innerHTML = root.Graph.tex(s);   // Graph.tex escapes everything outside $..$
+    else el.textContent = s;
+  }
+  const TEXOP = { "−": "-", "×": "\\times", "÷": "\\div", "·": "\\cdot" };
+  const fillTex = (st, v) => "$" + String(st.tex).replace("▢", v == null ? "\\square" : (TEXOP[v] || v)) + "$";
+  const num = s => parseFloat(String(s).replace(/−/g, "-").replace(/,/g, "").trim());
+
+  function mount(host, item, o = {}) {
+    const variant = o.variant || "repair";
+    const alt = variant === "alt" && item.repair && item.repair.alt;
+    const steps = alt ? alt.steps : ladderOf(item);
+    const welcome = variant === "welcome", full = variant === "full";
+    const blank = variant === "repair" || alt ? blankOf(steps, o.error) : null;
+    const fam = steps.findIndex(s => s.why && s.fam);
+    const whyAt = full ? -1 : blank ? steps.findIndex(s => s.id === blank) : welcome && fam >= 0 ? fam : 0;
+    const S = steps.map((st, i) => ({
+      st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
+      ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
+    }));
+    let whyOk = true, autos = 0, finished = full, timer = 0;
+    const emit = (name, data) => { if (o.on) o.on(name, data); };
+
+    const el = h("section", "rp");
+    el.dataset.variant = variant; el.dataset.ladder = alt ? "alt" : "main";
+    el.setAttribute("aria-label", "Repair");
+    host.replaceChildren(el);
+
+    /* ---- the state machine: finish the active step, open the next one that needs the student ---- */
+    function advance() {
+      for (const s of S) {
+        if (s.state === "done") continue;
+        if (s.worked) s.ok = true;
+        if (s.ok && (!s.ask || s.why != null)) { s.state = "done"; continue; }
+        s.state = "active"; return;
+      }
+      if (!finished) { finished = true; emit("repair_done", { why_ok: whyOk, variant, ladder: el.dataset.ladder, auto: autos }); }
+    }
+    function fillIn(s) {                                                         // out of tries: the step fills itself in, its why shown
+      s.ok = true; s.auto = true; autos++;
+      if (s.ask && s.why == null) { s.why = s.st.why.ok; whyOk = false; }
+      s.miss = L().auto || "";
+    }
+    function tryValue(s, v) {
+      const st = s.st;
+      const right = st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
+        : String(v) === String(st.ok);
+      if (right) { s.ok = true; s.miss = ""; }
+      else {
+        s.tried.add(String(v));
+        s.miss = welcome ? (st.miss && st.miss[v]) || L().hint || "" : (st.miss && st.miss[v]) || L().miss || "";
+        if (!welcome && s.tried.size >= TRIES) fillIn(s);
+      }
+      settle();
+    }
+    function tryWhy(s, i) {
+      const w = s.st.why;
+      if (i === w.ok) { s.why = i; s.miss = ""; }
+      else {
+        whyOk = false; s.whyTried.add(i);
+        s.miss = welcome ? L().hint || "" : L().miss || "";
+        if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
+      }
+      settle();
+    }
+    function settle() {
+      const focusIn = el.contains(document.activeElement);
+      advance(); draw();
+      if (focusIn) { const f = el.querySelector('.rp-step[data-state="active"] :is(button:not(:disabled), input)') || el.querySelector(".rp-next"); if (f) f.focus(); }
+    }
+
+    /* ---- drawing ---- */
+    function shown(s) {                                                          // a step's worked value, as text / $math$
+      const st = s.st;
+      if (st.kind === "pick") { const p = (st.opts || []).find(p => p.id === st.ok); return p ? p.md : ""; }
+      if (st.kind === "sheet") return o.sheet && o.sheet[st.ok] ? "$" + o.sheet[st.ok] + "$" : String(st.ok);
+      if (st.kind === "fill") return fillTex(st, st.ok);
+      return String(st.ok) + (st.unit ? " " + st.unit : "");
+    }
+    function chip(text, data, onTap, s, key, tried) {
+      const b = h("button", "rp-chip", text);
+      b.type = "button"; Object.assign(b.dataset, data);
+      if (tried.has(key) && !welcome) { b.disabled = true; b.append(h("span", "rp-x", "✗")); }
+      b.addEventListener("click", () => onTap(s, data.why != null ? Number(data.why) : data.v));
+      return b;
+    }
+    function valueUi(s) {
+      const st = s.st, box = h("div", "rp-val-ui");
+      if (st.kind === "num") {
+        const f = h("form", "rp-num"), inp = h("input", "rp-in"), go = h("button", "rp-check", L().check || "Check");
+        inp.type = "text"; inp.inputMode = "decimal"; inp.autocomplete = "off"; inp.setAttribute("aria-label", st.label);
+        go.type = "submit";
+        f.addEventListener("submit", e => { e.preventDefault(); if (inp.value.trim()) tryValue(s, inp.value); });   // Enter submits natively: no key handler
+        f.append(inp, go); box.append(f);
+        if (st.unit) f.append(h("span", "rp-unit", st.unit));
+        return box;
+      }
+      if (st.kind === "fill") box.append(h("div", "rp-tex", fillTex(st, null).replace("$", "$\\displaystyle ")));
+      const opts = h("div", "rp-opts rp-val-opts");
+      const list = st.kind === "pick" ? st.opts.map(p => [p.id, p.md]) : st.kind === "sheet" ? st.pool.map(id => [id, o.sheet && o.sheet[id] ? "$" + o.sheet[id] + "$" : id])
+        : st.opts.map(v => [v, v]);
+      for (const [v, text] of list) opts.append(chip(text, { v }, tryValue, s, String(v), s.tried));
+      box.append(opts);
+      return box;
+    }
+    function whyUi(s) {
+      const w = s.st.why, box = h("div", "rp-why");
+      box.append(h("p", "rp-q", w.q || L().why || "Why?"));
+      const opts = h("div", "rp-opts");
+      w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
+      box.append(opts);
+      return box;
+    }
+    function stepEl(s) {
+      const st = s.st, li = h("li", "rp-step");
+      li.dataset.id = st.id; li.dataset.state = s.state;
+      if (s.state === "active") li.setAttribute("aria-current", "step");
+      const head = h("div", "rp-head");
+      head.append(h("span", "rp-n", String(s.i + 1)), h("span", "rp-label", st.label));
+      if (s.state === "done" || (s.state === "active" && s.ok)) head.append(h("span", "rp-val", shown(s)));
+      if (s.state === "done") head.append(h("span", "rp-ok", "✓"));
+      li.append(head);
+      if (s.state === "done" && s.ask && s.why != null) li.append(h("p", "rp-because", s.st.why.opts[s.st.why.ok]));
+      if (s.state === "active") {
+        const body = h("div", s.seen ? "rp-body" : "rp-body rp-open");   // fades in once, when it opens; a redraw after a try does not
+        s.seen = true;
+        if (!s.ok) body.append(valueUi(s));
+        if (s.ask && s.why == null) body.append(whyUi(s));
+        li.append(body);
+      }
+      if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
+      return li;
+    }
+    function draw() {
+      const kids = [h("p", "rp-line", (L().intro || {})[variant === "repair" && !blank ? "fallback" : variant] || "")];
+      const ol = h("ol", "rp-steps");
+      for (const s of S) ol.append(stepEl(s));
+      kids.push(ol);
+      const foot = h("div", "rp-foot");
+      if (finished && !full) foot.append(h("p", "rp-done", L().done || ""));
+      if (full) {
+        const nx = h("button", "rp-next", L().next || "Next");
+        nx.type = "button"; nx.disabled = !!timer;
+        nx.addEventListener("click", () => emit("repair_next", {}));
+        foot.append(h("p", "rp-later", L().later || ""), nx);
+      } else if (!finished && !welcome) {
+        const sk = h("button", "rp-skip", L().skip || "Skip for now");
+        sk.type = "button"; sk.addEventListener("click", () => emit("repair_skip", { variant }));
+        foot.append(sk);
+      }
+      kids.push(foot);
+      el.replaceChildren(...kids);
+    }
+
+    if (full) timer = setTimeout(() => { timer = 0; const nx = el.querySelector(".rp-next"); if (nx) nx.disabled = false; }, STUDY_MS);
+    advance(); draw();
+    return { el, destroy() { clearTimeout(timer); el.remove(); } };
+  }
+
+  root.Repair = { mount, blankStep, TRIES, STUDY_MS };
+})(window);

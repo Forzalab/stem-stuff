@@ -105,6 +105,7 @@ try {
     const p = await browser.newPage({ viewport: { width: 360, height: 800 } });
     await p.clock.install();
     await p.goto(LAB);
+    await p.clock.pauseAt(await p.evaluate(() => Date.now()) + 1000);           // the fake clock stops: real time no longer leaks in
     await p.evaluate(() => window.lab({ variant: "full", error: "sign" }));
     assert.equal(await p.$$eval(".rp-step", s => s.every(x => x.dataset.state === "done")), true);
     assert.match(await p.textContent('.rp-step[data-id="answer"]'), /1\.0/);
