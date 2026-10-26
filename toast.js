@@ -29,7 +29,7 @@
     el.innerHTML = '<div class="stoast-b"><p class="stoast-t" aria-hidden="true"></p><span class="stoast-bar" aria-hidden="true"><i></i></span>' +
       '<span class="sr-only" role="status"></span></div><button type="button" class="stoast-x" aria-label="Close">' + X + '</button>';
     d.body.appendChild(el);
-    el.querySelector('.stoast-x').addEventListener('click', function () { hide(); });
+    el.querySelector('.stoast-x').addEventListener('click', function () { hide(); });   // (hide's arg would be the event otherwise)
     el.addEventListener('pointerenter', hold);
     el.addEventListener('pointerleave', go);
     el.addEventListener('animationend', function (e) { if (e.animationName === 'stoast-out' || e.animationName === 'stoast-fade-out') done(); });
@@ -128,15 +128,15 @@
     void el.offsetWidth; el.classList.add('on');
     var follow = setInterval(function () {                               // the question may still be laying out under it
       if (cur !== o) { clearInterval(follow); return; }
-      if (!place() || yields()) hide();                                  // scrolled out of its room, the duck rose or Cluck opened: step aside
+      if (!place() || yields()) hide(true);                              // scrolled out of its room, a control came under it, the duck rose or Cluck opened: gone at once (no exit motion beside the answer's: one blink)
     }, 120);
     arm(o.ms || 4000);
   }
   function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; next(); }
-  function hide() {
+  function hide(quiet) {
     clearTimeout(timer); left = 0;
     if (!cur || !el) return;
-    if (reduced() || !el.classList.contains('on')) { done(); return; }
+    if (quiet || busy() || reduced() || !el.classList.contains('on')) { done(); return; }
     el.classList.add('out');
   }
   function show(o) { if (!o || !o.text) return; q.push(o); next(); }
