@@ -928,7 +928,7 @@ def bank_payload(code, sid, mode="sugar"):
     if code == "last":
         with _tries_lock:
             _load_tries()
-            code = _last.get(sid, {}).get("bank") or os.environ.get("STEM_FRONT", "BANK_P2X")
+            code = _last.get(sid, {}).get("bank") or os.environ.get("STEM_FRONT", "BANK_P2X") or None   # STEM_FRONT="" turns the front door off (upload specs)
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
