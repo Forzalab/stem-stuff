@@ -1,7 +1,8 @@
 // login.js (E4, Tony #22/#22b/#23): the My Cluck save + login dialogs, driven through design/login-lab.html.
 // The picked image never leaves the device: the only request is POST acct/login with JSON {token}; the object URL is revoked and the
-// input cleared. ?k= logs in and is stripped from the URL. Save = navigator.share({files}) inside the click; "Saved ✓" only on resolve.
-// /acct/new and /acct/login (S2) are faked here with page.route. The "fixture" Cluck PNG is drawn by mycluck.mjs in the page itself.
+// input cleared. ?k= logs in and is stripped from the URL. Save = navigator.share({files}) inside the click; after share resolves or the
+// download fires, POST acct/keep {token} (Tony #29.9: Save makes the account permanent); "Saved ✓" only once keep answers ok.
+// /acct/new, /acct/login and /acct/keep (S2) are faked here with page.route. The "fixture" Cluck PNG is drawn by mycluck.mjs in the page itself.
 //   python3 serve.py 8833 & P=$!; sleep 1; node tests/login.pw.mjs http://localhost:8833; kill $P
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -16,8 +17,9 @@ async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
-/* a fresh context: S2 faked, every http request recorded, object URLs counted, navigator.share stubbed by `share` */
-async function fresh(browser, share = "none") {
+/* a fresh context: S2 faked, every http request recorded, object URLs counted, navigator.share stubbed by `share`.
+   keep: "ok" | "fail" (500) | "hold" (answers ok only on release()) */
+async function fresh(browser, share = "none", keep = "ok") {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 760 } });
   await ctx.addInitScript(mode => {
     const made = window.__urls = { made: [], revoked: [] };
@@ -37,7 +39,14 @@ async function fresh(browser, share = "none") {
   page.on("request", r => { if (/^https?:/.test(r.url())) reqs.push({ url: r.url(), method: r.method(), type: r.headers()["content-type"] || "", body: r.postData() }); });
   await page.route("**/acct/new", r => r.fulfill({ json: { token: NEW } }));
   await page.route("**/acct/login", r => r.fulfill({ json: { ok: true } }));
-  return { ctx, page, reqs, errs };
+  let release = () => {};
+  const held = new Promise(r => { release = r; });
+  await page.route("**/acct/keep", async r => {
+    if (keep === "hold") await held;
+    if (keep === "fail") return r.fulfill({ status: 500, body: "" });
+    r.fulfill({ json: { ok: true } });
+  });
+  return { ctx, page, reqs, errs, release, keeps: () => reqs.filter(r => new URL(r.url).pathname === "/acct/keep") };
 }
 const status = page => page.textContent("#lgStatus");
 
@@ -138,7 +147,7 @@ try {
   });
 
   await step("Save: share({files: [png]}) inside the click; rejected with AbortError -> no \"Saved ✓\"", async () => {
-    const { ctx, page } = await fresh(browser, "abort");
+    const { ctx, page, keeps } = await fresh(browser, "abort");
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
@@ -151,27 +160,59 @@ try {
     assert.deepEqual([s.files.length, s.files[0][1]], [1, "image/png"]);
     assert.ok(s.files[0][2] > 1000, "a real PNG");
     assert.doesNotMatch(await status(page), /Saved/);
+    assert.deepEqual(keeps(), [], "cancelled: no acct/keep");
     await ctx.close();
   });
 
-  await step("Save: share resolves -> \"Saved ✓\"", async () => {
-    const { ctx, page } = await fresh(browser, "ok");
+  await step("Save: share resolves -> one POST acct/keep {token}; \"Saved ✓\" only once keep answers ok", async () => {
+    const { ctx, page, keeps, release } = await fresh(browser, "ok", "hold");
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("#lgSave:not([disabled])");
     await page.click("#lgSave");
+    await page.waitForFunction(() => window.__share.length === 1);
+    for (let i = 0; i < 50 && !keeps().length; i++) await page.waitForTimeout(20);
+    await page.waitForTimeout(200);
+    assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "keep once, with the token");
+    assert.match(keeps()[0].type, /^application\/json/);
+    assert.doesNotMatch(await status(page), /Saved ✓/, "not before keep answers");
+    release();
     await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    assert.equal(keeps().length, 1);
+    await ctx.close();
+  });
+
+  await step("Save: keep fails -> no \"Saved ✓\", a retry state; Save again retries keep only (no second share)", async () => {
+    const { ctx, page, keeps } = await fresh(browser, "ok", "fail");
+    await page.goto(LAB);
+    await page.click("#openLogin");
+    await page.waitForSelector("#lgSave:not([disabled])");
+    await page.click("#lgSave");
+    await page.waitForFunction(() => /try again/i.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    assert.doesNotMatch(await status(page), /Saved ✓/);
+    assert.equal(keeps().length, 1);
+    await page.unroute("**/acct/keep");
+    await page.route("**/acct/keep", r => r.fulfill({ json: { ok: true } }));
+    await page.click("#lgSave");
+    await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    assert.equal(keeps().length, 2, "the retry is a keep");
+    assert.equal(await page.evaluate(() => window.__share.length), 1, "no second share sheet");
     await ctx.close();
   });
 
   await step("Save without navigator.share: falls back to a download of the PNG", async () => {
-    const { ctx, page } = await fresh(browser, "none");
+    const { ctx, page, keeps, release } = await fresh(browser, "none", "hold");
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("#lgSave:not([disabled])");
     const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#lgSave")]);
     assert.match(dl.suggestedFilename(), /\.png$/);
-    assert.doesNotMatch(await status(page), /Saved ✓/);
+    for (let i = 0; i < 50 && !keeps().length; i++) await page.waitForTimeout(20);
+    assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "the download fires keep, once");
+    assert.doesNotMatch(await status(page), /Saved ✓|Downloaded/, "nothing said before keep answers");
+    release();
+    await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    assert.equal(keeps().length, 1);
     await ctx.close();
   });
 } finally {
