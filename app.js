@@ -1556,7 +1556,11 @@ function feedback(r, typed) {
 const WISH_AUTO = 5;
 const wishLog = () => { try { return (JSON.parse(localStorage.getItem("stem-wish")) || []).filter(t => Date.now() - t < 3600e3); } catch { return []; } };
 function wishLogAdd() { try { localStorage.setItem("stem-wish", JSON.stringify([...wishLog(), Date.now()])); } catch { /* blocked */ } }
-let wish = null;   // { code, text, started, done, open, failed, ctl }
+let wish = null;   // { code, text, started, done, open, failed, ctl, off }
+/* a plain 503 from /explain (no X-Incident) = no AI key on this server (a preview deploy, Oct 26): Cluck is off for this page load. No more
+   Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
+let cluckOff = false;
+const CLUCK_OFF = "Cluck is off on this version of the site.";              // COPY-PENDING
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
    sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
@@ -1600,7 +1604,7 @@ function wishReset() {
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
-  if (modeOf() !== "sugar" || !S || !S.prob.wish) return;                   // only questions with a presolved key
+  if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
   if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
   wish = newWish();
   const w = wish;
@@ -1628,6 +1632,7 @@ async function wishStart(auto) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
       w.failed = r.status === 503 && sc ? 1 : r.status || 1;                // a plain 404/503 = no Cluck here (hidden), 429 = the cap: no incident
       if (![404, 429, 503].includes(r.status) || sc) w.inc = inc({ r, bytes: 0 });
+      if (r.status === 503 && !sc) { cluckOff = true; w.off = !auto; }     // no key here: a press (not the background ask) says so in the sheet
     }
     else {
       const rd = r.body.getReader(), dec = new TextDecoder();
@@ -1772,11 +1777,12 @@ function wishFrame(now) {
   const t = w.text;
   if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
     if (w.drawn !== -2) {
-      x.innerHTML = w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
+      if (w.off) $("#cluck .cl-ft").hidden = true;                          // no ask field: /chat has no key either
+      x.innerHTML = w.off ? `<div class="wl">${CLUCK_OFF}</div>` : w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
         : `<div class="wl">Cluck is out of wishes for this hour. Try again later.</div>`;
       w.drawn = -2;
       x.querySelector(".wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
-      say(w.failed ? "Cluck didn't load." : "Cluck is out of wishes for this hour.");
+      say(w.off ? CLUCK_OFF : w.failed ? "Cluck didn't load." : "Cluck is out of wishes for this hour.");
     }
     x.classList.remove("wrun"); return;
   }
@@ -1827,7 +1833,7 @@ function wishPaint() {
   document.querySelectorAll(".cl-peek").forEach(p => p.remove());
   if (!w || [404, 503].includes(w.failed)) {
     el.hidden = true;
-    if (w && cl && cl.open && cl.tab === "explain") { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain
+    if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
     clBackSync(); return;
   }
   const off = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
@@ -2101,7 +2107,7 @@ function clTop() {
   cl.el.style.setProperty("--cl-top", Math.round(Math.min(Math.max(t.getBoundingClientRect().top + 2 * lh + 2, 48), innerHeight * 0.45)) + "px");
 }
 function clTab(tab, focus) {
-  const has = { explain: !!wish && ![404, 503].includes(wish.failed) && wish.started, steps: !!origEl };
+  const has = { explain: !!wish && (wish.off || ![404, 503].includes(wish.failed)) && wish.started, steps: !!origEl };   // off: the sheet holds the one line
   if (!has[tab]) tab = has.explain ? "explain" : "steps";
   cl.tab = tab;
   if (!has.explain) cl.fold = true;                                         // nothing above it: the steps are the content
@@ -2110,7 +2116,7 @@ function clTab(tab, focus) {
   fold.hidden = !has.steps; fold.setAttribute("aria-expanded", String(cl.fold));
   fold.querySelector(".cl-fold-n").textContent = n ? `${n} step${n > 1 ? "s" : ""}` : "";
   cl.el.querySelector("#clTabSP").hidden = !has.steps || !cl.fold;
-  cl.el.querySelector(".cl-ft").hidden = !has.explain;
+  cl.el.querySelector(".cl-ft").hidden = !has.explain || !!wish.off;           // off: no ask field (/chat has no key either)
   const w = wish, was = !!(w && w.open);
   if (w) w.open = cl.open && has.explain;
   if (w && w.open && !was) { w.said = false; w.drawn = w.ended = undefined; wishDraw(); }   // reopened: w.shown is kept, so the text is redrawn whole, not typed again

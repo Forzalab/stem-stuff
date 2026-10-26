@@ -357,6 +357,31 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.fill("#cluck .ask textarea", "why?"); await page.click("#cluck .ask .send");
   await page.waitForFunction(() => /out of wishes for this hour/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 5000 });
   out.push("/chat 429: 'Cluck is out of wishes for this hour.'");
+  // (e) no key on the server (a preview deploy has none, Oct 26): the real keyless /explain answers a plain 503. The press is never silent:
+  //     the sheet stays open and says Cluck is off, the chip goes; the next miss on this page load shows no Cluck entry at all
+  await page.unroute("**/explain"); await page.unroute("**/chat");
+  if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
+  await go(page, "CALC1_UX05");
+  assert.equal(await answerKey(page, "CALC1_UX05", false), "wrong");
+  await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
+  const r503 = page.waitForResponse(r => /\/explain$/.test(r.url()), { timeout: 6000 });
+  await page.click("#wish .wchip");
+  assert.equal((await r503).status(), 503, "the keyless server answers a plain 503");
+  await page.waitForFunction(() => /Cluck is off on this version of the site\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 })
+    .catch(() => { throw new Error("keyless 503: the Explain press did nothing (no sheet / no line)"); });
+  await page.waitForTimeout(400);
+  assert.ok(await vis(page, "#cluck"), "keyless 503: the sheet stays open");
+  assert.ok(!(await vis(page, "#wish .wchip")), "keyless 503: the chip goes");
+  assert.ok(!(await vis(page, "#cluck .wretry")), "keyless 503: no Try again (it would 503 again)");
+  assert.ok(!(await vis(page, "#cluck .ask")), "keyless 503: no ask field (/chat has no key either)");
+  await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain503-chromium.png`) });
+  await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 });
+  await go(page, "CALC1_UX06");
+  assert.equal(await answerKey(page, "CALC1_UX06", false), "wrong");
+  await page.waitForTimeout(800);
+  assert.ok(!(await page.evaluate(() => [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta")].some(e => e.getClientRects().length && !e.closest("[hidden]")))),
+    "keyless: no Cluck entry on the next miss (this page load)");
+  out.push("keyless /explain 503: the press opens the sheet with 'Cluck is off on this version of the site.', the chip goes, no entry on the next miss");
   return "stubbed; " + out.join("; ");
 });
 
