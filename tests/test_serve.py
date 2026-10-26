@@ -819,6 +819,72 @@ class Http(unittest.TestCase):
         self.assertEqual(self.status("tries.json"), 404)
 
 
+class Repair(unittest.TestCase):
+    """GET /repair/<code> (DESIGN-v3 §3, SCHEMA.md "Repair ladder"): the ladder is server only; served after a recorded wrong try,
+    `alt` only after a twin miss. Twins get their template's ladder."""
+    FIX = {p["code"]: p for p in json.load(open(os.path.join(ROOT, "tests", "fixtures", "repair-p2x.json")))["problems"]}
+    sid = staticmethod(lambda name: hashlib.md5(name.encode()).hexdigest())
+
+    def setUp(self):
+        patch = unittest.mock.patch.object(serve, "problems", lambda: self.FIX)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def get(self, code, who):
+        st, _, raw = serve.dispatch("GET", f"/repair/{code}", f"sid={self.sid(who)}")
+        return st, json.loads(raw)
+
+    def miss(self, code, who):
+        st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid(who)}", json.dumps({"code": code, "answer": "99"}).encode())
+        self.assertEqual(json.loads(raw)["verdict"], "wrong")
+
+    def test_public_drops_repair(self):
+        for p in self.FIX.values():
+            out = serve.public(serve.view(p, "sugar"), "s")
+            self.assertNotIn("repair", out)
+            self.assertNotIn("alt", out)
+            self.assertNotIn("steps", json.dumps(out))
+        st, _, raw = serve.dispatch("GET", "/p/PHYS_RPA.json", "")
+        self.assertEqual(st, 200)
+        self.assertNotIn("repair", json.loads(raw))
+
+    def test_403_before_a_try(self):
+        self.assertEqual(self.get("PHYS_RPA", "r-none")[0], 403)
+        self.assertEqual(self.get("PHYS_RPB", "r-none")[0], 403)
+
+    def test_after_a_miss_steps_no_alt(self):
+        self.miss("PHYS_RPA", "r-miss")
+        st, out = self.get("PHYS_RPA", "r-miss")
+        self.assertEqual(st, 200)
+        self.assertEqual(out["steps"], self.FIX["PHYS_RPA"]["repair"]["steps"])
+        self.assertNotIn("alt", out)
+        self.assertEqual(self.get("PHYS_RPA", "r-other")[0], 403)              # per browser
+
+    def test_twin_miss_adds_alt(self):
+        self.miss("PHYS_RPA", "r-twin")
+        self.miss("PHYS_RPB", "r-twin")
+        st, out = self.get("PHYS_RPA", "r-twin")
+        self.assertEqual(st, 200)
+        self.assertEqual(out["alt"], self.FIX["PHYS_RPA"]["repair"]["alt"])
+        st, out = self.get("PHYS_RPB", "r-twin")                              # the twin: its template's ladder
+        self.assertEqual(st, 200)
+        self.assertEqual([s["id"] for s in out["alt"]["steps"]], ["units", "sanity", "answer"])
+        last = out["steps"][-1]
+        self.assertEqual(last["id"], "answer")
+        self.assertNotIn("ok", last)                                          # the template's 4/3 is not the twin's key (1)
+        self.assertNotIn("4/3", json.dumps(out))
+
+    def test_twin_miss_alone_unlocks_its_own_ladder(self):
+        self.miss("PHYS_RPB", "r-twin-only")
+        self.assertEqual(self.get("PHYS_RPB", "r-twin-only")[0], 200)
+        self.assertEqual(self.get("PHYS_RPA", "r-twin-only")[0], 403)          # the template itself was never missed
+
+    def test_no_ladder_404(self):
+        self.assertEqual(self.get("NOPE_XYZ", "r-404")[0], 404)
+        with unittest.mock.patch.object(serve, "problems", lambda: BANK):
+            self.assertEqual(self.get("CALC1_T6B", "r-404")[0], 404)
+
+
 class Persist(unittest.TestCase):
     """tries.json: a restart keeps tries; deleting an entry by hand resets it with a newer gen (design/DONE.md)."""
     def setUp(self):
