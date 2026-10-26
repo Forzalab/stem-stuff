@@ -1,8 +1,11 @@
 """tools/brainrot_list.py: a playlist feed -> [id, title, short], and the CATS block in brainrot.js rewritten between its markers.
 No network. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
+import json
 import os
+import re
 import sys
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
@@ -35,6 +38,32 @@ class BrainrotList(unittest.TestCase):
         self.assertEqual(src.count("// list:end"), 1)
         for name, _ in brainrot_list.PLAYLISTS:
             self.assertIn(f'["{name}", [["', src)
+
+    def test_static_categories_ship_and_survive_a_rerun(self):
+        """todo 78 (Tony, Oct 26): Hydraulic Press + Soap Cutting, curated by hand (no playlists), after the 3 playlist categories."""
+        want = ["Parkour", "Brainrot", "Subway Surfers", "Hydraulic Press", "Soap Cutting"]
+        self.assertEqual([n for n, _ in brainrot_list.PLAYLISTS] + [n for n, _ in brainrot_list.STATIC], want)
+        for name, rows in brainrot_list.STATIC:
+            self.assertTrue(8 <= len(rows) <= 12, name)
+            self.assertEqual(len({r[0] for r in rows}), len(rows), f"{name}: duplicate id")
+            for r in rows:
+                self.assertTrue(isinstance(r, list) and len(r) == 3, r)
+                self.assertTrue(isinstance(r[0], str) and len(r[0]) == 11, r)
+                self.assertTrue(isinstance(r[1], str) and r[1], r)
+                self.assertIn(r[2], (0, 1), r)
+        with open(os.path.join(ROOT, "brainrot.js"), encoding="utf-8") as f:
+            src = f.read()
+        shipped = [m.group(1) for m in re.finditer(r'^    \["([^"]+)", \[\[', src, re.M)]
+        self.assertEqual(shipped, want)
+        # a rerun with the 3 feeds mocked still writes the 2 static categories
+        mopen = mock.mock_open(read_data="x\n  /* list:start (t) */\n  const CATS = [];\n  // list:end\n")
+        feed = mock.MagicMock()
+        feed.__enter__.return_value.read.return_value = FEED.encode()
+        with mock.patch.object(brainrot_list.urllib.request, "urlopen", return_value=feed), mock.patch("builtins.open", mopen):
+            brainrot_list.main()
+        out = "".join(c.args[0] for c in mopen().write.call_args_list)
+        self.assertEqual([m.group(1) for m in re.finditer(r'^    \["([^"]+)", \[\[', out, re.M)], want)
+        self.assertIn(json.dumps(brainrot_list.STATIC[0][1][0], ensure_ascii=False), out)
 
     def test_no_markers(self):
         with self.assertRaises(SystemExit):
