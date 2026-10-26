@@ -12,7 +12,8 @@
   multi (design/DONE.md). No answer, no hints.
 - GET /repair/<CODE>   -> the item's repair ladder {steps, alt?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
   this browser has a recorded wrong try on it; `alt` only once a twin of the template was missed. Never in /p or /b.
-  The answer step never carries its key (ok/tol/opts/miss): POST /repair/<CODE>/check {value} -> {ok} grades it (same 403/404; not a try).
+  The answer step never carries its key (ok/tol/opts/miss): POST /repair/<CODE>/check {value, n} -> {ok} grades it (same 403/404; not a try);
+  a miss with n >= 2 (the client's attempt count) also carries `answer` = display text (a pick / mc: the right options' md; Tony #33 A).
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
@@ -1015,9 +1016,12 @@ def repair_of(p, sid):
 
 
 def repair_check(p, u, sid, body):
-    """POST /repair/<code>/check {value}: (status, {ok}), the same 404 / 403 as GET /repair. Not a try (tries.json is untouched).
+    """POST /repair/<code>/check {value, n}: (status, {ok, answer?}), the same 404 / 403 as GET /repair. Not a try (tries.json is untouched).
     p: the item, u: its mode view (what /check grades). The template's own answer step grades by its ok (num: its tol, else the item's
-    rule); a twin, or a step with no ok, by the item's own key (/check's unit_correct and tol rules; mc: the right id, pick all: "a,c")."""
+    rule); a twin, or a step with no ok, by the item's own key (/check's unit_correct and tol rules; mc: the right id, pick all: "a,c").
+    n: the client's 1-based attempt count on the step; a miss with n >= 2 carries `answer` (Tony #33 A) = display text: the step's ok,
+    else the item's (answer_of), a num with the step's unit; a pick / mc: the right option's md (the answer step ships no opts, so the
+    client cannot map an id), pick all: the right options' md joined ", " in option order."""
     got = _ladder(p, sid)
     if len(got) == 2:
         return got
@@ -1026,18 +1030,29 @@ def repair_check(p, u, sid, body):
     if not isinstance(value, str) or not value.strip() or len(value) > 200:
         return 400, {"error": "invalid"}
     step = rp["steps"][-1]
-    if t is p and "ok" in step:
-        if step.get("kind") != "num":
-            return 200, {"ok": value.strip() == step["ok"]}
-        u = {**u, "type": "num", "answer": step["ok"], **({"tol": step["tol"]} if "tol" in step else {})}
-    if u["type"] == "mc":
-        return 200, {"ok": {x.strip() for x in value.split(",") if x.strip()} == rights(u)}
-    if u["type"] == "multi":
-        return 400, {"error": "invalid"}
-    try:
-        return 200, {"ok": unit_correct(u, signature(u, value))}
-    except UNREADABLE:
-        return 400, {"error": "invalid"}
+    own = t is p and "ok" in step
+    if own and step.get("kind") != "num":
+        ok = value.strip() == step["ok"]
+    else:
+        g = {**u, "type": "num", "answer": step["ok"], **({"tol": step["tol"]} if "tol" in step else {})} if own else u
+        if g["type"] == "mc":
+            ok = {x.strip() for x in value.split(",") if x.strip()} == rights(g)
+        elif g["type"] == "multi":
+            return 400, {"error": "invalid"}
+        else:
+            try:
+                ok = unit_correct(g, signature(g, value))
+            except UNREADABLE:
+                return 400, {"error": "invalid"}
+    n = body.get("n")
+    if ok or type(n) is not int or n < 2:
+        return 200, {"ok": ok}
+    if own and step.get("kind") == "pick" or not own and u["type"] == "mc":                 # display text: the right options' md
+        ids = {step["ok"]} if own else rights(u)
+        a = ", ".join(c.get("md", c["id"]) for c in (step.get("opts") if own else None) or u.get("choices") or [] if c["id"] in ids)
+    else:
+        a = step["ok"] if own else answer_of(u)
+    return 200, {"ok": False, "answer": a + (" " + step["unit"] if step.get("kind") == "num" and step.get("unit") else "")}
 
 
 def answer_of(u):
