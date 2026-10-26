@@ -59,12 +59,13 @@ const term = (n, w) => ({ code: `CALC1_TR${n}`, title: `Term: ${w}`, type: "num"
 writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [term(1, "one"), term(2, "two"), term(3, "three")] }));
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."];   // $$ on lines of their own: what live models send
-let asked = 0;
+let asked = 0, gate = null, release = () => {};   // gate: a promise the next stream waits on before its first piece (one stream only)
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
   if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
+  const g = gate; gate = null; await g;
   let i = 0;
   const t = setInterval(() => {
     if (i < parts.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i++] } }] })}\n\n`);
@@ -309,6 +310,7 @@ try {
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {
+    gate = new Promise(r => { release = r; });                              // the next step checks the caret before any text is in (app.js WISH_DOTS is only 900 ms)
     await page.click("#mcGo");
     await page.waitForFunction(() => /Missing one/.test(document.querySelector("#q .chk .cluck")?.textContent || ""), null, { timeout: 4000 });   // short: left of Check (Tony, Oct 5)
   });
@@ -321,6 +323,7 @@ try {
     await page.click(".cl-peek .cl-cta");
     await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });
     assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
+    release();
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 3000 });
     const first = (await page.textContent("#cluck .wtext")).trim();
     assert.ok(!/Egg-cellent/.test(first), "no typing: " + first);
@@ -375,10 +378,10 @@ try {
     await page.reload(); await opened(page, "CALC1_E01");
     await page.waitForFunction(() => document.querySelector("#wish .wchip") && /Explain my mistake/.test(document.querySelector("#wish .wchip").textContent), null, { timeout: 4000 });
     assert.equal(asked, 1, "a 7-day-old entry is dropped, and a restore never calls by itself: the Explain my mistake chip");
-    asked = 0;
   });
 
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
+    asked = 0; release();                                                     // here, so a red step above cannot fail this one too
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$("#how"), null, "the tick line is for the first choose-all only (clutter C6)");

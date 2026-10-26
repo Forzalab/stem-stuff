@@ -348,7 +348,10 @@ try {
     await oc.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     const o = await oc.newPage();
     const tip = async (text, at) => {
-      await o.waitForFunction(t => { const e = document.querySelector("#toast"); return e?.classList.contains("on") && e.textContent === t; }, text, { timeout: 8000 })
+      /* found and held in one in-page poll: the toast hides itself 2 s after it shows (app.js armToast) unless a pointer rests on it, and
+         click() only moves the pointer after its stable wait (the .3 s toast-in), so harness lag could hide it before the tap landed */
+      await o.waitForFunction(t => { const e = document.querySelector("#toast"), ok = e?.classList.contains("on") && e.textContent === t;
+        if (ok) e.dispatchEvent(new PointerEvent("pointerenter")); return ok; }, text, { timeout: 8000 })
         .catch(async e => { throw new Error(e.message + " | want " + text + " | got " + await o.$eval("#toast", t => t.className + " " + t.textContent)); });
       const [t, a] = await rects(o, ["#toast", at]);
       const mid = await o.$eval("#toast", t => parseFloat(t.style.left) + parseFloat(getComputedStyle(t).getPropertyValue("--px")));
