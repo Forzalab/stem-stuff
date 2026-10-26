@@ -35,6 +35,14 @@ test("part.prompt: string or lines validate; other types and unknown keys do not
   assert.ok(!validate(withPart({ ...base, prompt: "" })));
   assert.ok(!validate(withPart({ ...base, prompts: "typo" })));
 });
+test("tag (Tony #29.4): one of the pop tags validates; an unknown tag does not; no tag is fine", () => {
+  const withTag = tag => ({ ...B, problems: [{ ...problems[0], tag }] });
+  for (const t of ["momentum", "energy", "forces", "signs", "circular", "rotation", "units"]) assert.ok(validate(withTag(t)), JSON.stringify(validate.errors));
+  assert.ok(!validate(withTag("kinematics")));
+  assert.ok(!validate(withTag(["momentum"])));
+  const { tag: _t, ...untagged } = problems[0];
+  assert.ok(validate({ ...B, problems: [untagged] }), JSON.stringify(validate.errors));
+});
 test("multi with mc parts: each part an mc (unfold: code + A, B, C...), up to 26; other multis keep 4", () => {
   const multi = B.problems.find(p => p.type === "multi");
   const withParts = parts => ({ ...B, problems: [{ ...multi, parts }] });
