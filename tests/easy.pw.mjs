@@ -767,6 +767,29 @@ try {
       assert.ok(Math.abs(post.top - pre.top) <= 1 && Math.abs(post.h - pre.h) <= 1, `Check moved the preview room: ${JSON.stringify([pre, post])}`);
     } finally { await c.close(); }
   });
+  /* Tony's todo 95 "ghost gap" (W90): wrong -> right -> Compare: the sheet hides #wish, which uncovered the spent preview's blank room (#ff -> #fcard 68 px, 40 before) */
+  await step("W91 ghost gap at 1280x800: wrong, right, Compare: no blank spent-preview band between the answer box and the formula card; Check itself moves nothing", async () => {
+    const { c, p } = await w91({ width: 1280, height: 800 });
+    try {
+      const g = () => p.evaluate(() => { const ff = document.getElementById("ff").getBoundingClientRect(), fc = document.getElementById("fcard").getBoundingClientRect(), pv = document.getElementById("preview"), cs = getComputedStyle(pv);
+        return { ff: ff.bottom, fc: fc.top, pv: pv.getClientRects().length ? pv.getBoundingClientRect().height + parseFloat(cs.marginTop) : 0, wish: !!document.getElementById("wish") && !document.getElementById("wish").hidden }; });
+      await p.waitForSelector("#fcard", { timeout: 6000 });
+      const a = await g();
+      await p.fill("#ans", "5"); await p.press("#ans", "Enter");
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("bad") || window.__drill?.state?.tries?.length >= 1, null, { timeout: 6000 }); await p.waitForTimeout(1500);
+      await p.fill("#ans", "4"); await p.waitForTimeout(300);
+      const pre = await g();
+      await p.press("#ans", "Enter");
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(400);
+      const post = await g();
+      assert.ok(Math.abs(post.ff - pre.ff) <= 1, `Check moved the answer box: ${pre.ff} -> ${post.ff}`);
+      const cmp = p.locator("#wish .cue-ok");
+      if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
+      const z = await g();
+      assert.equal(z.wish, false, "the sheet is open: #wish hides (W90's rule)");
+      assert.ok(z.pv === 0 && z.fc - z.ff <= a.fc - a.ff + 1, `a blank band: #ff -> #fcard ${z.fc - z.ff} px (before any answer ${a.fc - a.ff}), the spent room ${z.pv} px`);
+    } finally { await c.close(); }
+  });
 } finally {
   await browser.close();
   srv.kill();
