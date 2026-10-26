@@ -2,6 +2,7 @@
    Per template: miss -> repair ladder -> the `a` twin alone -> (wrong) the `alt` ladder -> the `a` twin again -> (wrong) the full
    solution, come back later (the caller re-queues via shuffle GAPS). Never a third ladder. `a` twin right -> the `b` twin (if the
    template has one) queued B_GAP+ items later, alone; a `b` miss -> the repair ladder (if one is left), then the solution.
+   No `a` twin (Tony #29.12) -> the `b` twin is the first solo twin, so conquered = repaired + that solo `b` win.
    Conquered = repaired + solo `a` twin + solo `b` twin where one exists. Back-off: after BACKOFF solo-twin wins in a row, the next
    ladder is offered ("want the steps?"), not auto-opened. The run counts solo-twin tries only: a twin miss resets it (and its alt
    ladder auto-opens); the original miss does not (every twin follows one, so the back-off could never trigger).
@@ -13,15 +14,15 @@ const LADDERS = 2;          // repair + alt (or repair again on a `b` miss), the
 const NONE = Object.freeze({ do: "none" });
 export function rNew() { return { v: 1, pos: 0, wins: 0, t: {} }; }
 const open = st => st.wins >= BACKOFF ? "offer" : "auto";
-/* ev = { type: "miss", tpl, b } | { type: "ladder_done", tpl } | { type: "twin", tpl, ok } | { type: "shown" } (one per showing).
-   b = the template has a `b` twin. Returns the next action: { do: "repair"|"alt", open } | { do: "twin", which } |
-   { do: "queue", which: "b", gap } | { do: "conquered" } | { do: "solution", later: true } | { do: "none" } */
+/* ev = { type: "miss", tpl, a, b } | { type: "ladder_done", tpl } | { type: "twin", tpl, ok } | { type: "shown" } (one per showing).
+   a / b = the template has an `a` / `b` twin (a omitted = true). Returns the next action: { do: "repair"|"alt", open } |
+   { do: "twin", which } | { do: "queue", which: "b", gap } | { do: "conquered" } | { do: "solution", later: true } | { do: "none" } */
 export function rEvent(st, ev) {
   const s = st.t[ev.tpl];
   switch (ev.type) {
     case "shown": st.pos += 1; return NONE;
     case "miss":
-      st.t[ev.tpl] = { phase: "repair", which: "a", ladders: 1, b: !!ev.b, due: null, repaired: false, conquered: false };
+      st.t[ev.tpl] = { phase: "repair", which: ev.a === false && ev.b ? "b" : "a", ladders: 1, b: !!ev.b, due: null, repaired: false, conquered: false };
       return { do: "repair", open: open(st) };
     case "ladder_done":
       if (!s || (s.phase !== "repair" && s.phase !== "alt")) return NONE;
