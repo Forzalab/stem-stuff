@@ -5,7 +5,8 @@ import { compile, evaluate } from "mathjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { validator, bank } from "./schemas.mjs";
+import { schema, validator, bank, repairFaults } from "./schemas.mjs";
+import { FAMILIES } from "../slips.mjs";
 import { isBankId, isBuiltin, isReserved, prefixOf } from "../codes.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
@@ -475,5 +476,73 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
       assert.ok(!validate(mk(part, { mid: [{ of: "TORQUE", tex: "x", [k]: "x".repeat(161) }] })), `${k}: over 160`);
       for (const bad of ["  ", 5, null]) assert.equal(ladderFaults(prob(part, { mid: [{ of: "TORQUE", tex: "x", [k]: bad }] })).length, 1, `${k}: ${JSON.stringify(bad)}`);
     }
+  });
+}
+
+// repair / noob / welcome / twin links (SCHEMA.md "Repair ladder, noob tier, welcome, twins"): the schema shapes them; repairFaults
+// (tests/schemas.mjs, also run by tools/schema-check.mjs) is the cross-check the schema cannot say.
+{
+  const root = new URL("../", import.meta.url), file = new URL("tests/fixtures/repair-p2x.json", root);
+  const fx = JSON.parse(readFileSync(file, "utf8"));
+  const edit = f => { const b = structuredClone(fx); f(Object.fromEntries(b.problems.map(p => [p.code, p]))); return b; };
+  const steps = p => p.repair.steps;
+  const pickStep = id => ({ id, label: "Look again", kind: "pick", opts: [{ id: "a", md: "x" }, { id: "b", md: "y" }], ok: "a" });
+  test("repair fixture: validates, no repairFaults, and meets the front-door need (one welcome, a repair)", () => {
+    assert.ok(validate(fx), JSON.stringify(validate.errors, null, 1));
+    assert.deepEqual(repairFaults(fx), []);
+    assert.deepEqual(repairFaults(fx, { need: true }), []);
+  });
+  test("repairFaults: each fault case fails", () => {
+    const cases = [
+      ["6 steps", p => steps(p.PHYS_RPA).splice(1, 0, pickStep("look"), pickStep("again")), /3-5 steps/],
+      ["last id is not answer", p => { steps(p.PHYS_RPA).at(-1).id = "final"; }, /last step id/],
+      ["digit in a label", p => { steps(p.PHYS_RPA)[0].label = "Step 1: name the unknown"; }, /digit/],
+      ["digit in an alt label", p => { p.PHYS_RPA.repair.alt.steps[0].label = "Units, 2 ways"; }, /alt.*digit/],
+      ["fam step without why", p => { delete steps(p.PHYS_RPA)[2].why; }, /fam .*why/],
+      ["two welcome items", p => { p.PHYS_RPA.welcome = true; }, /welcome/],
+      ["b twin without parent_template", p => { delete p.PHYS_RPC.parent_template; }, /parent_template/],
+    ];
+    for (const [name, f, re] of cases) {
+      const out = repairFaults(edit(f));
+      assert.match(out.join("; "), re, `${name}: ${JSON.stringify(out)}`);
+    }
+  });
+  test("repairFaults: cross-checks on ok, why, twins and the need", () => {
+    const bad = {
+      "ok not an option": p => { steps(p.PHYS_RPA)[0].ok = "z"; },
+      "ok not in the pool": p => { steps(p.PHYS_RPA)[1].ok = "PE_G"; },
+      "only the answer step may leave ok out": p => { delete steps(p.PHYS_RPA)[0].ok; },
+      "fill without its blank": p => { steps(p.PHYS_RPA)[2].tex = "v_f=m_1v_1"; },
+      "repeated id": p => { steps(p.PHYS_RPA)[1].id = "given"; },
+      "why.ok past the chips": p => { steps(p.PHYS_RPA)[2].why.ok = 3; },
+      "a ladder with no why": p => { p.PHYS_RPA.repair.alt.steps.forEach(s => delete s.why); },
+      "welcome renders through repair.js": p => { delete p.PHYS_WLC.repair; },
+      "template not in the bank": p => { p.PHYS_RPC.parent_template = "PHYS_ZZZ"; },
+      "template is itself a twin": p => { p.PHYS_RPC.parent_template = "PHYS_RPB"; },
+      "two b twins of one template": p => { p.PHYS_RPB.twin = "b"; },
+      "a twin's template carries the repair": p => { delete p.PHYS_RPA.repair; },
+      "parent_template only on a twin": p => { p.PHYS_RPA.parent_template = "PHYS_WLC"; },
+    };
+    for (const [name, f] of Object.entries(bad)) assert.ok(repairFaults(edit(f)).length >= 1, name);
+    assert.ok(repairFaults(B, { need: true }).length >= 1, "need: a bank with no welcome and no repair fails");
+    assert.deepEqual(repairFaults(B), [], "no need: a bank without the fields passes (ship.sh runs it on every bank)");
+  });
+  test("schema: noob, welcome, twin, parent_template, repair shapes", () => {
+    const bad = [p => { p.PHYS_RPA.noob = { tier: 4 }; }, p => { p.PHYS_RPA.noob = { tier: 1, x: 1 }; }, p => { p.PHYS_RPB.twin = "c"; },
+      p => { p.PHYS_WLC.welcome = false; }, p => { p.PHYS_RPB.parent_template = "rpa"; }, p => { p.PHYS_RPA.repair = { steps: [] }; },
+      p => { steps(p.PHYS_RPA)[0].kind = "drag"; }, p => { steps(p.PHYS_RPA)[2].why.opts.pop(); }, p => { p.PHYS_RPA.repair.alt.extra = 1; },
+      p => { steps(p.PHYS_RPA)[0].hint = "old"; }, p => { steps(p.PHYS_RPA)[2].fam = "made-up"; }];
+    for (const f of bad) assert.ok(!validate(edit(f)), f.toString());
+    const fam = schema("problems").$defs.rstep.properties.fam.anyOf, errs = schema("problems").$defs.error.enum;
+    assert.deepEqual(new Set([...errs, ...fam[1].enum]), new Set([...errs, ...FAMILIES]), "fam = the error types + slips.mjs FAMILIES");
+  });
+  test("tools/schema-check.mjs runs the gate: the fixture passes (also --repair); problems.json passes, but not --repair", () => {
+    const run = (...a) => spawnSync("node", [fileURLToPath(new URL("tools/schema-check.mjs", root)), ...a], { encoding: "utf8" });
+    assert.equal(run(fileURLToPath(file)).status, 0);
+    assert.equal(run("--repair", fileURLToPath(file)).status, 0);
+    assert.equal(run(fileURLToPath(new URL("problems.json", root))).status, 0);
+    const r = run("--repair", fileURLToPath(new URL("problems.json", root)));
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /^problems: .*welcome/m);
   });
 }
