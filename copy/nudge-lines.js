@@ -16,7 +16,7 @@ window.__stemNudgeLines = {
     "One piece at a time works.",
     "Want me to shrink this one?"
   ],
-  /* S6 help avoidance: tries on tries, Cluck never asked. One quiet offer, asking made cheap, no count of misses */
+  /* S6 help avoidance: a miss (W96: 1 wrong pick, was 2), Cluck never asked. One quiet offer, asking made cheap, no count of misses */
   S6: [
     "A hint costs nothing here.",
     "Want a second pair of eyes?",

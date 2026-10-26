@@ -68,7 +68,7 @@ test("jev_item: one event per ended item at the next q_open, the open item's lin
   const [a] = items();
   assert.deepEqual(Object.keys(a).sort(), ["code", "i", "lines", "sid"]);
   assert.match(a.sid, /^s[a-z0-9]+$/); assert.equal(a.i, 1); assert.equal(a.code, "A");
-  assert.deepEqual(a.lines, ["+0.0  q_open  A mc", "+9.0  pick  B wrong tries_left=2 err=sign", "+9.0  tree  wrong d=1 read=slip fam=sign"], "raw here: telemetry.js strips err= / fam= (telemetry.test.mjs)");
+  assert.deepEqual(a.lines.filter(l => !/  jev  nudge S6 /.test(l)), ["+0.0  q_open  A mc", "+9.0  pick  B wrong tries_left=2 err=sign", "+9.0  tree  wrong d=1 read=slip fam=sign", "+9.0  jev  S6 wrong=1"], "raw here: telemetry.js strips err= / fam= (telemetry.test.mjs)");
   const hide = L.listeners.indexOf("visibilitychange");
   assert.ok(hide >= 0);
   t = 25000; L.win.document.hidden = true; L.handlers[hide]();
@@ -83,7 +83,7 @@ test("lines: +SS.s  kind  args, reset per item, capped at 40, no typed text", ()
   const j = session();
   j.at(10).ev("q_open", { code: "P2X-14", type: "mc" });
   j.at(19.9).ev("pick", { choice: "B", verdict: "wrong", tries_left: 2 });
-  assert.deepEqual(j.state().lines, ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2", "+9.9  tree  wrong d=1 read=slip fam=any"]);
+  assert.deepEqual(j.state().lines.filter(l => !/  jev  nudge S6 /.test(l)), ["+0.0  q_open  P2X-14 mc", "+9.9  pick  B wrong tries_left=2", "+9.9  tree  wrong d=1 read=slip fam=any", "+9.9  jev  S6 wrong=1"]);   // W96: S6 at 1 wrong
   for (let i = 0; i < 50; i++) j.at(30 + i * 6).input();
   assert.equal(j.state().lines.length, 40);
   j.at(500).ev("q_open", { code: "P2X-15", type: "mc" });
@@ -122,25 +122,27 @@ test("F: the same item re-rendered is not a new item", () => {
   assert.equal(j.state().lines.length, 2);
 });
 
-test("S2: no input past 80 s (no history) → depth 1, then 2; input or a pick resets; hidden never counts", () => {
+test("S2: no input past 45 s (no history; W96 80→45) → depth 1, then 2; input or a pick resets; hidden never counts; a long hide counts on return", () => {
   const j = session();
   j.at(0).ev("q_open", { code: "A" });
-  j.at(79).tick(); assert.equal(j.state().counts.S2, 0);
-  j.at(81).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s");
-  j.at(90).tick(); assert.equal(j.state().counts.S2, 1, "once per depth");
-  j.at(161).tick(); assert.equal(why(j, "S2"), "depth=2 p75=80s");
-  j.at(170).input();
-  assert.ok(j.state().lines.includes("+170.0  pause  170s"));
-  j.at(249).tick(); assert.equal(j.state().counts.S2, 2);
-  j.at(251).tick(); assert.equal(j.state().counts.S2, 3);
-  j.at(260).vis(true); j.at(900).tick(); assert.equal(j.state().counts.S2, 3, "hidden");
-  j.at(901).vis(false); j.at(950).tick(); assert.equal(j.state().counts.S2, 3, "back = a fresh step");
+  j.at(44).tick(); assert.equal(j.state().counts.S2, 0);
+  j.at(46).tick(); assert.equal(why(j, "S2"), "depth=1 p75=45s");
+  j.at(50).tick(); assert.equal(j.state().counts.S2, 1, "once per depth");
+  j.at(91).tick(); assert.equal(why(j, "S2"), "depth=2 p75=45s");
+  j.at(100).input();
+  assert.ok(j.state().lines.includes("+100.0  pause  100s"));
+  j.at(144).tick(); assert.equal(j.state().counts.S2, 2);
+  j.at(146).tick(); assert.equal(j.state().counts.S2, 3);
+  j.at(150).vis(true); j.at(900).tick(); assert.equal(j.state().counts.S2, 3, "hidden");
+  j.at(901).vis(false); assert.equal(why(j, "S2"), "depth=17 p75=45s", "W96: a hide >= AWAY_STALL_S counts toward S2 at the return");
+  j.at(905).input(); j.at(910).vis(true); j.at(920).vis(false); j.at(960).tick();
+  assert.equal(j.state().counts.S2, 4, "a short hide (10 s) = a fresh step");
   assert.equal(j.state().last.action, "hint_offer");
 });
 
 test("S2: p75 of this item's past steps once there are 4; picks feed the history (pick → pick, not input → pick)", () => {
   const { p75 } = load().win.__stemJev;
-  assert.equal(p75([10, 20, 30]), 80);
+  assert.equal(p75([10, 20, 30]), 45);
   assert.equal(p75([10, 20, 30, 40]), 30);
   assert.equal(p75([40, 10, 30, 20, 50, 60, 70, 80]), 60);
   const hist = { A: [30, 10, 20, 20] };
@@ -254,25 +256,29 @@ test("wrapper: every stemT name is forwarded untouched (_ask / _tok / _xmark too
   assert.deepEqual([...win.stemJev().lines], ["+0.0  q_open  A mc", "+0.0  xmark  b"]);
 });
 
-test("a window blur pauses S2; a blur >= 5 s gives a fresh step on focus, a shorter one only pauses", () => {
+test("a window blur pauses S2; a blur >= 5 s gives a fresh step on focus, a shorter one only pauses; >= AWAY_STALL_S counts (W96)", () => {
   const j = session();
   j.at(0).ev("q_open", { code: "A" });
-  j.at(70).away("blur", true); j.at(200).tick();
-  assert.equal(j.state().counts.S2, 0, "no impasse while blurred (80 s p75 passed)");
-  j.at(240).away("blur", false);
-  assert.ok(j.state().lines.includes("+240.0  away  170s via=blur"));
-  j.at(300).tick(); assert.equal(j.state().counts.S2, 0, "focus = a fresh step (60 s in)");
-  j.at(321).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "and it counts from the focus");
+  j.at(40).away("blur", true); j.at(55).tick();
+  assert.equal(j.state().counts.S2, 0, "no impasse while blurred (45 s p75 passed)");
+  j.at(60).away("blur", false);
+  assert.ok(j.state().lines.includes("+60.0  away  20s via=blur"));
+  j.at(100).tick(); assert.equal(j.state().counts.S2, 0, "a 20 s focus = a fresh step (40 s in)");
+  j.at(106).tick(); assert.equal(why(j, "S2"), "depth=1 p75=45s", "and it counts from the focus");
   const k = session();
   k.at(0).ev("q_open", { code: "A" });
-  k.at(76).away("blur", true); k.at(79).away("blur", false); k.at(79.5).tick();
+  k.at(40).away("blur", true); k.at(43).away("blur", false); k.at(44.5).tick();
   assert.equal(k.state().counts.S2, 0, "a 3 s blur: nothing logged, no reset");
-  k.at(81).tick(); assert.equal(why(k, "S2"), "depth=1 p75=80s", "the step was not reset: 81 s since the last input");
+  k.at(46).tick(); assert.equal(why(k, "S2"), "depth=1 p75=45s", "the step was not reset: 46 s since the last input");
   const m = session();
   m.at(0).ev("q_open", { code: "A" });
-  m.at(70).away("blur", true); m.at(75).vis(true); m.at(200).tick(); assert.equal(m.state().counts.S2, 0, "blur then hide: paused");
-  m.at(260).vis(false); m.at(300).tick(); assert.equal(m.state().counts.S2, 0, "hide's return is still a fresh step");
-  m.at(341).tick(); assert.equal(m.state().counts.S2, 1);
+  m.at(30).away("blur", true); m.at(35).vis(true); m.at(45).tick(); assert.equal(m.state().counts.S2, 0, "blur then hide: paused");
+  m.at(50).vis(false); m.at(90).tick(); assert.equal(m.state().counts.S2, 0, "a 20 s episode's return is still a fresh step");
+  m.at(96).tick(); assert.equal(m.state().counts.S2, 1);
+  const l = session();
+  l.at(0).ev("q_open", { code: "A" });
+  l.at(70).away("blur", true); l.at(200).tick(); assert.equal(l.state().counts.S2, 0, "paused while away");
+  l.at(240).away("blur", false); assert.equal(why(l, "S2"), "depth=5 p75=45s", "a 170 s blur counts on focus: 240 s since the last input");
 });
 
 test("any input ends a blur (a missed focus can't pause S2 for good); input during a hide changes nothing", () => {
@@ -280,9 +286,10 @@ test("any input ends a blur (a missed focus can't pause S2 for good); input duri
   j.at(0).ev("q_open", { code: "A" });
   j.at(10).away("blur", true); j.at(100).input("pointerdown");
   assert.ok(j.state().lines.includes("+100.0  away  90s via=blur"), "a long blur still logs its away line");
-  assert.ok(!j.state().lines.some(l => l.includes("  pause  ")), "fresh step first: no pause line");
-  j.at(170).tick(); assert.equal(j.state().counts.S2, 0, "fresh step from the input");
-  j.at(181).tick(); assert.equal(why(j, "S2"), "depth=1 p75=80s", "S2 counts again");
+  assert.equal(why(j, "S2"), "depth=2 p75=45s", "W96: a 90 s blur counts toward S2, checked before the input resets it");
+  assert.ok(j.state().lines.includes("+100.0  pause  100s"), "no input for 100 s: the pause line is honest");
+  j.at(140).tick(); assert.equal(j.state().counts.S2, 1, "a fresh step from the input");
+  j.at(146).tick(); assert.equal(why(j, "S2"), "depth=1 p75=45s", "S2 counts again");
   const k = session();
   k.at(0).ev("q_open", { code: "A" });
   k.at(10).away("blur", true); k.at(12).input("wheel"); k.at(13).away("blur", false);
@@ -453,7 +460,7 @@ test("W96 (d) stemWords: a P3X-shaped item (md = an array of lines, a graph bloc
   const p3x = { code: "PHYS_Y2V", type: "num", body: [
     { type: "text", md: ["A water molecule has two hydrogen atoms.", "", "Given:", "- $r = 0.094$ nm"] },
     { type: "graph", kind: "scene", alt: "O at the origin.", marks: [] }] };
-  assert.equal(W96.stemWords(p3x), 7 + 1 + 4, "array md counted, graph alt not");
+  assert.equal(W96.stemWords(p3x), 7 + 1 + 5, "array md counted (whitespace words, as before), graph alt not");
   assert.equal(W96.stemWords({ body: [{ type: "text", md: "one two three" }] }), 3, "a string md as before");
   assert.equal(W96.stemWords({ body: [{ type: "text", md: "Shared givens here" }], parts: [{ prompt: "Find x" }, { prompt: ["Then", "find y"] }] }), 3 + 2 + 3, "multi prompts are stem too");
   assert.equal(W96.stemWords({}), 0); assert.equal(W96.stemWords(null), 0);
@@ -463,6 +470,6 @@ test("W96 (d) the page's size(): a P3X bank item opens with its real w= (was w=0
   const { win, args } = load();
   win.stemBank = { get: c => c === "PHYS_Y2V" ? { type: "num", body: [{ type: "text", md: ["Both H atoms are below O.", "The origin is at O."] }] } : null };
   win.stemT("q_open", { code: "PHYS_Y2V", type: "num" });
-  assert.ok(win.stemJev().lines[0].endsWith("PHYS_Y2V num w=10"), win.stemJev().lines[0]);
+  assert.ok(win.stemJev().lines[0].endsWith("PHYS_Y2V num w=11"), win.stemJev().lines[0]);
   assert.ok(args.length >= 1);
 });

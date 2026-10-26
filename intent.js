@@ -8,42 +8,47 @@
    On  = wraps window.stemT (app.js hook lines, telemetry.js keeps working) + 4 passive input listeners; window.stemJev reads the state.
    Line = "+SS.s  kind  args", seconds since q_open, no typed text. Rules (SPRINT §Jev rules; "ours" = J3 bench start values):
      F   item right, no wrong pick, < 80 s, no Cluck opened by hand → flow run +1; anything else on the item ends the run
-     S2  no input for longer than p75 of this item's past steps (q_open or pick → next pick) (< 4 samples: 80 s, ours); depth = gap / p75
+     S2  no input for longer than p75 of this item's past steps (q_open or pick → next pick) (< 4 samples: 45 s, ours; W96 80→45); depth = gap / p75
      S5  a fast pick (< 5 s after q_open or < 8 s after a wrong pick) that repeats a choice, or 2 fast picks in a row
      S7  Cluck opened by hand < 5 s after q_open (answer views come with the P3 view events)
-     S6  ≥ 2 wrong picks on the item, Cluck not opened by hand on it nor on the last 3 items, skill not high (first-try right rate over the
+     S6  ≥ 1 wrong pick on the item (W96: was ≥ 2), Cluck not opened by hand on it nor on the last 3 items, skill not high (first-try right rate over the
          last 8 items ≤ 0.75, or < 4 items yet; ours). High skill retrying alone = fine (Aleven 2006) → none
      Q   (first item of this visit, no pick, no help, depth ≥ 1: the "refusal" shape, Botelho 2019) OR (left this item unsolved before on
          this device AND depth ≥ 2; Karumbaiah 2018). Past leaves live in localStorage stem-jev-q (code → count), nothing else
    J6 streak signals (log lines only, never sent): "away <s>s via=hide|blur" (back after >= 5 s), "copy stem" (a copy inside the question stem),
    "xmark <choice>" (the student's own X in prove mode), "kept n=<n>" / "kepttap <choice>" (sugar kept rows), q_open's " w=<stem words> ch=<choices>". telemetry.js drops the "_"-names they ride on.
-   An open away episode (window blur or tab hide) pauses S2; back after >= 5 s = a fresh step (a shorter blur only paused).
+   An open away episode (window blur or tab hide) pauses S2; back after >= 5 s = a fresh step (a shorter blur only paused), back after
+   >= AWAY_STALL_S (30 s, W96 / Tony #40 b) = the away time COUNTS toward S2 depth, checked at the return (before any input resets it).
    J5 Cluck nudge, Tier 0 (brain cluck-nudge.md): S2 at depth ≥ 2, S6 and Q may each pick `cluck_say` = Cluck's peek (peek.js
    stemDuck.say, the one seam) carrying one line from copy/nudge-lines.js. On-device only, no LLM, no student turn used.
      budget  one shared budget: P_ONE = the fire chance when one trigger is on; with k of the 3 on, each live state rolls p_k once per
              item so that P(any | all k fire) = P_ONE × share(k); share(3) = SHARE_ALL = 0.85 (ours, J3 tunes), share(1) = 1, linear between
-     caps    max 1 per item · ≥ GAP_S (3 min) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
+     caps    max 1 per item · ≥ GAP_S (90 s; W96 180→90) since the last one · never in F flow (a run alive, no wrong pick on this item) · never while
              typing (a key < TYPING_S ago) · never while hidden · the peek must be free (one duck). A dismiss (the peek put away
              without a tap) doubles the gap (art. 7: a wrong nag costs more than a missed cue). S8 freeze has no detector (SPRINT): none
    Spot gate (SLIP_TIE): a wrong /check reply may carry `spot` (points at a place in the formula) beside `hint`; app.js record() asks
    stemJev.spot() once → spotOk (pure, the `spot` seat, SPOT consts) + one "jev  spot=ok|hold ..." line. Off = no stemJev = the plain hint.
    J6 "seen", moments earned / trap_beaten (copy/seen-lines.js): on a correct pick, tree(state) → candidates {moment, fam, why}
    (the decision tree below; its wrong-pick and item-end branches are log only; trap_beaten reads the `families` the server sends with a right pick); the fire path below only consumes them: same caps as J5 (1 per item, shared 3 min gap, not in flow / typing /
-   hidden) + MAX per session, a QUIET roll (silence is a valid pick), a kind (nod = the duck rises, no words · short · full), a line by the
+   hidden) + MAX per session, a QUIET roll (silence is a valid pick; W96 / Tony #40 a: a COMEBACK, a right pick after >= 1 miss on the
+   item, skips it and the typing, item and gap caps, keeps 1 per item + MAX; Cluck asked on it = a nod, no words: comeback()), a kind (nod = the duck rises, no words · short · full), a line by the
    error family of the last wrong pick. ev("pick") returns { kind, line, delay } for the page to show; peek.js stemDuck.say carries it.
    Ladder lane 4, held pick (🔒 Tony Oct 21, brain feedback-specs-2026-10-21 B): a choice selected, not checked, no input for 1×p75 of this
    item's steps (< 4 samples: HOLD.FALLBACK_S) → one hold nudge = the next ladder piece (app.js window.stemLadder.step()) + one breadcrumb
    line (copy/nudge-lines.js hold_mid | hold_arrow | hold_end: what the ladder just did, never right vs wrong; the page can't tell). HOLD.CAP
    per item, a 4th never fires. Each one waits another p75. Not while hidden, away, typing or with Cluck's sheet open. Stalling = normal
-   idling (🔒 Tony Oct 23): no farm rule, no freeze, no XP cost. state().hold = { code, n }. S2's own nudge keeps 2×p75 / 80 s.
+   idling (🔒 Tony Oct 23): no farm rule, no freeze, no XP cost. state().hold = { code, n }. S2's own nudge keeps 2×p75 / 90 s.
    Off: stem-seen-off = "1" (permanent) or sessionStorage stem-seen-s = "1" (this session). A "felt hollow" tap sets the session off; 2 of
    those in the first HOLLOW_OF fires set the permanent one. Lines go to a memory ring (stemJev.dump() → JSONL for tools/bench_seen.mjs) only. */
 (function () {
   "use strict";
   var W = window;
-  var FLOW_S = 80, S2_FALLBACK_S = 80, S2_MIN_N = 4, FAST_OPEN_S = 5, FAST_ERR_S = 8, HELP_S = 5, PAUSE_S = 5, AWAY_S = 5, CAP = 40, HIST_CAP = 20;
+  var FLOW_S = 80, S2_FALLBACK_S = 45, S2_MIN_N = 4, FAST_OPEN_S = 5, FAST_ERR_S = 8, HELP_S = 5, PAUSE_S = 5, AWAY_S = 5, CAP = 40, HIST_CAP = 20;
+  /* W96 (Tony #40 b): an away this long counts toward S2 on return (shorter: a fresh step, as before). 30 s: a glance at another tab or a
+     calculator stays "working"; 11 of the 12 aways in Tony's s9l8ji6 dump were >= 34 s and he called them chatting / daydreaming */
+  var AWAY_STALL_S = 30;
   var ACT = { F: "none", S2: "hint_offer", S5: "slow_cue", S6: "cluck_say", S7: "predict_first", Q: "cluck_say" };   // J5 draws cluck_say (S2 from depth 2 too); the rest wait for J4
-  var S6_WRONG = 2, S6_HELP_N = 3, SKILL_N = 8, SKILL_MIN_N = 4, SKILL_HIGH = 0.75;
+  var S6_WRONG = 1, S6_HELP_N = 3, SKILL_N = 8, SKILL_MIN_N = 4, SKILL_HIGH = 0.75;
   /* J5 nudge constants, all "ours" (J3 bench start values) */
   /* J6 seen constants, all "ours" (J3 bench start values) */
   var SEEN = { QUIET: 0.3, KIND: { nod: 0.3, short: 0.55, full: 0.15 }, JIT_MS: [600, 1800], MAX: 3, HOLLOW_N: 2, HOLLOW_OF: 5 };
@@ -52,7 +57,7 @@
   /* the spot gate (Tony Oct 24, SLIP_TIE): /check's `spot` (a hint that points at a place in the formula) instead of the plain `hint`, only
      when the student is (a) genuinely improving AND (b) nearly there. All "ours" (J3 bench start values) */
   var SPOT = { MIN_N: 4, WIN: 3, IMP: 0, WRONG: 1, FAST_S: FAST_ERR_S };
-  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
+  var NUDGE = { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 };
 
   /* the share of P_ONE left when k of the n nudge states are on: 1 for one, SHARE_ALL for all, linear between */
   function share(k, n) { n = n || NUDGE.STATES.length; return k <= 1 ? 1 : 1 - (1 - NUDGE.SHARE_ALL) * (k - 1) / (n - 1); }
@@ -116,6 +121,22 @@
     if (!(st.left > 0)) return no("last", "n=" + n + " d=" + d);
     if (!(st.since >= SPOT.FAST_S)) return no("fast", "n=" + n + " since=" + (st.since == null ? "-" : (+st.since).toFixed(1)));
     return { ok: true, why: "spot=ok " + is + " n=" + n + " d=" + d };
+  }
+
+  /* W96 (d): the words a student reads in the stem: every text block's md (a string, or an array of lines: the P2X / P3X banks store
+     it that way, so the old string-only count gave w=0) + a multi's part prompts (same format). Graph alt text is not the stem. Pure */
+  function stemWords(p) {
+    var w = 0, n = function (md) { (Array.isArray(md) ? md : [md]).forEach(function (x) { if (typeof x === "string") w += x.split(/\s+/).filter(Boolean).length; }); };
+    if (!p) return 0;
+    (p.body || []).forEach(function (x) { if (x && x.type === "text") n(x.md); });
+    (Array.isArray(p.parts) ? p.parts : []).forEach(function (x) { if (x && x.prompt != null) n(x.prompt); });
+    return w;
+  }
+  /* W96 (a): a comeback the tree vetoes only for help (Cluck asked on the item): a nod, never a credit line (overjustification: the
+     words stay for help-free credit). S5 and a lucky fix (< FAST_ERR_S after the miss) stay silent. Pure, same shape as tree */
+  function comeback(st) {
+    if (!st || !st.solved || !(st.wrong >= 1) || !st.help || st.s5 || (st.since != null && st.since < FAST_ERR_S)) return [];
+    return [{ moment: "comeback", fam: "any", nod: true, why: "credit=comeback help wrong=" + st.wrong }];
   }
 
   function p75(xs, fallback) {
@@ -246,18 +267,25 @@
       if (on) { if (!aw) aw = { at: t, via: kind }; else if (kind === "hide") aw.via = "hide"; return; }
       if (!aw || (kind === "blur" && aw.via === "hide")) return;          // a focus while still hidden is not the return: the show is
       var s = (t - aw.at) / 1000, via = aw.via; aw = null;
-      if (s >= AWAY_S) { log("away", Math.round(s) + "s via=" + via); if (q) { q.step = t; q.depth = 0; } }   // back from a real away: a fresh step (a short blur only paused S2)
+      if (s >= AWAY_S) log("away", Math.round(s) + "s via=" + via);
+      if (!q) return false;
+      if (s >= AWAY_STALL_S) { if (!hidden) stall(); return true; }       // W96: a long away counts toward S2, checked now (the first input back resets it)
+      if (s >= AWAY_S) { q.step = t; q.depth = 0; }                     // back from a real away: a fresh step (a short blur only paused S2)
+      return false;
     }
     /* called on a timer: S2 fires once per depth step; Q once per item; then a nudge may go */
     function tick() {
       if (!q || hidden) return;
+      stall();
+      held();
+    }
+    function stall() {
       var lim = p75(hist[q.code]), d = Math.floor((now() - q.step) / 1000 / lim);
       if (d > q.depth && !aw) {                                          // an open away episode (blur or hide) pauses S2
         q.depth = d; if (d > q.deep) q.deep = d; hit("S2", "depth=" + d + " p75=" + lim + "s");
       }
       if (!q.q && qRule()) { q.q = true; hit("Q", q.firstItem && !q.picks.length ? "first item, no pick" : "left before x" + quits[q.code]); }
       nudges();
-      held();
     }
     /* lane 4: the held-pick nudge (see the head comment). The clock = the later of the last input and the last hold nudge */
     function held() {
@@ -276,8 +304,8 @@
     }
     function vis(isHidden) {
       if (!q || hidden === isHidden) return;
-      hidden = isHidden; away("hide", isHidden);
-      if (!isHidden) { q.step = now(); q.depth = 0; }                   // back from away: a fresh step, never an impasse
+      hidden = isHidden;
+      if (!away("hide", isHidden) && !isHidden) { q.step = now(); q.depth = 0; }   // back from a short away: a fresh step (a long one counts: away())
     }
     function tlog(cs) { cs.forEach(function (c) { if (c.moment !== "earned" && c.moment !== "trap_beaten") log("tree", c.why); }); }   // the log-only branches
     /* the item ends (next item): skill + help history for S6 */
@@ -357,15 +385,19 @@
     function seen() {
       var cs = tree({ solved: q.solved, wrong: q.wrong, deep: q.deep, help: q.help, s5: q.s5, gaps: q.gaps, errs: q.errs, traps: q.traps || [], fams: Object.keys(fams),
         since: q.errAt ? (now() - q.errAt) / 1000 : null }), t = now();
-      if (!cs.length || !o.seenLines || (o.seenOff && o.seenOff()) || q.rolled.seen || sz.n >= SEEN.MAX || block(t)) return null;
+      var cb = q.solved && q.wrong >= 1;                                 // W96 (a): a comeback, right after >= 1 miss on this item
+      if (!cs.length && cb) cs = comeback({ solved: q.solved, wrong: q.wrong, help: q.help, s5: q.s5, since: q.errAt ? (t - q.errAt) / 1000 : null });
+      var bl = block(t);
+      if (cb && (bl === "item" || bl === "gap" || bl === "typing")) bl = "";   // a comeback skips these (the pick itself ends the typing); hidden / flow still hold
+      if (!cs.length || !o.seenLines || (o.seenOff && o.seenOff()) || q.rolled.seen || sz.n >= SEEN.MAX || bl) return null;
       q.rolled.seen = 1;                                                 // one roll per item: a quiet pick is the item's pick
-      if (rand() < SEEN.QUIET) { log("seen", cs[0].moment + " quiet"); return null; }
-      var K = SEEN.KIND, r = rand(), kind = r < K.nod ? "nod" : r < K.nod + K.short ? "short" : "full", line = "", id = "";
+      if (rand() < SEEN.QUIET && !cb) { log("seen", cs[0].moment + " quiet"); return null; }   // the roll is still drawn for a comeback (same seeded sequence), never obeyed
+      var K = SEEN.KIND, r = rand(), kind = cs[0].nod ? "nod" : r < K.nod ? "nod" : r < K.nod + K.short ? "short" : "full", line = "", id = "";
       if (kind !== "nod") {
         var title = o.title ? String(o.title(q.code) || "").trim().replace(/\s+/g, " ") : "", c = tpls(cs[0].fam, kind, title);
         var xs = c[0].length ? c[0] : c[1], tp = xs[Math.floor(rand() * xs.length)];
-        if (!tp) { log("seen", cs[0].moment + " none"); return null; }
-        line = fill(tp.text, title); id = tp.id; sz.used[id] = 1;
+        if (!tp && !cb) { log("seen", cs[0].moment + " none"); return null; }
+        if (tp) { line = fill(tp.text, title); id = tp.id; sz.used[id] = 1; } else kind = "nod";   // a comeback with no free line still nods
       }
       sz.n++; nz.at = t; q.nudged = true;                               // the shared gap + 1 per item
       sz.last = { kind: kind, line: line, id: id, fam: cs[0].fam, code: q.code, why: cs[0].why };
@@ -395,7 +427,7 @@
       }
     };
   }
-  W.__stemJev = { create: create, p75: p75, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN, SPOT: SPOT, spotOk: spotOk };
+  W.__stemJev = { create: create, p75: p75, stemWords: stemWords, comeback: comeback, S6_WRONG: S6_WRONG, AWAY_STALL_S: AWAY_STALL_S, ACT: ACT, NUDGE: NUDGE, HOLD: HOLD, share: share, chance: chance, tree: tree, SEEN: SEEN, SPOT: SPOT, spotOk: spotOk };
 
   /* ---- on for all (art. 11); ?jev=0 = off on this device, ?jev=1 = back on ---- */
   var on = false;
@@ -430,10 +462,9 @@
     lines: W.__stemNudgeLines, quits: quits, seenLines: W.__stemSeenLines, seenOff: seenOff, sid: sid,
     title: function (code) { var b = W.stemBank, p = b && b.get && b.get(code); return p && typeof p.title === "string" ? p.title : ""; },
     size: function (code) {                                          // J6: the item's stem words + choice count (bank items; an upload has no bank entry → none)
-      var b = W.stemBank, p = b && b.get && b.get(code), w = 0;
+      var b = W.stemBank, p = b && b.get && b.get(code);
       if (!p) return null;
-      (p.body || []).forEach(function (x) { if (x && x.type === "text" && typeof x.md === "string") w += x.md.split(/\s+/).filter(Boolean).length; });
-      return { w: w, ch: Array.isArray(p.choices) ? p.choices.length : null };
+      return { w: stemWords(p), ch: Array.isArray(p.choices) ? p.choices.length : null };
     },
     step: function () {                                                // lane 4: the next ladder piece; which kind = the mid count before vs after
       var L = W.stemLadder, mids = function () { return document.querySelectorAll ? document.querySelectorAll("#fcard li.mid:not([hidden])").length : 0; };
