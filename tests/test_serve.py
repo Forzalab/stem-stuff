@@ -1282,6 +1282,32 @@ class Banks(unittest.TestCase):
             self.assertIsNone(serve.bank_payload("last", "s11"))              # the front door off (upload specs)
             self.assertNotIn("front", serve.bank_payload("BANK_P3X", "s11"))
 
+    def test_former_front_returner_gets_the_front(self):                      # Tony, Oct 26: "yes send returners to exam 3"
+        """A browser whose last bank is a former front (BANK_P2X) reopens "/" on the current front; an explicit BANK_P2X still opens
+        P2X, any other last bank stays, and STEM_FRONT="" (front door off) keeps the last bank as it was."""
+        self.write("BANK_P3X", {"v": 1, "problems": [BANK["CALC1_T6B"]]})
+        self.write("BANK_P2X", {"v": 1, "problems": [BANK["CALC1_A9R"]]})
+        self.write("BANK_PSY6", {"v": 1, "problems": [BANK["CALC1_X2P"]]})
+        env = {k: v for k, v in os.environ.items() if k not in ("STEM_FRONT", "STEM_FRONT_TITLE")}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            serve.bank_payload("BANK_P2X", "r1")                                   # an Exam 2 regular
+            serve.bank_payload("BANK_PSY6", "r2")                                  # someone on another bank
+            b = serve.bank_payload("last", "r1")
+            self.assertEqual((b["code"], b.get("front")), ("BANK_P3X", "Exam 3"))
+            self.assertEqual(serve.bank_payload("BANK_P2X", "r1")["code"], "BANK_P2X")   # a link / typed code still opens P2X
+            self.assertNotIn("front", serve.bank_payload("BANK_P2X", "r1"))
+            self.assertEqual(serve.bank_payload("last", "r2")["code"], "BANK_PSY6")
+            os.remove(os.path.join(serve.BANKS, "BANK_P3X.json"))
+            serve.bank_payload("BANK_P2X", "r5")
+            self.assertEqual(serve.bank_payload("last", "r5")["code"], "BANK_P2X")      # the front bank not shipped: theirs, not nothing
+            self.write("BANK_P3X", {"v": 1, "problems": [BANK["CALC1_T6B"]]})
+        with unittest.mock.patch.dict(os.environ, dict(env, STEM_FRONT=""), clear=True):
+            serve.bank_payload("BANK_P2X", "r3")
+            self.assertEqual(serve.bank_payload("last", "r3")["code"], "BANK_P2X")     # the front door off: nothing redirects
+        with unittest.mock.patch.dict(os.environ, dict(env, STEM_FRONT="BANK_P2X", STEM_FRONT_TITLE="Exam 2"), clear=True):
+            serve.bank_payload("BANK_P2X", "r4")
+            self.assertEqual(serve.bank_payload("last", "r4").get("front"), "Exam 2")   # P2X as the current front: it stays
+
     def test_bank_gone(self):
         serve.bank_payload("BANK_AB12", "s5")
         os.remove(os.path.join(serve.BANKS, "BANK_AB12.json"))

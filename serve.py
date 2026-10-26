@@ -928,6 +928,8 @@ def snacks_placed(items):
 
 FRONT = ("BANK_P3X", "Exam 3")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
                                  # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 3 main bank (Tony, Oct 26), not BANK_P3Q
+FORMER_FRONTS = {"BANK_P2X"}     # Tony, Oct 26 ("send returners to exam 3"): a browser whose last bank is one of these reopens "/" on the
+                                 # front; a link or typed code still opens it (bank_payload "last" only)
 
 
 def front():
@@ -947,6 +949,8 @@ def bank_payload(code, sid, mode="sugar"):
         with _tries_lock:
             _load_tries()
             code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
+        if code in FORMER_FRONTS and front()[0] and code != front()[0] and front()[0] in all_banks:   # no front bank shipped: keep theirs
+            code = front()[0]                    # a former front's returner: the current front (its tries and "at" stay as they were)
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
