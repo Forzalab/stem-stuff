@@ -56,7 +56,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob")
 DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
 FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
 NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
@@ -928,7 +928,7 @@ def bank_payload(code, sid, mode="sugar"):
     if code == "last":
         with _tries_lock:
             _load_tries()
-            code = _last.get(sid, {}).get("bank")
+            code = _last.get(sid, {}).get("bank") or os.environ.get("STEM_FRONT", "BANK_P2X")
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
