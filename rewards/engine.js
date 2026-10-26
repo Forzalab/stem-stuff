@@ -121,7 +121,8 @@
       if (r.drop === 'common') { r.line = commonLine(); big = 'win'; }
       else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
-      if (s.streak === 3 || s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
+      if (s.streak === 3) r.streakNote = "Baby a tripleeee, QUACKKKK";   // Tony #36
+      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;

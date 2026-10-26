@@ -198,8 +198,15 @@ test("praise: four Cluck lines, picked by Math.random; a common drop on LINES[3]
   assert.equal(R.LINES[7], "You nailed that one!");
   assert.ok(!R.LINES.includes("Duck approves. Rare."));
   const at = i => (i + 0.5) / R.LINES.length;                                   // the common line's index roll
-  assert.equal(one("C0", {}, [0, 0, 0.5, at(0)]).line, R.LINES[0]);              // not index 3 last: no re-roll
+  assert.ok(R.LINES.slice(0, 2).includes(one("C0", {}, [0, 0, 0.5, at(0), at(1)]).line));   // the last line is now 0 or 1 (earlier tests rolled at random), so 3 takes no re-roll
   assert.equal(one("C3", {}, [0, 0, 0.5, at(3), 0.9]).line, "Cluck thinks that deserves a quack!");
+});
+
+/* Tony #36: the 3-in-a-row note is his line; 5 and every 10 stay "N cracked" */
+test("streak notes: 3 = Tony's line, 5 and 10 = N cracked, others none", () => {
+  const notes = [];
+  for (let i = 1; i <= 10; i++) { script = [0.99, 0.99]; notes.push(ok("S" + i).streakNote ?? null); }
+  assert.deepEqual(notes, [null, null, "Baby a tripleeee, QUACKKKK", null, "5 cracked", null, null, null, null, "10 cracked"]);
 });
 
 /* B4 conquered (DESIGN-v3 §5; Tony #1, #10, #25.5): repaired + solo `a` twin + solo `b` twin where one exists */
