@@ -10,7 +10,7 @@ const w = {}; w.window = w;
 vm.runInNewContext(read("../copy/repair-lines.js"), w);
 vm.runInNewContext(read("../copy/pops.js"), w);
 const R = JSON.parse(JSON.stringify(w.__stemRepairLines)), POPS = JSON.parse(JSON.stringify(w.__stemPopLines));   // out of the vm realm
-const SAD = "(╥﹏╥)", ENC = "(ง •̀_•́)ง";   // builder-picked kaomoji for #36 [[sad/encouraging kaomoji]] (COPY-PENDING)
+const SAD = "(╥﹏╥)", ENC = "(ง •̀_•́)ง";   // builder-picked kaomoji for #36 [[sad/encouraging kaomoji]], Tony OK'd Oct 26
 
 test("repair open (#36): one line for one fault or many; *waddles over* is the italic aside", () => {
   assert.equal(R.intro.repair, "*waddles over* Let's fix this together—QUACKK!");
@@ -32,9 +32,9 @@ test("welcome wrong-tap hint (#36): hintBy far rotation, the second try, third+ 
   });
   assert.equal(R.hint, "Good attempt, but keep trying!");
 });
-test("the builder kaomoji lines carry COPY-PENDING", () => {
+test("the builder kaomoji lines are vetted (Tony OK'd, Oct 26): no COPY-PENDING left on them", () => {
   const src = read("../copy/repair-lines.js").split("\n");
-  for (const k of [SAD, ENC]) assert.match(src.find(l => l.includes(k)), /\/\/ COPY-PENDING/, k);
+  for (const k of [SAD, ENC]) assert.doesNotMatch(src.find(l => l.includes(k)), /COPY-PENDING/, k);
 });
 test("cut lines (#36): intro.repairMany gone; intro.full and auto are empty strings (older repair.js prints nothing)", () => {
   assert.equal(R.intro.repairMany, undefined);
