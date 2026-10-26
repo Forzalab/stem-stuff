@@ -261,7 +261,10 @@ flow(20, "cluck-explain", async (page, w) => {
   const parent = await page.$eval("#cluck", e => e.parentElement.id || e.parentElement.tagName);
   assert.equal(parent, w === 393 ? "BODY" : "work", "phone: over the page; desktop: the notes column");
   assert.ok(await vis(page, "#cluck .cl-verify"), "verify line");
-  return `stubbed /explain; sheet in ${parent}, text typed, verify line shown`;
+  /* a manual open moves focus into the sheet (W90 r2 item 4): desktop, the ask field once Cluck's text is typed (phone: row 57; the tap on the text above blurs it here) */
+  if (w !== 393) await page.waitForFunction(() => document.activeElement?.matches("#cluck .ask textarea"), null, { timeout: 4000 })
+    .catch(async () => { throw new Error("manual open: focus not in the ask field: " + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))); });
+  return `stubbed /explain; sheet in ${parent}, text typed, verify line shown${w !== 393 ? ", focus in the ask field" : ""}`;
 });
 
 flow(21, "cluck-sheet", async (page, w) => {
@@ -977,8 +980,10 @@ flow(57, "cluck-compare", async (page, w) => {
   assert.ok(inView, "the new message is scrolled into view in the sheet");
   await page.waitForFunction(() => { const a = document.querySelector("#cluck .cl-cmp").getBoundingClientRect(); return a.top >= 0 && a.top < innerHeight - 20; }, null, { timeout: 3000 })
     .catch(() => { throw new Error("the new message is not on screen"); });
+  await page.waitForFunction(w => w === 393 ? !!document.activeElement?.closest("#cluck") : document.activeElement?.matches("#cluck .ask textarea"), w, { timeout: 4000 })
+    .catch(async () => { throw new Error("Compare: focus not in the sheet's ask field (desktop) / the sheet (phone): " + await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))); });
   assert.equal(asks.filter(a => a === "a").length, 1, "one /explain for the right answer");
-  return "wrong, right, Compare: a new solution message under the miss's text, in view in the sheet";
+  return "wrong, right, Compare: a new solution message under the miss's text, in view in the sheet, focus moves into the sheet";
 });
 
 /* priority: the ranked UNCOVERED list, then the covered rows in order */

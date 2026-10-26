@@ -1285,7 +1285,7 @@ function saveDone(r) {
 function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
-    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx")) a.blur();   // Next in the Check slot keeps focus (T17b-1)
+    const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat)
     if (mtOpen) closeMT(false);
     if (swapOn) setSwap(false);
     root.classList.remove("dock-away", "bar-off");
@@ -2030,7 +2030,7 @@ function clClose(dismiss) {
   if (!cl || !cl.open) return;
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
-  cl.open = false; cl.el.hidden = true; cl.sheetReset?.();
+  cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
   clTab(cl.tab, false); clPlace(); padRule();
   layoutFreeze();
   if (!sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
@@ -2150,7 +2150,12 @@ function clTab(tab, focus) {
   }
   if (w && was !== w.open) wishPaint();                                     // the chip's label follows
   clMore();
-  if (focus) (has.steps && tab === "steps" ? fold : cl.el.querySelector(".ask input") || fold).focus();
+  if (focus) {                                                              // a manual open: focus goes into the sheet (an auto open never moves it)
+    const ta = cl.el.querySelector(".ask textarea");
+    if (has.steps && tab === "steps") fold.focus();
+    else if (sideMQ.matches && ta && !ta.disabled && !cl.el.querySelector(".cl-ft").hidden) ta.focus({ preventScroll: true });
+    else { cl.wantAsk = sideMQ.matches; [...cl.el.querySelectorAll(".cl-x")].find(b => b.getClientRects().length)?.focus({ preventScroll: true }); }   // desktop: the ask field once the text is typed; phone: no keyboard pop
+  }
 }
 /* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),
    the student's words in a bubble. The speaker's name stays for screen readers */
@@ -2199,6 +2204,11 @@ function clAsk(build) {
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;
+  if (cl.wantAsk && cl.open && wishTyped(w)) {                              // the manual open's focus, now that the field takes it; not if the student moved on
+    cl.wantAsk = false;
+    const a = document.activeElement;
+    if (!a || a === document.body || (a.matches(".cl-x") && cl.el.contains(a))) ft.querySelector("textarea").focus({ preventScroll: true });
+  }
 }
 /* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
 function askFit(ta) {
@@ -2285,7 +2295,7 @@ async function clSend(msg) {
   } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
-  if (!w.out) cl.el.querySelector(".ask input")?.focus();
+  if (!w.out) cl.el.querySelector(".ask textarea")?.focus();
 }
 
 /* ---------- sugar rewards (design/REWARDS-WIRING.md; rewards/engine.js + rewards/fx.js) ----------
