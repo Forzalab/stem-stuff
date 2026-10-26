@@ -462,11 +462,11 @@ flow(8, "bad-code", async (page, w) => {
   await page.goto(BASE + "/"); await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 10000 });   // the splash goes once the boot is done
   await showCode(page);
   await page.fill("#code", "CALC1_ZZZ"); await page.press("#code", "Enter");
-  await page.waitForFunction(() => /CALC1_ZZZ not found\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 8000 });
+  await page.waitForFunction(() => /QUACKK, code not found\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 8000 });
   await page.fill("#code", "%%%"); await page.press("#code", "Enter");
-  await page.waitForFunction(() => /Not a code\. Try CALC1_T6B\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 3000 });
+  await page.waitForFunction(() => /Whoops, that's not a valid code! Try CALC1_T6B instead\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 3000 });
   assert.ok(await vis(page, "#entryMsg"));
-  return "'CALC1_ZZZ not found.' then 'Not a code. Try CALC1_T6B.'";
+  return "'QUACKK, code not found.' then 'Whoops, that\'s not a valid code! Try CALC1_T6B instead.'";
 });
 
 flow(39, "update-bar", async (page, w) => {
@@ -616,12 +616,12 @@ flow(9, "slow-load-retry", async (page, w) => {
   let stall = true;
   await page.route(new RegExp(`/p/${C.single}\\.json`), r => { if (stall) return; r.continue(); });
   await page.goto(`${BASE}/#${C.single}`);
-  await page.waitForFunction(() => /Too slow\. Tap Try again\./.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 12000 });
+  await page.waitForFunction(() => /Loading timed out, that's on me/.test(document.querySelector("#entryMsg")?.textContent || ""), null, { timeout: 12000 });
   assert.ok(await vis(page, "#retryLoad"), "Try again button");
   await page.screenshot({ path: join(OUT, `09-slow-load-retry-${w}-chromium.png`) });
   stall = false; await page.click("#retryLoad"); await opened(page, C.single);
-  return "'Too slow. Tap Try again.' + retry button (shot), retry opens the question";
-}, { noFinalShot: true, time: "real" });   // real-time by design: the app's own load timeout ("Too slow") on a stalled fetch
+  return "'Loading timed out, that\'s on me' + retry button (shot), retry opens the question";
+}, { noFinalShot: true, time: "real" });   // real-time by design: the app's own load timeout ("Loading timed out") on a stalled fetch
 
 flow(10, "change-code", async (page, w) => {
   await go(page, C.single);

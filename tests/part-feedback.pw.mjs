@@ -57,7 +57,7 @@ try {
   await step("can't read: the part's line names the typed text, no try spent, box not bad", async () => {
     await send(page, 0, "abc");
     const p = await part(page, 0);
-    assert.ok(p.line.includes("Can't read abc. Type it again."), p.line);
+    assert.ok(p.line.includes("Oops! Can't read abc, try again!"), p.line);
     assert.deepEqual([p.hinted, p.bad, p.cluck], [true, false, ""]);
   });
 

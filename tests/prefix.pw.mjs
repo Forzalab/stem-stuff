@@ -145,10 +145,10 @@ try {
       await page.goto("about:blank"); await page.goto(BASE + "/#BEAR_QAA");
       await waitMsg(page, "BEAR_QAA needs BANK_BEAR");
       assert.ok(await toneIs(page, "--wrong"));
-      await page.evaluate(() => { location.hash = "CALC1_ZZZ"; }); await waitMsg(page, "CALC1_ZZZ not found.");
+      await page.evaluate(() => { location.hash = "CALC1_ZZZ"; }); await waitMsg(page, "QUACKK, code not found.");
       await upload(page, json({ v: 1, bank: "BANK_BEAR", problems: BEAR }));
       await openedAny(page, ["BEAR_QAA", "BEAR_QAB"]);
-      await page.evaluate(() => { location.hash = "BEAR_ZZZ"; }); await waitMsg(page, "BEAR_ZZZ not found.");
+      await page.evaluate(() => { location.hash = "BEAR_ZZZ"; }); await waitMsg(page, "QUACKK, code not found.");
       await ctx.close();
     });
 

@@ -67,7 +67,7 @@ try {
 
     await step(`${vname}: unknown bank says so`, async () => {
       await typeCode(page, "BANK_NOPE");
-      await page.waitForFunction(() => document.querySelector("#entryMsg").textContent === "BANK_NOPE not found.", null, { timeout: 4000 });
+      await page.waitForFunction(() => document.querySelector("#entryMsg").textContent === "QUACKK, code not found.", null, { timeout: 4000 });
       assert.ok(await page.isHidden("#qnav"));
     });
 
