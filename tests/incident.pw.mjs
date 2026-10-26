@@ -185,7 +185,7 @@ await step("/check times out twice in a row (P2): the 2nd is its own incident, t
 
 await step("tracking off (privacy.html \"Don't record me\"): the code still shows, with a note; no report is sent", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }), off: true });
-  assert.match(await chip(page), /^Didn't load\. Tap to try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking is off on this device, so Tony gets less to go on\.$/);
+  assert.match(await chip(page), /^Didn't load\. Tap to try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
   await page.waitForTimeout(800);
   assert.deepEqual(page.beacons, [], "no /log/incident");
   await page.context().close();

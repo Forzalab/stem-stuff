@@ -176,6 +176,17 @@ await step("the bucket: a stable hash of the one telemetry id; stemHk picks the 
   await p2.context().close();
 });
 
+await step("duck kind: its 2nd line is a random pick from Cluck's idle pool (Tony #36), no more \"folded, not offended\"", async () => {
+  const page = await cluck(DESK, { hk: 2 });
+  await page.evaluate(() => { Math.random = () => 0.99; });                    // deterministic: the pool's last line
+  await page.click("#cluck .cl-bar .cl-x");
+  assert.equal((await state(page)).line, KINDS.duck);
+  await page.waitForFunction(l => document.querySelector("#clBack .hk-t").textContent !== l, KINDS.duck, { timeout: 6000 });
+  assert.equal((await state(page)).line, "Cluck's getting his ducks in a row", "Math.random 0.99: the pool's last line");
+  assert.deepEqual(page.errs, [], "no page errors");
+  await page.context().close();
+});
+
 await step("phone: unchanged; the X closes the sheet, nothing folds, no row", async () => {
   const page = await cluck(PHONE);
   await page.click("#cluck .cl-bar .cl-x");

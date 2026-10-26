@@ -100,7 +100,7 @@ function entryMsg(text, tone = "bad", inc = null) {
    Tony's debug mode (?debug=1 once): "E-7K3QX network". Tracking off (DNT / GPC / "Don't record me"): no report went out, and the line says so.
    card: an error card (not Cluck's chip): in debug mode it adds the flight recorder's diag line "v#197 · explain 504 · 20.1 s · AI: cap" */
 const incHTML = (c, card = true) => !c ? "" : ` <span class="inc" data-inc="${c}">Send Tony this code: <b>${esc(debugOn() ? incLabel(c) : c)}</b>${trackingOff()
-  ? ` <small class="inc-off">Tracking is off on this device, so Tony gets less to go on.</small>` : ""}${card && debugOn() && incDiag(c)
+  ? ` <small class="inc-off">Tracking turned off.</small>` : ""}${card && debugOn() && incDiag(c)
   ? ` <small class="inc-diag" data-diag="${c}">${esc(incDiag(c))}</small>` : ""}</span>`;
 document.addEventListener("click", async e => {
   const b = e.target.closest?.(".inc[data-inc]"); if (!b || b.closest("button")) return;   // inside Cluck's chip, the tap is the chip's (try again)
@@ -510,7 +510,7 @@ $("#entry").addEventListener("submit", e => {
   const mp = modePrefix(codeIn.value);                                    // DIET_<code> = the original questions, SUGAR_<code> = saccharine (design/EASY.md)
   if (mp) { setMode(mp.mode); codeIn.value = mp.rest; modeFlip = true; }
   const n = entry(codeIn.value);   // a bare suffix ("p2x") opens BANK_P2X
-  if (!n) { entryMsg("Not a code. Try CALC1_T6B."); codeIn.focus(); return; }
+  if (!n) { entryMsg("Whoops, that's not a valid code! Try CALC1_T6B instead."); codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
   if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Original questions on." : "Easy questions on."); });
@@ -523,7 +523,7 @@ window.stemHidden = c => { const o = window.stemOffline; return !!(o && o.has(c)
    After a file is loaded: open the code already typed if the file has it, else the file's first problem. */
 $("#upload").addEventListener("click", async () => {
   const off = window.stemOffline;
-  if (!off || !off.pickFile) { entryMsg("Can't open files here."); return; }
+  if (!off || !off.pickFile) { entryMsg("Uh-oh! Files won't open here, sorry!"); return; }
   const r = await off.pickFile();
   if (r && r.error) entryMsg(r.error, r.tone);
 });
@@ -600,14 +600,14 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   } catch (e) {
     const inc = reqInc("bank", path, t0, e === r ? { r, tp } : r ? { e, phase: "parse", tp } : { e, tp });
     if (!quiet) {
-      entryMsg(timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.", "bad", inc);
+      entryMsg(timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", inc);   // COPY-PENDING: the kaomoji (Tony #36 [[sad kaomoji]])
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
   }
   const nb = codes.bankNotice(b);
   if (nb.dropped) { if (!quiet) entryMsg(nb.dropped, "warn"); return false; }   // past its sunset (SCHEMA.md Version table): the message, not "not found"
-  if (!b || !b.problems.length) { if (!quiet) entryMsg(`${code} not found.`); return false; }
+  if (!b || !b.problems.length) { if (!quiet) entryMsg("QUACKK, code not found."); return false; }
   bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s, banner: nb.banner };
   src(b.code);
   remembered(b.code);
@@ -639,10 +639,10 @@ async function getProblem(code) {
    fresh device); a prefix it knows (a bank with it is open or uploaded) or a built-in one is a typo: "not found" */
 const deadCode = code => {
   const pre = codes.prefixOf(code);
-  return codes.isCustomPrefix(pre) && !knownPrefixes().has(pre) ? codes.needsBank(code) : `${code} not found.`;
+  return codes.isCustomPrefix(pre) && !knownPrefixes().has(pre) ? codes.needsBank(code) : "QUACKK, code not found.";
 };
 async function load(code) {
-  if (!codes.isCode(code)) { note(`Can't open ${code}.`); return; }   // T16: said, not silent
+  if (!codes.isCode(code)) { note(`Quack, can't open ${code}.`); return; }   // T16: said, not silent
   let prob;
   retryLoad.hidden = true;
   const f = !modeFlip && forceSugarOnce(code);                            // a question of a forced bank, opened directly
@@ -655,7 +655,7 @@ async function load(code) {
     }
   }
   catch (e) {
-    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Too slow. Tap Try again." : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);
+    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);   // COPY-PENDING: the kaomoji (Tony #36 [[sad kaomoji]])
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -1015,7 +1015,7 @@ function keptTap(o) {
   window.stemT?.("_kepttap", { choice: o.dataset.id });   // intent.js log only, telemetry.js drops "_" names
   if (S.keptTold) return;
   S.keptTold = true;
-  toast("Option already marked correct, cannot change!", o);
+  toast("That one's already correct!", o);
 }
 /* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
@@ -1169,7 +1169,7 @@ function partFeedback(i, r, typed) {
   const { hint, box, go } = partEls(i), row = hint.parentElement;
   let h = "";
   if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
-  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (hintOf(r)) {
@@ -1207,7 +1207,7 @@ function settle() {
   finish();
   $("#fb").innerHTML = S.solved ? ""                                         // every box shows its check: no words
     : `<p class="verdict bad">${icon("i-x")}<span>${right} of ${n} right.</span></p>`;   // no out-of-tries line (Q13): the shut boxes + Next say it
-  say(S.solved ? "Correct." : $("#fb").textContent.replace(/\s+/g, " ").trim() + " Out of tries.");
+  say(S.solved ? "Correct." : "Out of tries, but you've done your best!");
 }
 
 /* ---------- attempts, feedback ---------- */
@@ -1519,7 +1519,7 @@ function feedback(r, typed) {
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
-  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Can't read <code>${esc(typed)}</code>. Type it again.</span></p>`;
+  if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
   else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
@@ -2013,10 +2013,14 @@ function clClose(dismiss) {
    its type steps up. Under the verdict, one hairline row (B4) brings it back. Its sassy line rotates (H; the one humour exception in
    chrome, STYLE.md §5); "Show him" stays put; the button's name is plain. Phones: unchanged. In memory only, never stored. */
 let clGone = false, hkT = 0, hkI = 0, hkK = null;
+const HK_IDLE = ["Cluck's bathing in the sunshine", "Cluck's waiting for breadcrumbs",   // Tony #36: one slot of the duck kind, a random pick each time it shows
+  "Cluck's paddling in place", "Cluck's counting ripples", "Cluck's quacking a crossword", "Cluck's ruffling a few feathers",   // COPY-PENDING
+  "Cluck's practicing his waddle", "Cluck's taking a quick dip", "Cluck's bobbing for snacks", "Cluck's preening, back soon",   // COPY-PENDING
+  "Cluck's on a pond break", "Cluck's getting his ducks in a row"];                                                              // COPY-PENDING
 const HK = {                                                                // the A/B by humour kind: one kind per device (hkKind)
   sassy: ["Cluck is pretending not to watch", "Cluck has notes. Many notes.", "Cluck saw that. Just saying.", "Cluck is waiting. Patiently. Mostly.", "Cluck could explain, if asked"],
   deadpan: ["Cluck is still here", "Cluck has an explanation", "Cluck is available", "Cluck remains a duck", "Cluck is on standby"],
-  duck: ["Cluck knows ducks don't cluck", "Cluck is folded, not offended", "Cluck is sitting on an answer", "Cluck promises not to quack", "Cluck is floating nearby"],
+  duck: ["Cluck knows ducks don't cluck", HK_IDLE, "Cluck is sitting on an answer", "Cluck promises not to quack", "Cluck is floating nearby"],
   nerd: ["Cluck is at rest, potential energy high", "Cluck is in a superposition of helpful", "Cluck has a derivation ready", "Cluck is waiting for a nonzero input", "Cluck is converging on an answer"],
 };
 const HK_DEF = "deadpan";                                                   // no telemetry id (off, DNT / GPC, no key): this kind, nothing recorded
@@ -2043,7 +2047,8 @@ function clGoneSet(on) {
 function hkStop() { clearInterval(hkT); hkT = 0; }
 function hkShow(b, roll) {
   const t = b.querySelector(".hk-t"), set = HK[hkKind()];
-  t.textContent = set[hkI % set.length];
+  const l = set[hkI % set.length];
+  t.textContent = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l;
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
 function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "ok but how?" or "Compare with Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
@@ -2288,7 +2293,7 @@ function origRender() {
   el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
     <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
       `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(markNums(l, C.olds), true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
-    <p class="orig-note" hidden>You peeked, so only 2 XP.</p><p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
+    <p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
   const q = el.querySelector(".orig-q");
   for (const [i, b] of o.body.entries()) {
     if (b.type === "text") { const d = document.createElement("div"); d.className = "md"; d.innerHTML = md(C.orig[i]); q.append(d); }
@@ -2321,8 +2326,6 @@ function hintNudge(btn) {
 function origPeeked() {
   if (S.finished || S.tries.length || S.orig.peeked) return;                    // a look after answering is free
   S.orig.peeked = S.rwPeek = true;
-  $("#origBody .orig-note").hidden = false;
-  say("You peeked, so only 2 XP.");
 }
 function origOpen(open) {
   if (!origEl) return;
@@ -2374,7 +2377,7 @@ async function rewardShow(mine, res) {
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["Got it wrong first time? Keep your progress.", "Third time's the charm.", "Triple kill?"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4)
+  miss: ["Did an oopsie or two? Your progress is safe!", "Third time's the charm.", "They say third time's the charm, QUACKK—"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4); lines 1 + 3 Tony #36, Oct 26
   redo: ["Sometimes you get to redo a question!"] };                                // Tony, Oct 19: say it the first time a miss comes back
 /* the redo beat: a Redeem showing (a past miss back, the "Second chance" tag) opens unanswered; caret on the tag. Before the first
    answer only, so it never meets the one-more-try note or the Comeback toast */
@@ -3069,7 +3072,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURIComponent(location.hash.slice(1))) : null;
 const fromHash = () => {
   const n = hashCode();
-  if (!n) { if (location.hash.length > 1) note(`Can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
+  if (!n) { if (location.hash.length > 1) note(`Quack, can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };

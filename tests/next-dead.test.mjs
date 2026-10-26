@@ -25,8 +25,8 @@ test("nav.js: in a bank, Next is not dimmed by a current code that is not in the
 });
 
 test("app.js: a code the page can't open is said, not dropped (load, fromHash)", () => {
-  assert.match(app, /async function load\(code\) \{\n  if \(!codes\.isCode\(code\)\) \{ note\(`Can't open \$\{code\}\.`\); return; \}/);
-  assert.match(app, /if \(!n\) \{ if \(location\.hash\.length > 1\) note\(`Can't open /);
+  assert.match(app, /async function load\(code\) \{\n  if \(!codes\.isCode\(code\)\) \{ note\(`Quack, can't open \$\{code\}\.`\); return; \}/);
+  assert.match(app, /if \(!n\) \{ if \(location\.hash\.length > 1\) note\(`Quack, can't open /);
 });
 
 test("no prefix allowlist copy survives: codes.mjs is the only place (T15)", () => {

@@ -99,7 +99,7 @@ async function run(type, label, launchOpts) {
     await page.route("**/p/CALC1_A9R.json", r => { if (stall) return; r.continue(); });
     await page.goto(BASE + "/#CALC1_A9R");
     await page.waitForSelector("#retryLoad:not([hidden])", { timeout: 12000 });
-    assert.match(await page.textContent("#entryMsg"), /^\s*Too slow\. Tap Try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}\s*$/);
+    assert.match(await page.textContent("#entryMsg"), /^\s*Loading timed out, that's on me \S+ Send Tony this code: E-[2-9A-HJ-NP-Z]{5}\s*$/);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/reload-load-timeout-${label}-390.png` });
     stall = false;
     await page.click("#retryLoad");

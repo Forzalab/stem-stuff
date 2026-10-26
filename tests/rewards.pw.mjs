@@ -235,7 +235,7 @@ try {
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 2, "level 2: the last line hidden");
     await d.click("#cluck .orig-peek");
     assert.equal(await d.$$eval("#cluck .orig-sol li:not([hidden])", l => l.length), 3);
-    assert.equal(await d.isVisible("#cluck .orig-note"), true);
+    assert.equal(await d.$$eval("#cluck .orig-note", l => l.length), 0,"no peek-cost note (Tony #36: guilt based is bad); the 2 XP rule stays");
     const x0 = await xp(d);
     await pick(d, "a");
     await d.waitForFunction(x => window.Rewards.state().xp > x, x0, { timeout: 4000 });
@@ -365,11 +365,11 @@ try {
     await o.waitForTimeout(1200);
     assert.equal(await o.$eval("#toast", t => t.classList.contains("on")), false, "a try left: nothing up there (C12)");
     await pick(o, "c");
-    await tip("Got it wrong first time? Keep your progress.", "#rwHud .rw-streak");
+    await tip("Did an oopsie or two? Your progress is safe!", "#rwHud .rw-streak");
     await go(o, "CALC1_S01"); await pick(o, "b"); await pick(o, "c");
     await tip("Third time's the charm.", "#rwHud .rw-streak");
     await go(o, "CALC1_S02"); await pick(o, "b"); await pick(o, "c");
-    await tip("Triple kill?", "#rwHud .rw-streak");
+    await tip("They say third time's the charm, QUACKK—", "#rwHud .rw-streak");
     assert.equal(await seen("miss"), "3");
     await o.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.streak = 2; s.lastBurst = Date.now(); localStorage.setItem(k, JSON.stringify(s)); });
     await go(o, "CALC1_R03"); await rig(o, [0.5, 0.99]); await pick(o, "a");

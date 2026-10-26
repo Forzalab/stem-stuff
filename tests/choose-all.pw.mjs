@@ -223,7 +223,7 @@ try {
     });
     await step(`${name} sugar: tapping a kept row changes nothing and toasts once`, async () => {
       await tap(row(page, "c"), { force: true });
-      assert.equal(await toastOn(page), "Option already marked correct, cannot change!");
+      assert.equal(await toastOn(page), "That one's already correct!");
       assert.equal((await look(page, "c")).on, "true");
       await page.evaluate(() => document.querySelector("#toast").classList.remove("on"));
       await tap(row(page, "c"), { force: true });
