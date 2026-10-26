@@ -46,10 +46,14 @@
     if (!cur) return;
     const { el, anchor, align } = cur;
     if (!anchor.isConnected) { close(); return; }
-    const a = align.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+    const a = align.getBoundingClientRect(), w = el.offsetWidth;
     if (a.bottom < 0 || a.top > innerHeight) { close(); return; }
     const x = Math.max(EDGE, Math.min(a.left + a.width / 2 - w / 2, innerWidth - EDGE - w));
-    const up = a.bottom + GAP + h > innerHeight - 8 && a.top - GAP - h >= 8;
+    /* taller than the room on both sides (a doc popover with a figure, a short window): the roomier side, capped there, scrolling inside.
+       full = its whole height even while capped (scrollHeight + borders), so a re-place on scroll keeps the inside scroll position */
+    const full = el.scrollHeight + el.offsetHeight - el.clientHeight, below = innerHeight - 8 - a.bottom - GAP, above = a.top - GAP - 8;
+    const up = full > below && (full <= above || above > below), h = Math.min(full, Math.max(0, up ? above : below)), cap = h < full;
+    el.style.maxHeight = cap ? h + "px" : ""; el.style.overflowY = cap ? "auto" : "";
     el.style.left = Math.round(x) + "px"; el.style.top = Math.round(up ? a.top - GAP - h : a.bottom + GAP) + "px";
     el.dataset.side = up ? "top" : "bottom";
   }

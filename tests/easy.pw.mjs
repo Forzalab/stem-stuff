@@ -38,8 +38,15 @@ const P = {
 const pilotSheet = JSON.parse(readFileSync(join(ROOT, "tests", "fixtures", "formula-sheet-pilot.json"), "utf8"));   // 8 verbatim rows of sheet v3, docs included
 const pilot = JSON.parse(readFileSync(join(ROOT, "tests", "fixtures", "ladder-pilot.json"), "utf8")).items;
 mkdirSync(BANKS);
+/* BUOY, verbatim from brain sheet v3: the sheet's longest formula (about 560px at the card's size), no picture */
+const BUOY = { id: "BUOY", tex: "B = \\rho_{fluid} V_{fluid\\ displaced}\\, g,\\quad V_{fluid\\ displaced} = V_{object} \\text{ (submerged)}", doc: { sym: [{ s: "B", m: "buoyant force, upward", u: "N" },
+  { s: "\\rho_{fluid}", m: "density of the fluid", u: "kg/m³" }, { s: "V_{fluid\\ displaced}", m: "volume of fluid pushed aside", u: "m³" }, { s: "g", m: "free-fall acceleration, 9.8 m/s²", u: "m/s²" },
+  { s: "V_{object}", m: "volume of the object", u: "m³" }], when: "Use for any object in a fluid. Fully submerged: displaced volume equals object volume.",
+  ex: "ρ=1000 kg/m³, V=0.0020 m³ submerged → B = 1000·0.0020·9.8 = 19.6 N", purpose: "Buoyant force (the push up from a fluid on a thing in it): density of the fluid times the volume it displaces times g. A boat, a ball under water, a balloon." } };
 writeFileSync(join(BANKS, "formula-sheet.json"), JSON.stringify({ v: 3, groups: [{ name: "Work and Energy",
-  rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }, ...pilotSheet.groups] }));
+  rows: [{ id: "WE_THM", tex: "W_{net} = \\Delta K" }, { id: "W_AREA", tex: "W = \\text{area under } F\\text{-}x" }] }, ...pilotSheet.groups, { name: "Buoyancy", exam: [3], rows: [BUOY] }] }));
+writeFileSync(join(BANKS, "BANK_BUO.json"), JSON.stringify({ v: 1, problems: [{ code: "CALC1_BU1", title: "Buoyancy", type: "num", body: [{ type: "text", md: "A long formula." }], answer: "4",
+  saccharine: { title: "Buoyancy", part: ["BUOY", "I_SUM"] } }] }));
 /* ladder lane 3: the pilot's one-formula item (Q11 Q4e: mid pieces only) and its 4-formula item (Q11 Q5: mid pieces + 3 chain arrows) as CALC1 numerics */
 const lad = (code, it) => ({ code, title: it.title, type: "num", body: [{ type: "text", md: "Ladder pilot." }], answer: "4", saccharine: { title: it.title, part: it.part, ladder: it.ladder } });
 writeFileSync(join(BANKS, "BANK_LAD.json"), JSON.stringify({ v: 1, problems: [lad("CALC1_LD1", pilot.find(i => i.code === "PHYS_Z3X")), lad("CALC1_LD2", pilot.find(i => i.code === "PHYS_PGX"))] }));
@@ -292,6 +299,13 @@ try {
     assert.equal(await page.$eval(".pop", e => e.children[1].className + " " + e.children[1].textContent.replace(/\s+/g, "")),
       "pop-t fd-p " + pilotSheet.groups[1].rows.find(r => r.id === "KE_ROT").doc.purpose.replace(/_/g, "").replace(/\s+/g, ""), "the formula, then the purpose as the title");
     assert.equal(await q[2].getAttribute("aria-expanded"), "true");
+    assert.equal(await page.$$eval(".pop .fig, .pop .fd-fig", f => f.length), 0, "a row with no picture (KE_ROT) has no figure");
+    await q[1].click();                                                     // I = Σ m r²: formula-figs.js has its picture (design/FORMULA-FIGS.md)
+    await page.waitForFunction(() => document.querySelector(".pop .fd-fig svg"), null, { timeout: 3000 });
+    const fig = await page.$eval(".pop", e => { const f = e.querySelector(".fd-fig"), r = e.getBoundingClientRect(), fr = f.getBoundingClientRect(), s = f.querySelector("svg").getBoundingClientRect();
+      return { at: [...e.children].indexOf(f), role: f.getAttribute("role"), alt: f.getAttribute("aria-label") === window.FormulaFigs.I_SUM.alt, drawn: s.height > 60 && s.width > 150,
+        inside: fr.left >= r.left - 0.5 && fr.right <= r.right + 0.5, labels: f.querySelectorAll(".lbl .katex").length >= 3, inView: r.left >= 0 && r.right <= innerWidth }; });
+    assert.deepEqual(fig, { at: 1, role: "img", alt: true, drawn: true, inside: true, labels: true, inView: true }, "the picture sits under the formula: graph.js, role img, its alt as the label, KaTeX labels, inside the popover");
     await q[0].click();
     assert.deepEqual(await open(), [0], "one popover at a time");
     await q[0].click();
@@ -306,7 +320,29 @@ try {
     await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");
     assert.equal(await page.$$eval("#fcard .fq", b => b.length), 0, "rows without a doc have no ?");
     assert.equal(await page.$$eval("#fcard li.to", t => t.length), 1, "no ladder: the arrow is drawn as before");
+    /* orc v23 round 2: a doc popover never runs past the screen (a tall one scrolls inside), and a long formula is never cut: the popover
+       widens to it up to the viewport, and past that the header scrolls sideways */
+    for (const [w, h] of [[390, 844], [360, 640], [1280, 720]]) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.evaluate(() => { location.hash = "CALC1_BU1"; }); await opened(page, "CALC1_BU1");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true,
+        `${w}x${h}: BUOY's card row is wider than the screen; it scrolls in its box, never the page (KaTeX's hidden MathML stays inside .fm)`);
+      for (const [i, id] of [[0, "BUOY"], [1, "I_SUM"]]) {
+        const b = page.locator("#fcard .fq").nth(i);
+        await b.evaluate(x => x.scrollIntoView({ block: "center" }));
+        await b.click();
+        await page.waitForSelector(".pop");
+        if (id === "I_SUM") await page.waitForFunction(() => document.querySelector(".pop .fd-fig svg"));
+        const r = await page.$eval(".pop", e => { const p = e.getBoundingClientRect(), hd = e.querySelector(".pop-h"), x = getComputedStyle(hd).overflowX;
+          return { inView: p.top >= 0 && p.bottom <= innerHeight && p.left >= 0 && p.right <= innerWidth, fits: hd.scrollWidth <= hd.clientWidth + 1, scrolls: x === "auto" || x === "scroll",
+            reach: e.scrollHeight <= e.clientHeight + 1 || getComputedStyle(e).overflowY === "auto" }; });
+        assert.deepEqual(r, { inView: true, fits: w > 600 ? true : r.fits, scrolls: true, reach: true },
+          `${w}x${h} ${id}: the popover stays on screen; its formula is whole when the screen has room, else it scrolls; a capped body scrolls`);
+        await b.click();
+      }
+    }
     await page.setViewportSize({ width: 1280, height: 900 });
+    await page.evaluate(() => { location.hash = "CALC1_E01"; }); await opened(page, "CALC1_E01");   // where the next step starts
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {

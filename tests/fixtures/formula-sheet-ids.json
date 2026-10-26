@@ -1,0 +1,466 @@
+{
+ "v": 3,
+ "source": "Ids of brain phys2a-exam3-bank/formula-sheet.json v3 (163 rows), per group with its exam list: what formula-figs.js may key on. Test fixture only; regenerate when the sheet adds rows.",
+ "groups": [
+  {
+   "name": "One-dimensional motion",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "DISP",
+    "V_AVG",
+    "SPEED_AVG",
+    "DX_CONST_V",
+    "A_AVG"
+   ]
+  },
+  {
+   "name": "Free Fall Motion (in the y-direction)",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "FF_VY",
+    "FF_DY",
+    "FF_VY2",
+    "G_EARTH"
+   ]
+  },
+  {
+   "name": "Relative Velocity",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "REL_V"
+   ]
+  },
+  {
+   "name": "Two-Dimensional Kinematics (combined)",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "V_MAG",
+    "V_DIR"
+   ]
+  },
+  {
+   "name": "Vector Kinematics",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "POS_VEC",
+    "VEL_VEC",
+    "ACC_VEC",
+    "VK_V",
+    "VK_DR",
+    "VK_V2"
+   ]
+  },
+  {
+   "name": "Projectile Motion",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "PROJ_VX",
+    "PROJ_DX",
+    "PROJ_VY",
+    "PROJ_DY",
+    "PROJ_VY2",
+    "H_MAX",
+    "T_FLIGHT",
+    "RANGE"
+   ]
+  },
+  {
+   "name": "Quadratic equation",
+   "exam": [
+    1
+   ],
+   "ids": [
+    "QUADRATIC"
+   ]
+  },
+  {
+   "name": "Two-Dimensional Kinematics",
+   "exam": [
+    1,
+    2
+   ],
+   "ids": [
+    "KIN_VX",
+    "KIN_VY",
+    "KIN_DX",
+    "KIN_DY",
+    "KIN_VX2",
+    "KIN_VY2"
+   ]
+  },
+  {
+   "name": "Trig components",
+   "exam": [
+    1,
+    2
+   ],
+   "ids": [
+    "V0X",
+    "V0Y",
+    "F_MAG",
+    "F_DIR"
+   ]
+  },
+  {
+   "name": "Newton's Laws of Motion",
+   "exam": [
+    1,
+    2,
+    3
+   ],
+   "ids": [
+    "N2",
+    "N2_XY",
+    "N3"
+   ]
+  },
+  {
+   "name": "Friction forces",
+   "exam": [
+    1,
+    2
+   ],
+   "ids": [
+    "FK",
+    "FS"
+   ]
+  },
+  {
+   "name": "Work and Conservation of Energy",
+   "exam": [
+    2,
+    3
+   ],
+   "ids": [
+    "WORK",
+    "KE",
+    "PE_G",
+    "WE_THM",
+    "E_CONS"
+   ]
+  },
+  {
+   "name": "Spring Force and Potential Energy",
+   "exam": [
+    2,
+    3
+   ],
+   "ids": [
+    "HOOKE",
+    "PE_S"
+   ]
+  },
+  {
+   "name": "Work and Power",
+   "exam": [
+    2
+   ],
+   "ids": [
+    "POWER",
+    "W_AREA"
+   ]
+  },
+  {
+   "name": "Momentum and Impulse",
+   "exam": [
+    2
+   ],
+   "ids": [
+    "MOM",
+    "IMPULSE",
+    "P_CONS",
+    "P_CONS_X",
+    "P_CONS_Y",
+    "ELASTIC",
+    "INELASTIC"
+   ]
+  },
+  {
+   "name": "Centripetal Acceleration",
+   "exam": [
+    2
+   ],
+   "ids": [
+    "FR",
+    "FT",
+    "AC",
+    "A_TOT"
+   ]
+  },
+  {
+   "name": "Rotational Mechanics",
+   "exam": [
+    2,
+    3
+   ],
+   "ids": [
+    "OMEGA",
+    "ALPHA",
+    "ROT_W",
+    "ROT_TH",
+    "ROT_W2",
+    "ARC",
+    "VT",
+    "AT",
+    "V_ORBIT"
+   ]
+  },
+  {
+   "name": "Gravitation and Kepler's 3rd Law",
+   "exam": [
+    2
+   ],
+   "ids": [
+    "F_GRAV",
+    "F_SURF",
+    "PE_GRAV",
+    "V_ESC",
+    "KEPLER3"
+   ]
+  },
+  {
+   "name": "Rotational Mechanics (Exam 3)",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "OMEGA_T"
+   ]
+  },
+  {
+   "name": "Center of Gravity",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "CG_X",
+    "CG_Y",
+    "CG_Z"
+   ]
+  },
+  {
+   "name": "Torque, Moment of Inertia, Rotational Kinetic Energy, Angular Momentum",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "TORQUE",
+    "I_SUM",
+    "KE_ROT",
+    "L_IW",
+    "TAU_IALPHA",
+    "L_CONS"
+   ]
+  },
+  {
+   "name": "Density and Pressure",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "DENSITY",
+    "PRESSURE",
+    "P_DEPTH",
+    "PASCAL"
+   ]
+  },
+  {
+   "name": "Buoyancy and Archimedes' Principle",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "BUOY",
+    "BUOY_FLOAT",
+    "SG"
+   ]
+  },
+  {
+   "name": "Deformation of Solids",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "YOUNG",
+    "SHEAR",
+    "BULK"
+   ]
+  },
+  {
+   "name": "Temperature Scales",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "T_K",
+    "T_F",
+    "DT_CK",
+    "DT_F"
+   ]
+  },
+  {
+   "name": "Thermal Expansion of Solids and Liquids",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "EXP_L",
+    "EXP_A",
+    "EXP_V",
+    "EXP_COEF"
+   ]
+  },
+  {
+   "name": "Ideal Gas Law and Kinetic Theory of Gasses",
+   "exam": [
+    3,
+    4
+   ],
+   "ids": [
+    "MOLES",
+    "IDEAL_GAS",
+    "V_RMS",
+    "KE_AVG",
+    "KE_MOL",
+    "U_MONO",
+    "P_KIN",
+    "R_GAS",
+    "K_B"
+   ]
+  },
+  {
+   "name": "Specific Heat, Latent Heat, and Thermal Energy Transfer",
+   "exam": [
+    3
+   ],
+   "ids": [
+    "SPEC_HEAT",
+    "LATENT",
+    "Q_CONS",
+    "P_HEAT",
+    "CONDUCTION",
+    "RADIATION",
+    "SIGMA"
+   ]
+  },
+  {
+   "name": "Thermodynamics",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "W_GAS",
+    "W_ENV",
+    "FIRST_LAW",
+    "DU_CV",
+    "CV_MONO",
+    "CV_DIATOM",
+    "CV_DIAT_VIB",
+    "CP_CV",
+    "ADIABATIC",
+    "W_ENGINE",
+    "EFFICIENCY",
+    "ENTROPY"
+   ]
+  },
+  {
+   "name": "Thermodynamic Processes (Ideal Gases)",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "PROC_ISOBAR",
+    "PROC_ADIAB",
+    "PROC_ISOVOL",
+    "PROC_ISOTH",
+    "PROC_GEN",
+    "CYCLE_SIGN"
+   ]
+  },
+  {
+   "name": "Vibrations and Simple Harmonic Motion (SHM)",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "OMEGA_F",
+    "PERIOD_F"
+   ]
+  },
+  {
+   "name": "Simple Harmonic Motion for Spring-Mass System",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "SHM_V_X",
+    "SHM_A_X",
+    "SHM_OMEGA",
+    "SHM_PERIOD",
+    "SHM_X_T",
+    "SHM_V_T",
+    "SHM_A_T",
+    "SHM_ENERGY"
+   ]
+  },
+  {
+   "name": "Simple Harmonic Motion for Simple Pendulum",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "PEND_OMEGA",
+    "PEND_PERIOD"
+   ]
+  },
+  {
+   "name": "Waves",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "WAVE_V",
+    "WAVE_STRING",
+    "LIN_DENSITY"
+   ]
+  },
+  {
+   "name": "Sound",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "SOUND_BULK",
+    "SOUND_ROD",
+    "SOUND_TEMP",
+    "INTENSITY",
+    "DECIBEL",
+    "DB_DIFF",
+    "DOPPLER",
+    "DOPPLER_SIGN"
+   ]
+  },
+  {
+   "name": "Wave Interference",
+   "exam": [
+    4
+   ],
+   "ids": [
+    "CONSTRUCTIVE",
+    "DESTRUCTIVE"
+   ]
+  }
+ ]
+}
