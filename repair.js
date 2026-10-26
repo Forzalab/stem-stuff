@@ -2,8 +2,10 @@
    data (item.repair, SCHEMA.md), drawn by our code; nothing Cluck says goes through here. Graded on the device: the item is already a miss.
 
    Repair.mount(host, item, opts)   draws the ladder into host (replacing what is there); returns { el, destroy() }
-       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, on(name, data) }
+       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value), on(name, data) }
        error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
+       grade(value) -> Promise<boolean>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7; the
+       host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
        on: repair_done { why_ok, variant, ladder, auto } · repair_skip { variant } · repair_next { } (full, after the study pause)
    Repair.blankStep(item, error)    the step id the slip lives in, or null (= the fallback ladder). stemJev.repairBlank's signature
 
@@ -61,7 +63,8 @@
       st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));
-    let whyOk = true, autos = 0, finished = full, timer = 0;
+    let whyOk = true, autos = 0, finished = full, timer = 0, gone = false;
+    const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
 
     const el = h("section", "rp");
@@ -86,9 +89,18 @@
     }
     function tryValue(s, v) {
       const st = s.st;
-      const right = st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
-        : String(v) === String(st.ok);
-      if (right) { s.ok = true; s.miss = ""; }
+      if (st.ok == null && o.grade) {                                            // the key is on the server: one grade in flight at a time
+        if (s.busy) return;
+        s.busy = true;
+        Promise.resolve(o.grade(v)).then(ok => { s.busy = false; if (!gone) judge(s, v, ok === true); }, () => { s.busy = false; });
+        return;
+      }
+      judge(s, v, st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
+        : String(v) === String(st.ok));
+    }
+    function judge(s, v, right) {
+      const st = s.st;
+      if (right) { s.ok = true; s.miss = ""; s.val = v; }
       else {
         s.tried.add(String(v));
         s.miss = welcome ? (st.miss && st.miss[v]) || L().hint || "" : (st.miss && st.miss[v]) || L().miss || "";
@@ -114,11 +126,12 @@
 
     /* ---- drawing ---- */
     function shown(s) {                                                          // a step's worked value, as text / $math$
-      const st = s.st;
-      if (st.kind === "pick") { const p = (st.opts || []).find(p => p.id === st.ok); return p ? p.md : ""; }
-      if (st.kind === "sheet") return o.sheet && o.sheet[st.ok] ? "$" + o.sheet[st.ok] + "$" : String(st.ok);
-      if (st.kind === "fill") return fillTex(st, st.ok);
-      return String(st.ok) + (st.unit ? " " + st.unit : "");
+      const st = s.st, ok = st.ok != null ? st.ok : s.val;                     // no key here: the value the server took (none if it filled in)
+      if (ok == null) return "";
+      if (st.kind === "pick") { const p = optsOf(st).find(p => p.id === ok); return p ? p.md : ""; }
+      if (st.kind === "sheet") return o.sheet && o.sheet[ok] ? "$" + o.sheet[ok] + "$" : String(ok);
+      if (st.kind === "fill") return fillTex(st, ok);
+      return String(ok) + (st.unit ? " " + st.unit : "");
     }
     function chip(text, data, onTap, s, key, tried) {
       const b = h("button", "rp-chip", text);
@@ -140,7 +153,7 @@
       }
       if (st.kind === "fill") box.append(h("div", "rp-tex", fillTex(st, null).replace("$", "$\\displaystyle ")));
       const opts = h("div", "rp-opts rp-val-opts");
-      const list = st.kind === "pick" ? st.opts.map(p => [p.id, p.md]) : st.kind === "sheet" ? st.pool.map(id => [id, o.sheet && o.sheet[id] ? "$" + o.sheet[id] + "$" : id])
+      const list = st.kind === "pick" ? optsOf(st).map(p => [p.id, p.md]) : st.kind === "sheet" ? st.pool.map(id => [id, o.sheet && o.sheet[id] ? "$" + o.sheet[id] + "$" : id])
         : st.opts.map(v => [v, v]);
       for (const [v, text] of list) opts.append(chip(text, { v }, tryValue, s, String(v), s.tried));
       box.append(opts);
@@ -197,7 +210,7 @@
 
     if (full) timer = setTimeout(() => { timer = 0; const nx = el.querySelector(".rp-next"); if (nx) nx.disabled = false; }, STUDY_MS);
     advance(); draw();
-    return { el, destroy() { clearTimeout(timer); el.remove(); } };
+    return { el, destroy() { gone = true; clearTimeout(timer); el.remove(); } };
   }
 
   root.Repair = { mount, blankStep, TRIES, STUDY_MS };

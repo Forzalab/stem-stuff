@@ -118,6 +118,11 @@ class Wsgi(unittest.TestCase):
         with open(os.path.join(ROOT, "vercel.json")) as f:
             self.assertIn({"source": "/repair/:code", "destination": "/api/index?path=/repair/:code"}, json.load(f)["rewrites"])
 
+    def test_repair_check_route(self):                                               # Tony #29.7: POST /repair/<code>/check reaches serve.dispatch
+        self.assertEqual(call("POST", "/repair/CALC1_T6B/check", b'{"value": "1"}')[0], 404)
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            self.assertIn({"source": "/repair/:code/check", "destination": "/api/index?path=/repair/:code/check"}, json.load(f)["rewrites"])
+
 
 class Kv(unittest.TestCase):
     def setUp(self):

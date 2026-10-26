@@ -66,6 +66,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 |---|---|---|---|
 | `code` | all | `CALC1_K4M` | yes |
 | `title` | all, optional | brief plain-text title for the question list (≤ 60 chars, never the answer) | yes |
+| `tag` | all, optional | the physics idea the item drills, one of `momentum`, `energy`, `forces`, `signs`, `circular`, `rotation`, `units`: pops pick their lines by it (Tony #29.4). Not `topic`, which names the bank `topics` entry whose `tol` the item inherits | yes |
 | `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
 | `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
@@ -584,6 +585,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "type": "string",
           "pattern": "^[a-z][a-z0-9_-]{0,31}$",
           "description": "optional: the bank topics entry whose tol this question (its parts and fix) inherits when it has no tol of its own"
+        },
+        "tag": {
+          "enum": ["momentum", "energy", "forces", "signs", "circular", "rotation", "units"],
+          "description": "optional: the physics idea this item drills; pops pick their lines by it (Tony #29.4). Not topic (the tol topic)"
         },
         "title": {
           "type": "string",

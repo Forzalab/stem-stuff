@@ -52,6 +52,35 @@ test("no b twin: repaired + solo a twin = conquered", () => {
   assert.equal(st.t.Q7.conquered, true);
 });
 
+/* Tony #29.12: no `a` twin -> the `b` twin is the first solo twin; conquered = repaired + that solo `b` win */
+test("b-only template: the first solo twin is b; a b win = conquered", () => {
+  const st = rNew();
+  ev(st, "miss", "Q7", { a: false, b: true });
+  assert.deepEqual(ev(st, "ladder_done"), { do: "twin", which: "b" });
+  assert.deepEqual(ev(st, "twin", "Q7", { ok: true }), { do: "conquered" });
+  assert.equal(st.t.Q7.conquered, true);
+  assert.equal(st.wins, 1, "the b win counts toward the back-off run");
+  assert.deepEqual(rDue(st), []);
+});
+
+test("b-only template: a b miss -> repair ladder (one more at most), then the solution; the run resets", () => {
+  const st = rNew();
+  ev(st, "miss", "Q7", { a: false, b: true }); ev(st, "ladder_done");
+  assert.deepEqual(ev(st, "twin", "Q7", { ok: false }), { do: "repair", open: "auto" });
+  assert.equal(st.wins, 0);
+  assert.deepEqual(ev(st, "ladder_done"), { do: "twin", which: "b" });
+  assert.deepEqual(ev(st, "twin", "Q7", { ok: false }), { do: "solution", later: true });
+  assert.equal(st.t.Q7.conquered, false);
+});
+
+test("a+b template unchanged when `a` is stated: a first, then b queued", () => {
+  const st = rNew();
+  ev(st, "miss", "Q7", { a: true, b: true });
+  assert.deepEqual(ev(st, "ladder_done"), { do: "twin", which: "a" });
+  assert.deepEqual(ev(st, "twin", "Q7", { ok: true }), { do: "queue", which: "b", gap: B_GAP });
+  assert.equal(st.t.Q7.conquered, false);
+});
+
 /* the run is over solo-twin tries: the original miss must not reset it (every twin follows one, so the back-off could never
    trigger); a twin miss resets it, and that twin's alt ladder auto-opens again */
 test("back-off: after BACKOFF solo-twin wins in a row the next ladder is an offer; a twin miss resets it", () => {

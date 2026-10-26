@@ -1,0 +1,17 @@
+/* welcome.css: Q1, the welcome item (welcome.js; brain design-round-66 DESIGN-v3 §2). App chrome on app.css tokens only (STYLE.md §2):
+   the one warm surface in the app (Cluck's help family, Q1 only), the ladder sitting flat on it like a form. repair.css lays the steps out;
+   this file only warms them and fades the shown inputs. The fade is opacity only; reduced motion drops it (the picture is simply gone). */
+.wl { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s4); background: var(--help-fill);
+  border: var(--bw) solid var(--help-line); border-radius: 12px; color: var(--ink); }
+.wl-stem { margin: 0 0 var(--s3); font-size: var(--t-md); line-height: var(--lh); overflow-wrap: anywhere; }
+.wl-stem .katex { font-size: var(--kx); }
+.wl .rp { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; }
+.wl .rp-step { border-top-color: var(--help-line); }
+/* open: every step at full strength, a form to fill; alone: the future steps go back to repair.css's dim label */
+.wl[data-fade="open"] .rp-step[data-state="future"] { color: var(--ink); opacity: 1; }
+.wl-field { box-sizing: border-box; max-width: 100%; margin: var(--s2) 0 0 calc(1.25rem + var(--s2)); padding: var(--s1) var(--s3); overflow-x: auto;
+  border: var(--bw) dashed var(--help-line); border-radius: 8px; color: var(--help-muted); font-size: var(--t-sm); }
+.wl-field .katex { font-size: var(--kx); }
+.wl-out { animation: wl-out var(--d-move) ease-in both; }
+@keyframes wl-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wl-out { display: none; animation: none; } }

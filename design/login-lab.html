@@ -6,7 +6,8 @@
 <title>Login lab</title>
 <!-- My Cluck login lab (E4; Tony #22/#22b/#23, DESIGN-v3 §7): login.js on the real app.css tokens. Open: python3 serve.py 8833, then
      http://localhost:8833/design/login-lab.html (needs http: login.js fetches and imports). Try it at 360 and desktop; ?k=<token> logs in.
-     acct/new and acct/login (S2) are not in serve.py yet: when the server answers 404 the stub below fakes them, in this page only.
+     acct/new, acct/login and acct/keep (S2) are not in serve.py yet: when the server answers 404 the stub below fakes them, in this
+     page only. The "acct/keep" chip flips the faked keep between ok and fail (500), to see Save's retry state.
      tests/login.pw.mjs drives this page (it fakes S2 itself, with page.route, so it sees every request). -->
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="../vendor/fonts/atkinson.css">
@@ -28,16 +29,18 @@ h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
 <h1>Login lab</h1>
 <p class="lede">The My Cluck dialog. The picked image is decoded here; only the token is sent.</p>
 <div class="row"><button type="button" class="chip" id="openLogin">Keep your progress</button><span id="labState">Guest</span>
-  <button type="button" class="chip" id="labOut">Forget this device (lab)</button></div>
+  <button type="button" class="chip" id="labOut">Forget this device (lab)</button>
+  <button type="button" class="chip" id="labKeep" aria-pressed="false">acct/keep: ok</button></div>
 </main>
 <script>
 "use strict";
-/* S2 stub: only when the server has no acct/ route yet (404), and only on this page */
+/* S2 stub: only when the server has no acct/ route yet (404), and only on this page. window.labKeepFails: the faked keep answers 500 */
 (() => {
   const real = window.fetch.bind(window), tok = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   window.fetch = async (url, init) => {
     const r = await real(url, init), p = new URL(url, location.href).pathname;
-    if (r.status !== 404 || !/\/acct\/(new|login)$/.test(p)) return r;
+    if (r.status !== 404 || !/\/acct\/(new|login|keep)$/.test(p)) return r;
+    if (p.endsWith("keep") && window.labKeepFails) return new Response("", { status: 500 });
     return new Response(JSON.stringify(p.endsWith("new") ? { token: tok() } : { ok: true }), { headers: { "content-type": "application/json" } });
   };
 })();
@@ -52,6 +55,11 @@ const show = () => {
 };
 document.getElementById("openLogin").addEventListener("click", () => stemLogin.open());
 document.getElementById("labOut").addEventListener("click", () => { try { localStorage.removeItem("stem-acct"); } catch {} show(); });
+document.getElementById("labKeep").addEventListener("click", e => {
+  window.labKeepFails = !window.labKeepFails;
+  e.target.textContent = "acct/keep: " + (window.labKeepFails ? "fail" : "ok");   // lab only, not app copy
+  e.target.setAttribute("aria-pressed", String(window.labKeepFails));
+});
 addEventListener("stem:login", show);
 stemLogin.ready.then(show);
 show();
