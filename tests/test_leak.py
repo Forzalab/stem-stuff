@@ -5,6 +5,7 @@ every arm (Claude, DeepSeek, the old OpenRouter chain, the old Claude path + EDI
 with no safe cut ends the reply on _relay's failure path (reason "leak", the pattern id, never the text). urllib is mocked: no network."""
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -114,6 +115,41 @@ class Stream(unittest.TestCase):
     def test_clean_reply_unchanged(self):
         for t in CLEAN:
             self.assertEqual(run_guard([t[:3], t[3:]]), t)
+
+    def test_clean_stream_types_out(self):              # W92b: a fixed 96-char hold landed a short reply in one lump at the end (easy.pw: 8 states)
+        text = "Quack! The cart is heavier now, so the same push gives it less speed. Pick B and check the units once more. " * 3
+        g, fed, out = serve.PromptGuard(), "", ""
+        for i in range(0, len(text), 4):
+            fed += text[i:i + 4]
+            out += g.feed(text[i:i + 4])
+            self.assertGreaterEqual(len(out), len(fed) - serve.PromptGuard.MARGIN - 12, f"held {len(fed) - len(out)} chars at {i}")
+        self.assertEqual(out + g.end(), text)
+        short = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."]   # easy.pw's stub
+        g = serve.PromptGuard()
+        self.assertGreater(len([p for p in short if g.feed(p)]), 1, "a short reply goes out as it streams, not all at the end")
+
+    def test_every_leak_split_anywhere(self):          # a phrase split at any char is caught as if it came whole
+        pad = "Quack! The push is shared once they stick, so check it again. "
+        for pid, texts in LEAKS.items():
+            for t in texts:
+                text = pad + t + "\n" + pad
+
+                def run(chunks):
+                    try:
+                        return "".join(serve.prompt_guard(iter(chunks)))
+                    except serve.PromptLeak as e:
+                        return "stop " + str(e)
+                whole = run([text])
+                self.assertEqual(run(list(text)), whole, t)
+                self.assertEqual(run([text[i:i + 5] for i in range(0, len(text), 5)]), whole, t)
+
+    def test_leak_words_hold_every_hit(self):          # the guard's release rule: a match is made of LEAK_WORDS only
+        for pid, texts in LEAKS.items():
+            for t in texts + [x.upper() for x in texts]:
+                for _, a, z in serve.leak_scan(t):
+                    for m in re.finditer(r"\w+", t):           # every whole word inside the match
+                        if a <= m.start() and m.end() <= z:
+                            self.assertTrue(serve.LEAK_WORDS.fullmatch(m.group()), f"{m.group()!r} in {t[a:z]!r} ({pid})")
 
 
 class Arms(unittest.TestCase):

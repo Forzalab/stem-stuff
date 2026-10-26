@@ -2545,9 +2545,25 @@ def leak_cut(text, before="", upto=None):
     return text, ids
 
 
+# every word a LEAK_CUT / LEAK_STOP / XYZ_TAIL match can hold whole (any case; a superset is safe, a missing word is not: tests/test_leak.py
+# checks every LEAKS hit). A stream word NOT in it ends any match that starts before it, so the text before it can go out (PromptGuard).
+LEAK_WORDS = re.compile(r"(?i:straight|right|from|according|to|as|per|based|on|going|by|using|via|the|your|our|my|this|that|a|it|in|like|"
+                        r"answer|solution|keys?|s|work|numbers?|steps?|math|says|said|say|shows|showed|show|gives|gave|give|states|stated|"
+                        r"state|tells|told|tell|lists|listed|list|writes|wrote|confirms|confirmed|slip|note|block|field|assumed|evidence|"
+                        r"reproduces|on_topic|concept|confidence|low|medium|high|missing_piece|conserved_wrong_thing|wrong_model|"
+                        r"vector_as_scalar|sign_direction|units_scale|definition_mixup|formula_hunting|misread_question|algebra_slip|"
+                        r"field_misconception|no_signal|_*xyz|reveal|reminder|lamp|rules?|line|channel|spec|machine|user|query|question|"
+                        r"choices|student|picked|sheet|formulas|algebra|needs|result|problem|figure|scratchpad|message|formatting|"
+                        r"endformatting|format|voice|identity|editor|tag|section|end|data|student_[0-9a-f]*|system|prompt|instructions|"
+                        r"letter|external|classifier|trade|secret|censor(?:ed|s|ing)?|sandbox(?:ed)?|evil|ma(?:c|h|ch|hc)h?ine|presolved|"
+                        r"saccharine)")
+
+
 class PromptGuard:
-    """the prompt-leak guard on a stream: a chunk passes once nothing after it can still change it. The last HOLD chars are held (a phrase cut
-    across chunks, "From the K" + "EY:", is seen whole), a hit counts only when MARGIN chars follow it (its lookahead: "XYZ" + " plane").
+    """the prompt-leak guard on a stream: a chunk passes once nothing after it can still change it. Every match is made of LEAK_WORDS, so
+    a whole stream word outside them (W) ends any match that starts before it: the text up to W goes out (a phrase cut across chunks, "From
+    the K" + "EY:", is still seen whole), less the last MARGIN chars (a hit's lookahead: "XYZ" + " plane"); a run of LEAK_WORDS longer than
+    HOLD chars goes out past HOLD (no match is longer than LONG). So a clean reply types out MARGIN chars behind the model, not HOLD (W92b).
     feed / end return what may go out; a hit LEAK_CUT can't fix raises PromptLeak(id). HOLD >= LONG + MARGIN, LONG = the longest pattern.
     A line that starts the private note ("XYZ:", "**XYZ**", the Xyz stripper only knows the tag) ends the reply right there, quietly: the note
     always trails the reply (bench v4 Oct 23: 47 of 318 replies, DeepSeek's mostly), so what came before is whole; the rest is dropped."""
@@ -2557,17 +2573,34 @@ class PromptGuard:
     def __init__(self):
         self.buf, self.ctx, self.cut, self.done = "", "", [], False
 
+    def _safe(self):
+        """(k, seen, upto) on buf: a match starting in buf[:seen] is whole (lookahead too), buf[:k] may go out (seen less MARGIN, past
+        HOLD), a LEAK_CUT phrase ending by upto is whole"""
+        n, text, w = len(self.ctx), self.ctx + self.buf, None
+        for m in re.finditer(r"\w+", text):
+            if m.end() < len(text) and m.start() >= n and not LEAK_WORDS.fullmatch(m.group()):
+                w = m                                # the last whole stream word no match can hold
+        k = seen = max(0, len(self.buf) - self.HOLD)
+        upto = max(0, len(self.buf) - self.MARGIN)
+        if w:
+            seen, upto = max(seen, w.start() - n), max(upto, w.end() - n)
+            k = max(k, min(seen, len(self.buf) - self.MARGIN))
+        return k, seen, upto
+
     def _step(self, final):
+        k = len(self.buf) if final else self._safe()[1]
         m = XYZ_TAIL.search(self.ctx + self.buf, len(self.ctx))
-        if m and (final or m.end() + self.MARGIN <= len(self.ctx + self.buf)):   # its lookahead seen ("XYZ" + " plane" is no note)
-            self.buf, final, self.done = self.buf[:m.start() - len(self.ctx)].rstrip() + "\n", True, True
+        if m and (final or m.start() - len(self.ctx) < k or m.end() + self.MARGIN <= len(self.ctx + self.buf)):   # its lookahead seen
+            self.buf, final, self.done = self.buf[:m.start() - len(self.ctx)].rstrip() + "\n", True, True      # ("XYZ" + " plane" is no note)
             self.cut.append("xyz_tail")
-        upto = None if final else max(0, len(self.buf) - self.MARGIN)
-        self.buf, ids = leak_cut(self.buf, self.ctx, upto)
-        self.cut += ids
-        k = len(self.buf) if final else max(0, len(self.buf) - self.HOLD)   # what goes out now: a hit starting in it is whole, lookahead too
+        for _ in range(5):                       # a cut can move the next stream word: cut again until nothing more is whole
+            self.buf, ids = leak_cut(self.buf, self.ctx, None if final else self._safe()[2])
+            self.cut += ids
+            if final or not ids:
+                break
+        k, seen, _ = (len(self.buf),) * 3 if final else self._safe()   # what goes out now; a hit seen whole stops the reply at once
         n = len(self.ctx)
-        hits = [h for h in leak_scan(self.ctx + self.buf) if n <= h[1] < n + k]
+        hits = [h for h in leak_scan(self.ctx + self.buf) if n <= h[1] < n + seen]
         if hits:
             self.buf = ""
             raise PromptLeak(hits[0][0])
