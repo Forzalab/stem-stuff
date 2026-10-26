@@ -144,6 +144,55 @@ try {
     assert.equal((await ev()).some(e => e[0] === "repair_skip"), true);
   });
 
+  // #29.7: the server drops the answer step's ok/opts/tol/miss; such a step is graded through the injected async opts.grade(value)
+  await step("an answer step with no ok: a wrong value goes through opts.grade → false → the miss line, still active, no repair_done", async () => {
+    await mount({ variant: "repair", error: null, remote: true });
+    await act('.rp-why .rp-chip[data-why="0"]');
+    assert.equal(await page.getAttribute('.rp-step[data-id="answer"]', "data-state"), "active");
+    await page.fill('.rp-step[data-state="active"] input', "5");
+    await act(".rp-check");
+    await page.waitForFunction(() => window.__graded.length === 1);
+    assert.deepEqual(await page.evaluate(() => window.__graded), ["5"], "grade got the typed value");
+    await page.waitForSelector('.rp-step[data-id="answer"] .rp-miss');
+    assert.equal(await page.textContent('.rp-step[data-id="answer"] .rp-miss'), await page.evaluate(() => __stemRepairLines.miss), "the generic miss line");
+    assert.equal(await page.getAttribute('.rp-step[data-id="answer"]', "data-state"), "active");
+    assert.equal((await ev()).some(e => e[0] === "repair_done"), false);
+  });
+
+  await step("an answer step with no ok: opts.grade → true advances it to ✓ (the typed value shown) and emits repair_done", async () => {
+    await page.fill('.rp-step[data-state="active"] input', "1.0");
+    await act(".rp-check");
+    await page.waitForSelector('.rp-step[data-id="answer"][data-state="done"]');
+    assert.deepEqual(await page.evaluate(() => window.__graded), ["5", "1.0"]);
+    assert.match(await page.textContent('.rp-step[data-id="answer"]'), /1\.0.*✓/);
+    assert.equal(await page.textContent('.rp-step[data-id="answer"]').then(t => t.includes("undefined")), false);
+    assert.equal((await ev()).filter(e => e[0] === "repair_done").length, 1);
+  });
+
+  await step("a pick answer step with no ok/opts: the item's own choices, graded through opts.grade", async () => {
+    await mount({ variant: "alt", error: null, remote: true });
+    await act('.rp-why .rp-chip[data-why="0"]');
+    await act('.rp-val-opts .rp-chip[data-v="a"]');
+    assert.equal(await page.$$eval('.rp-step[data-id="answer"] .rp-val-opts .rp-chip', c => c.length), 2, "the item's 2 choices");
+    await act('.rp-val-opts .rp-chip[data-v="b"]');
+    await page.waitForSelector('.rp-step[data-id="answer"] .rp-miss');
+    assert.equal(await page.getAttribute('.rp-step[data-id="answer"]', "data-state"), "active");
+    await act('.rp-val-opts .rp-chip[data-v="a"]');
+    await page.waitForSelector('.rp-step[data-id="answer"][data-state="done"]');
+    assert.deepEqual(await page.evaluate(() => window.__graded), ["b", "a"]);
+    assert.equal((await ev()).some(e => e[0] === "repair_done" && e[1].variant === "alt"), true);
+  });
+
+  await step("a step that still carries ok grades locally: opts.grade is never called", async () => {
+    await mount({ variant: "repair", error: "sign", grade: true });
+    await act('.rp-val-opts .rp-chip[data-v="−"]');
+    await act('.rp-why .rp-chip[data-why="0"]');
+    await page.fill('.rp-step[data-state="active"] input', "1.0");
+    await act(".rp-check");
+    assert.equal((await ev()).some(e => e[0] === "repair_done"), true);
+    assert.deepEqual(await page.evaluate(() => window.__graded), []);
+  });
+
   await step("no page errors", async () => assert.deepEqual(errs, []));
 } finally {
   await browser.close();

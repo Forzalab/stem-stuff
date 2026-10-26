@@ -35,6 +35,7 @@ h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
   <button type="button" data-v="alt" data-e="sign">alt (twin missed)</button>
   <button type="button" data-v="welcome" data-e="">welcome</button>
   <button type="button" data-v="full" data-e="sign">full solution</button>
+  <button type="button" data-v="repair" data-e="" data-r="1">no family, server-graded answer</button>
 </div>
 <p class="stem" id="stem"></p>
 <div id="host"></div>
@@ -74,16 +75,26 @@ const SHEET = { MOM_CONS: "m_1v_1 + m_2v_2 = (m_1+m_2)v_f", KE: "KE = \\tfrac12 
 const host = document.getElementById("host"), log = document.getElementById("log");
 document.getElementById("stem").innerHTML = Graph.tex(FIX.stem);
 let cur = null;
-/* lab({ variant, error, label }): label overrides step one's (the text-only test) */
+/* remote: the ladder as GET /repair sends it (TONY-DECISIONS #29.7): the answer steps lose ok/opts/tol/miss, a pick answer then shows the
+   item's own choices, and the stub below stands in for POST /repair/<code>/check {value} -> {ok} (the key stays here, as on the server) */
+const KEY = { main: v => Math.abs(parseFloat(String(v).replace(/−/g, "-")) - FIX.answer) <= 0.02 * FIX.answer, alt: v => v === "a" };
+const strip = steps => steps.map(st => st.id === "answer" ? (({ ok, opts, tol, miss, ...rest }) => rest)(st) : st);
+const REMOTE = { ...FIX, choices: FIX.repair.alt.steps[2].opts,
+  repair: { steps: strip(FIX.repair.steps), alt: { steps: strip(FIX.repair.alt.steps) } } };
+/* lab({ variant, error, label, remote, grade }): label overrides step one's (the text-only test); grade: the stub on the local item too.
+   grade(value) -> Promise<boolean> is what the app wires to /check; the lab logs each value in window.__graded */
 window.lab = o => {
-  window.__ev = []; log.textContent = "";
+  window.__ev = []; window.__graded = []; log.textContent = "";
   if (cur) cur.destroy();
-  const item = o.label ? { ...FIX, repair: { ...FIX.repair, steps: [{ ...FIX.repair.steps[0], label: o.label }, ...FIX.repair.steps.slice(1)] } } : FIX;
-  cur = Repair.mount(host, item, { variant: o.variant, error: o.error || null, sheet: SHEET,
+  const base = o.remote ? REMOTE : FIX;
+  const item = o.label ? { ...base, repair: { ...base.repair, steps: [{ ...base.repair.steps[0], label: o.label }, ...base.repair.steps.slice(1)] } } : base;
+  const key = KEY[o.variant === "alt" ? "alt" : "main"];
+  const grade = v => { window.__graded.push(v); return new Promise(r => setTimeout(() => r(key(v)), 50)); };   // a round trip
+  cur = Repair.mount(host, item, { variant: o.variant, error: o.error || null, sheet: SHEET, grade: o.remote || o.grade ? grade : undefined,
     on: (name, data) => { window.__ev.push([name, data]); log.textContent += name + " " + JSON.stringify(data) + "\n"; } });
 };
 document.getElementById("cases").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (b) window.lab({ variant: b.dataset.v, error: b.dataset.e });
+  const b = e.target.closest("button"); if (b) window.lab({ variant: b.dataset.v, error: b.dataset.e, remote: !!b.dataset.r });
 });
 window.lab({ variant: "repair", error: "sign" });
 </script>
