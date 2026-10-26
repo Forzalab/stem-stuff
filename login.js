@@ -1,6 +1,8 @@
 /* login.js: the "My Cluck" save + login dialog (Tony #21, #22, #22b, #23; DESIGN-v3 §7). App chrome, not a reply format.
    The account is a token; the token is a QR inside a Cluck image drawn on this device (mycluck.mjs). The image never leaves it:
    saving goes to the share sheet / a download, logging in decodes the picked photo here and POSTs only {token}.
+   The account starts ephemeral (it lives as long as the sid cookie); Save makes it permanent: once the share sheet resolves or the
+   download fires, POST acct/keep {token} (Tony #29.9). "Saved ✓" only after keep answers ok.
 
    stemLogin.open()       the dialog: mints a token on first use (POST acct/new), draws MY Cluck, [Save my Cluck], [I have my Cluck].
                           Signed in, the same call is "Show my Cluck": it re-draws the stored token, no new mint
@@ -18,7 +20,7 @@
   const at = p => new URL(p, HERE).href;
   const KEY = "stem-acct", TOKEN = /^[A-Za-z0-9_-]{16,128}$/, MAX = 1600;               // MAX: a picked photo is scaled to this side for jsQR
   const QR = "vendor/qrcode-generator/qrcode.js", JSQR = "vendor/jsqr/jsQR.js";
-  let cur = null;                                                                       // { d, file, opener }
+  let cur = null;                                                                       // { d, file, opener, unkept }
 
   const store = {
     get() { try { const t = (JSON.parse(localStorage.getItem(KEY) || "null") || {}).token; return TOKEN.test(t) ? t : null; } catch { return null; } },
@@ -93,19 +95,29 @@
     me.d.querySelector("#lgSave").disabled = false;
   }
 
-  /* Save: share() straight from the click (iOS "Save Image" keeps the tap's user activation only that long); no await before it */
+  /* Save: share() straight from the click (iOS "Save Image" keeps the tap's user activation only that long); no await before it.
+     A keep that failed leaves cur.unkept set: the next tap retries the keep only, the image is already saved */
   function onSave() {
     const f = cur && cur.file;
     if (!f) return;
+    if (cur.unkept) return keep(cur.unkept);
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [f] }))
-      navigator.share({ files: [f] }).then(() => say("Saved ✓"), e => { if (!e || e.name !== "AbortError") download(f); });   // cancelled: say nothing
+      navigator.share({ files: [f] }).then(() => keep("Saved ✓"), e => { if (!e || e.name !== "AbortError") download(f); });   // cancelled: no keep, say nothing
     else download(f);
   }
   function download(f) {                                                                // desktop: a plain download (on iOS it would open a tab)
     const u = URL.createObjectURL(f), a = el("a", { href: u, download: f.name });
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(u), 1000);
-    say("Downloaded. Keep it where only you can see it.");
+    keep("Saved ✓ Keep it where only you can see it.");                                 // COPY-PENDING
+  }
+  async function keep(done) {                                                           // done: what to say once the account is permanent
+    const me = cur, t = store.get();
+    if (!me || !t) return;
+    me.unkept = null;
+    try { await post("acct/keep", { token: t }); }
+    catch { if (cur === me) { me.unkept = done; say("Not saved yet. Tap Save to try again."); } return; }   // COPY-PENDING
+    if (cur === me) say(done);
   }
 
   /* I have my Cluck: decode the picked photo here, send only the token, drop the image */

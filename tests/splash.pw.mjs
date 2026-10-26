@@ -30,6 +30,8 @@ const watch = `(() => {
 })()`;
 // the splash script has run (it sets aria-busy first thing), not just the markup parsed
 const up = page => page.waitForFunction(() => document.body && document.body.getAttribute("aria-busy") === "true", null, { timeout: 5000 });
+// reads the splash while it is up, in the same in-page poll that sees it: a later evaluate is a round trip that can land after it left (3 CI lanes)
+const during = (page, read) => page.waitForFunction(read => document.body && document.body.getAttribute("aria-busy") === "true" && document.getElementById("splash") && (0, eval)(read)(), String(read), { timeout: 5000 }).then(h => h.jsonValue());
 const gone = (page, timeout) => page.waitForSelector("#splash", { state: "detached", timeout });
 
 await step("markup is inline, before the stylesheets and scripts that load files; no text; aria-hidden", async () => {
@@ -61,9 +63,7 @@ await step("gone after load, busy cleared, shown at least 300 ms, fades out", as
   const ctx = await fresh(), page = await ctx.newPage();
   await ctx.addInitScript(watch);
   await page.goto(BASE + "/#CALC1_T6B", { waitUntil: "commit" });
-  await up(page);
-  assert.equal(await page.evaluate(() => document.body.getAttribute("aria-busy")), "true");
-  assert.equal(await page.evaluate(() => document.getElementById("splash").getAttribute("aria-hidden")), "true");
+  assert.equal(await during(page, () => String(document.getElementById("splash").getAttribute("aria-hidden"))), "true");
   await gone(page, 4000);
   const s = await page.evaluate(() => window.__sp);
   assert.ok(await page.evaluate(() => !document.body.hasAttribute("aria-busy")), "aria-busy still set");
@@ -76,12 +76,14 @@ await step("gone after load, busy cleared, shown at least 300 ms, fades out", as
 for (const [how, handler] of [["aborted", r => r.abort()], ["hung", () => {}]]) {
   await step(`gone within 4 s even if KaTeX is ${how}`, async () => {
     const ctx = await fresh(), page = await ctx.newPage();
+    await ctx.addInitScript(watch);
     await ctx.route("**/katex.min.js", handler);
-    const t0 = Date.now();
     await page.goto(BASE + "/", { waitUntil: "commit" });
     await up(page);
     await gone(page, 6000);
-    const ms = Date.now() - t0;
+    // page time from the navigation start: a Node clock also counts the goto and detach-poll round trips, ~200 ms idle, more under 3 CI lanes (took 4644 ms, CI plan PR 10)
+    const ms = Math.round(await page.evaluate(() => window.__sp.gone));
+    assert.ok(ms > 0, "the watch saw the splash go");
     assert.ok(ms < 4600, `took ${ms} ms`);
     if (how === "hung") assert.ok(ms >= 3800, `hung load should hit the cap, left at ${ms} ms`);
     assert.ok(await page.evaluate(() => !document.body.hasAttribute("aria-busy")));
@@ -93,8 +95,7 @@ await step("reduced motion: static mark, no animation, no fade", async () => {
   const ctx = await fresh({ reducedMotion: "reduce" }), page = await ctx.newPage();
   await ctx.addInitScript(watch);
   await page.goto(BASE + "/", { waitUntil: "commit" });
-  await up(page);
-  const r = await page.evaluate(() => {
+  const r = await during(page, () => {
     const c = getComputedStyle(document.querySelector(".sp-curve")), d = getComputedStyle(document.querySelector(".sp-dot"));
     return { anims: document.getAnimations().length, c: c.animationName, d: d.animationName, off: c.strokeDashoffset, tr: getComputedStyle(document.getElementById("splash")).transitionDuration };
   });

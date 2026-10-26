@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini-Cluck lab</title>
+<!-- minicluck.js lab (DESIGN-v3 §4; Tony #13, #25.4): a question card with a stem, the student's work on its sub-steps, and the tiny Cluck on
+     step 2. Open: python3 serve.py 8830, then http://localhost:8830/design/mini-lab.html (views.js needs the server: it imports views/library.json).
+     /mini is stubbed here (a canned OpenUI Lang reply after 400 ms) until serve.py has the route (S2); ?live skips the stub (tests/minicluck.pw.mjs
+     answers /mini itself). The question is author-time and static. -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../views.css">
+<link rel="stylesheet" href="../minicluck.css">
+<style>
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
+.lede { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); }
+.card { padding: var(--s4); border-radius: 10px; background: var(--card); }
+#stem { margin: 0 0 var(--s4); }
+#work { display: grid; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
+#work label { display: block; margin-bottom: var(--s1); color: var(--muted); font-size: var(--t-sm); }
+#work input { box-sizing: border-box; width: 100%; height: var(--btn); padding: 0 var(--s3); border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--ink); font: inherit; }
+#open { margin-top: var(--s4); width: auto; padding: 0 var(--s3); }
+</style>
+</head>
+<body>
+<main>
+<h1>Mini-Cluck lab</h1>
+<p class="lede" id="other">The tiny Cluck on a sub-step. The page dims; the stem and your work stay clear. X or Esc closes it.</p>
+<section class="card" aria-label="Question">
+  <p id="stem">A 2.0 kg box slides 3.0 m across a rough floor (μ = 0.25) after a 12 N push. How fast is it going at the end?</p>
+  <ol id="work">
+    <li><label for="s1">1. Work done by the push</label><input id="s1" value="W = 36 J"></li>
+    <li><label for="s2">2. Work done by friction</label><input id="s2" value="W_f = +14.7 J"></li>
+  </ol>
+  <button type="button" class="btn" id="open">Stuck on step 2?</button>
+</section>
+</main>
+<script>
+"use strict";
+window.ev = []; window.stemT = (n, p) => window.ev.push([n, p]);                  // the lab's telemetry: a log the test reads
+if (!/[?&]live\b/.test(location.search)) {                                     // the stub /mini: a canned OpenUI Lang reply
+  const real = window.fetch;
+  window.fetch = (u, o) => String(u).endsWith("/mini") ? new Promise(r => setTimeout(() => r(new Response(
+    'root = View([a])\na = Text("Friction pushes against the slide. **So which sign** does its work get?")', { headers: { "content-type": "text/plain" } })), 400)) : real(u, o);
+}
+</script>
+<script src="../popover.js"></script>
+<script src="../minicluck.js"></script>
+<script>
+"use strict";
+document.getElementById("open").addEventListener("click", () => Mini.open(document.getElementById("s2"), {
+  ask: "Friction on the box: is it helping the push, or fighting it?",
+  chips: ["Helping", "Fighting it", "Not sure"],
+  ctx: { code: "PHYS_LAB1", step: 2 },
+  keep: [document.getElementById("stem"), document.getElementById("work")] }));
+</script>
+</body>
+</html>
