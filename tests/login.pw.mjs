@@ -73,6 +73,7 @@ try {
     assert.equal((await page.textContent("dialog.lg .lg-cap")).replace(/\s+/g, " ").trim(), "Use this key for any future logins.");
     const mint = reqs.filter(r => r.url.includes("/acct/"));
     assert.deepEqual(mint.map(r => [r.method, new URL(r.url).pathname]), [["POST", "/acct/new"]]);
+    await page.waitForSelector("#lgSave:not([disabled])");                            // draw() done: the canvas exists before the QR is painted on it
     const back = await page.evaluate(async () => { const { decode } = await import("../mycluck.mjs"); const c = document.querySelector("canvas.lg-cluck");
       return decode(c.getContext("2d").getImageData(0, 0, c.width, c.height)); });
     assert.equal(new URL(back).searchParams.get("k"), NEW, "the drawn QR is the login link");
@@ -136,8 +137,10 @@ try {
     const before = reqs.length;
     const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#lgHave")]);
     await chooser.setFiles({ name: "cat.png", mimeType: "image/png", buffer: Buffer.from(png) });
-    await page.waitForFunction(() => document.querySelector("#lgStatus").textContent !== "", null, { timeout: 5000 });
-    assert.equal(await status(page), "No valid Cluck code found.");
+    const NONE = "No valid Cluck code found.";                                       // after "Reading your Cluck…" (transient while it decodes)
+    await page.waitForFunction(t => document.querySelector("#lgStatus").textContent === t, NONE, { timeout: 5000 })
+      .catch(async e => { throw new Error(`status never became ${JSON.stringify(NONE)}; last seen ${JSON.stringify(await status(page))}: ${e.message}`); });
+    assert.equal(await status(page), NONE);
     assert.deepEqual(reqs.slice(before), []);
     const u = await page.evaluate(() => window.__urls);
     assert.deepEqual(u.made.filter(x => !u.revoked.includes(x)), []);
