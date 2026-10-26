@@ -830,13 +830,62 @@ class Repair(unittest.TestCase):
         patch.start()
         self.addCleanup(patch.stop)
 
+    KEY = ("ok", "opts", "tol", "miss")                                      # the answer step's key: never served (Tony #29.7)
+
     def get(self, code, who):
         st, _, raw = serve.dispatch("GET", f"/repair/{code}", f"sid={self.sid(who)}")
         return st, json.loads(raw)
 
+    def check(self, code, who, value):
+        st, _, raw = serve.dispatch("POST", f"/repair/{code}/check", f"sid={self.sid(who)}", json.dumps({"value": value}).encode())
+        return st, json.loads(raw)
+
     def miss(self, code, who):
-        st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid(who)}", json.dumps({"code": code, "answer": "99"}).encode())
+        b = {"code": code, "choice": "b"} if self.FIX[code]["type"] == "mc" else {"code": code, "answer": "99"}
+        st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid(who)}", json.dumps(b).encode())
         self.assertEqual(json.loads(raw)["verdict"], "wrong")
+
+    def test_answer_step_never_carries_the_key(self):
+        """every item with a ladder (a twin: its template's), after every miss (so `alt` rides too): no ok/opts/tol/miss on either answer step."""
+        for code in self.FIX:
+            self.miss(code, "r-key")
+        for code, p in self.FIX.items():
+            if not (self.FIX.get(p.get("parent_template")) or p).get("repair"):
+                continue
+            st, out = self.get(code, "r-key")
+            self.assertEqual(st, 200, code)
+            for ladder in [out] + ([out["alt"]] if "alt" in out else []):
+                self.assertEqual(ladder["steps"][-1]["id"], "answer", code)
+                self.assertFalse(set(self.KEY) & set(ladder["steps"][-1]), code)
+            if code == "PHYS_RPA":
+                self.assertIn("alt", out)
+
+    def test_check_grades_the_answer_step(self):
+        for code, right, wrong in (("PHYS_RPA", "1.333", "8/3"), ("PHYS_RPB", "1", "4/3"), ("PHYS_WLC", "a", "b")):
+            self.miss(code, "r-chk")
+            self.assertEqual(self.check(code, "r-chk", right), (200, {"ok": True}), code)
+            self.assertEqual(self.check(code, "r-chk", wrong), (200, {"ok": False}), code)
+        self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.36"), (200, {"ok": True}))     # the step's tol (2%), not 3 s.f.
+        self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.37"), (200, {"ok": False}))
+
+    def test_check_is_not_a_try(self):
+        self.miss("PHYS_RPA", "r-try")
+        before = serve.dispatch("GET", "/state/PHYS_RPA", f"sid={self.sid('r-try')}")[2]
+        self.check("PHYS_RPA", "r-try", "1.333")
+        self.check("PHYS_RPA", "r-try", "5")
+        self.assertEqual(serve.dispatch("GET", "/state/PHYS_RPA", f"sid={self.sid('r-try')}")[2], before)
+        st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid('r-try')}", json.dumps({"code": "PHYS_RPA", "answer": "5"}).encode())
+        self.assertEqual(json.loads(raw)["triesLeft"], 0)                      # the second real try is still there
+
+    def test_check_same_gates_as_get(self):
+        self.assertEqual(self.check("PHYS_RPA", "r-gate", "1.333")[0], 403)
+        self.assertEqual(self.check("NOPE_XYZ", "r-gate", "1")[0], 404)
+        with unittest.mock.patch.object(serve, "problems", lambda: BANK):
+            self.assertEqual(self.check("CALC1_T6B", "r-gate", "1")[0], 404)
+        self.miss("PHYS_RPA", "r-gate")
+        st, _, raw = serve.dispatch("POST", "/repair/PHYS_RPA/check", f"sid={self.sid('r-gate')}", b"not json")
+        self.assertEqual(st, 400)
+        self.assertEqual(self.check("PHYS_RPA", "r-gate", 3)[0], 400)            # value is a string
 
     def test_public_drops_repair(self):
         for p in self.FIX.values():
@@ -856,7 +905,9 @@ class Repair(unittest.TestCase):
         self.miss("PHYS_RPA", "r-miss")
         st, out = self.get("PHYS_RPA", "r-miss")
         self.assertEqual(st, 200)
-        self.assertEqual(out["steps"], self.FIX["PHYS_RPA"]["repair"]["steps"])
+        steps = self.FIX["PHYS_RPA"]["repair"]["steps"]
+        self.assertEqual(out["steps"][:-1], steps[:-1])                        # the answer step loses the key (Tony #29.7)
+        self.assertEqual(out["steps"][-1], {k: v for k, v in steps[-1].items() if k not in self.KEY})
         self.assertNotIn("alt", out)
         self.assertEqual(self.get("PHYS_RPA", "r-other")[0], 403)              # per browser
 
@@ -865,7 +916,7 @@ class Repair(unittest.TestCase):
         self.miss("PHYS_RPB", "r-twin")
         st, out = self.get("PHYS_RPA", "r-twin")
         self.assertEqual(st, 200)
-        self.assertEqual(out["alt"], self.FIX["PHYS_RPA"]["repair"]["alt"])
+        self.assertEqual(out["alt"]["steps"][:-1], self.FIX["PHYS_RPA"]["repair"]["alt"]["steps"][:-1])
         st, out = self.get("PHYS_RPB", "r-twin")                              # the twin: its template's ladder
         self.assertEqual(st, 200)
         self.assertEqual([s["id"] for s in out["alt"]["steps"]], ["units", "sanity", "answer"])
