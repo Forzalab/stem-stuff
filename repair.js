@@ -2,7 +2,8 @@
    data (item.repair, SCHEMA.md), drawn by our code; nothing Cluck says goes through here. Graded on the device: the item is already a miss.
 
    Repair.mount(host, item, opts)   draws the ladder into host (replacing what is there); returns { el, destroy() }
-       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value, n), on(name, data) }
+       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value, n), answer, on(name, data) }
+       answer = the full card's display string for an answer step with no key on the device (else its worked value)
        error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
        grade(value, n) -> Promise<{ ok, answer? }>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7;
        the host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
@@ -19,6 +20,8 @@
    A step: reveal one at a time (done = one ✓ line, active = open, future = a dim label). A wrong try: ✗ on it + the miss line; TRIES
    wrong → it fills itself in with its why shown and moves on. ✓ / ✗ are glyphs, never hue alone. All text lands as textContent;
    `$..$` math goes through Graph.tex (escapes the text around it).
+   Lines (copy/repair-lines.js, contract v2): doneBy{L1,L2,L3,tail} else done; hintBy{far[],two,three[]} by the welcome wrong-tap count else
+   hint; auto / intro.<variant> "" or missing = no line (an auto-filled step's number badge gets data-auto instead).
 */
 (function (root) {
   "use strict";
@@ -27,6 +30,7 @@
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
   const L = () => root.__stemRepairLines || {};
 
+  const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
   function blankOf(steps, error) {
     if (!error || error === "SLIP_TIE") return null;
@@ -65,8 +69,19 @@
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));
     let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it
+    let missed = false, taps = 0;                                               // any wrong try (done level); welcome wrong taps on this item (hint tier)
     const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
+    function hint() {                                                            // welcome: tap 1 far, 2 two, 3+ three; old shape: the one hint
+      const H = L().hintBy;
+      if (!H) return L().hint || "";
+      taps++;
+      return any(taps === 1 ? H.far : taps === 2 ? H.two : H.three) || "";
+    }
+    function doneLine() {                                                        // L1 no wrong try, L2 some, L3 the answer was revealed
+      const D = L().doneBy;
+      return D ? (D[solved || full ? "L3" : missed ? "L2" : "L1"] || "") + (D.tail || "") : L().done || "";
+    }
 
     const el = h("section", "rp");
     el.dataset.variant = variant; el.dataset.ladder = alt ? "alt" : "main";
@@ -99,7 +114,7 @@
           if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true);
           const p = st.kind === "pick" && optsOf(st).find(p => p.id === v);         // the step fills in with it; no miss / auto line under it
           solved = { wrong: p ? p.md : String(v), answer: String(r.answer) };
-          fillIn(s); s.miss = ""; s.shown = solved.answer; settle();
+          missed = true; fillIn(s); s.miss = ""; s.shown = solved.answer; settle();
         }, () => { s.busy = false; });
         return;
       }
@@ -110,8 +125,9 @@
       const st = s.st;
       if (right) { s.ok = true; s.miss = ""; s.val = v; }
       else {
-        s.tried.add(String(v));
-        s.miss = welcome ? (st.miss && st.miss[v]) || L().hint || "" : (st.miss && st.miss[v]) || L().miss || "";
+        s.tried.add(String(v)); missed = true;
+        const h = welcome ? hint() : L().miss || "";
+        s.miss = (st.miss && st.miss[v]) || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
       }
       settle();
@@ -120,8 +136,8 @@
       const w = s.st.why;
       if (i === w.ok) { s.why = i; s.miss = ""; }
       else {
-        whyOk = false; s.whyTried.add(i);
-        s.miss = welcome ? L().hint || "" : L().miss || "";
+        whyOk = false; s.whyTried.add(i); missed = true;
+        s.miss = welcome ? hint() : L().miss || "";
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
       settle();
@@ -181,7 +197,9 @@
       li.dataset.id = st.id; li.dataset.state = s.state;
       if (s.state === "active") li.setAttribute("aria-current", "step");
       const head = h("div", "rp-head");
-      head.append(h("span", "rp-n", String(s.i + 1)), h("span", "rp-label", st.label));
+      const n = h("span", "rp-n", String(s.i + 1));
+      if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
+      head.append(n, h("span", "rp-label", st.label));
       if (s.state === "done" || (s.state === "active" && s.ok)) head.append(h("span", "rp-val", shown(s)));
       if (s.state === "done") head.append(h("span", "rp-ok", "✓"));
       li.append(head);
@@ -207,18 +225,21 @@
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
       const box = h("div", "rp-solved"), a = h("p", "rp-a");
       if (item.stem) box.append(h("p", "rp-stem", item.stem));
-      a.append(h("del", "rp-wrong", solved.wrong), " ", h("span", "rp-ans", solved.answer));
+      if (solved.wrong != null) a.append(h("del", "rp-wrong", solved.wrong), " ");
+      a.append(h("span", "rp-ans", solved.answer));
       box.append(a);
       return box;
     }
     function draw() {
-      if (solved) el.dataset.solved = "";
-      const kids = [solved ? solvedEl() : introEl()];
+      if (solved && !full) el.dataset.solved = "";                              // the server revealed it (#33 A): the ladder goes neutral
+      const kids = [], intro = solved && !full ? null : introEl();
+      if (intro && intro.textContent) kids.push(intro);
+      if (solved) kids.push(solvedEl());
       const ol = h("ol", "rp-steps");
       for (const s of S) ol.append(stepEl(s));
       kids.push(ol);
       const foot = h("div", "rp-foot");
-      if (finished && !full) foot.append(h("p", "rp-done", L().done || ""));
+      if (finished && !full) foot.append(h("p", "rp-done", doneLine()));
       if (full) {
         const nx = h("button", "rp-next", L().next || "Next");
         nx.type = "button"; nx.disabled = !!timer;
@@ -233,6 +254,12 @@
       el.replaceChildren(...kids);
     }
 
+    if (full) {                                                                 // #36: the full card fills in the answer
+      const a = S.find(s => s.st.id === "answer") || S[S.length - 1];
+      if (a && o.answer != null) a.shown = String(o.answer);
+      const ans = a ? shown(a) : "";
+      if (ans) solved = { wrong: null, answer: ans };
+    }
     if (full) timer = setTimeout(() => { timer = 0; const nx = el.querySelector(".rp-next"); if (nx) nx.disabled = false; }, STUDY_MS);
     advance(); draw();
     return { el, destroy() { gone = true; clearTimeout(timer); el.remove(); } };

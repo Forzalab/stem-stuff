@@ -83,7 +83,7 @@ const SHOW = { main: "1.0 m/s", alt: "$1.0$ m/s" };
 const strip = steps => steps.map(st => st.id === "answer" ? (({ ok, opts, tol, miss, ...rest }) => rest)(st) : st);
 const REMOTE = { ...FIX, choices: FIX.repair.alt.steps[2].opts,
   repair: { steps: strip(FIX.repair.steps), alt: { steps: strip(FIX.repair.alt.steps) } } };
-/* lab({ variant, error, label, remote, grade }): label overrides step one's (the text-only test); grade: the stub on the local item too.
+/* lab({ variant, error, label, remote, grade, answer }): answer = opts.answer (the full card's display string); label overrides step one's (the text-only test); grade: the stub on the local item too.
    grade(value, n) -> Promise<{ok, answer?}> is what the app wires to /check; the lab logs each value in window.__graded, each n in __ns */
 window.lab = o => {
   window.__ev = []; window.__graded = []; window.__ns = []; log.textContent = "";
@@ -93,7 +93,7 @@ window.lab = o => {
   const which = o.variant === "alt" ? "alt" : "main", key = KEY[which];
   const grade = (v, n) => { window.__graded.push(v); window.__ns.push(n);                                       // a round trip
     return new Promise(r => setTimeout(() => r(key(v) ? { ok: true } : n >= 2 ? { ok: false, answer: SHOW[which] } : { ok: false }), 50)); };
-  cur = Repair.mount(host, item, { variant: o.variant, error: o.error || null, sheet: SHEET, grade: o.remote || o.grade ? grade : undefined,
+  cur = Repair.mount(host, item, { variant: o.variant, error: o.error || null, sheet: SHEET, grade: o.remote || o.grade ? grade : undefined, answer: o.answer,
     on: (name, data) => { window.__ev.push([name, data]); log.textContent += name + " " + JSON.stringify(data) + "\n"; } });
 };
 document.getElementById("cases").addEventListener("click", e => {

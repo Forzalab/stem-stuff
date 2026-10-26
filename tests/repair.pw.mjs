@@ -258,6 +258,91 @@ try {
     assert.deepEqual(await page.evaluate(() => window.__graded), []);
   });
 
+  // #36 (contract v2, additive): doneBy by level + tail, hintBy tiers by the welcome wrong-tap count, auto / intro.full "" or missing → no line
+  // (the auto-filled step's number badge carries data-auto instead), the full card shows the problem with the answer filled in
+  const V2 = { doneBy: { L1: "D1!", L2: "D2!", L3: "D3!", tail: " TAIL" }, hintBy: { far: ["F0", "F1", "F2"], two: "TWO", three: ["T0", "T1"] },
+    auto: "", intro: { full: "" } };
+  const v2 = (patch = V2) => page.evaluate(p => { window.__lines0 ??= structuredClone(__stemRepairLines);
+    Object.assign(__stemRepairLines, p, { intro: { ...__lines0.intro, ...p.intro } }); }, patch);
+  const v2off = () => page.evaluate(() => { if (window.__lines0) window.__stemRepairLines = __lines0; delete window.__lines0; if (window.__rnd0) Math.random = window.__rnd0; });
+  const rnd = x => page.evaluate(x => { window.__rnd0 ??= Math.random; Math.random = () => x; }, x);
+  const finishSign = async () => { await act('.rp-val-opts .rp-chip[data-v="−"]'); await act('.rp-why .rp-chip[data-why="0"]');
+    await page.fill('.rp-step[data-state="active"] input', "1.0"); await act(".rp-check"); };
+
+  await step("v2 doneBy: L1 no wrong try → L1 + tail", async () => {
+    await v2();
+    await mount({ variant: "repair", error: "sign" });
+    await finishSign();
+    assert.equal(await page.textContent(".rp-done"), "D1! TAIL");
+  });
+
+  await step("v2 doneBy: L2 a wrong try, answer never revealed → L2 + tail", async () => {
+    await mount({ variant: "repair", error: "sign" });
+    await act('.rp-val-opts .rp-chip[data-v="+"]');
+    await finishSign();
+    assert.equal(await page.textContent(".rp-done"), "D2! TAIL");
+  });
+
+  await step("v2 doneBy: L3 the server revealed the answer → L3 + tail", async () => {
+    await mount({ variant: "repair", error: null, remote: true });
+    await act('.rp-why .rp-chip[data-why="0"]');
+    for (const [k, v] of [[1, "5"], [2, "7"]]) {
+      await page.fill('.rp-step[data-state="active"] input', v); await act(".rp-check");
+      await page.waitForFunction(k => window.__graded.length === k, k); await page.waitForTimeout(120);
+    }
+    await page.waitForSelector(".rp-solved");
+    assert.equal(await page.textContent(".rp-done"), "D3! TAIL");
+  });
+
+  await step("v2 hintBy: welcome wrong tap 1 → far[random], 2 → two, 3+ → three[random] (Math.random stubbed)", async () => {
+    await mount({ variant: "welcome", error: null });
+    await act('.rp-val-opts .rp-chip[data-v="a"]');                             // step 1 right: the sheet step (no authored miss) is next
+    const miss = () => page.textContent('.rp-step[data-id="sheet"] .rp-miss');
+    await rnd(0.99); await act('.rp-chip[data-v="KE"]'); assert.equal(await miss(), "F2");
+    await rnd(0); await act('.rp-chip[data-v="IMPULSE"]'); assert.equal(await miss(), "TWO");
+    await rnd(0); await act('.rp-chip[data-v="KE"]'); assert.equal(await miss(), "T0");
+    await rnd(0.99); await act('.rp-chip[data-v="IMPULSE"]'); assert.equal(await miss(), "T1");
+  });
+
+  await step("v2 auto \"\" / missing: the auto-filled step shows no line, its number badge carries data-auto (no text added)", async () => {
+    for (const drop of [false, true]) {
+      if (drop) await page.evaluate(() => { delete __stemRepairLines.auto; });
+      await mount({ variant: "repair", error: "sign" });
+      await act('.rp-val-opts .rp-chip[data-v="+"]');
+      await act('.rp-val-opts .rp-chip[data-v="×"]');
+      assert.equal(await page.$$eval('.rp-step[data-id="signs"] .rp-miss', x => x.length), 0, "no auto line");
+      assert.equal(await page.$eval('.rp-step[data-id="signs"] .rp-n', n => n.hasAttribute("data-auto")), true, "badge state");
+      assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-n'), "3", "no text added");
+      assert.equal(await page.$eval('.rp-step[data-id="given"] .rp-n', n => n.hasAttribute("data-auto")), false, "a worked step: no badge state");
+    }
+  });
+
+  await step("v2 full: no intro line (intro.full \"\" or missing), the problem with the answer filled in", async () => {
+    for (const drop of [false, true]) {
+      await v2off(); await v2();
+      if (drop) await page.evaluate(() => { delete __stemRepairLines.intro.full; });
+      await mount({ variant: "full", error: "sign" });
+      assert.equal(await page.$$eval(".rp-line", x => x.length), 0, "no intro line");
+      assert.match(await page.textContent(".rp-solved .rp-stem"), /2\.0 kg cart/, "the problem");
+      assert.equal(await page.textContent(".rp-solved .rp-ans"), "1.0 m/s", "the answer filled in");
+      assert.equal(await page.$$eval(".rp-solved del", x => x.length), 0, "nothing to strike");
+    }
+    await mount({ variant: "full", error: null, remote: true, answer: "1.0 m/s" });   // no key on the device: the host passes opts.answer
+    assert.equal(await page.textContent(".rp-solved .rp-ans"), "1.0 m/s");
+    assert.equal(await page.textContent('.rp-step[data-id="answer"] .rp-val'), "1.0 m/s");
+    await v2off();
+  });
+
+  await step("old shape: the full card keeps its intro line + the answer filled in; the auto line still shows, no badge state", async () => {
+    await mount({ variant: "full", error: "sign" });
+    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.full));
+    assert.equal(await page.textContent(".rp-solved .rp-ans"), "1.0 m/s");
+    await mount({ variant: "repair", error: "sign" });
+    await act('.rp-val-opts .rp-chip[data-v="+"]'); await act('.rp-val-opts .rp-chip[data-v="×"]');
+    assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-miss'), await page.evaluate(() => __stemRepairLines.auto));
+    assert.equal(await page.$eval('.rp-step[data-id="signs"] .rp-n', n => n.hasAttribute("data-auto")), false);
+  });
+
   await step("no page errors", async () => assert.deepEqual(errs, []));
 } finally {
   await browser.close();
