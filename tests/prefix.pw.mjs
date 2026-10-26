@@ -26,7 +26,7 @@ const json = o => ({ name: "x.json", mimeType: "application/json", buffer: Buffe
 const file = (name, o) => ({ ...json(o), name });
 const BEAR = ["BEAR_QAA", "BEAR_QAB"].map((c, i) => num(c, "2", `Bear ${i + 1}: 1 + 1`));
 
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "", STEM_TRIES: join(TMP, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

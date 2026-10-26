@@ -4,8 +4,17 @@
    Next plays a hidden queue (shuffle.mjs qPick, design/plans/QUEUE.md): fresh topics first, a miss back after 3 / 8 / 20 others,
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
-   { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows. */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead } from "./shuffle.mjs";
+   { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows.
+   The front door (DESIGN-v3 §1, Tony #2-#4): FRONT is the bank "/" opens (serve.py's "last" for a new browser); its bar says only its
+   title, and Next plays the noob ramp (shuffle.mjs ramp) until "Mix it up" (the queue above). */
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead } from "./shuffle.mjs";
+import { isBankId, bareBank } from "./codes.mjs";
+export const FRONT = { code: "BANK_P2X", title: "Exam 2" };
+/* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
+export function deepBank(search) {
+  const s = String(new URLSearchParams(search).get("bank") || "").trim().toUpperCase();
+  return isBankId(s) ? s : (bareBank(s) || {}).code || null;
+}
 const MAX = 60;
 const SPAM_MS = 2000;                                               // a pick faster than this is a guess (Fable fix 4)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
@@ -74,12 +83,20 @@ function sentences(s, n = MAX) {
 }
 
 /* ---------- the nav ---------- */
+/* a ?bank= link makes its bank this browser's live list (app.js stem-src, read on DOMContentLoaded, after this module ran); the query
+   goes, so a later switch to another bank sticks on reload (the last bank is remembered: stem-src) */
+if (typeof location !== "undefined" && deepBank(location.search)) {
+  try { localStorage.setItem("stem-src", deepBank(location.search)); } catch { /* blocked: the default opens */ }
+  const u = new URLSearchParams(location.search); u.delete("bank");
+  history.replaceState(history.state, "", location.pathname + (String(u) ? "?" + u : "") + location.hash);
+}
 if (typeof document !== "undefined" && document.getElementById("qnav")) init();
 
 function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
+  const modes = $("#qmodes"), mix = $("#qmix"), skip = $("#qskip");
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
   const rd = () => window.stemRedo || null;                          // a Redeem showing's own grading namespace (app.js)
@@ -98,6 +115,18 @@ function init() {
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
+  /* noob mode (the front bank, until "Mix it up"): tier 0 = a dead-easy, else the author's noob.tier 1-3, untagged = 3 */
+  const front = () => !!bank() && bank().code === FRONT.code;
+  const noob = () => front() && !Q().mix;
+  const tierOf = c => { if (dead(c)) return 0; const p = off() && off().get(c), t = p && p.noob && p.noob.tier; return [1, 2, 3].includes(t) ? t : 3; };
+  /* a returner (stem-noob-<bank>, set at the first answer; read once per page, so this visit's own opener plays out) skips the opener */
+  const back = new Map();
+  const returner = () => {
+    const id = bank().code;
+    if (!back.has(id)) { let v = false; try { v = !!localStorage.getItem("stem-noob-" + id); } catch { /* blocked */ } back.set(id, v); }
+    return back.get(id);
+  };
+  const opener = deads => front() && returner() ? [] : deads;
 
   /* ---------- the queue: one per bank (D64), saved after every change; the first open migrates the saved marks ---------- */
   let q = null, qFor = "", pending = null;
@@ -137,13 +166,13 @@ function init() {
     const st = Q();
     const fw = hop(st, 1);
     if (fw >= 0) return { e: st.hist[fw], step: fw };
-    const deads = all().filter(dead), od = deadOpen(st, deads);       // T28 P2: a fresh bank opens with 1-2 dead-easy
+    const deads = all().filter(dead), od = deadOpen(st, opener(deads));   // T28 P2: a fresh bank opens with 1-2 dead-easy
     if (od) return { e: { c: od, r: 0, redeem: false } };
     const live = new Set(pool());
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
     else {
-      const p = qPick(st, [...live], topicOf);
+      const p = noob() ? ramp(st, [...live], tierOf) : qPick(st, [...live], topicOf);
       if (!p) return null;
       code = p.code; redeem = p.redeem;
     }
@@ -160,8 +189,8 @@ function init() {
   window.stemOrder = list => {
     const live = list.filter(c => !snack(c) && !dead(c) && !(window.stemHidden && window.stemHidden(c)));
     const st = Q(), fresh = st.pos === 0 && !Object.keys(st.seen).length;
-    const od = deadOpen(st, list.filter(c => dead(c) && !(window.stemHidden && window.stemHidden(c))));   // T28 P2: a fresh queue starts on a dead-easy
-    const p = od ? { code: od } : !live.length ? null : fresh ? { code: live[0] } : qPick(st, live, topicOf);
+    const od = deadOpen(st, opener(list.filter(c => dead(c) && !(window.stemHidden && window.stemHidden(c)))));   // T28 P2: a fresh queue starts on a dead-easy
+    const p = od ? { code: od } : !live.length ? null : noob() ? ramp(st, live, tierOf) : fresh ? { code: live[0] } : qPick(st, live, topicOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
   };
   /* the list (a jump index, not the queue): file order, Q1, Q2, ... as the bank JSON lists them (a second upload joins after the
@@ -176,7 +205,9 @@ function init() {
     codes = cs.length ? rows0(cs) : [];
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    name.textContent = bank() ? bank().code : "Questions";             // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md)
+    name.textContent = bank() ? (front() ? FRONT.title : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
+    modes.hidden = !front();                                         // Mix it up / Skip ahead / Other banks: the front bank's list only
+    if (front()) { mix.textContent = Q().mix ? "Easy first" : "Mix it up"; skip.hidden = !!Q().mix; }
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;
@@ -279,6 +310,9 @@ function init() {
   document.getElementById("entry")?.addEventListener("submit", () => close(false));   // a code typed in the list's box: you picked, the list goes
   btn.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); open(); } });
   prev.addEventListener("click", () => go(-1));
+  mix.addEventListener("click", () => { const st = Q(); st.mix = !st.mix; save(); update(cur); });   // the student switches the order (Tony #3)
+  skip.addEventListener("click", () => { skipAhead(Q()); save(); go(1); });                           // strong starters: a tier up, and on
+  $("#qbanks").addEventListener("click", () => $("#code").focus());   // the code box comes with the list: type a bank code there
   next.addEventListener("click", () => go(1));
   list.addEventListener("click", e => { if (e.target.closest("a")) close(true); });   // the link itself navigates (#CODE)
   panel.addEventListener("keydown", e => {
@@ -297,12 +331,15 @@ function init() {
   addEventListener("drill:answer", e => {
     const d = e.detail || {};
     if (!d.code || d.code !== cur || !off()) return;
-    qAnswer(Q(), d.code, !!d.right, { spam: typeof d.ms === "number" && d.ms < SPAM_MS }); save();   // a guess in under 2 s: logged, no weight
+    const st = Q(), first = qAnswer(st, d.code, !!d.right, { spam: typeof d.ms === "number" && d.ms < SPAM_MS });   // a guess in under 2 s: logged, no weight
+    if (first && noob()) rampAnswer(st, d.code, !!d.right, tierOf);   // the ramp's gate counts first picks only
+    if (front()) try { localStorage.setItem("stem-noob-" + bank().code, "1"); } catch { /* blocked */ }
+    save();
   });
   addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c); });
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) { if (all().includes(s.code)) shown(s.code); update(s.code); }
-  window.stemQueue = { item: () => { const st = Q(); return st.hist[st.at] || null; }, state: () => Q() };   // tests + the Redeem chip later
+  window.stemQueue = { item: () => { const st = Q(); return st.hist[st.at] || null; }, state: () => Q(), mode: () => noob() ? "noob" : "mix" };   // tests + the Redeem chip later
 }
