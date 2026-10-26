@@ -193,9 +193,10 @@
 
   let tHost, cur, tTimer;
   /* the drop banner (flow C: a WIN / BONUS / LEGEND drop is a banner, never an overlay): never takes a tap (pointer-events: none in
-     rewards.css). tier: the drop's ('legend' = the gold banner + a small confetti puff from it; 'rare' a gem; else the star) */
-  const TOAST_I = { common: 'coin_color', rare: 'gem_stone_color', legend: 'duck_color' };
-  function toast(text, sub, tier) {
+     rewards.css). tier: the drop's ('legend' = the gold banner + a small confetti puff from it; 'rare' a gem; else the star); 'won' = the
+     B4 conquered line (a trophy; it takes a tap, rewards.css .fx-toast-won). ms: how long it stays (default 2.2 s) */
+  const TOAST_I = { common: 'coin_color', rare: 'gem_stone_color', legend: 'duck_color', won: 'trophy_color' };
+  function toast(text, sub, tier, ms) {
     if (!tHost || !tHost.isConnected) tHost = host('fx-toast-host');
     clearTimeout(tTimer);
     if (cur) cur.remove();
@@ -211,7 +212,7 @@
       if (still()) t.remove(); else run(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
     };
     t.addEventListener('click', hide);
-    tTimer = setTimeout(hide, 2200);
+    tTimer = setTimeout(hide, ms || 2200);
     if (tier === 'legend' && !still()) {                                     // small confetti from the banner, on the banner's own host (one group)
       const f = confettiIn(tHost), m = mid(t);
       if (f) {
@@ -368,6 +369,7 @@
     hud: fn => seq('hud', fn),                                              // app.js: the HUD's render (count-up, bar) in the HUD step
     burst: (kind, o) => seq('burst', () => burst(kind, o)),                 // flow C: LEVEL UP only; o.drop = the reels inside it
     toast: (text, sub, tier) => seq('toast', () => toast(text, sub, tier)),
+    conquered: line => seq('toast', () => toast(line, null, 'won', 3000)),   // B4: engine.js mastery()'s r.line, one line, 3 s, a tap dismisses
     nod                                                                     // app.js: the duck chip's calm nod, its own step after the answer's
   };
 })();

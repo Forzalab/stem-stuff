@@ -190,3 +190,45 @@ test("burst_gap_s (T22): dead-easy never touches lastBurst, whatever the gap", (
   assert.equal(JSON.parse(mem.get("stem-rw:T" + (n - 1))).lastBurst, 0);
   R.gap();
 });
+
+/* B4 conquered (DESIGN-v3 §5; Tony #1, #10, #25.5): repaired + solo `a` twin + solo `b` twin where one exists */
+const M = (type, tpl, x = {}) => R.mastery({ type, tpl, ...x });
+test("conquered: miss -> repair_done -> twin_a ok (no b) = conquered.Q7, 1/20, a short line with no topic name", () => {
+  assert.equal(M("miss", "Q7").note, "Q7 isn't conquered yet");
+  assert.equal(M("repair_done", "Q7").conquered, false);
+  const r = M("twin_a", "Q7", { ok: true });
+  assert.deepEqual([r.conquered, r.newly, r.count, r.goal], [true, true, 1, 20]);
+  assert.equal(r.line, "Q7 and variants conquered");
+  assert.equal(R.conquered().Q7, true);
+  assert.deepEqual([R.state().won, R.state().goal], [1, 20]);
+  assert.equal(M("twin_a", "Q7", { ok: true }).newly, false, "pays its line once");
+  R.use("T" + (n - 1)); assert.equal(R.conquered().Q7, true, "saved with the bank");
+});
+test("conquered: with a `b` twin pending, not yet; b solo right = conquered", () => {
+  M("miss", "Q3", { b: true }); M("repair_done", "Q3");
+  const r = M("twin_a", "Q3", { ok: true });
+  assert.deepEqual([r.conquered, r.count, r.line], [false, 0, null]);
+  assert.equal(R.conquered().Q3, undefined);
+  assert.equal(M("twin_b", "Q3", { ok: true }).conquered, true);
+});
+test("conquered: a solo twin wrong resets (a new ladder, then that twin again)", () => {
+  M("miss", "Q2"); M("repair_done", "Q2");
+  assert.equal(M("twin_a", "Q2", { ok: false }).conquered, false);
+  assert.equal(M("twin_a", "Q2", { ok: true }).conquered, false, "no fresh ladder: not repaired");
+  M("repair_done", "Q2");
+  assert.equal(M("twin_a", "Q2", { ok: true }).conquered, true);
+  M("miss", "Q5", { b: true }); M("repair_done", "Q5"); M("twin_a", "Q5", { ok: true });
+  M("twin_b", "Q5", { ok: false });
+  assert.equal(M("twin_b", "Q5", { ok: true }).conquered, false);
+  M("repair_done", "Q5");
+  assert.equal(M("twin_b", "Q5", { ok: true }).conquered, true, "the `a` win stands after a `b` miss (redo.mjs: ladder, then b again)");
+  assert.equal(R.state().won, 2);
+});
+test("conquered: twins without a miss + ladder never count; the goal follows config; inert before use()", () => {
+  assert.equal(M("twin_a", "Q9", { ok: true }).conquered, false);
+  M("miss", "Q9"); assert.equal(M("twin_a", "Q9", { ok: true }).conquered, false);
+  R.config({ goal: 12 }); assert.equal(R.state().goal, 12); R.config({ goal: 20 });
+  const g = { localStorage: globalThis.localStorage };
+  new Function("window", src)(g);
+  assert.equal(g.Rewards.mastery({ type: "miss", tpl: "Q1" }).conquered, false);
+});
