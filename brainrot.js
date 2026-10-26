@@ -178,7 +178,8 @@
   function sync() {
     const want = !!(window.stemBrainrotWanted && window.stemBrainrotWanted()) && !off()
       && !root.classList.contains("mt") && !root.classList.contains("swap") && !root.classList.contains("bar-open")
-      && !root.classList.contains("dock-away") && !document.querySelector("#q input:focus");
+      && !root.classList.contains("dock-away")
+      && !(root.classList.contains("dock-bottom") && document.querySelector("#q input:focus"));   // a software keyboard (app.js dockMQ: phone width or touch) only: on desktop the docked corner stays (W91, Tony Oct 26)
     if (want && !el) build();
     if (!el) return;
     const warm = !want && !!(window.stemBrainrotWarm && window.stemBrainrotWarm()) && !off();

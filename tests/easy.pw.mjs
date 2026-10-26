@@ -59,6 +59,9 @@ P.split = { code: "CALC1_E04", type: "mc", pick: "all", shuffle: false, body: [{
 P.long = { code: "CALC1_L01", title: "Long one", type: "num", answer: "4",
   body: Array.from({ length: 24 }, (_, i) => ({ type: "text", md: `Line ${i + 1} of a long problem: $W = F d$ holds here.` })),
   saccharine: { title: "Long one", part: ["WE_THM", "W_AREA"] } };
+/* W91 (Tony, Oct 26): answering never moves the layout. A typed sugar numeric with Cluck's key (so the corner shows) */
+writeFileSync(join(BANKS, "BANK_W91.json"), JSON.stringify({ v: 1, problems: [{ code: "CALC1_W91", title: "Typed one", type: "num", body: [{ type: "text", md: "Type 4." }], answer: "4",
+  saccharine: { title: "Typed one", key: "Use: $x = 4$", part: ["WE_THM"] } }] }));
 writeFileSync(join(BANKS, "BANK_LONG.json"), JSON.stringify({ v: 1, problems: [P.long] }));
 writeFileSync(join(BANKS, "BANK_EZ12.json"), JSON.stringify({ v: 1, problems: [P.all, P.none, P.prove, P.split] }));
 /* every title shares "Term: ": the list still shows one row per question, number + whole title, no shared-prefix header (owner, Oct 6) */
@@ -689,6 +692,103 @@ try {
     assert.ok(open.cl, "Cluck did not open");
     assert.ok(Math.abs(open.l - open.r) <= 2, `Cluck open: left gap ${open.l}, right gap ${open.r}`);
     assert.ok(Math.abs(shut.l - shut.r) <= 2, `Cluck closed: left gap ${shut.l}, right gap ${shut.r}`);
+  });
+  /* W91 (Tony, Oct 26, desktop): focusing the answer box parked the docked corner (meant for a phone's keyboard): the notes box jumped up, then jerked back on blur */
+  const w91 = async (vp, x = {}) => {
+    const c = await browser.newContext({ viewport: vp, serviceWorkers: "block", ...x });
+    await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    await c.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const p = await c.newPage();
+    await p.goto(BASE + "/#CALC1_W91"); await opened(p, "CALC1_W91");
+    return { c, p };
+  };
+  const rotSnap = p => p.evaluate(() => { const r = document.getElementById("rot"), n = document.getElementById("scratch");
+    return { parked: !!r && r.classList.contains("parked"), docked: !!r && r.classList.contains("docked"), notes: n ? Math.round(n.getBoundingClientRect().top) : null,
+      ans: Math.round(document.getElementById("ans").getBoundingClientRect().top) }; });
+  for (const [w, h] of [[1280, 800], [1920, 1080]]) await step(`W91 focus at ${w}x${h}: the docked corner stays, the notes box and the answer box don't move (focus, blur)`, async () => {
+    const { c, p } = await w91({ width: w, height: h });
+    try {
+      await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
+      await p.waitForTimeout(300);
+      const a = await rotSnap(p);
+      await p.focus("#ans"); await p.waitForTimeout(200);
+      const f = await rotSnap(p);
+      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(200);
+      const b = await rotSnap(p);
+      assert.equal(f.parked, false, "focus parked the docked corner");
+      assert.ok(Math.abs(f.notes - a.notes) <= 1 && Math.abs(f.ans - a.ans) <= 1, `focus moved: notes ${a.notes} -> ${f.notes}, answer ${a.ans} -> ${f.ans}`);
+      assert.ok(Math.abs(b.notes - a.notes) <= 1 && Math.abs(b.ans - a.ans) <= 1, `blur moved: notes ${a.notes} -> ${b.notes}, answer ${a.ans} -> ${b.ans}`);
+    } finally { await c.close(); }
+  });
+  await step("W91 a 710 px touch screen (dock-bottom, software keyboard): the answer box focus still parks the corner", async () => {
+    const { c, p } = await w91({ width: 710, height: 900 }, { hasTouch: true, isMobile: true });
+    try {
+      await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && !r.classList.contains("parked"); }, null, { timeout: 6000 });
+      assert.equal(await p.evaluate(() => document.documentElement.classList.contains("dock-bottom")), true, "dock-bottom");
+      await p.focus("#ans"); await p.waitForTimeout(200);
+      assert.equal((await rotSnap(p)).parked, true, "the keyboard can come up: parked");
+    } finally { await c.close(); }
+  });
+  /* FIX 2 (Tony: "the WHOLE LAYOUT add height suddenly for the latex math"): one line reserved from the question's open; a ratchet up, animated; never shrinks; a cap */
+  for (const [w, h] of [[1280, 800], [390, 844]]) await step(`W91 typing at ${w}: the first key, a one-line key, "x^(", a taller ladder (grows, animated, never shrinks), past the cap, Check`, async () => {
+    const { c, p } = await w91({ width: w, height: h }, w < 700 ? { hasTouch: true, isMobile: true } : {});
+    try {
+      const m = () => p.$eval("#preview", e => { const r = e.getBoundingClientRect(), q = document.getElementById("q").getBoundingClientRect(); return { top: r.top, h: r.height, below: q.bottom }; });
+      const type = async v => { await p.fill("#ans", v); await p.waitForTimeout(260); return m(); };
+      await p.focus("#ans"); await p.waitForTimeout(150);
+      const z = await m();
+      assert.ok(z.h > 10, `no room reserved before the first key: ${z.h}px`);
+      for (const v of ["4", "9/2", "sqrt(3)", "2.02", "-1/3", "x^("]) {
+        const r = await type(v);
+        assert.ok(Math.abs(r.below - z.below) <= 1 && Math.abs(r.h - z.h) <= 1, `"${v}" moved the page: below ${z.below} -> ${r.below}, room ${z.h} -> ${r.h}`);
+      }
+      const lad = ["1/2", "1/(2+1/x)", "1/(2+1/(3+1/x))", "1/(2+1/(3+1/(4+1/x)))"], hs = []; let steps = 0;
+      assert.match(await p.$eval("#preview", e => getComputedStyle(e).transition), /height 0\.15s/, "the ratchet animates (150 ms height)");
+      for (const v of lad) {
+        const mid = await p.evaluate(v => { const i = document.getElementById("ans"), pv = document.getElementById("preview"), was = pv.getBoundingClientRect().height;
+          i.value = v; i.dispatchEvent(new Event("input", { bubbles: true }));
+          return new Promise(res => requestAnimationFrame(() => setTimeout(() => res({ was, now: pv.getBoundingClientRect().height, to: parseFloat(pv.style.height) || 0 }), 40))); }, v);
+        if (mid.to > mid.was + 1) steps++;
+        if (mid.to > mid.was + 1) assert.ok(mid.now < mid.to - 0.5, `"${v}": jumped to ${mid.now} at once (no animation to ${mid.to})`);
+        await p.waitForTimeout(260); hs.push((await m()).h);
+      }
+      assert.ok(hs.every((x, i) => !i || x >= hs[i - 1] - 0.5), "the room shrank on the ladder: " + hs);
+      assert.ok(steps >= 2, `the ladder took ${steps} ratchet steps (want >= 2, each animated)`);
+      assert.ok(hs[hs.length - 1] > z.h + 5, "a 4-level fraction got no more room: " + hs);
+      const top = hs[hs.length - 1];
+      for (const v of ["1/(2+1/x)", "1/2", ""]) assert.ok(Math.abs((await type(v)).h - top) <= 1, `backspace to "${v}" changed the room: ${hs} -> ${(await m()).h}`);
+      const cap = 3 * z.h + 1;
+      const big = await type("1/(2+1/(3+1/(4+1/(5+1/(6+1/(7+1/(8+1/x)))))))");
+      assert.ok(big.h <= cap, `past the cap: ${big.h}px > ${cap}`);
+      assert.ok(await p.$eval("#preview .katex", k => { const r = k.getBoundingClientRect(), b = document.getElementById("preview").getBoundingClientRect(); return r.bottom <= b.bottom + 1; }), "the math overflows its room");
+      const pre = await type("4");
+      await p.click("#ansGo"); await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(200);
+      const post = await m();
+      assert.ok(Math.abs(post.top - pre.top) <= 1 && Math.abs(post.h - pre.h) <= 1, `Check moved the preview room: ${JSON.stringify([pre, post])}`);
+    } finally { await c.close(); }
+  });
+  /* Tony's todo 95 "ghost gap" (W90): wrong -> right -> Compare: the sheet hides #wish, which uncovered the spent preview's blank room (#ff -> #fcard 68 px, 40 before) */
+  await step("W91 ghost gap at 1280x800: wrong, right, Compare: no blank spent-preview band between the answer box and the formula card; Check itself moves nothing", async () => {
+    const { c, p } = await w91({ width: 1280, height: 800 });
+    try {
+      const g = () => p.evaluate(() => { const ff = document.getElementById("ff").getBoundingClientRect(), fc = document.getElementById("fcard").getBoundingClientRect(), pv = document.getElementById("preview"), cs = getComputedStyle(pv);
+        return { ff: ff.bottom, fc: fc.top, pv: pv.getClientRects().length ? pv.getBoundingClientRect().height + parseFloat(cs.marginTop) : 0, wish: !!document.getElementById("wish") && !document.getElementById("wish").hidden }; });
+      await p.waitForSelector("#fcard", { timeout: 6000 });
+      const a = await g();
+      await p.fill("#ans", "5"); await p.press("#ans", "Enter");
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("bad") || window.__drill?.state?.tries?.length >= 1, null, { timeout: 6000 }); await p.waitForTimeout(1500);
+      await p.fill("#ans", "4"); await p.waitForTimeout(300);
+      const pre = await g();
+      await p.press("#ans", "Enter");
+      await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(400);
+      const post = await g();
+      assert.ok(Math.abs(post.ff - pre.ff) <= 1, `Check moved the answer box: ${pre.ff} -> ${post.ff}`);
+      const cmp = p.locator("#wish .cue-ok");
+      if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
+      const z = await g();
+      assert.equal(z.wish, false, "the sheet is open: #wish hides (W90's rule)");
+      assert.ok(z.pv === 0 && z.fc - z.ff <= a.fc - a.ff + 1, `a blank band: #ff -> #fcard ${z.fc - z.ff} px (before any answer ${a.fc - a.ff}), the spent room ${z.pv} px`);
+    } finally { await c.close(); }
   });
 } finally {
   await browser.close();
