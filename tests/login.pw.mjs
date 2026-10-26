@@ -1,7 +1,8 @@
 // login.js (E4, Tony #22/#22b/#23): the My Cluck save + login dialogs, driven through design/login-lab.html.
 // The picked image never leaves the device: the only request is POST acct/login with JSON {token}; the object URL is revoked and the
 // input cleared. ?k= logs in and is stripped from the URL. Save = navigator.share({files}) inside the click; after share resolves or the
-// download fires, POST acct/keep {token} (Tony #29.9: Save makes the account permanent); "Saved ✓" only once keep answers ok.
+// download fires, POST acct/keep {token} (Tony #29.9: Save makes the account permanent); only once keep answers ok, a green ✓ flashes in
+// place of the Save button (Tony #32; reduced motion: the ✓, no flash). Copy is Tony's own (#32): download line, keep fail, error.
 // /acct/new, /acct/login and /acct/keep (S2) are faked here with page.route. The "fixture" Cluck PNG is drawn by mycluck.mjs in the page itself.
 //   python3 serve.py 8833 & P=$!; sleep 1; node tests/login.pw.mjs http://localhost:8833; kill $P
 import { createRequire } from "node:module";
@@ -19,8 +20,8 @@ async function step(name, fn) {
 }
 /* a fresh context: S2 faked, every http request recorded, object URLs counted, navigator.share stubbed by `share`.
    keep: "ok" | "fail" (500) | "hold" (answers ok only on release()) */
-async function fresh(browser, share = "none", keep = "ok") {
-  const ctx = await browser.newContext({ viewport: { width: 360, height: 760 } });
+async function fresh(browser, share = "none", keep = "ok", { motion = "no-preference", login = "ok" } = {}) {
+  const ctx = await browser.newContext({ viewport: { width: 360, height: 760 }, reducedMotion: motion });
   await ctx.addInitScript(mode => {
     const made = window.__urls = { made: [], revoked: [] };
     const mk = URL.createObjectURL.bind(URL), rv = URL.revokeObjectURL.bind(URL);
@@ -38,7 +39,7 @@ async function fresh(browser, share = "none", keep = "ok") {
   page.on("pageerror", e => errs.push(e.message));
   page.on("request", r => { if (/^https?:/.test(r.url())) reqs.push({ url: r.url(), method: r.method(), type: r.headers()["content-type"] || "", body: r.postData() }); });
   await page.route("**/acct/new", r => r.fulfill({ json: { token: NEW } }));
-  await page.route("**/acct/login", r => r.fulfill({ json: { ok: true } }));
+  await page.route("**/acct/login", r => login === "fail" ? r.fulfill({ status: 500, body: "" }) : r.fulfill({ json: { ok: true } }));
   let release = () => {};
   const held = new Promise(r => { release = r; });
   await page.route("**/acct/keep", async r => {
@@ -49,6 +50,18 @@ async function fresh(browser, share = "none", keep = "ok") {
   return { ctx, page, reqs, errs, release, keeps: () => reqs.filter(r => new URL(r.url).pathname === "/acct/keep") };
 }
 const status = page => page.textContent("#lgStatus");
+const SECRET = "Keep this image secret, and do not show to others.", FAILED = 'Save failed! Tap "Save my Cluck" to try again.';
+const isSaved = () => !!document.querySelector("dialog.lg .lg-saved");
+/* the saved state: the ✓ sits where Save was (Save gone), green (--correct), named; flashes unless reduced motion */
+async function savedState(page) {
+  return page.$eval("dialog.lg", d => { const ok = d.querySelector(".lg-saved"), cs = ok && getComputedStyle(ok);
+    const green = getComputedStyle(document.documentElement).getPropertyValue("--correct").trim();
+    const probe = document.createElement("i"); probe.style.color = green; document.body.append(probe);
+    const want = getComputedStyle(probe).color; probe.remove();
+    return ok && { save: !!d.querySelector("#lgSave"), text: ok.textContent.trim(), name: ok.getAttribute("aria-label"),
+      inPlace: ok.nextElementSibling && ok.nextElementSibling.classList.contains("lg-new"), green: cs.backgroundColor === want,
+      anim: cs.animationName }; });
+}
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
@@ -146,7 +159,7 @@ try {
     await ctx.close();
   });
 
-  await step("Save: share({files: [png]}) inside the click; rejected with AbortError -> no \"Saved ✓\"", async () => {
+  await step("Save: share({files: [png]}) inside the click; rejected with AbortError -> no saved ✓", async () => {
     const { ctx, page, keeps } = await fresh(browser, "abort");
     await page.goto(LAB);
     await page.click("#openLogin");
@@ -159,12 +172,12 @@ try {
     assert.equal(s.active, true, "called while the tap's user activation is live");
     assert.deepEqual([s.files.length, s.files[0][1]], [1, "image/png"]);
     assert.ok(s.files[0][2] > 1000, "a real PNG");
-    assert.doesNotMatch(await status(page), /Saved/);
+    assert.equal(await page.evaluate(isSaved), false);
     assert.deepEqual(keeps(), [], "cancelled: no acct/keep");
     await ctx.close();
   });
 
-  await step("Save: share resolves -> one POST acct/keep {token}; \"Saved ✓\" only once keep answers ok", async () => {
+  await step("Save: share resolves -> one POST acct/keep {token}; the green ✓ replaces Save only once keep answers ok", async () => {
     const { ctx, page, keeps, release } = await fresh(browser, "ok", "hold");
     await page.goto(LAB);
     await page.click("#openLogin");
@@ -175,32 +188,39 @@ try {
     await page.waitForTimeout(200);
     assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "keep once, with the token");
     assert.match(keeps()[0].type, /^application\/json/);
-    assert.doesNotMatch(await status(page), /Saved ✓/, "not before keep answers");
+    assert.equal(await page.evaluate(isSaved), false, "not before keep answers");
+    assert.ok(await page.$("#lgSave"), "Save still there while keep is out");
     release();
-    await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    await page.waitForFunction(isSaved, null, { timeout: 3000 });
+    const s = await savedState(page);
+    assert.deepEqual([s.save, s.text, s.name, s.inPlace, s.green], [false, "✓", "Saved", true, true], "a green ✓ in place of Save");
+    assert.notEqual(s.anim, "none", "it flashes");
     assert.equal(keeps().length, 1);
     await ctx.close();
   });
 
-  await step("Save: keep fails -> no \"Saved ✓\", a retry state; Save again retries keep only (no second share)", async () => {
+  await step("Save: keep fails -> no ✓, Tony's fail line; Save again retries keep only (no second share)", async () => {
     const { ctx, page, keeps } = await fresh(browser, "ok", "fail");
     await page.goto(LAB);
     await page.click("#openLogin");
     await page.waitForSelector("#lgSave:not([disabled])");
     await page.click("#lgSave");
     await page.waitForFunction(() => /try again/i.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
-    assert.doesNotMatch(await status(page), /Saved ✓/);
+    assert.equal(await status(page), FAILED);
+    assert.equal(await page.evaluate(isSaved), false);
+    assert.ok(await page.$("#lgSave:not([disabled])"), "Save stays, to retry");
     assert.equal(keeps().length, 1);
     await page.unroute("**/acct/keep");
     await page.route("**/acct/keep", r => r.fulfill({ json: { ok: true } }));
     await page.click("#lgSave");
-    await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    await page.waitForFunction(isSaved, null, { timeout: 3000 });
+    assert.notEqual(await status(page), FAILED, "the fail line goes once saved");
     assert.equal(keeps().length, 2, "the retry is a keep");
     assert.equal(await page.evaluate(() => window.__share.length), 1, "no second share sheet");
     await ctx.close();
   });
 
-  await step("Save without navigator.share: falls back to a download of the PNG", async () => {
+  await step("Save without navigator.share: falls back to a download of the PNG; ✓ + the secret line", async () => {
     const { ctx, page, keeps, release } = await fresh(browser, "none", "hold");
     await page.goto(LAB);
     await page.click("#openLogin");
@@ -209,10 +229,44 @@ try {
     assert.match(dl.suggestedFilename(), /\.png$/);
     for (let i = 0; i < 50 && !keeps().length; i++) await page.waitForTimeout(20);
     assert.deepEqual(keeps().map(r => [r.method, r.body]), [["POST", JSON.stringify({ token: NEW })]], "the download fires keep, once");
-    assert.doesNotMatch(await status(page), /Saved ✓|Downloaded/, "nothing said before keep answers");
+    assert.doesNotMatch(await status(page), /secret/, "nothing said before keep answers");
+    assert.equal(await page.evaluate(isSaved), false);
     release();
-    await page.waitForFunction(() => /Saved ✓/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 3000 });
+    await page.waitForFunction(isSaved, null, { timeout: 3000 });
+    assert.equal(await status(page), SECRET);
+    assert.equal((await savedState(page)).save, false);
     assert.equal(keeps().length, 1);
+    await ctx.close();
+  });
+
+  await step("Saved under prefers-reduced-motion: the same green ✓ in place of Save, no flash", async () => {
+    const { ctx, page } = await fresh(browser, "ok", "ok", { motion: "reduce" });
+    await page.goto(LAB);
+    await page.click("#openLogin");
+    await page.waitForSelector("#lgSave:not([disabled])");
+    await page.click("#lgSave");
+    await page.waitForFunction(isSaved, null, { timeout: 3000 });
+    const s = await savedState(page);
+    assert.deepEqual([s.save, s.text, s.inPlace, s.green, s.anim], [false, "✓", true, true, "none"]);
+    await ctx.close();
+  });
+
+  await step("I have my Cluck, login fails: Tony's error line", async () => {
+    const { ctx, page } = await fresh(browser, "none", "ok", { login: "fail" });
+    await page.goto(LAB);
+    await page.click("#openLogin");
+    await page.waitForSelector("dialog.lg[open] canvas.lg-cluck");
+    await page.waitForFunction(() => typeof window.jsQR === "function", null, { timeout: 5000 });
+    const png = await page.evaluate(async tok => {
+      const { drawCluck } = await import("../mycluck.mjs");
+      const img = drawCluck(location.origin + "/?k=" + tok, tok), c = document.createElement("canvas");
+      c.width = img.width; c.height = img.height; c.getContext("2d").putImageData(new ImageData(img.data, img.width, img.height), 0, 0);
+      return [...new Uint8Array(await (await new Promise(r => c.toBlob(r, "image/png"))).arrayBuffer())];
+    }, OLD);
+    const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#lgHave")]);
+    await chooser.setFiles({ name: "IMG_0042.png", mimeType: "image/png", buffer: Buffer.from(png) });
+    await page.waitForFunction(() => !/Reading|Checking/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 5000 });
+    assert.equal(await status(page), "Cluck didn't cluck! Come back in a minute.");
     await ctx.close();
   });
 } finally {
