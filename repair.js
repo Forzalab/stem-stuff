@@ -196,6 +196,14 @@
       if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
       return li;
     }
+    function introEl() {                                                         // Cluck's line; a leading *action* is italic, the rest text
+      const I = L().intro || {}, many = String(o.error).split("+").length > 1;
+      const key = variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
+      const t = String(I[key] || "");
+      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
+      if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
+      return p;
+    }
     function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
       const box = h("div", "rp-solved"), a = h("p", "rp-a");
       if (item.stem) box.append(h("p", "rp-stem", item.stem));
@@ -205,7 +213,7 @@
     }
     function draw() {
       if (solved) el.dataset.solved = "";
-      const kids = [solved ? solvedEl() : h("p", "rp-line", (L().intro || {})[variant === "repair" && !blank ? "fallback" : variant] || "")];
+      const kids = [solved ? solvedEl() : introEl()];
       const ol = h("ol", "rp-steps");
       for (const s of S) ol.append(stepEl(s));
       kids.push(ol);
