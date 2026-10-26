@@ -19,7 +19,7 @@ test("repair done (vet-repair-done)", () => assert.equal(R.done, "Nice job! Now,
 test("welcome wrong-tap hint (vet-welcome-hint): the fallback line", () => assert.equal(R.hint, "Almost there! Try another option."));
 test("signs pop (vet-pop-signs): Tony's words, the existing kaomoji in his slot", () => {
   const signs = POPS.filter(l => l.tag === "signs").map(l => l.text);
-  assert.deepEqual(signs, ["The sign all agreed (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Fantastic work!"]);
+  assert.deepEqual(signs, ["The signs all aligned (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Fantastic work!"]);
 });
 test("the old lines are gone", () => {
   const all = JSON.stringify([R, POPS]);
