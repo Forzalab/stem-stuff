@@ -314,6 +314,8 @@ try {
       assert.equal(await page.$eval('.rp-step[data-id="signs"] .rp-n', n => n.hasAttribute("data-auto")), true, "badge state");
       assert.equal(await page.textContent('.rp-step[data-id="signs"] .rp-n'), "3", "no text added");
       assert.equal(await page.$eval('.rp-step[data-id="given"] .rp-n', n => n.hasAttribute("data-auto")), false, "a worked step: no badge state");
+      const bg = sel => page.$eval(sel, n => getComputedStyle(n).backgroundColor);
+      assert.notEqual(await bg('.rp-step[data-id="signs"] .rp-n'), await bg('.rp-step[data-id="given"] .rp-n'), "the badge change is visible (filled)");
     }
   });
 
