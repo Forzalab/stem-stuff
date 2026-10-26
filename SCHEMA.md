@@ -82,6 +82,11 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `correct` | `mc` | id of the right choice | **no** |
 | `wrong` | all but `multi` (required for `mc`; `multi` puts them in each part) | known wrong answers, each with an error type and Cluck's hint (below) | **no** |
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
+| `noob` | all, optional | `{ "tier": 1 \| 2 \| 3 }`: the noob ramp's author tier (see "Repair ladder, noob tier, welcome, twins") | yes |
+| `welcome` | all, optional | `true` on the bank's one welcome Q1 | yes |
+| `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
+| `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
+| `repair` | all, optional | the repair ladder `{ steps, alt? }`, served by `GET /repair/<code>` after a recorded wrong try (`alt` only after a twin miss) | **no** |
 
 **Never put the answer in `body`, a graph's `alt`, `title`, `how`, a part's `prompt`, a choice's text beyond the choice itself, or a hint.**
 
@@ -546,6 +551,22 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "pick": {"$ref": "#/$defs/problem/properties/pick"}, "correct": {"$ref": "#/$defs/problem/properties/correct"}, "fix": {"$ref": "#/$defs/problem/properties/fix"},
         "miss": {"$ref": "#/$defs/problem/properties/miss"}, "wrong": {"$ref": "#/$defs/problem/properties/wrong"}},
       "allOf": [{"$ref": "#/$defs/mc_pick"}]},
+    "rsteps": {"type": "array", "minItems": 3, "maxItems": 5, "items": {"$ref": "#/$defs/rstep"}, "description": "a repair ladder: 3-5 steps, the last one id answer (repairFaults)"},
+    "rstep": {"type": "object", "required": ["id", "label", "kind"], "additionalProperties": false,
+      "description": "one repair step (SCHEMA.md \"Repair ladder\"); per-kind fields and ok are cross-checked by repairFaults",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,23}$", "description": "unique in its ladder; the last step is answer"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 60, "description": "what the step does, no digits (twins share the ladder, so no numbers)"},
+        "kind": {"enum": ["pick", "sheet", "num", "fill"]},
+        "opts": {"type": "array", "minItems": 2, "maxItems": 4, "items": {"oneOf": [{"$ref": "#/$defs/choice"}, {"type": "string", "minLength": 1, "maxLength": 12}]}, "description": "pick: choices {id, md}; fill: the chips for the blank (strings)"},
+        "pool": {"type": "array", "minItems": 2, "maxItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,15}$"}, "description": "sheet: formula-sheet.json row ids shown as chips"},
+        "tex": {"type": "string", "minLength": 1, "maxLength": 200, "description": "fill: the formula in LaTeX, no $, with exactly one ▢ (the blank)"},
+        "ok": {"type": "string", "minLength": 1, "description": "the right pick id / sheet id / fill chip / num value (math.js). Only the answer step may leave it out: then the item's own key grades it"},
+        "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05, "description": "num: relative tolerance; absent = the item's tol rule"},
+        "miss": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string", "minLength": 3, "maxLength": 160}, "description": "wrong opt -> one fixed line"},
+        "fam": {"anyOf": [{"$ref": "#/$defs/error"}, {"enum": ["distribute", "drop", "reciprocal", "power", "factor", "dream", "trig", "g"]}], "description": "the error type or slip family (slips.mjs FAMILIES; tests keep the two lists equal) this step catches; needs why"},
+        "why": {"type": "object", "required": ["q", "opts", "ok"], "additionalProperties": false, "description": "the principle prompt: 3 chips, distractors from the family's misconceptions (human-checked)",
+          "properties": {"q": {"type": "string", "minLength": 3, "maxLength": 80}, "opts": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "string", "minLength": 1, "maxLength": 80}}, "ok": {"type": "integer", "minimum": 0, "maximum": 2}}}}},
     "problem": {
       "type": "object",
       "required": [
@@ -644,6 +665,15 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           }
         },
         "sugar_only": {"type": "boolean", "description": "true: a sugar-only item (a snack). Diet never sees it: bank list, p/, /check, /state, /narrate, /explain"},
+        "noob": {"type": "object", "required": ["tier"], "additionalProperties": false, "description": "noob ramp (DESIGN-v3 §1): author tier, 1 easy, 2 medium, 3 hard; shuffle.mjs ramp reads it",
+          "properties": {"tier": {"enum": [1, 2, 3]}}},
+        "welcome": {"const": true, "description": "the bank's welcome Q1 (DESIGN-v3 §2): at most one per bank, needs repair (welcome.js renders it through repair.js)"},
+        "twin": {"enum": ["a", "b"], "description": "a redo twin of parent_template: a = same question, new numbers; b = the twisted one. Needs parent_template"},
+        "parent_template": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$", "description": "twin: the code of its template item in this bank (not a twin, carries repair); one a and one b per template"},
+        "repair": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the repair ladder (SCHEMA.md \"Repair ladder\"); GET /repair/<code> after a recorded wrong try",
+          "properties": {"steps": {"$ref": "#/$defs/rsteps"},
+            "alt": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the other-representation ladder (units/sanity or diagram), served only after a twin miss",
+              "properties": {"steps": {"$ref": "#/$defs/rsteps"}}}}},
         "tip": {
           "type": "string",
           "minLength": 3,
@@ -1766,3 +1796,39 @@ What the Copy button puts on the clipboard (details: `copy/COPY-PAYLOAD.md`).
 - An arrow listed in `arrows` starts hidden; a chain link the ladder does not list stays drawn as today. A card without a `ladder` is unchanged.
 
 Each formula row on the card has a small "?" that opens a popover (popover.js, variant `doc`, design/POPOVER.md; tap only, built on open, removed on close, one at a time) from the sheet's `doc`; it shows the row's formula again, then `purpose` as its title, then the rest: `{ "purpose": "one plain line: what the formula is for", "sym": [{ "s": "v_x", "m": "<= 8 words", "u": "m/s" }], "when": "<= 15 words", "ex": "one line, numbers that check" }` (formula-sheet.json v3; serve.py `sheet()` passes `doc` through). A row without a `doc` has no "?". No AI. `purpose` (optional, Oct 23) is the title, above the symbols; it names its symbols in words. `purpose` follows the same tooltip authoring rules. `use`, `why` and `purpose`, when present, are non-empty strings (ladderFaults, docFaults).
+
+## Repair ladder, noob tier, welcome, twins (DESIGN-v3 §1–3)
+
+Five per-item fields, all optional, top level next to `saccharine`. The `problems` schema shapes them; `repairFaults` (tests/schemas.mjs) checks the rest. `node tools/schema-check.mjs` runs both on every bank; `--repair` adds the front-door bank's need: exactly one `welcome` item and `repair` on its templates. Fixture: `tests/fixtures/repair-p2x.json`.
+
+**`noob`**: `"noob": { "tier": 2 }`. The noob ramp's author tier: 1 easy, 2 medium, 3 hard (shuffle.mjs `ramp`). Public.
+
+**`welcome`**: `"welcome": true`. The bank's welcome Q1, shown first on a fresh open through repair.js in the `welcome` variant (welcome.js). At most one per bank. It needs a `repair` (its sub-steps). Public.
+
+**`twin`, `parent_template`**: `"twin": "a", "parent_template": "PHYS_RPA"`. A redo twin of its template: `a` = same question, new numbers (opens after a repair); `b` = the twisted one (queued after the `a` twin wins). Every twin names its template; the template is in the same bank, is not a twin, and carries `repair`. At most one `a` and one `b` per template. `parent_template` only on a twin. Both public.
+
+**`repair`** (server only: `public()` never sends it; `GET /repair/<code>` does, after a recorded wrong try, and `alt` only after a twin miss is recorded). Hand-written per template; twins use their template's ladder.
+
+```json
+"repair": {
+  "steps": [
+    { "id": "given", "label": "Name the unknown", "kind": "pick", "opts": [{ "id": "a", "md": "$v_f$" }, { "id": "b", "md": "$m_2$" }], "ok": "a",
+      "miss": { "b": "You already know $m_2$. Read the stem again." } },
+    { "id": "sheet", "label": "Which line on the sheet?", "kind": "sheet", "pool": ["MOM_CONS", "KE", "IMPULSE"], "ok": "MOM_CONS" },
+    { "id": "signs", "label": "Set the signs", "kind": "fill", "tex": "v_f=\\frac{m_1v_1 \\,▢\\, m_2v_2}{m_1+m_2}", "opts": ["+", "−", "×"], "ok": "−",
+      "fam": "sign", "why": { "q": "Why a minus here?", "opts": ["the carts move opposite ways", "momentum is always negative", "a minus means slowing down"], "ok": 0 } },
+    { "id": "answer", "label": "Final answer", "kind": "num", "ok": "4/3", "tol": 0.02 }
+  ],
+  "alt": { "steps": [
+    { "id": "units", "label": "Units of momentum", "kind": "pick", "opts": [{ "id": "a", "md": "$\\text{kg·m/s}$" }, { "id": "b", "md": "$\\text{kg·m/s}^2$" }], "ok": "a",
+      "why": { "q": "Why these units?", "opts": ["mass times speed", "mass times acceleration", "force times time squared"], "ok": 0 } },
+    { "id": "sanity", "label": "Faster or slower than the first cart?", "kind": "pick", "opts": [{ "id": "a", "md": "slower" }, { "id": "b", "md": "faster" }], "ok": "a" },
+    { "id": "answer", "label": "Final answer", "kind": "num", "ok": "4/3", "tol": 0.02 }
+  ] }
+}
+```
+- `steps` = the ladder shown after a miss; `alt` = the other representation (units/sanity check or a diagram) shown after a twin miss, never the same ladder twice. Both follow the step rules.
+- A step: `id` (`a-z0-9_`, unique in its ladder), `label` (≤ 60 chars, **no digits**: twins share the ladder), `kind`, `ok`, and per kind: `pick` → `opts` 2–4 `{ id, md }`, `ok` = an opt id; `sheet` → `pool` 2–4 formula-sheet.json row ids, `ok` in `pool`; `fill` → `tex` (LaTeX, no `$`, exactly one `▢`) + `opts` 2–4 chip strings, `ok` = one of them; `num` → `ok` a math.js value, optional `tol`. Optional `miss`: wrong opt → one fixed line.
+- **3–5 steps; the last `id` is `answer`.** Only `answer` may leave out `ok` (and a `pick` answer its `opts`): then the item's own key (`correct` / `answer`) and choices grade it, which is how a twin reuses its template's ladder.
+- `fam`: the slip family (`slips.mjs` `FAMILIES`) or `wrong` error type this step catches; a miss in that family blanks this step. Every `fam` step has a `why`.
+- `why`: `{ "q", "opts": [3 chips], "ok": index }`, the principle prompt; distractors come from that family's misconceptions and are human-checked. Every ladder has at least one `why` (a ladder with no `fam` carries it on the step that asks "which principle?").

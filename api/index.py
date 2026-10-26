@@ -1,4 +1,4 @@
-"""Vercel entry: the stem-stuff API (serve.dispatch) as a WSGI app. vercel.json rewrites /p/, /state/, /b/ and /check
+"""Vercel entry: the stem-stuff API (serve.dispatch) as a WSGI app. vercel.json rewrites /p/, /state/, /repair/, /b/ and /check
 (and /log/incident, /health) here with the original path in ?path=; static files come from public/ (tools/build_public.py)."""
 import os
 import sys
@@ -7,7 +7,7 @@ from urllib.parse import parse_qs
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import serve  # noqa: E402
 
-REASON = {200: "OK", 204: "No Content", 400: "Bad Request", 404: "Not Found", 429: "Too Many Requests", 500: "Internal Server Error",
+REASON = {200: "OK", 204: "No Content", 400: "Bad Request", 403: "Forbidden", 404: "Not Found", 429: "Too Many Requests", 500: "Internal Server Error",
           502: "Bad Gateway", 503: "Service Unavailable"}
 
 

@@ -1,0 +1,25 @@
+/* login.css: the My Cluck dialog (login.js). App chrome on app.css tokens; .lg-* nodes only. 360px: the dialog is 100vw - 32px at most. */
+dialog.lg { box-sizing: border-box; width: min(22rem, calc(100vw - 2 * var(--s4))); max-width: none; max-height: calc(100dvh - 2 * var(--s4));
+  margin: auto; padding: var(--s5) var(--s4) var(--s4); overflow: auto; overscroll-behavior: contain;
+  background: var(--sheet); color: var(--ink); border: var(--bw) solid var(--line); border-radius: 16px;
+  font: 400 var(--t-md)/var(--lh) var(--font); text-align: center; }
+dialog.lg::backdrop { background: color-mix(in srgb, var(--scrim) 60%, transparent); }
+.lg-title { margin: 0 var(--s6) var(--s3); font-size: var(--t-lg); line-height: var(--lh-title); font-weight: var(--w-em); }
+.lg-x { position: absolute; top: var(--s1); right: var(--s1); width: var(--btn); height: var(--btn); padding: 0;
+  border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: var(--t-lg); }
+.lg-x:hover { background: var(--raised); color: var(--ink); }
+.lg-art { margin: 0 auto var(--s3); width: min(100%, 15rem); }
+.lg-cluck { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; background: var(--raised); }
+.lg-cap { margin: 0 0 var(--s4); font-weight: var(--w-em); }
+.lg-cap span { display: block; }
+.lg-new { margin: var(--s4) 0 var(--s2); color: var(--muted); font-size: var(--t-sm); }
+.lg-btn { box-sizing: border-box; display: block; width: 100%; min-height: var(--btn); padding: var(--s2) var(--s4);
+  border: var(--bw) solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink);
+  font-size: var(--t-sm); font-weight: var(--w-em); -webkit-tap-highlight-color: transparent; }
+.lg-btn:hover { background: var(--float); }
+.lg-go { border-color: var(--c1); background: var(--c1); color: var(--field); }
+.lg-go:hover { border-color: var(--c1-hi); background: var(--c1-hi); }
+.lg-go:disabled { opacity: 0.45; cursor: default; }
+.lg-x:focus-visible, .lg-btn:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.lg-file { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); border: 0; }   /* the picker: real, reachable via its button */
+.lg-status { min-height: calc(var(--t-sm) * var(--lh-ui)); margin: var(--s3) 0 0; color: var(--muted); font-size: var(--t-sm); line-height: var(--lh-ui); }

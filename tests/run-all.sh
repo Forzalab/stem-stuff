@@ -74,6 +74,7 @@ weight() {
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
     noob) echo 15 ;;   # local run ~15s
+    login) echo 5 ;;   # local run ~7 s
     *) echo 5 ;;
   esac
 }
@@ -94,6 +95,7 @@ tags() {
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
     cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
     noob) echo "@logic @real-time" ;;
+    login) echo "@logic @real-time" ;;
     *) echo "" ;;
   esac
 }
