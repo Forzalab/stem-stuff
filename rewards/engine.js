@@ -6,10 +6,19 @@
    original 2; a second-try correct 6 (snack 3); a wrong try +1 "for trying". Each code's correct pays once.
    Drop roll on every correct held >= 1 s (a peek at the original still rolls none): p = 0.6 real, 0.5 True/False, 0.45 snack; pity after
    2 dry; common 70 / rare 25 / legend 5.
-   The streak never halves: a wrong try only pauses it; any correct adds one. A wrong try never rolls (no loss dressed up as a win). */
+   The streak never halves: a wrong try only pauses it; any correct adds one. A wrong try never rolls (no loss dressed up as a win).
+   Mastery (DESIGN-v3 §5; Tony #1 no score screen, #10 short line, #25.5): Rewards.mastery(ev), one call per engine event. C4 (app.js)
+   translates redo.mjs's flow into these; tpl = the template's short label ("Q7"), never a topic name:
+     { type: "miss", tpl, b }          a graded wrong on the original (b: the template has a `b` twin); starts its track
+     { type: "repair_done", tpl }      a repair or alt ladder finished (redo.mjs ladder_done)
+     { type: "twin_a", tpl, ok }       the `a` twin, solo, graded
+     { type: "twin_b", tpl, ok }       the `b` twin, solo, graded
+   conquered[tpl] = repaired, then `a` solo right, then `b` solo right where one exists (redo.mjs's action "conquered"). A solo twin
+   wrong resets: a new ladder, then that twin again (an `a` win stands after a `b` miss). Conquered stays conquered (never goes down).
+   The HUD shows "N/20 conquered" (cfg.goal) by the level bar, with a finish line; app.js shows r.line with FX.conquered(). */
 (function (g) {
   'use strict';
-  var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000 };
+  var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000, goal: 20 };
   var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
     "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You did not guess that. Nice.",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
@@ -22,7 +31,7 @@
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
   var img = function (n) { return '<img src="' + icon(n) + '" alt="" draggable="false">'; };
-  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {}, cv: 2, keep: 1 }; }
+  function fresh() { return { xp: 0, streak: 0, dry: 0, lastBurst: 0, real: 0, snacks: 0, dead: 0, hist: [], paid: {}, missed: {}, orig: {}, won: {}, mt: {}, cv: 2, keep: 1 }; }
   function ls() { try { return g.localStorage || null; } catch (e) { return null; } }
   function load() {
     var d = fresh();
@@ -57,7 +66,8 @@
   function state() {
     if (!s) return null;
     var L = levelOf(s.xp), f = Math.min(floorOf(L), s.xp), n = floorOf(L + 1);   // a kept level (old save) fills its bar from today's XP
-    return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate() };
+    return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate(),
+      won: Object.keys(s.won).length, goal: cfg.goal };
   }
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
   function skipSnack() { if (!s) return false; s = load(); return s.hist.length >= 10 && rate() > 0.9; }
@@ -110,6 +120,33 @@
     return r;
   }
 
+  /* mastery: ev = { type: miss | repair_done | twin_a | twin_b, tpl, b, ok } (the header) -> { conquered, newly, count, goal, line, note }.
+     line: the one conquered line, only on the event that conquers; note: the miss helper copy. s.mt[tpl] = { b, rep, a } while on its track */
+  function mastery(ev) {
+    ev = ev || {};
+    var tpl = String(ev.tpl || ''), r = { conquered: false, newly: false, count: 0, goal: cfg.goal, line: null, note: null };
+    if (!s || !tpl) return r;
+    s = load();
+    var t = s.mt[tpl], won = !!s.won[tpl];
+    if (!won) {
+      if (ev.type === 'miss') { t = s.mt[tpl] = { b: !!ev.b, rep: false, a: false }; r.note = tpl + " isn't conquered yet"; }
+      else if (t && ev.type === 'repair_done') t.rep = true;
+      else if (t && (ev.type === 'twin_a' || ev.type === 'twin_b')) {
+        var w = ev.type === 'twin_a' ? 'a' : 'b';
+        if (!ev.ok) { t.rep = false; if (w === 'a') t.a = false; }               // a new ladder, then that twin again
+        else if (t.rep && (w === 'a' || t.a)) {
+          if (w === 'a') t.a = true;
+          if (w === 'b' || !t.b) { s.won[tpl] = true; delete s.mt[tpl]; won = r.newly = true; r.line = tpl + ' and variants conquered'; }
+        }
+      }
+      save();
+    }
+    r.conquered = won; r.count = Object.keys(s.won).length;
+    if (r.newly) render(0);
+    return r;
+  }
+  function conquered() { return s ? JSON.parse(JSON.stringify(s.won)) : {}; }
+
   /* the fading original (spec 1b) per Practice Exam question q: 1 = the first snack of q, the whole solution; 2 = a later snack, the
      last line hidden ("tap to peek"); 3 = after a first-try correct on a snack of q, folded away */
   function origLevel(q, code) {
@@ -136,6 +173,7 @@
     el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin24') + '</span><b class="rw-num">0</b></span>' +
       '<span class="rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
       '<span class="rw-lvl-body"><span class="rw-bar"><i></i></span><span class="rw-to"></span></span></span>' +
+      '<span class="rw-won"><span class="rw-goal"><i></i></span><span class="rw-won-t"></span></span>' +
       '<span class="rw-streak"><span class="rw-flame">' + TICK + '</span><b>0</b></span>' +
       '<span class="rw-counts"></span>' +
       '<button type="button" class="rw-tap" aria-label="Your progress" popovertarget="rwPop"></button>';
@@ -152,7 +190,7 @@
     }
     var q = function (sel) { return el.querySelector(sel); };
     ui = { el: el, xp: q('.rw-num'), lvl: q('.rw-lvl'), lvlN: q('.rw-star b'), bar: q('.rw-bar i'), to: q('.rw-to'),
-      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), pop: pop };
+      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), goal: q('.rw-goal i'), won: q('.rw-won-t'), pop: pop };
     ui.lvl.addEventListener('animationend', function () { ui.lvl.classList.remove('rw-pulse'); });
     shownLvl = null;
     render(0);
@@ -180,20 +218,23 @@
     }
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
-    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
+    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak); ui.el.classList.toggle('rw-z-won', !st.won);
+    var gp = Math.min(1, st.won / st.goal);                                  // the finish line is the bar's right end (rewards.css .rw-goal::after)
+    ui.goal.style.setProperty('--p', gp); ui.won.innerHTML = '<b>' + st.won + '/' + st.goal + '</b> conquered';
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
     ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
       '<span class="rw-bar"><i></i></span><dl>' +
       '<dt>Next level</dt><dd>' + st.toNext + ' XP to go</dd><dt>Points</dt><dd>' + st.xp + ' XP</dd>' +
       '<dt>Cracked</dt><dd>' + st.streak + ' right answers</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
-      '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>';
+      '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>' +
+      '<p class="rw-pop-won"><span class="rw-goal"><i style="--p:' + gp + '"></i></span><b>' + st.won + '/' + st.goal + '</b> conquered</p>';
     ui.pop.querySelector('.rw-bar i').style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
-      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved');
+      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved, ' + st.won + ' of ' + st.goal + ' conquered');
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
   g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
-    origSolved: origSolved, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND };
+    origSolved: origSolved, mastery: mastery, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND };
 })(typeof window !== 'undefined' ? window : globalThis);

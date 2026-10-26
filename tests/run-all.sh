@@ -74,6 +74,7 @@ weight() {
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
     repair) echo 5 ;;   # C2 local run ~4 s (estimate until CI timing)
+    login) echo 5 ;;   # local run ~7 s
     *) echo 5 ;;
   esac
 }
@@ -94,6 +95,7 @@ tags() {
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
     cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
+    login) echo "@logic @real-time" ;;
     *) echo "" ;;
   esac
 }

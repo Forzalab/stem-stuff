@@ -1,0 +1,61 @@
+{
+  "v": 1,
+  "problems": [
+    {
+      "code": "PHYS_WLC", "title": "Warm-up: speed of a cart", "type": "mc",
+      "body": [{"type": "text", "md": "A cart covers $6\\ \\text{m}$ in $2\\ \\text{s}$. Find its speed, in $\\text{m/s}$."}],
+      "choices": [{"id": "a", "md": "$3$"}, {"id": "b", "md": "$12$"}, {"id": "c", "md": "$\\tfrac13$"}],
+      "correct": "a",
+      "wrong": [{"choice": "b", "error": "op-swap", "hint": "QUACK. Speed is distance per time. Multiply or divide?"},
+                {"choice": "c", "error": "algebra", "hint": "QUACK. Which one goes on top: the metres or the seconds?"}],
+      "welcome": true,
+      "noob": {"tier": 1},
+      "repair": {"steps": [
+        {"id": "given", "label": "Name the unknown", "kind": "pick", "opts": [{"id": "a", "md": "speed"}, {"id": "b", "md": "time"}], "ok": "a"},
+        {"id": "sheet", "label": "Which line on the sheet?", "kind": "sheet", "pool": ["V_AVG", "KE"], "ok": "V_AVG",
+         "why": {"q": "Why this line?", "opts": ["it links distance and time", "it has a v in it", "it is the first line"], "ok": 0}},
+        {"id": "answer", "label": "Final answer", "kind": "pick"}
+      ]}
+    },
+    {
+      "code": "PHYS_RPA", "title": "Two carts stick together", "type": "num",
+      "body": [{"type": "text", "md": "A $2\\ \\text{kg}$ cart moving at $3\\ \\text{m/s}$ hits a $1\\ \\text{kg}$ cart moving at $2\\ \\text{m/s}$ the opposite way. They stick. Find their speed, in $\\text{m/s}$."}],
+      "answer": "4/3",
+      "wrong": [{"match": "8/3", "error": "sign", "hint": "QUACK. The carts move opposite ways. What sign does the second momentum get?"}],
+      "noob": {"tier": 2},
+      "repair": {
+        "steps": [
+          {"id": "given", "label": "Name the unknown", "kind": "pick", "opts": [{"id": "a", "md": "$v_f$"}, {"id": "b", "md": "$m_2$"}], "ok": "a",
+           "miss": {"b": "You already know $m_2$. Read the stem again."}},
+          {"id": "sheet", "label": "Which line on the sheet?", "kind": "sheet", "pool": ["MOM_CONS", "KE", "IMPULSE"], "ok": "MOM_CONS"},
+          {"id": "signs", "label": "Set the signs", "kind": "fill", "tex": "v_f=\\frac{m_1v_1 \\,▢\\, m_2v_2}{m_1+m_2}", "opts": ["+", "−", "×"], "ok": "−",
+           "fam": "sign",
+           "why": {"q": "Why a minus here?", "opts": ["the carts move opposite ways", "momentum is always negative", "a minus means slowing down"], "ok": 0}},
+          {"id": "answer", "label": "Final answer", "kind": "num", "ok": "4/3", "tol": 0.02}
+        ],
+        "alt": {"steps": [
+          {"id": "units", "label": "Units of momentum", "kind": "pick", "opts": [{"id": "a", "md": "$\\text{kg·m/s}$"}, {"id": "b", "md": "$\\text{kg·m/s}^2$"}], "ok": "a",
+           "why": {"q": "Why these units?", "opts": ["mass times speed", "mass times acceleration", "force times time squared"], "ok": 0}},
+          {"id": "sanity", "label": "Faster or slower than the first cart?", "kind": "pick", "opts": [{"id": "a", "md": "slower"}, {"id": "b", "md": "faster"}], "ok": "a"},
+          {"id": "answer", "label": "Final answer", "kind": "num", "ok": "4/3", "tol": 0.02}
+        ]}
+      }
+    },
+    {
+      "code": "PHYS_RPB", "title": "Two carts stick together, new numbers", "type": "num",
+      "body": [{"type": "text", "md": "A $3\\ \\text{kg}$ cart moving at $2\\ \\text{m/s}$ hits a $1\\ \\text{kg}$ cart moving at $2\\ \\text{m/s}$ the opposite way. They stick. Find their speed, in $\\text{m/s}$."}],
+      "answer": "1",
+      "wrong": [{"match": "2", "error": "sign", "hint": "QUACK. The carts move opposite ways. What sign does the second momentum get?"}],
+      "noob": {"tier": 2},
+      "twin": "a", "parent_template": "PHYS_RPA"
+    },
+    {
+      "code": "PHYS_RPC", "title": "Two carts, same way", "type": "num",
+      "body": [{"type": "text", "md": "A $2\\ \\text{kg}$ cart moving at $3\\ \\text{m/s}$ catches a $1\\ \\text{kg}$ cart moving at $2\\ \\text{m/s}$ the same way. They stick. Find their speed, in $\\text{m/s}$."}],
+      "answer": "8/3",
+      "wrong": [{"match": "4/3", "error": "sign", "hint": "QUACK. Both carts move the same way. Does the second momentum still get a minus?"}],
+      "noob": {"tier": 3},
+      "twin": "b", "parent_template": "PHYS_RPA"
+    }
+  ]
+}

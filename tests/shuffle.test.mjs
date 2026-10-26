@@ -257,3 +257,73 @@ test("dead-easy (T28) P1: before SOME snacks, same answer every time for one sna
   qShow(st, "PHYS_ZDA"); assert.equal(deadLead(st, deads, yes), "PHYS_ZDB");
   qShow(st, "PHYS_ZDB"); assert.equal(deadLead(st, deads, yes), null, "the pool is spent");
 });
+
+/* ramp (noob mode, DESIGN-v3 §2, Tony #25.6): the dead-easy opener, then tiers 1 -> 2 -> 3 behind a gate; a seen one comes back every REVIEW_EVERY */
+const rampPool = ["PHYS_ZDA", ...[1, 2, 3].flatMap(t => Array.from({ length: 8 }, (_, i) => "PHYS_T" + t + String.fromCharCode(65 + i)))];
+const tierOf = c => c.startsWith("PHYS_ZD") ? 0 : +c[6];
+async function rampRun(salt, answers) {   // answers[i]: true / false = a graded first pick on slot i + 1, undefined = shown, not answered
+  const { ramp, rampAnswer, qNew, qShow, qAnswer } = await import("../shuffle.mjs");
+  const st = qNew(salt), run = [];
+  for (let i = 0; i < answers.length; i++) {
+    const p = ramp(st, rampPool, tierOf);
+    qShow(st, p.code); st.hist.push({ c: p.code }); run.push(p);
+    if (answers[i] !== undefined && qAnswer(st, p.code, answers[i])) rampAnswer(st, p.code, answers[i], tierOf);
+  }
+  return { st, run };
+}
+test("ramp: a fresh state opens on the dead-easy, then only tier-1 codes", async () => {
+  const { run } = await rampRun("a", Array(8).fill(undefined));
+  assert.equal(run[0].code, "PHYS_ZDA");
+  for (const p of run.slice(1)) assert.equal(tierOf(p.code), 1, p.code);
+});
+test("ramp: 2 clean first picks -> the next is tier 2; a miss -> back to tier 1 (floor 1, cap 3)", async () => {
+  const up = await rampRun("a", [undefined, true, true, undefined]);
+  assert.equal(up.st.ramp.tier, 2);
+  assert.equal(tierOf(up.run[3].code), 1, "slot 4 is the first re-injection (a seen tier 1)");
+  assert.equal(up.run[3].why, "review");
+  const up5 = await rampRun("a", [undefined, true, true, undefined, undefined]);
+  assert.equal(tierOf(up5.run[4].code), 2, "after 2 clean, the next new one is tier 2");
+  const one = await rampRun("a", [undefined, true, undefined]);
+  assert.equal(tierOf(one.run[2].code), 1, "one clean is not enough");
+  const down = await rampRun("a", [undefined, true, true, false, undefined]);
+  assert.equal(down.st.ramp.tier, 1, "a miss drops a tier");
+  assert.equal(tierOf(down.run[4].code), 1);
+  const floor = await rampRun("a", [undefined, false, false, undefined]);
+  assert.equal(floor.st.ramp.tier, 1, "never below tier 1");
+  const top = await rampRun("a", [undefined, true, true, true, true, true, true, true, true]);
+  assert.equal(top.st.ramp.tier, 3, "never above tier 3");
+});
+test("ramp: from item 4, one seen code comes back every REVIEW_EVERY (slot 9 is a re-injection)", async () => {
+  const { REVIEW_FROM, REVIEW_EVERY } = await import("../shuffle.mjs");
+  assert.equal(REVIEW_FROM, 4); assert.equal(REVIEW_EVERY, 5);
+  const { run } = await rampRun("a", Array(14).fill(true));
+  const earlier = new Set(run.slice(0, 8).map(p => p.code));
+  assert.ok(earlier.has(run[8].code), "slot 9 re-shows a seen code: " + run[8].code);
+  assert.equal(run[8].why, "review");
+  assert.notEqual(run[8].code, "PHYS_ZDA", "never the dead-easy opener");
+  assert.notEqual(run[8].code, run[7].code, "never the one just shown");
+  for (const [i, p] of run.entries()) if (![3, 8, 13].includes(i)) assert.notEqual(p.why, "review", "slot " + (i + 1));
+});
+test("ramp: skipAhead jumps a tier (cap 3)", async () => {
+  const { ramp, skipAhead, qNew, qShow } = await import("../shuffle.mjs");
+  const st = qNew("a"); qShow(st, ramp(st, rampPool, tierOf).code);
+  skipAhead(st); assert.equal(tierOf(ramp(st, rampPool, tierOf).code), 2);
+  skipAhead(st); assert.equal(tierOf(ramp(st, rampPool, tierOf).code), 3);
+  skipAhead(st); assert.equal(st.ramp.tier, 3);
+});
+test("ramp: reload (same salt, JSON round trip) gives the same order", async () => {
+  const { ramp } = await import("../shuffle.mjs");
+  const ans = [undefined, true, false, true, true, undefined, true, true, false, true];
+  const a = await rampRun("s9", ans), b = await rampRun("s9", ans);
+  assert.deepEqual(a.run.map(p => p.code), b.run.map(p => p.code));
+  const back = JSON.parse(JSON.stringify(a.st));
+  assert.deepEqual(ramp(back, rampPool, tierOf), ramp(a.st, rampPool, tierOf));
+  assert.notDeepEqual((await rampRun("other", ans)).run.map(p => p.code), a.run.map(p => p.code), "the salt changes the order");
+});
+test("ramp: no item at the current tier -> the nearest tier still serves; an empty pool -> null", async () => {
+  const { ramp, qNew, qShow } = await import("../shuffle.mjs");
+  const st = qNew("a"), pool = ["PHYS_T3A", "PHYS_T3B"], run = [];
+  for (let i = 0; i < 5; i++) { const p = ramp(st, pool, tierOf); qShow(st, p.code); run.push(p.code); }
+  assert.deepEqual([...run.slice(0, 2)].sort(), pool, "tier 3 only: still served, each once first");
+  assert.equal(ramp(qNew("a"), [], tierOf), null);
+});
