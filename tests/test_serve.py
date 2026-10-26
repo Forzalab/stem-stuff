@@ -1264,6 +1264,24 @@ class Banks(unittest.TestCase):
         self.assertEqual((b["code"], b["at"]), ("BANK_AB12", "CALC1_X2P"))
         self.assertIsNone(serve.bank_payload("last", "other"))
 
+    def test_front_default_is_exam3(self):                                    # Tony, Oct 26: the front bank is the Exam 3 main bank
+        """A fresh browser's "last" bank is BANK_P3X "Exam 3" (not BANK_P3Q, the OpenUI test bank); its payload names it the front
+        bank ("front": its bar title), which is the one place nav.js learns it. STEM_FRONT[_TITLE] pins a spec's own front; "" = off."""
+        self.write("BANK_P3X", {"v": 1, "problems": [BANK["CALC1_T6B"]]})
+        env = {k: v for k, v in os.environ.items() if k not in ("STEM_FRONT", "STEM_FRONT_TITLE")}
+        with unittest.mock.patch.dict(os.environ, env, clear=True):
+            self.assertEqual(serve.front(), ("BANK_P3X", "Exam 3"))
+            b = serve.bank_payload("last", "s9")
+            self.assertEqual((b["code"], b.get("front")), ("BANK_P3X", "Exam 3"))
+            self.assertNotIn("front", serve.bank_payload("BANK_AB12", "s9"))      # any other bank: its code in the bar, no noob ramp
+        with unittest.mock.patch.dict(os.environ, dict(env, STEM_FRONT="BANK_AB12", STEM_FRONT_TITLE="Exam 2"), clear=True):
+            self.assertEqual(serve.bank_payload("last", "s10").get("front"), "Exam 2")
+            self.assertNotIn("front", serve.bank_payload("BANK_P3X", "s10"))
+        with unittest.mock.patch.dict(os.environ, dict(env, STEM_FRONT=""), clear=True):
+            self.assertEqual(serve.front(), (None, None))
+            self.assertIsNone(serve.bank_payload("last", "s11"))              # the front door off (upload specs)
+            self.assertNotIn("front", serve.bank_payload("BANK_P3X", "s11"))
+
     def test_bank_gone(self):
         serve.bank_payload("BANK_AB12", "s5")
         os.remove(os.path.join(serve.BANKS, "BANK_AB12.json"))

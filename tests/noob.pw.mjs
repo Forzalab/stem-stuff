@@ -36,7 +36,7 @@ assert.ok(SALT, "no salt with a two dead-easy opener");
 const PLAN = plays(SALT);
 assert.deepEqual(PLAN.map(tierOf), [0, 0, 1, 1, 2], "the pure ramp (B1) changed");
 
-const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
+const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });   // the front bank pinned to this fixture (serve.py FRONT is the real one)
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;

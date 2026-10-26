@@ -926,6 +926,18 @@ def snacks_placed(items):
     return out
 
 
+FRONT = ("BANK_P3X", "Exam 3")   # the front bank (DESIGN-v3 §1): what "/" opens on a fresh browser, and its bar title. The one source:
+                                 # its payload says "front" (bank_payload), nav.js reads that. Phys 2A Exam 3 main bank (Tony, Oct 26), not BANK_P3Q
+
+
+def front():
+    """(code, title) of the front bank: FRONT, or $STEM_FRONT (+ $STEM_FRONT_TITLE, else its code) for a spec's own; STEM_FRONT="" = off."""
+    code = os.environ.get("STEM_FRONT", FRONT[0])
+    if not code:
+        return None, None                # the front door off (upload specs): no bank is the front bank
+    return code, os.environ.get("STEM_FRONT_TITLE") or (FRONT[1] if code == FRONT[0] else code)
+
+
 def bank_payload(code, sid, mode="sugar"):
     """GET /b/<code>.json ("last" = this browser's last bank): {code, problems, marks, at}; None if there's no such bank.
     Opening a bank makes it this browser's last one (design/BANK.md). An old bank (bank_notice) adds "banner" before SUNSET;
@@ -934,7 +946,7 @@ def bank_payload(code, sid, mode="sugar"):
     if code == "last":
         with _tries_lock:
             _load_tries()
-            code = _last.get(sid, {}).get("bank") or os.environ.get("STEM_FRONT", "BANK_P2X") or None   # STEM_FRONT="" turns the front door off (upload specs)
+            code = _last.get(sid, {}).get("bank") or front()[0]   # a new browser: the front bank (None when STEM_FRONT="")
     note, dropped = _index()["notes"].get(code, (None, False))
     if dropped:
         return {"code": code, "problems": [], "dropped": note}
@@ -965,6 +977,9 @@ def bank_payload(code, sid, mode="sugar"):
         out["burst_gap_s"] = gap                 # T22: only when the bank sets it
     if note:
         out["banner"] = note                     # SCHEMA.md Version table: older than CUTOFF, before SUNSET
+    fc, ft = front()
+    if code == fc:
+        out["front"] = ft                        # the front bank: its bar title + noob ramp (nav.js front())
     return out
 
 

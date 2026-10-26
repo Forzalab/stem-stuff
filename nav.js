@@ -5,11 +5,11 @@
    one queue per bank in localStorage stem-q-<bank>. Prev / Next first walk the questions already shown (history). No queue UI (D57).
    The list button says the bank code. Hooks: app.js fires "drill:problem" { code } after every load and "drill:answer"
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows.
-   The front door (DESIGN-v3 §1, Tony #2-#4): FRONT is the bank "/" opens (serve.py's "last" for a new browser); its bar says only its
-   title, and Next plays the noob ramp (shuffle.mjs ramp) until "Mix it up" (the queue above). */
+   The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
+   is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
+   noob ramp (shuffle.mjs ramp) until "Mix it up" (the queue above). */
 import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
-export const FRONT = { code: "BANK_P2X", title: "Exam 2" };
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
   const s = String(new URLSearchParams(search).get("bank") || "").trim().toUpperCase();
@@ -116,7 +116,7 @@ function init() {
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
   /* noob mode (the front bank, until "Mix it up"): tier 0 = a dead-easy, else the author's noob.tier 1-3, untagged = 3 */
-  const front = () => !!bank() && bank().code === FRONT.code;
+  const front = () => !!bank() && !!bank().front;
   const noob = () => front() && !Q().mix;
   const tierOf = c => { if (dead(c)) return 0; const p = off() && off().get(c), t = p && p.noob && p.noob.tier; return [1, 2, 3].includes(t) ? t : 3; };
   /* a returner (stem-noob-<bank>, set at the first answer; read once per page, so this visit's own opener plays out) skips the opener */
@@ -205,7 +205,7 @@ function init() {
     codes = cs.length ? rows0(cs) : [];
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
-    name.textContent = bank() ? (front() ? FRONT.title : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
+    name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
     modes.hidden = !front();                                         // Mix it up / Skip ahead / Other banks: the front bank's list only
     if (front()) { mix.textContent = Q().mix ? "Easy first" : "Mix it up"; skip.hidden = !!Q().mix; }
     btn.setAttribute("aria-label", "Question list");

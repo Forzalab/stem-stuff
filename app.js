@@ -547,6 +547,7 @@ let bank = null;                         // { code, codes, get: Map code -> publ
 const src = v => { try { if (v === undefined) return localStorage.getItem("stem-src"); localStorage.setItem("stem-src", v); } catch { /* blocked */ } return null; };
 window.stemBank = {
   get code() { return bank && bank.code; },
+  get front() { return (bank && bank.front) || ""; },                 // the front bank's bar title (serve.py FRONT sends it), else ""
   codes: () => bank ? bank.codes.slice() : [],
   get: c => bank && bank.get.get(c),
   mark: c => (bank && bank.marks[c]) || null
@@ -608,7 +609,7 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   const nb = codes.bankNotice(b);
   if (nb.dropped) { if (!quiet) entryMsg(nb.dropped, "warn"); return false; }   // past its sunset (SCHEMA.md Version table): the message, not "not found"
   if (!b || !b.problems.length) { if (!quiet) entryMsg("QUACKK, code not found."); return false; }
-  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s, banner: nb.banner };
+  bank = { code: b.code, codes: b.problems.map(p => p.code), get: new Map(b.problems.map(p => [p.code, p])), marks: b.marks || {}, burstGap: b.burst_gap_s, banner: nb.banner, front: b.front || "" };
   src(b.code);
   remembered(b.code);
   bankChanged();
