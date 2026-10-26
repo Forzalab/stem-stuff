@@ -10,6 +10,8 @@
   /b/last.json = this browser's last bank, or null (design/BANK.md). Bank problems are graded like any other (/check).
 - GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
   multi (design/DONE.md). No answer, no hints.
+- GET /repair/<CODE>   -> the item's repair ladder {steps, alt?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
+  this browser has a recorded wrong try on it; `alt` only once a twin of the template was missed. Never in /p or /b.
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
@@ -89,6 +91,7 @@ BUNDLE = os.path.join(ROOT, "stem-stuff.html")
 BUNDLE_DIRS = ("", "design", "vendor", "vendor/katex")
 CODE_PATH = re.compile(r"^/p/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})\.json$")
 STATE_PATH = re.compile(r"^/state/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
+REPAIR_PATH = re.compile(r"^/repair/([A-Z][A-Z0-9]*_[A-Z0-9]{2,})$")
 BANK_CODE = re.compile(r"^BANK_[A-Z0-9]{3,6}$")
 BANK_PATH = re.compile(r"^/b/(BANK_[A-Z0-9]{3,6}|last)\.json$")
 _bundle_lock = threading.Lock()
@@ -974,6 +977,27 @@ def seen(code, sid):
         with _tries_lock:
             me["at"][bank_] = code
             _save_tries()
+
+
+def repair_of(p, sid):
+    """GET /repair/<code>: (status, body). The ladder is the template's (a twin names it in parent_template); 404 when there is none,
+    403 until this browser (any redo round too) has a wrong try recorded on p. `alt` rides only once a twin of the template was missed.
+    A twin's answer step loses the template's key (ok/tol/opts/miss): the twin's own key grades it (SCHEMA.md)."""
+    t = problems().get(p["parent_template"]) if p.get("twin") else p
+    rp = (t or {}).get("repair")
+    if not isinstance(rp, dict) or not rp.get("steps"):
+        return 404, {"error": "no repair"}
+    with _tries_lock:
+        _load_tries()
+        missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
+    if p["code"] not in missed:
+        return 403, {"error": "no wrong try yet"}
+    def mine(steps):
+        return steps if t is p else steps[:-1] + [{k: v for k, v in steps[-1].items() if k not in ("ok", "tol", "opts", "miss")}]
+    out = {"code": p["code"], "steps": mine(rp["steps"])}
+    if rp.get("alt") and any((problems().get(c) or {}).get("parent_template") == t["code"] for c in missed):
+        out["alt"] = {"steps": mine(rp["alt"]["steps"])}
+    return 200, out
 
 
 def answer_of(u):
@@ -3083,7 +3107,7 @@ def _dispatch(method, path, cookie_header, body, ua):
         return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
     if path == "/health":
         return health()
-    m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path)
+    m = STATE_PATH.match(path) or CODE_PATH.match(path) or BANK_PATH.match(path) or REPAIR_PATH.match(path)
     if not m:
         return None
     sid, cookie = new_sid(cookie_header)
@@ -3100,6 +3124,8 @@ def _dispatch(method, path, cookie_header, body, ua):
         return _json(200, state(view(p, mode), sid, reveal=mode == "sugar"), cookie)
     if hidden(p, mode):
         return _json(404, {"error": "not in sugar mode"}, cookie)
+    if m.re is REPAIR_PATH:
+        return _json(*repair_of(p, sid), cookie)
     out = _json(200, public(view(p, mode), sid), cookie)
     seen(p["code"], sid)
     return out

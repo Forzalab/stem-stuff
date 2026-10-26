@@ -1,0 +1,8 @@
+jsQR QR decoder, vendored unchanged.
+
+  file:     jsQR.js  (= dist/jsQR.js of the npm package, 10,101 lines, zero dependencies)
+  upstream: https://github.com/cozmo/jsQR
+  version:  jsqr 1.4.0 (npm), sha256 bc40c8a15196236b2314db0856f72ca0b49980cd5413b8c852a7349f5fee0859
+  license:  Apache-2.0, Copyright the jsQR authors (Cosmo Wolfe et al.) (full text in LICENSE next to this file)
+
+Used by mycluck.mjs decode(): reads the QR in a "My Cluck" image on the device (DESIGN-v3 / Tony #22b: the image never leaves it).

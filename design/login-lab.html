@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Login lab</title>
+<!-- My Cluck login lab (E4; Tony #22/#22b/#23, DESIGN-v3 §7): login.js on the real app.css tokens. Open: python3 serve.py 8833, then
+     http://localhost:8833/design/login-lab.html (needs http: login.js fetches and imports). Try it at 360 and desktop; ?k=<token> logs in.
+     acct/new and acct/login (S2) are not in serve.py yet: when the server answers 404 the stub below fakes them, in this page only.
+     tests/login.pw.mjs drives this page (it fakes S2 itself, with page.route, so it sees every request). -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../login.css">
+<style>
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 var(--font); }
+main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
+.lede { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--t-sm); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin: var(--s3) 0; font-size: var(--t-sm); }
+.chip { padding: var(--s1) var(--s3); border: var(--bw) solid var(--line); border-radius: 999px; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.chip:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+#labState { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>Login lab</h1>
+<p class="lede">The My Cluck dialog. The picked image is decoded here; only the token is sent.</p>
+<div class="row"><button type="button" class="chip" id="openLogin">Keep your progress</button><span id="labState">Guest</span>
+  <button type="button" class="chip" id="labOut">Forget this device (lab)</button></div>
+</main>
+<script>
+"use strict";
+/* S2 stub: only when the server has no acct/ route yet (404), and only on this page */
+(() => {
+  const real = window.fetch.bind(window), tok = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  window.fetch = async (url, init) => {
+    const r = await real(url, init), p = new URL(url, location.href).pathname;
+    if (r.status !== 404 || !/\/acct\/(new|login)$/.test(p)) return r;
+    return new Response(JSON.stringify(p.endsWith("new") ? { token: tok() } : { ok: true }), { headers: { "content-type": "application/json" } });
+  };
+})();
+</script>
+<script src="../login.js"></script>
+<script>
+"use strict";
+const show = () => {
+  const on = stemLogin.signedIn();
+  document.getElementById("labState").textContent = on ? "Signed in" : "Guest";
+  document.getElementById("openLogin").textContent = on ? "Show my Cluck" : "Keep your progress";
+};
+document.getElementById("openLogin").addEventListener("click", () => stemLogin.open());
+document.getElementById("labOut").addEventListener("click", () => { try { localStorage.removeItem("stem-acct"); } catch {} show(); });
+addEventListener("stem:login", show);
+stemLogin.ready.then(show);
+show();
+</script>
+</body>
+</html>
