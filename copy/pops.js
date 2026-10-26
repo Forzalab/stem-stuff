@@ -10,7 +10,7 @@ window.__stemPopLines = [
   { tag: "energy", text: "PE → KE speedrun. frame-perfect" },
   { tag: "forces", text: "free body diagram rizz is real and you have it", slang: true },
   { tag: "forces", text: "N and mg cancelled like your 8am. clean" },
-  { tag: "signs", text: "the signs agreed for once (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧" },
+  { tag: "signs", text: "The signs all aligned (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ Fantastic work!" },
   { tag: "circular", text: "a_c = v²/r said 'say less'" },
   { tag: "rotation", text: "torque-pilled. the wrench respects you" },
   { tag: "rotation", text: "I = ⅖MR² and you did NOT mix up the ball and the shell. iconic" }
