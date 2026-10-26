@@ -1,0 +1,50 @@
+/* repair.css: the Repair ladder (repair.js; brain design-round-66 DESIGN-v3 §3). App chrome on app.css tokens only (STYLE.md §2):
+   a help surface (Cluck's warm family), one step open at a time. States say themselves in glyphs (✓ / ✗) and words; colour only repeats them.
+   welcome.css (B3) owns the welcome variant's warm page; this file only lays the ladder out. */
+.rp { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s3) var(--s4) var(--s4); background: var(--help-sheet);
+  border: var(--bw) solid var(--help-line); border-radius: 10px; color: var(--ink); font-size: var(--t-sm); line-height: var(--lh-ui); }
+.rp-line { margin: 0 0 var(--s3); color: var(--help-on); }
+.rp-steps { margin: 0; padding: 0; list-style: none; }
+.rp-step { padding: var(--s2) 0; border-top: var(--bw) solid var(--help-rule); }
+.rp-step:first-child { border-top: 0; }
+.rp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); }
+.rp-n { flex: none; min-width: 1.25rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rp-label { flex: 1 1 8rem; min-width: 0; }
+.rp-val { margin-left: auto; overflow-wrap: anywhere; }
+.rp-ok { flex: none; color: var(--correct); font-weight: var(--w-em); }
+.rp-step[data-state="done"] .rp-label { color: var(--muted); }
+.rp-step[data-state="future"] { color: var(--muted); opacity: 0.6; }
+.rp-step[data-state="active"] .rp-label { font-weight: var(--w-em); }
+.rp-step[data-state="active"] .rp-n::before { content: "▸ "; }
+.rp-body { margin: var(--s2) 0 0 calc(1.25rem + var(--s2)); }
+.rp-body.rp-open { animation: rp-in var(--d-move) ease-out both; }
+.rp-tex { max-width: 100%; overflow-x: auto; margin-bottom: var(--s2); font-size: var(--t-md); }
+.rp-tex .katex, .rp-val .katex, .rp-chip .katex { font-size: var(--kx); }
+.rp-opts { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.rp-why { margin-top: var(--s3); }
+.rp-q { margin: 0 0 var(--s2); color: var(--help-on); }
+/* a chip: a real button, 44px tall; a tried-wrong one keeps its text and gains ✗ (never hue alone) */
+.rp-chip, .rp-check, .rp-skip, .rp-next { box-sizing: border-box; min-height: 44px; margin: 0; padding: var(--s1) var(--s3); border: var(--bw) solid var(--line);
+  border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.rp-chip:hover:not(:disabled) { background: var(--raised); }
+.rp-chip:disabled { color: var(--muted); cursor: default; }
+.rp-x { margin-left: var(--s2); color: var(--wrong); }
+.rp-num { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.rp-in { box-sizing: border-box; width: 8rem; max-width: 100%; min-height: 44px; padding: 0 var(--s3); border: var(--bw) solid var(--edge); border-radius: 8px;
+  background: var(--field); color: var(--ink); font: inherit; font-size: var(--t-md); }
+.rp-in:focus { outline: none; border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+.rp-check, .rp-next { border-color: var(--c1); background: var(--c1); color: var(--field); font-weight: var(--w-em); }
+.rp-next:disabled { opacity: 0.45; cursor: default; }
+.rp-unit { color: var(--muted); }
+.rp-miss, .rp-because, .rp-done, .rp-later { margin: var(--s2) 0 0; }
+.rp-miss { color: var(--help-on); }
+.rp-because { margin-left: calc(1.25rem + var(--s2)); color: var(--muted); font-size: var(--t-xs); }
+.rp-because::before { content: "why: "; }
+.rp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: var(--s3); }
+.rp-foot:empty { display: none; }
+.rp-done { margin: 0; font-weight: var(--w-em); }
+.rp-later { margin: 0; color: var(--muted); }
+.rp-skip { margin-left: auto; border-color: transparent; background: none; color: var(--muted); }
+.rp :is(.rp-chip, .rp-check, .rp-skip, .rp-next):focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+@keyframes rp-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rp-body.rp-open { animation: none; } }
