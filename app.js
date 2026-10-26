@@ -600,7 +600,7 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   } catch (e) {
     const inc = reqInc("bank", path, t0, e === r ? { r, tp } : r ? { e, phase: "parse", tp } : { e, tp });
     if (!quiet) {
-      entryMsg(timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", inc);   // COPY-PENDING: the kaomoji (Tony #36 [[sad kaomoji]])
+      entryMsg(timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
@@ -655,7 +655,7 @@ async function load(code) {
     }
   }
   catch (e) {
-    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);   // COPY-PENDING: the kaomoji (Tony #36 [[sad kaomoji]])
+    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -2014,9 +2014,8 @@ function clClose(dismiss) {
    chrome, STYLE.md §5); "Show him" stays put; the button's name is plain. Phones: unchanged. In memory only, never stored. */
 let clGone = false, hkT = 0, hkI = 0, hkK = null;
 const HK_IDLE = ["Cluck's bathing in the sunshine", "Cluck's waiting for breadcrumbs",   // Tony #36: one slot of the duck kind, a random pick each time it shows
-  "Cluck's paddling in place", "Cluck's counting ripples", "Cluck's quacking a crossword", "Cluck's ruffling a few feathers",   // COPY-PENDING
-  "Cluck's practicing his waddle", "Cluck's taking a quick dip", "Cluck's bobbing for snacks", "Cluck's preening, back soon",   // COPY-PENDING
-  "Cluck's on a pond break", "Cluck's getting his ducks in a row"];                                                              // COPY-PENDING
+  "Cluck's paddling in place", "Cluck's counting ripples", "Cluck's practicing his waddle", "Cluck's taking a quick dip",
+  "Cluck's bobbing for snacks", "Cluck's preening, back soon", "Cluck's on a pond break", "Cluck's getting his ducks in a row"];
 const HK = {                                                                // the A/B by humour kind: one kind per device (hkKind)
   sassy: ["Cluck is pretending not to watch", "Cluck has notes. Many notes.", "Cluck saw that. Just saying.", "Cluck is waiting. Patiently. Mostly.", "Cluck could explain, if asked"],
   deadpan: ["Cluck is still here", "Cluck has an explanation", "Cluck is available", "Cluck remains a duck", "Cluck is on standby"],
@@ -2377,7 +2376,7 @@ async function rewardShow(mine, res) {
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
 const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
-  miss: ["Did an oopsie or two? Your progress is safe!", "Third time's the charm.", "They say third time's the charm, QUACKK—"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4); lines 1 + 3 Tony #36, Oct 26
+  miss: ["Did an oopsie or two? Your progress is safe!", "Double whammy! That's OK, happens to the best of us.", "They say third time's the charm, QUACKK—"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4); lines 1 + 3 Tony #36, line 2 Tony, Oct 26
   redo: ["Sometimes you get to redo a question!"] };                                // Tony, Oct 19: say it the first time a miss comes back
 /* the redo beat: a Redeem showing (a past miss back, the "Second chance" tag) opens unanswered; caret on the tag. Before the first
    answer only, so it never meets the one-more-try note or the Comeback toast */

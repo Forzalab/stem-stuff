@@ -24,10 +24,10 @@ window.__stemRepairLines = {
   hintBy: {                                        // the same, by try number
     far: [
       "Good attempt, but keep trying!",
-      "That's not it (╥﹏╥) Keep calm and carry on!",   // COPY-PENDING (kaomoji)
+      "That's not it (╥﹏╥) Keep calm and carry on!",   // kaomoji: Tony OK'd, Oct 26
       "First time?"
     ],
-    two: "Two tries is normal. Two tries, never too much. (ง •̀_•́)ง",   // COPY-PENDING (kaomoji)
+    two: "Two tries is normal. Two tries, never too much. (ง •̀_•́)ง",   // kaomoji: Tony OK'd, Oct 26
     three: ["Third time's the charm.", "Who says three failures are bad?"]
   },
   auto: "",                                        // cut (#36): 2 wrong tries fill the step in, no line

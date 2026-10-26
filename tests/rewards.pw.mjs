@@ -372,7 +372,7 @@ try {
     await pick(o, "c");
     await tip("Did an oopsie or two? Your progress is safe!", "#rwHud .rw-streak");
     await go(o, "CALC1_S01"); await pick(o, "b"); await pick(o, "c");
-    await tip("Third time's the charm.", "#rwHud .rw-streak");
+    await tip("Double whammy! That's OK, happens to the best of us.", "#rwHud .rw-streak");
     await go(o, "CALC1_S02"); await pick(o, "b"); await pick(o, "c");
     await tip("They say third time's the charm, QUACKK—", "#rwHud .rw-streak");
     assert.equal(await seen("miss"), "3");
