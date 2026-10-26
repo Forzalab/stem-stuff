@@ -52,6 +52,11 @@ html.side:not(.qnav-on):not(.dock-bottom):not(.start) .entry { max-width: 28rem;
   position: relative; max-height: min(32rem, 60svh); overflow-y: auto; overscroll-behavior: contain;
   padding: var(--s2); background: var(--sheet); border-radius: 10px;
 }
+/* the front bank's row over the list (nav.js): Mix it up / Skip ahead, then a small "Other banks" text link at the right */
+.qmodes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: 0 0 var(--s2); }
+.qmodes[hidden], .qmodes [hidden] { display: none; }
+.qbanks { margin-left: auto; padding: var(--s2); border: 0; background: none; color: inherit; font: inherit; font-size: var(--t-sm); opacity: 0.7; text-decoration: underline; cursor: pointer; }
+.qbanks:hover { opacity: 1; }
 .qlist ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .qnav-on:not(.dock-bottom):not(.start) .qlist ol { grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); column-gap: var(--s2); }   /* wide: rows side by side, in order left to right */
 .qnav-on:not(.dock-bottom):not(.start) .qlist a { align-items: center; }   /* wide: one line per row, so the columns line up (Tony, Oct 6: variant A); the full title is the tooltip and the label */
