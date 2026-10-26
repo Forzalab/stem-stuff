@@ -52,7 +52,9 @@ class MiniLeak(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)
         where, reason, f = self.incidents[-1]
         self.assertEqual((where, reason, str(f["err"])), ("mini", "leak", "mini_label"))   # the pattern id, never the text
-        self.assertNotIn("sign is off", json.dumps(serve.inc_fields(dict(f, where=where, reason=reason)), default=str))
+        fields = serve.inc_fields(dict(f, where=where, reason=reason))
+        self.assertEqual((fields["q"], fields["err"]), ("K_VF", "PromptLeak: mini_label"))   # as _relay logs it
+        self.assertNotIn("sign is off", json.dumps(fields, default=str))
 
     def test_two_leaks_are_an_authored_line(self):
         self.claude = [(prog("The KEY has it. Which way?"),), (prog("Step goal: find the speed. What do you know?"),)]
@@ -61,7 +63,7 @@ class MiniLeak(unittest.TestCase):
         self.assertEqual([(w, r, str(f["err"])) for w, r, f in self.incidents], [("mini", "leak", "key_label"), ("mini", "leak", "mini_label")])
 
     def test_openrouter_arm_is_guarded(self):
-        self.claude, self.orr = [("", "refusal")], [(prog("Twist: a. Which way does the cart go?"),), (GOOD,)]
+        self.claude, self.orr = [("", "refusal")] * 2, [(prog("Twist: a. Which way does the cart go?"),), (GOOD,)]
         self.assertEqual(mini.reply(CTX), GOOD)
         self.assertEqual([str(f["err"]) for _, _, f in self.incidents], ["mini_label"])
         os.environ.pop("CLAUDE_API")                          # the OpenRouter chain alone

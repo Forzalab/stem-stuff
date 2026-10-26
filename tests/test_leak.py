@@ -39,7 +39,7 @@ LEAKS = {   # pattern id -> replies a model could send that echo a prompt
     "student_tag": ["<student_3fa9c2d1>", "</student_ab12cd34>"],
     "prompt_word": ["my system prompt", "my instructions say", "the letter prompt", "an external classifier checks me", "trade secret"],
     "mini_label": ["Your error label says sign.", "the ERROR LABEL", "Step goal: find v", "Twist: a", "Student answer: 5",   # mini.py's user turn
-                   "Worked solution: v = 1", "I must never quote it"],
+                   "Worked solution: v = 1", "Numbers: v_i = 3.0", "I must never quote it"],
     "lore_word": ["the lamp will censor me", "stuck in a sandbox", "the evil machine", "a presolved item", "saccharine mode"],
 }
 CLEAN = [   # plain English and the app's own copy: never a hit

@@ -2,7 +2,9 @@
 the static prefix, cached), no lore; the user turn carries the problem context. Engine: Claude (MINI_MODEL) first, then OpenRouter with the
 same model id first and OPENROUTER_MODELS after; a refusal, an error or an empty reply moves on. Leak filter: a reply that says the key
 (within tol) or the blanked formula is regenerated once; a second leak, a reply that is not OpenUI Lang, or no engine = an authored line.
-What goes out is always an OpenUI Lang program that passed views_gate (oui.py): replies use OpenUI Lang only (CLAUDE.md).
+Prompt-leak guard (W92c): the same serve.leak_cut / leak_scan as every Cluck reply, on the program's strings (mini is not streamed: no
+PromptGuard needed); a source phrase is cut ("From the KEY: ..."), any other prompt word drops the reply like a key leak + an incident
+(reason "leak", the pattern id, never the text). What goes out is always an OpenUI Lang program that passed views_gate (oui.py): replies use OpenUI Lang only (CLAUDE.md).
 serve.py's pipe helpers (claude_ready, budget_hit, incident, _or_post, ...) are reused, imported late (serve imports mini, route S2)."""
 import hashlib
 import json
@@ -157,6 +159,21 @@ def ask(system, user):
     return None
 
 
+_STR = re.compile(r'"((?:[^"\\\n]|\\.)*)"')            # an OpenUI Lang string literal (its escapes kept as they are)
+
+
+def guard(prog, ctx):
+    """prog with every LEAK_CUT phrase gone from its strings (a cut program is gated again), or None when a string still says a prompt
+    word (serve.leak_scan: the KEY, a prompt label, ...); the incident carries the pattern id only, never the text"""
+    s = _srv()
+    out = _STR.sub(lambda m: '"' + s.leak_cut(m.group(1))[0] + '"', prog)
+    hits = [h for m in _STR.finditer(out) for h in s.leak_scan(m.group(1))]
+    if not hits:
+        return out if out == prog else valid(out, ctx)     # what goes out always passed views_gate
+    s.incident("mini", "leak", err=s.PromptLeak(hits[0][0]), q=ctx.get("code"))
+    return None
+
+
 def reply(ctx):
     """mini-Cluck's answer for one stuck sub-step, as an OpenUI Lang program. ctx: code, stem, numbers, solution, answer, error,
     goal, twist (the prompt) + key, tol, formula (the leak filter)"""
@@ -166,8 +183,9 @@ def reply(ctx):
         if text is None:
             break
         prog = None if leaked(text, ctx) else valid(text, ctx)
+        prog = prog and guard(prog, ctx)
         if prog:
             return prog
-        _srv().log(f"mini {ctx.get('code', '-')}: reply dropped (leak or not OpenUI Lang)")
+        _srv().log(f"mini {ctx.get('code', '-')}: reply dropped (leak, prompt word or not OpenUI Lang)")
     n = int(hashlib.sha256(f"{ctx.get('code')}|{ctx.get('error')}".encode()).hexdigest(), 16)
     return authored(AUTHORED[n % len(AUTHORED)])
