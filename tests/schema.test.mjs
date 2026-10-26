@@ -5,7 +5,8 @@ import { compile, evaluate } from "mathjs";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { validator, bank, repairFaults } from "./schemas.mjs";
+import { schema, validator, bank, repairFaults } from "./schemas.mjs";
+import { FAMILIES } from "../slips.mjs";
 import { isBankId, isBuiltin, isReserved, prefixOf } from "../codes.mjs";
 
 // problems.json: the whole bank in one file (SCHEMA.md)
@@ -512,7 +513,6 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
       "ok not in the pool": p => { steps(p.PHYS_RPA)[1].ok = "PE_G"; },
       "only the answer step may leave ok out": p => { delete steps(p.PHYS_RPA)[0].ok; },
       "fill without its blank": p => { steps(p.PHYS_RPA)[2].tex = "v_f=m_1v_1"; },
-      "fam is not a slip family or error type": p => { steps(p.PHYS_RPA)[2].fam = "made-up"; },
       "repeated id": p => { steps(p.PHYS_RPA)[1].id = "given"; },
       "why.ok past the chips": p => { steps(p.PHYS_RPA)[2].why.ok = 3; },
       "a ladder with no why": p => { p.PHYS_RPA.repair.alt.steps.forEach(s => delete s.why); },
@@ -531,8 +531,10 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     const bad = [p => { p.PHYS_RPA.noob = { tier: 4 }; }, p => { p.PHYS_RPA.noob = { tier: 1, x: 1 }; }, p => { p.PHYS_RPB.twin = "c"; },
       p => { p.PHYS_WLC.welcome = false; }, p => { p.PHYS_RPB.parent_template = "rpa"; }, p => { p.PHYS_RPA.repair = { steps: [] }; },
       p => { steps(p.PHYS_RPA)[0].kind = "drag"; }, p => { steps(p.PHYS_RPA)[2].why.opts.pop(); }, p => { p.PHYS_RPA.repair.alt.extra = 1; },
-      p => { steps(p.PHYS_RPA)[0].hint = "old"; }];
+      p => { steps(p.PHYS_RPA)[0].hint = "old"; }, p => { steps(p.PHYS_RPA)[2].fam = "made-up"; }];
     for (const f of bad) assert.ok(!validate(edit(f)), f.toString());
+    const fam = schema("problems").$defs.rstep.properties.fam.anyOf, errs = schema("problems").$defs.error.enum;
+    assert.deepEqual(new Set([...errs, ...fam[1].enum]), new Set([...errs, ...FAMILIES]), "fam = the error types + slips.mjs FAMILIES");
   });
   test("tools/schema-check.mjs runs the gate: the fixture passes (also --repair); problems.json passes, but not --repair", () => {
     const run = (...a) => spawnSync("node", [fileURLToPath(new URL("tools/schema-check.mjs", root)), ...a], { encoding: "utf8" });

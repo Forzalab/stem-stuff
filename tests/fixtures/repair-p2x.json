@@ -7,7 +7,7 @@
       "choices": [{"id": "a", "md": "$3$"}, {"id": "b", "md": "$12$"}, {"id": "c", "md": "$\\tfrac13$"}],
       "correct": "a",
       "wrong": [{"choice": "b", "error": "op-swap", "hint": "QUACK. Speed is distance per time. Multiply or divide?"},
-                {"choice": "c", "error": "reciprocal", "hint": "QUACK. Which one goes on top: the metres or the seconds?"}],
+                {"choice": "c", "error": "algebra", "hint": "QUACK. Which one goes on top: the metres or the seconds?"}],
       "welcome": true,
       "noob": {"tier": 1},
       "repair": {"steps": [
