@@ -1,5 +1,6 @@
 """serve.py: evaluator, grading, HTTP. Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import contextlib
+import copy
 import hashlib
 import io
 import json
@@ -868,11 +869,44 @@ class Repair(unittest.TestCase):
         self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.35"), (200, {"ok": True}))     # the step's tol (2%), not 3 s.f.
         self.assertEqual(self.check("PHYS_RPA", "r-chk", "1.37"), (200, {"ok": False}))
 
+    def test_second_miss_returns_the_answer(self):
+        """TONY-DECISIONS #33 A: a miss with n >= 2 (the client's 1-based attempt count on the answer step) carries the answer;
+        n < 2 or no n does not; a hit never does. num: the value with the step's unit; mc: the right id(s), pick all "a,c"."""
+        def check(code, who, value, n=None):
+            body = {"value": value, **({} if n is None else {"n": n})}
+            st, _, raw = serve.dispatch("POST", f"/repair/{code}/check", f"sid={self.sid(who)}", json.dumps(body).encode())
+            return st, json.loads(raw)
+        self.miss("PHYS_RPA", "r-ans")
+        self.assertEqual(check("PHYS_RPA", "r-ans", "8/3"), (200, {"ok": False}))
+        self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", 1), (200, {"ok": False}))
+        self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", 2), (200, {"ok": False, "answer": "4/3"}))
+        self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", 3), (200, {"ok": False, "answer": "4/3"}))
+        self.assertEqual(check("PHYS_RPA", "r-ans", "1.333", 2), (200, {"ok": True}))
+        self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", "2"), (200, {"ok": False}))          # n is a number
+        self.assertEqual(check("PHYS_RPA", "r-gate-n", "8/3", 2)[0], 403)                       # same gate
+        self.miss("PHYS_RPB", "r-ans")                                                          # a twin: its own key, 4 figures
+        self.assertEqual(check("PHYS_RPB", "r-ans", "4/3", 2), (200, {"ok": False, "answer": "1"}))
+        self.miss("PHYS_WLC", "r-ans")
+        self.assertEqual(check("PHYS_WLC", "r-ans", "b", 2), (200, {"ok": False, "answer": "a"}))
+        fix = copy.deepcopy(self.FIX)                                                           # a unit on the step; pick all
+        fix["PHYS_RPA"]["repair"]["steps"][-1]["unit"] = "m/s"
+        fix["PHYS_WLC"]["correct"] = ["c", "a"]
+        fix["PHYS_WLC"]["pick"] = "all"
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", 2), (200, {"ok": False, "answer": "4/3 m/s"}))
+            self.assertEqual(check("PHYS_WLC", "r-ans", "a", 2), (200, {"ok": False, "answer": "a,c"}))
+            self.assertEqual(check("PHYS_WLC", "r-ans", "c,a", 2), (200, {"ok": True}))
+            st, out = self.get("PHYS_RPA", "r-ans")
+        self.assertEqual(out["steps"][-1]["unit"], "m/s")
+        self.assertEqual(out["steps"][2]["opts"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["opts"])   # fill chips stay served
+        self.assertEqual(out["steps"][2]["ok"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["ok"])
+
     def test_check_is_not_a_try(self):
         self.miss("PHYS_RPA", "r-try")
         before = serve.dispatch("GET", "/state/PHYS_RPA", f"sid={self.sid('r-try')}")[2]
         self.check("PHYS_RPA", "r-try", "1.333")
         self.check("PHYS_RPA", "r-try", "5")
+        serve.dispatch("POST", "/repair/PHYS_RPA/check", f"sid={self.sid('r-try')}", b'{"value": "5", "n": 2}')
         self.assertEqual(serve.dispatch("GET", "/state/PHYS_RPA", f"sid={self.sid('r-try')}")[2], before)
         st, _, raw = serve.dispatch("POST", "/check", f"sid={self.sid('r-try')}", json.dumps({"code": "PHYS_RPA", "answer": "5"}).encode())
         self.assertEqual(json.loads(raw)["triesLeft"], 0)                      # the second real try is still there
