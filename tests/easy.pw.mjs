@@ -425,16 +425,19 @@ try {
     for (let n = 1; n <= 5; n++) {
       const a0 = asked;
       if (n === 1) await page.evaluate(() => {                              // every state the reply passes through (Tony, Oct 12: the blink follows words, not lines)
-        window.__rv = [];
+        window.__rv = []; window.__rt = [];
         new MutationObserver(() => { const r = document.querySelector("#cluck .wreply:last-of-type"); if (!r) return; const c = r.cloneNode(true); c.querySelectorAll(".katex-mathml").forEach(m => m.remove());
-          const t = c.textContent.replace(/\s+/g, " ").trim(); if (t !== window.__rv.at(-1)) window.__rv.push(t); }).observe(document.querySelector("#cluck"), { subtree: true, childList: true, characterData: true });
+          const t = c.textContent.replace(/\s+/g, " ").trim(); if (t !== window.__rv.at(-1)) { window.__rv.push(t); window.__rt.push(performance.now()); } }).observe(document.querySelector("#cluck"), { subtree: true, childList: true, characterData: true });
       });
       await page.fill("#cluck .ask textarea", "why step " + n + "?"); await page.click("#cluck .ask .send");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 9000 });
       if (n === 1) {
-        const rv = await page.evaluate(() => window.__rv), words = t => t.split(" ").filter(Boolean).length;
+        const [rv, rt] = await page.evaluate(() => [window.__rv, window.__rt]), words = t => t.split(" ").filter(Boolean).length;
+        // the reveal runs on elapsed time (wishType: 35 chars/s): after a late frame (CPU load, 3 CI lanes) it shows what it owes, ~5 chars a word,
+        // in that frame or the next one: the budget counts the time since the state before the last
+        const owed = i => 2 + Math.floor((rt[i] - rt[Math.max(0, i - 2)]) * 35 / 1000 / 5);
         assert.ok(rv.length >= 10, "the reply types out, it does not land a line (a chunk) at a time: " + rv.length + " states");
-        assert.ok(rv.every((t, i) => words(t) - (i ? words(rv[i - 1]) : 0) <= 2), "each state adds a word, not a line: " + JSON.stringify(rv.slice(0, 12)));
+        assert.ok(rv.every((t, i) => words(t) - (i ? words(rv[i - 1]) : 0) <= owed(i)), "each state adds a word, not a line: " + JSON.stringify(rv.slice(0, 12).map((t, i) => [t, i ? Math.round(rt[i] - rt[i - 1]) : 0])));
         assert.ok(rv.every(t => !/[$\\]/.test(t)), "a formula shows whole or not at all, never as raw TeX: " + rv.find(t => /[$\\]/.test(t)));
       }
       if (n === 1) {
