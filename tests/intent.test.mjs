@@ -372,3 +372,97 @@ test("?jev=0 / DNT / stem-t-off: no stemJev.spot → the page shows the plain hi
   const offs = [load({ search: "?jev=0" }), load({ tele: tele({ doNotTrack: "1" }, {}) }), load({ store: { "stem-t-off": "1" }, tele: tele({}, { "stem-t-off": "1" }) })];
   for (const L of offs) { assert.equal(L.win.stemJev, undefined); assert.equal(L.win.stemJev?.spot?.()?.ok === true, false); }
 });
+
+/* ---- W96 (todo 96, TONY-DECISIONS #40: "make jev much more dynamic") ---- */
+const W96 = load().win.__stemJev;
+const SEENL = (() => { const w = {}; w.window = w; vm.runInNewContext(readFileSync(new URL("../copy/seen-lines.js", import.meta.url), "utf8"), w); return w.__stemSeenLines; })();
+const lowRoll = () => 0;                                                // every roll at its lowest: the old QUIET roll always says quiet
+
+test("W96 (a) comeback: a right pick after >= 1 miss on the item always shows (no QUIET roll), even when every roll is low", () => {
+  const j = session({}, { on: [], seenLines: SEENL, rand: lowRoll });
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).ev("pick", { choice: "A", verdict: "wrong", error: "sign" });
+  const r = j.at(30).ev("pick", { choice: "B", verdict: "correct" });
+  assert.ok(r && r.kind, "a comeback is seen: " + JSON.stringify(j.state().lines));
+  assert.ok(!j.state().lines.some(l => / seen .* quiet/.test(l)));
+});
+
+test("W96 (a) comeback: typing the answer (a key < TYPING_S before the pick) does not hide it; Cluck asked = a nod (no credit words); a lucky fix and S5 stay silent", () => {
+  const j = session({}, { on: [], seenLines: SEENL, rand: lowRoll });
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).ev("pick", { choice: "A", verdict: "wrong" });
+  j.at(29).input("keydown");
+  assert.ok(j.at(30).ev("pick", { choice: "B", verdict: "correct" })?.kind, "a typed num answer still gets its comeback");
+  j.at(200).ev("q_open", { code: "B" });
+  j.at(210).ev("pick", { choice: "A", verdict: "wrong" });
+  j.at(215).ev("cluck_open", { tab: "explain" });
+  const h = j.at(240).ev("pick", { choice: "B", verdict: "correct" });
+  assert.equal(h && h.kind, "nod", "help: a nod, never a credit line");
+  j.at(400).ev("q_open", { code: "C" });
+  j.at(410).ev("pick", { choice: "A", verdict: "wrong" });
+  assert.equal(j.at(414).ev("pick", { choice: "B", verdict: "correct" }), null, "a fix 4 s after the miss = lucky: silent");
+});
+
+test("W96 (a) comeback keeps the caps: 1 seen per item, SEEN.MAX per session; a nudge on the item does not eat the comeback", () => {
+  const j = session({}, { on: ["S6"], seenLines: SEENL, rand: lowRoll, lines: { S6: ["x"] }, say: () => true });
+  const got = [];
+  for (let k = 0; k < 5; k++) {
+    const t0 = k * 300;
+    j.at(t0).ev("q_open", { code: "I" + k });
+    j.at(t0 + 10).ev("pick", { choice: "A", verdict: "wrong" });
+    j.at(t0 + 15).nudgeEnd(true);
+    got.push(!!j.at(t0 + 40).ev("pick", { choice: "B", verdict: "correct" }));
+  }
+  assert.deepEqual(got, [true, true, true, false, false], "MAX = " + W96.SEEN.MAX + " per session");
+});
+
+test("W96 (b) away >= AWAY_STALL_S counts toward S2 depth on return (it used to give a fresh step); a short away still does", () => {
+  const j = session({}, { on: [] });
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(10).vis(true); j.at(10 + W96.AWAY_STALL_S + 80).vis(false);
+  assert.ok(why(j, "S2"), "a long away = stall depth on return: " + JSON.stringify(j.state().lines));
+  const k = session({}, { on: [] });
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(30).vis(true); k.at(30 + W96.AWAY_STALL_S - 5).vis(false); k.tick();
+  assert.equal(why(k, "S2"), undefined, "a shorter away = a fresh step");
+  const b = session({}, { on: [] });                                     // a window blur the same way
+  b.at(0).ev("q_open", { code: "A" });
+  b.at(5).away("blur", true); b.at(5 + W96.AWAY_STALL_S + 90).away("blur", false);
+  assert.ok(why(b, "S2"), "blur too");
+});
+
+test("W96 (b) the long-away S2 lands before the first input on return can reset it, and may draw the S2 nudge", () => {
+  const said = [];
+  const j = session({}, { on: ["S2"], rand: lowRoll, lines: { S2: ["s2"] }, say: (l, st) => { said.push(st); return true; } });
+  j.at(0).ev("q_open", { code: "A" });
+  j.at(20).vis(true); j.at(300).vis(false); j.at(301).input("pointerdown"); j.at(305).tick();
+  assert.deepEqual(said, ["S2"]);
+});
+
+test("W96 (c) thresholds: S6 at 1 wrong pick (S6_WRONG 2→1); S2 fallback 80→45 s; GAP_S 180→90 s", () => {
+  assert.equal(W96.S6_WRONG, 1); assert.equal(W96.p75([]), 45); assert.equal(W96.NUDGE.GAP_S, 90);
+  const j = session({}, { on: [] });
+  j.at(0).ev("q_open", { code: "A" }); j.at(10).ev("pick", { choice: "A", verdict: "wrong" });
+  assert.equal(why(j, "S6"), "wrong=1");
+  const k = session({}, { on: [] });
+  k.at(0).ev("q_open", { code: "A" }); k.at(46).tick();
+  assert.equal(why(k, "S2"), "depth=1 p75=45s");
+});
+
+test("W96 (d) stemWords: a P3X-shaped item (md = an array of lines, a graph block, no top-level string md) counts its real stem", () => {
+  const p3x = { code: "PHYS_Y2V", type: "num", body: [
+    { type: "text", md: ["A water molecule has two hydrogen atoms.", "", "Given:", "- $r = 0.094$ nm"] },
+    { type: "graph", kind: "scene", alt: "O at the origin.", marks: [] }] };
+  assert.equal(W96.stemWords(p3x), 7 + 1 + 4, "array md counted, graph alt not");
+  assert.equal(W96.stemWords({ body: [{ type: "text", md: "one two three" }] }), 3, "a string md as before");
+  assert.equal(W96.stemWords({ body: [{ type: "text", md: "Shared givens here" }], parts: [{ prompt: "Find x" }, { prompt: ["Then", "find y"] }] }), 3 + 2 + 3, "multi prompts are stem too");
+  assert.equal(W96.stemWords({}), 0); assert.equal(W96.stemWords(null), 0);
+});
+
+test("W96 (d) the page's size(): a P3X bank item opens with its real w= (was w=0)", () => {
+  const { win, args } = load();
+  win.stemBank = { get: c => c === "PHYS_Y2V" ? { type: "num", body: [{ type: "text", md: ["Both H atoms are below O.", "The origin is at O."] }] } : null };
+  win.stemT("q_open", { code: "PHYS_Y2V", type: "num" });
+  assert.ok(win.stemJev().lines[0].endsWith("PHYS_Y2V num w=10"), win.stemJev().lines[0]);
+  assert.ok(args.length >= 1);
+});
