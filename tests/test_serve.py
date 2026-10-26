@@ -871,7 +871,8 @@ class Repair(unittest.TestCase):
 
     def test_second_miss_returns_the_answer(self):
         """TONY-DECISIONS #33 A: a miss with n >= 2 (the client's 1-based attempt count on the answer step) carries the answer;
-        n < 2 or no n does not; a hit never does. num: the value with the step's unit; mc: the right id(s), pick all "a,c"."""
+        n < 2 or no n does not; a hit never does. answer = display text: num: the value with the step's unit; a pick / mc: the right
+        option's md (the answer step ships no opts, so the client cannot map an id); pick all: the right mds joined ", " in option order."""
         def check(code, who, value, n=None):
             body = {"value": value, **({} if n is None else {"n": n})}
             st, _, raw = serve.dispatch("POST", f"/repair/{code}/check", f"sid={self.sid(who)}", json.dumps(body).encode())
@@ -887,16 +888,20 @@ class Repair(unittest.TestCase):
         self.miss("PHYS_RPB", "r-ans")                                                          # a twin: its own key, 4 figures
         self.assertEqual(check("PHYS_RPB", "r-ans", "4/3", 2), (200, {"ok": False, "answer": "1"}))
         self.miss("PHYS_WLC", "r-ans")
-        self.assertEqual(check("PHYS_WLC", "r-ans", "b", 2), (200, {"ok": False, "answer": "a"}))
+        self.assertEqual(check("PHYS_WLC", "r-ans", "b", 2), (200, {"ok": False, "answer": "$3$"}))
         fix = copy.deepcopy(self.FIX)                                                           # a unit on the step; pick all
         fix["PHYS_RPA"]["repair"]["steps"][-1]["unit"] = "m/s"
         fix["PHYS_WLC"]["correct"] = ["c", "a"]
         fix["PHYS_WLC"]["pick"] = "all"
         with unittest.mock.patch.object(serve, "problems", lambda: fix):
             self.assertEqual(check("PHYS_RPA", "r-ans", "8/3", 2), (200, {"ok": False, "answer": "4/3 m/s"}))
-            self.assertEqual(check("PHYS_WLC", "r-ans", "a", 2), (200, {"ok": False, "answer": "a,c"}))
+            self.assertEqual(check("PHYS_WLC", "r-ans", "a", 2), (200, {"ok": False, "answer": "$3$, $\\tfrac13$"}))
             self.assertEqual(check("PHYS_WLC", "r-ans", "c,a", 2), (200, {"ok": True}))
             st, out = self.get("PHYS_RPA", "r-ans")
+        fix = copy.deepcopy(self.FIX)                                                           # the template's own pick step: its opts' md
+        fix["PHYS_WLC"]["repair"]["steps"][-1].update(ok="y", opts=[{"id": "x", "md": "$1$"}, {"id": "y", "md": "$2$ m"}])
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            self.assertEqual(check("PHYS_WLC", "r-ans", "x", 2), (200, {"ok": False, "answer": "$2$ m"}))
         self.assertEqual(out["steps"][-1]["unit"], "m/s")
         self.assertEqual(out["steps"][2]["opts"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["opts"])   # fill chips stay served
         self.assertEqual(out["steps"][2]["ok"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["ok"])
