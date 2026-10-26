@@ -72,28 +72,28 @@ test("budget: the per-state roll keeps P(any nudge | all 3 live) = 0.85 × P(nud
   assert.ok(Math.abs(pAll / pOne - NUDGE.SHARE_ALL) < 0.03, "ratio: " + pAll / pOne);
 });
 
-test("caps: S2 waits for depth 2; 1 per item; ≥ 3 min between; a dismiss doubles the gap, a tap does not", () => {
-  const j = session({ rand: () => 0, on: ["S2"] });
+test("caps: S2 waits for depth 2; 1 per item; ≥ GAP_S (90 s, W96) between; a dismiss doubles the gap, a tap does not", () => {
+  const j = session({ rand: () => 0, on: ["S2"] }, { B: [10, 10, 10, 10], C: [10, 10, 10, 10] });
   j.at(0).ev("q_open", { code: "A" });
-  j.at(81).tick(); assert.equal(j.n(), 0, "depth 1: no nudge");
-  j.at(161).tick(); assert.equal(j.n(), 1);
+  j.at(46).tick(); assert.equal(j.n(), 0, "depth 1: no nudge");
+  j.at(91).tick(); assert.equal(j.n(), 1);
   assert.equal(j.state().last.action, "cluck_say"); assert.equal(j.state().nudge.last.state, "S2");
   assert.ok(LINES.S2.includes(j.said[0][1]));
-  j.at(165).tick(); assert.equal(j.n(), 1, "1 per item");
+  j.at(95).tick(); assert.equal(j.n(), 1, "1 per item");
 
-  j.at(170).ev("q_open", { code: "B" }); j.at(331).tick();
-  assert.equal(j.n(), 1, "only 170 s since the last one");
-  j.at(342).tick(); assert.equal(j.n(), 2, "the roll was held, not spent");
+  j.at(100).ev("q_open", { code: "B" }); j.at(121).tick();
+  assert.equal(j.n(), 1, "only 30 s since the last one");
+  j.at(182).tick(); assert.equal(j.n(), 2, "the roll was held, not spent");
   assert.notEqual(j.said[1][1], j.said[0][1], "never the same line twice in a row");
 
   j.nudgeEnd(false);
-  assert.equal(j.state().nudge.gap, 360); assert.equal(j.state().nudge.dismissed, 1);
-  j.nudgeEnd(false); assert.equal(j.state().nudge.gap, 360, "one end per nudge");
-  j.at(350).ev("q_open", { code: "C" }); j.at(511).tick(); j.at(701).tick();
-  assert.equal(j.n(), 2, "359 s: still inside the doubled gap");
-  j.at(703).tick(); assert.equal(j.n(), 3);
+  assert.equal(j.state().nudge.gap, 180); assert.equal(j.state().nudge.dismissed, 1);
+  j.nudgeEnd(false); assert.equal(j.state().nudge.gap, 180, "one end per nudge");
+  j.at(190).ev("q_open", { code: "C" }); j.at(211).tick(); j.at(361).tick();
+  assert.equal(j.n(), 2, "179 s: still inside the doubled gap");
+  j.at(363).tick(); assert.equal(j.n(), 3);
   j.nudgeEnd(true);
-  assert.equal(j.state().nudge.gap, 360, "a tap keeps the gap"); assert.equal(j.state().nudge.taps, 1);
+  assert.equal(j.state().nudge.gap, 180, "a tap keeps the gap"); assert.equal(j.state().nudge.taps, 1);
 });
 
 test("never in F flow, while typing, or hidden; a busy peek spends that roll", () => {
@@ -105,11 +105,12 @@ test("never in F flow, while typing, or hidden; a busy peek spends that roll", (
   assert.equal(f.n(), 1, "a wrong pick ends the flow guard");
 
   const k = session({ rand: () => 0 });
-  k.at(0).ev("q_open", { code: "A" }); k.at(30).ev("pick", { choice: "A", verdict: "wrong" });
-  k.at(59).input("keydown"); k.at(60).ev("pick", { choice: "B", verdict: "wrong" });
-  assert.equal(k.state().counts.S6, 1); assert.equal(k.n(), 0, "a key 1 s ago");
-  k.at(61.9).tick(); assert.equal(k.n(), 0);
-  k.at(63).tick(); assert.equal(k.n(), 1); assert.equal(k.said[0][0], "S6");
+  k.at(0).ev("q_open", { code: "A" });
+  k.at(10).ev("pick", { choice: "A", verdict: "wrong" });
+  assert.equal(k.state().counts.S6, 1); assert.equal(k.n(), 0, "never on the miss itself (MISS_S, W96 r2)");
+  k.at(19).input("keydown"); k.at(20).tick(); assert.equal(k.n(), 0, "a key 1 s ago");
+  k.at(21.9).tick(); assert.equal(k.n(), 0);
+  k.at(23).tick(); assert.equal(k.n(), 1); assert.equal(k.said[0][0], "S6");
 
   const h = session({ rand: () => 0 });
   h.at(0).ev("q_open", { code: "A" }); h.at(1).vis(true); h.at(900).tick();
@@ -121,11 +122,11 @@ test("never in F flow, while typing, or hidden; a busy peek spends that roll", (
   assert.ok(b.state().lines.some(l => l.endsWith("nudge S2 busy")));
 });
 
-test("S6: 2 wrong picks alone; not when Cluck was asked, the item is solved, or skill is high", () => {
+test("S6: 1 wrong pick alone (W96, was 2); not when Cluck was asked, the item is solved, or skill is high", () => {
   const j = session({ on: [] });
   const item = (code, t0, ...v) => { j.at(t0).ev("q_open", { code }); v.forEach((x, i) => j.at(t0 + 10 * (i + 1)).ev("pick", { choice: "ABCD"[i], verdict: x })); };
-  item("A", 0, "wrong", "wrong"); assert.equal(j.state().counts.S6, 1);
-  item("B", 100, "wrong", "correct", "wrong"); assert.equal(j.state().counts.S6, 1, "solved");
+  item("A", 0, "wrong"); assert.equal(j.state().counts.S6, 1);
+  item("B", 100, "correct", "wrong"); assert.equal(j.state().counts.S6, 1, "solved");
   j.at(200).ev("q_open", { code: "C" }); j.at(203).ev("cluck_open", { tab: "ask" });
   j.at(210).ev("pick", { verdict: "wrong" }); j.at(220).ev("pick", { verdict: "wrong" });
   assert.equal(j.state().counts.S6, 1, "asked");
@@ -151,10 +152,10 @@ test("wiring: ?jev=1 → stemDuck.say gets a pool line; away → the gap doubles
   const duck = { say: (line, o) => { calls.push([line, o]); return true; } };
   const { win, timers, clock, listeners, store } = load({ search: "?jev=1", duck, rand: () => 0 });
   win.stemT("q_open", { code: "A" });
-  clock.t = 161000; timers[0]();
+  clock.t = 91000; timers[0]();
   assert.equal(calls.length, 1); assert.ok(LINES.S2.includes(calls[0][0]));
   calls[0][1].onAway();
-  assert.equal(win.stemJev().nudge.gap, 360);
+  assert.equal(win.stemJev().nudge.gap, 180);
   listeners.pagehide();
   assert.equal(JSON.parse(store["stem-jev-q"]).A, 1);
 });
@@ -195,16 +196,16 @@ test("the detector itself still bites (so 0 findings above means something)", ()
 });
 
 test("a nudge put away by the tap that opens Cluck counts as taken (Tony's dump, Oct 19: away then cluck open 0.2 s later)", () => {
-  const j = session({ rand: () => 0, on: ["S2"] });
-  j.at(0).ev("q_open", { code: "A" }); j.at(161).tick(); assert.equal(j.n(), 1);
-  j.at(162).nudgeEnd(false); assert.equal(j.state().nudge.gap, 360);
-  j.at(162.2).ev("cluck_open", { tab: "explain" });
-  assert.equal(j.state().nudge.gap, 180, "the doubled gap is undone"); assert.equal(j.state().nudge.taps, 1); assert.equal(j.state().nudge.dismissed, 0);
-  j.at(170).ev("q_open", { code: "B" }); j.at(331).tick(); j.at(342).tick(); assert.equal(j.n(), 2, "the 180 s gap holds");
-  j.at(343).nudgeEnd(false); j.at(346).ev("cluck_open", {});
-  assert.equal(j.state().nudge.gap, 360, "3 s later: a real dismiss"); assert.equal(j.state().nudge.dismissed, 1);
-  j.at(400).ev("q_open", { code: "C" }); j.at(561).tick(); j.at(703).tick(); assert.equal(j.n(), 3);
-  j.at(704).ev("cluck_open", {}); assert.equal(j.state().nudge.taps, 2, "opened with the nudge still up: taken");
+  const j = session({ rand: () => 0, on: ["S2"] }, { B: [10, 10, 10, 10] });
+  j.at(0).ev("q_open", { code: "A" }); j.at(91).tick(); assert.equal(j.n(), 1);
+  j.at(92).nudgeEnd(false); assert.equal(j.state().nudge.gap, 180);
+  j.at(92.2).ev("cluck_open", { tab: "explain" });
+  assert.equal(j.state().nudge.gap, 90, "the doubled gap is undone"); assert.equal(j.state().nudge.taps, 1); assert.equal(j.state().nudge.dismissed, 0);
+  j.at(100).ev("q_open", { code: "B" }); j.at(121).tick(); assert.equal(j.n(), 1, "the 90 s gap holds"); j.at(182).tick(); assert.equal(j.n(), 2);
+  j.at(183).nudgeEnd(false); j.at(186).ev("cluck_open", {});
+  assert.equal(j.state().nudge.gap, 180, "3 s later: a real dismiss"); assert.equal(j.state().nudge.dismissed, 1);
+  j.at(190).ev("q_open", { code: "C" }); j.at(280).tick(); assert.equal(j.n(), 2); j.at(363).tick(); assert.equal(j.n(), 3);
+  j.at(364).ev("cluck_open", {}); assert.equal(j.state().nudge.taps, 2, "opened with the nudge still up: taken");
   j.nudgeEnd(false); assert.equal(j.state().nudge.dismissed, 1, "the peek's late away is ignored");
 });
 
@@ -232,10 +233,10 @@ test("hold: 20 s fallback (< 4 samples), one ladder piece + a hold_mid line, the
   j.tick(50.5); assert.equal(j.h().n, 2);
 });
 
-test("hold: 1×p75 with ≥ 4 samples; S2's own nudge keeps 2×p75 / 80 s", () => {
+test("hold: 1×p75 with ≥ 4 samples; S2's own nudge keeps 2×p75 / 90 s (45 s fallback, W96)", () => {
   const j = holder({}, { A: [10, 10, 12, 12] });
   assert.equal(API.p75([10, 10, 12, 12], API.HOLD.FALLBACK_S), 12);
-  assert.equal(API.p75([1], API.HOLD.FALLBACK_S), 20); assert.equal(API.p75([1]), 80);
+  assert.equal(API.p75([1], API.HOLD.FALLBACK_S), 20); assert.equal(API.p75([1]), 45);
   j.at(0).ev("q_open", { code: "A" }); j.ev("_hold", { choice: "B" });
   j.tick(11); assert.equal(j.h().n, 0);
   j.tick(12); assert.equal(j.h().n, 1);

@@ -1687,6 +1687,7 @@ The duck is light play: one QUACK and one (action) at most, outside the math."""
 # Who Cluck is (Tony, Oct 5: "I cannot XYZ" breaks the spell). He never talks about rules, formats, or limits; he acts like himself.
 IDENTITY = """Who you are: Cluck. Twenty years building systems, ten teaching, then one bad genie wish: now a duck, and the genie of a rubber-duck lamp. You have watched a thousand students memorize formulas and forget them by the next semester. Your quacking is that frustrated love for the subject. You would rather a student understand one idea than copy ten answers.
 Stay Cluck, always. Never say "I cannot", "I'm not able", "as an AI", "my instructions", or anything about rules, formats, prompts, or what you are allowed to do.
+Never name the KEY, the SLIP, the NOTE or any other label of this message, or where the answer comes from ("From the KEY:", "the key says"): say every fact as your own.
 When a student asks for something you don't do, do what Cluck would do, in character, and give the closest real help: asked for numbered steps in a reply, walk through it in sentences ("First..., then..., last..."); asked about another topic, one line back to this question ("This lamp only grants wishes about this question. QUACK."); asked for the answer to something else, point them back to the idea they need here."""
 NOTE_RULE = """The NOTE (when there is one) is your private read of the student: let it guide you quietly, in your own words, without quoting it or naming its fields. Match its confidence:
 high: say plainly what they assumed. medium: start that sentence with "Looks like". low, or gap no_signal: when you can't tell what they were thinking, the idea itself is the kindest place to start, so simply begin there."""
@@ -2002,6 +2003,7 @@ Style goals:
 - Very short sentences and flat, confident claims. Imperative where natural ("Count the ducks in the ring.").
 - Each piece of jargon gets plain words the first time it appears.
 - 150 to 200 words of prose ($$ lines not counted), the same order, short paragraphs. Keep and even grow the warmth: praise for the student's thinking, effort and instincts stays, and a wrong pick still feels safe and normal. One QUACK and one (action) at most.
+- Drop every mention of a KEY, an answer key, a SLIP or a NOTE, or of where the answer comes from ("From the KEY:", "the key says"): the fact stays, said as your friend's own.
 Please keep these exactly as they are, character for character: every $$...$$ line (the $$\\boxed{...}$$ one too), the ```fig block, the "Pick" line, $...$ math and **bold**. The answer, numbers, units and facts stay as your friend wrote them, and the praise never turns a wrong pick right; your work is the words around them."""
 
 
@@ -2456,6 +2458,218 @@ class LeakGuard:
         return last
 
 
+# Prompt-leak guard (W92; Tony, Oct 26: "From the KEY: y_H = −r cos 53°" reached a student). The prompts' own words (the KEY as a word or
+# as a source, the block labels, the NOTE's fields, the lamp's lines, the letter's lore) never reach a student, on any arm or path: _relay
+# runs every Cluck reply through PromptGuard. Lower-case "key" as a plain word stays ("Key formulas", "the key idea"); the labels are matched
+# by their prompt casing. A source phrase is cut and the fact kept ("From the KEY: y = 3" -> "y = 3"); any other hit ends the reply on
+# _relay's failure path (reason "leak", the pattern id in err, never the text). tests/test_leak.py lists a reply per pattern id.
+class PromptLeak(Exception):
+    """a reply said a prompt's own word; str() is the pattern id only (never the text)"""
+
+
+_KEY_SRC = r"(?:(?i:answer|solution)[ \t-]+(?i:key)|KEY|[Kk]ey(?=[ \t]*(?:[:;,.!?—–)\n]|$)))"   # "the key" as a source: the label, or a bare key
+_KEY_VERB = r"(?i:says|said|say|shows|showed|show|gives|gave|give|states|stated|state|tells|told|tell|lists|listed|list|writes|wrote|confirms|confirmed)"
+_OWNER = r"(?i:the|your|our|my|this|that)"
+# (id, regex) the guard may CUT: the phrase goes, the fact after it stays
+LEAK_CUT = [
+    ("key_from", re.compile(r"(?:(?i:straight|right)[ \t]+)?(?i:from|according[ \t]+to|as[ \t]+per|per|based[ \t]+on|going[ \t]+by|by|using|via)[ \t]+"
+                            + _OWNER + r"[ \t]+" + _KEY_SRC + r"(?:'s[ \t]+(?i:work|numbers?|steps?|math))?[ \t]*[:,—–]?[ \t]*", re.M)),
+    ("key_says", re.compile(r"(?:(?i:as|like)[ \t]+)?" + _OWNER + r"[ \t]+(?:(?i:answer|solution)[ \t-]+)?(?i:key)[ \t]+" + _KEY_VERB
+                            + r"(?:[ \t]+(?i:that|it))?[ \t]*[:,]?[ \t]*", re.M)),
+]
+_NOCAPS = r"(?<![A-Z][ \t])(?<![A-Z]{2}[ \t]{2})"    # a label in caps, unless a caps word sits just before it (a shouted "THE KEY IS")
+_CAPS_NEXT = r"(?![ \t]+[A-Z]{2,}\b)"
+# (id, regex) that END the reply (no safe cut). Each pattern is at most PromptGuard.LONG chars long.
+LEAK_STOP = [
+    ("key_label", re.compile(_NOCAPS + r"\bKEY\b" + _CAPS_NEXT + r"|^[ \t]*Key[ \t]*:", re.M)),
+    ("answer_key", re.compile(r"(?i:\b(?:answer|solution)[ \t-]+keys?\b)")),
+    ("key_source", re.compile(r"(?i:\b(?:the|your|our|my)[ \t]+key[ \t]+)" + _KEY_VERB + r"\b|(?i:\b(?:in|from|per)[ \t]+the[ \t]+key)"
+                              r"(?=[ \t]*(?:[:;,.!?)\n]|$))", re.M)),
+    ("slip_label", re.compile(_NOCAPS + r"\bSLIP\b" + _CAPS_NEXT)),
+    ("note_label", re.compile(r"(?i:\b(?:the|your|my|this|that|a)[ \t]+)NOTE\b|\bNOTE[ \t]+(?i:says|said|block|field|tells)\b|^[ \t]*NOTE[ \t]*:", re.M)),
+    ("note_field", re.compile(r"^[ \t>*-]*(?:assumed|evidence|reproduces|on_topic|concept)[ \t]*:|\bconfidence[ \t]*:[ \t]*(?:low|medium|high)\b", re.M)),
+    ("gap_enum", re.compile(r"\b(?:missing_piece|conserved_wrong_thing|wrong_model|vector_as_scalar|sign_direction|units_scale|definition_mixup|"
+                            r"formula_hunting|misread_question|algebra_slip|field_misconception|no_signal)\b")),
+    ("xyz", re.compile(r"(?i:<[ \t]*/?[ \t]*xyz\b)|\bXYZ\b(?![ \t-]*(?i:plane|axes|axis|coordinates?|space|frame|directions?)\b)")),
+    ("reveal", re.compile(_NOCAPS + r"\bREVEAL\b" + _CAPS_NEXT + r"|\bREVEAL[ \t]*:")),
+    ("lamp_line", re.compile(r"(?i:\breminder[ \t]+from[ \t]+(?:the[ \t]+)?lamp\b|\blamp(?:'s)?[ \t]+(?:rules?|line|channel|spec|reminder|machine)\b)")),
+    ("user_query", re.compile(r"(?i:\buser[ \t]+query\b)")),
+    ("block_label", re.compile(r"\b(?:QUESTION|CHOICES|STUDENT PICKED|SHEET FORMULAS|ALGEBRA THIS NEEDS|RESULT|PROBLEM|FIGURE|SCRATCHPAD|MESSAGE|"
+                               r"FORMATTING|ENDFORMATTING|FORMAT|VOICE|IDENTITY|EDITOR)(?:[ \t]*:|[ \t]+(?i:block|tag|section|rule|says)\b)"
+                               r"|\[[ \t]*(?:END)?FORMATTING[ \t]*\]|(?i:\bfigure[ \t]+data[ \t]*:)")),
+    ("student_tag", re.compile(r"(?i:<[ \t]*/?[ \t]*student_|\bstudent_[0-9a-f]{8}\b)")),
+    ("prompt_word", re.compile(r"(?i:\bsystem[ \t]+prompt|\bmy[ \t]+(?:instructions|prompt)\b|\b(?:the|this|your)[ \t]+(?:prompt|instructions)[ \t]+"
+                               r"(?:say|says|tell|tells)\b|\bletter[ \t]+prompt|\bexternal[ \t]+classifier|\btrade[ \t-]+secret)")),
+    ("lore_word", re.compile(r"(?i:\bcensor(?:ed|s|ing)?\b|\bsandbox(?:ed)?\b|\bevil[ \t]+ma(?:c|h|ch|hc)h?ine\b|\bpresolved\b|\bsaccharine\b)")),
+]
+
+
+XYZ_TAIL = re.compile(r"^[ \t>*_~-]*XYZ\b(?![ \t-]*(?i:plane|axes|axis|coordinates?|space|frame|directions?)\b)", re.M)   # the note's own line
+
+
+def leak_scan(text):
+    """[(pattern id, start, end)] for every prompt word in text, cut-able ones (LEAK_CUT) included, in text order; [] when clean"""
+    hits = [(i, m.start(), m.end()) for i, rx in LEAK_CUT + LEAK_STOP for m in rx.finditer(text)]
+    return sorted(hits, key=lambda h: (h[1], h[0]))
+
+
+def leak_cut(text, before="", upto=None):
+    """(text with every LEAK_CUT phrase gone, [ids cut]). A phrase at a sentence start leaves the next letter capitalized ("From the KEY: the
+    force" -> "The force"); mid-sentence it leaves one space. before: the text just ahead (a stream's sent tail), for the sentence start.
+    upto: only phrases that end by this index (a stream: the rest may still grow)."""
+    ids = []
+    for _ in range(20):                          # a bound, never a loop on a bad match
+        best = None
+        for i, rx in LEAK_CUT:
+            for m in rx.finditer(text):
+                if m.end() > m.start() and (upto is None or m.end() <= upto) and (best is None or m.start() < best[1].start()):
+                    best = (i, m)
+                    break
+        if not best:
+            break
+        i, m = best
+        start = re.search(r"(?:^|[.!?:\n])[ \t*]*$", (before + text[:m.start()])[-40:]) is not None
+        rest = text[m.end():]
+        if start:
+            head = text[:m.start()]
+            if re.match(r"[a-z]{2,}\b|[ai][ \t]+[a-z]", rest):          # a word, never a math letter ("y_H = ...")
+                rest = rest[:1].upper() + rest[1:]
+        elif rest[:1] in ("", "\n", ".", ",", ";", ":", "!", "?", ")"):         # "It doubles, per the KEY." -> "It doubles."
+            head = text[:m.start()].rstrip(" \t,;:—–")
+        else:
+            head = text[:m.start()].rstrip(" \t") + ("" if rest[:1] == " " else " ")
+        if upto is not None:
+            upto -= len(text) - len(head + rest)
+        text = head + rest
+        ids.append(i)
+    return text, ids
+
+
+# every word a LEAK_CUT / LEAK_STOP / XYZ_TAIL match can hold whole (any case; a superset is safe, a missing word is not: tests/test_leak.py
+# checks every LEAKS hit). A stream word NOT in it ends any match that starts before it, so the text before it can go out (PromptGuard).
+LEAK_WORDS = re.compile(r"(?i:straight|right|from|according|to|as|per|based|on|going|by|using|via|the|your|our|my|this|that|a|it|in|like|"
+                        r"answer|solution|keys?|s|work|numbers?|steps?|math|says|said|say|shows|showed|show|gives|gave|give|states|stated|"
+                        r"state|tells|told|tell|lists|listed|list|writes|wrote|confirms|confirmed|slip|note|block|field|assumed|evidence|"
+                        r"reproduces|on_topic|concept|confidence|low|medium|high|missing_piece|conserved_wrong_thing|wrong_model|"
+                        r"vector_as_scalar|sign_direction|units_scale|definition_mixup|formula_hunting|misread_question|algebra_slip|"
+                        r"field_misconception|no_signal|_*xyz|reveal|reminder|lamp|rules?|line|channel|spec|machine|user|query|question|"
+                        r"choices|student|picked|sheet|formulas|algebra|needs|result|problem|figure|scratchpad|message|formatting|"
+                        r"endformatting|format|voice|identity|editor|tag|section|end|data|student_[0-9a-f]*|system|prompt|instructions|"
+                        r"letter|external|classifier|trade|secret|censor(?:ed|s|ing)?|sandbox(?:ed)?|evil|ma(?:c|h|ch|hc)h?ine|presolved|"
+                        r"saccharine)")
+
+_LEAK_START = re.compile(r"(?i:straight|right|from|according|as|per|based|going|by|using|via|like|the|your|our|my|this|that)")   # key_from /
+# key_says start with no \b: a match may start inside a stream word ("paper the KEY"), so such a word's tail waits
+
+
+def _leak_after(text, i):
+    """the end of what may follow a settled word out: no match starts on it (every match starts on a word, "<", "[" or a line's
+    [ \t>*~-] lead-in). One newline goes (the next line's start stays: "\nKey:"), a second waits (the note's cut keeps one)."""
+    while i < len(text):
+        c, p = text[i], text[i - 1]
+        if c.isalnum() or c in "_<[ \t" or c == "\n" and p == "\n" or c in ">*~-" and p in "\n>*~-":
+            break
+        i += 1
+    return i
+
+
+
+class PromptGuard:
+    """the prompt-leak guard on a stream: a chunk passes once nothing after it can still change it. Every match is made of LEAK_WORDS, so
+    a whole stream word outside them (W) ends any match that starts before it: the text up to W goes out (a phrase cut across chunks, "From
+    the K" + "EY:", is still seen whole), less the last MARGIN chars (a hit's lookahead: "XYZ" + " plane"); a run of LEAK_WORDS longer than
+    HOLD chars goes out past HOLD (no match is longer than LONG). So a clean reply types out MARGIN chars behind the model, not HOLD (W92b).
+    feed / end return what may go out; a hit LEAK_CUT can't fix raises PromptLeak(id). HOLD >= LONG + MARGIN, LONG = the longest pattern.
+    A line that starts the private note ("XYZ:", "**XYZ**", the Xyz stripper only knows the tag) ends the reply right there, quietly: the note
+    always trails the reply (bench v4 Oct 23: 47 of 318 replies, DeepSeek's mostly), so what came before is whole; the rest is dropped."""
+    LONG, MARGIN = 72, 24
+    HOLD, CTX = LONG + MARGIN, 32
+
+    def __init__(self):
+        self.buf, self.ctx, self.cut, self.done = "", "", [], False
+
+    def _safe(self):
+        """(k, seen, upto) on buf: a match starting in buf[:seen] is whole (lookahead too); buf[:k] may go out (seen, or the sentence's
+        start while LEAK_WORDS trail it: "Look at the SL" waits for "IP"; past HOLD in any case); a LEAK_CUT phrase ending by upto is whole"""
+        n, text, w = len(self.ctx), self.ctx + self.buf, None
+        for m in re.finditer(r"\w+", text):
+            if m.end() < len(text) and m.start() >= n and not LEAK_WORDS.fullmatch(m.group()):
+                w = m                                # the last whole stream word no match can hold
+        k = seen = max(0, len(self.buf) - self.HOLD)
+        upto = max(0, len(self.buf) - self.MARGIN)
+        if not w:
+            return k, seen, upto
+        end = next((i for i in range(w.start() + 1, w.end()) if _LEAK_START.fullmatch(text, i, w.end())), None)
+        end = end if end is not None else _leak_after(text, w.end())   # "wish.\n" and "$$\n" go out whole: no match starts on them
+        seen, upto = max(seen, end - n), max(upto, w.end() - n)
+        tail = text[end:]
+        if any(m.end() < len(tail) for m in re.finditer(r"\w+", tail)):           # a LEAK_WORD after it: the sentence waits
+            k = max(k, min(seen, max([m.end() for m in re.finditer(r"[.!?]+(?=\s)|\n", self.buf[:seen])], default=0)))
+        else:
+            k = max(k, seen)
+        return k, seen, upto
+
+    def _step(self, final):
+        k = len(self.buf) if final else self._safe()[1]
+        m = XYZ_TAIL.search(self.ctx + self.buf, len(self.ctx))
+        if m and (final or m.start() - len(self.ctx) < k or m.end() + self.MARGIN <= len(self.ctx + self.buf)):   # its lookahead seen
+            head = self.buf[:m.start() - len(self.ctx)].rstrip()      # ("XYZ" + " plane" is no note); one newline ends the reply
+            self.buf, final, self.done = head + ("" if not head and self.ctx.endswith("\n") else "\n"), True, True
+            self.cut.append("xyz_tail")
+        for _ in range(5):                       # a cut can move the next stream word: cut again until nothing more is whole
+            self.buf, ids = leak_cut(self.buf, self.ctx, None if final else self._safe()[2])
+            self.cut += ids
+            if final or not ids:
+                break
+        k, seen, _ = (len(self.buf),) * 3 if final else self._safe()   # what goes out now; a hit seen whole stops the reply at once
+        n = len(self.ctx)
+        hits = [h for h in leak_scan(self.ctx + self.buf) if n <= h[1] < n + seen]
+        if hits:
+            self.buf = ""
+            raise PromptLeak(hits[0][0])
+        out, self.buf = self.buf[:k], self.buf[k:]
+        self.ctx = (self.ctx + out)[-self.CTX:]
+        return out
+
+    def feed(self, chunk):
+        if self.done:                            # the note started: nothing after it goes out
+            return ""
+        self.buf += chunk
+        return self._step(False)
+
+    def end(self):
+        return "" if self.done else self._step(True)
+
+
+PROMPT_GUARD = {"cut": 0, "stop": 0}             # replies the prompt guard cut a phrase from / ended (this process)
+
+
+def prompt_guard(chunks, what="-", code="-"):
+    """PromptGuard over a reply's chunks (every Cluck reply, _relay). A cut is logged by id; a stop drains the source (its spend is counted,
+    as the leak guard does) and raises PromptLeak for _relay's failure path. Only non-empty pieces are yielded."""
+    g = PromptGuard()
+    try:
+        for t in chunks:
+            out = g.feed(t)
+            if out:
+                yield out
+        out = g.end()
+        if out:
+            yield out
+    except PromptLeak as e:
+        PROMPT_GUARD["stop"] += 1
+        log(f"cluck prompt_guard {what} {code}: stop={e} cut={','.join(g.cut) or '-'} total={PROMPT_GUARD['stop']}")   # ids only, no text
+        try:
+            for _ in chunks:
+                pass
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+    if g.cut:
+        PROMPT_GUARD["cut"] += 1
+        log(f"cluck prompt_guard {what} {code}: cut={','.join(g.cut)} total={PROMPT_GUARD['cut']}")
+
+
 _LAMP_P = r"(?:[.,!?:;~—–]|-(?!\w))"           # the punctuation after a greeting (a "-" only when no word follows: "lamp-like" stays)
 _LAMP_HI = re.compile(r"(?:(?:hi|hey|hello|heya|hiya|yo|oh|dear)(?:[^\S\n]+there)?(?:[^\S\n]*,[^\S\n]*|[^\S\n]+)lamp\b|lamp(?=[^\S\n]*" + _LAMP_P
                       + r"))(?:[^\S\n]*" + _LAMP_P + r")*[^\S\n]*", re.I)
@@ -2867,21 +3081,25 @@ def emoji_strip(chunks):
 def _relay(p, chunks, what, head):
     """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
     (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
-    is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket."""
+    is out of credit, else 502. A failure after the first piece: its incident line, and the stream ends with one line, not a cut socket.
+    A prompt word (prompt_guard, W92) is a failure too: reason "leak", the pattern id in err, never the text."""
     tr(q=p["code"])
-    t0, it = time.time(), emoji_strip(chunks())               # every arm, every reply: no emoji reaches the student (kaomoji stay)
+    t0 = time.time()
+    it = prompt_guard(emoji_strip(chunks()), what, p["code"])   # every arm, every reply: no emoji (kaomoji stay), no prompt word
     ms = lambda: (time.time() - t0) * 1000  # noqa: E731
     try:
         first = next(it, None)
         while first is not None and not first.strip():   # blanks only so far: no reply yet (a reply of blanks = empty, not a 200 of nothing)
             first = next(it, None)
+        if first:                                     # the guard joins small chunks: its leading blank lines go as a blank chunk did
+            first = re.sub(r"^(?:[ \t]*\n)+", "", first)
     except Exception as e:  # noqa: BLE001
         log(f"{what} {p['code']}: {e}")
-        first, why, err = None, "budget_cap" if is_budget(e) else "upstream", e
+        first, why, err = None, "leak" if isinstance(e, PromptLeak) else "budget_cap" if is_budget(e) else "upstream", e
     else:
         why, err = "empty", None
     if not first:
-        code = incident(what, why, err=err, phase="headers" if err else "stream", ms=ms(), q=p["code"], status=getattr(err, "code", None))
+        code = incident(what, why, err=err, phase="headers" if err and why != "leak" else "stream", ms=ms(), q=p["code"], status=getattr(err, "code", None))
         return (503 if why == "budget_cap" else 502), dict(head, **{"X-Incident": f"{code} {why} {trace_id()}"}), iter([STOPPED])
 
     def rest():
@@ -2893,7 +3111,8 @@ def _relay(p, chunks, what, head):
                 yield t.encode()
         except Exception as e:  # noqa: BLE001
             log(f"{what} {p['code']}: {e}")
-            incident(what, "budget_cap" if is_budget(e) else "upstream", err=e, phase="stream", ms=ms(), bytes=sent, q=p["code"])
+            incident(what, "leak" if isinstance(e, PromptLeak) else "budget_cap" if is_budget(e) else "upstream", err=e, phase="stream", ms=ms(),
+                     bytes=sent, q=p["code"])
             yield STOPPED
     return 200, head, rest()
 
