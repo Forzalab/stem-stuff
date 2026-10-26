@@ -95,7 +95,7 @@
   function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; next(); }
   function hide() {
     clearTimeout(timer); left = 0;
-    if (!cur || !el) { q.length = 0; return; }
+    if (!cur || !el) return;
     if (reduced() || !el.classList.contains('on')) { done(); return; }
     el.classList.add('out');
   }
@@ -108,5 +108,6 @@
   g.addEventListener('scroll', place, { passive: true });
   g.addEventListener('resize', place);
 
-  g.stemToast = { show: show, hide: function () { q.length = 0; hide(); if (el && cur) done(); }, place: place };
+  /* hide(): the one on screen goes now (the next queued one follows); clear(): it and the queue */
+  g.stemToast = { show: show, hide: function () { clearTimeout(timer); left = 0; if (el && cur) done(); }, clear: function () { q.length = 0; clearTimeout(timer); left = 0; if (el && cur) done(); }, place: place };
 })(window);

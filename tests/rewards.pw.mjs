@@ -509,7 +509,7 @@ try {
       await p.evaluate(() => window.Rewards.config({ goal: 4 }));
       const seen = [];
       for (const [tpl, line] of [["Q1", "1 question done. Keep it up!"], ["Q2", "Halfway there!"], ["Q3", "Only 1 to go, you got this!"], ["Q4", "🎉 All done!"]]) {
-        await p.evaluate(() => window.stemToast && window.stemToast.hide());
+        await p.evaluate(() => window.stemToast && window.stemToast.clear());
         await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
         assert.ok(await conquer(p, tpl), tpl + " conquered");
         const got = await toastNow(p); seen.push(got);
