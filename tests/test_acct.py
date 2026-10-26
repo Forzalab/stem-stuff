@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 import unittest
 import unittest.mock
 
@@ -18,6 +19,21 @@ class Store(unittest.TestCase):
 
     def setUp(self):
         acct._mem.clear()
+        acct._exp.clear()
+
+    def key(self, tok):
+        return "acct:" + hashlib.sha256(tok.encode()).hexdigest()
+
+    def ttl(self, k):
+        """seconds left on k, None = no TTL (both stores keep the deadline in _exp)"""
+        return acct._exp[k] - time.time() if k in acct._exp else None
+
+    def later(self, s):
+        """move the clock s seconds on"""
+        now = time.time() + s
+        p = unittest.mock.patch.object(acct.time, "time", lambda: now)
+        p.start()
+        self.addCleanup(p.stop)
 
     def dump(self):
         return json.dumps(acct._mem)
@@ -85,6 +101,50 @@ class Store(unittest.TestCase):
             with self.assertRaises(ValueError):
                 acct.put_rewards(SID, bad)
 
+    def test_fresh_record_lives_as_long_as_the_sid_cookie(self):
+        import serve
+        self.assertIn("Max-Age=%d;" % acct.SID_MAX_AGE, serve.new_sid("")[1])   # one lifetime, not two drifting numbers
+        k = self.key(acct.mint(SID))
+        for key in (k, "acct:sid:" + SID):
+            self.assertAlmostEqual(self.ttl(key), acct.SID_MAX_AGE, delta=5)
+
+    def test_keep_removes_the_ttl(self):
+        tok = acct.mint(SID)
+        self.assertTrue(acct.keep(tok))
+        self.assertIsNone(self.ttl(self.key(tok)))
+        self.assertIsNone(self.ttl("acct:sid:" + SID))
+        self.later(2 * acct.SID_MAX_AGE)
+        self.assertEqual(acct.login(tok), SID)          # a kept account never dies
+        self.assertIsNone(self.ttl(self.key(tok)))       # and login does not give it a TTL back
+        self.assertTrue(acct.put_rewards(SID, {"xp": 1}))
+        self.assertIsNone(self.ttl(self.key(tok)))
+        for bad in ("Zx9_-" * 5, None, "x"):
+            self.assertFalse(acct.keep(bad))
+
+    def test_kept_survives_a_second_mint(self):
+        acct.keep(acct.mint(SID))
+        self.assertIsNone(self.ttl(self.key(acct.mint(SID))))
+
+    def test_use_refreshes_the_ttl(self):
+        tok = acct.mint(SID)
+        k = self.key(tok)
+        self.later(acct.SID_MAX_AGE - 100)
+        self.assertEqual(acct.login(tok), SID)
+        self.assertAlmostEqual(self.ttl(k), acct.SID_MAX_AGE, delta=5)
+        self.assertAlmostEqual(self.ttl("acct:sid:" + SID), acct.SID_MAX_AGE, delta=5)
+        self.later(2 * acct.SID_MAX_AGE - 200)            # put_rewards is use too
+        self.assertTrue(acct.put_rewards(SID, {"xp": 2}))
+        self.assertAlmostEqual(self.ttl(k), acct.SID_MAX_AGE, delta=5)
+
+    def test_dead_record_token_is_none(self):
+        tok = acct.mint(SID)
+        acct.put_rewards(SID, {"xp": 5})
+        self.later(acct.SID_MAX_AGE + 1)
+        self.assertIsNone(acct.login(tok))
+        self.assertFalse(acct.keep(tok))                 # too late to save
+        self.assertIsNone(acct.get_rewards(SID))
+        self.assertFalse(acct.put_rewards(SID, {"xp": 6}))
+
 
 class KvPath(Store):
     """the same tests through _kv (Upstash REST), faked by a dict that speaks GET/SET"""
@@ -95,11 +155,23 @@ class KvPath(Store):
 
         def fake(*cmd):
             self.cmds.append(cmd)
+            k, now = cmd[1], acct.time.time()
+            if acct._exp.get(k, now + 1) <= now:        # Redis drops a key at its deadline
+                acct._mem.pop(k, None)
+                acct._exp.pop(k, None)
             if cmd[0] == "GET":
-                return acct._mem.get(cmd[1])
-            if cmd[0] == "SET":
-                acct._mem[cmd[1]] = cmd[2]
+                return acct._mem.get(k)
+            if cmd[0] == "SET":                          # SET k v [EX n]: a plain SET clears the TTL
+                acct._mem[k] = cmd[2]
+                acct._exp.pop(k, None)
+                if cmd[3:4] == ("EX",):
+                    acct._exp[k] = now + cmd[4]
                 return "OK"
+            if cmd[0] == "EXPIRE":
+                if k not in acct._mem:
+                    return 0
+                acct._exp[k] = now + cmd[2]
+                return 1
             raise AssertionError(cmd)
         for p in (unittest.mock.patch.object(acct, "KV", ("https://kv.example", "t")), unittest.mock.patch.object(acct, "_kv", fake)):
             p.start()
