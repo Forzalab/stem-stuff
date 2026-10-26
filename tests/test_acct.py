@@ -29,7 +29,7 @@ class Store(unittest.TestCase):
         return acct._exp[k] - time.time() if k in acct._exp else None
 
     def later(self, s):
-        """move the clock s seconds on"""
+        """move the clock s seconds on (stacks: a 2nd call counts from the 1st)"""
         now = time.time() + s
         p = unittest.mock.patch.object(acct.time, "time", lambda: now)
         p.start()
@@ -132,7 +132,7 @@ class Store(unittest.TestCase):
         self.assertEqual(acct.login(tok), SID)
         self.assertAlmostEqual(self.ttl(k), acct.SID_MAX_AGE, delta=5)
         self.assertAlmostEqual(self.ttl("acct:sid:" + SID), acct.SID_MAX_AGE, delta=5)
-        self.later(2 * acct.SID_MAX_AGE - 200)            # put_rewards is use too
+        self.later(acct.SID_MAX_AGE - 100)                # (from the patched clock) put_rewards is use too
         self.assertTrue(acct.put_rewards(SID, {"xp": 2}))
         self.assertAlmostEqual(self.ttl(k), acct.SID_MAX_AGE, delta=5)
 
