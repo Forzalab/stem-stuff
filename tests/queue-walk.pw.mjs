@@ -30,7 +30,7 @@ if (!/^https?:/.test(ARG)) {
     choices: ["one", "two", "three"].map((md, i) => ({ id: "abc"[i], md })) });
   writeFileSync(join(banks, "BANK_QW5.json"), JSON.stringify({ v: 1, problems: [1, 2, 3, 4, 5].map(q5) }));
   OWN = true;
-  srv = spawn("python3", [join(ROOT, "serve.py"), ARG], { env: { ...process.env, STEM_BANKS: banks, STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });
+  srv = spawn("python3", [join(ROOT, "serve.py"), ARG], { env: { ...process.env, STEM_BANKS: banks, STEM_FRONT: "BANK_P2X", STEM_FRONT_TITLE: "Exam 2", STEM_TRIES: join(tmp, "tries.json"), OPENROUTER_API_KEY: "" }, stdio: "ignore" });   // the front bank as it was when this walk was written
   for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 }
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
