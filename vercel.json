@@ -31,6 +31,10 @@
       "destination": "/api/index?path=/state/:code"
     },
     {
+      "source": "/repair/:code",
+      "destination": "/api/index?path=/repair/:code"
+    },
+    {
       "source": "/b/:bank.json",
       "destination": "/api/index?path=/b/:bank.json"
     },

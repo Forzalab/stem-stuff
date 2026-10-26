@@ -113,6 +113,11 @@ class Wsgi(unittest.TestCase):
         with open(os.path.join(ROOT, "vercel.json")) as f:
             self.assertIn({"source": "/chat", "destination": "/api/index?path=/chat"}, json.load(f)["rewrites"])
 
+    def test_repair_route(self):                                                     # C1: /repair/<code> reaches serve.dispatch on Vercel
+        self.assertEqual(call("GET", "/repair/CALC1_T6B")[0], 404)                     # no ladder: 404, not the static fallthrough
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            self.assertIn({"source": "/repair/:code", "destination": "/api/index?path=/repair/:code"}, json.load(f)["rewrites"])
+
 
 class Kv(unittest.TestCase):
     def setUp(self):
