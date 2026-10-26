@@ -41,11 +41,17 @@ test("different seeds -> different colour (and the colour is in the pixels)", ()
   assert.ok(new Set(seeds.map(s => variant(s).hat)).size >= 2);
 });
 
-test("level H: 25% of the QR, at the centre, covered by art still decodes", () => {
-  const img = drawCluck(LINK, TOK), { x, y, size } = img.qr;
-  const side = Math.round(size / 2), x0 = x + (size - side) / 2 | 0, y0 = y + (size - side) / 2 | 0;   // side/2 squared = 25% of the area
-  for (let j = y0; j < y0 + side; j++) for (let i = x0; i < x0 + side; i++) img.data.set([255, 210, 74, 255], (j * img.width + i) * 4);
-  assert.equal(decode(img), LINK);
+/* Level H restores ~30% of the codewords, but art also breaks every codeword it only grazes: measured on this layout, a centre
+   disc of 20% of the QR's area decodes for 100/100 random tokens, 22% for 3/5, 25% for 1/5 (a square: 16% ok, 25% 0/5).
+   So the art budget is 20% of the area, over 2x the badge's ~9%. Light and dark art both, since a photo can binarise either way. */
+test("level H: art over the centre, 20% of the QR's area, still decodes", () => {
+  for (const tok of [TOK, "AAAAAAAAAAAAAAAAAAAAAA", "kitten_kitten_kitten_k"]) for (const rgb of [[255, 210, 74], [26, 20, 16]]) {
+    const link = "https://stem-stuff.vercel.app/?k=" + tok, img = drawCluck(link, tok), { x, y, size } = img.qr;
+    const cx = x + size / 2, cy = y + size / 2, r2 = size * size * 0.2 / Math.PI;
+    for (let j = y; j < y + size; j++) for (let i = x; i < x + size; i++)
+      if ((i + 0.5 - cx) ** 2 + (j + 0.5 - cy) ** 2 <= r2) img.data.set([...rgb, 255], (j * img.width + i) * 4);
+    assert.equal(decode(img), link, `${tok} ${rgb}`);
+  }
 });
 
 test("decode: no QR -> null", () => {
