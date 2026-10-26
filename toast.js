@@ -3,7 +3,7 @@
    Anchored in the question area (Tony: "I'm looking at the question first"), never in the top bar: under its anchor, held inside the
    viewport and under the pinned bar. In: a 200 ms slide, then the bar fills from `from` to `to` over 600 ms while the number counts.
    It waits for the reward FX to finish (html.fx-busy / an .fx-ov overlay) so it is the last thing that happens. One at a time: a queue.
-   4 s on screen, paused while the pointer rests on it or the tab is hidden; the close button or Escape closes it.
+   4 s on screen, paused while the pointer rests on it or the tab is hidden; the close button (or Escape while focus is on it) closes it.
    Sharp words (Tony, Windows laptop: blurry stickers): at rest the card has no transform and no running animation (`backwards`, never
    `both`), and it sits on whole px, so its text keeps subpixel AA.
    Today: the stage lines (rewards/engine.js). The miss #toast moves onto it in a later PR.
@@ -48,7 +48,9 @@
   }
   function hold() { if (left) { clearTimeout(timer); left = Math.max(800, left - (Date.now() - since)); } }
   function go() { if (left && cur) arm(left); }
-  function arm(ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(hide, ms); }
+  /* its own exit waits for the reward FX too (one blink: never two things moving at once, tests/blink-fx.pw.mjs) */
+  function expire() { if (busy()) { timer = setTimeout(expire, 250); return; } hide(); }
+  function arm(ms) { clearTimeout(timer); left = ms; since = Date.now(); timer = setTimeout(expire, ms); }
   function count(o) {
     var t = el.querySelector('.stoast-t'), i = el.querySelector('.stoast-bar i'), n = o.num || [0, 0];
     var put = function (v) {
@@ -102,7 +104,8 @@
   function show(o) { if (!o || !o.text) return; q.push(o); next(); }
 
   d.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && cur && el && el.classList.contains('on')) { hide(); e.stopImmediatePropagation(); }
+    // only from inside the toast (its close button): a passive status line never eats the Escape that closes Cluck's sheet or an overlay
+    if (e.key === 'Escape' && cur && el && el.classList.contains('on') && el.contains(d.activeElement)) { hide(); e.stopImmediatePropagation(); }
   }, true);
   d.addEventListener('visibilitychange', function () { d.hidden ? hold() : go(); });
   g.addEventListener('scroll', place, { passive: true });
