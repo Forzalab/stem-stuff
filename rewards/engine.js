@@ -92,7 +92,7 @@
     var T = g.stemToast, at = cfg.toastAt || function () { return document.querySelector('#q'); };
     if (shownWon == null) {
       shownWon = won;
-      if (!won && !started[key] && T) { started[key] = 1; T.show({ text: stage(0, goal), from: 0, to: 0, at: at }); }
+      if (!won && !started[key] && T) { started[key] = 1; T.show({ text: stage(0, goal), from: 0, to: 0, at: at, until: Date.now() + 15000 }); }   // the start line: now-ish or never
       return;
     }
     var p0 = shownWon; shownWon = won;

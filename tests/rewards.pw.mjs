@@ -521,6 +521,10 @@ try {
         assert.ok(Math.abs(g.tx.left - g.bar.left) < 1, "d1: words and bar share one left edge");
         assert.ok(Math.abs((g.x.top + g.x.bottom) / 2 - (g.t.top + g.t.bottom) / 2) < 2, "d1: the close button is centred");
         assert.equal(+g.p, +tpl.slice(1) / 4, "the bar ends at this landmark");
+        /* r4 (cluck-rise, easy): it never lies on a live control (Check, Next, a choice, the duck) */
+        assert.deepEqual(await p.evaluate(() => { const t = document.querySelector(".stoast.on").getBoundingClientRect();
+          return [...document.querySelectorAll("button, a[href], input, textarea, select, [role=button], .opt, .ck-say")].filter(e => !e.closest(".stoast") && e.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
+            .filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top; }).map(e => e.id || e.className); }), [], w + " " + tpl + ": over a control");
       }
       assert.equal(await p.evaluate(() => window.Rewards.stage(10, 20) + "|" + window.Rewards.stage(9, 20) + "|" + window.Rewards.stage(15, 20)),
         "Halfway there!|9 questions done. Keep it up!|Only 5 to go, you got this!", "quarters, not thirds");
