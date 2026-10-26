@@ -2467,14 +2467,14 @@ class PromptLeak(Exception):
     """a reply said a prompt's own word; str() is the pattern id only (never the text)"""
 
 
-_KEY_SRC = r"(?:(?i:answer|solution)[ \t-]+(?i:key)|KEY|[Kk]ey(?=[ \t]*(?:[:;,.!?—–)\n]|$)))"   # "the key" as a source: the label, or a bare key
+_KEY_SRC = r"(?:(?i:answer|solution)[ \t-]+(?i:key)|(?i:worked)[ \t]+(?i:solution)|KEY|[Kk]ey(?=[ \t]*(?:[:;,.!?—–)\n]|$)))"   # "the key" as a source: the label, the worked solution (mini.py), a bare key
 _KEY_VERB = r"(?i:says|said|say|shows|showed|show|gives|gave|give|states|stated|state|tells|told|tell|lists|listed|list|writes|wrote|confirms|confirmed)"
 _OWNER = r"(?i:the|your|our|my|this|that)"
 # (id, regex) the guard may CUT: the phrase goes, the fact after it stays
 LEAK_CUT = [
     ("key_from", re.compile(r"(?:(?i:straight|right)[ \t]+)?(?i:from|according[ \t]+to|as[ \t]+per|per|based[ \t]+on|going[ \t]+by|by|using|via)[ \t]+"
                             + _OWNER + r"[ \t]+" + _KEY_SRC + r"(?:'s[ \t]+(?i:work|numbers?|steps?|math))?[ \t]*[:,—–]?[ \t]*", re.M)),
-    ("key_says", re.compile(r"(?:(?i:as|like)[ \t]+)?" + _OWNER + r"[ \t]+(?:(?i:answer|solution)[ \t-]+)?(?i:key)[ \t]+" + _KEY_VERB
+    ("key_says", re.compile(r"(?:(?i:as|like)[ \t]+)?" + _OWNER + r"[ \t]+(?:(?:(?i:answer|solution)[ \t-]+)?(?i:key)|(?i:worked)[ \t]+(?i:solution))[ \t]+" + _KEY_VERB
                             + r"(?:[ \t]+(?i:that|it))?[ \t]*[:,]?[ \t]*", re.M)),
 ]
 _NOCAPS = r"(?<![A-Z][ \t])(?<![A-Z]{2}[ \t]{2})"    # a label in caps, unless a caps word sits just before it (a shouted "THE KEY IS")
@@ -2500,6 +2500,8 @@ LEAK_STOP = [
     ("student_tag", re.compile(r"(?i:<[ \t]*/?[ \t]*student_|\bstudent_[0-9a-f]{8}\b)")),
     ("prompt_word", re.compile(r"(?i:\bsystem[ \t]+prompt|\bmy[ \t]+(?:instructions|prompt)\b|\b(?:the|this|your)[ \t]+(?:prompt|instructions)[ \t]+"
                                r"(?:say|says|tell|tells)\b|\bletter[ \t]+prompt|\bexternal[ \t]+classifier|\btrade[ \t-]+secret)")),
+    ("mini_label", re.compile(r"(?i:\berror[ \t]+labels?\b|\bnever[ \t]+quote[ \t]+it\b)|\b(?:Step goal|Student answer|Twist|Worked solution|"   # mini.py's
+                              r"Error label|Numbers)[ \t]*:")),                                    # user-turn labels (Step goal: ...)
     ("lore_word", re.compile(r"(?i:\bcensor(?:ed|s|ing)?\b|\bsandbox(?:ed)?\b|\bevil[ \t]+ma(?:c|h|ch|hc)h?ine\b|\bpresolved\b|\bsaccharine\b)")),
 ]
 
@@ -2556,7 +2558,7 @@ LEAK_WORDS = re.compile(r"(?i:straight|right|from|according|to|as|per|based|on|g
                         r"choices|student|picked|sheet|formulas|algebra|needs|result|problem|figure|scratchpad|message|formatting|"
                         r"endformatting|format|voice|identity|editor|tag|section|end|data|student_[0-9a-f]*|system|prompt|instructions|"
                         r"letter|external|classifier|trade|secret|censor(?:ed|s|ing)?|sandbox(?:ed)?|evil|ma(?:c|h|ch|hc)h?ine|presolved|"
-                        r"saccharine)")
+                        r"saccharine|worked|error|labels?|goal|twist|never|quote)")
 
 _LEAK_START = re.compile(r"(?i:straight|right|from|according|as|per|based|going|by|using|via|like|the|your|our|my|this|that)")   # key_from /
 # key_says start with no \b: a match may start inside a stream word ("paper the KEY"), so such a word's tail waits
