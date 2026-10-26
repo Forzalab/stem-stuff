@@ -1,4 +1,5 @@
-"""Curated brainrots: read Tony's 3 YouTube playlists (RSS, newest 15 each), add the hand-curated STATIC categories, and rewrite the CATS block in brainrot.js.
+"""Curated brainrots: read Tony's 8 YouTube playlists (RSS, newest 15 each) and rewrite the CATS block in brainrot.js.
+A playlist with a FALLBACK list whose feed fails (HTTP error, timeout) or comes back empty gets that list instead; the run goes on.
 Run by hand when a playlist changes; commit the result. No runtime fetch: sw.js caches brainrot.js, the list rides along.
 A Short (feed link /shorts/<id>) is flagged 1: brainrot.js lets it fill its 9:16 frame instead of centre-cropping a landscape video.
 usage: python3 tools/brainrot_list.py"""
@@ -13,12 +14,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = os.path.join(ROOT, "brainrot.js")
 PLAYLISTS = [("Parkour", "PLmSs-0cFIbfVWhkZx0i4UMiZdr2C0Z8w7"),          # Tony, Oct 5
              ("Brainrot", "PLGgy9JJbLirtf32CrMSCLiGcBqKAj0WRL"),
-             ("Subway Surfers", "PLGspExVREA9D1_jjA77wSmxdzlw1E507h")]
-# Hand-curated categories with no playlist (Tony, Oct 26, todo 78: "hydraulic press and soap squeezing/cutting videos"; then Kinetic Sand,
-# Pressure Washing, Marble Run = marble runs + domino chains): written after the
-# playlists on every run. Each id passed YouTube oEmbed (embeddable); title = oEmbed's, verbatim; short = 1 when oEmbed is taller than wide.
-STATIC = [
-    ("Hydraulic Press", [
+             ("Subway Surfers", "PLGspExVREA9D1_jjA77wSmxdzlw1E507h"),
+             ("Hydraulic Press", "PLIBm3moPkDhaZrkZ-rxkirsphZ2Fnkw3V"),      # Tony, Oct 26
+             ("Soap Cutting", "PLeQTxdXK8k64"),
+             ("Kinetic Sand", "PLDH5HFJhX9kQ"),
+             ("Pressure Washing", "PLy8J11EiVseMBG-Eq-U5cmnHUZE7EKLQ3"),
+             ("Marble Run", "PL6NGwXalsxaT_UG5avTg98BsLWLaCBsPU")]
+# Per-category FALLBACK (todo 78, Tony, Oct 26: "if playlist suddenly 404, choose a random link to put in"): hand-curated, used when that
+# playlist's feed fails or is empty. Marble Run = marble runs + domino chains. Each id passed YouTube oEmbed (embeddable);
+# title = oEmbed's, verbatim; short = 1 when oEmbed is taller than wide. The 3 Oct 5 playlists have none: an empty feed there still aborts.
+FALLBACK = {
+    "Hydraulic Press": [
         ["q9BtYEnrkg4", "Top 100 Best Hydraulic Press Moments | Satisfying Crushing Compilation", 0],
         ["eSvhnGdncP8", "Top 100 Best Hydraulic Press Moments VOL 3 | Satisfying Crushing Compilation", 0],
         ["Tbi09Ohrn2k", "Top 100 Best Hydraulic Press Moments VOL 4 | Satisfying Crushing Compilation", 0],
@@ -31,8 +37,8 @@ STATIC = [
         ["d9izfWJl0Jw", "TOP 30 STRONG OBJECTS CRUSHED BY 500 TON HYDRAULIC PRESS", 0],
         ["TnOaLbu3hy8", "TOP 20 STRONG OBJECTS CRUSHED BY 500 TON HYDRAULIC PRESS", 0],
         ["_Dqu5YtFiw4", "500 TON HYDRAULIC PRESS VS VERY HARD OBJECTS", 0],
-    ]),
-    ("Soap Cutting", [
+    ],
+    "Soap Cutting": [
         ["f63gAuLHnBo", "[ASMR]Compilation set★ASMR SOAP★Crushing soap★Cutting soap cubes★FOAM&GLITTER&STARCH★", 0],
         ["Njq04uncvrQ", "Compilation set★ASMR SOAP★Compilation set★Crushing soap★Cutting soap cubes★FOAM&GLITTER&STARCH★", 0],
         ["9eqvo0uqpTs", "Asmr soap with foam and glitter 💕✨ Crushing crunchy 💗 Cutting soap cubes 💕", 0],
@@ -45,8 +51,8 @@ STATIC = [
         ["K6H6peOuMPA", "Soap Carving ASMR ! Relaxing Sounds ! Satisfying ASMR Video | P974", 0],
         ["orD6yIilR0A", "ASMR Soap carving", 0],
         ["6S28fH1qUNc", "Relaxing Soap Cutting ASMR. Satisfying Soap and lipstick cutting. Corte de jabón - 859", 0],
-    ]),
-    ("Kinetic Sand", [
+    ],
+    "Kinetic Sand": [
         ["3clqk2U3T9Y", "Very Satisfying and Relaxing Compilation 148 Kinetic Sand ASMR", 0],
         ["mjMW51EFNVw", "Very Satisfying Video Compilation 63 Kinetic Sand Cutting ASMR", 0],
         ["rF6awqlStl4", "Very Satisfying and Relaxing Compilation 275 Kinetic Sand ASMR", 0],
@@ -59,8 +65,8 @@ STATIC = [
         ["etp46Aca_UM", "*1 HOUR* All of Very Satisfying ASMR Videos - Kinetic Sand Cutting ASMR Compilation", 0],
         ["T87KwRk9IvE", "1 Hour Kinetic Sand ASMR! Satisfying Sand ASMR Cutting! Relaxing Kinetic Sand ASMR #13", 0],
         ["USRtMtLHkfY", "3 Hour Kinetic Sand ASMR Marathon | No Talking, Just Satisfaction", 0],
-    ]),
-    ("Pressure Washing", [
+    ],
+    "Pressure Washing": [
         ["oTWeDOhm4_c", "Extremely Satisfying Pressure Washing ▶ 1", 0],
         ["iJaw4nP2VS0", "Extremely Satisfying Pressure Washing ▶ 2", 0],
         ["vX--cenq70I", "INGENIOUS & Oddly Satisfying Pressure Washing  Videos #74", 0],
@@ -73,8 +79,8 @@ STATIC = [
         ["plSsCNEmRmA", "Pressure washing in real time - Satisfying pressure washing ASMR to help you relax and sleep!", 0],
         ["rKMojw8tdds", "Pressure Washing 15 Years Of NEGLECT... Real Speed Pure ASMR No Talking", 0],
         ["ni-hoolFhKo", "ASMR Pressure Washing 💦 Relaxing Power Wash Sounds (No Talking) Can I save this Expensive driveway?🤔", 0],
-    ]),
-    ("Marble Run", [
+    ],
+    "Marble Run": [
         ["_y-G5YM6paE", "Magic Marble Run Compilation", 0],
         ["E1NyZ5PtnAk", "Marble Run Race ASMR 1000 Marbles Rain Gutter VS Mega Whirlpool ASMR Amakandu 1H", 0],
         ["Z6GnsxR7c18", "Marble run race ASMR ☆ Summary video of over 10 types of marble runs.Compilation Long video!", 0],
@@ -87,8 +93,8 @@ STATIC = [
         ["NlHAW1YTWiM", "75,000 Dominoes Falling to Relax Your Mind (ODDLY SATISFYING)", 0],
         ["nTLQluEp1Nw", "Satisfying Domino & Marble Tricks! (Relaxing Compilation)", 0],
         ["i-Oqf-f8FjU", "The World's Largest marble run race compilation video", 0],
-    ]),
-]
+    ],
+}
 FEED = "https://www.youtube.com/feeds/videos.xml?playlist_id="
 NS = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
 BLOCK = re.compile(r"(/\* list:start[^\n]*\n).*?(\n *// list:end)", re.S)
@@ -119,13 +125,20 @@ def rewrite(src, cats):
 def main():
     cats = []
     for name, pid in PLAYLISTS:
-        with urllib.request.urlopen(FEED + pid, timeout=20) as r:
-            vids = parse(r.read())
+        try:
+            with urllib.request.urlopen(FEED + pid, timeout=20) as r:
+                vids = parse(r.read())
+        except (OSError, ET.ParseError):                                   # HTTPError / URLError / timeout are OSErrors
+            if name not in FALLBACK:
+                raise
+            vids = []
         if not vids:
-            raise SystemExit(f"{name}: empty feed")
+            if name not in FALLBACK:
+                raise SystemExit(f"{name}: empty feed")
+            print(f"{name}: feed failed, using fallback", file=sys.stderr)
+            vids = FALLBACK[name]
         cats.append((name, vids))
         print(f"{name}: {len(vids)} videos, {sum(v[2] for v in vids)} shorts", file=sys.stderr)
-    cats += STATIC                                                     # curated by hand, kept on every rerun
     with open(TARGET, encoding="utf-8") as f:
         src = f.read()
     with open(TARGET, "w", encoding="utf-8") as f:
