@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Welcome lab</title>
+<!-- B3 Welcome Q1 lab (brain design-round-66 DESIGN-v3 §2): welcome.js (repair.js, welcome variant) on the real app.css tokens. Open:
+     python3 serve.py 8832, then http://localhost:8832/design/welcome-lab.html, or open this file straight from disk. Try it at 360 and desktop.
+     FIX is a hand-made dead-easy item in the A1 shape (welcome: true, repair{steps[]}): swap it for the bank's welcome item once A2b lands.
+     Nothing is fetched. tests/welcome.pw.mjs drives this page through window.lab(). -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../vendor/fonts/atkinson.css">
+<link rel="stylesheet" href="../vendor/katex/katex.min.css">
+<link rel="stylesheet" href="../app.css">
+<link rel="stylesheet" href="../repair.css">
+<link rel="stylesheet" href="../welcome.css">
+<style>
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 var(--t-md)/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 46rem; margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+h1 { margin: 0 0 var(--s1); font-size: var(--t-lg); }
+.lede { margin: 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); }
+.row { margin: var(--s3) 0 var(--s4); }
+.row button { min-height: 36px; padding: 0 var(--s3); border: var(--bw) solid var(--line); border-radius: 8px; background: var(--sheet); color: var(--ink); font: inherit; font-size: var(--t-xs); cursor: pointer; }
+.row button:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+#log { margin-top: var(--s4); color: var(--muted); font: 400 var(--t-xs)/1.4 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+<h1>Welcome lab</h1>
+<p class="lede">Q1 only: warm, every sub-step shown, then faded as you go. A wrong tap is a hint. The events land below.</p>
+<div class="row"><button type="button" id="again">start over</button></div>
+<div id="host"></div>
+<pre id="log"></pre>
+</main>
+<script src="../vendor/katex/katex.min.js"></script>
+<script src="../vendor/math.min.js"></script>
+<script src="../graph.js"></script>
+<script src="../copy/repair-lines.js"></script>
+<script src="../repair.js"></script>
+<script src="../welcome.js"></script>
+<script>
+"use strict";
+/* dead easy, unfailable: p = m·v = 2·3 = 6 kg·m/s. Step labels are digit-free (schema rule); the why sits on the fam step (the faded one) */
+const FIX = window.FIX = {
+  code: "LAB_WELCOME", type: "num", answer: 6, welcome: true, noob: { tier: 1 },
+  stem: "A $2$ kg ball moves at $3$ m/s. What is its momentum?",
+  repair: { steps: [
+    { id: "formula", label: "Which formula?", kind: "pick", ok: "a",
+      opts: [{ id: "a", md: "$p=mv$" }, { id: "b", md: "$p=m/v$" }, { id: "c", md: "$p=\\tfrac12 mv^2$" }],
+      miss: { b: "Momentum grows when it goes faster. Try another.", c: "That one is energy. Try another." } },
+    { id: "plug", label: "Plug in", kind: "fill", tex: "p=2\\,▢\\,3", opts: ["×", "+", "−"], ok: "×", fam: "op",
+      why: { q: "Why times?", opts: ["momentum is mass times speed", "we always add what we are given", "the bigger number goes first"], ok: 0 } },
+    { id: "answer", label: "Its momentum", kind: "num", ok: "6", unit: "kg·m/s" }
+  ] }
+};
+const host = document.getElementById("host"), log = document.getElementById("log");
+let cur = null;
+/* lab({ label }): label overrides step one's (the text-only test) */
+window.lab = (o = {}) => {
+  window.__ev = []; log.textContent = "";
+  if (cur) cur.destroy();
+  const item = o.label ? { ...FIX, repair: { steps: [{ ...FIX.repair.steps[0], label: o.label }, ...FIX.repair.steps.slice(1)] } } : FIX;
+  cur = Welcome.mount(host, item, { on: (name, data) => { window.__ev.push([name, data]); log.textContent += name + " " + JSON.stringify(data) + "\n"; } });
+};
+document.getElementById("again").addEventListener("click", () => window.lab());
+window.lab();
+</script>
+</body>
+</html>
