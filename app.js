@@ -823,10 +823,12 @@ function docHTML(d, tex, fig) {
 const FIG_H = 168;
 function drawDocFig(g, fig) {
   Graph.render(g, fig);
-  const W = g.clientWidth, H = g.offsetHeight;
-  if (!(H > FIG_H && W)) return;
-  g.style.width = Math.max(Math.round(0.6 * W), Math.floor(W * FIG_H / H)) + "px";
-  Graph.render(g, fig); g.style.marginInline = "auto";
+  for (let i = 0; i < 2; i++) {                                                   // a widened popover (a long formula) can make it much taller: two tries
+    const W = g.clientWidth, H = g.offsetHeight;
+    if (!(H > FIG_H + 1 && W > 160)) return;
+    g.style.width = Math.max(160, Math.floor(W * FIG_H / H)) + "px";
+    Graph.render(g, fig); g.style.marginInline = "auto";
+  }
 }
 function formulaCard() {
   if (window.Pop && Pop.anchor()?.closest("#fcard")) Pop.close();
@@ -851,6 +853,9 @@ function formulaCard() {
     Pop.toggle(b, { variant: "doc", label: "What this formula means", align: b.closest(".f").querySelector(".fm"), build: el => {
       const fig = window.FormulaFigs?.[f.id];
       el.innerHTML = docHTML(f.doc, f.tex, fig); el.classList.toggle("fd-has-fig", !!fig);   // a figure needs a fixed width to draw at
+      /* a formula wider than the popover widens it, up to the viewport (past that .pop-h scrolls sideways): never cut short. Before the figure, so it draws at the final width */
+      const hd = el.querySelector(".pop-h"), need = Math.ceil(hd.scrollWidth + el.offsetWidth - hd.clientWidth);
+      if (need > el.offsetWidth) el.style.width = el.style.maxWidth = Math.min(need, innerWidth - 32) + "px";
       const g = fig && el.querySelector(".fd-fig");
       if (g) try { drawDocFig(g, fig); } catch (e) { console.error(e); g.textContent = fig.alt; g.classList.add("fig-off"); }
     } });
