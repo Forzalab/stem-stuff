@@ -1136,6 +1136,7 @@ function wireFF() {
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
       try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
+      pvFit(pv);
     });
     /* Enter: next empty box first, submit when all are filled */
     inp.addEventListener("keydown", e => {
@@ -1146,6 +1147,20 @@ function wireFF() {
     });
   }
   go.addEventListener("click", submitFF);
+}
+/* W91: the preview's room. One line is reserved (app.css); taller math ratchets it up (150 ms), it never shrinks while this question is open (the element is
+   rebuilt per question), and past 3 lines the math scales down inside it: typing never moves the page more than the ratchet steps */
+function pvFit(pv) {
+  let w = pv.querySelector(":scope > .pvi");
+  if (!w) { w = document.createElement("div"); w.className = "pvi"; w.append(...pv.childNodes); pv.append(w); }
+  w.style.transform = "";
+  const line = parseFloat(getComputedStyle(pv).minHeight) || 0, cap = 3 * line, nat = w.getBoundingClientRect().height;
+  let need = nat;
+  if (cap && nat > cap) { w.style.transform = `scale(${cap / nat})`; need = cap; }
+  const room = pv._room || line;                             // unlocked, the box is the reserved line (its height: auto already grew with the new math)
+  if (need <= room + 0.5) return;
+  if (!pv._room) { pv.style.height = room + "px"; void pv.offsetHeight; }   // lock it at the line first, so the first step animates too
+  pv._room = need; pv.style.height = need + "px";
 }
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
@@ -1508,6 +1523,7 @@ function reveal(r, part) {
   host.querySelector(".ansl")?.remove();
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b></p>`);
+  if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
 }
