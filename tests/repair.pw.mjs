@@ -130,6 +130,27 @@ try {
     assert.match(await page.textContent('.rp-step[data-id="given"] .rp-miss'), /\S/, "the hint");
   });
 
+  // W71 copy lane: a k>1 slip (drop+sign) says "mistakes" (intro.repairMany, intro.repair until it lands); a leading *...* is an italic action
+  await step("intro: repairMany for a multi-family slip, intro.repair for one family or while repairMany is undefined", async () => {
+    await page.evaluate(() => { window.__intro0 = { ...__stemRepairLines.intro }; __stemRepairLines.intro.repairMany = "MANY"; });
+    await mount({ variant: "repair", error: "drop+sign" });
+    assert.equal(await page.textContent(".rp-line"), "MANY");
+    await mount({ variant: "repair", error: "sign" });
+    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.repair));
+    await page.evaluate(() => { delete __stemRepairLines.intro.repairMany; });
+    await mount({ variant: "repair", error: "drop+sign" });
+    assert.equal(await page.textContent(".rp-line"), await page.evaluate(() => __stemRepairLines.intro.repair), "falls back");
+  });
+
+  await step("intro: a leading *action* is <em>, the rest lands as text", async () => {
+    await page.evaluate(() => { __stemRepairLines.intro.repair = "*waddles to you* QUACK. <b>x</b> *not this*"; });
+    await mount({ variant: "repair", error: "sign" });
+    assert.deepEqual(await page.$$eval(".rp-line em", e => e.map(x => x.textContent)), ["waddles to you"]);
+    assert.equal(await page.textContent(".rp-line"), "waddles to you QUACK. <b>x</b> *not this*");
+    assert.equal(await page.$$eval(".rp-line b", x => x.length), 0);
+    await page.evaluate(() => { __stemRepairLines.intro = window.__intro0; });
+  });
+
   await step("text only: a label with markup lands as text, never as an element", async () => {
     await page.evaluate(() => { window.__x = 0; });
     await mount({ variant: "repair", error: null, label: "<img src=x onerror=window.__x=1>" });
