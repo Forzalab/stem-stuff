@@ -52,6 +52,8 @@ const earned = (j, t0, code, e1 = "negation", e2 = "sign") => {
   j.at(t0 + 20).ev("pick", { choice: "B", verdict: "wrong", error: e2 });
   return j.at(t0 + 30).ev("pick", { choice: "C", verdict: "correct" });
 };
+/* W96: an item earned by depth alone (no wrong pick: not a comeback, so the QUIET roll and every cap apply): S2 depth 2 (45 s fallback) then right */
+const deepItem = (j, t0, code) => { j.at(t0).ev("q_open", { code }); j.at(t0 + 91).tick(); return j.at(t0 + 95).ev("pick", { choice: "A", verdict: "correct" }); };
 const R = (quiet = 0.9, kind = 0.5, tpl = 0, delay = 0) => script(quiet, kind, tpl, delay);
 const plain = x => JSON.parse(JSON.stringify(x));   // out of the vm realm, so deepEqual compares plain values
 const seenLog = j => j.state().lines.filter(l => /  seen  /.test(l));
@@ -107,7 +109,7 @@ test("the session feeds the tree: help and S5 (fast repeat) are not earned; a fa
   const h = session({ rand: R() });
   h.at(0).ev("q_open", { code: "A" }); h.at(10).ev("pick", { choice: "A", verdict: "wrong" }); h.at(15).ev("cluck_open", { tab: "ask" });
   h.at(30).ev("pick", { choice: "B", verdict: "wrong" });
-  assert.equal(h.at(50).ev("pick", { choice: "C", verdict: "correct" }), null, "help");
+  assert.equal(plain(h.at(50).ev("pick", { choice: "C", verdict: "correct" })).kind, "nod", "help: not earned, but a comeback = a nod, no words (W96)");
   const f = session({ rand: R() });
   f.at(0).ev("q_open", { code: "A" }); f.at(2).ev("pick", { choice: "A", verdict: "wrong" }); f.at(3).ev("pick", { choice: "B", verdict: "wrong" });
   assert.equal(f.at(4).ev("pick", { choice: "C", verdict: "correct" }), null, "S5");
@@ -170,24 +172,29 @@ test("fire: an earned item returns { kind, line, delay, fam }, logs it, and take
   assert.equal(j.state().seen.n, 1); assert.deepEqual(plain(j.state().seen.used), ["sgn-1"]);
   assert.equal(j.at(31).ev("pick", { choice: "C", verdict: "correct" }), null, "1 per item (a second right pick, e.g. a multi's next part)");
 });
-test("fire: nod has no text; quiet logs `seen earned quiet` and returns nothing, once per item", () => {
+test("fire: nod has no text; quiet logs `seen earned quiet` and returns nothing, once per item; a comeback is never quiet (W96)", () => {
   const n = earned(session({ rand: R(0.9, 0.1) }), 0, "A");
   assert.equal(n.kind, "nod"); assert.equal(n.line, ""); assert.equal(n.id, "");
   const j = session({ rand: R(0.1) });
-  assert.equal(earned(j, 0, "A"), null);
+  assert.equal(deepItem(j, 0, "A"), null);
   assert.match(seenLog(j).at(-1), /seen {2}earned quiet$/);
   assert.equal(j.state().seen.n, 0, "quiet is not a fire");
-  assert.equal(j.at(31).ev("pick", { choice: "C", verdict: "correct" }), null);
+  assert.equal(j.at(96).ev("pick", { choice: "C", verdict: "correct" }), null);
   assert.equal(seenLog(j).length, 1, "no second roll on the item");
+  assert.ok(earned(session({ rand: R(0.1) }), 0, "A"), "the same low roll on a comeback still shows");
 });
-test("fire: the quiet and kind rolls follow QUIET and KIND (seeded, 20000 items)", () => {
-  const rand = lcg(11), N = 20000, got = { quiet: 0, nod: 0, short: 0, full: 0 };
+test("fire: the quiet and kind rolls follow QUIET and KIND (seeded, 20000 items); comebacks skip QUIET, keep KIND", () => {
+  const rand = lcg(11), N = 20000, got = { quiet: 0, nod: 0, short: 0, full: 0 }, cb = { quiet: 0, nod: 0, short: 0, full: 0 };
   for (let i = 0; i < N; i++) {
-    const j = session({ rand }), r = earned(j, 0, "A", "misread", "misread");
+    const r = deepItem(session({ rand }), 0, "A");
     if (r) got[r.kind]++; else got.quiet++;
+    const c = earned(session({ rand }), 0, "A", "misread", "misread");
+    if (c) cb[c.kind]++; else cb.quiet++;
   }
   assert.ok(Math.abs(got.quiet / N - SEEN.QUIET) < 0.015, "quiet " + got.quiet / N);
   for (const k of ["nod", "short", "full"]) assert.ok(Math.abs(got[k] / N - (1 - SEEN.QUIET) * SEEN.KIND[k]) < 0.015, k + " " + got[k] / N);
+  assert.equal(cb.quiet, 0, "a comeback always shows");
+  for (const k of ["nod", "short", "full"]) assert.ok(Math.abs(cb[k] / N - SEEN.KIND[k]) < 0.015, "comeback " + k + " " + cb[k] / N);
 });
 test("fire: the family decides the line; no family or a family without a free line of the kind → the any pool", () => {
   assert.equal(earned(session({ rand: R(0.9, 0.5, 0) }), 0, "A", "x", "negation").line, LINES.fam.negation[0].text);
@@ -215,24 +222,32 @@ test("fire: no template id twice in a session; {title} fills; a fill over 8 word
   const none = earned(session({ rand: R(0.9, 0.9, 0) }), 0, "A", "misread", "misread");
   assert.ok(!/\{title\}/.test(none.line) && none.id !== "mis-3" && none.id !== "any-5", "no title → no {title} line");
 });
-test("caps: shared gap (3 min) with J5 and between seen lines; MAX per session; a J5 nudge on the item", () => {
-  const j = session({ rand: () => 0.9 });
-  assert.ok(earned(j, 0, "A")); assert.equal(earned(j, 100, "B"), null, "100 s since the last");
-  assert.ok(earned(j, 300, "C")); assert.ok(earned(j, 600, "D"));
-  assert.equal(earned(j, 900, "E"), null, "MAX = " + SEEN.MAX); assert.equal(j.state().seen.n, SEEN.MAX);
-  const n = session({ rand: () => 0, on: ["S6"], lines: NUDGE, say: () => true });   // S6 nudges at the 2nd wrong pick (roll 0 < p), so this item is taken
-  assert.equal(earned(n, 0, "A"), null); assert.equal(n.state().nudge.n, 1);
+test("caps: shared gap (GAP_S 90 s, W96) with J5 and between seen lines; MAX per session; a J5 nudge on the item; a comeback skips gap + item (W96)", () => {
+  const j = session({ rand: () => 0.9, hist: { B: [5, 5, 5, 5] } });
+  assert.ok(deepItem(j, 0, "A"));
+  j.at(100).ev("q_open", { code: "B" }); j.at(111).tick();
+  assert.equal(j.at(115).ev("pick", { choice: "A", verdict: "correct" }), null, "20 s since the last");
+  assert.ok(earned(j, 120, "C"), "a comeback 55 s after the last one still shows");
+  assert.ok(earned(j, 400, "D"));
+  assert.equal(earned(j, 700, "E"), null, "MAX = " + SEEN.MAX); assert.equal(j.state().seen.n, SEEN.MAX);
+  const n = session({ rand: () => 0, on: ["S6"], lines: NUDGE, say: () => true });   // S6 nudges on the tick after the 1st wrong pick (roll 0 < p; MISS_S)
+  n.at(0).ev("q_open", { code: "A" }); n.at(10).ev("pick", { choice: "A", verdict: "wrong" }); n.at(16).tick(); assert.equal(n.state().nudge.n, 1);
+  assert.ok(n.at(30).ev("pick", { choice: "B", verdict: "correct" }), "the nudge does not eat the comeback");
+  const m = session({ rand: script(0, 0), on: ["S2"], lines: NUDGE, say: () => true });   // an S2 nudge takes a depth-only item
+  assert.equal(deepItem(m, 0, "A"), null); assert.equal(m.state().nudge.n, 1); assert.deepEqual(plain(seenLog(m)), [], "the item cap, not a quiet roll");
 });
-test("caps: never in F flow (a run alive, no wrong pick), never while typing, never hidden", () => {
+test("caps: never in F flow (a run alive, no wrong pick), never while typing (a comeback ends the typing itself, W96), never hidden", () => {
   const f = session({ rand: () => 0.9 });
   f.at(0).ev("q_open", { code: "A" }); f.at(10).ev("pick", { choice: "A", verdict: "correct" });
   f.at(20).ev("q_open", { code: "B" }); f.at(181).tick();
   assert.equal(f.state().flowRun, 1);
   assert.equal(f.at(185).ev("pick", { choice: "A", verdict: "correct" }), null, "deep-only item inside a flow run");
   const k = session({ rand: () => 0.9 });
-  k.at(0).ev("q_open", { code: "A" }); k.at(10).ev("pick", { choice: "A", verdict: "wrong" }); k.at(20).ev("pick", { choice: "B", verdict: "wrong" });
-  k.at(29).input("keydown");
-  assert.equal(k.at(30).ev("pick", { choice: "C", verdict: "correct" }), null, "a key 1 s ago");
+  k.at(0).ev("q_open", { code: "A" }); k.at(91).tick(); k.at(94).input("keydown");
+  assert.equal(k.at(95).ev("pick", { choice: "C", verdict: "correct" }), null, "a key 1 s ago");
+  const c = session({ rand: () => 0.9 });
+  c.at(0).ev("q_open", { code: "A" }); c.at(10).ev("pick", { choice: "A", verdict: "wrong" }); c.at(29).input("keydown");
+  assert.ok(c.at(30).ev("pick", { choice: "C", verdict: "correct" }), "a typed comeback");
   const h = session({ rand: () => 0.9 });
   h.at(0).ev("q_open", { code: "A" }); h.at(10).ev("pick", { choice: "A", verdict: "wrong" }); h.at(20).ev("pick", { choice: "B", verdict: "wrong" });
   h.at(25).vis(true);
@@ -244,7 +259,7 @@ test("off: seenOff() → nothing; no seenLines → inert; the J5 nudge rules are
   assert.equal(earned(j, 0, "A"), null); off = false;
   assert.ok(earned(j, 200, "B"));
   assert.equal(earned(session({ rand: () => 0.9, seenLines: undefined }), 0, "A"), null);
-  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 180, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(API.NUDGE)), { ACT: "cluck_say", STATES: ["S2", "S6", "Q"], P_ONE: 0.7, SHARE_ALL: 0.85, GAP_S: 90, TAKE_S: 2, TYPING_S: 3, S2_DEPTH: 2, Q_DEPTH: 2, MISS_S: 5 });
 });
 test("dump: the ring is JSONL of every log line (sid, item, code, line), pick lines carry err=", () => {
   const j = session({ rand: R(), sid: "sX" });
@@ -259,7 +274,7 @@ test("dump: the ring is JSONL of every log line (sid, item, code, line), pick li
 /* ---- wiring: ?jev=1 → intent.js → stemDuck.say, the off switches, the hollow tap ---- */
 const wired = (extra = {}) => {
   const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.99, 0.9, 0.5, 0, 0), bank: { get: () => ({ title: "T" }) }, ...extra });
+  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.5, 0, 0), bank: { get: () => ({ title: "T" }) }, ...extra });
   const pick = (t, ch, v, error) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: ch, verdict: v, error }); };
   L.win.stemT("q_open", { code: "A" });
   pick(10, "A", "wrong", "negation"); pick(20, "B", "wrong", "sign"); pick(30, "C", "correct");
@@ -303,7 +318,7 @@ test("wiring: 2 hollows spread past the first 5 fires do not switch it off for g
 });
 test("wiring: a nod → say(\"\", { nod: true })", () => {
   const calls = [], duck = { say: (line, o) => { calls.push([line, o]); return true; } };
-  const L = load({ search: "?jev=1", duck, rand: script(0.99, 0.9, 0.1, 0, 0) });
+  const L = load({ search: "?jev=1", duck, rand: script(0.9, 0.1, 0, 0) });
   L.win.stemT("q_open", { code: "A" });
   [[10, "A", "wrong"], [20, "B", "wrong"], [30, "C", "correct"]].forEach(([t, c, v]) => { L.clock.t = t * 1000; L.win.stemT("pick", { code: "A", choice: c, verdict: v }); });
   L.later[0][0]();
