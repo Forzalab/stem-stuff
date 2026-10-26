@@ -172,7 +172,7 @@ try {
   await step("a pick answer step with no ok/opts: the item's own choices, graded through opts.grade", async () => {
     await mount({ variant: "alt", error: null, remote: true });
     await act('.rp-why .rp-chip[data-why="0"]');
-    await act('.rp-val-opts .rp-chip[data-v="a"]');
+    assert.deepEqual(await states(), ["units:done", "size:done", "answer:active"]);
     assert.equal(await page.$$eval('.rp-step[data-id="answer"] .rp-val-opts .rp-chip', c => c.length), 2, "the item's 2 choices");
     await act('.rp-val-opts .rp-chip[data-v="b"]');
     await page.waitForSelector('.rp-step[data-id="answer"] .rp-miss');
