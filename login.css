@@ -11,7 +11,6 @@ dialog.lg::backdrop { background: color-mix(in srgb, var(--scrim) 60%, transpare
 .lg-art { margin: 0 auto var(--s3); width: min(100%, 15rem); }
 .lg-cluck { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; background: var(--raised); }
 .lg-cap { margin: 0 0 var(--s4); font-weight: var(--w-em); }
-.lg-cap span { display: block; }
 .lg-new { margin: var(--s4) 0 var(--s2); color: var(--muted); font-size: var(--t-sm); }
 .lg-btn { box-sizing: border-box; display: block; width: 100%; min-height: var(--btn); padding: var(--s2) var(--s4);
   border: var(--bw) solid var(--line); border-radius: 8px; background: var(--raised); color: var(--ink);
