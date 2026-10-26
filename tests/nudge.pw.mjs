@@ -1,4 +1,4 @@
-// J5 Cluck nudge, Tier 0 (intent.js → peek.js stemDuck.say; brain cluck-nudge.md 🔒): Jev on by default (art. 11, no flag), the first item idle past 80 s with
+// J5 Cluck nudge, Tier 0 (intent.js → peek.js stemDuck.say; brain cluck-nudge.md 🔒): Jev on by default (art. 11, no flag), the first item idle past 45 s (W96) with
 // no pick (Q) → Cluck's peek rises carrying a Q line from copy/nudge-lines.js. Any input puts it away (a dismiss: Jev's gap doubles); a tap
 // counts as taken. ?jev=0 (this device off) = no nudge. The roll is pinned (__stemJevRand = 0) so it always fires. Phone 390 + desktop 1280, shots.
 //   node tests/nudge.pw.mjs <port> [shots dir]      (starts its own serve.py on that port)
@@ -94,12 +94,12 @@ const look = page => page.evaluate(() => {
 const jev = page => page.evaluate(() => window.stemJev().nudge);
 
 for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { width: 1280, height: 800 }]]) {
-  await step(`${name}: default on (no flag), first item idle past 80 s with no pick → the peek rises with a Q line; a key puts it away and the gap doubles`, async () => {
+  await step(`${name}: default on (no flag), first item idle past 45 s (W96 80→45) with no pick → the peek rises with a Q line; a key puts it away and the gap doubles`, async () => {
     const page = await open({ vp, touch: name === "phone" });
-    await idle(page, 75000);
+    await idle(page, 40000);
     assert.equal(await up(page), false, "nothing before the Q depth");
     await idle(page, 15000);
-    assert.equal(await up(page), true, "the nudge at ~80 s (Jev ticks every 5 s)");
+    assert.equal(await up(page), true, "the nudge at ~45 s (Jev ticks every 5 s)");
     await settle(page);
     const L = await look(page), N = await jev(page);
     assert.ok(LINES.Q.includes(L.say), "a Q line: " + L.say);
@@ -113,7 +113,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
     await page.keyboard.press("Shift");
     assert.equal(await up(page), false, "any input puts it away");
     const M = await jev(page);
-    assert.equal(M.dismissed, 1); assert.equal(M.gap, 360);
+    assert.equal(M.dismissed, 1); assert.equal(M.gap, 180);
     await idle(page, 120000);
     assert.equal((await jev(page)).n, 1, "1 per item");
     assert.equal(page.ai, 0, "Tier 0: no server call");
@@ -129,7 +129,7 @@ await step("a tap on the nudge = taken (no back-off)", async () => {
   await settle(page);
   await page.click(".ck-peek");
   const N = await jev(page);
-  assert.equal(N.taps, 1); assert.equal(N.dismissed, 0); assert.equal(N.gap, 180);
+  assert.equal(N.taps, 1); assert.equal(N.dismissed, 0); assert.equal(N.gap, 90);
   assert.deepEqual(page.errs, [], "no console errors");
   await page.context().close();
 });
