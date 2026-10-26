@@ -2,10 +2,12 @@
    data (item.repair, SCHEMA.md), drawn by our code; nothing Cluck says goes through here. Graded on the device: the item is already a miss.
 
    Repair.mount(host, item, opts)   draws the ladder into host (replacing what is there); returns { el, destroy() }
-       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value), on(name, data) }
+       opts: { variant: "repair" | "alt" | "welcome" | "full", error, sheet, grade(value, n), answer, on(name, data) }
+       answer = the full card's display string for an answer step with no key on the device (else its worked value)
        error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
-       grade(value) -> Promise<boolean>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7; the
-       host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
+       grade(value, n) -> Promise<{ ok, answer? }>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7;
+       the host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
+       n = the 1-based try on that step; an `answer` (display string, 2nd miss, #33 A) = the worked solution: stem + answer, try struck, no hue
        on: repair_done { why_ok, variant, ladder, auto } · repair_skip { variant } · repair_next { } (full, after the study pause)
    Repair.blankStep(item, error)    the step id the slip lives in, or null (= the fallback ladder). stemJev.repairBlank's signature
 
@@ -18,6 +20,8 @@
    A step: reveal one at a time (done = one ✓ line, active = open, future = a dim label). A wrong try: ✗ on it + the miss line; TRIES
    wrong → it fills itself in with its why shown and moves on. ✓ / ✗ are glyphs, never hue alone. All text lands as textContent;
    `$..$` math goes through Graph.tex (escapes the text around it).
+   Lines (copy/repair-lines.js, contract v2): doneBy{L1,L2,L3,tail} else done; hintBy{far[],two,three[]} by the welcome wrong-tap count else
+   hint; auto / intro.<variant> "" or missing = no line (an auto-filled step's number badge gets data-auto instead).
 */
 (function (root) {
   "use strict";
@@ -26,6 +30,7 @@
   const TOL = 0.02;           // a `num` step's relative tolerance when it names none
   const L = () => root.__stemRepairLines || {};
 
+  const any = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;   // one of a rotation (Math.random: stubbed in tests)
   const ladderOf = item => (item && item.repair && item.repair.steps) || [];
   function blankOf(steps, error) {
     if (!error || error === "SLIP_TIE") return null;
@@ -63,9 +68,20 @@
       st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));
-    let whyOk = true, autos = 0, finished = full, timer = 0, gone = false;
+    let whyOk = true, autos = 0, finished = full, timer = 0, gone = false, solved = null;   // solved = { wrong, answer } once the server sends it
+    let missed = false, taps = 0;                                               // any wrong try (done level); welcome wrong taps on this item (hint tier)
     const optsOf = st => st.opts || (st.kind === "pick" && item.choices) || [];
     const emit = (name, data) => { if (o.on) o.on(name, data); };
+    function hint() {                                                            // welcome: tap 1 far, 2 two, 3+ three; old shape: the one hint
+      const H = L().hintBy;
+      if (!H) return L().hint || "";
+      taps++;
+      return any(taps === 1 ? H.far : taps === 2 ? H.two : H.three) || "";
+    }
+    function doneLine() {                                                        // L1 no wrong try, L2 some, L3 the answer was revealed
+      const D = L().doneBy;
+      return D ? (D[solved || full ? "L3" : missed ? "L2" : "L1"] || "") + (D.tail || "") : L().done || "";
+    }
 
     const el = h("section", "rp");
     el.dataset.variant = variant; el.dataset.ladder = alt ? "alt" : "main";
@@ -91,8 +107,15 @@
       const st = s.st;
       if (st.ok == null && o.grade) {                                            // the key is on the server: one grade in flight at a time
         if (s.busy) return;
-        s.busy = true;
-        Promise.resolve(o.grade(v)).then(ok => { s.busy = false; if (!gone) judge(s, v, ok === true); }, () => { s.busy = false; });
+        s.busy = true; s.n = (s.n || 0) + 1;
+        Promise.resolve(o.grade(v, s.n)).then(r => {
+          s.busy = false;
+          if (gone) return;
+          if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true);
+          const p = st.kind === "pick" && optsOf(st).find(p => p.id === v);         // the step fills in with it; no miss / auto line under it
+          solved = { wrong: p ? p.md : String(v), answer: String(r.answer) };
+          missed = true; fillIn(s); s.miss = ""; s.shown = solved.answer; settle();
+        }, () => { s.busy = false; });
         return;
       }
       judge(s, v, st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
@@ -102,8 +125,9 @@
       const st = s.st;
       if (right) { s.ok = true; s.miss = ""; s.val = v; }
       else {
-        s.tried.add(String(v));
-        s.miss = welcome ? (st.miss && st.miss[v]) || L().hint || "" : (st.miss && st.miss[v]) || L().miss || "";
+        s.tried.add(String(v)); missed = true;
+        const h = welcome ? hint() : L().miss || "";
+        s.miss = (st.miss && st.miss[v]) || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
       }
       settle();
@@ -112,8 +136,8 @@
       const w = s.st.why;
       if (i === w.ok) { s.why = i; s.miss = ""; }
       else {
-        whyOk = false; s.whyTried.add(i);
-        s.miss = welcome ? L().hint || "" : L().miss || "";
+        whyOk = false; s.whyTried.add(i); missed = true;
+        s.miss = welcome ? hint() : L().miss || "";
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
       settle();
@@ -126,6 +150,7 @@
 
     /* ---- drawing ---- */
     function shown(s) {                                                          // a step's worked value, as text / $math$
+      if (s.shown != null) return s.shown;                                     // the server's display string, as is
       const st = s.st, ok = st.ok != null ? st.ok : s.val;                     // no key here: the value the server took (none if it filled in)
       if (ok == null) return "";
       if (st.kind === "pick") { const p = optsOf(st).find(p => p.id === ok); return p ? p.md : ""; }
@@ -172,7 +197,9 @@
       li.dataset.id = st.id; li.dataset.state = s.state;
       if (s.state === "active") li.setAttribute("aria-current", "step");
       const head = h("div", "rp-head");
-      head.append(h("span", "rp-n", String(s.i + 1)), h("span", "rp-label", st.label));
+      const n = h("span", "rp-n", String(s.i + 1));
+      if (s.auto && !L().auto) n.dataset.auto = "";                              // no auto line: the badge says it filled itself in
+      head.append(n, h("span", "rp-label", st.label));
       if (s.state === "done" || (s.state === "active" && s.ok)) head.append(h("span", "rp-val", shown(s)));
       if (s.state === "done") head.append(h("span", "rp-ok", "✓"));
       li.append(head);
@@ -187,13 +214,32 @@
       if (s.miss && s.state !== "future") { const m = h("p", "rp-miss", s.miss); m.setAttribute("aria-live", "polite"); li.append(m); }
       return li;
     }
+    function introEl() {                                                         // Cluck's line; a leading *action* is italic, the rest text
+      const I = L().intro || {}, many = String(o.error).split("+").length > 1;
+      const key = variant !== "repair" ? variant : !blank ? "fallback" : many && I.repairMany != null ? "repairMany" : "repair";
+      const t = String(I[key] || "");
+      const m = /^\*([^*]+)\*([\s\S]*)$/.exec(t), p = h("p", "rp-line");
+      if (m) p.append(h("em", null, m[1]), m[2]); else put(p, t);
+      return p;
+    }
+    function solvedEl() {                                                        // the problem, the answer filled in, the wrong try struck
+      const box = h("div", "rp-solved"), a = h("p", "rp-a");
+      if (item.stem) box.append(h("p", "rp-stem", item.stem));
+      if (solved.wrong != null) a.append(h("del", "rp-wrong", solved.wrong), " ");
+      a.append(h("span", "rp-ans", solved.answer));
+      box.append(a);
+      return box;
+    }
     function draw() {
-      const kids = [h("p", "rp-line", (L().intro || {})[variant === "repair" && !blank ? "fallback" : variant] || "")];
+      if (solved && !full) el.dataset.solved = "";                              // the server revealed it (#33 A): the ladder goes neutral
+      const kids = [], intro = solved && !full ? null : introEl();
+      if (intro && intro.textContent) kids.push(intro);
+      if (solved) kids.push(solvedEl());
       const ol = h("ol", "rp-steps");
       for (const s of S) ol.append(stepEl(s));
       kids.push(ol);
       const foot = h("div", "rp-foot");
-      if (finished && !full) foot.append(h("p", "rp-done", L().done || ""));
+      if (finished && !full) foot.append(h("p", "rp-done", doneLine()));
       if (full) {
         const nx = h("button", "rp-next", L().next || "Next");
         nx.type = "button"; nx.disabled = !!timer;
@@ -208,6 +254,12 @@
       el.replaceChildren(...kids);
     }
 
+    if (full) {                                                                 // #36: the full card fills in the answer
+      const a = S.find(s => s.st.id === "answer") || S[S.length - 1];
+      if (a && o.answer != null) a.shown = String(o.answer);
+      const ans = a ? shown(a) : "";
+      if (ans) solved = { wrong: null, answer: ans };
+    }
     if (full) timer = setTimeout(() => { timer = 0; const nx = el.querySelector(".rp-next"); if (nx) nx.disabled = false; }, STUDY_MS);
     advance(); draw();
     return { el, destroy() { gone = true; clearTimeout(timer); el.remove(); } };

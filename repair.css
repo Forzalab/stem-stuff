@@ -9,6 +9,7 @@
 .rp-step:first-child { border-top: 0; }
 .rp-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); }
 .rp-n { flex: none; min-width: 1.25rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rp-n[data-auto] { border-radius: 999px; background: var(--help-rule); color: var(--ink); text-align: center; }   /* #36: filled itself in (no line) */
 .rp-label { flex: 1 1 8rem; min-width: 0; }
 .rp-val { margin-left: auto; overflow-wrap: anywhere; }
 .rp-ok { flex: none; color: var(--correct); font-weight: var(--w-em); }
@@ -40,6 +41,13 @@
 .rp-miss { color: var(--help-on); }
 .rp-because { margin-left: calc(1.25rem + var(--s2)); color: var(--muted); font-size: var(--t-xs); }
 .rp-because::before { content: "why: "; }
+/* solved (#33 A: the server sent the answer after the 2nd miss): the problem with the answer in, the wrong try struck; the ladder neutral */
+.rp-solved { margin: 0 0 var(--s3); }
+.rp-stem, .rp-a { margin: 0 0 var(--s2); }
+.rp-a { font-size: var(--t-md); }
+.rp-wrong { color: inherit; text-decoration: line-through; }
+.rp-ans { font-weight: var(--w-em); }
+.rp[data-solved] .rp-ok { color: var(--muted); }
 .rp-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); margin-top: var(--s3); }
 .rp-foot:empty { display: none; }
 .rp-done { margin: 0; font-weight: var(--w-em); }
