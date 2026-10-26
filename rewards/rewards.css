@@ -65,16 +65,17 @@ html.start .rw-hud { display: none; }
 .rw-flame.rw-lit { opacity: 1; filter: none; }
 .rw-counts { display: none; }
 .rw-hud.rw-z-xp .rw-coin, .rw-hud.rw-z-st .rw-streak { display: none; }   /* C1: a 0 balance / 0 count stays hidden until the first reward */   /* the screen reader hears the counts (aria-label); eyes get them in words in the popover */
+/* the drop ladder's end (W88, todo 85): with the boxed count chip hidden (C1) the level words are the strip's last item, and bare words
+   8px from Prev read as one crowded label ("80 XP to level 2" against the < button), so the strip keeps 16px of its own at that end */
+.rw-hud.rw-z-st { padding-right: 16px; }
 /* B4 mastery (DESIGN-v3 §5; Kivetz 2006 goal gradient): the stage line (engine.js stage(), Tony #32) over a short bar whose right end is a finish line (a light post).
-   Hidden at 0 like the other counts (C1); the popover always shows it. No score screen anywhere (Tony #1): this is the only readout. */
-.rw-won { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 4px; font: 600 var(--t-sm, 0.9375rem)/1 var(--rw-font); color: var(--muted); white-space: nowrap; }
-.rw-won b, .rw-pop-won b { color: var(--reward); font-variant-numeric: tabular-nums; }
+   Not in the strip (Tony #38: it crowded the bar): a toast in the question area (toast.js) on each landmark, and here in the popover. No score screen anywhere (Tony #1). */
+.rw-pop-won b { color: var(--reward); font-variant-numeric: tabular-nums; }
 .rw-goal { position: relative; display: block; height: 6px; border-radius: var(--rw-pill); background: var(--page); }
 .rw-goal i { display: block; height: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left; background: var(--reward); transition: transform .75s cubic-bezier(.16, 1, .3, 1); }
 .rw-goal::after { content: ""; position: absolute; right: -1px; top: -4px; bottom: -4px; width: 3px; border-radius: 2px; background: var(--ink); }   /* the finish line */
 .rw-pop .rw-pop-won { margin: 12px 0 0; display: grid; gap: 8px; }
 .rw-pop .rw-pop-won .rw-goal { height: 10px; }
-@container (max-width: 560px) { .rw-won { display: none; } }
 @container (max-width: 470px) { .rw-to { display: none; } }
 @container (max-width: 250px) { .rw-lvl-body { display: none; } .rw-lvl { flex: none; } }
 @container (max-width: 160px) { .rw-lvl { display: none; } }
@@ -142,9 +143,12 @@ html.start .rw-hud { display: none; }
 .rw-hint[aria-expanded="true"] .rw-hint-chev svg { transform: rotate(180deg); }
 .rw-free {   /* the slot-kit sticker over the chevron corner: after the button in the DOM + z-index, so it sits on top and covers no words */
   position: absolute; z-index: 3; top: -12px; right: 2px; padding: 3px 10px 4px; border-radius: 6px; cursor: pointer;   /* a tap on it opens the card (app.js) */
-  font: 600 var(--t-xs, 0.8125rem)/1.1 var(--rw-font); letter-spacing: 0; color: var(--help-ink); background: var(--reward); border: 2px solid var(--page);
-  transform: rotate(-6deg); box-shadow: 0 2px 0 var(--help-line);
+  font: 600 var(--t-xs, 0.8125rem)/1.1 var(--rw-font); letter-spacing: 0; color: var(--help-ink); border: 2px solid transparent; isolation: isolate;
 }
+/* sharp sticker words (W88, Tony's Windows laptop): the tilt lives on a card behind the words. Rotated text is painted on its own layer
+   without subpixel AA (blurry at DPR 1-1.25), so the words stay upright and only the card leans. Same for the banner, the reels card, the plate */
+.rw-free::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; background: var(--reward); border: 2px solid var(--page);
+  transform: rotate(-6deg); box-shadow: 0 2px 0 var(--help-line); }
 .rw-hint::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transform: translateX(-120%) skewX(-18deg);
   background: linear-gradient(90deg, transparent 30%, rgb(255 220 192 / .55) 50%, transparent 70%); }
 .rw-hint.rw-nudge { animation: rw-lift .9s ease-out 1; }
@@ -177,10 +181,11 @@ html.start .rw-hud { display: none; }
   display: flex; justify-content: center; padding: 0 16px; pointer-events: none;
 }
 .fx-toast {
-  position: relative; max-width: min(420px, 100%); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px;
-  color: var(--help-ink); border: 2px solid var(--help-deep); border-radius: var(--rw-r-m); background: var(--reward); transform: rotate(-2deg);
-  box-shadow: 0 4px 0 var(--page), var(--rw-sh4); font-family: var(--rw-font);
+  position: relative; isolation: isolate; max-width: min(420px, 100%); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px;
+  color: var(--help-ink); border: 2px solid transparent; border-radius: var(--rw-r-m); font-family: var(--rw-font);
 }
+.fx-toast::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; border: 2px solid var(--help-deep); background: var(--reward);
+  transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4); }   /* the sticker's lean, behind upright words (see .rw-free::before) */
 .fx-toast-i { width: 32px; height: 32px; flex: none; }
 .fx-toast-b { min-width: 0; }
 .fx-toast-t { font: 600 var(--t-lg, 1.25rem)/1.15 var(--rw-font); }
@@ -188,16 +193,15 @@ html.start .rw-hud { display: none; }
 /* B4: the conquered line (FX.conquered): the one banner that takes a tap (tap dismisses; else 3 s) */
 .fx-toast-won { pointer-events: auto; cursor: pointer; }
 /* flow C: a LEGEND drop is the gold banner (+ a small confetti puff, fx.js); WIN / BONUS keep the reward sticker */
-.fx-toast-legend { background: var(--help-on); border-color: var(--reward); box-shadow: 0 4px 0 var(--help-deep), 0 0 0 3px var(--reward), var(--rw-sh4); }
+.fx-toast-legend::before { background: var(--help-on); border-color: var(--reward); box-shadow: 0 4px 0 var(--help-deep), 0 0 0 3px var(--reward), var(--rw-sh4); }
 .fx-toast-legend .fx-toast-i { width: 40px; height: 40px; }
 .fx-toast-conf { position: fixed; }   /* the legend banner's small confetti: full screen, on the banner's host */
 
 /* ---------- slots: a sticker card INSIDE the level-up overlay (flow C: never an overlay of its own) ---------- */
 .fx-in-lvl { margin-top: 20px; }
-.fx-slots {
-  position: relative; width: min(340px, calc(100vw - 32px)); padding: 8px; border-radius: var(--rw-r-l); background: var(--help-on); transform: rotate(-1deg);
-  box-shadow: 0 6px 0 var(--help-deep), var(--rw-sh5);
-}
+.fx-slots { position: relative; isolation: isolate; width: min(340px, calc(100vw - 32px)); padding: 8px; border-radius: var(--rw-r-l); }
+.fx-slots::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--help-on); transform: rotate(-1deg);
+  box-shadow: 0 6px 0 var(--help-deep), var(--rw-sh5); }   /* the card leans, the reels and the label stay upright (see .rw-free::before) */
 .fx-slots-in { border-radius: var(--rw-r-m); padding: 12px; background: var(--help-fill); }
 .fx-bulbs { display: flex; justify-content: space-between; padding: 0 6px 10px; }
 .fx-bulbs i { width: 8px; height: 8px; border-radius: 50%; background: var(--reward); box-shadow: 0 2px 0 var(--help-deep); }
@@ -244,9 +248,11 @@ html.start .rw-hud { display: none; }
 .fx-star-m { margin-bottom: 12px; }
 .fx-star-m img { width: 74px; height: 74px; }
 .fx-plate {
-  margin-top: 16px; padding: 8px 24px; border-radius: var(--rw-pill); border: 3px solid var(--page); background: var(--reward); color: var(--help-ink);
-  font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4);
+  position: relative; isolation: isolate; margin-top: 16px; padding: 8px 24px; border-radius: var(--rw-pill); border: 3px solid transparent; color: var(--help-ink);
+  font: 600 var(--t-lg, 1.25rem)/1 var(--rw-font);
 }
+.fx-plate::before { content: ""; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; border: 3px solid var(--page); background: var(--reward);
+  transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--rw-sh4); }
 
 @keyframes fx-blink { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) {

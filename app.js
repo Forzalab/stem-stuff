@@ -2265,7 +2265,9 @@ function rwSync() {
   if (on) {
     RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
     RW().use(rwKey());
-    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud); RW().mountHUD(rwHud); }
+    if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud);
+      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) });   // Tony #38: the stage toast sits under the question (or its verdict line)
+      RW().mountHUD(rwHud); }
     else RW().render(0);
   }
   if (rwHud) rwHud.hidden = !on;

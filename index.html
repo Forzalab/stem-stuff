@@ -58,6 +58,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <!-- sugar rewards (design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
 <script src="rewards/icons.js" defer></script>
 <script src="vendor/confetti.browser.js" defer></script>
+<script src="toast.js" defer></script><!-- the one toast (design/TOAST.md round 5): the stage lines today; before engine.js, which shows them -->
 <script src="rewards/engine.js" defer></script>
 <script src="rewards/fx.js" defer></script>
 </head>
@@ -102,6 +103,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <link rel="stylesheet" href="nav.css">
 <link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
 <link rel="stylesheet" href="rewards/rewards.css">
+<link rel="stylesheet" href="toast.css">
 <link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
 <link rel="modulepreload" href="views.js">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->
