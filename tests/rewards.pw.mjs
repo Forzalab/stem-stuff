@@ -87,6 +87,7 @@ try {
     assert.ok(hud.top >= top.top && hud.bottom <= top.bottom + 1, "in the top bar " + JSON.stringify([hud, top]));
     assert.ok(!overlap(hud, prev), "clear of Prev");
     assert.equal(await xp(page), 0);
+    assert.equal(await page.$eval("#rwHud .rw-won-t", e => e.checkVisibility() ? e.textContent : null), "Ready when you are.", "Tony #36: on the bar too at 0 done");
     await page.click("#rwHud .rw-tap");                                        // HUD B: one tap = "your progress", in words
     await page.waitForSelector("#rwPop:popover-open", { timeout: 2000 });
     assert.match(await page.textContent("#rwPop"), /Level 1.*Next level80 XP to go.*Exam questions0 solved.*Easy ones0 solved.*Ready when you are\./);

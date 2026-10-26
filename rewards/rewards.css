@@ -72,7 +72,6 @@ html.start .rw-hud { display: none; }
 .rw-goal { position: relative; display: block; height: 6px; border-radius: var(--rw-pill); background: var(--page); }
 .rw-goal i { display: block; height: 100%; border-radius: inherit; transform: scaleX(var(--p, 0)); transform-origin: left; background: var(--reward); transition: transform .75s cubic-bezier(.16, 1, .3, 1); }
 .rw-goal::after { content: ""; position: absolute; right: -1px; top: -4px; bottom: -4px; width: 3px; border-radius: 2px; background: var(--ink); }   /* the finish line */
-.rw-hud.rw-z-won .rw-won { display: none; }
 .rw-pop .rw-pop-won { margin: 12px 0 0; display: grid; gap: 8px; }
 .rw-pop .rw-pop-won .rw-goal { height: 10px; }
 @container (max-width: 560px) { .rw-won { display: none; } }

@@ -20,14 +20,16 @@
 (function (g) {
   'use strict';
   var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000, goal: 20 };
-  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", "Duck approves. Rare.",
-    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You did not guess that. Nice.",
+  /* one praise rotation (Tony #36): reuse it wherever praise is needed; LINES[3] says one of these */
+  var PRAISE = ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"];
+  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", PRAISE,
+    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You nailed that one!",
     "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
     "Friction cannot stop you.", "Net force: forward.", "Quack quack, combo pack.", "Golden feather incoming…",
     "Torque? More like talk less, solve more.", "Spring loaded. Released.", "Centripetal? Central to the win.",
     "Exam 2 just got nervous."];
   var LEGEND = ["THE GOLDEN DUCK HAS NOTICED YOU.", "Achievement: Physics Goblin.", "Cluck sheds one proud tear."];
-  var MISS = "Not quite, but you can retry next turn.";   // COPY-PENDING (Tony #32 prog-miss)
+  var MISS = "Close call, let's retry next turn!";   // Tony #36
   var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0;
 
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
@@ -62,7 +64,8 @@
   function oldLevelOf(xp) { var L = 1; while (20 * L + 5 * L * (L - 1) <= xp) L++; return L; }   // the pre-Oct-21 curve, migration only
   function levelOf(xp) { return Math.max(curveLevel(xp), (s && s.keep) || 1); }
   function rate() { return s.hist.length ? s.hist.reduce(function (a, b) { return a + b; }, 0) / s.hist.length : null; }
-  function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i]; }
+  function praise() { return PRAISE[ri(0, PRAISE.length - 1)]; }
+  function commonLine() { var i; do i = ri(0, LINES.length - 1); while (i === lastLine); lastLine = i; return LINES[i] === PRAISE ? praise() : LINES[i]; }
   var reduced = function () { try { return !!(g.matchMedia && g.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } };
 
   function state() {
@@ -140,7 +143,7 @@
     s = load();
     var t = s.mt[tpl], won = !!s.won[tpl];
     if (!won) {
-      if (ev.type === 'miss') { t = s.mt[tpl] = { b: !!ev.b, rep: false, a: false }; r.note = "Next stop: " + tpl + ". One more time, and then we celebrate..."; r.miss = MISS; }   // COPY-PENDING
+      if (ev.type === 'miss') { t = s.mt[tpl] = { b: !!ev.b, rep: false, a: false }; r.note = "Let's give " + tpl + " another whirl!"; r.miss = MISS; }   // Tony #36
       else if (t && ev.type === 'repair_done') t.rep = true;
       else if (t && (ev.type === 'twin_a' || ev.type === 'twin_b')) {
         var w = ev.type === 'twin_a' ? 'a' : 'b';
@@ -229,7 +232,7 @@
     }
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
-    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak); ui.el.classList.toggle('rw-z-won', !st.won);
+    ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
     var gp = Math.min(1, st.won / st.goal);                                  // the finish line is the bar's right end (rewards.css .rw-goal::after)
     ui.goal.style.setProperty('--p', gp); ui.won.textContent = st.stage;
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
@@ -247,5 +250,5 @@
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
   g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
-    origSolved: origSolved, mastery: mastery, stage: stage, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND };
+    origSolved: origSolved, mastery: mastery, stage: stage, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -191,12 +191,23 @@ test("burst_gap_s (T22): dead-easy never touches lastBurst, whatever the gap", (
   R.gap();
 });
 
+/* Tony #36: one praise rotation (reusable), the common line "Duck approves. Rare." rotates through it; LINES[7] swapped */
+test("praise: four Cluck lines, picked by Math.random; a common drop on LINES[3] says one of them", () => {
+  assert.deepEqual(R.PRAISE, ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"]);
+  R.PRAISE.forEach((l, i) => { script = [(i + 0.5) / 4]; assert.equal(R.praise(), l); });
+  assert.equal(R.LINES[7], "You nailed that one!");
+  assert.ok(!R.LINES.includes("Duck approves. Rare."));
+  const at = i => (i + 0.5) / R.LINES.length;                                   // the common line's index roll
+  assert.equal(one("C0", {}, [0, 0, 0.5, at(0)]).line, R.LINES[0]);              // not index 3 last: no re-roll
+  assert.equal(one("C3", {}, [0, 0, 0.5, at(3), 0.9]).line, "Cluck thinks that deserves a quack!");
+});
+
 /* B4 conquered (DESIGN-v3 §5; Tony #1, #10, #25.5): repaired + solo `a` twin + solo `b` twin where one exists */
 const M = (type, tpl, x = {}) => R.mastery({ type, tpl, ...x });
 test("conquered: miss -> repair_done -> twin_a ok (no b) = conquered.Q7, 1/20, a short line with no topic name", () => {
   const m = M("miss", "Q7");
-  assert.equal(m.note, "Next stop: Q7. One more time, and then we celebrate...");   // Tony #32 (Copy Swipe vet-not-conquered)
-  assert.equal(m.miss, "Not quite, but you can retry next turn.");                   // Tony #32 (prog-miss)
+  assert.equal(m.note, "Let's give Q7 another whirl!");          // Tony #36
+  assert.equal(m.miss, "Close call, let's retry next turn!");     // Tony #36
   assert.equal(M("repair_done", "Q7").conquered, false);
   const r = M("twin_a", "Q7", { ok: true });
   assert.deepEqual([r.conquered, r.newly, r.count, r.goal], [true, true, 1, 20]);
