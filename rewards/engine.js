@@ -77,7 +77,7 @@
   /* the bar's stage line (Tony #32), p = done / total: 0 start, p < 1/3 early, 1/3 <= p <= 2/3 halfway, p > 2/3 late, all done */
   function stage(done, total) {
     var p = done / total;
-    if (!done) return "Ready when you are.";                                                           // COPY-PENDING
+    if (!done) return "Ready when you are.";                                                           // Tony #32, #36
     if (p >= 1) return "🎉 All done!";                                                                 // COPY-PENDING (Tony: an emoji is fine, a reward)
     if (p < 1 / 3) return done + (done === 1 ? " question" : " questions") + " done. Keep it up!";   // COPY-PENDING
     if (p <= 2 / 3) return "Halfway there!";                                                           // COPY-PENDING
