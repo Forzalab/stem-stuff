@@ -2605,6 +2605,7 @@ function dockRoom(evenAway) {
 }
 let stripRoom = 24;
 function barOpen(open) {
+  open = open && dockMQ.matches;                             // the phone / touch strip's state only: on desktop bar-open would park the docked corner (W101, LEAKS L1)
   root.classList.toggle("bar-open", open);
   if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
   barTab.setAttribute("aria-expanded", open);
@@ -2660,7 +2661,7 @@ function layoutDock() {
   if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
   root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
-if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
+if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { barOpen(dock.contains(document.activeElement)); layoutDock(); layoutFreeze(); });   // W101: to the strip while typing the code: it opens with the box; to the desktop bar: no bar-open
 new ResizeObserver(() => layoutDock()).observe(dock);
 
 function layoutFreeze() {
