@@ -173,9 +173,7 @@ function init() {
     const st = Q();
     const fw = hop(st, 1);
     if (fw >= 0) return { e: st.hist[fw], step: fw };
-    const deads = all().filter(dead), od = deadOpen(st, opener(deads));   // T28 P2: a fresh bank opens with 1-2 dead-easy
-    if (od) return { e: { c: od, r: 0, redeem: false } };
-    if (st.mock && !st.mock.done) {                                    // the night-before mock (W103b): its list, then its misses
+    if (st.mock && !st.mock.done) {                                    // the night-before mock (W103b): its list, then its misses (before the dead-easy opener)
       const m = mockNext(st.mock); save();
       if (m && m.end) note(`Night-before mock: ${m.score} / ${m.of}`);   // COPY-PENDING (W103b) the score line
       if (m && m.code) {
@@ -183,6 +181,8 @@ function init() {
         return { e: { c: m.code, r: again ? Math.floor(Date.now() / 1000) : 0, redeem: !!(st.seen[m.code] && st.seen[m.code].owe) } };   // a closed card plays a fresh round
       }
     }
+    const deads = all().filter(dead), od = deadOpen(st, opener(deads));   // T28 P2: a fresh bank opens with 1-2 dead-easy
+    if (od) return { e: { c: od, r: 0, redeem: false } };
     const live = new Set(pool());
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
@@ -223,7 +223,6 @@ function init() {
     name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
     modes.hidden = !front();                                         // Mix it up / Skip ahead / Other banks: the front bank's list only
     if (front()) { mix.textContent = Q().mix ? "Easy first" : "Mix it up"; skip.hidden = !!Q().mix; }
-    if (front() && wantMock) { wantMock = false; queueMicrotask(startMock); }
     mockBtn.hidden = !!(Q().mock && Q().mock.miss === null && !Q().mock.done);   // the mock is running: no restart
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
@@ -332,10 +331,15 @@ function init() {
   $("#qbanks").addEventListener("click", () => $("#code").focus());   // the code box comes with the list: type a bank code there
   next.addEventListener("click", () => go(1));
   /* the night-before mock (W103b): the front bank's exam-order list (shuffle.mjs mockList), from its first question */
+  let reload = null;                                                 // one same-code reload asked of app.js (stemMock.again)
   function startMock() {
     const st = Q(), o = off();
     st.mock = mockNew(mockList(pool().map(c => ({ code: c, ...o.get(c) })), st.salt));
     st.hist = st.hist.slice(0, st.at + 1); save();                   // Next plays the mock, not the history ahead
+    if (st.mock.list[0] && st.mock.list[0] === cur) {                // already on X3 Q1: a fresh showing of it in place (go(1) would say "only question")
+      const n = upNext(); use(n.e); pending = n.e; shown(cur, true);
+      reload = cur; dispatchEvent(new HashChangeEvent("hashchange")); return;   // app.js fromHash reloads it (stemMock.again) in its fresh round
+    }
     go(1);
   }
   mockBtn.addEventListener("click", startMock);
@@ -362,11 +366,12 @@ function init() {
     if (front()) try { localStorage.setItem("stem-noob-" + bank().code, "1"); } catch { /* blocked */ }
     save();
   });
-  addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c); });
+  addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c);
+    if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
   if (s) { if (all().includes(s.code)) shown(s.code); update(s.code); }
-  window.stemMock = { on: () => !!cur && mockOn(Q().mock, cur), state: () => Q().mock || null };   // app.js / peek.js / repair.js: the mock phase holds the hints
+  window.stemMock = { on: () => !!cur && mockOn(Q().mock, cur), state: () => Q().mock || null, again: c => { const y = reload === c; reload = null; return y; } };   // app.js / peek.js / repair.js: the mock phase holds the hints
   window.stemQueue = { item: () => { const st = Q(); return st.hist[st.at] || null; }, state: () => Q(), mode: () => noob() ? "noob" : "mix" };   // tests + the Redeem chip later
 }

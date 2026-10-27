@@ -16,13 +16,18 @@ try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_m
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = +(process.argv[2] || 8841), BASE = `http://localhost:${PORT}`;
 const TMP = mkdtempSync(join(tmpdir(), "mock-")), BANKS = join(TMP, "banks");
-/* file order is not exam order; a twin and an other-quiz item stay out of the mock */
+/* file order is not exam order; a twin, an other-quiz item and two dead-easy (T28 opener) stay out of the mock */
 const ITEMS = [["PHYS_MQ3", "X3 Q3 third, practice"], ["PHYS_OQ1", "Quiz 11 Q1: other"], ["PHYS_MQ1", "X3 Q1 first, practice"],
-  ["PHYS_WQ1", "X3 Q1 twin first numbers"], ["PHYS_MQ2", "X3 Q2 second, practice"]];
+  ["PHYS_WQ1", "X3 Q1 twin first numbers"], ["PHYS_MQ2", "X3 Q2 second, practice"], ["PHYS_DQ1", "Warm-up one"], ["PHYS_DQ2", "Warm-up two"]];
 const ANS = Object.fromEntries(ITEMS.map(([c], i) => [c, String(i + 3)]));
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 1, problems: ITEMS.map(([code, title], i) => ({ code, title, type: "num", answer: ANS[code],
-  nudge: "Check the units of your answer.", body: [{ type: "text", md: `${title}: 2 + ${i + 1}` }] })) }));
+  nudge: "Check the units of your answer.", body: [{ type: "text", md: `${title}: 2 + ${i + 1}` }], ...(/^PHYS_DQ/.test(code) ? { saccharine: { dead: true } } : {}) })) }));
+/* the queue salt pinned to one whose opener is TWO dead-easy (shuffle.mjs deadOpen): "/" opens on a dead-easy (never on X3 Q1, so ?mock=1
+   must navigate after app.js's first load), and the mock's first Next must beat the opener's second dead-easy */
+const { deadOpen } = await import("../shuffle.mjs");
+const SALT = Array.from({ length: 200 }, (_, i) => "m" + i).find(s => deadOpen({ salt: s, pos: 1, seen: { PHYS_DQ1: { n: 1 } }, hist: [{ c: "PHYS_DQ1" }] }, ["PHYS_DQ1", "PHYS_DQ2"]) === "PHYS_DQ2");
+assert.ok(SALT, "no salt with a two dead-easy opener");
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_FRONT: "BANK_P3X", STEM_FRONT_TITLE: "Exam 3", STEM_TRIES: join(TMP, "tries.json") }, stdio: "ignore" });
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
@@ -51,7 +56,10 @@ const next = page => page.click("#qnext");
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
-  await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
+  await ctx.addInitScript(s => { try {
+    localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9");
+    if (!localStorage.getItem("stem-q-BANK_P3X")) localStorage.setItem("stem-q-BANK_P3X", JSON.stringify({ v: 1, salt: s, pos: 0, seen: {}, hist: [], at: -1 }));
+  } catch { /* blocked */ } }, SALT);
   const page = await ctx.newPage();
   const errs = []; page.on("pageerror", e => errs.push(e.message));
 
@@ -86,10 +94,16 @@ try {
     await page.waitForFunction(() => window.stemMock.state().done === true, null, { timeout: 4000 });
     assert.equal(await page.$eval("#qmock", b => b.hidden), false, "the button is back");
   });
-  await step("the #qmodes button starts it again from X3 Q1; a reload keeps the mock", async () => {
+  await step("the #qmodes button on X3 Q1 itself restarts it in place (a fresh round, no 'only question' note); a reload keeps the mock", async () => {
+    await page.evaluate(() => { location.hash = "#PHYS_MQ1"; });
+    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ1" && document.querySelector("#q").classList.contains("closed"), null, { timeout: 8000 })
+      .catch(() => { throw new Error("X3 Q1 by its code: not shown closed (its mock try)"); });
     await page.click("#qlistBtn");
     await page.click("#qmock");
-    await opened(page, "PHYS_MQ1");
+    await opened(page, "PHYS_MQ1").catch(async () => { throw new Error("the restart did not reopen X3 Q1: " + JSON.stringify(await page.evaluate(() => ({ m: window.stemMock.state(), item: window.stemQueue.item(), closed: document.querySelector("#q").classList.contains("closed"), toast: document.querySelector("#toast")?.textContent })))); });
+    assert.equal(await page.evaluate(() => window.stemMock.state().at), 1, "X3 Q1 is the mock's first");
+    assert.equal(await page.evaluate(() => window.stemMock.on()), true);
+    assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast")?.textContent || ""), /only question/);
     await page.reload();
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ1", null, { timeout: 8000 });
     await next(page); await opened(page, "PHYS_MQ2");

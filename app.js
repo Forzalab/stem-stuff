@@ -3167,6 +3167,7 @@ const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURICompone
 const fromHash = () => {
   const n = hashCode();
   if (!n) { if (location.hash.length > 1) note(`Quack, can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
+  if (n.prefix !== "BANK" && S && S.code === n.code && window.stemMock?.again?.(n.code)) return load(n.code);   // the mock starting on the open X3 Q1 (nav.js, W103b): its fresh round
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };
