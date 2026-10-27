@@ -729,6 +729,62 @@ try {
       assert.equal((await rotSnap(p)).parked, true, "the keyboard can come up: parked");
     } finally { await c.close(); }
   });
+  /* W101 (LEAKS L1, desktop): the code label's focus ran the dock's focusin -> barOpen(true), meant for the phone strip: bar-open parked the docked corner
+     (notes box up ~357 px) and stayed on after blur, so the corner never came back */
+  for (const [w, h] of [[1280, 800], [1366, 768], [1920, 1200]]) await step(`W101 code box at ${w}x${h} (lone question): the label's focus and its blur move nothing, the corner stays`, async () => {
+    const { c, p } = await w91({ width: w, height: h });
+    try {
+      await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
+      await p.waitForTimeout(300);
+      const a = await rotSnap(p);
+      await p.click("#codeChip"); await p.waitForTimeout(200);
+      assert.equal(await p.evaluate(() => document.activeElement.id), "code", "the label focuses the code box");
+      const f = await rotSnap(p);
+      await p.mouse.click(5, h - 5); await p.waitForTimeout(300);
+      const b = await rotSnap(p);
+      const cls = await p.evaluate(() => document.documentElement.classList.contains("bar-open"));
+      assert.equal(f.parked, false, "the code box focus parked the docked corner");
+      assert.ok(Math.abs(f.notes - a.notes) <= 1, `code focus moved the notes box: ${a.notes} -> ${f.notes}`);
+      assert.equal(b.parked, false, "after blur the corner stayed parked");
+      assert.ok(Math.abs(b.notes - a.notes) <= 1, `blur left the notes box moved: ${a.notes} -> ${b.notes}`);
+      assert.equal(cls, false, "desktop: bar-open (the phone strip's state) set");
+    } finally { await c.close(); }
+  });
+  await step("W101 resize while typing the code, 1280 -> 700 -> 1280: the strip opens with the box (focus kept), back on desktop no bar-open, the corner returns", async () => {
+    const { c, p } = await w91({ width: 1280, height: 800 });
+    const st = () => p.evaluate(() => ({ open: document.documentElement.classList.contains("bar-open"), act: document.activeElement.id }));
+    try {
+      await p.waitForFunction(() => { const r = document.getElementById("rot"); return r && !r.hidden && r.classList.contains("docked") && !r.classList.contains("parked"); }, null, { timeout: 6000 });
+      await p.waitForTimeout(300);
+      const a = await rotSnap(p);
+      await p.click("#codeChip"); await p.waitForTimeout(150);
+      await p.setViewportSize({ width: 700, height: 800 }); await p.waitForTimeout(300);
+      const m = await st();
+      assert.ok(m.open && m.act === "code", `at 700 (the strip): ${JSON.stringify(m)}`);
+      await p.setViewportSize({ width: 1280, height: 800 }); await p.waitForTimeout(400);
+      assert.equal((await st()).open, false, "back on desktop: bar-open stayed");
+      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(300);
+      const z = await rotSnap(p);
+      assert.ok(!z.parked && Math.abs(z.notes - a.notes) <= 1, `the corner did not come back: parked ${z.parked}, notes ${a.notes} -> ${z.notes}`);
+    } finally { await c.close(); }
+  });
+  for (const [w, h] of [[390, 844], [844, 390], [768, 1024]]) await step(`W101 touch ${w}x${h} (dock-bottom): the strip opens, the code box focus keeps it open and parks the corner, blur keeps it (today's strip)`, async () => {
+    const { c, p } = await w91({ width: w, height: h }, { hasTouch: true, isMobile: true });
+    const st = () => p.evaluate(() => ({ open: document.documentElement.classList.contains("bar-open"), exp: document.getElementById("barTab").getAttribute("aria-expanded"),
+      parked: !!document.getElementById("rot")?.classList.contains("parked") }));
+    try {
+      assert.equal(await p.evaluate(() => document.documentElement.classList.contains("dock-bottom") && document.documentElement.classList.contains("bar-mini")), true, "dock-bottom strip");
+      assert.equal((await st()).open, false, "the strip rests");
+      await p.tap("#barTab"); await p.waitForTimeout(150);
+      await p.tap("#code"); await p.waitForTimeout(150);
+      assert.equal(await p.evaluate(() => document.activeElement.id), "code", "the code box has focus");
+      const f = await st();
+      assert.ok(f.open && f.exp === "true", `the strip is open: ${JSON.stringify(f)}`);
+      assert.equal(f.parked || !(await p.$("#rot")), true, "the open strip parks the corner");
+      await p.evaluate(() => document.activeElement.blur()); await p.waitForTimeout(150);
+      assert.equal((await st()).open, true, "blur: the strip stays open (closed by its tab)");
+    } finally { await c.close(); }
+  });
   /* FIX 2 (Tony: "the WHOLE LAYOUT add height suddenly for the latex math"): one line reserved from the question's open; a ratchet up, animated; never shrinks; a cap */
   for (const [w, h] of [[1280, 800], [390, 844]]) await step(`W91 typing at ${w}: the first key, a one-line key, "x^(", a taller ladder (grows, animated, never shrinks), past the cap, Check`, async () => {
     const { c, p } = await w91({ width: w, height: h }, w < 700 ? { hasTouch: true, isMobile: true } : {});

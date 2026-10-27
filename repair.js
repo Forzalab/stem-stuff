@@ -58,6 +58,7 @@
 
   function mount(host, item, o = {}) {
     const variant = o.variant || "repair";
+    if (root.stemMock && root.stemMock.on() && variant !== "welcome") return { el: null, destroy() {} };   // the night-before mock (W103b): no ladder until it ends
     const alt = variant === "alt" && item.repair && item.repair.alt;
     const steps = alt ? alt.steps : ladderOf(item);
     const welcome = variant === "welcome", full = variant === "full";

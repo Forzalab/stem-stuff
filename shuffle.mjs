@@ -132,8 +132,9 @@ export function deadLead(st, deads, snack) {
    tierOf(code) -> 0 for a dead-easy, else the author's noob.tier 1|2|3. The opener (deadOpen) goes first, then new codes from
    st.ramp.tier (the nearest tier, easier first, once that one is spent) in a fixed salt order. From slot REVIEW_FROM, every
    REVIEW_EVERY-th slot re-shows a seen one (qPick over them, so a due miss goes first). Every new one seen -> qPick takes over.
-   The gate (rampAnswer, on a first pick only: when qAnswer returned true): RAMP_UP clean ones at the tier -> up one; a miss ->
-   down one (floor 1). Pure like qPick; st.ramp rides along in the saved queue. */
+   The gate (rampAnswer, on a first pick only: when qAnswer returned true): RAMP_UP clean ones at the tier -> up one; a 1st miss
+   resets the clean count only, a 2nd miss IN A ROW -> down one (floor 1) and the run starts over; a clean one ends the run
+   (PLAN §6.6, Oct 26). Pure like qPick; st.ramp {tier, clean, miss} rides along in the saved queue (an old one without miss = 0). */
 export const RAMP_UP = 2;         // TUNABLE: clean first picks at a tier to move up
 export const REVIEW_FROM = 4;     // TUNABLE: the first re-injection slot
 export const REVIEW_EVERY = 5;    // TUNABLE: then one every this many slots
@@ -154,8 +155,9 @@ export function ramp(st, pool, tierOf) {
 export function rampAnswer(st, code, right, tierOf) {
   const r = gate(st), k = tierOf(code);
   if (!k) return r.tier;                                         // a dead-easy is a warm-up, not a gate pass
-  if (!right) { r.tier = Math.max(1, r.tier - 1); r.clean = 0; }
-  else if (k >= r.tier && ++r.clean >= RAMP_UP) { r.tier = Math.min(3, r.tier + 1); r.clean = 0; }   // a review of an easier one moves nothing
+  if (!right) { r.clean = 0; r.miss = (r.miss || 0) + 1; if (r.miss >= 2) { r.tier = Math.max(1, r.tier - 1); r.miss = 0; } return r.tier; }
+  r.miss = 0;
+  if (k >= r.tier && ++r.clean >= RAMP_UP) { r.tier = Math.min(3, r.tier + 1); r.clean = 0; }   // a review of an easier one moves nothing
   return r.tier;
 }
 /* "Skip this question": up one tier now (cap 3), the clean count starts over */
@@ -168,4 +170,46 @@ export function glue(order, beforeOf) {
   const moves = c => { const b = beforeOf(c); return !!b && live.has(b); };
   for (const c of order) if (moves(c)) { const b = beforeOf(c); by.set(b, [...(by.get(b) || []), c]); }
   return order.flatMap(c => moves(c) ? [] : [...(by.get(c) || []), c]);
+}
+/* ---------- the night-before mock (W103b, PLAN §6.9): the PE3 questions in exam order, one try each, then the misses ----------
+   mockList(items, salt): one code per exam position, in order. The position: the item's exam_q, else its title's "X3 Q<n>" (today's
+   BANK_P3X; a range "X3 Q10-11" is no position). A template = no twin / parent_template and no "twin" / "twist" in its title. A template
+   with twins (SCHEMA.md twin a|b + parent_template) plays one of them, picked by hash(salt + n) so a reload agrees; none -> itself.
+   st.mock = mockNew(list) rides in the saved queue (additive, like st.ramp): { list, at, res: { CODE: right }, miss, back, done }. */
+const examQ = p => Number.isInteger(p.exam_q) ? p.exam_q : +((/^X3 Q(\d{1,2})\b(?!-)/.exec(p.title || "") || [])[1] || 0);
+export function mockList(items, salt = "") {
+  const twins = new Map(), at = new Map();
+  for (const p of items) if (p.parent_template) twins.set(p.parent_template, [...(twins.get(p.parent_template) || []), p.code]);
+  for (const p of items) {
+    const n = examQ(p);
+    if (n && !p.twin && !p.parent_template && (Number.isInteger(p.exam_q) || !/\b(twin|twist)\b/i.test(p.title)) && !at.has(n)) at.set(n, p.code);
+  }
+  return [...at.keys()].sort((a, b) => a - b).map(n => {
+    const t = at.get(n), tw = (twins.get(t) || []).sort();
+    return tw.length ? tw[hash(salt + ":mock:" + n) % tw.length] : t;
+  });
+}
+export const mockNew = list => ({ list: [...list], at: 0, res: {}, miss: null, back: 0, done: false });
+/* the mock phase is on for code: no peek, no Cluck hint, no ladder, one try (app.js, peek.js, repair.js read it through nav.js) */
+export const mockOn = (m, code) => !!m && !m.done && m.miss === null && m.list.includes(code);
+/* a graded first pick in the mock phase; returns true when it counted */
+export function mockAnswer(m, code, right) {
+  if (!mockOn(m, code) || code in m.res) return false;
+  m.res[code] = !!right;
+  return true;
+}
+/* Next: { code, end } (end: the mock just ended, with its score / of), or null when it is all done (the normal queue takes over).
+   Unanswered = a miss. The misses come back in exam order, with the normal flow. */
+export function mockNext(m) {
+  if (!m || m.done) return null;
+  if (m.miss === null) {
+    if (m.at < m.list.length) return { code: m.list[m.at++], end: false };
+    m.miss = m.list.filter(c => m.res[c] !== true);
+    const code = m.miss[m.back++] ?? null;
+    if (!code) m.done = true;
+    return { code, end: true, score: m.list.length - m.miss.length, of: m.list.length };
+  }
+  if (m.back < m.miss.length) return { code: m.miss[m.back++], end: false };
+  m.done = true;
+  return null;
 }

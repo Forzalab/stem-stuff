@@ -103,6 +103,12 @@ class Grade(unittest.TestCase):
         self.assertEqual(pub["pick"], "all")
         self.assertFalse({"correct", "wrong", "miss"} & set(pub))
 
+    def test_public_twin_fields(self):                                          # the night-before mock (nav.js mockList, W103b) reads them on the client
+        p = {**BANK["CSCI26_A7K"], "code": "TWIN_A", "twin": "a", "parent_template": "CSCI26_A7K", "exam_q": 8}
+        pub = serve.public(p, "k1")
+        self.assertEqual((pub["twin"], pub["parent_template"], pub["exam_q"]), ("a", "CSCI26_A7K", 8))
+        self.assertFalse({"twin", "parent_template", "exam_q"} & set(serve.public(BANK["CSCI26_A7K"], "k1")))   # absent stays absent
+
     def test_pick_all_kept(self):                                               # sugar kept rows: the ticked ids, only when every tick is right
         p = {**BANK["CSCI26_A7K"], "code": "KEPT_T", "wrong": [w for w in BANK["CSCI26_A7K"]["wrong"] if w["choice"] != "d"]}   # d: false, no wrong hint
         g = lambda sid, ids, rv=True: serve.grade(p, sid, {"choices": ids}, reveal=rv)

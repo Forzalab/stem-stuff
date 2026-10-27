@@ -329,6 +329,7 @@ function answerOf(u) {
 /* the hint the student sees for a reply: `spot` when record() let it through Jev's gate (r.shown), else the plain `hint`. gradeLocal's
    `spot` (slips.mjs slipSpot) passes the same gate (record() guards on r.spot) */
 const hintOf = r => r.shown === "spot" && r.spot ? r.spot : r.hint;
+const mockHold = () => !!window.stemMock?.on?.();             // the night-before mock (nav.js, W103b): one try, no hint, no reveal, no Cluck
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
   const multi = key.type === "multi", idx = answer.part;
   if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
@@ -1248,6 +1249,7 @@ function settle() {
 
 /* ---------- attempts, feedback ---------- */
 function record(a, r) {
+  if (mockHold() && r.verdict === "wrong") { r.triesLeft = 0; delete r.hint; delete r.spot; delete r.correct; }   // one try (W103b): the wrong closes it
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
@@ -1529,6 +1531,7 @@ function reveal(r, part) {
 }
 /* the duck chip (sugar, questions with Cluck's key only): right = "See Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
+  if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
   if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
@@ -1640,6 +1643,7 @@ function wishReset() {
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
+  if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
   if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
   wish = newWish();
@@ -2601,6 +2605,7 @@ function dockRoom(evenAway) {
 }
 let stripRoom = 24;
 function barOpen(open) {
+  open = open && dockMQ.matches;                             // the phone / touch strip's state only: on desktop bar-open would park the docked corner (W101, LEAKS L1)
   root.classList.toggle("bar-open", open);
   if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
   barTab.setAttribute("aria-expanded", open);
@@ -2656,7 +2661,7 @@ function layoutDock() {
   if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
   root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
-if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
+if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { barOpen(dock.contains(document.activeElement)); layoutDock(); layoutFreeze(); });   // W101: to the strip while typing the code: it opens with the box; to the desktop bar: no bar-open
 new ResizeObserver(() => layoutDock()).observe(dock);
 
 function layoutFreeze() {
@@ -3163,6 +3168,7 @@ const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURICompone
 const fromHash = () => {
   const n = hashCode();
   if (!n) { if (location.hash.length > 1) note(`Quack, can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
+  if (n.prefix !== "BANK" && S && S.code === n.code && window.stemMock?.again?.(n.code)) return load(n.code);   // the mock starting on the open X3 Q1 (nav.js, W103b): its fresh round
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };
