@@ -93,7 +93,7 @@ try {
     await ctx.close();
   });
 
-  await step("I have my Cluck: the only request is POST acct/login {token} (JSON, < 200 B); object URL revoked, input cleared", async () => {
+  await step("Restore my Cluck: the only request is POST acct/login {token} (JSON, < 200 B); object URL revoked, input cleared", async () => {
     const { ctx, page, reqs, errs } = await fresh(browser);
     await page.goto(LAB);
     await page.click("#openLogin");
@@ -137,7 +137,7 @@ try {
     const before = reqs.length;
     const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#lgHave")]);
     await chooser.setFiles({ name: "cat.png", mimeType: "image/png", buffer: Buffer.from(png) });
-    const NONE = "No valid Cluck code found.";                                       // after "Reading your Cluck…" (transient while it decodes)
+    const NONE = "No valid Cluck code found.";                                       // after "Eggs-amining your quiz space now!" (transient while it decodes)
     await page.waitForFunction(t => document.querySelector("#lgStatus").textContent === t, NONE, { timeout: 5000 })
       .catch(async e => { throw new Error(`status never became ${JSON.stringify(NONE)}; last seen ${JSON.stringify(await status(page))}: ${e.message}`); });
     assert.equal(await status(page), NONE);
@@ -256,7 +256,7 @@ try {
     await ctx.close();
   });
 
-  await step("I have my Cluck, login fails: Tony's error line", async () => {
+  await step("Restore my Cluck, login fails: Tony's error line", async () => {
     const { ctx, page } = await fresh(browser, "none", "ok", { login: "fail" });
     await page.goto(LAB);
     await page.click("#openLogin");

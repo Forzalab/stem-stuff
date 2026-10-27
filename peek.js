@@ -49,7 +49,7 @@
     room();
   }
   /* nothing on top of anything (Tony, Oct 19): the duck and its line rest on no control. Where they would (a short phone: the hint card's
-     "ok but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
+     "okay, but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
      question, so the page never jumps back under a finger when the duck goes */
   var CTL = "button, a[href], input, textarea, select, [role=button], .opt";
   function room() {
@@ -91,7 +91,7 @@
     if (idle < wait()) return arm(wait() - idle);                           // input came since: wait out the rest
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
     mine = true; n++; lastRise = performance.now();
-    rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
+    rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
       onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
   }
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
@@ -105,7 +105,7 @@
       wt = 0;
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
       mine = true; lastRise = performance.now();
-      rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
+      rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
         onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
     }, WRONG_MS);
   }

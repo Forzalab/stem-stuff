@@ -24,7 +24,12 @@ export const FAMILY_HINT = {
   g: "QUACK. Check the value you used for g.",
 };
 /* FAMILY_HINT's line; a k=2 "inner+outer" pair (pairs) gets both lines in that order under one QUACK. (serve.py family_hint) */
-export const familyHint = fam => fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" ");
+export const familyHint = fam => fillSign(fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" "));
+/* {sign} in a hint = the zodiac season of the device's date (todo 93 miss-060/061), tropical ranges. SYNC: serve.py ZODIAC (tests/slips.test.mjs).
+   Month m (1-12): the first day of the sign that starts in m and its name; before that day it is still month m-1's sign. */
+export const ZODIAC = [[20, "Aquarius"], [19, "Pisces"], [21, "Aries"], [20, "Taurus"], [21, "Gemini"], [21, "Cancer"], [23, "Leo"], [23, "Virgo"], [23, "Libra"], [23, "Scorpio"], [22, "Sagittarius"], [22, "Capricorn"]];
+export const zodiac = (d = new Date()) => { const m = d.getMonth(), [start, name] = ZODIAC[m]; return d.getDate() >= start ? name : ZODIAC[(m + 11) % 12][1]; };
+export const fillSign = s => s.replace("{sign}", zodiac());
 
 export const ZERO = 1e-9;
 export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol

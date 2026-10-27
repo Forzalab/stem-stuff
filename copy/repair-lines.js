@@ -15,8 +15,8 @@ window.__stemRepairLines = {
     /* *waddles over* = an italic aside (app chrome: <em>) */
     repair: "*waddles over* Let's fix this together—QUACKK!",
     fallback: "QUACK. Let's walk it through, one step at a time.",
-    alt: "QUACK. Same idea, a different way in.",
-    welcome: "Hi. Let's warm up together.",
+    alt: "QUACK. Let's waddle a different path!",
+    welcome: "Ready to waddle through some forces?",
     full: ""                                       // cut (#36): no intro line on the full card
   },
   miss: "Whoops! Let's try again.",               // a wrong step try (repair / alt): the default miss line
@@ -31,7 +31,7 @@ window.__stemRepairLines = {
     three: ["Third time's the charm.", "Who says three failures are bad?"]
   },
   auto: "",                                        // cut (#36): 2 wrong tries fill the step in, no line
-  why: "Why?",                                     // a why without its own question
+  why: "Why is that?",                                     // a why without its own question
   done: "You did perfectly! Now, try a similar one, QUAAACK—",   // = doneBy.L1 + doneBy.tail
   doneBy: {                                        // by level, then the tail
     L1: "You did perfectly!",

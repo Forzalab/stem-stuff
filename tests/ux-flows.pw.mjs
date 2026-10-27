@@ -193,7 +193,7 @@ async function cluckOpen(page, w) {
   assert.equal(await answerKey(page, C.single, false), "wrong");
   await page.waitForFunction(() => !!document.querySelector("#wish .wchip, .cl-peek .cl-cta, #cluck:not([hidden])"), null, { timeout: 6000 });
   if (w === 393) {
-    await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
+    await page.waitForFunction(() => /okay, but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 6000 });   // Lane 2: Q3 = C peek + the E1 CTA
     await page.click(".cl-peek .cl-cta");
   } else {                                                          // desktop: a wrong answer never opens the sheet by itself either (B7 ii, Tony Oct 18)
     assert.ok(!(await vis(page, "#cluck")), "desktop: no auto-open after a wrong answer");
@@ -279,7 +279,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   /* Esc closes (focus goes back to the chip), the chip reopens, the X closes */
   await page.keyboard.press("Escape"); await closed().catch(() => { throw new Error("Escape did not close the sheet"); });
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-open")), false, "html.cl-open cleared on close");
-  await page.waitForFunction(() => /ok but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
+  await page.waitForFunction(() => /okay, but how\?/.test(document.querySelector(".cl-peek .cl-cta")?.textContent || ""), null, { timeout: 3000 });
   await page.click(".cl-peek .cl-cta"); await opened_();
   await page.click("#cluck .wtext").catch(() => {});
   await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 8000 });
@@ -295,7 +295,7 @@ flow(21, "cluck-sheet", async (page, w) => {
   const fold = () => page.getAttribute("#clFold", "aria-expanded");
   const sol = () => vis(page, "#cluck .orig-sol");
   assert.equal(await page.textContent("#clFold .cl-fold-t"), "See reference solution");
-  /* phone: the card ("Similar solution steps") opened the sheet, so the steps are showing; desktop: the explanation opened by itself, the fold is shut after a miss */
+  /* phone: the card ("Compare with a similar solution") opened the sheet, so the steps are showing; desktop: the explanation opened by itself, the fold is shut after a miss */
   const start = w === 393 ? "true" : "false", other = start === "true" ? "false" : "true";
   assert.equal(await fold(), start, `the fold starts ${start === "true" ? "open (opened from the card)" : "shut after a miss"}`);
   assert.equal(await sol(), start === "true", "the steps follow the fold");
@@ -326,10 +326,10 @@ flow(23, "cluck-errors", async (page, w) => {
   assert.equal(asks, 0, "no auto /explain past the cap");
   out.push("local cap: chip 'Explain my mistake', no auto-open, no request");
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-cap-chromium.png`) });
-  // (b) /explain fails (500): chip "Didn't load. Tap to try again"; the open sheet says "Cluck didn't load." + a Try again that re-sends
+  // (b) /explain fails (500): chip "Oops, didn't load. Tap to try again."; the open sheet says "Couldn't load Cluck." + a Try again that re-sends
   await page.click("#wish .wchip");
-  await page.waitForFunction(() => /Didn't load\. Tap to try again/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
-  await page.waitForFunction(() => /Cluck didn't load\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 });
+  await page.waitForFunction(() => /Oops, didn't load\. Tap to try again\./.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 6000 });
+  await page.waitForFunction(() => /Couldn't load Cluck\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 });
   await page.waitForFunction(() => !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 3000 });   // the wish loop has stopped
   assert.ok(!/typing/i.test(await sheetTxt()), "no 'typing' text left on a failure");
   assert.equal(await page.evaluate(() => document.querySelectorAll("#cluck .wtext .wcaret").length), 0, "no caret forever on a failure");
@@ -338,17 +338,17 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain500-chromium.png`) });
   const before = asks;
   await page.click("#cluck .wtext .wretry");
-  await page.waitForFunction(() => /Cluck didn't load\./.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
+  await page.waitForFunction(() => /Couldn't load Cluck\./.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
   assert.ok(asks > before, "Try again sent a new /explain");
-  out.push(`/explain 500: chip "Didn't load. Tap to try again", sheet "Cluck didn't load." + Try again (re-sends, ${asks - before} new request)`);
-  // (c) the server's hourly cap on /explain (429): "Cluck is out of wishes for this hour. Try again later."
+  out.push(`/explain 500: chip "Oops, didn't load. Tap to try again.", sheet "Couldn't load Cluck." + Try again (re-sends, ${asks - before} new request)`);
+  // (c) the server's hourly cap on /explain (429): "Oh duck, Cluck is tired! Come back later."
   await page.unroute("**/explain");
   await page.route("**/explain", r => r.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "hourly" }) }));
   await page.click("#cluck .wtext .wretry");
-  await page.waitForFunction(() => /out of wishes for this hour/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
-  assert.match(await sheetTxt(), /Cluck is out of wishes for this hour\. Try again later\./);
+  await page.waitForFunction(() => /Cluck is tired/.test(document.querySelector("#cluck .wtext")?.textContent || ""), null, { timeout: 6000 });
+  assert.match(await sheetTxt(), /Oh duck, Cluck is tired! Come back later\./);
   await page.screenshot({ path: join(OUT, `23-cluck-errors-${w}-explain429-chromium.png`) });
-  out.push("/explain 429: 'Cluck is out of wishes for this hour. Try again later.'");
+  out.push("/explain 429: 'Oh duck, Cluck is tired! Come back later.'");
   // (d) /chat 429 (hourly): the reply bubble says the same
   await page.unroute("**/explain");
   await stubCluck(page, { chat: 429, chatBody: "{}" });
@@ -358,8 +358,8 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.click("#cluck .wtext").catch(() => {});
   await page.waitForSelector("#cluck .ask textarea:not([disabled])", { timeout: 8000 });
   await page.fill("#cluck .ask textarea", "why?"); await page.click("#cluck .ask .send");
-  await page.waitForFunction(() => /out of wishes for this hour/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 5000 });
-  out.push("/chat 429: 'Cluck is out of wishes for this hour.'");
+  await page.waitForFunction(() => /Cluck is tired/.test(document.querySelector("#cluck .cl-thread")?.textContent || ""), null, { timeout: 5000 });
+  out.push("/chat 429: 'Oh duck, Cluck is tired!'");
   // (e) no key on the server (a preview deploy has none, Oct 26): the real keyless /explain answers a plain 503. The press is never silent:
   //     the sheet stays open and says Cluck is off, the chip goes; the next miss on this page load shows no Cluck entry at all
   await page.unroute("**/explain"); await page.unroute("**/chat");
@@ -370,7 +370,7 @@ flow(23, "cluck-errors", async (page, w) => {
   const r503 = page.waitForResponse(r => /\/explain$/.test(r.url()), { timeout: 6000 });
   await page.click("#wish .wchip");
   assert.equal((await r503).status(), 503, "the keyless server answers a plain 503");
-  await page.waitForFunction(() => /Cluck is off on this version of the site\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 })
+  await page.waitForFunction(() => /Eggs-tra help currently unavailable\./.test(document.querySelector("#cluck:not([hidden]) .wtext")?.textContent || ""), null, { timeout: 6000 })
     .catch(() => { throw new Error("keyless 503: the Explain press did nothing (no sheet / no line)"); });
   await page.waitForTimeout(400);
   assert.ok(await vis(page, "#cluck"), "keyless 503: the sheet stays open");
@@ -384,7 +384,7 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.waitForTimeout(800);
   assert.ok(!(await page.evaluate(() => [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta")].some(e => e.getClientRects().length && !e.closest("[hidden]")))),
     "keyless: no Cluck entry on the next miss (this page load)");
-  out.push("keyless /explain 503: the press opens the sheet with 'Cluck is off on this version of the site.', the chip goes, no entry on the next miss");
+  out.push("keyless /explain 503: the press opens the sheet with 'Eggs-tra help currently unavailable.', the chip goes, no entry on the next miss");
   return "stubbed; " + out.join("; ");
 });
 
@@ -406,12 +406,12 @@ flow(22, "cluck-chat-5", async (page, w) => {
     await page.fill("#cluck .ask textarea", `why step ${n}?`); await page.click("#cluck .ask .send");
     await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 6000 });
   }
-  await page.waitForFunction(() => /That's 5 questions on this one/.test(document.querySelector("#cluck .done-row")?.textContent || ""), null, { timeout: 3000 });
+  await page.waitForFunction(() => /Classic Cluck, wound down at 5\. On to the next one\./.test(document.querySelector("#cluck .done-row")?.textContent || ""), null, { timeout: 3000 });
   return "stubbed /chat; 5 replies, then the done row";
 });
 
 flow(28, "retry-tag", async (page, w) => {
-  /* the retry tag (lane d, PICKER 9 "Agreed"): a Redeem showing says "Second chance" at the top of the card; right -> "Redeemed" at once,
+  /* the retry tag (lane d, PICKER 9 "Agreed"): a Redeem showing says "Pity roll" at the top of the card; right -> "Avenged!" at once,
      and the Comeback toast still plays. Walk the BANK_UXS fixture (rewards on). Two walks: streak 0, then the streak seeded to 4 so the
      right Redeem is "5 cracked" (a count note wants the toast slot on that answer): Comeback must still show, and the streak still counts. */
   const a = await walk28(page, 0);
@@ -435,21 +435,21 @@ async function walk28(page, seed) {
     if (item && item.redeem) {
       const x0 = await xp(page);
       const tag0 = await page.evaluate(() => { const t = document.querySelector("#rtag"); return t && !t.hidden ? t.textContent : null; });
-      assert.match(tag0 || "", /^Second chance$/, "a Redeem showing carries the Second chance tag: " + tag0);
+      assert.match(tag0 || "", /^Pity roll$/, "a Redeem showing carries the Pity roll tag: " + tag0);
       assert.ok(await page.$("#qlist .mk-again .mk-back"), "the list keeps the row's marks, faded, behind the history glyph");
       await dwell(page);
       if (seed) await page.evaluate(n => { for (const k of Object.keys(localStorage)) if (k.startsWith("stem-rw:")) { const j = JSON.parse(localStorage.getItem(k)); if (j && "streak" in j) { j.streak = n; localStorage.setItem(k, JSON.stringify(j)); } } }, seed);   // answer() re-reads it
       while (await page.$("#q .opt:not(:disabled)")) { const v = await answerKey(page, code, true); if (v === "correct" || v === null) break; }
-      await page.waitForFunction(() => /^Redeemed$/.test(document.querySelector("#rtag:not([hidden])")?.textContent || ""), null, { timeout: 4000 })
-        .catch(async () => { throw new Error(`no "Redeemed" tag on a right Redeem of ${code}: ${await page.textContent("#rtag")}`); });
-      await page.waitForFunction(() => window.__toasts.includes("Comeback!"), null, { timeout: 8000 })
-        .catch(async () => { throw new Error(`no 'Comeback!' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });
+      await page.waitForFunction(() => /^Avenged!$/.test(document.querySelector("#rtag:not([hidden])")?.textContent || ""), null, { timeout: 4000 })
+        .catch(async () => { throw new Error(`no "Avenged!" tag on a right Redeem of ${code}: ${await page.textContent("#rtag")}`); });
+      await page.waitForFunction(() => window.__toasts.includes("HONK HONK. Spacetime just applauded."), null, { timeout: 8000 })
+        .catch(async () => { throw new Error(`no 'HONK HONK. Spacetime just applauded.' toast on a right Redeem of ${code}; fx toasts seen: ${JSON.stringify(await page.evaluate(() => window.__toasts))}`); });
       const st = await page.evaluate(() => window.Rewards?.state()?.streak);
       if (seed) assert.equal(st, seed + 1, "the streak still counts the Redeem");
       const x1 = await xp(page);
       /* XP: app.js:1446 pays a never-paid code's first right as usual (+ the toast); "no XP" is only for a code already paid (!res.xp) */
       if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} cracked" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
-      return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> tag "Redeemed" + toast "Comeback!"; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
+      return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> tag "Avenged!" + toast "HONK HONK. Spacetime just applauded."; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
     }
     await dwell(page); if (await page.$("#q .opt:not(:disabled)")) await answerKey(page, code, false);   // wrong: the streak stays 0
   }
@@ -522,7 +522,7 @@ flow(39, "update-bar", async (page, w) => {
     writeFileSync(css, orig + `\n/* g2c ${Date.now()} */\n`);
     await page.reload();
     await page.locator("#updateBar").waitFor({ state: "visible", timeout: 8000 });
-    assert.equal((await page.textContent("#updateBar")).trim(), "New version ready. Tap to update.");
+    assert.equal((await page.textContent("#updateBar")).trim(), "New version's ready! Tap to update.");
     const r = await page.$eval("#updateBar", b => { const x = b.getBoundingClientRect(); return { l: x.left, r: x.right, vw: innerWidth, h: x.height }; });
     assert.ok(r.l >= 0 && r.r <= r.vw + 0.5, `bar inside the viewport: ${JSON.stringify(r)}`);
     await page.screenshot({ path: join(OUT, `39-update-bar-${w}-chromium.png`) });
@@ -908,11 +908,11 @@ flow(48, "onboarding-toasts", async (page, w) => {
   await page.goto(`${BASE}/#${C.single}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1300);
   const t1 = await toastText(page);
   if (w === 1280 && !t1) return skip("desktop: no notes button toast (padFab is phone-only); nothing to assert");
-  assert.equal(t1, "Tap here to write notes.");
+  assert.equal(t1, "Quack up your thoughts here...");
   await page.screenshot({ path: join(OUT, `48-onboarding-toasts-${w}-first-chromium.png`) });
   await page.locator("#padFab").tap(); await page.waitForTimeout(900);
   const t2 = await toastText(page);
-  assert.equal(t2, "Tap to switch question / answer.");
+  assert.equal(t2, "Switch question/answer here.");
   return `'${t1}' (shot -first) then '${t2}'`;
 }, { padPhone: true, ob: true });
 
@@ -954,7 +954,7 @@ flow(55, "bfcache-resume", async (page, w) => {
 });
 
 /* Compare after a miss (W90 r2 item 2, Tony Oct 26: "the chatbox stays as is, when i expect it to update when compare button is clicked"):
-   wrong once (Cluck explains the miss), right on the 2nd try, then "Compare with Cluck's steps" -> Cluck's solution for the RIGHT answer
+   wrong once (Cluck explains the miss), right on the 2nd try, then "See Cluck's steps" -> Cluck's solution for the RIGHT answer
    comes as a new message under the miss's text (kept above as history), scrolled into view inside the sheet (the page does not jump),
    and the manual open moves focus into the sheet (W90 r2 item 4: desktop, the ask field once the text is typed) */
 const STUB_OK = "SOLUTION-RIGHT full steps.\nAnswer: a.";

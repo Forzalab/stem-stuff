@@ -520,7 +520,7 @@ register("Predict", (p, c) => {
     const pick = st.pick;
     let r;
     try { r = await c.predict(pick, { view: c.id, key: p.answer }); }
-    catch { st.busy = false; st.verdict = { ok: false, text: "Could not check. Try again." }; show(); return; }
+    catch { st.busy = false; st.verdict = { ok: false, text: "Couldn't check. Try again." }; show(); return; }
     st.busy = false;
     st.used = r && r.tries_left != null ? tries - r.tries_left : st.used + 1;
     if (r && r.ok) { st.right = pick; st.verdict = { ok: true, text: "Right." }; }

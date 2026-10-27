@@ -547,7 +547,16 @@ class Slips(unittest.TestCase):
             self.assertLessEqual(len(h.split()) - 1, 12, fam)
             self.assertIsNone(re.search(r"\d", h), fam)                       # no number at all, so never the answer
 
-    def test_pair_hint_composes_family_lines(self):                          # k=2 "inner+outer": the two family lines in that order, one QUACK.
+    def test_zodiac_season_by_date(self):                                    # todo 93 miss-060/061: {sign} = the tropical season of the date
+        d = serve.datetime.date
+        for day, want in ((d(2026, 3, 20), "Pisces"), (d(2026, 3, 21), "Aries"), (d(2026, 4, 19), "Aries"), (d(2026, 4, 20), "Taurus"),
+                          (d(2026, 10, 22), "Libra"), (d(2026, 10, 23), "Scorpio"), (d(2026, 12, 21), "Sagittarius"), (d(2026, 12, 22), "Capricorn"),
+                          (d(2027, 1, 1), "Capricorn"), (d(2027, 1, 19), "Capricorn"), (d(2027, 1, 20), "Aquarius"), (d(2027, 2, 19), "Pisces")):
+            self.assertEqual(serve.zodiac(day), want, day)
+        with unittest.mock.patch.dict(serve.FAMILY_HINT, {"sign": "QUACK, it's {sign} season. Check your signs."}):
+            self.assertEqual(serve.family_hint("sign"), f"QUACK, it's {serve.zodiac()} season. Check your signs.")
+
+    def test_pair_hint_composes_family_lines(self):                         # k=2 "inner+outer": the two family lines in that order, one QUACK.
         self.assertEqual(serve.family_hint("drop+sign"),
                          "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.")   # slips.test.mjs pins the same text
         self.assertEqual(serve.family_hint("sign"), serve.FAMILY_HINT["sign"])

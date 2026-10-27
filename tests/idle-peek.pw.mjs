@@ -123,7 +123,7 @@ for (const [name, vp] of [["phone", { width: 390, height: 844 }], ["desktop", { 
       assert.ok(Math.abs(L.sky.l - (L.col.l - 48)) < 1 && Math.abs(L.sky.r - (L.col.r + 48)) < 1, "desktop: the sky = the column + a soft bleed");
     }
     assert.ok(L.duck.b <= vp.height + 1 && L.duck.w >= 44 && L.duck.h >= 44, "a 44px+ target on screen");
-    assert.equal(L.say, name === "phone" ? "Stuck? Tap me." : "Stuck? Click me.");
+    assert.equal(L.say, name === "phone" ? "Need help? Tap me." : "Stuck? Click me.");
     assert.equal(L.sayOp, 1, "the line shows");
     assert.equal(L.label, "Cluck: want a hint?");
     assert.deepEqual(L.over, [], "the duck and its line rest on no control");

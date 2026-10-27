@@ -135,7 +135,7 @@ try {
     assert.equal(await page.title(), "CALC1_E01");
     assert.match(await page.$eval('#qlist a[href="#CALC1_E01"]', a => a.textContent), /Practice Exam 2, Question 1: even numbers/);
     await page.reload(); await opened(page, "CALC1_E01");                 // the bank opens a random first question: E01 first this visit
-    assert.equal((await page.textContent("#how")).trim(), "Tick every true one.");   // short, first choose-all only (clutter C6)
+    assert.equal((await page.textContent("#how")).trim(), "Tick all true options.");   // short, first choose-all only (clutter C6)
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
@@ -371,7 +371,7 @@ try {
     assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header with its X");
     assert.equal(await page.isHidden("#cluck .cl-x2"), true, "B5: no corner X");
     await page.click("#cluck .cl-x");                                        // closed: the peek + CTA are the way back, then open again from the top
-    assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "ok but how?", "E1 = T2, wording b (Tony, Oct 13)");
+    assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "okay, but how?", "E1 = T2, wording b (Tony, Oct 13)");
     assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
     assert.ok((await page.$eval(".cl-peek .cl-cta", b => b.getBoundingClientRect().height)) >= 44, "the CTA is a 44px target");
     assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "Q3 = C: Cluck's steps inline, under the hint");
@@ -496,7 +496,7 @@ try {
       assert.equal((await page.$$eval("#cluck .msg.me .md", r => r.map(x => x.textContent))).at(-1), "why step " + n + "?");
       if (n < 5) assert.equal(await page.textContent("#cluck .ask .left"), `${5 - n} left`);
     }
-    assert.ok(!(await page.$("#cluck .ask")) && /5 questions/.test(await page.textContent("#cluck .done-row")), "5 asked: the field is done");
+    assert.ok(!(await page.$("#cluck .ask")) && /wound down at 5\./.test(await page.textContent("#cluck .done-row")), "5 asked: the field is done");
     await page.keyboard.press("Escape");
     assert.equal(await page.isHidden("#cluck"), true);
     assert.equal(await page.evaluate(() => document.activeElement.matches(".wchip, .cl-cta")), true, "focus goes back to the chip / CTA");

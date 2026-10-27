@@ -83,7 +83,7 @@ async function run(type, label, launchOpts) {
     await page.waitForSelector("#retry", { timeout: 12000 });
     const dt = Date.now() - t0;
     assert.ok(dt >= 7500 && dt < 10000, `timed out after ${dt} ms`);
-    assert.match(await page.textContent("#fb"), /^\s*Too slow\. Tap Try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}\s*$/);   // the incident code (incident.mjs), never its reason
+    assert.match(await page.textContent("#fb"), /^\s*Timeout! Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}\s*$/);   // the incident code (incident.mjs), never its reason
     assert.equal(await page.inputValue("#ans"), "7", "typed answer kept");
     assert.equal(await page.evaluate(() => window.__drill.state.tries.length), before, "a timeout is not a try: " + JSON.stringify(await page.evaluate(() => window.__drill.state.tries)));
     if (SHOTS) { await page.$eval("#freezeIn", e => { e.scrollTop = e.scrollHeight; }); await page.waitForTimeout(100); await page.screenshot({ path: `${SHOTS}/reload-timeout-${label}-390.png` }); }

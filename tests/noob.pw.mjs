@@ -1,5 +1,5 @@
 // The front door (DESIGN-v3 §1, Tony #2-#4): a fresh "/" opens the Exam 2 bank's dead-easy opener, the bar says "Exam 2" only,
-// no bank menu; noob order (shuffle.mjs ramp): tier 1 first, 2 clean first tries -> tier 2; "Mix it up" = the old queue; a returner
+// no bank menu; noob order (shuffle.mjs ramp): tier 1 first, 2 clean first tries -> tier 2; "Shuffle" = the old queue; a returner
 // (localStorage stem-noob-<bank>) skips the opener; ?bank=X opens X and stays the last bank. A fixture bank stands in for BANK_P2X
 // (the real one lives in the brain, never on GitHub). Starts its own serve.py with a throwaway banks/ folder and tries.json:
 //   node tests/noob.pw.mjs [port]
@@ -84,21 +84,21 @@ try {
     assert.equal(tierOf(PLAN[4]), 2);
   });
 
-  await step("'Mix it up' switches to the shuffle queue and stays switched; 'Easy first' switches back", async () => {
+  await step("'Shuffle' switches to the shuffle queue and stays switched; 'Start with easy ones' switches back", async () => {
     await page.click("#qlistBtn");
-    assert.equal((await page.textContent("#qmix")).trim(), "Mix it up");
-    assert.equal(await page.isVisible("#qskip"), true, "no Skip ahead in noob mode");
+    assert.equal((await page.textContent("#qmix")).trim(), "Shuffle");
+    assert.equal(await page.isVisible("#qskip"), true, "no Skip this question in noob mode");
     await page.click("#qmix");
     assert.equal(await page.evaluate(() => window.stemQueue.mode()), "mix");
-    assert.equal((await page.textContent("#qmix")).trim(), "Easy first");
-    assert.equal(await page.isVisible("#qskip"), false, "Skip ahead in mix mode");
+    assert.equal((await page.textContent("#qmix")).trim(), "Start with easy ones");
+    assert.equal(await page.isVisible("#qskip"), false, "Skip this question in mix mode");
     await page.reload(); await anyOpen(page);
     assert.equal(await page.evaluate(() => window.stemQueue.mode()), "mix", "the mode did not survive a reload");
     await page.click("#qlistBtn"); await page.click("#qmix");
     assert.equal(await page.evaluate(() => window.stemQueue.mode()), "noob");
   });
 
-  await step("'Skip ahead': up one tier and on to the next question", async () => {
+  await step("'Skip this question': up one tier and on to the next question", async () => {
     const t0 = await page.evaluate(() => window.stemQueue.state().ramp.tier), was = await code(page);
     await page.click("#qskip");
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, was, { timeout: 4000 });
@@ -106,7 +106,7 @@ try {
     assert.equal(await page.evaluate(() => document.querySelector("#qlist").hidden), true, "the list stayed open");
   });
 
-  await step("a small 'Other banks' link in the list: it opens the code box", async () => {
+  await step("a small 'Explore other banks' link in the list: it opens the code box", async () => {
     await page.click("#qlistBtn");
     await page.click("#qbanks");
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "code");
