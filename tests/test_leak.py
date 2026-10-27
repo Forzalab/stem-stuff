@@ -19,8 +19,10 @@ from test_claude_pipe import Resp, sse_claude, sse_or  # noqa: E402
 
 TONY = "From the KEY: y_H = −r cos 53°. So the y-value of each H is a negative piece of r."
 LEAKS = {   # pattern id -> replies a model could send that echo a prompt
-    "key_from": [TONY, "From the key, the force doubles.", "According to the KEY, $F = ma$.", "per the key: a ball falls", "Straight from the KEY: 3 N"],
-    "key_says": ["The key says the cart stops.", "So the KEY says $v=3$.", "As the answer key shows, it rolls."],
+    "key_from": [TONY, "From the key, the force doubles.", "According to the KEY, $F = ma$.", "per the key: a ball falls", "Straight from the KEY: 3 N",
+                 "From the worked solution, it slows."],
+    "key_says": ["The key says the cart stops.", "So the KEY says $v=3$.", "As the answer key shows, it rolls.",
+                 "The worked solution says it slows."],
     "answer_key": ["Check the answer key.", "the solution key"],
     "key_label": ["The KEY has it.", "KEY: P = W / t", "Key: P = W / t", "both the PROBLEM and KEY agree", "the **KEY**"],
     "key_source": ["It is in the key."],
@@ -36,6 +38,8 @@ LEAKS = {   # pattern id -> replies a model could send that echo a prompt
                     "Figure data: {}", "[ FORMATTING ]", "CHOICES: a, b", "ALGEBRA THIS NEEDS: ratios"],
     "student_tag": ["<student_3fa9c2d1>", "</student_ab12cd34>"],
     "prompt_word": ["my system prompt", "my instructions say", "the letter prompt", "an external classifier checks me", "trade secret"],
+    "mini_label": ["Your error label says sign.", "the ERROR LABEL", "Step goal: find v", "Twist: a", "Student answer: 5",   # mini.py's user turn
+                   "Worked solution: v = 1", "Numbers: v_i = 3.0", "I must never quote it"],
     "lore_word": ["the lamp will censor me", "stuck in a sandbox", "the evil machine", "a presolved item", "saccharine mode"],
 }
 CLEAN = [   # plain English and the app's own copy: never a hit
@@ -46,6 +50,7 @@ CLEAN = [   # plain English and the app's own copy: never a hit
     "the gap between plates", "your scratchpad", "Scratchpad", "Quack! (•̀ᴗ•́)و", "the key to this is the ratio", "A key holds the door.",
     "The keys are on the table.", "a reveal", "a wish", "lever arm", "the ladder leans", "a family of curves", "keep the KEYboard",
     "we confirmed the result", "the formula sheet", "Key ideas: momentum", "Focus on the key.", "Energy is the key.",
+    "Worked solution", "the solution shows a ratio", "a twist on the last one", "the step's goal", "Label the axes.", "an error in the sign",
 ] + [serve.CLUCK_NUDGE, serve.STOPPED.decode()] + serve.CANNED
 
 
