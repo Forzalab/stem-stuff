@@ -98,7 +98,7 @@
     var p0 = shownWon; shownWon = won;
     if (!T || won <= p0) return;
     for (var k = landmark(p0, goal) + 1, b = landmark(won, goal); k <= b; k++) {
-      var n = k === b ? won : Math.ceil(k * goal / 4), line = stage(n, goal), o = { text: line, at: at,
+      var n = k === b ? won : Math.ceil(k * goal / 4), line = stage(n, goal), o = { text: line, at: at, until: Date.now() + 60000,   // no room under the question for a minute: the popover still has it
         from: k === landmark(p0, goal) + 1 ? p0 / goal : (k - 1) / 4, to: k === b ? Math.min(1, won / goal) : k / 4 };
       if (/^\d+ /.test(line)) { o.text = line.replace(/^\d+/, '{#}'); o.num = [p0, n]; }                  // the count goes up
       else if (/^Only \d+ /.test(line)) { o.text = line.replace(/^Only \d+/, 'Only {#}'); o.num = [goal - p0, goal - n]; }   // the rest goes down

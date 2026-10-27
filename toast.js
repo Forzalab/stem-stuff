@@ -2,7 +2,7 @@
    d1: no icon; the words and a progress bar share one left edge; a close button centred on the right; the bar ends in an 8px finish dot.
    Anchored in the question area (Tony: "I'm looking at the question first"), never in the top bar: 12px under its anchor, and it
    scrolls with it. It never covers a live control (W88 r4, cluck-rise): it shows only when it fits between the pinned bar and the
-   viewport's foot under (or else over) its anchor and covers no live control (no clamping to the foot, where the duck, the
+   viewport's foot under its anchor and covers no live control (no clamping to the foot, where the duck, the
    Scratchpad button and the dock live; never on Check / Next / a choice), else it waits
    until the student scrolls there; it steps aside while Cluck's duck is up or Cluck is open. A toast with `until` (a time stamp) that
    cannot show by then is dropped (the start line). In: a 200 ms slide, then the bar fills from `from` to `to` over 600 ms while the number counts.
@@ -50,8 +50,9 @@
     }
     return false;
   }
-  /* -> true when it has a place: 12px under its anchor, else 12px over it (the problem's words, never a box: #toast's rule), on screen,
-     under the pinned bar, over no live control. A shown toast keeps its side and scrolls with its anchor. */
+  /* -> true when it has a place: 12px under its anchor, on screen, under the pinned bar, over no live control; it scrolls with its
+     anchor. Never over the anchor: that is the problem the student reads first (a short landscape phone, 844x390, put it on the
+     question's own words), so with no room under it, it waits for a scroll (W88 r4). */
   function place() {
     if (!cur || !el) return false;
     var a = anchor(cur);
@@ -64,12 +65,11 @@
     if (bar && getComputedStyle(bar).position === 'sticky') barB = bar.getBoundingClientRect().bottom;
     var vv = g.visualViewport, bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - 12;
     var x = Math.round(Math.min(Math.max(gut, b.left), vw - gut - w));
-    var sides = cur.side ? [cur.side] : ['under', 'over'];
+    var sides = ['under'];
     for (var i = 0; i < sides.length; i++) {
       var y = Math.round(sides[i] === 'under' ? b.bottom + 12 : b.top - 12 - h);
       if (y < barB + 8 || y + h > bottom || covers(x, y, w, h)) continue;
       el.style.left = x + 'px'; el.style.top = y + 'px';               // whole px: the words stay on the pixel grid
-      cur.side = sides[i];
       return true;
     }
     return false;
