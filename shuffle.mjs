@@ -169,3 +169,45 @@ export function glue(order, beforeOf) {
   for (const c of order) if (moves(c)) { const b = beforeOf(c); by.set(b, [...(by.get(b) || []), c]); }
   return order.flatMap(c => moves(c) ? [] : [...(by.get(c) || []), c]);
 }
+/* ---------- the night-before mock (W103b, PLAN §6.9): the PE3 questions in exam order, one try each, then the misses ----------
+   mockList(items, salt): one code per exam position, in order. The position: the item's exam_q, else its title's "X3 Q<n>" (today's
+   BANK_P3X; a range "X3 Q10-11" is no position). A template = no twin / parent_template and no "twin" / "twist" in its title. A template
+   with twins (SCHEMA.md twin a|b + parent_template) plays one of them, picked by hash(salt + n) so a reload agrees; none -> itself.
+   st.mock = mockNew(list) rides in the saved queue (additive, like st.ramp): { list, at, res: { CODE: right }, miss, back, done }. */
+const examQ = p => Number.isInteger(p.exam_q) ? p.exam_q : +((/^X3 Q(\d{1,2})\b(?!-)/.exec(p.title || "") || [])[1] || 0);
+export function mockList(items, salt = "") {
+  const twins = new Map(), at = new Map();
+  for (const p of items) if (p.parent_template) twins.set(p.parent_template, [...(twins.get(p.parent_template) || []), p.code]);
+  for (const p of items) {
+    const n = examQ(p);
+    if (n && !p.twin && !p.parent_template && (Number.isInteger(p.exam_q) || !/\b(twin|twist)\b/i.test(p.title)) && !at.has(n)) at.set(n, p.code);
+  }
+  return [...at.keys()].sort((a, b) => a - b).map(n => {
+    const t = at.get(n), tw = (twins.get(t) || []).sort();
+    return tw.length ? tw[hash(salt + ":mock:" + n) % tw.length] : t;
+  });
+}
+export const mockNew = list => ({ list: [...list], at: 0, res: {}, miss: null, back: 0, done: false });
+/* the mock phase is on for code: no peek, no Cluck hint, no ladder, one try (app.js, peek.js, repair.js read it through nav.js) */
+export const mockOn = (m, code) => !!m && !m.done && m.miss === null && m.list.includes(code);
+/* a graded first pick in the mock phase; returns true when it counted */
+export function mockAnswer(m, code, right) {
+  if (!mockOn(m, code) || code in m.res) return false;
+  m.res[code] = !!right;
+  return true;
+}
+/* Next: { code, end } (end: the mock just ended, with its score / of), or null when it is all done (the normal queue takes over).
+   Unanswered = a miss. The misses come back in exam order, with the normal flow. */
+export function mockNext(m) {
+  if (!m || m.done) return null;
+  if (m.miss === null) {
+    if (m.at < m.list.length) return { code: m.list[m.at++], end: false };
+    m.miss = m.list.filter(c => m.res[c] !== true);
+    const code = m.miss[m.back++] ?? null;
+    if (!code) m.done = true;
+    return { code, end: true, score: m.list.length - m.miss.length, of: m.list.length };
+  }
+  if (m.back < m.miss.length) return { code: m.miss[m.back++], end: false };
+  m.done = true;
+  return null;
+}
