@@ -10,11 +10,11 @@ window.__stemSeenLines = {
   fam: {
     "negation": [
       { id: "neg-1", text: "Keen eye. That \"not\" didn't get you.", kind: "short" },
-      { id: "neg-2", text: "Negation handled. Every part.", kind: "short" },
-      { id: "neg-3", text: "Flipped the whole statement right.", kind: "full" }
+      { id: "neg-2", text: "Negación? Sin problema.", kind: "short" },
+      { id: "neg-3", text: "Doble negación, sí señor.", kind: "full" }
     ],
     "counting": [
-      { id: "cnt-1", text: "Every node counted, none twice.", kind: "short" },
+      { id: "cnt-1", text: "Zero duplicate ducks, nice.", kind: "short" },
       { id: "cnt-2", text: "🎶 You can count on me, like 1 2 3 🎶", kind: "short" },
       { id: "cnt-3", text: "Count me in too.", kind: "full" }
     ],
@@ -35,7 +35,7 @@ window.__stemSeenLines = {
     ],
     "arithmetic": [
       { id: "ari-1", text: "Arithmetic held to the end.", kind: "short" },
-      { id: "ari-2", text: "Every calculation landed.", kind: "short" },
+      { id: "ari-2", text: "QUAACK. Rocket-science-grade math.", kind: "short" },
       { id: "ari-3", text: "Elementary math, done right.", kind: "full" }
     ],
     "algebra": [
@@ -44,7 +44,7 @@ window.__stemSeenLines = {
       { id: "alg-3", text: "Algebra was easy. DEAD easy.", kind: "full" }
     ],
     "off-by-one": [
-      { id: "obo-1", text: "Boundaries landed exactly right.", kind: "short" },
+      { id: "obo-1", text: "Off by one? Not today. QUAACK.", kind: "short" },
       { id: "obo-2", text: "Burritos overflow by one. You didn't.", kind: "short" },
       { id: "obo-3", text: "One plus one isn't three today.", kind: "full" }
     ],
@@ -69,7 +69,7 @@ window.__stemSeenLines = {
     ],
     "order-ops": [
       { id: "ord-1", text: "Operations ordered like my ducklings.", kind: "short" },
-      { id: "ord-2", text: "Parentheses first. Right order.", kind: "short" },
+      { id: "ord-2", text: "Zero open parentheses. Superb. QUAACKK", kind: "short" },
       { id: "ord-3", text: "Stepping it right, one at a time.", kind: "full" }
     ],
     "limit-plug": [
@@ -92,7 +92,7 @@ window.__stemSeenLines = {
     { id: "any-2", text: "Reasoning stayed strong.", kind: "short" },
     { id: "any-3", text: "That's egg-cellent reasoning, paddler.", kind: "short" },
     { id: "any-4", text: "You've got duck-umented skill.", kind: "full" },
-    { id: "any-5", text: "{title}: handled with care.", kind: "full" },
+    { id: "any-5", text: "Brains beat the lotto. QUAACK.", kind: "full" },
     { id: "any-6", text: "Feathered applause. Force-ful answer.", kind: "full" }
   ]
 };

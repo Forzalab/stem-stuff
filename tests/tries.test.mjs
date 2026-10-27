@@ -189,7 +189,7 @@ test("slips: PHYS_XZP typed 0.692 -> sign, with the family hint, in diet and sug
     for (const m of ["diet", "sugar"]) {
       setMode(m);
       const r = gradeLocal(xzp({ code: `PHYS_XZP_${m}` }), { answer: "0.692" });
-      assert.deepEqual([r.verdict, r.error, r.hint, r.triesLeft], ["wrong", "sign", FAMILY_HINT.sign, 1], m);
+      assert.deepEqual([r.verdict, r.error, r.hint, r.triesLeft], ["wrong", "sign", familyHint("sign"), 1], m);
     }
   } finally { setMode("sugar"); }
 });
@@ -224,7 +224,7 @@ test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair, the def
     spot: "QUACK. Your pieces are fine but one. Redo the bottom of the fraction." });
   assert.deepEqual(gradeLocal({ ...t, code: "T_tied" }, { answer: "0.03" }), tie({ ...t, code: "T_tie1" }, { answer: "0.03" }));   // SLIP_TIE on: the default
   const off = load(undefined, (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;
-  assert.deepEqual(off({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: FAMILY_HINT.sign, error: "sign" });   // SLIP_TIE off
+  assert.deepEqual(off({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: familyHint("sign"), error: "sign" });   // SLIP_TIE off
   assert.deepEqual([gradeLocal({ ...p, code: "T_k2d" }, { answer: "-7" }).spot, off({ ...p, code: "T_k2d" }, { answer: "9" }).error],
     ["QUACK. Redo the term in brackets, then check your last step.", "distribute"]);   // default SLIP_K 2 (9: distribute = sign, off-tie names distribute)
   const k1 = load((f, v, t, s) => slipMatch(f, v, t, s, 1), (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;   // k=1 + tie off: before #268
@@ -233,5 +233,5 @@ test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair, the def
 test("slips: a multi part with form gets its slip", () => {
   const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };
   const r = gradeLocal(p, { part: 0, answer: "17" });
-  assert.deepEqual([r.error, r.hint, r.part], ["sign", FAMILY_HINT.sign, 0]);
+  assert.deepEqual([r.error, r.hint, r.part], ["sign", familyHint("sign"), 0]);
 });

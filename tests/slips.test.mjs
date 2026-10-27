@@ -155,8 +155,8 @@ test("zodiac: the tropical season of a date, the same table as serve.py zodiac (
   assert.equal(fillSign("QUACK, it's {sign} season."), `QUACK, it's ${zodiac()} season.`);
 });
 test("k=2 hint: an inner+outer pair is the two family lines in that order, one QUACK. (serve.py family_hint)", () => {
-  assert.equal(familyHint("drop+sign"), "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.");   // test_serve.py pins the same text
-  assert.equal(familyHint("sign"), FAMILY_HINT.sign);
+  assert.equal(familyHint("drop+sign"), `QUACK. Count your terms like you count your ducks. It's ${zodiac()} season. Check ONE of your signs.`);   // test_serve.py pins the same text
+  assert.equal(familyHint("sign"), fillSign(FAMILY_HINT.sign));   // {sign} filled (todo 93)
   for (const form of ["10-(3+2)", "2*9.8*3", "sqrt(9+16)"]) for (const [fam] of pairs(form)) {
     const h = familyHint(fam);
     assert.ok(h.startsWith("QUACK. ") && h.split("QUACK").length === 2 && !/\d/.test(h), fam);

@@ -67,16 +67,16 @@ NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
 WRONG_MISS = "QUACK. At least one ticked row is wrong."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
 # slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
 FAMILY_HINT = {
-    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
-    "sign": "QUACK. Check every sign. One of them flipped.",
-    "drop": "QUACK. Count your terms. One of them went missing.",
-    "reciprocal": "QUACK. Check what is on top and what is on the bottom.",
-    "power": "QUACK. Check your powers. A square or a root slipped.",
-    "factor": "QUACK. Check your factors. Something got doubled or halved.",
-    "dream": "QUACK. Check your square or root of a sum. It does not split.",
-    "trig": "QUACK. Check your trig. Sine or cosine, degrees or radians.",
-    "units": "QUACK. Check your units. A power of ten slipped.",
-    "g": "QUACK. Check the value you used for g.",
+    "distribute": "QUACK. It's {sign} season. Check your signs.",
+    "sign": "QUACK. It's {sign} season. Check ONE of your signs.",
+    "drop": "QUACK. Count your terms like you count your ducks.",
+    "reciprocal": "QUACK. Your math got RATIO-ed (not on Twitter).",
+    "power": "QUACK. Go find the ROOT cause. POWER to you.",
+    "factor": "QUACK. Try buying half of a double cheeseburger.",
+    "dream": "QUACK. Square roots don't hatch separately.",
+    "trig": "QUACK. Check your trig.",
+    "units": "QUACK. Oops, that might be an egg-xtra zero! Or a missing one.",
+    "g": "QUACK. Fun fact: Earth's gravity isn't the same everywhere! Even on quizzes.",
 }
 
 
