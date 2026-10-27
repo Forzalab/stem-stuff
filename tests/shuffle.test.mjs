@@ -276,7 +276,7 @@ test("ramp: a fresh state opens on the dead-easy, then only tier-1 codes", async
   assert.equal(run[0].code, "PHYS_ZDA");
   for (const p of run.slice(1)) assert.equal(tierOf(p.code), 1, p.code);
 });
-test("ramp: 2 clean first picks -> the next is tier 2; a miss -> back to tier 1 (floor 1, cap 3)", async () => {
+test("ramp: 2 clean first picks -> the next is tier 2; 2 misses in a row -> back to tier 1 (floor 1, cap 3)", async () => {
   const up = await rampRun("a", [undefined, true, true, undefined]);
   assert.equal(up.st.ramp.tier, 2);
   assert.equal(tierOf(up.run[3].code), 1, "slot 4 is the first re-injection (a seen tier 1)");
@@ -285,13 +285,30 @@ test("ramp: 2 clean first picks -> the next is tier 2; a miss -> back to tier 1 
   assert.equal(tierOf(up5.run[4].code), 2, "after 2 clean, the next new one is tier 2");
   const one = await rampRun("a", [undefined, true, undefined]);
   assert.equal(tierOf(one.run[2].code), 1, "one clean is not enough");
-  const down = await rampRun("a", [undefined, true, true, false, undefined]);
-  assert.equal(down.st.ramp.tier, 1, "a miss drops a tier");
-  assert.equal(tierOf(down.run[4].code), 1);
+  const down = await rampRun("a", [undefined, true, true, false, false, undefined]);
+  assert.equal(down.st.ramp.tier, 1, "2 misses in a row drop a tier");
+  assert.equal(tierOf(down.run[5].code), 1);
   const floor = await rampRun("a", [undefined, false, false, undefined]);
   assert.equal(floor.st.ramp.tier, 1, "never below tier 1");
   const top = await rampRun("a", [undefined, true, true, true, true, true, true, true, true]);
   assert.equal(top.st.ramp.tier, 3, "never above tier 3");
+});
+test("ramp: 1st miss resets the clean count only; a 2nd miss IN A ROW drops a tier; a clean answer ends the run (PLAN §6.6)", async () => {
+  const { rampAnswer } = await import("../shuffle.mjs");
+  const st = { ramp: { tier: 2, clean: 1 } };   // an old saved queue: no miss key
+  assert.equal(rampAnswer(st, "PHYS_T2A", false, tierOf), 2, "1st miss: tier stays");
+  assert.equal(st.ramp.clean, 0, "1st miss: the clean count starts over");
+  assert.equal(rampAnswer(st, "PHYS_T2B", false, tierOf), 1, "2nd miss in a row: down one");
+  assert.equal(rampAnswer(st, "PHYS_T1A", false, tierOf), 1, "floor 1");
+  const run = { ramp: { tier: 3, clean: 0 } };
+  rampAnswer(run, "PHYS_T3A", false, tierOf); rampAnswer(run, "PHYS_T3B", true, tierOf);
+  assert.equal(rampAnswer(run, "PHYS_T3C", false, tierOf), 3, "miss, clean, miss: the clean ended the run, no drop");
+  assert.equal(rampAnswer(run, "PHYS_T3D", false, tierOf), 2, "then a 2nd in a row drops");
+  assert.equal(rampAnswer(run, "PHYS_T2A", false, tierOf), 2, "the drop ends the run: a 3rd miss starts a new one");
+  const dead = { ramp: { tier: 2, clean: 0, miss: 1 } };
+  rampAnswer(dead, "PHYS_ZDA", false, tierOf);
+  assert.deepEqual(dead.ramp, { tier: 2, clean: 0, miss: 1 }, "a dead-easy moves nothing");
+  assert.equal(JSON.parse(JSON.stringify(run)).ramp.miss, 1, "the run rides in the saved queue");
 });
 test("ramp: from item 4, one seen code comes back every REVIEW_EVERY (slot 9 is a re-injection)", async () => {
   const { REVIEW_FROM, REVIEW_EVERY } = await import("../shuffle.mjs");

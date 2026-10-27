@@ -132,8 +132,9 @@ export function deadLead(st, deads, snack) {
    tierOf(code) -> 0 for a dead-easy, else the author's noob.tier 1|2|3. The opener (deadOpen) goes first, then new codes from
    st.ramp.tier (the nearest tier, easier first, once that one is spent) in a fixed salt order. From slot REVIEW_FROM, every
    REVIEW_EVERY-th slot re-shows a seen one (qPick over them, so a due miss goes first). Every new one seen -> qPick takes over.
-   The gate (rampAnswer, on a first pick only: when qAnswer returned true): RAMP_UP clean ones at the tier -> up one; a miss ->
-   down one (floor 1). Pure like qPick; st.ramp rides along in the saved queue. */
+   The gate (rampAnswer, on a first pick only: when qAnswer returned true): RAMP_UP clean ones at the tier -> up one; a 1st miss
+   resets the clean count only, a 2nd miss IN A ROW -> down one (floor 1) and the run starts over; a clean one ends the run
+   (PLAN §6.6, Oct 26). Pure like qPick; st.ramp {tier, clean, miss} rides along in the saved queue (an old one without miss = 0). */
 export const RAMP_UP = 2;         // TUNABLE: clean first picks at a tier to move up
 export const REVIEW_FROM = 4;     // TUNABLE: the first re-injection slot
 export const REVIEW_EVERY = 5;    // TUNABLE: then one every this many slots
@@ -154,8 +155,9 @@ export function ramp(st, pool, tierOf) {
 export function rampAnswer(st, code, right, tierOf) {
   const r = gate(st), k = tierOf(code);
   if (!k) return r.tier;                                         // a dead-easy is a warm-up, not a gate pass
-  if (!right) { r.tier = Math.max(1, r.tier - 1); r.clean = 0; }
-  else if (k >= r.tier && ++r.clean >= RAMP_UP) { r.tier = Math.min(3, r.tier + 1); r.clean = 0; }   // a review of an easier one moves nothing
+  if (!right) { r.clean = 0; r.miss = (r.miss || 0) + 1; if (r.miss >= 2) { r.tier = Math.max(1, r.tier - 1); r.miss = 0; } return r.tier; }
+  r.miss = 0;
+  if (k >= r.tier && ++r.clean >= RAMP_UP) { r.tier = Math.min(3, r.tier + 1); r.clean = 0; }   // a review of an easier one moves nothing
   return r.tier;
 }
 /* "Skip ahead": up one tier now (cap 3), the clean count starts over */
