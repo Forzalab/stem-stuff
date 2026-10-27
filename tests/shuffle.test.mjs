@@ -344,3 +344,65 @@ test("ramp: no item at the current tier -> the nearest tier still serves; an emp
   assert.deepEqual([...run.slice(0, 2)].sort(), pool, "tier 3 only: still served, each once first");
   assert.equal(ramp(qNew("a"), [], tierOf), null);
 });
+
+/* ---------- the night-before mock (W103b; PLAN §6.9): 20 PE3 questions in exam order, one try each, then the misses ---------- */
+const X = (code, title, more = {}) => ({ code, title, ...more });
+/* today's BANK_P3X shape: no twin / parent_template / exam_q; the exam position is only in the title */
+const titleBank = [
+  X("PHYS_Q11", "Quiz 11 Q1: hoop pulley"),
+  X("PHYS_T3", "X3 Q3 rectangle centre of gravity, practice"),
+  X("PHYS_T1", "X3 Q1 rod on two strings, practice"),
+  X("PHYS_W1", "X3 Q1 twin rod numbers"),
+  X("PHYS_K1", "X3 Q1 twist rod tension"),
+  X("PHYS_T2", "X3 Q2 rolling sphere, practice"),
+  X("PHYS_C", "X3 Q10-11 floating concept check"),
+  X("PHYS_T20", "X3 Q20 bulb ice to steam, practice"),
+];
+test("mockList, title fallback: the templates themselves, in exam order (X3 Qn), twins / twists / ranges / other items left out", async () => {
+  const { mockList } = await import("../shuffle.mjs");
+  assert.deepEqual(mockList(titleBank, "s"), ["PHYS_T1", "PHYS_T2", "PHYS_T3", "PHYS_T20"]);
+});
+/* the SCHEMA.md twin shape (twin a|b + parent_template), and exam_q preferred over the title */
+const twinBank = [
+  X("PHYS_T2", "rolling sphere", { exam_q: 2 }),
+  X("PHYS_T1", "X3 Q9 says the title, exam_q wins", { exam_q: 1 }),
+  X("PHYS_A1", "a", { twin: "a", parent_template: "PHYS_T1" }),
+  X("PHYS_B1", "b", { twin: "b", parent_template: "PHYS_T1" }),
+  X("PHYS_A2", "a", { twin: "a", parent_template: "PHYS_T2" }),
+];
+test("mockList, twin shape: exam_q orders; one twin of each template by hash(salt + n), stable for a salt; no twin -> the template", async () => {
+  const { mockList } = await import("../shuffle.mjs");
+  const a = mockList(twinBank, "s1");
+  assert.equal(a.length, 2);
+  assert.ok(["PHYS_A1", "PHYS_B1"].includes(a[0]), "Q1 plays a twin of its template");
+  assert.equal(a[1], "PHYS_A2", "Q2 has one twin");
+  assert.deepEqual(mockList(twinBank, "s1"), a, "a reload agrees");
+  const picks = new Set(Array.from({ length: 40 }, (_, i) => mockList(twinBank, "s" + i)[0]));
+  assert.deepEqual([...picks].sort(), ["PHYS_A1", "PHYS_B1"], "the salt picks a or b");
+  assert.deepEqual(mockList([twinBank[0], twinBank[1]], "s1"), ["PHYS_T1", "PHYS_T2"], "no twins: the templates");
+  assert.deepEqual(mockList([], "s"), []);
+});
+test("mockNext / mockAnswer: the list once in order, one graded first pick each, then the score and the misses in exam order, then done", async () => {
+  const { mockNew, mockNext, mockAnswer, mockOn } = await import("../shuffle.mjs");
+  const m = mockNew(["Q1", "Q2", "Q3", "Q4"]);
+  const seen = [];
+  for (const [c, ok] of [["Q1", true], ["Q2", false], ["Q3", null], ["Q4", true]]) {
+    const n = mockNext(m);
+    assert.deepEqual(n, { code: c, end: false });
+    assert.equal(mockOn(m, c), true, "the mock phase: no hints on " + c);
+    if (ok !== null) { assert.equal(mockAnswer(m, c, ok), true); assert.equal(mockAnswer(m, c, true), false, "only the first pick counts"); }
+    seen.push(c);
+  }
+  assert.equal(mockAnswer(m, "ZZ", true), false, "not a mock question");
+  const back = JSON.parse(JSON.stringify(m));                     // the saved queue round trip
+  assert.deepEqual(mockNext(back), { code: "Q2", end: true, score: 2, of: 4 }, "the score line comes with the first miss");
+  assert.equal(mockOn(back, "Q2"), false, "a miss comes back with the normal flow");
+  assert.equal(mockAnswer(back, "Q2", true), false, "the replay is not scored");
+  assert.deepEqual(mockNext(back), { code: "Q3", end: false }, "a skipped one is a miss");
+  assert.equal(mockNext(back), null, "then the normal queue");
+  assert.equal(back.done, true);
+  const clean = mockNew(["Q1"]); mockNext(clean); mockAnswer(clean, "Q1", true);
+  assert.deepEqual(mockNext(clean), { code: null, end: true, score: 1, of: 1 }, "no misses: the score, then the normal queue");
+  assert.equal(mockNext(clean), null);
+  assert.equal(mockOn(null, "Q1"), false);
+});

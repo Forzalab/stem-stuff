@@ -79,6 +79,7 @@
   /* AMA 3 sugar only · in a bank · a question open · AMA 9 Cluck closed · nothing over the page (question list, code bar, keyboard, reward FX) */
   function ok() {
     var c = H.classList;
+    if (window.stemMock && window.stemMock.on()) return false;          // the night-before mock (nav.js, W103b): no Cluck until it ends
     return c.contains("sugar") && !c.contains("start") && !!(window.stemBank && window.stemBank.code) &&
       !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !document.querySelector(".fx-ov") &&
       !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
@@ -99,6 +100,7 @@
      does not use up the idle peeks (n). Not retried: if it is busy at that moment, this question gets none. */
   var WRONG_MS = 700, COOL = 120000, wt = 0, wrongDone = {}, lastRise = -COOL;
   function wrong(code) {
+    if (window.stemMock && window.stemMock.on()) return;              // the mock (W103b): its replay gets the peek, so not spent here
     if (!code || wrongDone[code]) return;
     wrongDone[code] = 1; clearTimeout(wt);
     wt = setTimeout(function () {
