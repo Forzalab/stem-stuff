@@ -66,7 +66,7 @@ function placeToast() {
   if (row) {                                                                     // on the struck text, after the badge
     t.classList.remove("up");
     t.style.maxWidth = Math.max(120, b.right - m.right - 18) + "px";
-    t.style.left = (m.right + 12) + "px"; t.style.top = (b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return;
+    t.style.left = Math.round(m.right + 12) + "px"; t.style.top = Math.round(b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return;   // whole px: sharp words (TOAST.md)
   }
   t.style.maxWidth = "";
   const w = t.offsetWidth, h = t.offsetHeight, bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - dockRoom();
@@ -74,7 +74,7 @@ function placeToast() {
   x = Math.min(Math.max(gut, x), innerWidth - gut - w);
   const up = toastAt.id === "padFab" || b.bottom + 12 + h > bottom;             // no room under it: flip above, caret on the bottom edge
   t.classList.toggle("up", up);
-  t.style.left = x + "px"; t.style.top = (up ? b.top - 12 - h : b.bottom + 12) + "px";
+  t.style.left = Math.round(x) + "px"; t.style.top = Math.round(up ? b.top - 12 - h : b.bottom + 12) + "px";   // whole px: sharp words (TOAST.md)
   t.style.setProperty("--px", Math.max(18, Math.min(w - 18, mx - x)) + "px");
 }
 function hideToast() { clearTimeout(toastT); toastLeft = 0; toastAt = null; $("#toast")?.classList.remove("on"); }
