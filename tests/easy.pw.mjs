@@ -375,6 +375,9 @@ try {
     assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
     assert.ok((await page.$eval(".cl-peek .cl-cta", b => b.getBoundingClientRect().height)) >= 44, "the CTA is a 44px target");
     assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "Q3 = C: Cluck's steps inline, under the hint");
+    // the stub is still streaming (a piece every 150 ms) and only its 3rd piece (the $$ block) overflows 3 lines: wait for the whole reply
+    // in the peek (its last piece), then check the fade (todo 94: read after piece 1 only, a 2-line peek, no overflow yet)
+    await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector(".cl-peek .cl-steps")?.textContent || ""), null, { timeout: 6000 });
     assert.equal(await page.$eval(".cl-peek .cl-steps", s => s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient")), true, "the rest fades under a gradient");
     await page.evaluate(() => { window.__said = []; });
     await page.click(".cl-peek .cl-cta");
