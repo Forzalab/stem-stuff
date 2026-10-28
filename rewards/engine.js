@@ -31,7 +31,7 @@
     "Egg-cellent work, Cluck approves!"];
   var LEGEND = ["Gravity's never gonna lift you up— quack.", "Duck yeah! You nailed that question.", "Cluck sheds one proud tear."];
   var MISS = "Close call, let's retry next turn!";   // Tony #36
-  var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0, shownWon = null, started = {};
+  var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0, shownWon = null, started = {}, fam = null;
 
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
@@ -73,7 +73,7 @@
     if (!s) return null;
     var L = levelOf(s.xp), f = Math.min(floorOf(L), s.xp), n = floorOf(L + 1);   // a kept level (old save) fills its bar from today's XP
     return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate(),
-      won: Object.keys(s.won).length, goal: cfg.goal, stage: stage(Object.keys(s.won).length, cfg.goal) };
+      won: Object.keys(s.won).length, goal: cfg.goal, stage: stage(Object.keys(s.won).length, cfg.goal), families: fam ? { met: fam.met, of: fam.of } : null };
   }
   /* the stage line (Tony #32), p = done / total, in quarters (Tony #38: landmarks 25 / 50 / 75): 0 start, p < 1/2 early,
      1/2 <= p < 3/4 halfway, 3/4 <= p < 1 late, all done */
@@ -182,6 +182,14 @@
     if (r.newly) render(0);
     return r;
   }
+  /* families met (todo 103 MUST 1, PLAN §6.7): nav.js hands in shuffle.mjs familiesMet(bank, queue) = { met, of } on every bank open and
+     answer; of 0 (a bank without families) or null = none, so only a family bank (BANK_P3X) shows the popover row. Not in the strip (Tony #38).
+     Redraws the popover only, so an XP count-up in flight is never cut short. */
+  function families(f) {
+    fam = f && f.of > 0 ? { met: +f.met || 0, of: +f.of } : null;
+    if (ui && s && ui.el.isConnected) pop(state());
+    return fam;
+  }
   function conquered() { return s ? JSON.parse(JSON.stringify(s.won)) : {}; }
 
   /* the fading original (spec 1b) per Practice Exam question q: 1 = the first snack of q, the whole solution; 2 = a later snack, the
@@ -221,7 +229,8 @@
       pop.addEventListener('beforetoggle', function (e) {
         if (e.newState !== 'open' || !ui) return;
         var r = ui.el.getBoundingClientRect(), w = Math.min(320, innerWidth - 24);
-        pop.style.top = (r.bottom + 8) + 'px'; pop.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + 'px'; pop.style.width = w + 'px';
+        pop.style.top = (r.bottom + 8) + 'px'; pop.style.maxHeight = Math.max(120, innerHeight - r.bottom - 16) + 'px';   // a landscape phone: it scrolls, never runs off the screen (rewards.css)
+        pop.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + 'px'; pop.style.width = w + 'px';
       });
     }
     var q = function (sel) { return el.querySelector(sel); };
@@ -255,22 +264,28 @@
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
     ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
-    var gp = Math.min(1, st.won / st.goal);                                  // the popover's bar; the finish line is its right end (rewards.css .rw-goal::after)
     stageToasts(st.won, st.goal);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
+    pop(st);
+  }
+  /* the popover's words + the strip's spoken label (render, families) */
+  function pop(st) {
+    var gp = Math.min(1, st.won / st.goal);                                  // the popover's bar; the finish line is its right end (rewards.css .rw-goal::after)
     ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
       '<span class="rw-bar"><i></i></span><dl>' +
       '<dt>Next level</dt><dd>' + st.toNext + ' XP to go</dd><dt>Points</dt><dd>' + st.xp + ' XP</dd>' +
       '<dt>Cracked</dt><dd>' + st.streak + ' right answers</dd><dt>Exam questions</dt><dd>' + st.real + ' solved</dd>' +
-      '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd></dl>' +
+      '<dt>Easy ones</dt><dd>' + st.snacks + ' solved</dd>' +
+      (st.families ? '<dt class="rw-fam">Families met</dt><dd class="rw-fam">' + st.families.met + ' / ' + st.families.of + '</dd>' : '') + '</dl>' +   // COPY-PENDING (W103c)
       '<p class="rw-pop-won"><span class="rw-goal"><i style="--p:' + gp + '"></i></span><b>' + st.stage + '</b></p>';
     ui.pop.querySelector('.rw-bar i').style.setProperty('--p', (st.xp - st.floor) / (st.next - st.floor));
     ui.el.setAttribute('aria-label', st.xp + ' XP (points), level ' + st.level + ', ' + st.toNext + ' XP to level ' + (st.level + 1) +
-      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved, ' + st.stage);
+      ', ' + st.streak + ' cracked, ' + st.real + ' exam and ' + st.snacks + ' easy solved, ' +
+      (st.families ? st.families.met + ' of ' + st.families.of + ' families met, ' : '') + st.stage);   // COPY-PENDING (W103c) the families part
   }
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
   g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
-    origSolved: origSolved, mastery: mastery, stage: stage, landmark: landmark, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
+    origSolved: origSolved, mastery: mastery, families: families, stage: stage, landmark: landmark, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
 })(typeof window !== 'undefined' ? window : globalThis);

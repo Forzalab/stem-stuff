@@ -83,7 +83,7 @@ html.start .rw-hud { display: none; }
 
 /* "your progress": the native popover under the strip (engine.js sets top / left / width on open) */
 .rw-pop {
-  position: fixed; inset: auto; margin: 0; box-sizing: border-box; padding: 16px; border-radius: 14px;
+  position: fixed; inset: auto; margin: 0; box-sizing: border-box; padding: 16px; border-radius: 14px; overflow-y: auto; overscroll-behavior: contain;   /* max-height: engine.js, on open */
   background: var(--card); border: 1px solid var(--line); color: var(--ink);   /* a navy card, not a warm one (PALETTE-v3 §3) */
   box-shadow: 0 16px 36px -8px rgb(0 0 0 / .6), 0 3px 6px rgb(0 0 0 / .25); font: 400 var(--t-md, 1.0625rem)/var(--lh, 1.41) var(--rw-font);
 }

@@ -177,17 +177,37 @@ export function glue(order, beforeOf) {
    with twins (SCHEMA.md twin a|b + parent_template) plays one of them, picked by hash(salt + n) so a reload agrees; none -> itself.
    st.mock = mockNew(list) rides in the saved queue (additive, like st.ramp): { list, at, res: { CODE: right }, miss, back, done }. */
 const examQ = p => Number.isInteger(p.exam_q) ? p.exam_q : +((/^X3 Q(\d{1,2})\b(?!-)/.exec(p.title || "") || [])[1] || 0);
+const isTpl = p => !p.twin && !p.parent_template && (Number.isInteger(p.exam_q) || !/\b(twin|twist)\b/i.test(p.title));
 export function mockList(items, salt = "") {
   const twins = new Map(), at = new Map();
   for (const p of items) if (p.parent_template) twins.set(p.parent_template, [...(twins.get(p.parent_template) || []), p.code]);
   for (const p of items) {
     const n = examQ(p);
-    if (n && !p.twin && !p.parent_template && (Number.isInteger(p.exam_q) || !/\b(twin|twist)\b/i.test(p.title)) && !at.has(n)) at.set(n, p.code);
+    if (n && isTpl(p) && !at.has(n)) at.set(n, p.code);
   }
   return [...at.keys()].sort((a, b) => a - b).map(n => {
     const t = at.get(n), tw = (twins.get(t) || []).sort();
     return tw.length ? tw[hash(salt + ":mock:" + n) % tw.length] : t;
   });
+}
+/* families met (todo 103 MUST 1, PLAN §6.7; lifts Tony #32 "some students loop on one Q"): familiesMet(items, seen) -> { met, of }.
+   A family = one exam position, mockList's: the item's examQ, else its parent_template's. of = the bank's families (0: a bank without
+   any, nothing to show). THE RULE: a family is met after a clean answer (seen[code].right > 0: a showing whose first graded pick was
+   right, qAnswer) on one of its twins (anything not a template: twin / parent_template, or a "twin" / "twist" title). Until the bank
+   has a twin for that family (today's BANK_P3X, mostly), a clean answer on the template itself meets it. Met stays met (right never drops). */
+export function familiesMet(items, seen = {}) {
+  const by = new Map(items.map(p => [p.code, p])), fam = new Map();
+  for (const p of items) {
+    const n = examQ(p) || (by.has(p.parent_template) ? examQ(by.get(p.parent_template)) : 0);
+    if (!n) continue;
+    const f = fam.get(n) || { twin: [], tpl: [] };
+    (isTpl(p) ? f.tpl : f.twin).push(p.code);
+    fam.set(n, f);
+  }
+  const ok = c => !!(seen[c] && seen[c].right > 0);
+  let met = 0;
+  for (const f of fam.values()) if ((f.twin.length ? f.twin : f.tpl).some(ok)) met++;
+  return { met, of: fam.size };
 }
 export const mockNew = list => ({ list: [...list], at: 0, res: {}, miss: null, back: 0, done: false });
 /* the mock phase is on for code: no peek, no Cluck hint, no ladder, one try (app.js, peek.js, repair.js read it through nav.js) */

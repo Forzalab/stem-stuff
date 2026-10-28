@@ -485,6 +485,30 @@ try {
     }
     return bad;
   });
+  await step("families met (W103c): a bank without exam families (BANK_RW12) has no Families met row in the popover, nor in the spoken label", async () => {
+    const [c, p] = await fresh(1280);
+    await p.evaluate(() => document.querySelector("#rwPop").showPopover());
+    const t = await p.evaluate(() => [document.querySelector("#rwPop").textContent, document.querySelector("#rwHud").getAttribute("aria-label"), !!document.querySelector("#rwPop .rw-fam")]);
+    await c.close();
+    assert.match(t[0], /Easy ones/, "the popover rendered");
+    assert.deepEqual([/Families/i.test(t[0]), /famil/i.test(t[1]), t[2]], [false, false, false]);
+  });
+  await step("families met (W103c): the popover, one row taller, still ends inside a landscape phone (844x390, 667x375); its last line scrolls into view", async () => {
+    const bad = [];
+    for (const [w, h] of [[844, 390], [667, 375]]) {
+      const [c, p] = await fresh(w, h);
+      await p.evaluate(() => window.Rewards.families({ met: 17, of: 20 }));   // a family bank's row (the count itself: tests/mock.pw.mjs)
+      await p.click("#rwHud .rw-tap"); await p.waitForSelector("#rwPop:popover-open");
+      const r = await p.evaluate(() => { const P = document.querySelector("#rwPop"), b = P.getBoundingClientRect(), won = P.querySelector(".rw-pop-won");
+        won.scrollIntoView({ block: "nearest" }); const W = won.getBoundingClientRect();
+        return { bottom: Math.round(b.bottom), ih: innerHeight, row: !!P.querySelector("dd.rw-fam"), won: W.bottom <= b.bottom + 1 && W.top >= b.top - 1 }; });
+      if (!r.row) bad.push(`${w}x${h}: no row`);
+      if (r.bottom > r.ih) bad.push(`${w}x${h}: the popover ends at ${r.bottom} > ${r.ih}`);
+      if (!r.won) bad.push(`${w}x${h}: the stage line cannot be scrolled into the popover`);
+      await c.close();
+    }
+    assert.deepEqual(bad, []);
+  });
   await step("W88 HUD fit: at 0 done the bar has no stage line, its last item keeps >= 16px from Prev and no word is clipped, 1024 / 1280 / 1440 / 1920, list shut and open", async () => {
     const bad = [];
     for (const w of [1024, 1280, 1440, 1920]) {
