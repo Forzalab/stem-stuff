@@ -23,13 +23,13 @@
   var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000, goal: 20 };
   /* one praise rotation (Tony #36): reuse it wherever praise is needed; LINES[3] says one of these */
   var PRAISE = ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"];
-  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", PRAISE,
-    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You nailed that one!",
-    "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
-    "Friction cannot stop you.", "Net force: forward.", "Quack quack, combo pack.", "Golden feather incoming…",
-    "Torque? More like talk less, solve more.", "Spring loaded. Released.", "Centripetal? Central to the win.",
-    "Exam 2 just got nervous."];
-  var LEGEND = ["THE GOLDEN DUCK HAS NOTICED YOU.", "Achievement: Physics Goblin.", "Cluck sheds one proud tear."];
+  var LINES = ["QUACK! Brain boost!", "You really quacked this one!", "Worth the brain juice.", PRAISE,
+    "Math cracked, and duck's happy 🫡", "Physics is scared of you.", "Fresh, fresh brain juice. Respect.", "You nailed that one!",
+    "Momentum conserved (literally, if you're lucky).", "Energy? Fully charged!", "Newton. Fruity, rolled, and universally hated.",
+    "Friction can't slow you down!", "Forward momentum!", "Quack quack, combo pack.", "Golden feather incoming…",
+    "Torque? More like tort-ure. Heh.", "Spring locked and loaded.", "Centripetal? I hardly know her!",
+    "Egg-cellent work, Cluck approves!"];
+  var LEGEND = ["Gravity's never gonna lift you up— quack.", "Duck yeah! You nailed that question.", "Cluck sheds one proud tear."];
   var MISS = "Close call, let's retry next turn!";   // Tony #36
   var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0, shownWon = null, started = {};
 
@@ -81,7 +81,7 @@
     var p = done / total;
     if (!done) return "Ready when you are.";                                                           // Tony #32, #36
     if (p >= 1) return "🎉 All done!";                                                                 // COPY-PENDING (Tony: an emoji is fine, a reward)
-    if (p < 1 / 2) return done + (done === 1 ? " question" : " questions") + " done. Keep it up!";   // COPY-PENDING
+    if (p < 1 / 2) return done + (done === 1 ? " question" : " questions") + " done. Quack on!";   // COPY-PENDING
     if (p < 3 / 4) return "Halfway there!";                                                            // COPY-PENDING
     return "Only " + (total - done) + " to go, you got this!";                                        // COPY-PENDING
   }
@@ -144,7 +144,7 @@
       else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
       if (s.streak === 3) r.streakNote = "Baby a tripleeee, QUACKKKK";   // Tony #36
-      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
+      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' eggs cracked! Enough for two omelettes.';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;

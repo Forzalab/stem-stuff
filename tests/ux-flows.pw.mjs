@@ -413,7 +413,7 @@ flow(22, "cluck-chat-5", async (page, w) => {
 flow(28, "retry-tag", async (page, w) => {
   /* the retry tag (lane d, PICKER 9 "Agreed"): a Redeem showing says "Pity roll" at the top of the card; right -> "Avenged!" at once,
      and the Comeback toast still plays. Walk the BANK_UXS fixture (rewards on). Two walks: streak 0, then the streak seeded to 4 so the
-     right Redeem is "5 cracked" (a count note wants the toast slot on that answer): Comeback must still show, and the streak still counts. */
+     right Redeem is "5 eggs cracked!" (a count note wants the toast slot on that answer): Comeback must still show, and the streak still counts. */
   const a = await walk28(page, 0);
   await page.evaluate(() => localStorage.clear()); await page.goto("about:blank");   // a real reload: same-hash goto would keep the old queue
   const b = await walk28(page, 4);
@@ -448,7 +448,7 @@ async function walk28(page, seed) {
       if (seed) assert.equal(st, seed + 1, "the streak still counts the Redeem");
       const x1 = await xp(page);
       /* XP: app.js:1446 pays a never-paid code's first right as usual (+ the toast); "no XP" is only for a code already paid (!res.xp) */
-      if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} cracked" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
+      if (seed) return `${code} Redeem after ${i} others, streak seeded ${seed} -> ${st} ("${seed + 1} eggs cracked!" on this answer); toasts ${JSON.stringify(await page.evaluate(() => window.__toasts))}`;
       return `${code} missed, back as a Redeem after ${i} others (streak kept at 0); right -> tag "Avenged!" + toast "HONK HONK. Spacetime just applauded."; XP ${x0} -> ${x1} (code never paid before, so it pays: inventory's "no XP" holds only for an already-paid code)`;
     }
     await dwell(page); if (await page.$("#q .opt:not(:disabled)")) await answerKey(page, code, false);   // wrong: the streak stays 0
