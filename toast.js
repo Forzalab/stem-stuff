@@ -10,7 +10,7 @@
    4 s on screen, paused while the pointer rests on it or the tab is hidden; the close button (or Escape while focus is on it) closes it.
    Sharp words (Tony, Windows laptop: blurry stickers): at rest the card has no transform and no running animation (`backwards`, never
    `both`), and it sits on whole px, so its text keeps subpixel AA.
-   Today: the stage lines (rewards/engine.js). The miss #toast moves onto it in a later PR.
+   Today: the stage lines (rewards/engine.js). The old #toast (app.js) keeps its own placement but shares the sharp-words rule (W102).
    show({ text, num: [from, to], from, to, at, ms, until }): text may hold "{#}", the number that counts from num[0] to num[1]; from / to are
    the bar's fill (0..1); at = the anchor element or a function returning it. */
 (function (g) {
