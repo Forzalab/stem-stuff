@@ -2,11 +2,13 @@
 A playlist with a FALLBACK list whose feed fails (HTTP error, timeout) or comes back empty gets that list instead; the run goes on.
 Run by hand when a playlist changes; commit the result. No runtime fetch: sw.js caches brainrot.js, the list rides along.
 A Short (feed link /shorts/<id>) is flagged 1: brainrot.js lets it fill its 9:16 frame instead of centre-cropping a landscape video.
+A video YouTube won't play in an embed is dropped (todo 105: oEmbed 401 / 403 / 404); brainrot.js still swaps one that goes bad later.
 usage: python3 tools/brainrot_list.py"""
 import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -96,6 +98,7 @@ FALLBACK = {
     ],
 }
 FEED = "https://www.youtube.com/feeds/videos.xml?playlist_id="
+OEMBED = "https://www.youtube.com/oembed?format=json&url=https%3A//www.youtube.com/watch%3Fv%3D"
 NS = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
 BLOCK = re.compile(r"(/\* list:start[^\n]*\n).*?(\n *// list:end)", re.S)
 
@@ -107,6 +110,23 @@ def parse(xml):
         vid, title, link = e.findtext("yt:videoId", "", NS), e.findtext("a:title", "", NS), e.find("a:link", NS)
         if vid:
             out.append([vid, title.strip(), int("/shorts/" in (link.get("href", "") if link is not None else ""))])
+    return out
+
+
+def embeddable(name, vids):
+    """drop what oEmbed says can't be embedded: 401 / 403 = embedding off (or private), 404 = gone. Any other failure can't tell: kept"""
+    out = []
+    for v in vids:
+        try:
+            with urllib.request.urlopen(OEMBED + v[0], timeout=20):
+                pass
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404):
+                print(f"{name}: dropped {v[0]} (oEmbed {e.code})", file=sys.stderr)
+                continue
+        except OSError:
+            pass
+        out.append(v)
     return out
 
 
@@ -132,11 +152,14 @@ def main():
             if name not in FALLBACK:
                 raise
             vids = []
+        vids = embeddable(name, vids)
         if not vids:
             if name not in FALLBACK:
                 raise SystemExit(f"{name}: empty feed")
             print(f"{name}: feed failed, using fallback", file=sys.stderr)
-            vids = FALLBACK[name]
+            vids = embeddable(name, FALLBACK[name])
+            if not vids:
+                raise SystemExit(f"{name}: no embeddable video, fallback included")
         cats.append((name, vids))
         print(f"{name}: {len(vids)} videos, {sum(v[2] for v in vids)} shorts", file=sys.stderr)
     with open(TARGET, encoding="utf-8") as f:
