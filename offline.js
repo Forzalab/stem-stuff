@@ -143,7 +143,7 @@
       if (document.getElementById("updateBar")) return;
       const b = document.createElement("button");
       b.id = "updateBar"; b.type = "button"; b.setAttribute("role", "status");
-      b.textContent = "New version ready. Tap to update.";
+      b.textContent = "New version's ready! Tap to update.";
       b.addEventListener("click", () => { b.disabled = true; b.textContent = "Updating…"; taken().then(() => location.reload()); });
       document.body.appendChild(b);
     };

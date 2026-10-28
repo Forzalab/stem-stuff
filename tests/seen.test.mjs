@@ -206,6 +206,9 @@ test("fire: the family decides the line; no family or a family without a free li
   d.at(205).ev("pick", { choice: "A", verdict: "correct" }); // tick needs a q; deep 2
   assert.ok(seenLog(d).some(l => /earned short any-/.test(l)));
 });
+/* the {title} fill is checked on a fixture mis-3 (the line copy/seen-lines.js carried before the todo 93 copy pass, which gave misread a
+   plain full line); everything else is the live LINES */
+const TITLED = { ...LINES, fam: { ...LINES.fam, misread: [...LINES.fam.misread.filter(l => l.id !== "mis-3"), { id: "mis-3", text: "{title}: read exactly as written.", kind: "full" }] } };
 test("fire: no template id twice in a session; {title} fills; a fill over 8 words is skipped", () => {
   const ids = []; let t = 0;
   const seq = script(0.9, 0.5, 0, 0, 0.9, 0.5, 0, 0, 0.9, 0.5, 0, 0);
@@ -215,11 +218,11 @@ test("fire: no template id twice in a session; {title} fills; a fill over 8 word
   assert.equal(new Set(ids).size, 3);
   assert.equal(earned(k, t, "A9", "negation", "negation"), null, "MAX per session");
 
-  const fits = earned(session({ rand: R(0.9, 0.9, 0), title: () => "Limit from a table" }), 0, "A", "misread", "misread");
+  const fits = earned(session({ rand: R(0.9, 0.9, 0), seenLines: TITLED, title: () => "Limit from a table" }), 0, "A", "misread", "misread");
   assert.equal(fits.id, "mis-3"); assert.equal(fits.line, "Limit from a table: read exactly as written."); assert.equal(fits.line.split(" ").length, 8);
-  const long = earned(session({ rand: R(0.9, 0.9, 0), title: () => "A title of exactly six words" }), 0, "A", "misread", "misread");
+  const long = earned(session({ rand: R(0.9, 0.9, 0), seenLines: TITLED, title: () => "A title of exactly six words" }), 0, "A", "misread", "misread");
   assert.ok(!/mis-3|any-5/.test(long.id), "mis-3 fills to 9 words: skipped → " + long.id); assert.ok(long.line.split(" ").length <= 8);
-  const none = earned(session({ rand: R(0.9, 0.9, 0) }), 0, "A", "misread", "misread");
+  const none = earned(session({ rand: R(0.9, 0.9, 0), seenLines: TITLED }), 0, "A", "misread", "misread");
   assert.ok(!/\{title\}/.test(none.line) && none.id !== "mis-3" && none.id !== "any-5", "no title → no {title} line");
 });
 test("caps: shared gap (GAP_S 90 s, W96) with J5 and between seen lines; MAX per session; a J5 nudge on the item; a comeback skips gap + item (W96)", () => {
@@ -367,6 +370,9 @@ test("lines: a family for every `error` used in problems.json + banks/*.json, 2�
   }
   assert.ok(LINES.any.length >= 3 && LINES.any.some(l => l.kind === "short") && LINES.any.some(l => l.kind === "full"));
 });
+/* Tony 2026-10-27 15:5x PT, Copy Swipe 3: override (owner's call on his own rule). Exactly these two lines (copy pass ids seen-100 = cnt-2,
+   seen-103 = ops-2) skip the 8-word cap and the no digit / "!" / em dash rule; every other rule still checks them, every other line gets every rule. */
+const OVERRIDE = new Set(["cnt-2", "ops-2"]);
 test("lines: unique ids, kind short|full, ≤ 8 words after fill for every real title, one line at 390 px", () => {
   const ids = allLines.map(l => l.id); assert.equal(new Set(ids).size, ids.length);
   assert.equal(new Set(allLines.map(l => l.text)).size, allLines.length, "unique text");
@@ -376,7 +382,7 @@ test("lines: unique ids, kind short|full, ≤ 8 words after fill for every real 
     assert.ok(l.text.length <= 40, "one line at 390 px: " + l.text);
     for (const t of l.text.includes("{title}") ? titles : [""]) {
       const f = l.text.replace("{title}", t), n = f.split(/\s+/).length;
-      if (!l.text.includes("{title}")) assert.ok(n <= 8, f);   // a {title} line over 8 words is skipped at runtime (the fire path), not an error
+      if (!l.text.includes("{title}") && !OVERRIDE.has(l.id)) assert.ok(n <= 8, f);   // Tony 2026-10-27 15:5x PT, Copy Swipe 3: override (owner's call on his own rule)   // a {title} line over 8 words is skipped at runtime (the fire path), not an error
     }
     assert.ok(!l.text.includes("{title}") || l.text.replace("{title}", "").split(/\s+/).filter(Boolean).length <= 6, l.id + ": leave room for a title");
   }
@@ -386,7 +392,7 @@ test("lines: Tony's rule: no trigger echo (counts, help, timers, again / finally
   for (const { text, id } of allLines) {
     assert.doesNotMatch(text, BAN_TRIGGER, id + ": " + text);
     assert.doesNotMatch(text, BAN_STATE, id + ": " + text);
-    assert.doesNotMatch(text, /\d|!|—|–/, id + ": " + text);
+    if (!OVERRIDE.has(id)) assert.doesNotMatch(text, /\d|!|—|–/, id + ": " + text);   // Tony 2026-10-27 15:5x PT, Copy Swipe 3: override (owner's call on his own rule)
     assert.doesNotMatch(text, /\b(S2|S5|S6|impasse|earned|hard way)\b/i, id);
   }
 });

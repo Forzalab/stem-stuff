@@ -187,7 +187,7 @@
     }
     function whyUi(s) {
       const w = s.st.why, box = h("div", "rp-why");
-      box.append(h("p", "rp-q", w.q || L().why || "Why?"));
+      box.append(h("p", "rp-q", w.q || L().why || "Why is that?"));
       const opts = h("div", "rp-opts");
       w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
       box.append(opts);

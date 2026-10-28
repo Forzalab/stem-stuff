@@ -206,7 +206,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await p2.context().close();
 });
 
-/* nothing on top of anything (Tony, Oct 19): with the duck up (a miss with tries left: the hint card + "ok but how?"; out of tries: Next
+/* nothing on top of anything (Tony, Oct 19): with the duck up (a miss with tries left: the hint card + "okay, but how?"; out of tries: Next
    + the chip) and with Cluck open (the B5 bar), every visible control is hit at its own centre (elementFromPoint = itself) and no two
    controls' boxes cross. The duck's line (.ck-say) counts as a control: it must not sit on one. Phone: the open sheet covers the page by
    design, so only its own controls count then */

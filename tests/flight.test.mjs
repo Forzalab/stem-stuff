@@ -15,7 +15,7 @@ function run({ stemT = () => {}, store = {}, observers = null, idle = null } = {
   const el = (tag, id, extra = {}) => ({ tagName: tag.toUpperCase(), id, className: "", getAttribute: () => null, textContent: "", value: "",
     getBoundingClientRect: () => ({ left: 1.4, top: 2.6, width: 300, height: 40, right: 301, bottom: 42 }), ...extra });
   const nodes = { "#qnext": el("button", "qnext"), "#scratch": el("textarea", "scratch", { value: SENTINEL }), "#entryMsg": el("p", "entryMsg", { textContent: "BEAR_" + SENTINEL }),
-    "#toast": el("div", "toast", { textContent: "Copied E-7K3QX." }), "#cluck .wl": el("div", "", { className: "wl", textContent: "Cluck didn't load. " + SENTINEL }) };
+    "#toast": el("div", "toast", { textContent: "Copied E-7K3QX." }), "#cluck .wl": el("div", "", { className: "wl", textContent: "Couldn't load Cluck. " + SENTINEL }) };
   const document = {
     readyState: "complete", visibilityState: "visible", documentElement: { className: "fx-blur kb", scrollHeight: 2000 }, activeElement: nodes["#scratch"],
     querySelector: q => (q === 'meta[name="stem-build"]' ? { getAttribute: () => "#197", dataset: { sha: "abc1234" } } : nodes[q] || null),
@@ -118,7 +118,7 @@ test("snapshot: last 64 ring + last 20 kb + page.at (state, no text); cut to the
   assert.equal(s.kb.length, 20);
   assert.equal(s.page.at.app.q, "CALC1_FL2");
   assert.equal(s.page.at.hash, "#CALC1_FL2");
-  assert.deepEqual(P(s.page.at.said), { toast: "Copied", entry: ("BEAR_" + SENTINEL).length, wl: "Cluck didn't load" }, "our prefix, else a length");
+  assert.deepEqual(P(s.page.at.said), { toast: "Copied", entry: ("BEAR_" + SENTINEL).length, wl: "Couldn't load Cluck" }, "our prefix, else a length");
   assert.equal(s.page.at.active, "textarea#scratch");
   assert.deepEqual(P(s.page.at.boxes[0]), ["#qnext", 1, 3, 300, 40, 1]);
   const size = JSON.stringify(s).length;

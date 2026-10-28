@@ -103,7 +103,7 @@ test("pick all: the first ticked distractor in shown (authored) order strikes; n
 test("pick all: a false tick with no hint gets the some-taps-wrong line, nothing struck; all ticks right gets miss", () => {
   const p = pickAll("T_a3w", { wrong: [{ choice: "e", error: "misread", hint: "QUACK. e" }] });
   let r = gradeLocal(p, { choices: ["a", "b"] });
-  assert.deepEqual([r.verdict, r.error, r.hint, r.struck], ["wrong", "incomplete", "QUACK. Some taps are wrong. Check each row again.", undefined]);
+  assert.deepEqual([r.verdict, r.error, r.hint, r.struck], ["wrong", "incomplete", "QUACK. At least one ticked row is wrong.", undefined]);
   r = gradeLocal(p, { choices: ["c"] });
   assert.deepEqual([r.verdict, r.error, r.hint, r.struck], ["wrong", "incomplete", "QUACK. Missing one.", undefined]);
 });
@@ -156,7 +156,7 @@ test("prove: wrong set strikes first; a wrong fix names its row; repeat is free;
   assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint, r.triesLeft], ["wrong", "b", "arithmetic", "QUACK. fix b", 0]);
   const q = prove("T_p3");
   r = gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6", d: "15" } });
-  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "QUACK. You found the false ones. One fix is wrong. Redo its math."]);
+  assert.deepEqual([r.verdict, r.fixWrong, r.error, r.hint], ["wrong", "d", undefined, "All ducks almost in a row... check your math carefully."]);
   assert.equal(gradeLocal(q, { choices: ["c", "a"], fixes: { d: "15.0", b: "6" } }).repeat, true);   // same values: a repeat
   assert.equal(gradeLocal(q, { choices: ["a", "c"], fixes: { b: "6.000", d: "15.588" } }).verdict, "correct");
 });
@@ -189,7 +189,7 @@ test("slips: PHYS_XZP typed 0.692 -> sign, with the family hint, in diet and sug
     for (const m of ["diet", "sugar"]) {
       setMode(m);
       const r = gradeLocal(xzp({ code: `PHYS_XZP_${m}` }), { answer: "0.692" });
-      assert.deepEqual([r.verdict, r.error, r.hint, r.triesLeft], ["wrong", "sign", FAMILY_HINT.sign, 1], m);
+      assert.deepEqual([r.verdict, r.error, r.hint, r.triesLeft], ["wrong", "sign", familyHint("sign"), 1], m);
     }
   } finally { setMode("sugar"); }
 });
@@ -220,11 +220,11 @@ test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair, the def
   const r = k2(p, { answer: "-7" });
   assert.deepEqual([r.hint, r.error, r.spot, r.collide], [familyHint("drop+sign"), "drop+sign", "QUACK. Redo the term in brackets, then check your last step.", undefined]);
   const t = { type: "num", code: "T_tie", answer: "12/(100+200+300)", form: "12/(100+200+300)" };       // test_serve.py test_slip_tie_on_collide
-  assert.deepEqual(tie(t, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: "QUACK. Put your answer back in. Does it work?", collide: ["sign", "drop"],
+  assert.deepEqual(tie(t, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: "Time to consult the duck oracle.", collide: ["sign", "drop"],
     spot: "QUACK. Your pieces are fine but one. Redo the bottom of the fraction." });
   assert.deepEqual(gradeLocal({ ...t, code: "T_tied" }, { answer: "0.03" }), tie({ ...t, code: "T_tie1" }, { answer: "0.03" }));   // SLIP_TIE on: the default
   const off = load(undefined, (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;
-  assert.deepEqual(off({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: FAMILY_HINT.sign, error: "sign" });   // SLIP_TIE off
+  assert.deepEqual(off({ ...t, code: "T_tie0" }, { answer: "0.03" }), { verdict: "wrong", triesLeft: 1, hint: familyHint("sign"), error: "sign" });   // SLIP_TIE off
   assert.deepEqual([gradeLocal({ ...p, code: "T_k2d" }, { answer: "-7" }).spot, off({ ...p, code: "T_k2d" }, { answer: "9" }).error],
     ["QUACK. Redo the term in brackets, then check your last step.", "distribute"]);   // default SLIP_K 2 (9: distribute = sign, off-tie names distribute)
   const k1 = load((f, v, t, s) => slipMatch(f, v, t, s, 1), (...a) => slipSpot(...a.slice(0, 4), false)).gradeLocal;   // k=1 + tie off: before #268
@@ -233,5 +233,5 @@ test("slips: gradeLocal sets `spot` as serve.py slip_hit does (k=2 pair, the def
 test("slips: a multi part with form gets its slip", () => {
   const p = { type: "multi", code: "T_slipm", parts: [{ type: "num", answer: "3", form: "10-(1+2+4)" }] };
   const r = gradeLocal(p, { part: 0, answer: "17" });
-  assert.deepEqual([r.error, r.hint, r.part], ["sign", FAMILY_HINT.sign, 0]);
+  assert.deepEqual([r.error, r.hint, r.part], ["sign", familyHint("sign"), 0]);
 });

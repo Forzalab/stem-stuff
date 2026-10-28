@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as mathjs from "mathjs";
-import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../slips.mjs";
+import { mutants, match, close, raw, parse, FAMILIES, FAMILY_HINT, familyHint, zodiac, ZODIAC, fillSign, pairs, EPS, SLIP_WIN, SLIP_K, OUTER_FAMS, cands, region, spot, SPOT_COPY, ROOT, pairCands, slipSpot, SLIP_TIE } from "../slips.mjs";
 
 globalThis.math = mathjs;                                 // the browser has the global from vendor/math.min.js
 const GOLDEN = JSON.parse(readFileSync(new URL("fixtures/slips-golden.json", import.meta.url), "utf8"));
@@ -145,9 +145,18 @@ test("k=2 spot: pairCands = slips.py pair_cands (the inner slip's place + ROOT),
   assert.equal(SLIP_TIE, true);                                                                       // on by default (Tony, Oct 25)
   assert.deepEqual(slipSpot("12/(100+200+300)", 0.03, [0.02], "sign").collide, ["sign", "drop"]);
 });
+test("zodiac: the tropical season of a date, the same table as serve.py zodiac (todo 93 miss-060/061 {sign})", () => {
+  const at = (y, m, d) => new Date(y, m - 1, d, 12);
+  for (const [d, want] of [[at(2026, 3, 20), "Pisces"], [at(2026, 3, 21), "Aries"], [at(2026, 4, 19), "Aries"], [at(2026, 4, 20), "Taurus"],
+    [at(2026, 10, 22), "Libra"], [at(2026, 10, 23), "Scorpio"], [at(2026, 12, 21), "Sagittarius"], [at(2026, 12, 22), "Capricorn"],
+    [at(2027, 1, 1), "Capricorn"], [at(2027, 1, 19), "Capricorn"], [at(2027, 1, 20), "Aquarius"], [at(2027, 2, 19), "Pisces"]]) assert.equal(zodiac(d), want, String(d));
+  const py = readFileSync(new URL("../serve.py", import.meta.url), "utf8").match(/ZODIAC = \(([\s\S]*?)\)\n/)[1];
+  assert.deepEqual(ZODIAC, [...py.matchAll(/\((\d+), "(\w+)"\)/g)].map(m => [+m[1], m[2]]), "byte-equal to serve.py ZODIAC");
+  assert.equal(fillSign("QUACK, it's {sign} season."), `QUACK, it's ${zodiac()} season.`);
+});
 test("k=2 hint: an inner+outer pair is the two family lines in that order, one QUACK. (serve.py family_hint)", () => {
-  assert.equal(familyHint("drop+sign"), "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.");   // test_serve.py pins the same text
-  assert.equal(familyHint("sign"), FAMILY_HINT.sign);
+  assert.equal(familyHint("drop+sign"), `QUACK. Count your terms like you count your ducks. It's ${zodiac()} season. Check ONE of your signs.`);   // test_serve.py pins the same text
+  assert.equal(familyHint("sign"), fillSign(FAMILY_HINT.sign));   // {sign} filled (todo 93)
   for (const form of ["10-(3+2)", "2*9.8*3", "sqrt(9+16)"]) for (const [fam] of pairs(form)) {
     const h = familyHint(fam);
     assert.ok(h.startsWith("QUACK. ") && h.split("QUACK").length === 2 && !/\d/.test(h), fam);
