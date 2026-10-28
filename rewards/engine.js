@@ -15,22 +15,23 @@
      { type: "twin_b", tpl, ok }       the `b` twin, solo, graded
    conquered[tpl] = repaired, then `a` solo right, then `b` solo right where one exists (redo.mjs's action "conquered"). A solo twin
    wrong resets: a new ladder, then that twin again (an `a` win stands after a `b` miss). Conquered stays conquered (never goes down).
-   The HUD shows a stage line (stage(): Tony #32, no "N/20 conquered") over a bar to cfg.goal with a finish line; app.js shows r.line
-   with FX.conquered(). */
+   The stage line (stage(): Tony #32, no "N/20 conquered") is a toast in the question area (toast.js, Tony #38 d1), never in the top bar:
+   the start line once per bank at 0 done, then one toast per landmark crossed (25 / 50 / 75 / 100 % of cfg.goal), its bar filling from
+   the last count to this one. The popover keeps the line + its bar. app.js shows r.line with FX.conquered(). */
 (function (g) {
   'use strict';
   var PRE = 'stem-rw:', CAP_DEF = 15000, capMs = CAP_DEF, cfg = { minDwell: 1000, goal: 20 };
   /* one praise rotation (Tony #36): reuse it wherever praise is needed; LINES[3] says one of these */
   var PRAISE = ["Cluck nods approvingly!", "Cluck gives a happy quack!", "Cluck is very proud!", "Cluck thinks that deserves a quack!"];
-  var LINES = ["QUACK! Brain +1.", "Clean hit. Keep rolling.", "That one was earned.", PRAISE,
-    "Formula fed. Duck fed.", "Physics is scared of you.", "Brain sauce added.", "You nailed that one!",
-    "Momentum conserved.", "Energy: fully stored.", "Free body, free XP.", "Newton nods slowly.",
-    "Friction cannot stop you.", "Net force: forward.", "Quack quack, combo pack.", "Golden feather incoming…",
-    "Torque? More like talk less, solve more.", "Spring loaded. Released.", "Centripetal? Central to the win.",
-    "Exam 2 just got nervous."];
-  var LEGEND = ["THE GOLDEN DUCK HAS NOTICED YOU.", "Achievement: Physics Goblin.", "Cluck sheds one proud tear."];
+  var LINES = ["QUACK! Brain boost!", "You really quacked this one!", "Worth the brain juice.", PRAISE,
+    "Math cracked, and duck's happy 🫡", "Physics is scared of you.", "Fresh, fresh brain juice. Respect.", "You nailed that one!",
+    "Momentum conserved (literally, if you're lucky).", "Energy? Fully charged!", "Newton. Fruity, rolled, and universally hated.",
+    "Friction can't slow you down!", "Forward momentum!", "Quack quack, combo pack.", "Golden feather incoming…",
+    "Torque? More like tort-ure. Heh.", "Spring locked and loaded.", "Centripetal? I hardly know her!",
+    "Egg-cellent work, Cluck approves!"];
+  var LEGEND = ["Gravity's never gonna lift you up— quack.", "Duck yeah! You nailed that question.", "Cluck sheds one proud tear."];
   var MISS = "Close call, let's retry next turn!";   // Tony #36
-  var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0;
+  var key = null, s = null, ui = null, lastLine = -1, shownLvl = null, raf = 0, shownWon = null, started = {};
 
   var icon = function (n) { var m = g.RW_ICONS || {}; return m[n] || ('rewards/icons/' + n + '_color.svg'); };
   var TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';   // the count's icon: a plain tick, not a flame
@@ -52,7 +53,7 @@
   /* the bank (or file, or "solo") whose state is live; switching re-reads it */
   /* T22: the bank's burst_gap_s (SCHEMA.md, 60-600 s) is the minimum gap between full-screen bursts; absent or invalid = 15 s, as before */
   function gap(v) { capMs = typeof v === 'number' && isFinite(v) && v >= 60 && v <= 600 ? v * 1000 : CAP_DEF; return capMs; }
-  function use(k) { k = String(k || 'solo'); if (k !== key) { key = k; s = load(); shownLvl = null; } else s = load(); render(0); return k; }
+  function use(k) { k = String(k || 'solo'); if (k !== key) { key = k; s = load(); shownLvl = null; shownWon = null; } else s = load(); render(0); return k; }
   function on() { return key !== null; }
 
   var ri = function (a, b) { return a + Math.floor(Math.random() * (b - a + 1)); };
@@ -74,14 +75,35 @@
     return { xp: s.xp, level: L, floor: f, next: n, toNext: n - s.xp, streak: s.streak, dry: s.dry, real: s.real, snacks: s.snacks, rate: rate(),
       won: Object.keys(s.won).length, goal: cfg.goal, stage: stage(Object.keys(s.won).length, cfg.goal) };
   }
-  /* the bar's stage line (Tony #32), p = done / total: 0 start, p < 1/3 early, 1/3 <= p <= 2/3 halfway, p > 2/3 late, all done */
+  /* the stage line (Tony #32), p = done / total, in quarters (Tony #38: landmarks 25 / 50 / 75): 0 start, p < 1/2 early,
+     1/2 <= p < 3/4 halfway, 3/4 <= p < 1 late, all done */
   function stage(done, total) {
     var p = done / total;
     if (!done) return "Ready when you are.";                                                           // Tony #32, #36
     if (p >= 1) return "🎉 All done!";                                                                 // COPY-PENDING (Tony: an emoji is fine, a reward)
-    if (p < 1 / 3) return done + (done === 1 ? " question" : " questions") + " done. Keep it up!";   // COPY-PENDING
-    if (p <= 2 / 3) return "Halfway there!";                                                           // COPY-PENDING
+    if (p < 1 / 2) return done + (done === 1 ? " question" : " questions") + " done. Quack on!";   // COPY-PENDING
+    if (p < 3 / 4) return "Halfway there!";                                                            // COPY-PENDING
     return "Only " + (total - done) + " to go, you got this!";                                        // COPY-PENDING
+  }
+  /* the landmark a count has reached: 0 none, 1-3 = 25 / 50 / 75 %, 4 = all done */
+  function landmark(done, total) { return done >= total ? 4 : Math.floor(4 * done / total); }
+  /* the stage toast (toast.js): the start line once per bank, then one per landmark crossed; the bar fills from the last count to this one */
+  function stageToasts(won, goal) {
+    var T = g.stemToast, at = cfg.toastAt || function () { return document.querySelector('#q'); };
+    if (shownWon == null) {
+      shownWon = won;
+      if (!won && !started[key] && T) { started[key] = 1; T.show({ text: stage(0, goal), from: 0, to: 0, at: at, until: Date.now() + 15000 }); }   // the start line: now-ish or never
+      return;
+    }
+    var p0 = shownWon; shownWon = won;
+    if (!T || won <= p0) return;
+    for (var k = landmark(p0, goal) + 1, b = landmark(won, goal); k <= b; k++) {
+      var n = k === b ? won : Math.ceil(k * goal / 4), line = stage(n, goal), o = { text: line, at: at, until: Date.now() + 60000,   // no room under the question for a minute: the popover still has it
+        from: k === landmark(p0, goal) + 1 ? p0 / goal : (k - 1) / 4, to: k === b ? Math.min(1, won / goal) : k / 4 };
+      if (/^\d+ /.test(line)) { o.text = line.replace(/^\d+/, '{#}'); o.num = [p0, n]; }                  // the count goes up
+      else if (/^Only \d+ /.test(line)) { o.text = line.replace(/^Only \d+/, 'Only {#}'); o.num = [goal - p0, goal - n]; }   // the rest goes down
+      T.show(o);
+    }
   }
   /* the 85% rule as a skip (Tony via the lead, Oct 4): last 10 first tries all but perfect (> 90%) = the student is cruising */
   function skipSnack() { if (!s) return false; s = load(); return s.hist.length >= 10 && rate() > 0.9; }
@@ -122,7 +144,7 @@
       else if (r.drop === 'rare') { r.line = 'BONUS!'; r.sub = commonLine(); big = 'bonus'; }
       else if (r.drop === 'legend') { r.line = LEGEND[ri(0, LEGEND.length - 1)]; r.sub = '+50 XP'; r.xp += 50; big = 'legend'; }
       if (s.streak === 3) r.streakNote = "Baby a tripleeee, QUACKKKK";   // Tony #36
-      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' cracked';
+      else if (s.streak === 5 || s.streak % 10 === 0) r.streakNote = s.streak + ' eggs cracked! Enough for two omelettes.';
     }
     s.xp += r.xp;
     r.level = levelOf(s.xp); r.levelUp = r.level > L0;
@@ -188,7 +210,6 @@
     el.innerHTML = '<span class="rw-coin" id="rwCoin"><span class="rw-coin-ic">' + img('coin24') + '</span><b class="rw-num">0</b></span>' +
       '<span class="rw-lvl"><span class="rw-star">' + img('star') + '<b>1</b></span>' +
       '<span class="rw-lvl-body"><span class="rw-bar"><i></i></span><span class="rw-to"></span></span></span>' +
-      '<span class="rw-won"><span class="rw-goal"><i></i></span><span class="rw-won-t"></span></span>' +
       '<span class="rw-streak"><span class="rw-flame">' + TICK + '</span><b>0</b></span>' +
       '<span class="rw-counts"></span>' +
       '<button type="button" class="rw-tap" aria-label="Your progress" popovertarget="rwPop"></button>';
@@ -205,9 +226,9 @@
     }
     var q = function (sel) { return el.querySelector(sel); };
     ui = { el: el, xp: q('.rw-num'), lvl: q('.rw-lvl'), lvlN: q('.rw-star b'), bar: q('.rw-bar i'), to: q('.rw-to'),
-      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), goal: q('.rw-goal i'), won: q('.rw-won-t'), pop: pop };
+      flame: q('.rw-flame'), streak: q('.rw-streak b'), counts: q('.rw-counts'), pop: pop };
     ui.lvl.addEventListener('animationend', function () { ui.lvl.classList.remove('rw-pulse'); });
-    shownLvl = null;
+    shownLvl = null; shownWon = null;
     render(0);
     return el;
   }
@@ -234,8 +255,8 @@
     shownLvl = st.level;
     ui.streak.textContent = st.streak;
     ui.el.classList.toggle('rw-z-xp', !st.xp); ui.el.classList.toggle('rw-z-st', !st.streak);
-    var gp = Math.min(1, st.won / st.goal);                                  // the finish line is the bar's right end (rewards.css .rw-goal::after)
-    ui.goal.style.setProperty('--p', gp); ui.won.textContent = st.stage;
+    var gp = Math.min(1, st.won / st.goal);                                  // the popover's bar; the finish line is its right end (rewards.css .rw-goal::after)
+    stageToasts(st.won, st.goal);
     ui.flame.classList.toggle('rw-lit', st.streak > 0);
     ui.counts.innerHTML = 'exam <b>' + st.real + '</b> · easy <b>' + st.snacks + '</b>';
     ui.pop.innerHTML = '<p class="rw-pop-h"><span class="rw-star">' + img('star') + '<b>' + st.level + '</b></span>Level ' + st.level + '</p>' +
@@ -251,5 +272,5 @@
   function config(o) { for (var k in o || {}) cfg[k] = o[k]; return cfg; }
 
   g.Rewards = { use: use, gap: gap, on: on, state: state, answer: answer, skipSnack: skipSnack, origLevel: origLevel, origSeen: origSeen,
-    origSolved: origSolved, mastery: mastery, stage: stage, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
+    origSolved: origSolved, mastery: mastery, stage: stage, landmark: landmark, conquered: conquered, mountHUD: mountHUD, render: render, config: config, LINES: LINES, LEGEND: LEGEND, PRAISE: PRAISE, praise: praise };
 })(typeof window !== 'undefined' ? window : globalThis);

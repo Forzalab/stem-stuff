@@ -231,6 +231,21 @@ try {
       await row(page, "c").focus(); await page.keyboard.press(" ");
       assert.deepEqual((await st(page)).on, ["c"], "Space on a kept row: no change");
     });
+    /* W102 blur (TOAST.md round 5, the #317 rule on the old #toast): at rest no transform and no held animation (fill `backwards`, never
+       `both`), on whole px, so Windows keeps subpixel AA on the words. The MC row toast: its top is the row's middle, the one fractional case */
+    await step(`${name} W102 blur: the #toast on a kept row rests untransformed, with no held animation, on whole px`, async () => {
+      await page.evaluate(() => { window.__drill.state.keptTold = false; });
+      await tap(row(page, "c"), { force: true });
+      await page.waitForFunction(() => { const t = document.querySelector("#toast.on"); if (t) t.dispatchEvent(new PointerEvent("pointerenter")); return !!t; });
+      await page.waitForTimeout(500);                                          // past the .3 s toast-in
+      const t = await page.evaluate(() => { const e = document.querySelector("#toast"), r = e.getBoundingClientRect();
+        return { on: e.classList.contains("on"), row: e.classList.contains("row"), tf: getComputedStyle(e).transform, anim: e.getAnimations().length, px: [e.style.left, e.style.top, r.left, r.top] }; });
+      assert.deepEqual([t.on, t.row], [true, true], "the row toast is up " + JSON.stringify(t));
+      assert.equal(t.tf, "none", "the words rest untransformed");
+      assert.equal(t.anim, 0, "no animation holds the card");
+      assert.ok(t.px.map(parseFloat).every(Number.isInteger), "whole px " + t.px);
+      await page.evaluate(() => document.querySelector("#toast").click());   // tap closes it (STYLE §3)
+    });
     await step(`${name} sugar: arrows skip the kept row`, async () => {
       const ids = await page.$$eval("#q .opt", os => os.map(o => o.dataset.id)), live = ids.filter(x => x !== "c");
       await row(page, live[0]).focus();

@@ -1,0 +1,42 @@
+/* toast.css: the one toast (toast.js; design/TOAST.md round 5, Tony #38 pick d1). The shipped toast look (STYLE.md §3 Toast, take 5f):
+   the page's own paper, a --line hairline, a soft shadow, the part prompt's type (400, --t-md, --ink). No icon. The words and the bar
+   share one left edge; the close button is centred on the right; the bar ends in an 8px finish dot (--reward once the bar is full).
+   z: #toast's 50 (app.css z ladder), under the drop banner (55).
+   Sharp words: no transform at rest. The slide-in uses fill-mode `backwards` (never `both`: a held identity matrix keeps the card on its
+   own layer and Windows paints the words without subpixel AA); line-height is a whole 24px so the words land on whole px. */
+.stoast {
+  position: fixed; z-index: 50; left: 0; top: 0; visibility: hidden; box-sizing: border-box; max-width: calc(100vw - 32px);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 4px 12px 16px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-3);
+  color: var(--ink); font: 400 var(--t-md, 1.0625rem)/24px var(--font, system-ui, sans-serif);
+}
+.stoast.on { visibility: visible; animation: stoast-in .2s ease-out backwards; }
+.stoast.out { animation: stoast-out .15s ease-in forwards; }
+.stoast-b { min-width: 0; display: grid; gap: 8px; }
+.stoast-t { margin: 0; overflow-wrap: anywhere; }
+.stoast-n { font-variant-numeric: tabular-nums; }
+.stoast-bar { position: relative; display: block; height: 6px; margin-right: 4px; border-radius: 999px; background: var(--sheet); }
+.stoast-bar i {
+  display: block; height: 100%; border-radius: inherit; background: var(--reward); transform: scaleX(var(--p, 0)); transform-origin: left;
+  transition: transform .6s cubic-bezier(.16, 1, .3, 1);
+}
+.stoast-bar::after {   /* the finish: an 8px dot on the bar's right end */
+  content: ""; position: absolute; right: -4px; top: -1px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+}
+.stoast-fin .stoast-bar::after { background: var(--reward); }
+.stoast-x {
+  width: 44px; height: 44px; display: grid; place-items: center; margin: 0; padding: 0; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.stoast-x svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.stoast-x:hover { color: var(--ink); }
+.stoast-x:focus-visible { outline: 2px solid var(--focus, #8fb0ff); outline-offset: -2px; }
+@keyframes stoast-in { from { opacity: 0; transform: translateY(8px); } }
+@keyframes stoast-out { to { opacity: 0; transform: translateY(4px); } }
+@keyframes stoast-fade { from { opacity: 0; } }
+@keyframes stoast-fade-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .stoast.on { animation: stoast-fade .2s linear backwards; }
+  .stoast.out { animation: stoast-fade-out .15s linear forwards; }
+  .stoast-bar i { transition: none; }
+}

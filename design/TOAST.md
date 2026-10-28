@@ -72,3 +72,16 @@ The mock now shows the part hint as main renders it under a wrong part (verdict 
 **Pick: 5h.** It is part of the box, not a sticker on top of it. It covers only the verdict line that repeats it. Runner-up: 5g.
 
 Also in this round: a right answer box in a closed part (or question) dims like every closed box (`opacity: .5`); its green edge and check stay (app.css `.ff.shut`, `.q.closed .ff`; test `disabled.pw.mjs` updated). A right MC choice still stays bright (main, PR #30).
+
+## Round 5: the stage toast, built (W88, Oct 26; Tony #38)
+
+Rounds 3–4 of the stage-toast mock (`stage-toast.html`, variants a–d, then d1–d3) lived on a local branch that was lost; the pick survives in TONY-DECISIONS #38 and is what this round builds.
+
+- **Pick d1.** One anchored toast in the question area, never in the top bar ("I'm looking at the question first"). No icon; the words and the progress bar share one left edge; a 44px close button centred on the right; the bar ends in an 8px finish dot (`--reward` once full). Look: STYLE.md §3 Toast (page paper, `--line` hairline, `--shadow-3`, 400 `--t-md`).
+- **Motion.** A 200 ms slide in, then the bar fills from the last count to the new one over 600 ms while the number counts (up for "{n} questions done", down for "Only {left} to go"). Reduced motion: a fade, the bar and number land at once. It waits for the reward FX (`html.fx-busy`, an overlay) to finish.
+- **Landmarks.** 25 / 50 / 75 % of the goal, plus the start line (once per bank at 0 done) and done. The stage lines move from thirds to quarters: early under 1/2, "Halfway there!" from 1/2, "Only {left} to go, you got this!" from 3/4. One toast per landmark crossed, queued. Copy is Tony's, verbatim (`engine.js stage()`).
+- **Code.** `toast.js` (`window.stemToast.show / hide / clear`) and `toast.css` (`.stoast`, words `.stoast-t`). `engine.js` calls it; `app.js` only names the anchor (the verdict line `#fb` when it has words, else `#q`). The HUD no longer carries `.rw-won`; the popover keeps the line and its bar.
+- **HUD fix.** At 0 done C1 hides the boxed count chip, so bare words became the strip's last item 8px from Prev. The strip now keeps 16px at that end (`.rw-hud.rw-z-st`).
+- **Sharp words (blur).** At rest the toast has no transform (`animation-fill-mode: backwards`, never `both`) and sits on whole px. The reward stickers (`.fx-toast`, `.fx-slots`, `.rw-free`, `.fx-plate`) keep their lean on a `::before` card; their words stay upright. Before/after for Tony's laptop: `mockups/blur-compare.html`.
+- **Next.** The miss `#toast` moves onto `stemToast` in a later PR (its `toast-in … both` in app.css has the same rest-transform issue).
+- **W102 (Oct 28): `#toast` takes the sharp-words rule, not the component.** Moving it onto `stemToast` would change what students see (only under its anchor and never over a control, so the notes at the Scratchpad button, under Next and on a kept choice never show; anchor-wide, a bar and an X, 4 s, X-only close), so that is a design round for Tony. Today `#toast` keeps its own placement, caret and timing, with fill `backwards` (no `to {}`) and whole-px left/top in `placeToast`. Test: `choose-all.pw.mjs` "W102 blur".
