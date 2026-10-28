@@ -270,7 +270,7 @@ try {
     }, OLD);
     const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click("#lgHave")]);
     await chooser.setFiles({ name: "IMG_0042.png", mimeType: "image/png", buffer: Buffer.from(png) });
-    await page.waitForFunction(() => !/Reading|Checking/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 5000 });
+    await page.waitForFunction(() => !/Eggs-amining|Checking/.test(document.querySelector("#lgStatus").textContent), null, { timeout: 5000 });
     assert.equal(await status(page), "Cluck didn't cluck! Come back in a minute.");
     await ctx.close();
   });
