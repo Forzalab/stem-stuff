@@ -43,9 +43,15 @@ class BrainrotList(unittest.TestCase):
 
     WANT = ["Parkour", "Brainrot", "Subway Surfers", "Hydraulic Press", "Soap Cutting", "Kinetic Sand", "Pressure Washing", "Marble Run"]
 
-    def run_main(self, feeds):
-        """main() with urlopen mocked per playlist id (feeds: pid -> bytes or an exception) and brainrot.js mocked; -> (written JS, stderr)"""
+    def run_main(self, feeds, oembed=None):
+        """main() with urlopen mocked per playlist id (feeds: pid -> bytes or an exception), per oEmbed video id (oembed: id -> an
+        exception; else 200) and brainrot.js mocked; -> (written JS, stderr)"""
         def urlopen(url, timeout=None):
+            if url.startswith(brainrot_list.OEMBED):
+                got = (oembed or {}).get(url[len(brainrot_list.OEMBED):])
+                if got:
+                    raise got
+                return mock.MagicMock()
             got = feeds.get(url.rsplit("=", 1)[1], FEED.encode())
             if isinstance(got, Exception):
                 raise got
@@ -89,6 +95,32 @@ class BrainrotList(unittest.TestCase):
             self.assertIn(f"{name}: feed failed, using fallback", err)
         self.assertIn('["Hydraulic Press", [["aaaaaaaaaaa"', out)
         self.assertNotIn("Hydraulic Press: feed failed", err)
+
+    @staticmethod
+    def http(code):
+        return urllib.error.HTTPError("u", code, "x", {}, None)
+
+    def test_a_video_that_cannot_be_embedded_is_dropped(self):
+        """todo 105 (Tony, Oct 27: "Video unavailable. Playback on other websites has been disabled by the video owner"): oEmbed 401 / 403 /
+        404 = not embeddable (or gone), so it never ships; any other oEmbed failure can't tell, so the video stays."""
+        for code in (401, 403, 404):
+            out, err = self.run_main({}, {"aaaaaaaaaaa": self.http(code)})
+            self.assertNotIn("aaaaaaaaaaa", out, code)
+            self.assertIn('["Parkour", [["bbbbbbbbbbb", "skibidi toilet", 1]]]', out)
+            self.assertIn(f"Parkour: dropped aaaaaaaaaaa (oEmbed {code})", err)
+        out, err = self.run_main({}, {"aaaaaaaaaaa": self.http(500), "bbbbbbbbbbb": urllib.error.URLError("down")})
+        self.assertIn('["Parkour", [["aaaaaaaaaaa", ', out)
+        self.assertIn('["bbbbbbbbbbb", "skibidi toilet", 1]]]', out)
+        self.assertNotIn("dropped", err)
+
+    def test_a_feed_with_no_embeddable_video_uses_its_fallback_minus_the_dead(self):
+        dead = {"aaaaaaaaaaa": self.http(401), "bbbbbbbbbbb": self.http(404), brainrot_list.FALLBACK["Marble Run"][0][0]: self.http(401)}
+        with self.assertRaises(SystemExit):                                    # an Oct 5 playlist has no fallback: still aborts
+            self.run_main({}, dead)
+        pid = dict(brainrot_list.PLAYLISTS)
+        out, err = self.run_main({p: FEED.replace("aaaaaaaaaaa", "ccccccccccc").encode() for n, p in pid.items() if n in self.WANT[:3]}, dead)
+        self.assertIn(f'["Marble Run", {json.dumps(brainrot_list.FALLBACK["Marble Run"][1:], ensure_ascii=False)}]', out)
+        self.assertIn("Marble Run: feed failed, using fallback", err)
 
     def test_an_empty_original_playlist_still_aborts(self):
         with self.assertRaises(SystemExit):

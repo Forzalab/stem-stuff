@@ -31,7 +31,8 @@
   ];
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const VIDS = shuffle(CATS.slice()).slice(0, 3).map(([, v]) => v[Math.floor(Math.random() * v.length)]);   // 3 random categories, one video each, new every load (Tony, Oct 26); the corner shows 2 (app.css)
+  const any = a => a[Math.floor(Math.random() * a.length)];
+  const PICK = shuffle(CATS.map((_, i) => i)).slice(0, 3), VIDS = PICK.map(c => any(CATS[c][1]));   // 3 random categories, one video each, new every load (Tony, Oct 26); the corner shows 2 (app.css)
   const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
@@ -67,7 +68,43 @@
   const PHONE = matchMedia("(max-width: 700px)");
   const off = () => !!sess("stem-rot-off") || PHONE.matches || slow();   // ✕ for this session, a phone, or a slow link
   const src = id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}`
-    + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1";
+    + "&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
+  /* a video YouTube won't play here (Tony, Oct 27: "Video unavailable. Playback on other websites has been disabled by the video owner")
+     is swapped in its slot: an unused video of the same category, else of any category; never one shown before on this page. Nothing left
+     (or 3 swaps in one slot: then it's the browser, not the videos) = the slot keeps YouTube's own message. The player says so
+     over postMessage (enablejsapi=1; origin= = it posts to this page only; the Referer already carries the origin, so YouTube learns
+     nothing new): the page sends {"event":"listening"} every 250 ms until the player answers, then asks for onError, the same protocol
+     YouTube's www-widgetapi.js speaks, without loading that script (one more script from YouTube, for 3 messages). Swapped codes
+     (developers.google.com/youtube/iframe_api_reference#onError): 2 bad id, 5 HTML5 player, 100 removed / private, 101 + 150 embedding
+     off. Not 153 (no Referer): every video would fail the same. tools/brainrot_list.py drops non-embeddable ids before they ship. */
+  const YT = "https://www.youtube-nocookie.com", DEAD = [2, 5, 100, 101, 150], shown = new Set(VIDS.map(v => v[0]));
+  const slots = [];
+  function listen(f, i) {
+    const say = m => { try { f.contentWindow.postMessage(JSON.stringify({ ...m, id: i, channel: "widget" }), YT); } catch { /* not there */ } };
+    const s = slots[i] = { f, say, c: PICK[i], left: 3, t: 0, heard: false, gone: false };
+    f.addEventListener("load", () => {
+      clearInterval(s.t); s.heard = s.gone = false;
+      let n = 0;
+      s.t = setInterval(() => { if (s.heard || ++n > 40) clearInterval(s.t); else say({ event: "listening" }); }, 250);
+    });
+  }
+  function swap(s) {
+    const free = k => CATS[k][1].filter(v => !shown.has(v[0]));
+    const ks = free(s.c).length ? [s.c] : CATS.map((_, k) => k).filter(k => free(k).length);
+    if (!ks.length || s.left < 1) return;
+    s.left--;
+    const c = any(ks), [id, t, short] = any(free(c));
+    shown.add(id); s.c = c; s.gone = true;
+    s.f.title = `${t}, muted`; s.f.parentElement.classList.toggle("short", !!short); s.f.src = src(id);
+  }
+  addEventListener("message", e => {
+    const s = e.origin === YT && slots.find(x => x.f.contentWindow === e.source);
+    if (!s || s.gone) return;
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    if (m.event === "readyToListen") return s.say({ event: "listening" });   // www-widgetapi.js answers it the same way
+    if (!s.heard) { s.heard = true; s.say({ event: "command", func: "addEventListener", args: ["onError"] }); }
+    if (m.event === "onError" && DEAD.includes(m.info)) swap(s);
+  });
 
   let el = null, duo = null, tab = null, link = null, stashed = innerHeight < 700, corner = store("stem-rot") || "bl", picked = store("stem-rot-pick") === "1", on = false, showT = 0, drag = null;
   const desk = () => innerWidth >= 720;
@@ -81,6 +118,7 @@
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
     duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.querySelectorAll("iframe").forEach(listen);
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     const hd = document.createElement("div"); hd.className = "rot-hd";      // docked only (app.css): the column's label row

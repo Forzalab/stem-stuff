@@ -80,6 +80,7 @@ weight() {
     repair) echo 5 ;;   # C2 local run ~4 s (estimate until CI timing)
     login) echo 5 ;;   # local run ~7 s
     proof) echo 8 ;;   # W107 proof box, local run (estimate until CI timing)
+    brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
     *) echo 5 ;;
   esac
 }
@@ -106,6 +107,7 @@ tags() {
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
     login) echo "@logic @real-time" ;;
     proof) echo "@logic @real-time" ;;   # W107 proof box + stub grader
+    brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
     *) echo "" ;;
   esac
 }
