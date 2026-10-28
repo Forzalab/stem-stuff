@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sticker Blur Check</title>
+<!-- W88 (todo 85, Tony 15:4x PT): open this file straight from disk on the Windows laptop (no server). Each row: BEFORE (main today)
+     and AFTER (this branch), same sticker, same words. Standalone: inline CSS, system fonts, no network. -->
+<style>
+  :root {
+    --page: #050c16; --card: #101c2c; --ink: #e8edf5; --muted: #a7b7cd; --line: #394a61;
+    --reward: #ffcd94; --help-ink: #361900; --help-deep: #b05a00; --help-on: #ffdcc0; --help-line: #643d1f; --help-fill: #2d1806;
+    --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --sh4: 0 12px 24px -6px rgb(0 0 0 / .6), 0 2px 4px rgb(0 0 0 / .4);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 64px; background: #fff; color: #111; font: 400 18px/1.45 var(--font); }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  .lead { font-size: 20px; margin: 0 0 16px; max-width: 60rem; }
+  .how { background: #fff7e8; border: 2px solid #e0b46a; border-radius: 12px; padding: 16px 20px; margin: 0 0 32px; font-size: 19px; }
+  .how ol { margin: 8px 0 0; padding-left: 24px; }
+  .how kbd { font: 600 16px/1 ui-monospace, Consolas, monospace; padding: 2px 6px; border: 1px solid #999; border-radius: 4px; background: #fff; }
+  section.theme { border-radius: 16px; padding: 24px 16px; margin: 0 0 32px; }
+  section.dark { background: var(--page); color: var(--ink); }
+  section.light { background: #f4f1ec; color: #1a1a1a; }
+  section.theme > h2 { font-size: 28px; margin: 0 0 4px; }
+  section.theme > p { margin: 0 0 20px; font-size: 18px; opacity: .85; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 28px; }
+  .row > h3 { grid-column: 1 / -1; margin: 0; font-size: 22px; }
+  .cell { min-width: 0; padding: 36px 16px 28px; border-radius: 12px; border: 2px dashed currentColor; display: grid; justify-items: center; gap: 16px; position: relative; }
+  .tag { position: absolute; top: 8px; left: 12px; font: 700 20px/1 var(--font); letter-spacing: .02em; }
+  .before .tag { color: #e5484d; } .after .tag { color: #2f9e44; }
+  section.light .before .tag { color: #c4161c; } section.light .after .tag { color: #1f7a33; }
+  .note { font-size: 15px; opacity: .8; text-align: center; }
+  @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+
+  /* ---- the stickers, copied from rewards/rewards.css (BEFORE = 08037a0 main, AFTER = branch ccr-w88-hudfit-r5k2) ---- */
+  .s { font-family: var(--font); }
+  /* drop banner */
+  .fx-toast { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; max-width: 100%; color: var(--help-ink); border-radius: 20px; }
+  .fx-toast i { width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--help-deep); }
+  .fx-toast-t { font: 600 20px/1.15 var(--font); }
+  .fx-toast-s { font: 600 13px/1.3 var(--font); }
+  .before .fx-toast { border: 2px solid var(--help-deep); background: var(--reward); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--sh4); }
+  .after .fx-toast { isolation: isolate; border: 2px solid transparent; }
+  .after .fx-toast::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; border: 2px solid var(--help-deep); background: var(--reward); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--sh4); }
+  /* slots card (inside LEVEL UP) */
+  .fx-slots { position: relative; width: min(340px, 100%); padding: 8px; border-radius: 28px; }
+  .fx-slots-in { border-radius: 20px; padding: 12px; background: var(--help-fill); }
+  .fx-reels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .fx-reels span { height: 56px; border-radius: 12px; background: var(--ink); display: grid; place-items: center; font: 600 28px/1 var(--font); color: var(--help-deep); }
+  .fx-slabel { margin-top: 12px; text-align: center; font: 600 28px/1 var(--font); color: var(--reward); text-shadow: 0 3px 0 var(--page); }
+  .before .fx-slots { background: var(--help-on); transform: rotate(-1deg); box-shadow: 0 6px 0 var(--help-deep), var(--sh4); }
+  .after .fx-slots { isolation: isolate; }
+  .after .fx-slots::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--help-on); transform: rotate(-1deg); box-shadow: 0 6px 0 var(--help-deep), var(--sh4); }
+  /* FREE badge on the hint card */
+  .hint { position: relative; width: min(340px, 100%); min-height: 64px; border-radius: 10px; background: #ff9a3e; color: var(--help-ink); display: flex; align-items: center; padding: 8px 16px; font: 600 20px/1.2 var(--font); }
+  .rw-free { position: absolute; top: -12px; right: 2px; padding: 3px 10px 4px; border-radius: 6px; font: 600 13px/1.1 var(--font); color: var(--help-ink); }
+  .before .rw-free { background: var(--reward); border: 2px solid var(--page); transform: rotate(-6deg); box-shadow: 0 2px 0 var(--help-line); }
+  .after .rw-free { border: 2px solid transparent; isolation: isolate; }
+  .after .rw-free::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: inherit; background: var(--reward); border: 2px solid var(--page); transform: rotate(-6deg); box-shadow: 0 2px 0 var(--help-line); }
+  /* LEVEL UP plate */
+  .fx-plate { position: relative; padding: 8px 24px; border-radius: 999px; color: var(--help-ink); font: 600 20px/1 var(--font); }
+  .before .fx-plate { border: 3px solid var(--page); background: var(--reward); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--sh4); }
+  .after .fx-plate { isolation: isolate; border: 3px solid transparent; }
+  .after .fx-plate::before { content: ""; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; border: 3px solid var(--page); background: var(--reward); transform: rotate(-2deg); box-shadow: 0 4px 0 var(--page), var(--sh4); }
+  /* stage toast: BEFORE = the old stage line in the top bar; AFTER = the new toast (toast.css) */
+  .rw-won { display: flex; flex-direction: column; gap: 4px; font: 600 15px/1 var(--font); color: var(--muted); white-space: nowrap; }
+  .rw-goal { position: relative; display: block; height: 6px; border-radius: 999px; background: var(--page); }
+  .rw-goal::after { content: ""; position: absolute; right: -1px; top: -4px; bottom: -4px; width: 3px; border-radius: 2px; background: var(--ink); }
+  section.light .rw-won { color: #4a5568; } section.light .rw-goal { background: #d9d4cc; } section.light .rw-goal::after { background: #1a1a1a; }
+  .stoast { width: min(360px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 4px 12px 16px;
+    background: var(--page); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 24px -6px rgb(0 0 0 / .55), 0 2px 4px rgb(0 0 0 / .35);
+    color: var(--ink); font: 400 17px/24px var(--font); text-align: left; }
+  section.light .stoast { background: #fff; border-color: #cfc8bd; color: #1a1a1a; box-shadow: 0 10px 24px -6px rgb(0 0 0 / .18), 0 2px 4px rgb(0 0 0 / .12); }
+  .stoast p { margin: 0; }
+  .stoast-bar { position: relative; display: block; height: 6px; margin: 8px 4px 0 0; border-radius: 999px; background: var(--card); }
+  section.light .stoast-bar { background: #e8e3db; }
+  .stoast-bar i { display: block; height: 100%; width: 50%; border-radius: inherit; background: var(--reward); }
+  section.light .stoast-bar i { background: #e08a1e; }
+  .stoast-bar::after { content: ""; position: absolute; right: -4px; top: -1px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .stoast-x { width: 44px; height: 44px; display: grid; place-items: center; color: var(--muted); font-size: 22px; }
+  .before .stoast-anim { animation: in .2s ease-out both; }   /* BEFORE: fill-mode both holds an identity matrix at rest */
+  .after .stoast-anim { animation: in .2s ease-out backwards; }
+  @keyframes in { from { opacity: 0; transform: translateY(8px); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sticker blur check: before vs after</h1>
+  <p class="lead">Each row shows the same sticker twice. <b>BEFORE</b> is the app today. <b>AFTER</b> is the fix: the sticker card still leans, but the words stay straight, so Windows can draw them sharp.</p>
+  <div class="how">
+    <b>How to check (on the Windows laptop):</b>
+    <ol>
+      <li>Open this file in the browser you use for the app (double-click it; no internet needed).</li>
+      <li>Look at the words at <b>100%</b> zoom (<kbd>Ctrl</kbd> + <kbd>0</kbd>), then <b>125%</b> and <b>150%</b> (<kbd>Ctrl</kbd> + <kbd>+</kbd>). Windows display scaling of 125% or 150% counts too.</li>
+      <li>In each row, are the AFTER words as sharp as normal page text? Are the BEFORE words softer or fuzzy?</li>
+    </ol>
+  </div>
+
+  <section class="theme dark">
+    <h2>Dark (the app's theme)</h2>
+    <p>The app has one dark theme; this is how the stickers look in it.</p>
+    <div class="row"><h3>1. Drop banner (a WIN / BONUS drop)</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-toast"><i></i><div><div class="fx-toast-t">Cluck is very proud!</div><div class="fx-toast-s">+16 XP</div></div></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-toast"><i></i><div><div class="fx-toast-t">Cluck is very proud!</div><div class="fx-toast-s">+16 XP</div></div></div></div>
+    </div>
+    <div class="row"><h3>2. Slot reels card (inside LEVEL UP)</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-slots"><div class="fx-slots-in"><div class="fx-reels"><span>7</span><span>7</span><span>7</span></div><div class="fx-slabel">JACKPOT</div></div></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-slots"><div class="fx-slots-in"><div class="fx-reels"><span>7</span><span>7</span><span>7</span></div><div class="fx-slabel">JACKPOT</div></div></div></div>
+    </div>
+    <div class="row"><h3>3. FREE badge (on the hint card)</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="hint s">Similar solution steps<span class="rw-free">FREE</span></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="hint s">Similar solution steps<span class="rw-free">FREE</span></div></div>
+    </div>
+    <div class="row"><h3>4. LEVEL UP plate</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-plate">Level 2 unlocked</div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-plate">Level 2 unlocked</div></div>
+    </div>
+    <div class="row"><h3>5. Stage line: old bar text vs new toast</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><span class="rw-won"><span class="rw-goal"></span><span>Ready when you are.</span></span><span class="note">In the top bar, 8px from the &lt; button.</span></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="stoast stoast-anim"><div><p>Halfway there!</p><span class="stoast-bar"><i></i></span></div><span class="stoast-x">×</span></div><span class="note">Under the question; the words never move once it has slid in.</span></div>
+    </div>
+  </section>
+
+  <section class="theme light">
+    <h2>Light page</h2>
+    <p>The same stickers on a light page (the app has no light theme yet; this shows whether the blur is easier to see on white).</p>
+    <div class="row"><h3>1. Drop banner</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-toast"><i></i><div><div class="fx-toast-t">Cluck is very proud!</div><div class="fx-toast-s">+16 XP</div></div></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-toast"><i></i><div><div class="fx-toast-t">Cluck is very proud!</div><div class="fx-toast-s">+16 XP</div></div></div></div>
+    </div>
+    <div class="row"><h3>2. Slot reels card</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-slots"><div class="fx-slots-in"><div class="fx-reels"><span>7</span><span>7</span><span>7</span></div><div class="fx-slabel">JACKPOT</div></div></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-slots"><div class="fx-slots-in"><div class="fx-reels"><span>7</span><span>7</span><span>7</span></div><div class="fx-slabel">JACKPOT</div></div></div></div>
+    </div>
+    <div class="row"><h3>3. FREE badge</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="hint s">Similar solution steps<span class="rw-free">FREE</span></div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="hint s">Similar solution steps<span class="rw-free">FREE</span></div></div>
+    </div>
+    <div class="row"><h3>4. LEVEL UP plate</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><div class="s fx-plate">Level 2 unlocked</div></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="s fx-plate">Level 2 unlocked</div></div>
+    </div>
+    <div class="row"><h3>5. Stage line vs stage toast</h3>
+      <div class="cell before"><span class="tag">BEFORE</span><span class="rw-won"><span class="rw-goal"></span><span>Ready when you are.</span></span></div>
+      <div class="cell after"><span class="tag">AFTER</span><div class="stoast stoast-anim"><div><p>Halfway there!</p><span class="stoast-bar"><i></i></span></div><span class="stoast-x">×</span></div></div>
+    </div>
+  </section>
+  <p class="note">Built from rewards/rewards.css and toast.css (branch ccr-w88-hudfit-r5k2). Headless Chrome on Linux cannot show the Windows blur, so only your screen can judge this.</p>
+</div>
+</body>
+</html>

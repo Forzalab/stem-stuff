@@ -35,6 +35,7 @@ for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } 
 
 let failures = 0;
 async function step(name, fn) {
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return;   // ONLY=<regex>: run just those steps (the W88 ones open their own contexts)
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", e.message.slice(0, 700)); }
 }
@@ -87,7 +88,7 @@ try {
     assert.ok(hud.top >= top.top && hud.bottom <= top.bottom + 1, "in the top bar " + JSON.stringify([hud, top]));
     assert.ok(!overlap(hud, prev), "clear of Prev");
     assert.equal(await xp(page), 0);
-    assert.equal(await page.$eval("#rwHud .rw-won-t", e => e.checkVisibility() ? e.textContent : null), "Ready when you are.", "Tony #36: on the bar too at 0 done");
+    assert.equal(await page.$eval(".stoast .stoast-t", e => e.checkVisibility() ? e.textContent : null).catch(() => null), "Ready when you are.", "Tony #36 / #38: the start line, as the stage toast at 0 done");
     await page.click("#rwHud .rw-tap");                                        // HUD B: one tap = "your progress", in words
     await page.waitForSelector("#rwPop:popover-open", { timeout: 2000 });
     assert.match(await page.textContent("#rwPop"), /Level 1.*Next level80 XP to go.*Exam questions0 solved.*Easy ones0 solved.*Ready when you are\./);
@@ -458,6 +459,95 @@ try {
     await p4.click("#rot .rot-link");
     assert.deepEqual(await st(), [false, "Hide curated brainrot"], "Show works");
     await rm.close();
+  });
+  /* W88 (todo 85, Tony #38): the stage line left the top bar for one anchored toast in the question area. At 0 done C1 hid the boxed
+     count chip, so the unboxed stage line was the bar's last item, 8px from Prev, at every desktop width ("evel 2", the goal post read as a cursor) */
+  const fresh = async (w, h = 800, o = {}) => {
+    const c = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block", ...o });
+    await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-jev", "0"); localStorage.setItem("stem-voice", "off");
+      for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
+    const p = await c.newPage();
+    await p.goto(BASE + "/#BANK_RW12");                                         // the bank: List · XP · Prev / Next in the bar
+    await p.waitForFunction(() => /^CALC1_/.test(document.querySelector("#pcode")?.textContent || ""), null, { timeout: 8000 });
+    await p.waitForSelector("#rwHud:not([hidden])");
+    return [c, p];
+  };
+  const hudFit = p => p.evaluate(() => {
+    const vis = e => e && e.checkVisibility(), r = e => e.getBoundingClientRect(), hud = document.querySelector("#rwHud"), H = r(hud), bad = [];
+    const items = [...hud.children].filter(e => !e.matches(".rw-tap") && vis(e)), prev = document.querySelector("#qprev");
+    if (vis(hud.querySelector(".rw-won"))) bad.push("the stage line is still in the bar");
+    const last = items[items.length - 1], L = last.matches(".rw-lvl") ? r(last.querySelector(".rw-to:not([hidden])") && vis(last.querySelector(".rw-to")) ? last.querySelector(".rw-to") : last) : r(last);
+    if (vis(prev) && r(prev).left - L.right < 16) bad.push(`${last.className} ends ${Math.round(r(prev).left - L.right)}px from Prev (< 16)`);
+    for (const t of hud.querySelectorAll(".rw-num, .rw-star b, .rw-to")) if (vis(t)) {
+      const T = r(t);
+      if (t.scrollWidth > t.clientWidth + 1 || T.left < H.left - 1 || T.right > H.right + 1) bad.push(`${t.className || t.tagName} clipped ${Math.round(T.left)}-${Math.round(T.right)} in ${Math.round(H.left)}-${Math.round(H.right)}`);
+      const body = t.closest(".rw-lvl-body"); if (body && (T.left < r(body).left - 1 || T.right > r(body).right + 1)) bad.push("the level words overflow their slot");
+    }
+    return bad;
+  });
+  await step("W88 HUD fit: at 0 done the bar has no stage line, its last item keeps >= 16px from Prev and no word is clipped, 1024 / 1280 / 1440 / 1920, list shut and open", async () => {
+    const bad = [];
+    for (const w of [1024, 1280, 1440, 1920]) {
+      const [c, p] = await fresh(w);
+      for (const b of await hudFit(p)) bad.push(w + ": " + b);
+      await toggleList(p); await p.waitForTimeout(200);
+      for (const b of await hudFit(p)) bad.push(w + " list open: " + b);
+      await c.close();
+    }
+    assert.deepEqual(bad, []);
+  });
+
+  /* Tony #38: one toast per landmark crossed (25 / 50 / 75 + the start and done lines), in the question area, never in the bar; d1: no icon,
+     the words and the bar share one left edge, a centred close, an 8px finish dot; the bar fills from the last landmark to this one */
+  const conquer = (p, tpl) => p.evaluate(t => { const R = window.Rewards; R.mastery({ type: "miss", tpl: t, b: false }); R.mastery({ type: "repair_done", tpl: t });
+    return R.mastery({ type: "twin_a", tpl: t, ok: true }).newly; }, tpl);
+  const toastNow = p => p.waitForFunction(() => { const t = document.querySelector(".stoast.on"); return t && !t.getAnimations({ subtree: true }).length && t.dataset.done === "1" ? t.querySelector(".stoast-t").textContent : false; }, null, { timeout: 9000 }).then(h => h.jsonValue());
+  await step("W88 landmarks: quarters; the start line, then one toast per landmark (1 / 2 / 3 / 4 of 4), anchored in the question column, under the bar", async () => {
+    for (const [w, h] of [[1280, 800], [390, 844]]) {
+      const [c, p] = await fresh(w, h, w < 600 ? { isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : {});
+      assert.equal(await toastNow(p), "Ready when you are.", w + ": the start line");
+      await p.evaluate(() => window.Rewards.config({ goal: 4 }));
+      const seen = [];
+      for (const [tpl, line] of [["Q1", "1 question done. Keep it up!"], ["Q2", "Halfway there!"], ["Q3", "Only 1 to go, you got this!"], ["Q4", "🎉 All done!"]]) {
+        await p.evaluate(() => window.stemToast && window.stemToast.clear());
+        await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
+        assert.ok(await conquer(p, tpl), tpl + " conquered");
+        const got = await toastNow(p); seen.push(got);
+        assert.equal(got, line, w + " " + tpl);
+        const g = await p.evaluate(() => { const r = q => document.querySelector(q)?.getBoundingClientRect(), t = r(".stoast.on"), x = r(".stoast.on .stoast-x"), tx = r(".stoast.on .stoast-t"), bar = r(".stoast.on .stoast-bar");
+          return { t, x, tx, bar, hud: r("#rwHud"), col: r("#freeze"), p: getComputedStyle(document.querySelector(".stoast.on .stoast-bar i")).getPropertyValue("--p").trim(), vw: innerWidth }; });
+        assert.ok(g.t.left >= g.col.left - 1 && g.t.right <= g.col.right + 1 && g.t.right <= g.vw, `${w} ${tpl}: in the question column ${JSON.stringify([g.t, g.col])}`);
+        assert.ok(!overlap(g.t, g.hud), w + " " + tpl + ": not over the HUD");
+        assert.ok(Math.abs(g.tx.left - g.bar.left) < 1, "d1: words and bar share one left edge");
+        assert.ok(Math.abs((g.x.top + g.x.bottom) / 2 - (g.t.top + g.t.bottom) / 2) < 2, "d1: the close button is centred");
+        assert.equal(+g.p, +tpl.slice(1) / 4, "the bar ends at this landmark");
+        /* r4 (cluck-rise, easy): it never lies on a live control (Check, Next, a choice, the duck) */
+        assert.deepEqual(await p.evaluate(() => { const t = document.querySelector(".stoast.on").getBoundingClientRect();
+          return [...document.querySelectorAll("button, a[href], input, textarea, select, [role=button], .opt, .ck-say")].filter(e => !e.closest(".stoast") && e.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
+            .filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top; }).map(e => e.id || e.className); }), [], w + " " + tpl + ": over a control");
+      }
+      assert.equal(await p.evaluate(() => window.Rewards.stage(10, 20) + "|" + window.Rewards.stage(9, 20) + "|" + window.Rewards.stage(15, 20)),
+        "Halfway there!|9 questions done. Keep it up!|Only 5 to go, you got this!", "quarters, not thirds");
+      await c.close();
+    }
+  });
+
+  /* Tony 15:4x PT (Windows laptop): the drop banner / sticker words were blurry. A rotated box (or one an animation's fill holds at an
+     identity matrix) is painted on its own layer and loses subpixel AA, so at rest every reward sticker's words sit on an untransformed box;
+     the tilt lives on a ::before card behind them. */
+  await step("W88 blur: at rest the drop banner, the slots card, the FREE sticker, the plate and the stage toast carry no transform on their words; the toast sits on whole px", async () => {
+    const [c, p] = await fresh(1280);
+    const rest = await p.evaluate(() => ["fx-toast", "fx-slots", "rw-free", "fx-plate"].map(k => {
+      const d = document.body.appendChild(document.createElement("div")); d.className = "rw-skin " + k; d.textContent = "QUACK";
+      const v = getComputedStyle(d).transform; d.remove(); return k + ":" + v; }));
+    assert.deepEqual(rest, ["fx-toast:none", "fx-slots:none", "rw-free:none", "fx-plate:none"]);
+    await toastNow(p);
+    const t = await p.evaluate(() => { const e = document.querySelector(".stoast.on"), w = e.querySelector(".stoast-t"), r = w.getBoundingClientRect();
+      return { tf: getComputedStyle(e).transform + "," + getComputedStyle(w).transform, anim: e.getAnimations({ subtree: true }).length, r: [r.left, r.top, e.getBoundingClientRect().left, e.getBoundingClientRect().top] }; });
+    assert.equal(t.tf, "none,none", "the words rest untransformed");
+    assert.equal(t.anim, 0, "no animation holds the card");
+    assert.ok(t.r.every(Number.isInteger), "whole px " + t.r);
+    await c.close();
   });
 } finally {
   await browser.close();
