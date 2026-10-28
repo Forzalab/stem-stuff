@@ -362,7 +362,7 @@ class Grade(unittest.TestCase):
     def test_max_tries_table(self):
         mk = lambda t, n: {"type": t, "correct": "0", "choices": [{"id": str(i), "md": "x"} for i in range(n)]}  # noqa: E731
         table = [(mk("mc", 2), 1), (mk("mc", 3), 2), (mk("mc", 5), 2), (mk("mc", 8), 2), ({"type": "num"}, 2),
-                 ({"type": "text"}, 2), ({"type": "expr"}, 2), ({"type": "multi"}, 2)]
+                 ({"type": "text"}, 2), ({"type": "expr"}, 2), ({"type": "multi"}, 2), ({"type": "proof"}, 3)]   # W107: 3 Checks
         for p, n in table:
             self.assertEqual(serve.max_tries(p), n, (p["type"], len(p.get("choices", []))))
         # the table also lives in tests/tries.test.mjs against app.js maxTries(): keep them equal

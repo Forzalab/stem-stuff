@@ -183,6 +183,7 @@ await step("footer: a real 'privacy' link to privacy.html; the page has 7 plain 
   assert.match(await page.textContent("main"), /duck may react to how you work/, "Jev (on for all) listed");
   assert.match(await page.textContent("main"), /last 1500 characters of your notes/, "Cluck flow listed");
   assert.match(await page.textContent("main"), /Cluck may start its reply before you open it/, "prefetch listed");
+  assert.match(await page.textContent("main"), /When you press Check on a proof question, Cluck gets the question and your proof, to grade it\./, "proof grading listed (W107, Tony Oct 27)");
   assert.match(await page.textContent("main"), /Copy puts your answers, your notes and their edit history/, "Copy flow listed");
   assert.match(await page.textContent("main"), /When something breaks, you see an error code\. With it we record what failed and some technical detail about your browser, only to fix that error\. What you type, your answers and your notes are never in an error report\./, "error reports listed (incident.mjs)");
   assert.match(await page.textContent("main"), /On the site owner's own test devices only, we also record each answer typed or picked, how long each try took, and which common mistake it matched, to study common mistakes; no one else's typing is recorded\. There is no screen replay\./, "owner-only typed log listed (T36), screen replay still denied");

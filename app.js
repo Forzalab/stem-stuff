@@ -266,7 +266,8 @@ async function check(code, answer) {
   return { verdict: "pending", inc };
 }
 /* mirror of serve.py grade(): keep the two in step */
-const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
+const PROOF_TRIES = 3;                                     // serve.py PROOF_TRIES (W107, Tony Oct 27: a proof gets 3 Checks)
+const maxTries = p => p.tries ?? (p.type === "proof" ? PROOF_TRIES : p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
 const FIX_NUDGE = "All ducks almost in a row... check your math carefully.";   // serve.py FIX_NUDGE
 const WRONG_MISS = "QUACK. At least one ticked row is wrong.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
@@ -331,6 +332,7 @@ function answerOf(u) {
 const hintOf = r => r.shown === "spot" && r.spot ? r.spot : r.hint;
 const mockHold = () => !!window.stemMock?.on?.();             // the night-before mock (nav.js, W103b): one try, no hint, no reveal, no Cluck
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
+  if (key.type === "proof") return { verdict: "busy", why: "upload", triesLeft: maxTries(key) };   // W107: only Cluck's server grades a proof
   const multi = key.type === "multi", idx = answer.part;
   if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
   const sk = multi ? `${key.code}#${idx}` : key.code, st = localState.get(sk) || { wrong: [], done: false };
@@ -767,6 +769,15 @@ function renderQuestion() {
         <div class="phint" id="ph${i}" aria-live="polite"></div></div>`;
     }).join("")}</div>`;
     wireParts();
+  } else if (p.type === "proof") {
+    /* W107 (Tony approved, Oct 27): one tall box for the whole proof, Check in its corner (the Next slot, T17b-1); the 3 rubric chips
+       (base | assume | prove) under it after a Check; the reference proof in #preview once a sugar lockout reveals it */
+    q.innerHTML = `${howLine(p)}<div class="ff proof" id="ff">
+        <textarea id="ans" class="ans" rows="8" maxlength="${PROOF_MAX}" aria-label="Your proof"${p.how ? ' aria-describedby="how"' : ""} ${INPUT_ATTRS.replace(' enterkeyhint="send"', "")}
+          placeholder="Base case: ...&#10;Assume: ...&#10;Prove: ..."></textarea>
+        <button type="button" class="btn btn-go send" id="ansGo" aria-label="Check proof" disabled>${icon("i-go")}</button>
+      </div><div class="rubric" id="rubric" aria-live="polite" hidden></div><div class="preview proofref" id="preview" aria-hidden="true"></div>`;
+    wireProof();
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
@@ -1181,6 +1192,52 @@ async function submitFF() {
   } finally { busy = false; }
 }
 
+/* ---------- proof (W107): a textarea (Enter = a new line, no new key handler), Check sends it to Cluck's grader ---------- */
+const PROOF_MAX = 3000;                                    // serve.py PROOF_MAX
+const PROOF_ROW = { base: "Base case", assume: "Assume", prove: "Prove" };
+const PROOF_V = { ok: ["i-ok", "done"], missing: ["i-x", "missing"], wrong: ["i-x", "wrong"] };
+function wireProof() {
+  const inp = $("#ans"), go = $("#ansGo");
+  inp.addEventListener("input", () => {
+    go.disabled = !inp.value.trim();
+    const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
+  });
+  go.addEventListener("click", submitProof);
+}
+function rubricChips(rb) {
+  const el = $("#rubric"); if (!el) return;
+  el.hidden = !rb;
+  el.innerHTML = rb ? Object.keys(PROOF_ROW).map(k => { const [ic, w] = PROOF_V[rb[k]] || PROOF_V.missing;
+    return `<span class="rb ${esc(rb[k] || "missing")}" data-id="${k}" data-v="${esc(rb[k] || "missing")}">${icon(ic)}<span>${PROOF_ROW[k]}: ${w}</span></span>`; }).join("") : "";
+}
+async function submitProof() {
+  const inp = $("#ans"), v = inp ? inp.value : "";
+  if (!v.trim() || S.finished || busy) return;
+  busy = true;
+  try {
+    const mine = S, r = await check(S.code, { answer: v });
+    if (S !== mine) return;
+    if (r.verdict === "busy" || r.verdict === "timeout" || r.verdict === "pending") { proofWait(r); return; }   // not a try: the text stays
+    if (r.verdict !== "invalid") record({ a: v }, r);
+    if (r.rubric) rubricChips(r.rubric);
+    if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
+    else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
+    else if (r.verdict === "wrong") pips(r, ...pipsAt());
+    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; layoutFreeze(); return; }
+    feedback(r, "");
+    if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
+  } finally { busy = false; }
+}
+/* the grader could not answer (no key, the hourly cap, a failure, an uploaded file): one wait line, with the S- code when there is one */
+function proofWait(r) {
+  const why = { off: "Cluck can't check proofs right now.", hourly: "Cluck needs a short break. Try again soon.", upload: "Proof checks need the hosted bank. Open it by code." }[r.why]
+    || "Cluck could not check it. Tap to try again.";
+  $("#fb").innerHTML = `<p class="verdict wait">${icon("i-wait")}<span>${esc(why)}</span>${incHTML(r.inc)}${r.why === "upload" || r.why === "off" ? "" : `<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button>`}</p>`;
+  const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; layoutFreeze(); submitProof(); });
+  say($("#fb").textContent.replace(/\s+/g, " ").trim());
+  layoutFreeze();
+}
+
 /* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
 const partEls = i => { const r = document.querySelector(`#q .part[data-i="${i}"]`); return { row: r, box: r.querySelector(".ff"), inp: r.querySelector(".ans"), go: r.querySelector(".send"), hint: r.querySelector(".phint") }; };
 function wireParts() {
@@ -1253,7 +1310,7 @@ function record(a, r) {
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
-  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null, error: r.error, collide: r.collide, families: r.families, typed: a.c == null && typeof a.a === "string" ? a.a : null });   // telemetry (telemetry.js drops error + collide + families + typed: on device only, except Tony's own devices, T36)
+  window.stemT?.("pick", { code: S.code, choice: a.c ?? null, part: a.part ?? null, right: r.verdict === "correct", verdict: r.verdict, tries_left: r.triesLeft ?? null, error: r.error, collide: r.collide, families: r.families, typed: a.c == null && typeof a.a === "string" && S.prob.type !== "proof" ? a.a : null });   // W107: a proof never rides in telemetry   // telemetry (telemetry.js drops error + collide + families + typed: on device only, except Tony's own devices, T36)
   /* SLIP_TIE spot: the reply's `spot` (a place in the formula) shows instead of `hint` only when Jev's gate says so (intent.js spotOk:
      improving + nearly there). Asked once, after the pick line; Jev off (no stemJev) = the plain hint. hintOf(r) reads the result */
   if (r.verdict === "wrong" && typeof r.spot === "string" && r.spot) r.shown = window.stemJev?.spot?.()?.ok === true ? "spot" : "hint";
@@ -1520,6 +1577,11 @@ function reveal(r, part) {
   }
   const multi = p.type === "multi", i = multi ? (part ?? r.part) : 0, u = multi ? p.parts[i] : p;
   const host = multi ? partEls(i).hint : $("#preview"); if (!host) return "";
+  if (p.type === "proof") {                                  // W107: the reference proof, as markdown with its math, under the box
+    host.classList.remove("spent"); host.removeAttribute("aria-hidden");
+    host.innerHTML = `<p class="ansl">${icon("i-ok")}<span>A proof</span></p><div class="md refmd">${md(String(c))}</div>`;
+    return "A proof is shown under your box.";
+  }
   let val = esc(c);
   if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(String(c)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
   host.querySelector(".ansl")?.remove();
@@ -1580,7 +1642,7 @@ function feedback(r, typed) {
   }
   if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
-  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : submitFF)(); });
+  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
   const rev = reveal(r);
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();

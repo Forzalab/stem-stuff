@@ -554,3 +554,23 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     assert.match(r.stdout, /^problems: .*welcome/m);
   });
 }
+
+// the proof type (W107, SCHEMA.md "Proof items"): a whole induction proof, graded by Cluck on 3 rubric rows; the key block never leaves the server
+test("proof: the fixture validates; it needs proof + how; 3 rubric rows base | assume | prove; no answer keys of the other types", () => {
+  const fx = JSON.parse(readFileSync(new URL("./fixtures/proof-bank.json", import.meta.url), "utf8"));
+  assert.ok(validate(fx), JSON.stringify(validate.errors));
+  const p = fx.problems[0], one = q => ({ ...fx, problems: [q] });
+  const { proof: _p, ...noProof } = p, { how: _h, ...noHow } = p;
+  assert.ok(!validate(one(noProof)), "a proof item needs its proof block");
+  assert.ok(!validate(one(noHow)), "a proof item needs how");
+  assert.ok(!validate(one({ ...p, answer: "x" })), "no answer: the grader reads the rubric");
+  assert.ok(!validate(one({ ...p, wrong: [] })), "no wrong entries");
+  const rows = p.proof.rubric;
+  assert.ok(!validate(one({ ...p, proof: { ...p.proof, rubric: rows.slice(0, 2) } })), "3 rows");
+  assert.ok(!validate(one({ ...p, proof: { ...p.proof, rubric: [rows[1], rows[0], rows[2]] } })), "in order: base, assume, prove");
+  assert.ok(!validate(one({ ...p, proof: { ...p.proof, rubric: [...rows.slice(0, 2), { id: "concl", need: "Says so for all n." }] } })), "no conclusion row (Tony: casual)");
+  assert.ok(!validate(one({ ...p, proof: { ...p.proof, hints: { base: p.proof.hints.base, assume: p.proof.hints.assume } } })), "a hint per row");
+  assert.ok(!validate(one({ ...p, proof: { ...p.proof, hints: { ...p.proof.hints, prove: "Try again." } } })), "hints in Cluck's voice");
+  const num = problems.find(q => q.type === "num");
+  assert.ok(!validate({ ...B, problems: [{ ...num, proof: p.proof }] }), "proof only on a proof item");
+});

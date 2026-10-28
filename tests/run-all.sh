@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -79,6 +79,7 @@ weight() {
     mock) echo 12 ;;   # W103b night-before mock, local run ~10 s
     repair) echo 5 ;;   # C2 local run ~4 s (estimate until CI timing)
     login) echo 5 ;;   # local run ~7 s
+    proof) echo 8 ;;   # W107 proof box, local run (estimate until CI timing)
     *) echo 5 ;;
   esac
 }
@@ -104,6 +105,7 @@ tags() {
     mock) echo "@logic @real-time" ;;   # W103b; waits out the ~0.7 s wrong-answer peek for real
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
     login) echo "@logic @real-time" ;;
+    proof) echo "@logic @real-time" ;;   # W107 proof box + stub grader
     *) echo "" ;;
   esac
 }
@@ -206,7 +208,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
