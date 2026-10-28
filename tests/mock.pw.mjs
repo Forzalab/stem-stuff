@@ -79,6 +79,13 @@ try {
     await answer(page, ANS.PHYS_MQ2);
     await next(page); await opened(page, "PHYS_MQ3");
   });
+  /* families met (W103c, todo 103 MUST 1): Q1 Q2 Q3 = 3 families; a clean MQ2 meets twinless Q2; Q1's missed template would not have
+     counted anyway (it has a title twin, PHYS_WQ1). The row lives in the HUD popover (shuffle.mjs familiesMet, rewards/engine.js families) */
+  await step("families met: the P3X popover row says 1 / 3 after one clean twinless template", async () => {
+    await page.waitForFunction(() => /Families met\s*1 \/ 3/.test(document.querySelector("#rwPop .rw-pop-h ~ dl")?.textContent || ""), null, { timeout: 3000 })
+      .catch(async () => { throw new Error("no 'Families met 1 / 3' row: " + JSON.stringify(await page.evaluate(() => [window.Rewards.state()?.families, document.querySelector("#rwPop dl")?.textContent]))); });
+    assert.deepEqual(await page.evaluate(() => window.Rewards.state().families), { met: 1, of: 3 });
+  });
   await step("the end: the score line, then the misses in exam order, open again, with the normal flow (hint, a second try, Cluck)", async () => {
     await next(page); await opened(page, "PHYS_MQ1");
     await page.waitForFunction(() => /1 \/ 3/.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 3000 });

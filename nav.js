@@ -8,7 +8,7 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
+import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -214,8 +214,11 @@ function init() {
     return glue(cs, beforeOf);
   }
 
+  /* families met (todo 103 MUST 1, shuffle.mjs familiesMet): the HUD popover's count; a bank without families hands in of 0 = no row */
+  const fams = () => { const o = off(), R = window.Rewards; if (R && R.families) R.families(o ? familiesMet(pool().map(c => ({ code: c, ...o.get(c) })), Q().seen) : null); };
   function update(code) {
     cur = code;
+    fams();
     const o = off(), cs = all();
     codes = cs.length ? rows0(cs) : [];
     const on = codes.length > 0;
@@ -363,6 +366,7 @@ function init() {
     const st = Q(), first = qAnswer(st, d.code, !!d.right, { spam: typeof d.ms === "number" && d.ms < SPAM_MS });   // a guess in under 2 s: logged, no weight
     mockAnswer(st.mock, d.code, !!d.right);
     if (first && noob()) rampAnswer(st, d.code, !!d.right, tierOf);   // the ramp's gate counts first picks only
+    if (first) fams();
     if (front()) try { localStorage.setItem("stem-noob-" + bank().code, "1"); } catch { /* blocked */ }
     save();
   });

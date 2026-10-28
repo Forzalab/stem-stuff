@@ -266,3 +266,14 @@ test("stage line: start, early, halfway, late, done, with the quarter edges at a
   M("miss", "Q1"); M("repair_done", "Q1"); M("twin_a", "Q1", { ok: true });
   assert.equal(R.state().stage, "1 question done. Quack on!", "state() carries the line for the bar's own done count");
 });
+
+/* families met (todo 103 MUST 1, PLAN §6.7): nav.js hands the count (shuffle.mjs familiesMet) in; only a bank with families shows it */
+test("families: the count rides in state(); a bank with no families (of 0) or none handed in -> null", () => {
+  assert.equal(R.state().families, null, "nothing handed in");
+  R.families({ met: 7, of: 20 });
+  assert.deepEqual(R.state().families, { met: 7, of: 20 });
+  R.families({ met: 0, of: 0 });
+  assert.equal(R.state().families, null, "a non-family bank");
+  R.families({ met: 1, of: 3 }); R.families(null);
+  assert.equal(R.state().families, null);
+});

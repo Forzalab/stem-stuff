@@ -406,3 +406,25 @@ test("mockNext / mockAnswer: the list once in order, one graded first pick each,
   assert.equal(mockNext(clean), null);
   assert.equal(mockOn(null, "Q1"), false);
 });
+
+/* ---------- families met (todo 103 MUST 1, PLAN §6.7; lifts Tony #32 "some students loop on one Q") ----------
+   a family = one exam position (mockList's examQ); met after a clean (first pick right) twin; no twin in the bank yet -> a clean template */
+const clean = (...cs) => Object.fromEntries(cs.map(c => [c, { n: 1, right: 1, miss: 0 }]));
+const missed = (...cs) => Object.fromEntries(cs.map(c => [c, { n: 2, right: 0, miss: 2 }]));
+test("familiesMet, today's title shape: a family with a title twin / twist needs a clean one of those; a twinless family, its template", async () => {
+  const { familiesMet } = await import("../shuffle.mjs");
+  assert.deepEqual(familiesMet(titleBank, {}), { met: 0, of: 4 }, "Q1 Q2 Q3 Q20; the range and the other quiz are no family");
+  assert.deepEqual(familiesMet(titleBank, clean("PHYS_T2", "PHYS_T3", "PHYS_Q11", "PHYS_C")), { met: 2, of: 4 }, "twinless Q2 / Q3: the template");
+  assert.deepEqual(familiesMet(titleBank, clean("PHYS_T1")), { met: 0, of: 4 }, "Q1 has a twin: its template alone is not enough");
+  assert.deepEqual(familiesMet(titleBank, clean("PHYS_K1")), { met: 1, of: 4 }, "a clean twist meets Q1");
+  assert.deepEqual(familiesMet(titleBank, { ...missed("PHYS_W1", "PHYS_T20"), ...clean("PHYS_T1") }), { met: 0, of: 4 }, "a missed twin / template meets nothing");
+});
+test("familiesMet, the SCHEMA twin shape: a twin's family is its template's exam_q; only a clean twin meets it; no families -> of 0", async () => {
+  const { familiesMet } = await import("../shuffle.mjs");
+  assert.deepEqual(familiesMet(twinBank, clean("PHYS_T1", "PHYS_T2")), { met: 0, of: 2 }, "both have twins: templates do not count");
+  assert.deepEqual(familiesMet(twinBank, clean("PHYS_B1")), { met: 1, of: 2 }, "a clean b meets Q1");
+  assert.deepEqual(familiesMet(twinBank, clean("PHYS_A1", "PHYS_B1", "PHYS_A2")), { met: 2, of: 2 }, "one per family, never more");
+  assert.deepEqual(familiesMet([twinBank[0], twinBank[1]], clean("PHYS_T1")), { met: 1, of: 2 }, "no twins yet: the template");
+  assert.deepEqual(familiesMet([X("CALC1_R01", "Practice Exam 2, Question 1"), X("CALC1_R02", "")], clean("CALC1_R01")), { met: 0, of: 0 }, "a non-family bank");
+  assert.deepEqual(familiesMet([], {}), { met: 0, of: 0 });
+});
