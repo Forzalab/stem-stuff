@@ -206,7 +206,7 @@ test("praise: four Cluck lines, picked by Math.random; a common drop on LINES[3]
 test("streak notes: 3 = Tony's line, 5 and 10 = N cracked, others none", () => {
   const notes = [];
   for (let i = 1; i <= 10; i++) { script = [0.99, 0.99]; notes.push(ok("S" + i).streakNote ?? null); }
-  assert.deepEqual(notes, [null, null, "Baby a tripleeee, QUACKKKK", null, "5 cracked", null, null, null, null, "10 cracked"]);
+  assert.deepEqual(notes, [null, null, "Baby a tripleeee, QUACKKKK", null, "5 eggs cracked! Enough for two omelettes.", null, null, null, null, "10 eggs cracked! Enough for two omelettes."]);
 });
 
 /* B4 conquered (DESIGN-v3 §5; Tony #1, #10, #25.5): repaired + solo `a` twin + solo `b` twin where one exists */
@@ -256,13 +256,13 @@ test("conquered: twins without a miss + ladder never count; the goal follows con
 /* the stage line replaces "N/20 conquered" (Tony #32), in quarters (Tony #38, landmarks 25 / 50 / 75): p = done / total; p < 1/2 early,
    1/2 <= p < 3/4 halfway, 3/4 <= p < 1 late */
 test("stage line: start, early, halfway, late, done, with the quarter edges at a goal of 20", () => {
-  const at = { 0: "Ready when you are.", 1: "1 question done. Keep it up!", 5: "5 questions done. Keep it up!", 9: "9 questions done. Keep it up!",
+  const at = { 0: "Ready when you are.", 1: "1 question done. Quack on!", 5: "5 questions done. Quack on!", 9: "9 questions done. Quack on!",
     10: "Halfway there!", 14: "Halfway there!", 15: "Only 5 to go, you got this!", 19: "Only 1 to go, you got this!", 20: "🎉 All done!", 21: "🎉 All done!" };
   for (const d in at) assert.equal(R.stage(+d, 20), at[d], "done " + d);
-  assert.equal(R.stage(1, 3), "1 question done. Keep it up!", "1/3 is still early (quarters, not thirds)");
+  assert.equal(R.stage(1, 3), "1 question done. Quack on!", "1/3 is still early (quarters, not thirds)");
   assert.equal(R.stage(2, 4), "Halfway there!", "exactly 1/2 is halfway");
   assert.equal(R.stage(3, 4), "Only 1 to go, you got this!", "exactly 3/4 is late");
   assert.deepEqual([0, 4, 5, 9, 10, 14, 15, 19, 20].map(d => R.landmark(d, 20)), [0, 0, 1, 1, 2, 2, 3, 3, 4], "landmarks 25 / 50 / 75 / 100");
   M("miss", "Q1"); M("repair_done", "Q1"); M("twin_a", "Q1", { ok: true });
-  assert.equal(R.state().stage, "1 question done. Keep it up!", "state() carries the line for the bar's own done count");
+  assert.equal(R.state().stage, "1 question done. Quack on!", "state() carries the line for the bar's own done count");
 });
