@@ -58,6 +58,7 @@
 
   function mount(host, item, o = {}) {
     const variant = o.variant || "repair";
+    if (root.stemMock && root.stemMock.on() && variant !== "welcome") return { el: null, destroy() {} };   // the night-before mock (W103b): no ladder until it ends
     const alt = variant === "alt" && item.repair && item.repair.alt;
     const steps = alt ? alt.steps : ladderOf(item);
     const welcome = variant === "welcome", full = variant === "full";
@@ -186,7 +187,7 @@
     }
     function whyUi(s) {
       const w = s.st.why, box = h("div", "rp-why");
-      box.append(h("p", "rp-q", w.q || L().why || "Why?"));
+      box.append(h("p", "rp-q", w.q || L().why || "Why is that?"));
       const opts = h("div", "rp-opts");
       w.opts.forEach((t, i) => opts.append(chip(t, { why: String(i) }, tryWhy, s, i, s.whyTried)));
       box.append(opts);

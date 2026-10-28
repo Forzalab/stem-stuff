@@ -49,7 +49,7 @@
     room();
   }
   /* nothing on top of anything (Tony, Oct 19): the duck and its line rest on no control. Where they would (a short phone: the hint card's
-     "ok but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
+     "okay, but how?" at the window's foot), the page gets that much room under its end and scrolls up by it; the room stays until the next
      question, so the page never jumps back under a finger when the duck goes */
   var CTL = "button, a[href], input, textarea, select, [role=button], .opt";
   function room() {
@@ -79,6 +79,7 @@
   /* AMA 3 sugar only · in a bank · a question open · AMA 9 Cluck closed · nothing over the page (question list, code bar, keyboard, reward FX) */
   function ok() {
     var c = H.classList;
+    if (window.stemMock && window.stemMock.on()) return false;          // the night-before mock (nav.js, W103b): no Cluck until it ends
     return c.contains("sugar") && !c.contains("start") && !!(window.stemBank && window.stemBank.code) &&
       !c.contains("ql-open") && !c.contains("bar-open") && !c.contains("kb") && !document.querySelector(".fx-ov") &&
       !(window.stemCluckOpen && window.stemCluckOpen()) && !(window.stemDuck.up && !mine);   // AMA 10: one duck per screen
@@ -91,7 +92,7 @@
     if (idle < wait()) return arm(wait() - idle);                           // input came since: wait out the rest
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
     mine = true; n++; lastRise = performance.now();
-    rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
+    rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
       onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
   }
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
@@ -99,13 +100,14 @@
      does not use up the idle peeks (n). Not retried: if it is busy at that moment, this question gets none. */
   var WRONG_MS = 700, COOL = 120000, wt = 0, wrongDone = {}, lastRise = -COOL;
   function wrong(code) {
+    if (window.stemMock && window.stemMock.on()) return;              // the mock (W103b): its replay gets the peek, so not spent here
     if (!code || wrongDone[code]) return;
     wrongDone[code] = 1; clearTimeout(wt);
     wt = setTimeout(function () {
       wt = 0;
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
       mine = true; lastRise = performance.now();
-      rise({ line: fine.matches ? "Stuck? Click me." : "Stuck? Tap me.", label: "Cluck: want a hint?",
+      rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
         onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
     }, WRONG_MS);
   }

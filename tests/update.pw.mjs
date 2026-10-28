@@ -1,4 +1,4 @@
-// "New version ready. Tap to update." (offline.js + sw.js): the shell is served from the SW cache, so after a deploy the page
+// "New version's ready! Tap to update." (offline.js + sw.js): the shell is served from the SW cache, so after a deploy the page
 // is one version behind. Serves a copy of the client from its own static server (Cache-Control: no-cache, like Vercel),
 // changes app.css, reloads: the bar shows; tap it: the page reloads with the new file and the bar is gone. Then two stamped
 // deploys (a new sw.js each): untouched, the page reloads by itself; after a key press, the bar instead (design/DEPLOY.md).
@@ -59,7 +59,7 @@ try {
   await step("changed file: the bar shows", async () => {
     await page.reload();
     await bar(page).waitFor({ state: "visible", timeout: 5000 });
-    assert.equal((await bar(page).textContent()).trim(), "New version ready. Tap to update.");
+    assert.equal((await bar(page).textContent()).trim(), "New version's ready! Tap to update.");
   });
   await step("tap: reload onto the new version, bar gone", async () => {
     await Promise.all([page.waitForEvent("load"), bar(page).click()]);

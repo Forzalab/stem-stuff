@@ -103,6 +103,12 @@ class Grade(unittest.TestCase):
         self.assertEqual(pub["pick"], "all")
         self.assertFalse({"correct", "wrong", "miss"} & set(pub))
 
+    def test_public_twin_fields(self):                                          # the night-before mock (nav.js mockList, W103b) reads them on the client
+        p = {**BANK["CSCI26_A7K"], "code": "TWIN_A", "twin": "a", "parent_template": "CSCI26_A7K", "exam_q": 8}
+        pub = serve.public(p, "k1")
+        self.assertEqual((pub["twin"], pub["parent_template"], pub["exam_q"]), ("a", "CSCI26_A7K", 8))
+        self.assertFalse({"twin", "parent_template", "exam_q"} & set(serve.public(BANK["CSCI26_A7K"], "k1")))   # absent stays absent
+
     def test_pick_all_kept(self):                                               # sugar kept rows: the ticked ids, only when every tick is right
         p = {**BANK["CSCI26_A7K"], "code": "KEPT_T", "wrong": [w for w in BANK["CSCI26_A7K"]["wrong"] if w["choice"] != "d"]}   # d: false, no wrong hint
         g = lambda sid, ids, rv=True: serve.grade(p, sid, {"choices": ids}, reveal=rv)
@@ -187,7 +193,7 @@ class Grade(unittest.TestCase):
     def test_slip_window_d2(self):                                              # Tony D2: slips use SLIP_WIN (0.5% or 3 s.f.), not tol_of
         u = {"type": "num", "answer": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "form": "1/((4/3)^2+(1/3)^2+(2/3)^2)", "tol": 1e-3}
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):                                   # 0.532 also sits on power: the tie is not this test
-            self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})   # 9/17 = 0.5294, 0.49% off
+            self.assertEqual(serve.slip_hit(u, 0.532), {"error": "drop", "hint": serve.family_hint("drop")})   # 9/17 = 0.5294, 0.49% off
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):                                   # SLIP_TIE on (the default): both, in the window
             self.assertEqual(serve.slip_hit(u, 0.532)["collide"], ["drop", "power"])
         self.assertIsNone(serve.slip_hit({**u, "answer": "12/(100+200+300)", "form": "12/(100+200+300)", "tol": 0.02}, 0.0609))   # 0.06 sign: 1.5%
@@ -444,10 +450,10 @@ class Slips(unittest.TestCase):
     def test_golden_sign_in_both_modes(self):
         for mode, v, rv in self.modes(self.ITEM):
             r = serve.grade(v, "sl1-" + mode, {"answer": "0.692"}, reveal=rv)
-            self.assertEqual((r["verdict"], r["error"], r["hint"], r["triesLeft"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 1), mode)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["triesLeft"]), ("wrong", "sign", serve.family_hint("sign"), 1), mode)
         for mode, v, rv in self.modes(self.MULTI):
             r = serve.grade(v, "sl2-" + mode, {"part": 0, "answer": "0.692"}, reveal=rv)
-            self.assertEqual((r["verdict"], r["error"], r["hint"], r["part"]), ("wrong", "sign", serve.FAMILY_HINT["sign"], 0), mode)
+            self.assertEqual((r["verdict"], r["error"], r["hint"], r["part"]), ("wrong", "sign", serve.family_hint("sign"), 0), mode)
             self.assertNotIn("error", serve.grade(v, "sl2-" + mode, {"part": 1, "answer": "0.692"}, reveal=rv))   # part b has no form
 
     def test_author_wrong_wins(self):
@@ -486,14 +492,14 @@ class Slips(unittest.TestCase):
                     for p, body in ((self.TIE, {}), (self.TIE_MULTI, {"part": 0})) for mode, rv in (("diet", False), ("sugar", True))]
 
     def test_slip_tie_off_is_old(self):                                        # SLIP_TIE=0: byte-identical to before SLIP_TIE
-        hint = serve.FAMILY_HINT["sign"]                                        # FAMILIES order picks sign
+        hint = serve.family_hint("sign")                                        # FAMILIES order picks sign
         today = [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign"}] * 2 + [{"verdict": "wrong", "triesLeft": 1, "hint": hint, "error": "sign", "part": 0}] * 2
         for i, env in enumerate(({"SLIP_TIE": "0"}, {"SLIP_TIE": " 0 "})):
             got = self.tie_grade(env, f"tie-off{i}")
             self.assertEqual([json.dumps(r) for r in got], [json.dumps(r) for r in today], env)
             self.assertFalse(any("spot" in r or "collide" in r for r in got), env)                 # W-SPOT: no spot line with the flag off
         with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):
-            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"error": "drop", "hint": serve.FAMILY_HINT["drop"]})
+            self.assertEqual(serve.slip_hit(self.TIE, 0.04), {"error": "drop", "hint": serve.family_hint("drop")})
 
     def test_slip_tie_on_collide(self):                                        # flag on (the default: unset / "" / "1") + 2 families: the plain nudge, no error, collide
         base = {"verdict": "wrong", "triesLeft": 1, "hint": serve.DEFAULT_NUDGE, "collide": ["sign", "drop"],
@@ -512,7 +518,7 @@ class Slips(unittest.TestCase):
             self.assertEqual((r["hint"], r["collide"], "spot" in r), (serve.DEFAULT_NUDGE, ["sign", "drop"], False))
             self.assertFalse(any(ch.isdigit() for ch in got[0]["spot"]))
             r = serve.grade(self.ITEM, "tie-single", {"answer": "0.692"})                                           # one family: same as today
-            self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.FAMILY_HINT["sign"], False))
+            self.assertEqual((r["error"], r["hint"], "collide" in r), ("sign", serve.family_hint("sign"), False))
 
     def test_slip_k2_pair_spot(self):                                          # SLIP_K=2 (the default): a pair reaches the spot path (k=1: no slip)
         self.assertEqual(serve.slips.SLIP_K, int(os.environ.get("SLIP_K", "2")))
@@ -523,7 +529,7 @@ class Slips(unittest.TestCase):
         with unittest.mock.patch.object(serve.slips, "SLIP_K", 2):
             self.assertEqual(serve.slip_hit(p, -7.0), {"error": "drop+sign", "hint": serve.family_hint("drop+sign"), "spot": line})
             with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "0"}):
-                self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.FAMILY_HINT["distribute"]})   # a k=1 slip wins
+                self.assertEqual(serve.slip_hit(p, 9.0), {"error": "distribute", "hint": serve.family_hint("distribute")})   # a k=1 slip wins
             with unittest.mock.patch.dict(os.environ, {"SLIP_TIE": "1"}):
                 self.assertEqual(serve.slip_hit(p, 9.0)["collide"], ["distribute", "sign"])                               # k=1 tie: still no pair
             self.assertIsNone(serve.slip_hit(dict(p, ignore_slips=["-7"]), -7.0))                                        # ignore_slips holds at k=2
@@ -547,10 +553,19 @@ class Slips(unittest.TestCase):
             self.assertLessEqual(len(h.split()) - 1, 12, fam)
             self.assertIsNone(re.search(r"\d", h), fam)                       # no number at all, so never the answer
 
-    def test_pair_hint_composes_family_lines(self):                          # k=2 "inner+outer": the two family lines in that order, one QUACK.
+    def test_zodiac_season_by_date(self):                                    # todo 93 miss-060/061: {sign} = the tropical season of the date
+        d = serve.datetime.date
+        for day, want in ((d(2026, 3, 20), "Pisces"), (d(2026, 3, 21), "Aries"), (d(2026, 4, 19), "Aries"), (d(2026, 4, 20), "Taurus"),
+                          (d(2026, 10, 22), "Libra"), (d(2026, 10, 23), "Scorpio"), (d(2026, 12, 21), "Sagittarius"), (d(2026, 12, 22), "Capricorn"),
+                          (d(2027, 1, 1), "Capricorn"), (d(2027, 1, 19), "Capricorn"), (d(2027, 1, 20), "Aquarius"), (d(2027, 2, 19), "Pisces")):
+            self.assertEqual(serve.zodiac(day), want, day)
+        with unittest.mock.patch.dict(serve.FAMILY_HINT, {"sign": "QUACK, it's {sign} season. Check your signs."}):
+            self.assertEqual(serve.family_hint("sign"), f"QUACK, it's {serve.zodiac()} season. Check your signs.")
+
+    def test_pair_hint_composes_family_lines(self):                         # k=2 "inner+outer": the two family lines in that order, one QUACK.
         self.assertEqual(serve.family_hint("drop+sign"),
-                         "QUACK. Count your terms. One of them went missing. Check every sign. One of them flipped.")   # slips.test.mjs pins the same text
-        self.assertEqual(serve.family_hint("sign"), serve.FAMILY_HINT["sign"])
+                         f"QUACK. Count your terms like you count your ducks. It's {serve.zodiac()} season. Check ONE of your signs.")   # slips.test.mjs pins the same text
+        self.assertEqual(serve.family_hint("sign"), serve.FAMILY_HINT["sign"].replace("{sign}", serve.zodiac()))   # {sign} filled (todo 93)
         for form in ("10-(3+2)", "2*9.8*3", "sqrt(9+16)"):
             for fam, _ in serve.slips.pairs(form):
                 h = serve.family_hint(fam)

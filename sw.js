@@ -75,7 +75,7 @@ const keyOf = req => {
 const good = r => r && (r.ok || r.type === "opaque");
 
 // Same sw.js, different file (dev: serve.py edits): the background refresh stores it, then tells every open page, which
-// shows "New version ready. Tap to update." (offline.js). Stored first, so the tap never reloads into the old copy.
+// shows "New version's ready! Tap to update." (offline.js). Stored first, so the tap never reloads into the old copy.
 // Stamped (a deploy): a different file means the NEXT deploy, whose new sw.js is on its way. Not stored, no bar: the old
 // way, the bar came first, the tap reloaded under this old worker (a half-old shell) and the new one's takeover needed a 2nd tap.
 async function differs(a, b) {

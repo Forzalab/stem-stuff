@@ -276,7 +276,7 @@ test("ramp: a fresh state opens on the dead-easy, then only tier-1 codes", async
   assert.equal(run[0].code, "PHYS_ZDA");
   for (const p of run.slice(1)) assert.equal(tierOf(p.code), 1, p.code);
 });
-test("ramp: 2 clean first picks -> the next is tier 2; a miss -> back to tier 1 (floor 1, cap 3)", async () => {
+test("ramp: 2 clean first picks -> the next is tier 2; 2 misses in a row -> back to tier 1 (floor 1, cap 3)", async () => {
   const up = await rampRun("a", [undefined, true, true, undefined]);
   assert.equal(up.st.ramp.tier, 2);
   assert.equal(tierOf(up.run[3].code), 1, "slot 4 is the first re-injection (a seen tier 1)");
@@ -285,13 +285,30 @@ test("ramp: 2 clean first picks -> the next is tier 2; a miss -> back to tier 1 
   assert.equal(tierOf(up5.run[4].code), 2, "after 2 clean, the next new one is tier 2");
   const one = await rampRun("a", [undefined, true, undefined]);
   assert.equal(tierOf(one.run[2].code), 1, "one clean is not enough");
-  const down = await rampRun("a", [undefined, true, true, false, undefined]);
-  assert.equal(down.st.ramp.tier, 1, "a miss drops a tier");
-  assert.equal(tierOf(down.run[4].code), 1);
+  const down = await rampRun("a", [undefined, true, true, false, false, undefined]);
+  assert.equal(down.st.ramp.tier, 1, "2 misses in a row drop a tier");
+  assert.equal(tierOf(down.run[5].code), 1);
   const floor = await rampRun("a", [undefined, false, false, undefined]);
   assert.equal(floor.st.ramp.tier, 1, "never below tier 1");
   const top = await rampRun("a", [undefined, true, true, true, true, true, true, true, true]);
   assert.equal(top.st.ramp.tier, 3, "never above tier 3");
+});
+test("ramp: 1st miss resets the clean count only; a 2nd miss IN A ROW drops a tier; a clean answer ends the run (PLAN §6.6)", async () => {
+  const { rampAnswer } = await import("../shuffle.mjs");
+  const st = { ramp: { tier: 2, clean: 1 } };   // an old saved queue: no miss key
+  assert.equal(rampAnswer(st, "PHYS_T2A", false, tierOf), 2, "1st miss: tier stays");
+  assert.equal(st.ramp.clean, 0, "1st miss: the clean count starts over");
+  assert.equal(rampAnswer(st, "PHYS_T2B", false, tierOf), 1, "2nd miss in a row: down one");
+  assert.equal(rampAnswer(st, "PHYS_T1A", false, tierOf), 1, "floor 1");
+  const run = { ramp: { tier: 3, clean: 0 } };
+  rampAnswer(run, "PHYS_T3A", false, tierOf); rampAnswer(run, "PHYS_T3B", true, tierOf);
+  assert.equal(rampAnswer(run, "PHYS_T3C", false, tierOf), 3, "miss, clean, miss: the clean ended the run, no drop");
+  assert.equal(rampAnswer(run, "PHYS_T3D", false, tierOf), 2, "then a 2nd in a row drops");
+  assert.equal(rampAnswer(run, "PHYS_T2A", false, tierOf), 2, "the drop ends the run: a 3rd miss starts a new one");
+  const dead = { ramp: { tier: 2, clean: 0, miss: 1 } };
+  rampAnswer(dead, "PHYS_ZDA", false, tierOf);
+  assert.deepEqual(dead.ramp, { tier: 2, clean: 0, miss: 1 }, "a dead-easy moves nothing");
+  assert.equal(JSON.parse(JSON.stringify(run)).ramp.miss, 1, "the run rides in the saved queue");
 });
 test("ramp: from item 4, one seen code comes back every REVIEW_EVERY (slot 9 is a re-injection)", async () => {
   const { REVIEW_FROM, REVIEW_EVERY } = await import("../shuffle.mjs");
@@ -326,4 +343,66 @@ test("ramp: no item at the current tier -> the nearest tier still serves; an emp
   for (let i = 0; i < 5; i++) { const p = ramp(st, pool, tierOf); qShow(st, p.code); run.push(p.code); }
   assert.deepEqual([...run.slice(0, 2)].sort(), pool, "tier 3 only: still served, each once first");
   assert.equal(ramp(qNew("a"), [], tierOf), null);
+});
+
+/* ---------- the night-before mock (W103b; PLAN §6.9): 20 PE3 questions in exam order, one try each, then the misses ---------- */
+const X = (code, title, more = {}) => ({ code, title, ...more });
+/* today's BANK_P3X shape: no twin / parent_template / exam_q; the exam position is only in the title */
+const titleBank = [
+  X("PHYS_Q11", "Quiz 11 Q1: hoop pulley"),
+  X("PHYS_T3", "X3 Q3 rectangle centre of gravity, practice"),
+  X("PHYS_T1", "X3 Q1 rod on two strings, practice"),
+  X("PHYS_W1", "X3 Q1 twin rod numbers"),
+  X("PHYS_K1", "X3 Q1 twist rod tension"),
+  X("PHYS_T2", "X3 Q2 rolling sphere, practice"),
+  X("PHYS_C", "X3 Q10-11 floating concept check"),
+  X("PHYS_T20", "X3 Q20 bulb ice to steam, practice"),
+];
+test("mockList, title fallback: the templates themselves, in exam order (X3 Qn), twins / twists / ranges / other items left out", async () => {
+  const { mockList } = await import("../shuffle.mjs");
+  assert.deepEqual(mockList(titleBank, "s"), ["PHYS_T1", "PHYS_T2", "PHYS_T3", "PHYS_T20"]);
+});
+/* the SCHEMA.md twin shape (twin a|b + parent_template), and exam_q preferred over the title */
+const twinBank = [
+  X("PHYS_T2", "rolling sphere", { exam_q: 2 }),
+  X("PHYS_T1", "X3 Q9 says the title, exam_q wins", { exam_q: 1 }),
+  X("PHYS_A1", "a", { twin: "a", parent_template: "PHYS_T1" }),
+  X("PHYS_B1", "b", { twin: "b", parent_template: "PHYS_T1" }),
+  X("PHYS_A2", "a", { twin: "a", parent_template: "PHYS_T2" }),
+];
+test("mockList, twin shape: exam_q orders; one twin of each template by hash(salt + n), stable for a salt; no twin -> the template", async () => {
+  const { mockList } = await import("../shuffle.mjs");
+  const a = mockList(twinBank, "s1");
+  assert.equal(a.length, 2);
+  assert.ok(["PHYS_A1", "PHYS_B1"].includes(a[0]), "Q1 plays a twin of its template");
+  assert.equal(a[1], "PHYS_A2", "Q2 has one twin");
+  assert.deepEqual(mockList(twinBank, "s1"), a, "a reload agrees");
+  const picks = new Set(Array.from({ length: 40 }, (_, i) => mockList(twinBank, "s" + i)[0]));
+  assert.deepEqual([...picks].sort(), ["PHYS_A1", "PHYS_B1"], "the salt picks a or b");
+  assert.deepEqual(mockList([twinBank[0], twinBank[1]], "s1"), ["PHYS_T1", "PHYS_T2"], "no twins: the templates");
+  assert.deepEqual(mockList([], "s"), []);
+});
+test("mockNext / mockAnswer: the list once in order, one graded first pick each, then the score and the misses in exam order, then done", async () => {
+  const { mockNew, mockNext, mockAnswer, mockOn } = await import("../shuffle.mjs");
+  const m = mockNew(["Q1", "Q2", "Q3", "Q4"]);
+  const seen = [];
+  for (const [c, ok] of [["Q1", true], ["Q2", false], ["Q3", null], ["Q4", true]]) {
+    const n = mockNext(m);
+    assert.deepEqual(n, { code: c, end: false });
+    assert.equal(mockOn(m, c), true, "the mock phase: no hints on " + c);
+    if (ok !== null) { assert.equal(mockAnswer(m, c, ok), true); assert.equal(mockAnswer(m, c, true), false, "only the first pick counts"); }
+    seen.push(c);
+  }
+  assert.equal(mockAnswer(m, "ZZ", true), false, "not a mock question");
+  const back = JSON.parse(JSON.stringify(m));                     // the saved queue round trip
+  assert.deepEqual(mockNext(back), { code: "Q2", end: true, score: 2, of: 4 }, "the score line comes with the first miss");
+  assert.equal(mockOn(back, "Q2"), false, "a miss comes back with the normal flow");
+  assert.equal(mockAnswer(back, "Q2", true), false, "the replay is not scored");
+  assert.deepEqual(mockNext(back), { code: "Q3", end: false }, "a skipped one is a miss");
+  assert.equal(mockNext(back), null, "then the normal queue");
+  assert.equal(back.done, true);
+  const clean = mockNew(["Q1"]); mockNext(clean); mockAnswer(clean, "Q1", true);
+  assert.deepEqual(mockNext(clean), { code: null, end: true, score: 1, of: 1 }, "no misses: the score, then the normal queue");
+  assert.equal(mockNext(clean), null);
+  assert.equal(mockOn(null, "Q1"), false);
 });

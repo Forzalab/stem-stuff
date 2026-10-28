@@ -149,7 +149,7 @@ try {
     assert.equal(await page.evaluate(() => window.__ov), 0, "an overlay for a drop with no level up");
     assert.equal(await page.$$eval(".fx-slots", e => e.length), 0, "reels outside a level up");
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
-    assert.match(await page.textContent("#sr"), /Correct\. Plus \d+ XP\. QUACK! Brain \+1\./);
+    assert.match(await page.textContent("#sr"), /Correct! \+\d+ XP\. QUACK! Brain \+1\./);
     await quiet(page);
   });
 
@@ -212,7 +212,7 @@ try {
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the link hides them");
     await d.click("#rot .rot-link");
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the link brings them back");
-    assert.match(await d.textContent("#origHd"), /Similar solution steps/);   // T1 variant A: a button that says what you get
+    assert.match(await d.textContent("#origHd"), /Compare with a similar solution/);   // T1 variant A: a button that says what you get
     assert.match(await d.textContent("#origHd"), /Practice Exam 2, question 7/);  // the screen reader still hears which question
     assert.equal(await d.$eval("#origHd", b => b.tagName), "BUTTON");
     assert.equal(await d.isVisible("#orig .rw-free"), false, "the hint card steps aside while the sheet is open");
@@ -379,7 +379,7 @@ try {
     assert.equal(await seen("miss"), "3");
     await o.evaluate(() => { const k = Object.keys(localStorage).find(x => x.startsWith("stem-rw:")); const s = JSON.parse(localStorage.getItem(k)); s.streak = 2; s.lastBurst = Date.now(); localStorage.setItem(k, JSON.stringify(s)); });
     await go(o, "CALC1_R03"); await rig(o, [0.5, 0.99]); await pick(o, "a");
-    await tip("Yay, 3 ducks in a row! See your progress here.", "#rwHud .rw-star");
+    await tip("THREE STREAK! See your progress here.", "#rwHud .rw-star");
     assert.equal(await o.$$eval(".fx-toast", e => e.length), 0, "the onboarding line replaces the 3 cracked note");
     assert.equal(await seen("three"), "1");
     await oc.close();

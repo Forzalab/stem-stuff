@@ -13,7 +13,7 @@
   const SVGNS = "http://www.w3.org/2000/svg", PAD = 4;                         // a kept element's clear area reaches 4px past its box
   const DUCK = "M9 4.5a4 4 0 0 1 4 4c0 1-.3 1.8-.8 2.5H17c1.5 0 2.7-.8 3.3-2 .8 1 1.2 2.3 1.2 3.7 0 4-3.4 6.8-8 6.8H9c-3.3 0-5.5-2.2-5.5-5 0-1.8 1-3.3 2.4-4.2A4 4 0 0 1 9 4.5z";
   const ICON = { duck: DUCK, x: "M18 6 6 18M6 6l12 12", send: "M5 12l7-7 7 7M12 19V5" };   // index.html's i-duck / i-x / i-send paths
-  const LOST = "Hmm, I lost that thought. Try again?";                          // the authored line when /mini fails
+  const LOST = "Quantum ducks just made a mess.";                          // the authored line when /mini fails
   let cur = null;                                                               // { el, host, dim, keep, how, done }
 
   const node = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -56,10 +56,10 @@
     const head = node("div", "mini-h"), log = node("div", "mini-log"), chips = node("div", "mini-chips"), f = node("form", "mini-f");
     const x = button("mini-x", "Close", icon("x"));
     x.addEventListener("click", () => close("x"));
-    head.append(icon("duck"), node("p", "mini-ask", o.ask || "What are you thinking here?"), x);
+    head.append(icon("duck"), node("p", "mini-ask", o.ask || "What's on your mind?"), x);
     log.setAttribute("aria-live", "polite");
     const inp = node("input", "mini-in");
-    inp.type = "text"; inp.maxLength = 300; inp.autocomplete = "off"; inp.placeholder = "Your thought…"; inp.setAttribute("aria-label", "Tell Cluck");
+    inp.type = "text"; inp.maxLength = 300; inp.autocomplete = "off"; inp.placeholder = "Cluck up your thoughts here..."; inp.setAttribute("aria-label", "Tell Cluck");
     const go = button("mini-go", "Send", icon("send")); go.type = "submit";
     f.append(inp, go);
     let seq = 0;

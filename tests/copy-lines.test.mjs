@@ -47,8 +47,8 @@ test("every key an older repair.js reads stays a string", () => {
 });
 test("unchanged lines stay", () => {
   assert.deepEqual([R.intro.fallback, R.intro.alt, R.intro.welcome, R.why, R.check, R.next, R.skip],
-    ["QUACK. Let's walk it through, one step at a time.", "QUACK. Same idea, a different way in.", "Hi. Let's warm up together.",
-     "Why?", "Check", "Next", "Skip for now"]);
+    ["QUACK. Let's walk it through, one step at a time.", "QUACK. Let's waddle a different path!", "Ready to waddle through some forces?",
+     "Why is that?", "Check", "Next", "Skip for now"]);
 });
 test("signs pop (vet-pop-signs): Tony's words, the existing kaomoji in his slot", () => {
   const signs = POPS.filter(l => l.tag === "signs").map(l => l.text);

@@ -138,8 +138,8 @@ function vmark(box, id) {
   m.dataset.v = id; m.innerHTML = icon(id);
 }
 /* the words the screen reader hears (the page shows only the icon) */
-const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries for now. This one comes back around."
-  : r.verdict === "wrong" ? "Not yet. 1 try left." : "";
+const verdictWords = r => r.verdict === "correct" ? "Correct." : r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0) ? "Out of tries, fight it later."
+  : r.verdict === "wrong" ? "Not quite. One more try, I swear." : "";
 
 /* ================= markdown + TeX ================= */
 function renderMath(src, display) {
@@ -268,8 +268,8 @@ async function check(code, answer) {
 /* mirror of serve.py grade(): keep the two in step */
 const maxTries = p => p.tries ?? (p.type === "mc" && shown(p).length === 2 ? 1 : MAX_TRIES);   // serve.py max_tries(): 2-choice mc = ONE try, else two; a mode view keeps its count
 const all = p => p.type === "mc" && p.pick === "all";                              // checkboxes, graded as a set (design/CHOOSE-ALL.md)
-const FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math.";   // serve.py FIX_NUDGE
-const WRONG_MISS = "QUACK. Some taps are wrong. Check each row again.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
+const FIX_NUDGE = "All ducks almost in a row... check your math carefully.";   // serve.py FIX_NUDGE
+const WRONG_MISS = "QUACK. At least one ticked row is wrong.";   // serve.py WRONG_MISS (miss default: mode.mjs NONE_MISS)
 const squash = t => String(t).replace(/\s+/g, "").toLowerCase();
 function unitSig(u, t) {                                  // serve.py signature()
   if (u.type === "text") { if (!squash(t)) throw 0; return squash(t); }
@@ -329,6 +329,7 @@ function answerOf(u) {
 /* the hint the student sees for a reply: `spot` when record() let it through Jev's gate (r.shown), else the plain `hint`. gradeLocal's
    `spot` (slips.mjs slipSpot) passes the same gate (record() guards on r.spot) */
 const hintOf = r => r.shown === "spot" && r.spot ? r.spot : r.hint;
+const mockHold = () => !!window.stemMock?.on?.();             // the night-before mock (nav.js, W103b): one try, no hint, no reveal, no Cluck
 function gradeLocal(key, answer) {                        // multi: { part: i, answer } grades ONE part, with its own tries and lockout
   const multi = key.type === "multi", idx = answer.part;
   if (multi && !(Number.isInteger(idx) && idx >= 0 && idx < key.parts.length)) return { verdict: "invalid", triesLeft: maxTries(key) };
@@ -384,7 +385,7 @@ function gradeLocal(key, answer) {                        // multi: { part: i, a
   const tol = (multi ? key.parts[idx] : key).tol ?? 1e-6;
   const repeat = st.wrong.some(w => same(sig, w, tol));
   if (!repeat) st.wrong.push(sig);
-  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "QUACK. Put your answer back in. Does it work?") };
+  const out = { verdict: "wrong", triesLeft: left(), hint: hit && hit.hint ? hit.hint : (key.nudge || "Time to consult the duck oracle.") };
   if (hit && hit.error) out.error = hit.error;
   if (hit && hit.struck) out.struck = hit.struck;
   if (hit && hit.fixWrong) out.fixWrong = hit.fixWrong;
@@ -513,7 +514,7 @@ $("#entry").addEventListener("submit", e => {
   if (!n) { entryMsg("Whoops, that's not a valid code! Try CALC1_T6B instead."); codeIn.focus(); return; }
   codeIn.blur();
   const done = n.prefix === "BANK" ? openBank(n.code) : load(n.code);
-  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Original questions on." : "Easy questions on."); });
+  if (mp) done.then(() => { modeFlip = false; say(mp.mode === "diet" ? "Originals are on." : "Easy mode is on."); });
 });
 let modeFlip = false;   // the mode just changed: reopen even what is already open (its view differs)
 window.stemBrainrotWanted = () => modeOf() === "sugar" && !!S && !!S.prob.wish;   // brainrot.js: sugar questions with a layer only
@@ -601,7 +602,7 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   } catch (e) {
     const inc = reqInc("bank", path, t0, e === r ? { r, tp } : r ? { e, phase: "parse", tp } : { e, tp });
     if (!quiet) {
-      entryMsg(timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
+      entryMsg(timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Failed to load.", "bad", inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
       retryLoad.hidden = false; retryLoad.onclick = () => openBank(code, { go });
     }
     return false;
@@ -656,7 +657,7 @@ async function load(code) {
     }
   }
   catch (e) {
-    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Didn't load. Tap Try again.", "bad", e.status === 404 ? null : e.inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
+    entryMsg(e.status === 404 ? deadCode(code) : timedOut(e) ? "Loading timed out, that's on me (╥﹏╥)" : "Failed to load.", "bad", e.status === 404 ? null : e.inc);   // the kaomoji: Tony #36 [[sad kaomoji]], OK'd Oct 26
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
@@ -748,8 +749,8 @@ function renderQuestion() {
             : `<span class="badge" aria-hidden="true">${LETTERS[i]}</span>`}<span class="txt">${md(c.md, true, true)}</span>
         </button>
         ${many ? "" : `<button type="button" class="btn btn-go send" aria-label="Check ${LETTERS[i]}" hidden>${icon("i-go")}</button>`}
-        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Type the right answer")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
-          data-how="${esc(p.fix.how || "Type the right answer")}" placeholder="${esc(p.fix.how || "Type the right answer")}"></div>` : ""}
+        ${p.fix && many && !c.lock ? `<p class="fix-how" id="fh${i}" hidden>${esc(p.fix.how || "Enter your answers here...")}</p><div class="ff fix" hidden><input class="ans" type="text" aria-label="Right answer for ${LETTERS[i]}" ${INPUT_ATTRS}
+          data-how="${esc(p.fix.how || "Enter your answers here...")}" placeholder="${esc(p.fix.how || "Enter your answers here...")}"></div>` : ""}
       </div>`).join("")}</div>${many ? `<div class="chk"><button type="button" class="btn btn-go send" id="mcGo" aria-label="Check" disabled>${icon("i-go")}</button></div>` : ""}`;
     q.querySelectorAll(".opt").forEach(o => o.setAttribute("aria-label", `${o.dataset.l}: ${o.querySelector(".txt").textContent.trim()}`));
     wireMC(q);
@@ -769,7 +770,7 @@ function renderQuestion() {
   } else {
     const v = p.var || "x";
     const lead = p.type === "expr" ? `<span class="lead" aria-hidden="true">${renderMath(`f(${v}) =`, false)}</span>` : "";
-    const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Like 9/2, sqrt(3), dne" : "";
+    const ph = p.type === "expr" ? "Use " + v + " in your answer" : p.type === "num" ? "Ex: 9/2, 5e-4, sqrt(3), dne" : "";
     q.innerHTML = `${howLine(p)}<div class="ff" id="ff">${lead}
         <input id="ans" class="ans" type="text" aria-label="${p.type === "expr" ? `Answer: f(${v})` : "Answer"}"${p.how ? ' aria-describedby="how"' : ""}
           ${INPUT_ATTRS} placeholder="${ph}">
@@ -870,7 +871,7 @@ const INPUT_ATTRS = 'inputmode="text" autocomplete="off" autocorrect="off" autoc
 let howAt = null;
 const howLine = p => {
   let h = p.how;
-  if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick every true one.";
+  if (!h && all(p) && modeOf() === "sugar" && (howAt ??= p.code) === p.code) h = "Tick all true options.";
   return h ? `<p class="how" id="how">${md(h, true)}</p>` : "";
 };
 const off = () => window.stemOffline && window.stemOffline.has(S.code);
@@ -1206,8 +1207,8 @@ function partFeedback(i, r, typed) {
   let h = "";
   if (r.verdict === "wrong" && !S.parts[i].shut) { box.classList.add("bad"); go.hidden = true; vmark(box, "i-x"); }   // the box says it: no words
   else if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   if (hintOf(r)) {
     const hintWithQuack = quackHint(hintOf(r), S.code + ":part" + i + ":" + S.tries.length);
     h += `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
@@ -1248,6 +1249,7 @@ function settle() {
 
 /* ---------- attempts, feedback ---------- */
 function record(a, r) {
+  if (mockHold() && r.verdict === "wrong") { r.triesLeft = 0; delete r.hint; delete r.spot; delete r.correct; }   // one try (W103b): the wrong closes it
   const t = Date.now();
   /* "pending" is not a server verdict; the payload schema allows it for pre-server tries (COPY-PAYLOAD.md) */
   S.tries.push({ t, ...a, v: r.verdict });
@@ -1417,9 +1419,9 @@ function pips(r, el, pos) {
 }
 const pipsAt = () => $("#mcGo") ? [$("#mcGo"), "beforebegin"] : S.prob.type === "mc" ? [$("#q .choices"), "afterend"] : [$("#ff"), "afterend"];   // single pick has no Check: under the rows
 /* the retry tag (round 7 PICKER 9: retry-tag "Agreed" on the shadcn 6px shape): a re-showing says so at the top of the card, so a blank card
-   never reads as lost work. Owes a miss = Second chance, else Review; once closed: Redeemed / Reviewed, or Comes back later. No "+3" until
+   never reads as lost work. Owes a miss = Pity roll, else Review; once closed: Avenged! / Reviewed, or Comes back later. No "+3" until
    D60 pays it. No lockout sub-lines (Tony, Oct 17: drop). */
-const RTAG = { owe: ["Second chance", "i-back"], won: ["Redeemed", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
+const RTAG = { owe: ["Pity roll", "i-back"], won: ["Avenged!", "i-ok"], review: ["Review", "i-back"], kept: ["Reviewed", "i-ok"], out: ["Comes back later", "i-back"] };
 function retryTag() {
   const t = $("#rtag"), r = window.stemRedo.get(), on = !!S && !!r && r.codes.includes(S.code);
   const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
@@ -1471,7 +1473,7 @@ function cueNext() {
   nx.addEventListener("click", e => {
     e.stopPropagation();
     const n = $("#qnext");
-    if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No other question to open here." } })); return; }
+    if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
     n.click();                                                                   // nav.js go(1): the same queue as the bar's Next
   });
   const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
@@ -1527,8 +1529,9 @@ function reveal(r, part) {
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
 }
-/* the duck chip (sugar, questions with Cluck's key only): right = "Compare with Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
+/* the duck chip (sugar, questions with Cluck's key only): right = "See Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
+  if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
   if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
   if (!still && wish.nod == null) { if (cueRight()) wish.nod = nodGate(); else { wish.nod = false; nodMiss(); } }
@@ -1557,8 +1560,8 @@ function feedback(r, typed) {
   else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
-  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved. Tap Copy to send Tony.</span>${incHTML(r.inc)}</p>`;
-  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Too slow. Tap Try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
+  else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
+  else if (r.verdict === "timeout") h = `<p class="verdict wait">${icon("i-wait")}<span>Timeout! Tap to try again.</span>${incHTML(r.inc)}<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button></p>`;
   /* out of tries: no words on the page (Q13). The lock, the struck rows / box and Next in the Check slot say it; the screen reader hears verdictWords */
   let quackHtml = "";
   if (hintOf(r)) {
@@ -1596,7 +1599,7 @@ let wish = null;   // { code, text, started, done, open, failed, ctl, off }
 /* a plain 503 from /explain (no X-Incident) = no AI key on this server (a preview deploy, Oct 26): Cluck is off for this page load. No more
    Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
 let cluckOff = false;
-const CLUCK_OFF = "Cluck is off on this version of the site.";              // COPY-PENDING
+const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-PENDING
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
    sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
@@ -1640,6 +1643,7 @@ function wishReset() {
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
 /* One text source: the box always shows the live /explain stream (saccharine.narration is no longer read here). */
 function wishOnWrong() {
+  if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.prob.wish || cluckOff) return;       // only questions with a presolved key; no key on the server: no entry
   if (wish && wish.code === S.code) { wishPaint(); return; }               // a later miss redrew the hint card: Cluck's peek goes back in
   wish = newWish();
@@ -1775,7 +1779,7 @@ const WCARET = '<span class="wcaret" aria-hidden="true"></span>';
 /* the wait (Tony, Oct 18): a wish now waits for a draft AND its rewrite (serve.py EDITOR), so until the first chunk Cluck says what he's up
    to, one line every WISH_SWAP ms from a random start, the caret after it; each line fades in (reduced motion: swaps, no fade). The lines are
    aria-hidden: the screen reader hears "Cluck is thinking." once. */
-const WISH_LINES = ["Making a duck omelette…", "Ducking in the pond…", "Fluffing feathers…", "Counting breadcrumbs…", "Quacking the numbers…", "Polishing the lamp…"];
+const WISH_LINES = ["Whipping up a duck omelette…", "Splashing in the pond…", "Fluffing feathers…", "Counting breadcrumbs…", "Quacking the numbers…", "Shining up the lamp…"];
 const WISH_SWAP = 1600;
 function wishCut(t, n, done) {                                            // n chars, moved to a word end; a half-open $..$ or **..** waits
   n = Math.min(t.length, Math.ceil(n));
@@ -1815,11 +1819,11 @@ function wishFrame(now) {
   if (w.done && !t && (w.failed || w.capped)) {                           // nothing came: say so in the sheet (the chip sits under it on a phone)
     if (w.drawn !== -2) {
       if (w.off) $("#cluck .cl-ft").hidden = true;                          // no ask field: /chat has no key either
-      x.innerHTML = w.off ? `<div class="wl">${CLUCK_OFF}</div>` : w.failed ? `<div class="wl">Cluck didn't load. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
-        : `<div class="wl">Cluck is out of wishes for this hour. Try again later.</div>`;
+      x.innerHTML = w.off ? `<div class="wl">${CLUCK_OFF}</div>` : w.failed ? `<div class="wl">Couldn't load Cluck. <button type="button" class="wretry">Try again</button>${incHTML(w.inc)}</div>`
+        : `<div class="wl">Oh duck, Cluck is tired! Come back later.</div>`;
       w.drawn = -2;
       x.querySelector(".wretry")?.addEventListener("click", e => { e.stopPropagation(); wishRetry(w); wishDraw(); });
-      say(w.off ? CLUCK_OFF : w.failed ? "Cluck didn't load." : "Cluck is out of wishes for this hour.");
+      say(w.off ? CLUCK_OFF : w.failed ? "Couldn't load Cluck." : "Cluck is out of wishes for this hour.");
     }
     x.classList.remove("wrun"); return;
   }
@@ -1862,7 +1866,7 @@ function peekText() {                                                       // t
     if (s.offsetHeight !== h) layoutFreeze();
   });
 }
-/* E1 LOCKED (Tony, Oct 13: T2, "ok but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
+/* E1 LOCKED (Tony, Oct 13: T2, "okay, but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
    no fill at rest or pressed (NO NESTED BOX), pressed = the label turns --help and the duck tilts once. T35 may host it in an AI preview card */
 const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
@@ -1874,7 +1878,7 @@ function wishPaint() {
     clBackSync(); return;
   }
   const off = sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
-    : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Similar solution steps" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
+    : !!origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
   el.hidden = off;
   const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
@@ -1882,15 +1886,15 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "Compare with Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
-    if (!off) (host || el.querySelector(".cluck > div")).insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("ok but how?", w.open)}</div>`);
+    if (!off) (host || el.querySelector(".cluck > div")).insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
     el.hidden = off || !!host;
   } else {
-    const label = !w.started ? "Explain my mistake" : "Didn't load. Tap to try again";
+    const label = !w.started ? "Explain my mistake" : "Oops, didn't load. Tap to try again.";
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
   const btn = document.querySelector("#wish .wchip, .cl-peek .cl-cta");
@@ -1902,7 +1906,7 @@ function wishPaint() {
     else if (w.open) { clClose(); return; }
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
   });
-  clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "ok but how?" up = no "Show him" row
+  clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
@@ -2062,10 +2066,10 @@ const HK_IDLE = ["Cluck's bathing in the sunshine", "Cluck's waiting for breadcr
   "Cluck's paddling in place", "Cluck's counting ripples", "Cluck's practicing his waddle", "Cluck's taking a quick dip",
   "Cluck's bobbing for snacks", "Cluck's preening, back soon", "Cluck's on a pond break", "Cluck's getting his ducks in a row"];
 const HK = {                                                                // the A/B by humour kind: one kind per device (hkKind)
-  sassy: ["Cluck is pretending not to watch", "Cluck has notes. Many notes.", "Cluck saw that. Just saying.", "Cluck is waiting. Patiently. Mostly.", "Cluck could explain, if asked"],
-  deadpan: ["Cluck is still here", "Cluck has an explanation", "Cluck is available", "Cluck remains a duck", "Cluck is on standby"],
-  duck: ["Cluck knows ducks don't cluck", HK_IDLE, "Cluck is sitting on an answer", "Cluck promises not to quack", "Cluck is floating nearby"],
-  nerd: ["Cluck is at rest, potential energy high", "Cluck is in a superposition of helpful", "Cluck has a derivation ready", "Cluck is waiting for a nonzero input", "Cluck is converging on an answer"],
+  sassy: ["Even ducks need a rest frame.", "Cluck's got lots of wisdom. One click and it's yours.", "Gravity's keeping us grounded here.", "Cluck waits for your next rub.", "Cluck's always here for you."],
+  deadpan: ["Cluck's still here, quack!", "Cluck's got the answer", "Cluck's here if needed", "Cluck remains a duck", "Cluck's on standby"],
+  duck: ["Cluck knows ducks don't cluck", HK_IDLE, "Cluck can hatch eggs. And hints, too.", "Cluck zipped his beak", "Cluck is nearby, floating"],
+  nerd: ["Cluck's resting with energy", "Feathered forces at work.", "The answer is... spaghetti waves?", "Cluck's polling for input...", "Gravity: still pulling for you."],
 };
 const HK_DEF = "deadpan";                                                   // no telemetry id (off, DNT / GPC, no key): this kind, nothing recorded
 const hkForced = (() => {                                                   // QA: #hk=<kind> (alone or after a code) or ?hk=<kind>, read once; the hash
@@ -2095,14 +2099,14 @@ function hkShow(b, roll) {
   t.textContent = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l;
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
-function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "ok but how?" or "Compare with Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
+function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
 function clBackSync() {
-  const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "ok but how?" wins
+  const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
   let b = $("#clBack");
   if (!show) { if (b) b.hidden = true; hkStop(); return; }
   if (!b) {
     b = document.createElement("button"); b.type = "button"; b.id = "clBack"; b.className = "cl-back"; b.hidden = true;
-    b.setAttribute("aria-label", "Show Cluck's explanation");
+    b.setAttribute("aria-label", "See Cluck's explanation");
     b.innerHTML = `${icon("i-duck")}<span class="hk" aria-hidden="true"><span class="hk-t"></span></span><span class="hk-go" aria-hidden="true">Show him</span>`;
     b.addEventListener("click", clBack);
   }
@@ -2205,7 +2209,7 @@ function clAsk(build) {
   cl.el.classList.toggle("wbusy", !!w && w.busy);                          // the field's rim turns while Cluck answers
   if (!w) { ft.innerHTML = ""; return; }
   const left = w.out ? 0 : CHAT_TURNS - w.chat.filter(t => t.role === "user").length;
-  if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>That's ${CHAT_TURNS} questions on this one. On to the next!</p></div>`; return; }
+  if (left <= 0) { ft.innerHTML = `<div class="done-row"><p>Classic Cluck, wound down at ${CHAT_TURNS}. On to the next one.</p></div>`; return; }
   if (build || !ft.querySelector(".ask")) {
     ft.innerHTML = `<form class="ask"><label class="ff"><span class="sr-only">Ask Cluck about a step</span><textarea rows="1" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Ask Cluck about a step"></textarea></label><span class="left"></span><button type="submit" class="send" aria-label="Send">${icon("i-send")}</button></form>`;
     const f = ft.querySelector(".ask"), inp = f.querySelector("textarea");   // inp: the typed fields' Enter (STYLE.md §5 list), no new shortcut
@@ -2233,7 +2237,7 @@ function askFit(ta) {
   ta.style.height = Math.min(h, max) + "px";
   ta.style.overflowY = h > max + 1 ? "auto" : "hidden";
 }
-/* "Compare with Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
+/* "See Cluck's steps" after a miss, then a right try (Tony, Oct 26): the sheet's text explains the miss, so Cluck's solution for the
    right answer comes as a NEW message under it (the miss stays above as history), typed like a chat reply and scrolled into view inside the
    sheet (the page does not move). One /explain (not auto) per right answer, cached like the box text; a re-press scrolls to it. Not in the
    chat history (that alternates turns) */
@@ -2266,7 +2270,7 @@ async function clCompare(w) {
   if (wish !== w) return;
   const ok = !!r && r.ok && ty.text.trim() && !inc;
   if (ok) { ty.done = true; await typed; if (wish !== w) return; ckPut(key, ty.text); top(box); say(speakable(stripFigs(ty.text))); }
-  else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
+  else { ty.off = true; w.cmp = null; re.innerHTML = wishHTML(r && r.status === 429 ? "Oh duck, Cluck is tired! Come back later." : "Didn't load. Tap Compare to try again.") + incHTML(inc); }   // COPY-PENDING: the Compare retry line
   w.busy = false; clAsk();
 }
 async function clSend(msg) {
@@ -2307,7 +2311,7 @@ async function clSend(msg) {
   if (err) {
     w.chat.pop();                                                          // not answered: it does not count
     if (err === "limit") { w.out = true; box.remove(); }
-    else re.innerHTML = wishHTML(err === "hourly" ? "Cluck is out of wishes for this hour. Try again later." : "Didn't load. Try asking again.") + incHTML(inc);
+    else re.innerHTML = wishHTML(err === "hourly" ? "Oh duck, Cluck is tired! Come back later." : "Oops, didn't load. Ask again?") + incHTML(inc);
   } else { w.chat.push({ role: "assistant", content: text }); say(speakable(stripFigs(text))); }
   clAsk();
   re.scrollIntoView({ block: "nearest" });
@@ -2382,9 +2386,9 @@ function origRender() {
   /* T1 (Tony, Oct 4, picked variant A "Free hint card"; Oct 5: two words, no tagline, "it looks and feels ai-ish/extraneous"): it read as a
      topic bar, so it is a filled casino button. FREE floats over its chevron corner, after the button in the DOM so it paints on top, only
      while opening it costs nothing (level 3 = folded after a solve: looking again before answering is a peek) */
-  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Similar solution steps</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
+  el.innerHTML = `<button type="button" class="orig-hd rw-skin rw-hint" id="origHd" aria-expanded="false" aria-controls="cluck">${HINT_BULB}<span class="rw-hint-tx"><span class="rw-hint-t">Compare with a similar solution</span><span class="sr-only">Practice Exam 2, question ${esc(o.q ?? "")}.</span></span><span class="rw-hint-chev" aria-hidden="true">${icon("i-down")}</span></button>${lvl < 3 ? '<span class="rw-skin rw-free" aria-hidden="true">FREE</span>' : ""}
     <div class="orig-body" id="origBody">${sol.length ? `<ol class="orig-sol">${sol.map((l, i) =>
-      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(markNums(l, C.olds), true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Show last step (this one pays 2 XP)</button>' : ""}
+      `<li${lvl === 2 && i === sol.length - 1 ? " hidden" : ""}><span>${md(markNums(l, C.olds), true)}</span></li>`).join("")}</ol>` : ""}${lvl === 2 && sol.length ? '<button type="button" class="btn btn-label orig-peek">Peek the last step (costs ~15XP)</button>' : ""}
     <p class="orig-h">The exam question</p><div class="orig-q"></div></div>`;   // steps first: the fun part in one look (Oct 5 review)
   const q = el.querySelector(".orig-q");
   for (const [i, b] of o.body.entries()) {
@@ -2448,7 +2452,7 @@ async function rewardShow(mine, res) {
   if (rwSeen(coin)) { fx.coinFly && fx.coinFly(at, coin, Math.min(8, Math.max(2, Math.round(res.xp / 2)))); fx.shine && fx.shine(coin); }
   const held = mine.rwHeld || 0; mine.rwHeld = 0;
   fx.hud ? fx.hud(() => RW().render(res.xp + held)) : setTimeout(() => RW().render(res.xp + held), 675);   // the +1s held back count up with it; fx.js: in the HUD step (one blink)
-  say(`Correct. Plus ${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
+  say(`Correct! +${res.xp} XP.${res.levelUp ? ` Level ${res.level}.` : ""}${res.line ? " " + res.line : ""}${res.sub && res.sub !== "+50 XP" ? " " + res.sub : ""}`);
   if (!res.drop && res.burst !== "levelup" && !res.streakNote) { if (mine.rwBack) comeback(); else if (!mine.prob.dead) setTimeout(() => rwTip("right", $("#rwCoin")), 1050); return; }
   /* flow C (Tony, Oct 21): one beat per answer, at most one overlay. A level up is the only overlay, with the slot reels spinning inside
      it when the same answer dropped; any other drop (WIN / BONUS / LEGEND) or a streak note is the banner (LEGEND: gold + small confetti) */
@@ -2468,10 +2472,10 @@ async function rewardShow(mine, res) {
    The miss beat speaks 3 times: the plain line, then two humor lines (Tony: "as we got used to ui already"), then never again.
    It never stacks: a toast already up wins and the beat waits for the next time. A piece not on screen (C1: the count is hidden at 0)
    waits too, uncounted. */
-const RW_OB = { right: ["Points always go up and never let you down."], three: ["Yay, 3 ducks in a row! See your progress here."],
+const RW_OB = { right: ["Points always go up and never let you down."], three: ["THREE STREAK! See your progress here."],
   miss: ["Did an oopsie or two? Your progress is safe!", "Double whammy! That's OK, happens to the best of us.", "They say third time's the charm, QUACKK—"],   // copy: Tony, Oct 15 22:5x PT (his emoji left out: STYLE §4); lines 1 + 3 Tony #36, line 2 Tony, Oct 26
-  redo: ["Sometimes you get to redo a question!"] };                                // Tony, Oct 19: say it the first time a miss comes back
-/* the redo beat: a Redeem showing (a past miss back, the "Second chance" tag) opens unanswered; caret on the tag. Before the first
+  redo: ["Gravity pulled you back for review."] };                                // Tony, Oct 19: say it the first time a miss comes back
+/* the redo beat: a Redeem showing (a past miss back, the "Pity roll" tag) opens unanswered; caret on the tag. Before the first
    answer only, so it never meets the one-more-try note or the Comeback toast */
 function rwRedoTip() {
   const r = window.stemRedo.get();
@@ -2488,7 +2492,7 @@ function rwTip(beat, at) {
 /* a redo round's right answer on a past miss: a toast, no XP (the code paid once already; nothing to farm) */
 function comeback() {
   const fx = FXL();
-  if (fx.toast) { hideToast(); fx.toast("Comeback!", "Missed it before. Got it now."); }
+  if (fx.toast) { hideToast(); fx.toast("HONK HONK. Spacetime just applauded.", "Energy bounced BACK, quack!"); }
   say("Comeback. Missed it before, got it now.");
 }
 
@@ -2566,7 +2570,7 @@ async function copyPad() {
   const ok = await copyText(payload);
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Didn't copy. Try again.");
+  say(ok ? "Copied." : "Copy failed. Try again.");
   setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 1600);
 }
 $("#copy").addEventListener("click", copyPad);
@@ -2577,7 +2581,7 @@ document.addEventListener("click", async e => {
   const ok = await copyText([...b.closest(".cb").querySelectorAll(".l")].map(l => l.textContent).join("\n"));
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
-  say(ok ? "Copied." : "Didn't copy. Try again.");
+  say(ok ? "Copied." : "Copy failed. Try again.");
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
@@ -2603,6 +2607,7 @@ function dockRoom(evenAway) {
 }
 let stripRoom = 24;
 function barOpen(open) {
+  open = open && dockMQ.matches;                             // the phone / touch strip's state only: on desktop bar-open would park the docked corner (W101, LEAKS L1)
   root.classList.toggle("bar-open", open);
   if (open && root.classList.contains("bar-mini")) root.style.setProperty("--bar-over", Math.max(0, dock.offsetHeight - stripRoom) + "px");
   barTab.setAttribute("aria-expanded", open);
@@ -2658,7 +2663,7 @@ function layoutDock() {
   if (!S) root.style.setProperty("--kb-top", kb && inDock && vv ? Math.max(0, vv.offsetTop) + "px" : "0px");
   root.style.setProperty("--dock-h", bottom ? dockRoom(true) + "px" : "0px");
 }
-if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { layoutDock(); layoutFreeze(); });
+if (dockMQ.addEventListener) dockMQ.addEventListener("change", () => { barOpen(dock.contains(document.activeElement)); layoutDock(); layoutFreeze(); });   // W101: to the strip while typing the code: it opens with the box; to the desktop bar: no bar-open
 new ResizeObserver(() => layoutDock()).observe(dock);
 
 function layoutFreeze() {
@@ -2974,7 +2979,7 @@ function openMT() {
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Tap to switch question / answer.", mtMode), 400);
+  setTimeout(() => obToast(2, "Switch question/answer here.", mtMode), 400);
 }
 let mtSkipPop = false;
 function shutMT() {
@@ -3055,8 +3060,8 @@ function fabSync() {
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
   if (!show) return;
   fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
-  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Tap here to write notes.", fab), 700); }
-  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move this button.", fab), 700);
+  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Quack up your thoughts here...", fab), 700); }
+  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move me!", fab), 700);
 }
 function fabBounds() {
   const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;
@@ -3165,6 +3170,7 @@ const hashCode = () => location.hash.length > 1 ? normalizeLink(decodeURICompone
 const fromHash = () => {
   const n = hashCode();
   if (!n) { if (location.hash.length > 1) note(`Quack, can't open ${location.hash.slice(1, 40)}.`); return; }   // a #code that is no code (T16: said, not silent)
+  if (n.prefix !== "BANK" && S && S.code === n.code && window.stemMock?.again?.(n.code)) return load(n.code);   // the mock starting on the open X3 Q1 (nav.js, W103b): its fresh round
   if (n.prefix === "BANK") { if (!bank || bank.code !== n.code) return openBank(n.code); }
   else if (!S || S.code !== n.code) return load(n.code);
 };
