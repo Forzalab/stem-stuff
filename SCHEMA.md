@@ -67,7 +67,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `code` | all | `CALC1_K4M` | yes |
 | `title` | all, optional | brief plain-text title for the question list (≤ 60 chars, never the answer) | yes |
 | `tag` | all, optional | the physics idea the item drills, one of `momentum`, `energy`, `forces`, `signs`, `circular`, `rotation`, `units`: pops pick their lines by it (Tony #29.4). Not `topic`, which names the bank `topics` entry whose `tol` the item inherits | yes |
-| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own | yes |
+| `type` | all | `num` one value · `expr` a function of `var` · `text` a word/phrase/code typed exactly · `mc` pick one choice · `multi` 2–4 answer boxes, each graded on its own · `proof` a whole written proof, graded by Cluck (see "Proof items") | yes |
 | `body` | all | array of blocks, stacked top to bottom in any order and repeatable | yes |
 | `how` | `text`, `multi` (required); others optional | **how to type the answer**, shown right above the answer box: "Type TRUE or FALSE.", "Two decimals, in the order asked.", "Type the condition, like `if (x && y)`." | yes |
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
@@ -87,6 +87,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `welcome` | all, optional | `true` on the bank's one welcome Q1 | yes |
 | `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
 | `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
+| `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
 | `repair` | all, optional | the repair ladder `{ steps, alt? }`, served by `GET /repair/<code>` after a recorded wrong try (`alt` only after a twin miss) | **no** |
 
 **Never put the answer in `body`, a graph's `alt`, `title`, `how`, a part's `prompt`, a choice's text beyond the choice itself, or a hint.**
@@ -105,7 +106,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 - Keep the worksheet's wording. Put the needed rule lines (fuzzy NOT/AND/OR, what □ means) in the body of the problems that need them.
 
 ## Grading (server `POST /check`, or in the browser for an uploaded file)
-- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**. There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
+- **Tries by choice count** (Tony, locked): a 2-choice `mc` gets **ONE** try (one wrong answer locks it); an `mc` with 3 or more shown choices gets **TWO**; `num`/`expr`/`text` get TWO; a `multi` gets TWO **per part**; a `proof` gets **THREE** Checks (Tony, Oct 27). There is no separate T/F type: TRUE/FALSE is a 2-choice `mc`. `serve.py` `max_tries()` and `app.js` `maxTries()` are the same rule (tests pin both). A repeat of the same wrong answer, or text that can't be read, does not count.
 - `mc`: the answer is the choice id. `num`/`expr`: the typed value must equal `answer` within `tol` **or to 3 significant figures** (Tony, Oct 3; the prompt asks for at least 4. $15.59$ counts for $9\sqrt3$; `expr`: at every point in `points`); `dne` matches only `"dne"` / "does not exist".
 - `text`: compared after lower-casing and removing all spaces, against `answer` and every `accept` entry. So `if(!a||b)` = `if (!a || b)`, `modus tollens` = `MODUS TOLLENS`.
 - `multi`: **each part is graded alone.** `POST /check` takes `{ code, part: i, answer }` (`i` = 0 for a, 1 for b...) and the reply carries `part: i`. Each part has its own tries (the `num`/`expr`/`text` rule: TWO), its own repeat check and its own lockout, keyed by (browser, code, part): a part locks by itself when its tries run out and never locks the others. The old whole-set body `{ parts: [...] }` is not accepted (`invalid`). Every box has its own inline submit arrow, off while that box is empty; Enter in a box submits that box. A right part turns green and read-only; a wrong part shows the hint of the first of *its own* `wrong` entries it matched, else the problem `nudge`, else the default nudge. The problem is finished when every part is right or locked, and counts as correct only if every part is right.
@@ -113,6 +114,21 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 - Reply: `{ "verdict": "correct" | "wrong" | "invalid" | "locked", "triesLeft": 1, "gen": 7, "error"?: "sign", "hint"?: "QUACK. ...", "families"?: ["op-swap", "sign"] }`. `families` is on a `correct` reply only: the item's distractor error families, sorted, no choice map (J6 trap_beaten; on device, never sent on to analytics). The answer is never sent, with ONE exception (T19, Tony Oct 12): in SUGAR mode only, the reply that shuts a question out of tries (and any later `locked` reply, and `/state` for it) carries `correct` (mc: the right id, pick all: the ids, num: the value to 4 figures, text/expr: the authored answer; a multi: that part's). Never before lockout, never in diet (serve.py `answer_of`, `dispatch`; app.js `gradeLocal` for an upload). The page shows it as the green right row / an "Answer" line, and a revealed question pays 0 XP and stays a miss. Also sugar only: a pick-all `wrong` reply whose ticks are all right carries `kept` (the ticked ids, sorted; never an unticked one, never alongside a false tick), so the page can keep those rows (design/CHOOSE-ALL.md §4).
 - `GET /state/<CODE>` (same cookie): `{ "wrong": 1, "done": false, "gen": 7 }`. Tries live in `tries.json` and survive a restart; `gen` lets the page tell a hand reset from a lost file (design/DONE.md).
 - Shuffle: the server seeds it from the browser's cookie + the code; an uploaded file seeds it from a random id kept in this browser. Letters A–E follow the shown order; the answer sent is always the choice id.
+
+## Proof items (W107, Tony Oct 27)
+A `proof` item asks for a whole written proof (induction first). The page shows one tall text box (Enter is a new line) and Check; after a Check, three chips under the box, one per rubric row, and Cluck's hint for the first row that is not ok.
+
+```json
+{ "code": "CSCI26_PRA", "type": "proof", "body": [ ... ], "how": "Write the base case, then what you assume for $k$, then prove it for $k+1$.",
+  "proof": { "reference": ["Base case: ...", "", "Assume: ...", "", "Prove: ..."],
+             "rubric": [ { "id": "base", "need": "Checks n = 1 ..." }, { "id": "assume", "need": "..." }, { "id": "prove", "need": "..." } ],
+             "keys": ["(k+1)(3k+4)"], "hints": { "base": "QUACK. ...", "assume": "QUACK. ...", "prove": "QUACK. ..." } } }
+```
+
+- Grading is **casual** (Tony: "only need to have base and induction {assume, prove} steps"): exactly three rows, `base`, `assume`, `prove`, in that order; no conclusion row; form and notation never count against the student. `POST /check {code, answer}` sends the proof to Cluck's grader (`serve.py` `proof_grade` / `proof_judge`: ONE JSON-schema call, OpenRouter with zero data retention, the proof fenced in a random tag, e-mail / phone shapes blanked, outside the tries lock). Each row comes back `ok`, `missing` or `wrong`; all three ok = `correct`.
+- Reply: `{ verdict, triesLeft, gen, rubric: {base, assume, prove}, gap?, hint? }`. `gap` is the first row that is not ok; `hint` is the grader's line for it, unless it leaks one of `keys`, trips the leak guard, or reads above Flesch-Kincaid grade 5 (the words after the `QUACK.` tag): then the item's own `hints[gap]`. The same proof again (spaces and case aside) is a `repeat`: no try, no call. `busy` (with `why`: `off` no key, `hourly` the shared Cluck cap, `upstream` / `budget` a failure with its `inc` code) never uses a try. Sugar lockout carries `correct` = the reference proof (T19); diet never does.
+- `reference`, `rubric`, `keys` and `hints` never leave the server. The proof text never goes in a log or incident line; telemetry's owner-device `typed` field is null for a proof. An uploaded file cannot grade a proof on the device (`busy`, `why: "upload"`).
+- Authoring: every student-facing line (the reference, each hint) reads at Flesch-Kincaid grade 5 or below (Tony: grade 2 to 5; `serve.fk_grade`). Every item ships a full reference proof that a second pass has checked (sympy for the algebra).
 
 ## Wrong answers and hints
 Author in this order:
@@ -532,6 +548,19 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "s_text": {"type": "object", "required": ["mark", "at", "text"], "additionalProperties": false, "properties": {"mark": {"const": "text"}, "color": {"$ref": "#/$defs/color"}, "dash": {"type": "boolean", "default": false}, "label": {"$ref": "#/$defs/label"}, "anchor": {"$ref": "#/$defs/anchor"}, "at": {"$ref": "#/$defs/pt"}, "text": {"$ref": "#/$defs/label"}}},
     "error": {"enum": ["sign", "op-swap", "order-ops", "arithmetic", "algebra", "off-by-factor", "units", "deg-rad", "chain-rule", "product-rule", "quotient-rule", "power-rule", "limit-plug", "domain", "components", "misread", "incomplete", "other", "fallacy", "quantifier", "negation", "counting", "off-by-one", "format"]},
     "cluck": {"type": "string", "pattern": "^(QUACK|Quack)\\.", "maxLength": 300, "description": "Cluck voice: starts with QUACK., one question/action, never the answer"},
+    "proofkey": {"type": "object", "required": ["reference", "rubric", "hints"], "additionalProperties": false,
+      "description": "a proof item's key (W107; server only): Cluck's grader reads reference + rubric; keys and hints guard what the student sees",
+      "properties": {
+        "reference": {"$ref": "#/$defs/md", "description": "the full reference proof, plain words at Flesch-Kincaid grade 2-5 + $..$: shown (sugar) once the 3 Checks are used"},
+        "rubric": {"type": "array", "minItems": 3, "maxItems": 3, "description": "exactly base, assume, prove, in that order (Tony, Oct 27: casual, no conclusion row)",
+          "prefixItems": [{"$ref": "#/$defs/proofrow_base"}, {"$ref": "#/$defs/proofrow_assume"}, {"$ref": "#/$defs/proofrow_prove"}], "items": false},
+        "keys": {"type": "array", "items": {"type": "string", "minLength": 2}, "description": "the step's own algebra (e.g. (k+1)(3k+4)): a grader hint that holds one is swapped for the authored hint"},
+        "hints": {"type": "object", "required": ["base", "assume", "prove"], "additionalProperties": false,
+          "properties": {"base": {"$ref": "#/$defs/cluck"}, "assume": {"$ref": "#/$defs/cluck"}, "prove": {"$ref": "#/$defs/cluck"}},
+          "description": "one authored Cluck hint per row (FK grade 2-5): used when the grader's own hint is missing, leaks a key, or reads above grade 5"}}},
+    "proofrow_base": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "base"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
+    "proofrow_assume": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "assume"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
+    "proofrow_prove": {"type": "object", "required": ["id", "need"], "additionalProperties": false, "properties": {"id": {"const": "prove"}, "need": {"type": "string", "minLength": 3, "maxLength": 300}}},
     "choice": {"type": "object", "required": ["id", "md"], "additionalProperties": false, "properties": {"id": {"type": "string", "pattern": "^[a-z]$"}, "md": {"$ref": "#/$defs/md"}, "lock": {"type": "boolean", "default": false, "description": "Pin to its authored slot (none of these / DNE)"}}},
     "wrong": {"type": "object", "required": ["error", "hint"], "additionalProperties": false, "properties": {"choice": {"type": "string", "pattern": "^[a-z]$"}, "match": {"type": "string", "minLength": 1}, "re": {"type": "string", "minLength": 1}, "error": {"$ref": "#/$defs/error"}, "hint": {"$ref": "#/$defs/cluck"}, "fix": {"$ref": "#/$defs/fixkey"}}, "oneOf": [{"required": ["choice"]}, {"required": ["match"]}, {"required": ["re"]}]},
     "fixkey": {"type": "object", "required": ["answer"], "additionalProperties": false, "description": "mc pick all + fix: the corrected value for this false choice (private). Type and var come from the problem fix.", "properties": {"answer": {"type": "string", "minLength": 1}, "accept": {"type": "array", "items": {"type": "string", "minLength": 1}}, "tol": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.05}, "tol_why": {"type": "string", "minLength": 1}, "tol_src": {"const": "auto"}, "points": {"type": "array", "minItems": 3, "items": {"type": "number"}}, "wrong": {"type": "array", "items": {"$ref": "#/$defs/wrong"}}}},
@@ -602,8 +631,13 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
             "expr",
             "text",
             "mc",
-            "multi"
+            "multi",
+            "proof"
           ]
+        },
+        "proof": {
+          "$ref": "#/$defs/proofkey",
+          "description": "proof only (server only): the reference proof, the 3 rubric rows Cluck grades, the leak keys and one hint per row"
         },
         "var": {
           "type": "string",
@@ -853,6 +887,12 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         {
           "if": {"not": {"properties": {"type": {"const": "mc"}}}},
           "then": {"properties": {"pick": false}}
+        },
+        {
+          "if": {"properties": {"type": {"const": "proof"}}, "required": ["type"]},
+          "then": {"required": ["proof", "how"], "properties": {"answer": false, "accept": false, "choices": false, "correct": false, "parts": false, "points": false,
+            "tol": false, "var": false, "shuffle": false, "wrong": false, "nudge": false, "form": false}},
+          "else": {"properties": {"proof": false}}
         },
         {
           "if": {

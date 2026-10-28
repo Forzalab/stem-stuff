@@ -1,0 +1,61 @@
+{
+ "v": 20261022,
+ "bank": "BANK_PRF",
+ "profile": {
+  "subject": "discrete",
+  "audience": "CSCI 26 students in Prof. Kerney's class, practicing proof by induction and loop proofs in C++."
+ },
+ "problems": [
+  {
+   "code": "PRF_PRA",
+   "title": "Induction: a sum",
+   "type": "proof",
+   "body": [
+    {
+     "type": "text",
+     "md": [
+      "Prove by induction that for every natural number $n \\ge 1$,",
+      "",
+      "$$2+5+8+\\cdots+(3n-1)=\\frac{n(3n+1)}{2}.$$"
+     ]
+    }
+   ],
+   "how": "Write the base case, then what you assume for $k$, then prove it for $k+1$.",
+   "proof": {
+    "reference": [
+     "Base case: Let $n=1$. The left side is just $2$, and the right side is $\\frac{1\\cdot 4}{2}=2$, so the two sides match.",
+     "",
+     "Assume: Say the rule is true for some whole number $n=k$, so that $2+5+\\cdots+(3k-1)=\\frac{k(3k+1)}{2}$.",
+     "",
+     "Prove: The next term in the sum is $3(k+1)-1=3k+2$, so we add it to both sides. The right side is now $\\frac{k(3k+1)}{2}+3k+2=\\frac{3k^2+7k+4}{2}=\\frac{(k+1)(3k+4)}{2}$.",
+     "That is the same rule with $n=k+1$, since $3(k+1)+1=3k+4$. So the rule is true for every whole number $n \\ge 1$."
+    ],
+    "rubric": [
+     {
+      "id": "base",
+      "need": "Checks n = 1 (both sides are 2). Any clear check of n = 1 counts."
+     },
+     {
+      "id": "assume",
+      "need": "Assumes the sum rule is true for one n = k: 2+5+...+(3k-1) = k(3k+1)/2."
+     },
+     {
+      "id": "prove",
+      "need": "Adds the next term 3k+2 to the assumed sum and gets (k+1)(3k+4)/2, the rule for n = k+1. Any correct algebra counts."
+     }
+    ],
+    "keys": [
+     "(k+1)(3k+4)",
+     "3k^2+7k+4",
+     "3k²+7k+4",
+     "3k+4"
+    ],
+    "hints": {
+     "base": "QUACK. Start with n = 1, and work out the left side and then the right side. Do the two sides match?",
+     "assume": "QUACK. Say what you assume. Write the sum rule again, but use the letter k in place of n.",
+     "prove": "QUACK. Add the next term to both sides of what you assumed. Can you make the right side look like the rule for k + 1?"
+    }
+   }
+  }
+ ]
+}

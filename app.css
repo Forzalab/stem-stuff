@@ -602,6 +602,25 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .ansl .ico { flex: none; width: 1.25rem; height: 1.25rem; color: var(--correct); }   /* T23: the reveal's green = the right row's green */
 .ansl b { color: var(--correct); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .preview:has(.ansl) { color: var(--ink); }
+/* W107 proof box (Tony approved, Oct 27): the .ff field grown tall for a whole proof, Check pinned in its top-right corner (the Next slot) */
+.ff.proof { height: auto; align-items: stretch; padding-top: var(--s2); padding-bottom: var(--s2); }
+.ff.proof textarea {
+  flex: 1 1 auto; min-width: 0; min-height: 10rem; margin: 0; padding: 0 var(--s2) 0 0; resize: vertical;
+  font-family: var(--mono); font-size: var(--t-sm); line-height: 1.5; color: var(--ink); background: transparent; border: 0; caret-color: var(--focus);
+}
+.ff.proof textarea:focus { outline: none; }
+.ff.proof textarea::placeholder { color: var(--hint); opacity: 1; }
+.ff.proof.done textarea { color: var(--correct); }
+.ff.proof textarea:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+.rubric { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s2) 0 0; }
+.rubric[hidden] { display: none; }
+.rubric .rb { display: inline-flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s2); border: var(--bw) solid var(--edge); border-radius: 6px; font-size: var(--t-sm); color: var(--ink); }
+.rubric .rb .ico { flex: none; width: 1rem; height: 1rem; }
+.rubric .rb.ok { border-color: var(--correct); }
+.rubric .rb.ok .ico { color: var(--correct); }
+.rubric .rb:is(.missing, .wrong) .ico { color: var(--wrong); }
+.preview.proofref { margin-left: 0; overflow: visible; }
+.proofref .refmd { margin-top: var(--s1); color: var(--ink); }
 
 /* feedback */
 .fb:empty { display: none; }

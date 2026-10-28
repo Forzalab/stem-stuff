@@ -21,8 +21,14 @@ const mk = (type, n, extra = {}) => ({ type, code: `T_${type}${n}`, choices: Arr
   wrong: Array.from({ length: n - 1 }, (_, i) => ({ choice: "abcdefgh"[i + 1], error: "misread", hint: "QUACK. Look again." })), ...extra });
 
 test("maxTries: 2-choice mc = 1, everything else = 2 (same table as serve.py)", () => {
-  const table = [[mk("mc", 2), 1], [mk("mc", 3), 2], [mk("mc", 5), 2], [mk("mc", 8), 2], [{ type: "num" }, 2], [{ type: "text" }, 2], [{ type: "expr" }, 2], [{ type: "multi" }, 2]];
+  const table = [[mk("mc", 2), 1], [mk("mc", 3), 2], [mk("mc", 5), 2], [mk("mc", 8), 2], [{ type: "num" }, 2], [{ type: "text" }, 2], [{ type: "expr" }, 2], [{ type: "multi" }, 2],
+    [{ type: "proof" }, 3]];   // W107: a proof gets 3 Checks (Tony, Oct 27)
   for (const [p, n] of table) assert.equal(maxTries(p), n, `${p.type} ${(p.choices || []).length}`);
+});
+test("proof in an uploaded file: never graded on the device (the rubric needs Cluck's server), not a try", () => {
+  const p = { type: "proof", code: "T_proof", body: [{ type: "text", md: "Prove it." }], proof: { reference: "R" } };
+  const r = gradeLocal(p, { answer: "Base case: n = 1." });
+  assert.deepEqual([r.verdict, r.why, r.triesLeft], ["busy", "upload", 3]);
 });
 test("2-choice mc locks after 1 wrong", () => {
   const p = mk("mc", 2, { code: "T_two" });
