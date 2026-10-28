@@ -12,19 +12,24 @@ export const FAMILIES = ["distribute", "sign", "drop", "reciprocal", "power", "f
 export const EPS = 1e-9;
 /* SYNC: serve.py FAMILY_HINT (one fixed Cluck line per family; never prints a number or the answer; may point to a place, SPOT_COPY). Keep byte-equal: tests/slips.test.mjs checks it against serve.py. */
 export const FAMILY_HINT = {
-  distribute: "QUACK. Check the minus before the brackets. It goes to every term.",
-  sign: "QUACK. Check every sign. One of them flipped.",
-  drop: "QUACK. Count your terms. One of them went missing.",
-  reciprocal: "QUACK. Check what is on top and what is on the bottom.",
-  power: "QUACK. Check your powers. A square or a root slipped.",
-  factor: "QUACK. Check your factors. Something got doubled or halved.",
-  dream: "QUACK. Check your square or root of a sum. It does not split.",
-  trig: "QUACK. Check your trig. Sine or cosine, degrees or radians.",
-  units: "QUACK. Check your units. A power of ten slipped.",
-  g: "QUACK. Check the value you used for g.",
+  distribute: "QUACK. It's {sign} season. Check your signs.",
+  sign: "QUACK. It's {sign} season. Check ONE of your signs.",
+  drop: "QUACK. Count your terms like you count your ducks.",
+  reciprocal: "QUACK. Your math got RATIO-ed (not on Twitter).",
+  power: "QUACK. Go find the ROOT cause. POWER to you.",
+  factor: "QUACK. Try buying half of a double cheeseburger.",
+  dream: "QUACK. Square roots don't hatch separately.",
+  trig: "QUACK. Check your trig.",
+  units: "QUACK. Oops, that might be an egg-xtra zero! Or a missing one.",
+  g: "QUACK. Fun fact: Earth's gravity isn't the same everywhere! Even on quizzes.",
 };
 /* FAMILY_HINT's line; a k=2 "inner+outer" pair (pairs) gets both lines in that order under one QUACK. (serve.py family_hint) */
-export const familyHint = fam => fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" ");
+export const familyHint = fam => fillSign(fam.split("+").map((f, i) => i ? FAMILY_HINT[f].replace(/^QUACK\. /, "") : FAMILY_HINT[f]).join(" "));
+/* {sign} in a hint = the zodiac season of the device's date (todo 93 miss-060/061), tropical ranges. SYNC: serve.py ZODIAC (tests/slips.test.mjs).
+   Month m (1-12): the first day of the sign that starts in m and its name; before that day it is still month m-1's sign. */
+export const ZODIAC = [[20, "Aquarius"], [19, "Pisces"], [21, "Aries"], [20, "Taurus"], [21, "Gemini"], [21, "Cancer"], [23, "Leo"], [23, "Virgo"], [23, "Libra"], [23, "Scorpio"], [22, "Sagittarius"], [22, "Capricorn"]];
+export const zodiac = (d = new Date()) => { const m = d.getMonth(), [start, name] = ZODIAC[m]; return d.getDate() >= start ? name : ZODIAC[(m + 11) % 12][1]; };
+export const fillSign = s => s.replaceAll("{sign}", zodiac());
 
 export const ZERO = 1e-9;
 export const SLIP_WIN = 0.005;   // slips.py SLIP_WIN (Tony D2): a slip's own window, never the grading tol

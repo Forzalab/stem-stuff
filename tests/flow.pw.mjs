@@ -246,10 +246,10 @@ for (const [W, H] of [[390, 844], [375, 667]]) {
   const toastText = () => page.evaluate(() => { const t = document.querySelector("#toast"); return t.classList.contains("on") ? t.textContent.trim() : ""; });
   await step("390 onboarding: new device only, once each (button, then q | a)", async () => {
     await page.goto(`${BASE}/#CALC1_X2P`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1200);
-    assert.equal(await toastText(), "Tap here to write notes.");
+    assert.equal(await toastText(), "Quack up your thoughts here...");
     assert.ok(await page.evaluate(() => document.querySelector("#toast").classList.contains("up")), "the caret points down at the button");
     await page.locator("#padFab").tap(); await page.waitForTimeout(900);
-    assert.equal(await toastText(), "Tap to switch question / answer.");
+    assert.equal(await toastText(), "Switch question/answer here.");
     await page.locator("#mtExp").tap(); await page.waitForTimeout(300);
     await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(1200);
     assert.equal(await toastText(), "", "shown again");

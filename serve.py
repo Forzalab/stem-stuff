@@ -61,29 +61,42 @@ BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.j
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
 PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "twin", "parent_template", "exam_q")
-DEFAULT_NUDGE = "QUACK. Put your answer back in. Does it work?"
-FIX_NUDGE = "QUACK. You found the false ones. One fix is wrong. Redo its math."
-NONE_MISS = "QUACK. Did you consider any of the unticked option(s)? Sussy. ಠ\u2060_\u2060ಠ QUACK."
-WRONG_MISS = "QUACK. Some taps are wrong. Check each row again."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
+DEFAULT_NUDGE = "Time to consult the duck oracle."
+FIX_NUDGE = "All ducks almost in a row... check your math carefully."
+NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
+WRONG_MISS = "QUACK. At least one ticked row is wrong."   # a ticked row is false but has no hint: NONE_MISS would point the wrong way
 # slips v2 (design/HANDOFF-slips-v2.md): one Cluck line per slip family (slips.FAMILIES). Names the family only, never a number or the answer; a SLIP_TIE collision may instead point to a place (slips.spot).
 FAMILY_HINT = {
-    "distribute": "QUACK. Check the minus before the brackets. It goes to every term.",
-    "sign": "QUACK. Check every sign. One of them flipped.",
-    "drop": "QUACK. Count your terms. One of them went missing.",
-    "reciprocal": "QUACK. Check what is on top and what is on the bottom.",
-    "power": "QUACK. Check your powers. A square or a root slipped.",
-    "factor": "QUACK. Check your factors. Something got doubled or halved.",
-    "dream": "QUACK. Check your square or root of a sum. It does not split.",
-    "trig": "QUACK. Check your trig. Sine or cosine, degrees or radians.",
-    "units": "QUACK. Check your units. A power of ten slipped.",
-    "g": "QUACK. Check the value you used for g.",
+    "distribute": "QUACK. It's {sign} season. Check your signs.",
+    "sign": "QUACK. It's {sign} season. Check ONE of your signs.",
+    "drop": "QUACK. Count your terms like you count your ducks.",
+    "reciprocal": "QUACK. Your math got RATIO-ed (not on Twitter).",
+    "power": "QUACK. Go find the ROOT cause. POWER to you.",
+    "factor": "QUACK. Try buying half of a double cheeseburger.",
+    "dream": "QUACK. Square roots don't hatch separately.",
+    "trig": "QUACK. Check your trig.",
+    "units": "QUACK. Oops, that might be an egg-xtra zero! Or a missing one.",
+    "g": "QUACK. Fun fact: Earth's gravity isn't the same everywhere! Even on quizzes.",
 }
 
 
+# {sign} in a hint = the zodiac season of today's date (todo 93 miss-060/061), tropical ranges. Month m (1-12): the first day of the sign
+# that starts in m and its name; before that day it is still month m-1's sign. SYNC: slips.mjs ZODIAC (tests/slips.test.mjs checks it).
+ZODIAC = ((20, "Aquarius"), (19, "Pisces"), (21, "Aries"), (20, "Taurus"), (21, "Gemini"), (21, "Cancer"), (23, "Leo"), (23, "Virgo"), (23, "Libra"), (23, "Scorpio"), (22, "Sagittarius"), (22, "Capricorn"))
+
+
+def zodiac(day=None):
+    """the season name (Aries ... Pisces) on `day` (a date; default today)"""
+    day = day or datetime.date.today()
+    start, name = ZODIAC[day.month - 1]
+    return name if day.day >= start else ZODIAC[day.month - 2][1]
+
+
 def family_hint(fam):
-    """FAMILY_HINT's line; a k=2 "inner+outer" pair (slips.pairs) gets both lines in that order under one QUACK. (slips.mjs familyHint)"""
+    """FAMILY_HINT's line; a k=2 "inner+outer" pair (slips.pairs) gets both lines in that order under one QUACK. (slips.mjs familyHint).
+    A {sign} slot is filled with today's zodiac season."""
     first, *rest = fam.split("+")
-    return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)])
+    return " ".join([FAMILY_HINT[first], *(FAMILY_HINT[f].removeprefix("QUACK. ") for f in rest)]).replace("{sign}", zodiac())
 
 # Server-only or private paths: never served.
 BLOCK_PREFIX = ("/k/", "/log/", "/.git", "/tests/", "/tools/", "/banks/")

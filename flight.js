@@ -116,7 +116,7 @@
 
   /* ---- page.at: the page's STATE at the failure (§8 option 1). Our classes, ids, numbers and boxes; never a node's text or value.
      The only strings read from the page are our own status lines, sent only as the known prefix we wrote, else as a length ---- */
-  var OURS = ["Cluck didn't load", "Cluck is out of wishes", "Cluck stopped early", "Didn't load", "Too slow", "Saved", "Copied", "Not found", "Offline"];
+  var OURS = ["Couldn't load Cluck", "Oh duck, Cluck is tired", "Cluck stopped early", "Didn't load", "Oops, didn't load", "Failed to load", "Timeout", "Saved", "Copied", "Not found", "Offline"];
   function ours(el) {
     if (!el) return null;
     var t = String(el.textContent || "").trim();

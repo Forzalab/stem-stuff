@@ -5,7 +5,7 @@
    download fires, POST acct/keep {token} (Tony #29.9). Only once keep answers ok, a green ✓ flashes in place of the Save button
    (Tony #32; login.css: no flash under reduced motion).
 
-   stemLogin.open()       the dialog: mints a token on first use (POST acct/new), draws MY Cluck, [Save my Cluck], [I have my Cluck].
+   stemLogin.open()       the dialog: mints a token on first use (POST acct/new), draws MY Cluck, [Save my Cluck], [Restore my Cluck].
                           Signed in, the same call is "Show my Cluck": it re-draws the stored token, no new mint
    stemLogin.close()      closes and removes it (lazy, like popover.js: built on open, gone on close)
    stemLogin.signedIn()   a token is stored on this device (localStorage "stem-acct")
@@ -62,14 +62,14 @@
   function build() {
     const d = el("dialog", { class: "lg", "aria-labelledby": "lgTitle" });
     const x = el("button", { type: "button", class: "lg-x", "aria-label": "Close" }, "×");
-    const h = el("h2", { id: "lgTitle", class: "lg-title" }, store.get() ? "My Cluck" : "Keep your progress");
+    const h = el("h2", { id: "lgTitle", class: "lg-title" }, store.get() ? "My Cluck" : "Save progress for next time?");
     const c = el("canvas", { class: "lg-cluck", role: "img", "aria-label": "Your Cluck: a QR code that signs you in", width: "600", height: "600" });
     const cap = el("p", { class: "lg-cap" }, "Use this key for any future logins.");          // Tony #36
     const save = el("button", { type: "button", id: "lgSave", class: "lg-btn lg-go", disabled: "" }, "Save my Cluck");
-    const have = el("button", { type: "button", id: "lgHave", class: "lg-btn" }, "I have my Cluck");
+    const have = el("button", { type: "button", id: "lgHave", class: "lg-btn" }, "Restore my Cluck");
     const file = el("input", { type: "file", id: "lgFile", class: "lg-file", accept: "image/*", tabindex: "-1", "aria-label": "Pick your Cluck from your photos" });
     const st = el("p", { id: "lgStatus", class: "lg-status", role: "status", "aria-live": "polite" });
-    d.append(x, h, el("div", { class: "lg-art" }), cap, save, el("p", { class: "lg-new" }, "New phone?"), have, file, st);
+    d.append(x, h, el("div", { class: "lg-art" }), cap, save, el("p", { class: "lg-new" }, "New device?"), have, file, st);
     d.querySelector(".lg-art").append(c);
     x.addEventListener("click", () => close());
     d.addEventListener("click", e => { if (e.target === d) close(); });                // a tap on the backdrop
@@ -125,11 +125,11 @@
     say(done);
   }
 
-  /* I have my Cluck: decode the picked photo here, send only the token, drop the image */
+  /* Restore my Cluck: decode the picked photo here, send only the token, drop the image */
   async function onPick(input) {
     const f = input.files && input.files[0];
     if (!f) return;
-    say("Reading your Cluck…");
+    say("Eggs-amining your quiz space now!");
     const u = URL.createObjectURL(f);
     let text = null;
     try {
@@ -170,7 +170,7 @@
         root.dispatchEvent(new CustomEvent("stem:login", { detail: { via: "new" } }));
       }
       await draw(t);
-    } catch { say("Couldn't make your Cluck. Check your connection and try again."); }
+    } catch { say("Can't make Cluck quack. Check connection, then try again."); }
   }
   function close() {
     if (!cur) return;

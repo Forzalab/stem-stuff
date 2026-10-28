@@ -128,7 +128,7 @@ export function deadOpen(st, deads) {
 export function deadLead(st, deads, snack) {
   return hash(st.salt + ":lead:" + snack) % 100 < DEAD_LEAD ? deads.find(c => !st.seen[c]) || null : null;
 }
-/* ---------- the noob ramp (DESIGN-v3 §2, Tony #25.6): a first-timer's order; "Mix it up" stays qPick ----------
+/* ---------- the noob ramp (DESIGN-v3 §2, Tony #25.6): a first-timer's order; "Shuffle" stays qPick ----------
    tierOf(code) -> 0 for a dead-easy, else the author's noob.tier 1|2|3. The opener (deadOpen) goes first, then new codes from
    st.ramp.tier (the nearest tier, easier first, once that one is spent) in a fixed salt order. From slot REVIEW_FROM, every
    REVIEW_EVERY-th slot re-shows a seen one (qPick over them, so a due miss goes first). Every new one seen -> qPick takes over.
@@ -160,7 +160,7 @@ export function rampAnswer(st, code, right, tierOf) {
   if (k >= r.tier && ++r.clean >= RAMP_UP) { r.tier = Math.min(3, r.tier + 1); r.clean = 0; }   // a review of an easier one moves nothing
   return r.tier;
 }
-/* "Skip ahead": up one tier now (cap 3), the clean count starts over */
+/* "Skip this question": up one tier now (cap 3), the clean count starts over */
 export function skipAhead(st) { const r = gate(st); r.tier = Math.min(3, r.tier + 1); r.clean = 0; return st; }
 /* snacks (sugar, design/REWARDS-WIRING.md: main's fixed "snack, real, real"): each snack goes right before the code it twists
    (beforeOf(code) -> that code, or null for a real). Several snacks with one target keep their order; a snack whose target is not in

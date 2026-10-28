@@ -1,5 +1,5 @@
 // Redo note (Tony, Oct 19: "make it CLEAR first time ... we are hitting a retrial question"): the first time a missed question comes back
-// as a Redeem showing (the "Second chance" tag) on this device, the plain toast (STYLE.md §3) says "Sometimes you get to redo a question!"
+// as a Redeem showing (the "Pity roll" tag) on this device, the plain toast (STYLE.md §3) says "Gravity pulled you back for review."
 // with its caret on the tag. Once per device (app.js rwTip beat "redo", stem-ob-rw-redo): the second Redeem says nothing. Sugar only
 // (rewardOn), and it logs "ob redo 1" for intent.js (Jev). Own serve.py on a temp bank, real clock (a pick needs the 2 s dwell).
 //   node tests/redo-note.pw.mjs [port]
@@ -18,7 +18,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = /^\d+$/.test(process.argv[2] || "") ? process.argv[2] : "8877", BASE = `http://127.0.0.1:${PORT}`;
 const tmp = mkdtempSync(join(tmpdir(), "redo-")), banks = join(tmp, "banks");
 mkdirSync(banks);
-const NOTE = "Sometimes you get to redo a question!";
+const NOTE = "Gravity pulled you back for review.";
 const PROBS = Array.from({ length: 8 }, (_, i) => ({ code: `CALC1_RDN${i + 1}`, title: `Redo ${i + 1}`, type: "mc", shuffle: false,
   body: [{ type: "text", md: `Redo ${i + 1}: pick a.` }], correct: "a", choices: ["one", "two", "three", "four"].map((md, j) => ({ id: "abcd"[j], md })),
   saccharine: { title: `Practice Exam 2, Question ${i + 1}`, key: "Tick: a", slip: { b: "Not b.", c: "Not c." } } }));
@@ -85,7 +85,7 @@ for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 
     assert.deepEqual(await notes(page), [], "no redo note before any redo");
     const r1 = await toRedeem(page);
     assert.equal(r1, m1, "the missed one comes back");
-    assert.match(await page.textContent("#rtag"), /Second chance/);
+    assert.match(await page.textContent("#rtag"), /Pity roll/);
     await page.waitForFunction(n => { const t = document.querySelector("#toast"); return t.classList.contains("on") && t.textContent === n; }, NOTE, { timeout: 3000 })
       .catch(async () => { throw new Error("no redo note on the first Redeem; toasts: " + JSON.stringify(await page.evaluate(() => window.__notes))); });
     const [t, a] = await page.evaluate(() => ["#toast", "#rtag"].map(s => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, top: r.top, bottom: r.bottom, width: r.width }; }));
@@ -102,7 +102,7 @@ for (const [w, vp] of [["1280", { width: 1280, height: 900 }], ["390", { width: 
     await miss(page);
     const r2 = await toRedeem(page);
     assert.equal(r2, m2, "the second miss comes back");
-    assert.match(await page.textContent("#rtag"), /Second chance/);
+    assert.match(await page.textContent("#rtag"), /Pity roll/);
     await page.waitForTimeout(1200);
     const seen = await notes(page);
     assert.equal(seen.length, 1, "the redo note shows once per device: " + JSON.stringify(seen));

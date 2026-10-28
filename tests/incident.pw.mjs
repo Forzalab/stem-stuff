@@ -90,7 +90,7 @@ const beacon = async (page, n = 1) => { for (let i = 0; i < 30 && page.beacons.l
 await step("/explain 502 + X-Incident: the old words + the server's code; no reason for a student; one beacon with that code", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 502, headers: { "X-Incident": "S-7K3QX upstream" }, body: "" }) });
   const t = await chip(page);
-  assert.match(t, /^Didn't load\. Tap to try again Send Tony this code: S-7K3QX$/, t);
+  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: S-7K3QX$/, t);
   assert.ok(!REASONS.test(t), "no reason words: " + t);
   const [b] = await beacon(page);
   assert.deepEqual([b.code, b.where, b.reason, b.status, b.phase, b.path, b.q], ["S-7K3QX", "explain", "upstream", 502, "headers", "/explain", "CALC1_INC1"]);
@@ -99,15 +99,15 @@ await step("/explain 502 + X-Incident: the old words + the server's code; no rea
   await page.context().close();
 });
 
-await step("a plain 500 (no header): the page's own E- code; the sheet says \"Cluck didn't load.\" + the code", async () => {
+await step("a plain 500 (no header): the page's own E- code; the sheet says \"Couldn't load Cluck.\" + the code", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }) });
   const t = await chip(page);
-  assert.match(t, /^Didn't load\. Tap to try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
+  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
   const code = t.match(CODE)[0];
   await page.click("#wish .wchip");                                    // a tap = Try again (still 500): a new code
-  await page.waitForFunction(c => { const x = document.querySelector("#cluck .wtext")?.innerText || ""; return /Cluck didn't load\./.test(x) && /Send Tony this code: E-/.test(x) && !x.includes(c); }, code, { timeout: 8000 });
+  await page.waitForFunction(c => { const x = document.querySelector("#cluck .wtext")?.innerText || ""; return /Couldn't load Cluck\./.test(x) && /Send Tony this code: E-/.test(x) && !x.includes(c); }, code, { timeout: 8000 });
   const sheet = await page.evaluate(() => document.querySelector("#cluck .wtext").innerText.replace(/\s+/g, " ").trim());
-  assert.match(sheet, /^Cluck didn't load\. Try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, sheet);
+  assert.match(sheet, /^Couldn't load Cluck\. Try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, sheet);
   const sel = await page.evaluate(() => getComputedStyle(document.querySelector("#cluck .wtext .inc")).userSelect);
   assert.notEqual(sel, "none", "the code is selectable");
   const bs = await beacon(page, 2);
@@ -124,7 +124,7 @@ await step("a plain 500 (no header): the page's own E- code; the sheet says \"Cl
 await step("headers, then the connection drops: a code shows, the beacon says phase=stream", async () => {
   const page = await wrong({ explain: r => r.continue({ url: `http://127.0.0.1:${drop.address().port}/explain` }) });
   const t = await chip(page);
-  assert.match(t, /^Didn't load\. Tap to try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
+  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
   const [b] = await beacon(page);
   assert.equal(b.code, t.match(CODE)[0]);
   assert.deepEqual([b.where, b.phase, b.status, b.bytes], ["explain", "stream", 200, 0]);
@@ -136,7 +136,7 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
   broke = true; orCalls = 0; logs.length = 0;
   const page = await wrong();
   const t = await chip(page);
-  assert.match(t, /^Didn't load\. Tap to try again Send Tony this code: S-[2-9A-HJ-NP-Z]{5}$/, t);
+  assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: S-[2-9A-HJ-NP-Z]{5}$/, t);
   assert.ok(!REASONS.test(t), "no 'credit' / budget words: " + t);
   const code = t.match(CODE)[0];
   assert.equal(orCalls, 0, "no Cluck model tried once the NOTE call said out of credit");
@@ -172,7 +172,7 @@ await step("/check times out twice in a row (P2): the 2nd is its own incident, t
   await page.goto(BASE + "/#BANK_INC");
   await page.waitForFunction(() => !document.getElementById("splash") && /^#CALC1_INC1/.test(location.hash) && !document.getElementById("freeze").hidden, null, { timeout: 10000 });
   await page.click('.opt[data-id="b"]'); await page.click('.ch[data-id="b"] .send');
-  await page.waitForFunction(() => document.querySelector(".verdict.wait .inc") && /Too slow/.test(document.body.innerText), null, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector(".verdict.wait .inc") && /Timeout!/.test(document.body.innerText), null, { timeout: 15000 });
   const first = await page.evaluate(() => document.querySelector(".verdict.wait .inc").dataset.inc);
   await page.click(".verdict.wait .retry");
   await page.waitForFunction(c => { const x = document.querySelector(".verdict.wait .inc"); return x && x.dataset.inc !== c; }, first, { timeout: 15000 });
@@ -185,7 +185,7 @@ await step("/check times out twice in a row (P2): the 2nd is its own incident, t
 
 await step("tracking off (privacy.html \"Don't record me\"): the code still shows, with a note; no report is sent", async () => {
   const page = await wrong({ explain: r => r.fulfill({ status: 500, body: "" }), off: true });
-  assert.match(await chip(page), /^Didn't load\. Tap to try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
+  assert.match(await chip(page), /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5} Tracking turned off\.$/);
   await page.waitForTimeout(800);
   assert.deepEqual(page.beacons, [], "no /log/incident");
   await page.context().close();

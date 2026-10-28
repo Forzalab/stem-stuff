@@ -267,7 +267,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       });
       if (mode === "diet") { assert.equal(g.any, false, "diet shows the chip / a duck / a nod"); return; }
       assert.ok(g.has, "no duck chip");
-      assert.equal(g.label, outcome === "right" ? "Compare with Cluck's steps" : "Ask Cluck");
+      assert.equal(g.label, outcome === "right" ? "See Cluck's steps" : "Ask Cluck");
       assert.equal(g.sh, 1, "the label wraps"); assert.equal(g.clip, false, "the label is cut");
       assert.ok(g.r.l >= 16 - 0.5 && g.r.r <= g.vw - 16 + 0.5, `chip outside the 16px gutter: ${g.r.l}-${g.r.r}`);
       assert.ok(g.r.h >= 44, `chip ${g.r.h} tall`);

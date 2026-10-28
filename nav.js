@@ -7,7 +7,7 @@
    { code, right } after every graded pick. Navigation goes through location.hash, which app.js follows.
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
-   noob ramp (shuffle.mjs ramp) until "Mix it up" (the queue above). */
+   noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
 import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
@@ -122,7 +122,7 @@ function init() {
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
-  /* noob mode (the front bank, until "Mix it up"): tier 0 = a dead-easy, else the author's noob.tier 1-3, untagged = 3 */
+  /* noob mode (the front bank, until "Shuffle"): tier 0 = a dead-easy, else the author's noob.tier 1-3, untagged = 3 */
   const front = () => !!bank() && !!bank().front;
   const noob = () => front() && !Q().mix;
   const tierOf = c => { if (dead(c)) return 0; const p = off() && off().get(c), t = p && p.noob && p.noob.tier; return [1, 2, 3].includes(t) ? t : 3; };
@@ -221,8 +221,8 @@ function init() {
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
     name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
-    modes.hidden = !front();                                         // Mix it up / Skip ahead / Other banks: the front bank's list only
-    if (front()) { mix.textContent = Q().mix ? "Easy first" : "Mix it up"; skip.hidden = !!Q().mix; }
+    modes.hidden = !front();                                         // Shuffle / Skip this question / Explore other banks: the front bank's list only
+    if (front()) { $("#qmixTx").textContent = Q().mix ? "Start with easy ones" : "Shuffle"; $("#qmixIco").hidden = !!Q().mix; skip.hidden = !!Q().mix; }   // the label in its span, so the shuffle icon stays (shown with "Shuffle" only)
     mockBtn.hidden = !!(Q().mock && Q().mock.miss === null && !Q().mock.done);   // the mock is running: no restart
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
@@ -248,7 +248,7 @@ function init() {
      Crossed out + greyed only when it can't be answered any more (correct, or out of tries); still a link. */
   const ico = (id, cls) => `<svg class="ico ${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
   function marks(rec) {
-    if (rec && rec.again) return { html: `<span class="mk mk-again" aria-hidden="true">${ico("i-back", "mk-back")}${ico("i-x", "mk-x").repeat(rec.x || 0)}</span>`, gone: false, say: " Back again." };
+    if (rec && rec.again) return { html: `<span class="mk mk-again" aria-hidden="true">${ico("i-back", "mk-back")}${ico("i-x", "mk-x").repeat(rec.x || 0)}</span>`, gone: false, say: " Welcome back!" };
     if (!rec || (!rec.x && rec.done === "open")) return { html: "", gone: false, say: "" };
     const html = `<span class="mk" aria-hidden="true">${ico("i-x", "mk-x").repeat(rec.x || 0)}${rec.done === "correct" ? ico("i-ok", "mk-ok") : ""}</span>`;
     const say = rec.done === "correct" ? " Correct." : rec.done === "out" ? " No tries left." : " 1 wrong, 1 try left.";
@@ -304,9 +304,9 @@ function init() {
   function go(d) {
     const st = Q();
     let e = null;
-    if (d < 0) { const b = hop(st, -1); if (b < 0) { note("This is the first question you opened."); return; } st.at = b; e = st.hist[b]; save(); }
+    if (d < 0) { const b = hop(st, -1); if (b < 0) { note("Say hi to your first question, again."); return; } st.at = b; e = st.hist[b]; save(); }
     else {
-      const n = upNext(); if (!n) { note("No other question to open here."); return; }
+      const n = upNext(); if (!n) { note("No more questions, no more eggs."); return; }
       e = n.e;
       if (n.step != null) { st.at = n.step; save(); } else pending = e;
     }

@@ -1,6 +1,6 @@
 // Dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor"). html.side: the X, Escape or the sash dragged
 // to the right edge fold the right column; one centred column, the question one type step up, no "Question" label. Under the verdict a
-// 44px+ row (#clBack) brings it back: its name is plain ("Show Cluck's explanation"), its rotating line is aria-hidden, "Show him" stays.
+// 44px+ row (#clBack) brings it back: its name is plain ("See Cluck's explanation"), its rotating line is aria-hidden, "Show him" stays.
 // Reduced motion: one static line. The humour kind is a stable hash of telemetry's own id (window.stemHk), forced by #hk=<kind>, a fixed
 // default without an id. Phones: unchanged. Own serve.py + a stub OpenRouter.
 //   node tests/dismiss.pw.mjs <port> [shots dir]
@@ -49,11 +49,11 @@ async function step(name, fn) {
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 const DESK = { width: 1280, height: 800 }, PHONE = { width: 393, height: 852 };
 const KINDS = {   // app.js HK, first lines (the default, deadpan, when there is no telemetry id)
-  sassy: "Cluck is pretending not to watch", deadpan: "Cluck is still here", duck: "Cluck knows ducks don't cluck", nerd: "Cluck is at rest, potential energy high" };
+  sassy: "Even ducks need a rest frame.", deadpan: "Cluck's still here, quack!", duck: "Cluck knows ducks don't cluck", nerd: "Cluck's resting with energy" };
 
 /* a wrong pick streams Cluck's reply; the idle duck's tap opens the sheet on it */
-/* close (default): then the other wrong picks use up the tries, so the question closes with the "Ask Cluck" chip, not the "ok but how?" peek
-   or the "Compare with Cluck's steps" chip: with either of those up the row stays hidden (E, Tony Oct 21: one Cluck CTA on screen at a time;
+/* close (default): then the other wrong picks use up the tries, so the question closes with the "Ask Cluck" chip, not the "okay, but how?" peek
+   or the "See Cluck's steps" chip: with either of those up the row stays hidden (E, Tony Oct 21: one Cluck CTA on screen at a time;
    checked on its own below) */
 async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close = true } = {}) {
   const phone = vp.width < 500;
@@ -107,7 +107,7 @@ await step("desktop: the X folds the column; one centred column, a bigger questi
   assert.ok(Math.abs(s.gapL - s.gapR) <= 2, `centred: ${s.gapL} | ${s.gapR}`);
   assert.ok(!s.hscroll, "no sideways scroll");
   assert.ok(s.back && s.backH >= 44 && s.last, "the row shows, 44px+, last under the verdict: " + JSON.stringify(s));
-  assert.equal(s.name, "Show Cluck's explanation", "a plain accessible name");
+  assert.equal(s.name, "See Cluck's explanation", "a plain accessible name");
   assert.equal(s.hkHidden, "true", "the rotating line is aria-hidden");
   assert.equal(s.go, "Show him", "the action word stays");
   assert.equal(s.line, KINDS.deadpan, "no telemetry id (local run): the fixed default kind");
@@ -212,30 +212,30 @@ await step("1920x1080 + 393x852: greyscale shots (STYLE.md §7.16); 1920 dismiss
   await p.context().close();
 });
 
-/* E (Tony, Oct 21): "Show him" is never on screen with "ok but how?" or "Compare with Cluck's steps" */
+/* E (Tony, Oct 21): "Show him" is never on screen with "okay, but how?" or "See Cluck's steps" */
 const ctas = page => page.evaluate(() => {
   const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
   return { how: [...document.querySelectorAll(".cl-peek .cl-cta")].some(vis), back: vis(document.querySelector("#clBack")) };
 });
 const one = async (page, what) => { const c = await ctas(page); assert.ok(!(c.how && c.back), `${what}: both Cluck CTAs up ${JSON.stringify(c)}`); return c; };
-await step("E desktop 1280: with the 'ok but how?' peek up, no 'Show him' row; open / dismiss / Escape / reopen never show both", async () => {
+await step("E desktop 1280: with the 'okay, but how?' peek up, no 'Show him' row; open / dismiss / Escape / reopen never show both", async () => {
   const page = await cluck(DESK, { close: false });
   await one(page, "open");
   await page.click("#cluck .cl-bar .cl-x");
   let c = await one(page, "dismissed (X)");
-  assert.ok(c.how && !c.back, "dismissed with the peek: only 'ok but how?' " + JSON.stringify(c));
+  assert.ok(c.how && !c.back, "dismissed with the peek: only 'okay, but how?' " + JSON.stringify(c));
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-gone")), true, "the column folded");
   await page.click(".cl-peek .cl-cta");
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
   await one(page, "reopened from the peek");
   await page.keyboard.press("Escape"); await page.waitForTimeout(200);
   c = await one(page, "dismissed (Escape)");
-  assert.ok(c.how && !c.back, "Escape: only 'ok but how?' " + JSON.stringify(c));
+  assert.ok(c.how && !c.back, "Escape: only 'okay, but how?' " + JSON.stringify(c));
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
   c = await one(page, "question closed");
   const cmp = await page.evaluate(() => [...document.querySelectorAll("#wish .cue-ok")].some(e => e.getClientRects().length > 0));
-  assert.ok(!c.how && !c.back && cmp, "solved: 'Compare with Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
+  assert.ok(!c.how && !c.back && cmp, "solved: 'See Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
 });

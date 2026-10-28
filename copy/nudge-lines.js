@@ -8,59 +8,59 @@
 window.__stemNudgeLines = {
   /* S2 impasse, depth ≥ 2: a long pause on one step. Name the step, not the student; offer a smaller piece */
   S2: [
-    "This one's being stubborn.",
+    "This one's a bit tricky.",
     "Want a smaller first step?",
-    "This step has teeth.",
-    "Peek at just the first move?",
-    "Some steps take a while.",
-    "One piece at a time works.",
-    "Want me to shrink this one?"
+    "This step's a doozy.",
+    "How about a first peek?",
+    "Take your time. I'm here. Quack.",
+    "Let's quack this one together.",
+    "Patience pays. Quack."
   ],
   /* S6 help avoidance: a miss (W96: 1 wrong pick, was 2), Cluck never asked. One quiet offer, asking made cheap, no count of misses */
   S6: [
-    "A hint costs nothing here.",
-    "Want a second pair of eyes?",
+    "If you need a hint, I'm here.",
+    "Need an extra pair of eyes?",
     "I can show where to look.",
-    "Fresh eyes help. Mine are free.",
-    "Asking is free, by the way.",
-    "Want one clue? Just one.",
-    "Two heads beat one here."
+    "Ask the bread. It knows all.",
+    "Ask anytime. Quack.",
+    "Need one little clue?",
+    "Two neurons beat one. One quacks."
   ],
   /* Q about to quit: a comeback cue. Progress is safe, no clock, a lower way in; never a streak threat */
   Q: [
     "Still here. No rush.",
-    "Your progress is saved.",
-    "Short break? It all stays here.",
-    "No clock on this one.",
-    "Start with any piece you like.",
-    "Come back anytime. It keeps.",
-    "Want a softer start?"
+    "Your work's all saved.",
+    "Have a break. Have a... quack.",
+    "Time waits for no one. We do.",
+    "May I wing you a hint?",
+    "Gravity is so duck-tractive.",
+    "Time to honk at the quantum void."
   ],
   /* hold_mid: a new piece just popped inside the Key formulas box. Point at the box, not the student */
   hold_mid: [
-    "A new step is in the box.",
-    "Check the key formulas again.",
+    "New breadcrumb incoming. QUAACK.",
+    "Formula box just changed, QUACKK-",
     "One more piece just showed up.",
-    "The formula box has a new line.",
-    "A smaller step is up there now.",
-    "Peek at the new formula line."
+    "New line in formula box.",
+    "Gravity dropped a formula for you.",
+    "Check the new formula line."
   ],
   /* hold_arrow: an arrow now links two formulas in the box. Point at the chain */
   hold_arrow: [
     "Two formulas just got linked.",
-    "Follow the new arrow in the box.",
-    "One formula feeds the next one.",
-    "The arrow shows what goes where.",
+    "Quack-a-lacka. Linked formula.",
+    "Two formulas chained. Take a look.",
+    "Arrow shows the way.",
     "Trace the arrow, top to bottom.",
-    "See what the arrow connects?"
+    "Formulas of a feather flock."
   ],
   /* hold_end: no piece left (or no ladder). The vague one, "why this one?": the same for any pick */
   hold_end: [
-    "Why this one?",
+    "Why pick this one?",
     "What makes this choice fit?",
     "Say why, in one short line.",
-    "What would prove this pick?",
-    "Which words point to this one?",
-    "Check it against the question."
+    "What backs this pick up?",
+    "Why that answer? Quack.",
+    "Quack up your calculations."
   ]
 };
