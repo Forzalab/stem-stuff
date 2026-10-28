@@ -145,11 +145,11 @@ try {
     await page.waitForTimeout(1100);
     await pick(page, "a");
     await page.waitForSelector(".fx-toast", { timeout: 6000 });
-    assert.match(await page.textContent(".fx-toast"), /QUACK! Brain \+1\./);
+    assert.match(await page.textContent(".fx-toast"), /QUACK! Brain boost!/);
     assert.equal(await page.evaluate(() => window.__ov), 0, "an overlay for a drop with no level up");
     assert.equal(await page.$$eval(".fx-slots", e => e.length), 0, "reels outside a level up");
     assert.equal(await page.$eval("#toast", t => t.classList.contains("on")), false);
-    assert.match(await page.textContent("#sr"), /Correct! \+\d+ XP\. QUACK! Brain \+1\./);
+    assert.match(await page.textContent("#sr"), /Correct! \+\d+ XP\. QUACK! Brain boost!/);
     await quiet(page);
   });
 
@@ -508,7 +508,7 @@ try {
       assert.equal(await toastNow(p), "Ready when you are.", w + ": the start line");
       await p.evaluate(() => window.Rewards.config({ goal: 4 }));
       const seen = [];
-      for (const [tpl, line] of [["Q1", "1 question done. Keep it up!"], ["Q2", "Halfway there!"], ["Q3", "Only 1 to go, you got this!"], ["Q4", "🎉 All done!"]]) {
+      for (const [tpl, line] of [["Q1", "1 question done. Quack on!"], ["Q2", "Halfway there!"], ["Q3", "Only 1 to go, you got this!"], ["Q4", "🎉 All done!"]]) {
         await p.evaluate(() => window.stemToast && window.stemToast.clear());
         await p.waitForFunction(() => !document.querySelector(".stoast.on"), null, { timeout: 3000 });
         assert.ok(await conquer(p, tpl), tpl + " conquered");
@@ -527,7 +527,7 @@ try {
             .filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top; }).map(e => e.id || e.className); }), [], w + " " + tpl + ": over a control");
       }
       assert.equal(await p.evaluate(() => window.Rewards.stage(10, 20) + "|" + window.Rewards.stage(9, 20) + "|" + window.Rewards.stage(15, 20)),
-        "Halfway there!|9 questions done. Keep it up!|Only 5 to go, you got this!", "quarters, not thirds");
+        "Halfway there!|9 questions done. Quack on!|Only 5 to go, you got this!", "quarters, not thirds");
       await c.close();
     }
   });
