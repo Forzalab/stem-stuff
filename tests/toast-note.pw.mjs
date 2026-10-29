@@ -156,6 +156,7 @@ try {
       await p.evaluate(() => { window.Rewards.config({ goal: 4 }); window.stemToast.clear(); const R = window.Rewards; R.mastery({ type: "miss", tpl: "Q1", b: false });
         R.mastery({ type: "repair_done", tpl: "Q1" }); R.mastery({ type: "twin_a", tpl: "Q1", ok: true }); });
       const s = await stageUp(p).catch(() => null);
+      if (s) await p.evaluate(() => document.querySelector(".stoast.on").dispatchEvent(new PointerEvent("pointerenter")));   // its 4 s wait: a loaded runner must not time it out before the click lands
       await p.click("#qnext");
       const n = await note(p, "This is the only question here.");
       const a = await rect(p, "#qnext");
