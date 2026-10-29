@@ -14,6 +14,7 @@
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
 import { createParser, mergeStatements } from "./vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
+import { place } from "./figcheck.js";
 
 const SCHEMA = toSchema(LIB);
 const REG = new Map();
@@ -350,6 +351,14 @@ export function geoModel(p) {
   if (labels > GEO_CAPS.labels) throw tooLong(`${labels} > ${GEO_CAPS.labels} labels`);
   return { pts, marks: out };
 }
+/* Labels (fable audit 2026-10-29 U3, I-LBL-1/2): every text (point names first, then the marks' labels) is a request to figcheck.js
+   place() (= scene.js's packer) in viewBox units: its usual side first (point names away from the figure's centre, a dim / arrow
+   label on its normal, an angle label on the bisector just outside the arc), then the other sides, outer rings with a leader line,
+   then a free spot; scored by overlap with texts already placed and the strokes drawn. Text widths are estimated (GEO_EM per char:
+   the figure is built before it is in the page). A text left on a stroke gets class knock (a halo in the card's colour). */
+const GEO_FONT = 14, GEO_EM = 0.6 * GEO_FONT, GEO_LH = 18, GEO_ASC = 13.5;
+const DIR8 = (dx, dy) => ["e", "se", "s", "sw", "w", "nw", "n", "ne"][Math.round(((Math.atan2(dy, dx) / Math.PI * 180) + 360) % 360 / 45) % 8];   // screen: y down
+const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
 function drawGeometry(doc, g, t) {
   const all = Object.values(g.pts), ext = [...all];
   for (const m of g.marks) if (m.k === "circle") ext.push([m.c[0] - m.r, m.c[1] - m.r], [m.c[0] + m.r, m.c[1] + m.r]);
@@ -358,31 +367,44 @@ function drawGeometry(doc, g, t) {
   const span = Math.max(x1 - x0, y1 - y0) || 1, k = 240 / span, pad = 34;      // one scale for x and y (1:1)
   const W = (x1 - x0) * k + 2 * pad, H = (y1 - y0) * k + 2 * pad;
   const X = p => (p[0] - x0) * k + pad, Y = p => (y1 - p[1]) * k + pad;      // y up
-  const txt = (s, x, y) => {
-    const m = SLOT.exec(s), id = m && m[1], filled = id && t && Object.hasOwn(t, id) ? String(t[id]) : null;
-    return h(doc, "text", { class: "gm-t", x, y, "data-slot": id && filled == null ? id : null }, filled ?? (id || plainTex(s)));
+  const segs = [], reqs = [], dots = [];
+  const stroke = (id, ...pts) => { for (let i = 0; i + 1 < pts.length; i++) segs.push({ id, pts: [pts[i], pts[i + 1]] }); };
+  /** a text to place: its string (a slot or plain), the point it names, its usual side (a screen vector) */
+  const label = (id, s, at, dx, dy, cls = "gm-t") => {
+    const m = SLOT.exec(s), slot = m && m[1], filled = slot && t && Object.hasOwn(t, slot) ? String(t[slot]) : null;
+    const text = filled ?? (slot || plainTex(s)), d = DIR8(dx, dy);
+    reqs.push({ key: reqs.length, id, w: Math.max(1, [...text].length) * GEO_EM, h: GEO_LH, t: { pt: at }, dirs: [d, ...DIRS8.filter(x => x !== d)],
+      text, cls, slot: slot && filled == null ? slot : null });
   };
   const cx = all.reduce((s, p) => s + X(p), 0) / all.length, cy = all.reduce((s, p) => s + Y(p), 0) / all.length;
+  for (const [id, p] of Object.entries(g.pts)) { const x = X(p), y = Y(p); dots.push({ id: "pt:" + id, box: [x - 2.5, y - 2.5, 5, 5] }); label("pt:" + id, id, [x, y], x - cx, y - cy, "gm-t gm-name"); }
   const kids = [];
-  for (const m of g.marks) {
-    if (m.k === "seg") kids.push(h(doc, "line", { class: "gm gm-seg", x1: X(m.a), y1: Y(m.a), x2: X(m.b), y2: Y(m.b) }));
-    else if (m.k === "circle") kids.push(h(doc, "circle", { class: "gm gm-circle", cx: X(m.c), cy: Y(m.c), r: m.r * k }));
-    else if (m.k === "arrow") {
+  g.marks.forEach((m, i) => {
+    const id = "m" + i;
+    if (m.k === "seg") { kids.push(h(doc, "line", { class: "gm gm-seg", x1: X(m.a), y1: Y(m.a), x2: X(m.b), y2: Y(m.b) })); stroke(id, [X(m.a), Y(m.a)], [X(m.b), Y(m.b)]); }
+    else if (m.k === "circle") {
+      kids.push(h(doc, "circle", { class: "gm gm-circle", cx: X(m.c), cy: Y(m.c), r: m.r * k }));
+      stroke(id, ...Array.from({ length: 25 }, (_, j) => [X(m.c) + m.r * k * Math.cos(j * Math.PI / 12), Y(m.c) + m.r * k * Math.sin(j * Math.PI / 12)]));
+    } else if (m.k === "arrow") {
       const ax = X(m.a), ay = Y(m.a), bx = X(m.b), by = Y(m.b), L = Math.hypot(bx - ax, by - ay) || 1, ux = (bx - ax) / L, uy = (by - ay) / L;
       const hx = bx - ux * 10, hy = by - uy * 10;
       kids.push(h(doc, "g", { class: "gm gm-arrow" }, h(doc, "line", { x1: ax, y1: ay, x2: hx, y2: hy }),
         h(doc, "polygon", { points: `${bx},${by} ${hx - uy * 6},${hy + ux * 6} ${hx + uy * 6},${hy - ux * 6}` })));
-      if (m.text) kids.push(txt(m.text, (ax + bx) / 2 - uy * 14, (ay + by) / 2 + ux * 14 + 4));
+      stroke(id, [ax, ay], [bx, by]); stroke(id, [hx - uy * 6, hy + ux * 6], [bx, by], [hx + uy * 6, hy - ux * 6]);
+      if (m.text) label(id, m.text, [(ax + bx) / 2, (ay + by) / 2], -uy, ux);
     } else if (m.k === "right" || m.k === "angle") {
       const ox = X(m.at), oy = Y(m.at), un = p => { const dx = X(p) - ox, dy = Y(p) - oy, L = Math.hypot(dx, dy) || 1; return [dx / L, dy / L]; };
       const [ax, ay] = un(m.u), [bx, by] = un(m.v);
       if (m.k === "right") {
         const s = 12;
         kids.push(h(doc, "path", { class: "gm gm-right", d: `M${ox + ax * s},${oy + ay * s} L${ox + (ax + bx) * s},${oy + (ay + by) * s} L${ox + bx * s},${oy + by * s}` }));
+        stroke(id, [ox + ax * s, oy + ay * s], [ox + (ax + bx) * s, oy + (ay + by) * s], [ox + bx * s, oy + by * s]);
       } else {
         const r = 22, cross = ax * by - ay * bx;
         kids.push(h(doc, "path", { class: "gm gm-angle", d: `M${ox + ax * r},${oy + ay * r} A${r},${r} 0 0 ${cross > 0 ? 1 : 0} ${ox + bx * r},${oy + by * r}` }));
-        if (m.text) { const mx = ax + bx, my = ay + by, L = Math.hypot(mx, my) || 1; kids.push(txt(m.text, ox + (mx / L) * (r + 12), oy + (my / L) * (r + 12) + 4)); }
+        const a0 = Math.atan2(ay, ax), da = Math.atan2(cross, ax * bx + ay * by);
+        stroke(id, ...Array.from({ length: 9 }, (_, j) => [ox + r * Math.cos(a0 + da * j / 8), oy + r * Math.sin(a0 + da * j / 8)]));
+        if (m.text) { const mx = ax + bx, my = ay + by, L = Math.hypot(mx, my) || 1; label(id, m.text, [ox + (mx / L) * (r + 2), oy + (my / L) * (r + 2)], mx, my); }
       }
     } else if (m.k === "dim") {
       const ax = X(m.a), ay = Y(m.a), bx = X(m.b), by = Y(m.b), L = Math.hypot(bx - ax, by - ay) || 1;
@@ -394,16 +416,21 @@ function drawGeometry(doc, g, t) {
       kids.push(h(doc, "g", { class: "gm gm-dim" }, h(doc, "line", { x1: ax + px, y1: ay + py, x2: bx + px, y2: by + py }),
         h(doc, "line", { x1: ax + px * 0.5, y1: ay + py * 0.5, x2: ax + px * 1.5, y2: ay + py * 1.5 }),
         h(doc, "line", { x1: bx + px * 0.5, y1: by + py * 0.5, x2: bx + px * 1.5, y2: by + py * 1.5 })));
-      if (m.text) kids.push(txt(m.text, mx + nx * (o + 14), my + ny * (o + 14) + 4));
+      stroke(id, [ax + px, ay + py], [bx + px, by + py]); stroke(id, [ax + px * 0.5, ay + py * 0.5], [ax + px * 1.5, ay + py * 1.5]); stroke(id, [bx + px * 0.5, by + py * 0.5], [bx + px * 1.5, by + py * 1.5]);
+      if (m.text) label(id, m.text, [mx + px, my + py], nx, ny);
     } else if (m.k === "label") {
-      const x = X(m.at), y = Y(m.at), dx = x - cx, dy = y - cy, L = Math.hypot(dx, dy) || 1;
-      kids.push(txt(m.text, x + (dx / L) * 26, y + (dy / L) * 26 + 4));
+      const x = X(m.at), y = Y(m.at);
+      label(id, m.text, [x, y], x - cx, y - cy);
     }
+  });
+  const placed = place(reqs, segs, dots, { x: 0, y: 0, w: W, h: H }, null, { LH: GEO_LH });
+  for (const q of placed) {
+    if (q.lead) kids.push(h(doc, "line", { class: "gm-lead", x1: q.lead[0][0], y1: q.lead[0][1], x2: q.lead[1][0], y2: q.lead[1][1] }));
   }
-  for (const [id, p] of Object.entries(g.pts)) {
-    const dx = X(p) - cx, dy = Y(p) - cy, L = Math.hypot(dx, dy) || 1;
-    kids.push(h(doc, "g", { class: "gm-pt" }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 }),
-      h(doc, "text", { class: "gm-t gm-name", x: X(p) + (dx / L) * 12, y: Y(p) + (dy / L) * 12 + 4 }, id)));
+  for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
+  for (const q of placed) {
+    const x = +(q.box[0] + q.box[2] / 2).toFixed(2), y = +(q.box[1] + (q.box[3] - GEO_LH) / 2 + GEO_ASC).toFixed(2);
+    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : ""), x, y, "data-slot": q.slot }, q.text));
   }
   return h(doc, "svg", { viewBox: `0 0 ${W.toFixed(1)} ${H.toFixed(1)}`, "aria-hidden": "true", focusable: "false" }, kids);
 }

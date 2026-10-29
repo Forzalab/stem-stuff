@@ -333,6 +333,59 @@ class Pipe(unittest.TestCase):
         self.assertEqual(livefig.strip("A.\n" + colons(FIX["valid"][0]) + "\nB."), "A.\nB.")
 
 
+class Contact(unittest.TestCase):
+    """I-INC-1/2, I-FORCE-1/2/3 (fable audit 2026-10-29 U1): livefig.fix is graph.js fix() in Python; check() reports its findings as
+    warnings (contact / anchor / direction) and the figure goes out fixed, never dropped for them"""
+    CASES = FIX["contact"]["cases"]
+
+    def close(self, a, b, at):
+        if isinstance(b, (int, float)) and not isinstance(b, bool):
+            self.assertLessEqual(abs(a - b), 1e-6, at)
+        elif isinstance(b, dict):
+            self.assertEqual(sorted(a), sorted(b), at)
+            for k in b:
+                self.close(a[k], b[k], f"{at}.{k}")
+        elif isinstance(b, list):
+            self.assertEqual(len(a), len(b), at)
+            for i, (x, y) in enumerate(zip(a, b)):
+                self.close(x, y, f"{at}[{i}]")
+        else:
+            self.assertEqual(a, b, at)
+
+    def test_same_numbers_as_graph_js(self):
+        for c in self.CASES:                      # want = graph.js Graph.fix output (tests/livefig.test.mjs checks JS against it too)
+            marks, codes = livefig.fix(c["fig"]["marks"])
+            self.close(marks, c["want"], c["name"])
+            self.assertEqual(codes, c["codes"], c["name"])
+
+    def test_planted_cases_report_contact_and_anchor(self):
+        for c in self.CASES:
+            warn = []
+            self.assertIsNone(livefig.check(c["fig"], ctx(), warn), c["name"])     # never dropped for what the renderer fixes
+            self.assertEqual(warn, c["codes"], c["name"])
+        sunk = self.CASES[0]["fig"]
+        self.assertEqual(sunk["marks"][1]["at"], [0, 0.9], "check() leaves the caller's figure alone")
+        self.assertIn("anchor", next(c["codes"] for c in self.CASES if "anchor" in c["codes"]))
+
+    def test_the_resting_fixtures_and_the_prompt_example_have_no_finding(self):
+        ex = json.loads(livefig.EXAMPLE["scene"])
+        for g in (FIX["valid"][0], FIX["geom"]["valid"][1], ex):
+            self.assertEqual(livefig.fix(g["marks"])[1], [], g["alt"])
+        self.assertEqual(ex["marks"][1]["at"], [0, 1.443])
+        for c in FIX["invalid"]:                  # the 8 clones of valid[0] rest too
+            if isinstance(c["fig"], dict) and c["fig"].get("kind") == "scene":
+                self.assertNotIn([0, 0.9], [m.get("at") for m in c["fig"].get("marks", []) if isinstance(m, dict)], c["name"])
+
+    def test_fence_sends_the_fixed_figure_and_logs_the_codes(self):
+        sunk = self.CASES[0]
+        g = livefig.Fence(ctx())
+        out = g.feed("Forces on the block:\n" + fence(sunk["fig"]) + "\nTry once more.") + g.end()
+        self.assertEqual(g.log, ["ok:contact"])
+        sent = json.loads(out.split("```fig\n")[1].split("\n```")[0])
+        self.close(sent["marks"], sunk["want"], "sent")
+        self.assertEqual(livefig.fix(sent["marks"])[1], [], "what goes out has no finding left")
+
+
 class Bundle(unittest.TestCase):
     def test_vercel_function_carries_the_gate(self):
         with open(os.path.join(serve.ROOT, "vercel.json"), encoding="utf-8") as f:

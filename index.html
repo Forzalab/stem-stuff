@@ -42,6 +42,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <script src="vendor/math.min.js" defer></script>
 <script src="vendor/marked.min.js" defer></script>
 <script src="design/explain-box.js" defer></script>
+<script type="module" src="figcheck.js"></script><!-- figure invariants + the label packer (fable audit U3): a module runs in order with the defer scripts, so window.FigCheck is set before graph.js -->
 <script src="graph.js" defer></script>
 <script src="formula-figs.js" defer></script><!-- the formula sheet's pictures (design/FORMULA-FIGS.md): data for graph.js, drawn in the "?" popover -->
 <script src="popover.js" defer></script><!-- the rich-context popup (design/POPOVER.md): before app.js, which opens it -->

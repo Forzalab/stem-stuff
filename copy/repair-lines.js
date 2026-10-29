@@ -16,7 +16,7 @@ window.__stemRepairLines = {
     repair: "*waddles over* Let's fix this together—QUACKK!",
     fallback: "QUACK. Let's walk it through, one step at a time.",
     alt: "QUACK. Let's waddle a different path!",
-    welcome: "Ready to waddle through some forces?",
+    welcome: "Ready to waddle through this one?",     // topic-neutral (Tony, vet w-4): it opens any bank's welcome item
     full: ""                                       // cut (#36): no intro line on the full card
   },
   miss: "Whoops! Let's try again.",               // a wrong step try (repair / alt): the default miss line

@@ -49,7 +49,18 @@
   const P = a => a.map(p => n2(p[0]) + "," + n2(p[1])).join(" ");
   const norm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
   const fin = p => Number.isFinite(p[0]) && Number.isFinite(p[1]);
+  /* stroke recorder (U3, I-LBL-1): while a figure is built, every drawn stroke is kept as screen-px segments tagged with the mark
+     that drew it, so mount() can place labels off them (figcheck.js place()). Grid lines are not obstacles. */
+  let REC = null, CUR = -1;
+  function rec(pts, closed) {
+    if (!REC) return;
+    const q = pts.filter(fin);
+    for (let i = 0; i + 1 < q.length; i++) REC.push({ id: CUR, pts: [q[i], q[i + 1]] });
+    if (closed && q.length > 2) REC.push({ id: CUR, pts: [q[q.length - 1], q[0]] });
+  }
+  const ring = (c, r, a0 = 0, a1 = 360, n = 16) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + (a1 - a0) * i / n) * deg; return [c[0] + r * Math.cos(a), c[1] - r * Math.sin(a)]; });
   function line(pts, st, w, dash) {
+    if (st !== "var(--grid)") rec(pts);
     return `<polyline points="${P(pts)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
   }
   /* split a sampled curve at non-finite points and big jumps (asymptotes) */
@@ -70,6 +81,7 @@
     let L = Math.max(8, 4 * w); if (len < 1.6 * L) L = len / 1.6;
     const W = 0.75 * L;
     const wedge = t => { const bx = t[0] - L * ux, by = t[1] - L * uy;
+      rec([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]], true);
       return `<polygon points="${P([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`; };
     const cut = head === "fill" ? 0.6 * L : head === "double" ? 1.35 * L : head === "open" ? 0.3 * w : 0;
     let s = line([a, [b[0] - cut * ux, b[1] - cut * uy]], st, w, dash);
@@ -116,6 +128,7 @@
   }
   function arcPath(c, r, a0, a1, st, w, dash = "") {
     const p = a => [c[0] + r * Math.cos(a * deg), c[1] - r * Math.sin(a * deg)];
+    rec(ring(c, r, a0, Math.abs(a1 - a0) >= 359.99 ? a0 + 360 : a1, Math.max(4, Math.ceil(Math.abs(a1 - a0) / 15))));
     if (Math.abs(a1 - a0) >= 359.99) return `<circle cx="${n2(c[0])}" cy="${n2(c[1])}" r="${n2(r)}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
     const [s, e] = [p(a0), p(a1)], big = Math.abs(a1 - a0) > 180 ? 1 : 0, sweep = a1 > a0 ? 0 : 1;
     return `<path d="M${n2(s[0])} ${n2(s[1])}A${n2(r)} ${n2(r)} 0 ${big} ${sweep} ${n2(e[0])} ${n2(e[1])}" fill="none" style="stroke:${st}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`;
@@ -127,6 +140,7 @@
     let s = "";
     for (let t = HATCH.inset + HATCH.len * Math.SQRT1_2; t <= L - HATCH.inset + 0.01; t += HATCH.gap) {
       const q = [a[0] + t * ux, a[1] + t * uy];
+      rec([q, [q[0] + HATCH.len * hx, q[1] + HATCH.len * hy]]);
       s += `<line x1="${n2(q[0])}" y1="${n2(q[1])}" x2="${n2(q[0] + HATCH.len * hx)}" y2="${n2(q[1] + HATCH.len * hy)}" style="stroke:var(--muted)" stroke-width="${SW.con}"/>`;
     }
     return s;
@@ -140,7 +154,8 @@
       pts: inclinePts,
       draw(m, k) {
         const v = inclinePts(m).map(k.X);
-        let s = `<polygon points="${P(v)}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+        rec(v, true);
+        let s = `<polygon data-mark="incline" points="${P(v)}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
         s += hatch(v[0], v[1], m.flip ? "left" : "right");
         const r = 30, a0 = m.flip ? 180 - m.angle : 0, a1 = m.flip ? 180 : m.angle;
         s += arcPath(v[0], r, a0, a1, col("muted"), SW.con);
@@ -159,12 +174,15 @@
         let s;
         if (m.shape === "box" || m.shape === "rod") {
           const w = m.w * k.s, h = Math.max(m.h * k.s, m.shape === "rod" ? 6 : 0), rx = m.shape === "rod" ? Math.min(h / 2, 3) : 2;
-          s = `<rect x="${n2(-w / 2)}" y="${n2(-h / 2)}" width="${n2(w)}" height="${n2(h)}" rx="${rx}" transform="translate(${n2(x)} ${n2(y)}) rotate(${-(m.angle || 0)})" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+          const ca = Math.cos((m.angle || 0) * deg), sa = Math.sin((m.angle || 0) * deg);   // = the rect's translate + rotate(-angle)
+          rec([[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, h / 2], [-w / 2, h / 2]].map(([px, py]) => [x + px * ca + py * sa, y - px * sa + py * ca]), true);
+          s = `<rect data-mark="body" x="${n2(-w / 2)}" y="${n2(-h / 2)}" width="${n2(w)}" height="${n2(h)}" rx="${rx}" transform="translate(${n2(x)} ${n2(y)}) rotate(${-(m.angle || 0)})" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
         } else if (m.shape === "dot") {
-          s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(6, (m.r || 0) * k.s))}" style="fill:${st}"/>`;
+          s = `<circle data-mark="body" cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(6, (m.r || 0) * k.s))}" style="fill:${st}"/>`;
         } else {
           const r = m.r * k.s;
-          s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+          rec(ring([x, y], r));
+          s = `<circle data-mark="body" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
           if (m.shape === "ring") s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1, r - 5))}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
           s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="2.5" style="fill:${st}"/>`;
         }
@@ -210,6 +228,7 @@
       draw(m, k) {
         const [x, y] = k.X(m.at), r = m.r * k.s, st = col(m.color);
         let s = "";
+        rec(ring([x, y], r));
         if (m.mount) { const q = k.X(m.mount), [ux, uy] = norm(q[0] - x, q[1] - y);
           s += `<polygon points="${P([[x, y], [q[0] - 7 * uy, q[1] + 7 * ux], [q[0] + 7 * uy, q[1] - 7 * ux]])}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`; }
         s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
@@ -230,6 +249,7 @@
           if (dist > 0.5 && dist < 40) { d = norm(c[0] - x, c[1] - y); h = Math.max(10, dist); }
         }
         const bx = x + h * d[0], by = y + h * d[1], hw = Math.max(8, 0.6 * h);
+        rec([[x, y], [bx - hw * d[1], by + hw * d[0]], [bx + hw * d[1], by - hw * d[0]]], true);
         return `<polygon points="${P([[x, y], [bx - hw * d[1], by + hw * d[0]], [bx + hw * d[1], by - hw * d[0]]])}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>` +
           `<circle cx="${n2(x)}" cy="${n2(y)}" r="3.5" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
       }
@@ -269,6 +289,7 @@
       draw(m, k) {
         const v = m.pts.map(k.X), c = col(m.color || "ink");
         if (m.label) { const cx = v.reduce((a, p) => a + p[0], 0) / v.length, cy = v.reduce((a, p) => a + p[1], 0) / v.length; k.label(m.label, [cx, cy], m.anchor || "c", m.color); }
+        rec(v, true);
         return `<polygon points="${P(v)}" style="fill:${m.fill ? c : "none"};fill-opacity:${FILL};stroke:${c}" stroke-width="${SW.out}"${m.dash ? ` stroke-dasharray="${DASH.guide}"` : ""}/>`;
       }
     },
@@ -322,23 +343,137 @@
       pts: m => [add(m.c, [-m.r, -m.r]), add(m.c, [m.r, m.r])],
       draw(m, k) {
         const [x, y] = k.X(m.c), r = m.r * k.s, c = col(m.color || "ink");
+        rec(ring([x, y], r, 0, 360, 24));
         if (m.label) k.label(m.label, [x + r * Math.SQRT1_2, y - r * Math.SQRT1_2], m.anchor || "ne", m.color);
         return `<circle data-mark="circle" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:${m.fill ? c : "none"};fill-opacity:${FILL};stroke:${c}" stroke-width="${SW.out}"${m.dash ? ` stroke-dasharray="${DASH.guide}"` : ""}/>`;
       }
     }
   };
 
-  /* ---- layout: draw, measure labels, grow padding, redraw (max 3 passes) ---- */
+  /* ---- the scene model pre-pass (fable audit 2026-10-29 U1: I-INC-1/2, I-FORCE-1/2/3): the renderer owns contact, not the author.
+     fix(marks) -> { marks, codes }: a box/disk whose bottom is within 0.6 h of a ramp (incline hypotenuse), a surface or a solid seg
+     is snapped along that surface's normal so its bottom edge rests on it (offset h/2 or r), a box at the surface's angle. Points on a
+     body (force tails, arrow/spring/rope ends) ride along with it; a force tail just off a body (within 0.25 of its size) is
+     re-anchored to its centre. Weight (mg, W, F_g) points straight down; on a resting body the normal (N, F_N) is perpendicular to
+     the surface and friction (f, f_k, f_s) along it. Only unambiguous labels are turned; a body far from every surface never moves.
+     codes: "contact" (moved > 0.02 h or turned > 1 deg), "anchor" (a tail re-anchored), "direction" (an arrow turned). livefig.fix
+     is the same code in Python (conformance vectors: tests/fixtures/livefig.json "contact"). */
+  const FIX = { snap: 0.6, tol: 0.02, near: 0.25, turn: 1, down: 0.5 };
+  const WEIGHT = new Set(["mg", "W", "w", "F_g", "F_G", "F_grav"]), NORMAL = new Set(["N", "n", "F_N", "F_n"]), FRICTION = new Set(["f", "f_k", "f_s", "F_f", "F_fr"]);
+  function sym(label) {
+    return typeof label !== "string" ? "" : label.replace(/\$/g, "").split("=")[0]
+      .replace(/\\(vec|mathbf|boldsymbol|overrightarrow|mathrm|text)(?![a-zA-Z])/g, "").replace(/\\[,;: !]/g, "").replace(/[{}\s]/g, "");
+  }
+  const angOf = v => Math.atan2(v[1], v[0]) / deg;
+  const mod = (a, n) => ((a % n) + n) % n;
+  const turnBy = (a, b, n = 360) => { const d = mod(a - b, n); return Math.min(d, n - d); };
+  function solid(m) {
+    if (m.mark !== "body" || !Array.isArray(m.at) || !fin(m.at)) return null;
+    if (m.shape === "box") return m.w > 0 && m.h > 0 ? { box: true, hw: m.w / 2, hh: m.h / 2, H: m.h, size: Math.max(m.w, m.h) } : null;
+    if (m.shape === "dot" || m.shape === "rod" || !(m.r > 0)) return null;     // a point mass or a rod (a ladder leans on purpose)
+    return { box: false, hw: m.r, hh: m.r, H: 2 * m.r, size: 2 * m.r };
+  }
+  function surfacesOf(marks) {
+    const out = [];
+    for (const m of marks) {
+      let a, b, up;                                           // up: +1 free side = left normal of a->b, -1 = right, 0 = the body's side
+      if (m.mark === "incline") { const v = inclinePts(m); a = v[0]; b = v[2]; up = m.flip ? -1 : 1; }
+      else if (m.mark === "surface") { a = m.from; b = m.to; up = m.side === "left" ? -1 : 1; }
+      else if (m.mark === "seg" && !m.dash) { a = m.from; b = m.to; up = 0; }
+      else continue;
+      if (!Array.isArray(a) || !Array.isArray(b) || !fin(a) || !fin(b)) continue;
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L > 0) out.push({ a, b, u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L], L, up });
+    }
+    return out;
+  }
+  const local = (p, q) => rot([p[0] - q.c[0], p[1] - q.c[1]], -q.ang * deg);
+  function outside(l, k) { return k.box ? Math.hypot(Math.max(Math.abs(l[0]) - k.hw, 0), Math.max(Math.abs(l[1]) - k.hh, 0)) : Math.max(Math.hypot(l[0], l[1]) - k.hw, 0); }
+  function fix(marks) {
+    const codes = new Set(), out = marks.map(m => ({ ...m }));
+    const surf = surfacesOf(out), bodies = [];
+    const paths = out.filter(m => m.mark === "path").flatMap(m => { try { return sample(m).filter(fin); } catch { return []; } });
+    for (const m of out) {
+      const k = solid(m);
+      if (!k) continue;
+      const q = { m, k, c: m.at, ang: m.angle || 0 };
+      q.c1 = q.c; q.ang1 = q.ang;
+      bodies.push(q);
+      if (paths.some(p => Math.hypot(p[0] - q.c[0], p[1] - q.c[1]) <= FIX.near * k.size)) continue;   // a body on its trajectory flies
+      let best = null;
+      for (const s of surf) {
+        const rx = q.c[0] - s.a[0], ry = q.c[1] - s.a[1], t = rx * s.u[0] + ry * s.u[1], dl = s.u[0] * ry - s.u[1] * rx;
+        if (t < 0 || t > s.L) continue;
+        const side = s.up || (dl >= 0 ? 1 : -1), gap = side * dl - k.hh;
+        if (Math.abs(gap) > FIX.snap * k.H) continue;
+        if (!s.up && [s.a, s.b].some(p => outside(local(p, q), k) <= FIX.tol * k.size)) continue;   // a seg that starts on the body (a radius, a rope)
+        if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { s, side, t, gap };
+      }
+      if (!best) continue;
+      const { s, side, t, gap } = best, n = [-side * s.u[1], side * s.u[0]];
+      q.c1 = [s.a[0] + t * s.u[0] + k.hh * n[0], s.a[1] + t * s.u[1] + k.hh * n[1]];
+      let tilt = angOf(s.u); if (tilt > 90) tilt -= 180; if (tilt <= -90) tilt += 180;
+      if (k.box) q.ang1 = tilt;
+      q.rest = { n, u: s.u };
+      if (Math.abs(gap) > FIX.tol * k.H || (k.box && turnBy(q.ang, q.ang1, 180) > FIX.turn)) codes.add("contact");
+      m.at = q.c1; if (k.box) m.angle = q.ang1;
+    }
+    /* which body a point is on (inside its outline, or within near x size of it), in the body's authored pose */
+    const owner = p => {
+      let best = null;
+      if (!Array.isArray(p) || !fin(p)) return null;
+      for (const q of bodies) { const l = local(p, q), d = outside(l, q.k); if (d <= FIX.near * q.k.size && (!best || d < best.d)) best = { q, l, d }; }
+      return best;
+    };
+    const ride = o => { const r = rot(o.l, o.q.ang1 * deg); return [o.q.c1[0] + r[0], o.q.c1[1] + r[1]]; };
+    const on = o => o && o.d <= FIX.tol * o.q.k.size;
+    for (const m of out) {
+      if (m.mark === "force") {
+        const o = owner(m.at);
+        if (o) {
+          if (on(o)) m.at = ride(o);
+          else { m.at = o.q.c1; codes.add("anchor"); }
+        }
+        const s = sym(m.label), dir = (m.angle || 0) + (m.frame || 0), rest = o && o.q.rest;
+        let want = null, tol = FIX.turn;
+        if (WEIGHT.has(s)) { want = 270; tol = FIX.down; }
+        else if (rest && NORMAL.has(s)) want = angOf(rest.n);
+        else if (rest && FRICTION.has(s)) { const a = angOf(rest.u); want = turnBy(dir, a) <= turnBy(dir, a + 180) ? a : a + 180; }
+        if (want !== null && turnBy(dir, want) > tol) { m.angle = mod(want - (m.frame || 0), 360); codes.add("direction"); }
+      } else if (m.mark === "arrow") {
+        const o = owner(m.from);
+        if (on(o)) { const p = ride(o), dx = p[0] - m.from[0], dy = p[1] - m.from[1]; m.from = p; if (Array.isArray(m.to)) m.to = [m.to[0] + dx, m.to[1] + dy]; }
+      } else if (m.mark === "spring") {
+        for (const e of ["from", "to"]) { const o = owner(m[e]); if (on(o)) m[e] = ride(o); }
+      } else if (m.mark === "rope" && Array.isArray(m.pts) && m.pts.length) {
+        m.pts = m.pts.slice();
+        for (const i of new Set([0, m.pts.length - 1])) { const o = owner(m.pts[i]); if (on(o)) m.pts[i] = ride(o); }
+      }
+    }
+    return { marks: out, codes: [...codes].sort() };
+  }
+
+  /* ---- layout: draw, measure labels, place them, grow padding, redraw (max 3 passes) ----
+     Labels (fable audit 2026-10-29 U3, I-LBL-1/2): every label with a side (anchor other than "c") goes through figcheck.js place()
+     (= scene.js's packer): its own side first at OFF px, then the other 7 sides, a 2nd and 3rd ring with a leader line, then a free
+     spot, scored by overlap with the labels already placed and the strokes drawn (REC; a label crossing its own mark's stroke costs
+     less). Centred labels (on a body, a node) and tick labels keep their spot and are placed first, as obstacles. A label left on a
+     stroke is marked knock (its --knock background covers the line). The first two passes may place a label up to 60 px outside the
+     svg, so the padding grows as before; the last pass keeps every label inside the svg. Without FigCheck: the anchors as given. */
+  const SLACK = 60;
   function mount(el, build) {
-    const pad = { l: PAD, r: PAD, t: PAD, b: PAD };
+    const pad = { l: PAD, r: PAD, t: PAD, b: PAD }, FC = root.FigCheck;
     for (let pass = 0; pass < 3; pass++) {
-      const W = el.clientWidth, labels = [];
-      const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html }) };
-      const { svg, H } = build(W, pad, k);
+      const W = el.clientWidth, labels = [], strokes = [];
+      const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html, id: CUR }) };
+      REC = strokes; CUR = -1;
+      let built;
+      try { built = build(W, pad, k); } finally { REC = null; }
+      const { svg, H } = built;
       el._X = k.X;                                                     // world -> px, for live figures (drag)
       el.style.height = H + "px";
       el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false">${svg}</svg>`;
-      const grow = { l: 0, r: 0, t: 0, b: 0 };
+      const grow = { l: 0, r: 0, t: 0, b: 0 }, items = [];
       for (const L of labels) {
         if (!L.at || !fin(L.at)) continue;
         const sp = document.createElement("span");
@@ -348,24 +483,42 @@
         const w = sp.offsetWidth, h = sp.offsetHeight, a = L.anchor || "c", o = a === "c" ? 0 : a.length === 2 ? OFF * 0.7 : OFF;
         const fx = a.includes("e") ? 0 : a.includes("w") ? -1 : -0.5, fy = a.includes("n") ? -1 : a.includes("s") ? 0 : -0.5;
         const dx = a.includes("e") ? o : a.includes("w") ? -o : 0, dy = a.includes("n") ? -o : a.includes("s") ? o : 0;
-        const x = L.at[0] + dx + fx * w, y = L.at[1] + dy + fy * h;
-        sp.style.transform = `translate(${n2(x)}px, ${n2(y)}px)`;
-        grow.l = Math.max(grow.l, 4 - x); grow.r = Math.max(grow.r, x + w - W + 4);
-        grow.t = Math.max(grow.t, 4 - y); grow.b = Math.max(grow.b, y + h - H + 4);
+        items.push({ L, sp, w, h, a, fixed: a === "c" || !!L.cls || !DIRS8.includes(a), x: L.at[0] + dx + fx * w, y: L.at[1] + dy + fy * h });
       }
+      let placed = null;
+      if (FC && items.length) {
+        const R = pass < 2 ? { x: -SLACK, y: -SLACK, w: W + 2 * SLACK, h: H + 2 * SLACK } : { x: 0, y: 0, w: W, h: H };
+        const fixedFirst = items.map((it, i) => [it.fixed ? 0 : 1, i]).sort((p, q) => p[0] - q[0] || p[1] - q[1]).map(p => items[p[1]]);
+        /* the packer's box is the span + 3 px each side: a fixed label's box sits 3 px left of its span */
+        const reqs = fixedFirst.map((it, i) => ({ key: i, id: it.L.id, w: it.w, h: it.h, t: { pt: it.L.at }, ...(it.fixed ? { spot: [it.x - 3, it.y] } : { dirs: [it.a, ...DIRS8.filter(d => d !== it.a)] }) }));
+        try { placed = FC.place(reqs, strokes, [], R, null, { GAP: OFF }); } catch (e) { console.warn("labels", e); placed = null; }
+        if (placed) placed.forEach((p, i) => { const it = fixedFirst[i]; it.x = p.box[0] + 3; it.y = p.box[1]; it.knock = p.knock && !it.fixed; it.lead = p.lead; });
+      }
+      let leads = "";
+      for (const it of items) {
+        it.sp.style.transform = `translate(${n2(it.x)}px, ${n2(it.y)}px)`;
+        if (it.knock) it.sp.classList.add("knock");
+        if (it.lead) leads += `<line class="lead" x1="${n2(it.lead[0][0])}" y1="${n2(it.lead[0][1])}" x2="${n2(it.lead[1][0])}" y2="${n2(it.lead[1][1])}" style="stroke:var(--muted)" stroke-width="${SW.grid}"/>`;
+        grow.l = Math.max(grow.l, 4 - it.x); grow.r = Math.max(grow.r, it.x + it.w - W + 4);
+        grow.t = Math.max(grow.t, 4 - it.y); grow.b = Math.max(grow.b, it.y + it.h - H + 4);
+      }
+      if (leads) el.firstElementChild.insertAdjacentHTML("beforeend", leads);
+      el._labels = items.map(it => ({ id: String(it.L.id), box: [it.x, it.y, it.w, it.h] }));
+      el._R = { x: 0, y: 0, w: W, h: H };
       if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
       for (const s in pad) pad[s] += Math.max(0, Math.ceil(grow[s]));
     }
   }
+  const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
 
   function drawMarks(marks, k) {
     return marks.filter(m => S[m.mark]).map((m, i) => [LAYER[m.mark] ?? 5, i, m]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
-      .map(([, , m]) => { try { return S[m.mark].draw(m, k); } catch (e) { console.warn("mark", m.mark, e); return ""; } }).join("");
+      .map(([, i, m]) => { CUR = i; try { return S[m.mark].draw(m, k); } catch (e) { console.warn("mark", m.mark, e); return ""; } }).join("");
   }
 
   function scene(g) {
-    const marks = g.marks;
-    return (W, pad, k) => {
+    const pre = fix(g.marks), marks = pre.marks;         // contact, anchors and arrow directions first: the renderer owns them
+    const build = (W, pad, k) => {
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
       const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
@@ -377,6 +530,71 @@
       Object.assign(k, { s, marks, X: p => [ox + (p[0] - x0) * s, pad.t + (y1 - p[1]) * s] });
       return { svg: drawMarks(marks, k), H };
     };
+    build.marks = marks;                                 // the final model, for figcheck (render)
+    build.fixed = pre.codes;                             // what the pre-pass fixed (contact / anchor / direction), counted in fig_check
+    return build;
+  }
+
+  /* ---- figcheck on the final model (fable audit 2026-10-29 U3; §2 hooks: graph.js render()): after Graph.fix, the scene's bodies,
+     ramps / surfaces, solids and forces in world units plus the placed label boxes in px go through FigCheck.checkAll; the finding
+     codes (only the codes, never label text) are left on the figure as data-fig-findings="I-… I-…" ("" = clean) for tests and U7's
+     degrade / telemetry. No behaviour change on a finding yet. A force is judged against the nearest body whose outline is within
+     half its size of the tail (I-FORCE-1 then flags what fix() did not re-anchor); weight by its label (I-FORCE-2). */
+  function figModel(marks) {
+    const FC = root.FigCheck, bodies = [], surfaces = [], solids = [], forces = [], owners = [];
+    const paths = marks.filter(m => m.mark === "path").flatMap(m => { try { return sample(m).filter(fin); } catch { return []; } });
+    marks.forEach((m, i) => {
+      const id = "m" + i;
+      if (m.mark === "incline" && Array.isArray(m.at) && fin(m.at)) { const inc = FC.incline({ ...m, id }); solids.push(inc.shape); surfaces.push(inc.surface); }
+      else if (m.mark === "surface" && Array.isArray(m.from) && Array.isArray(m.to) && fin(m.from) && fin(m.to)) {
+        const u = norm(m.to[0] - m.from[0], m.to[1] - m.from[1]), up = m.side === "left" ? -1 : 1;
+        surfaces.push(FC.surface(id, m.from, m.to, [-up * u[1], up * u[0]]));
+      }
+      const k = solid(m);
+      if (!k || paths.some(p => Math.hypot(p[0] - m.at[0], p[1] - m.at[1]) <= FIX.near * k.size)) return;   // a body on its trajectory flies
+      const shape = k.box ? FC.box(id, m.at, m.w, m.h, m.angle || 0) : FC.circle(id, m.at, m.r);
+      bodies.push({ id, shape, size: k.H });
+      owners.push({ id, m, k, q: { c: m.at, ang: m.angle || 0 } });
+    });
+    marks.forEach((m, i) => {
+      if (m.mark !== "force" || !Array.isArray(m.at) || !fin(m.at)) return;
+      let best = null;
+      for (const o of owners) { const d = outside(local(m.at, o.q), o.k); if (d <= 0.5 * o.k.size && (!best || d < best.d)) best = { o, d }; }
+      forces.push({ id: "m" + i, at: m.at, angle: m.angle || 0, frame: m.frame || 0, body: best && best.o.id, ...(WEIGHT.has(sym(m.label)) ? { role: "weight" } : { role: "other" }) });
+    });
+    return { bodies, solids, surfaces, forces };
+  }
+  function figFindings(el, build) {
+    const FC = root.FigCheck;
+    if (!FC) return;
+    try {
+      const m = build.marks ? figModel(build.marks) : {};
+      const fs = FC.checkAll({ ...m, labels: el._labels || [], R: el._R });
+      const codes = [...new Set(fs.map(f => f.id))].sort();
+      el.dataset.figFindings = codes.join(" ");
+      return codes;
+    } catch (e) { console.warn("figcheck", e); return []; }
+  }
+  /* ---- degrade + telemetry (fable audit 2026-10-29 U7, §2 verdict ladder: ok -> fixed -> degrade -> telemetry). Every finding
+     checkAll still reports is one nothing fixed: the pre-pass (fix) and the label packer (mount) have run, and the RJ rows have no
+     fix at all. So any finding left = a broken figure, and the student never sees it: the svg goes and the figure's alt text stands
+     in a plain box (.fig-off.fig-alt). The static image path (app.js viewImage) is OpenUI views only; a graph block has no image of its
+     own. A finding-free figure is untouched. Telemetry: one fig_check per figure render that found or fixed something, through the app's
+     sender (window.stemT: a no-op when recording is off), codes and counts only: never a label, the alt, or any of the figure. The
+     same result on a redraw (resize) is not sent twice. */
+  function degrade(el, block) {
+    el.replaceChildren();
+    el.textContent = block.alt || "";
+    el.classList.add("fig-off", "fig-alt");
+    el.dataset.figDegraded = "1";
+    el.style.height = ""; el.style.maxWidth = ""; el.style.marginInline = "";
+  }
+  function figReport(el, rules, fixed, degraded) {
+    if (!rules.length && !fixed.length) return;
+    const p = { path: "graph", rules, fixed: fixed.length, degraded, step: null }, key = JSON.stringify(p);
+    if (el._figSent === key) return;
+    el._figSent = key;
+    try { root.stemT?.("fig_check", p); } catch { /* telemetry is never the figure's problem */ }
   }
 
   function niceStep(span, px) {
@@ -410,8 +628,9 @@
       }
       let body = "", top = "";
       const other = [];
-      for (const m of g.marks) {
+      for (const [i, m] of g.marks.entries()) {
         const c = col(m.color || "c1");
+        CUR = "c" + i;
         if (m.mark === "shade") {
           const n = 120, up = [], dn = [], vy = m.var === "y";
           for (let i = 0; i <= n; i++) { const t = m.from + (m.to - m.from) * i / n;
@@ -442,6 +661,7 @@
         } else other.push(m);
       }
       top += drawMarks(other.map(m => m.mark === "point" ? { ...m, color: m.color || "ink" } : m), k);
+      CUR = "axes";
       let axes = "";
       if (axesOn) {
         const O = X([ax, ay]);
@@ -803,6 +1023,7 @@
   function render(el, block) {
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
+    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; }   // a redraw starts clean
     const g = el._g;
     const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
     el.style.maxWidth = ""; el.style.marginInline = "";
@@ -818,7 +1039,10 @@
       el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
       mount(el, build);
     }
+    const rules = figFindings(el, build) || [], degraded = rules.length > 0;
+    if (degraded) degrade(el, block);
+    figReport(el, rules, build.fixed || [], degraded);
   }
 
-  root.Graph = { render, tex };
+  root.Graph = { render, tex, fix };
 })(window);

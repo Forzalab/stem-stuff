@@ -72,7 +72,8 @@ weight() {
     choose-all|idle-peek|nav-stable|overscroll) echo 25 ;; telemetry) echo 24 ;; incident) echo 23 ;; disabled) echo 21 ;; reload) echo 20 ;;
     bar) echo 15 ;; polish) echo 14 ;; choose-all-spam) echo 13 ;; bank|cluck-more) echo 12 ;; splash) echo 11 ;; livefig) echo 10 ;; seen) echo 9 ;;
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip) echo 5 ;; blind|katex-wrap|measure-slots|views-oui|views-static) echo 4 ;;
-    popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
+    popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
+    geomarks) echo 12 ;;  # wgeo U1: + the ramp contact check on chromium/firefox/webkit at 1440 + 390; U3: + labels at 1440/390/360 (graph.js + Geometry); local run ~12.5 s (CI has chromium only: ~5 s)
     welcome) echo 5 ;;   # local run ~4 s
     welcome-app) echo 26 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~26 s (estimate until CI timing)
     minicluck) echo 3 ;;   # local run ~3s
