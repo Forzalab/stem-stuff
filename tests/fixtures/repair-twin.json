@@ -1,0 +1,25 @@
+{
+  "v": 1,
+  "problems": [
+    {
+      "code": "P3X_PHN", "title": "A dropped ball", "type": "mc",
+      "body": [{"type": "text", "md": "A ball is dropped from rest. Take $g = 10\\ \\text{m/s}^2$. How far does it fall in $2\\ \\text{s}$?"}],
+      "choices": [{"id": "a", "md": "$20\\ \\text{m}$"}, {"id": "b", "md": "$10\\ \\text{m}$"}, {"id": "c", "md": "$40\\ \\text{m}$"}],
+      "correct": "a",
+      "wrong": [{"choice": "b", "error": "algebra", "hint": "QUACK. Did the time get squared?"}],
+      "repair": {"steps": [
+        {"id": "given", "label": "Name the unknown", "kind": "pick", "opts": [{"id": "a", "md": "distance"}, {"id": "b", "md": "time"}], "ok": "a",
+         "why": {"q": "Why that one?", "opts": ["the question asks how far", "the question asks how long", "it is always the first letter"], "ok": 0}},
+        {"id": "power", "label": "The power on the time", "kind": "fill", "tex": "d=\\tfrac12 g t^{▢}", "opts": ["1", "2", "3"], "ok": "2"},
+        {"id": "answer", "label": "Final answer", "kind": "pick"}
+      ]}
+    },
+    {
+      "code": "P3X_A98", "title": "A dropped ball, new numbers", "type": "num",
+      "body": [{"type": "text", "md": "A ball is dropped from rest. Take $g = 10\\ \\text{m/s}^2$. How far does it fall in $3\\ \\text{s}$, in $\\text{m}$?"}],
+      "answer": "45",
+      "wrong": [{"match": "15", "error": "algebra", "hint": "QUACK. Did the time get squared?"}],
+      "twin": "a", "parent_template": "P3X_PHN"
+    }
+  ]
+}
