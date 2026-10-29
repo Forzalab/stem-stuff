@@ -3,7 +3,8 @@
 //   render(program, mount, o)   whole program -> handle
 //   stream(chunks, mount, o)    (async) iterable of text chunks -> Promise<handle>; paints once per completed statement
 //   mountView(mount, o)         handle { push(chunk), end(), patch(program), errors, src, el }
-// o = { predict(pick, {view, key}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e), t: {id: text} }
+// o = { predict(pick, {view, key}) -> Promise<{ok, tries_left, patch?}>, doodle: "duck", document, onError(e), t: {id: text},
+//       stage: "pre" | "wrong" | "post" (the server's reveal stage for a Scene; default wrong = fail closed, views/scene-contract.md §2) }
 // Slots (views plan Oct 20, registry "slot"): a string prop that is exactly "$t.<id>" is filled from o.t; an id o.t lacks paints
 // as an outlined empty box <span class="vw-tslot" data-slot="<id>"> (what measure_slots reads). Caps apply to the filled text.
 // Rules built in (brain refine/REFINE.md): F3 no look props (look = views.css by cascade, page vs .ai-box); F4 Reveal's body is a
@@ -14,6 +15,7 @@
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
 import { createParser, mergeStatements } from "./vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
+import { sceneModel, SceneView, tokenize } from "./scene.js";
 
 const SCHEMA = toSchema(LIB);
 const REG = new Map();
@@ -244,6 +246,7 @@ class Session {
       icon: (n, sm) => icon(doc, n, sm),
       rich: s => rich(doc, s),
       t: this.o.t,
+      stage: ["pre", "wrong", "post"].includes(this.o.stage) ? this.o.stage : "wrong",
     };
   }
   handle() {
@@ -445,6 +448,7 @@ register("Answer", (p, c) => c.h("p", { class: "vw-p" }, c.h("span", { class: "v
 register("Steps", (p, c) => {
   const steps = (p.steps || []).map(s => s.props);
   if (!steps.length) return c.h("div", { class: "vw-steps wait" });      // its steps have not arrived yet: hold the slot
+  if (p.fig && p.fig.typeName === "Scene") return sceneSteps(p, steps, c);
   const st = c.state(() => ({ i: 0 }));
   st.i = Math.min(st.i, steps.length - 1);
   const g = p.fig ? graphModel(p.fig.props) : null;
@@ -472,6 +476,53 @@ register("Steps", (p, c) => {
   foot.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); go(e.key === "ArrowLeft" ? -1 : 1); } });
   show();
   return c.h("div", { class: "vw-steps" }, fig, p.front && c.h("div", null, c.h("div", { class: "vw-lab" }, p.front), front), cap, tb, foot);
+});
+
+/** A scene stepper (viz MVP, views/scene-contract.md): the Scene is read through Steps (its parts through the Scene, like Step
+ *  through Steps). Step k = the replay of the ops of steps 1..k (Back is exact); Next / Back tween 200 ms (scene.js SceneView);
+ *  taps only, no autoplay, no scrubber. A step's Ask = choice pills (the next step shows the answer; nothing is graded here).
+ *  Caption, ask, code and math rows keep their slots on every step, so nothing below the figure jumps. */
+function sceneSteps(p, steps, c) {
+  const model = sceneModel(p.fig.props, steps), view = new SceneView(c.doc, model, c.stage);
+  const st = c.state(() => ({ i: 0, picks: {} }));
+  st.i = Math.min(st.i, steps.length - 1);
+  const cap = c.h("p", { class: "vw-cap", "aria-live": "polite" });
+  const text = (s, S) => tokenize(s, model, S, view.stage).flatMap(t => (t.hid ? [c.h("span", { class: "vw-hid" }, t.s)] : c.rich(t.s)));
+  const anyAsk = model.steps.some(s => s.ask);
+  const q = c.h("p", { class: "vw-q" }), pills = c.h("div", { class: "vw-pills", role: "radiogroup" });
+  const ask = anyAsk ? c.h("div", { class: "vw-ask" }, q, pills) : null;
+  const back = button(c.doc, "prev", "Back"), next = button(c.doc, "next", "Next"), n = c.h("span", { class: "vw-n" });
+  const foot = c.h("div", { class: "vw-foot" }, back, next, n);
+  const show = from => {
+    const f = view.go(st.i, from), s = model.steps[st.i];
+    cap.replaceChildren(...text(s.cap, f.S));
+    if (ask) {
+      const a = s.ask;
+      cls(ask, "off", !a);
+      q.replaceChildren(...(a ? text(a.q, f.S) : []));
+      pills.setAttribute("aria-label", a ? a.q : "");
+      pills.replaceChildren(...(a ? a.choices : []).map(ch => {
+        const b = c.h("button", { type: "button", class: "vw-pill", role: "radio", "aria-checked": String(st.picks[st.i] === ch), "data-v": ch }, ...text(ch, f.S));
+        b.addEventListener("click", () => { st.picks[st.i] = ch; for (const x of pills.childNodes) x.setAttribute("aria-checked", String(x === b)); });
+        return b;
+      }));
+    }
+    n.textContent = `Step ${st.i + 1} of ${steps.length}`;
+    dis(back, st.i === 0); dis(next, st.i === steps.length - 1);
+  };
+  const go = d => { const i = Math.max(0, Math.min(steps.length - 1, st.i + d)); if (i !== st.i) { const from = st.i; st.i = i; show(from); } };
+  back.addEventListener("click", () => go(-1));
+  next.addEventListener("click", () => go(1));
+  foot.addEventListener("keydown", e => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); go(e.key === "ArrowLeft" ? -1 : 1); } });
+  show(null);
+  return c.h("div", { class: "vw-steps vw-scene" }, ...view.nodes, cap, ask, foot);
+}
+/** Scene drawn alone (no stepper): every object at its declared state, a still figure. Gated replies only carry it as Steps.fig. */
+register("Scene", (p, c) => {
+  const ids = (p.objs || []).map(o => o && o.props && o.props.id).filter(Boolean);
+  const view = new SceneView(c.doc, sceneModel(p, [{ cap: "", ops: ids.length ? [`add ${ids.join(" ")}`] : [] }]), c.stage);
+  view.go(0, null);
+  return c.h("div", { class: "vw-scene" }, ...view.nodes);
 });
 
 register("Hints", (p, c) => {

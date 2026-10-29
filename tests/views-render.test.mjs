@@ -13,8 +13,11 @@ const slots = m => byClass(m, "vw-slot");
 const tick = () => new Promise(r => setTimeout(r, 0));
 const ANSWER = ["χ(P) = 3", "Three classes cover"];
 
+// read through their owner, never drawn alone: Step through Steps, the scene parts through Scene (viz MVP, views/scene-contract.md)
+const READ_THROUGH = ["Step", "Shape", "Link", "Axes", "MathRows", "Code", "Trace", "Cells", "Bars", "Q", "Ask"];
 test("registry: every library component has a drawing, and nothing is drawn that the library does not list", () => {
-  assert.deepEqual(registered().sort(), Object.keys(LIB.components).filter(n => n !== "Step").sort());
+  assert.deepEqual(registered().sort(), Object.keys(LIB.components).filter(n => !READ_THROUGH.includes(n)).sort());
+  assert.ok(registered().includes("Scene"));
 });
 
 test("library: views-lib.js loads views/library.json, the one source (no hand-kept list beside it)", () => {

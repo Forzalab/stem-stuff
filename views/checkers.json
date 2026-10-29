@@ -187,17 +187,5 @@
       "cols": 4
     }
   },
-  "staged": {
-    "Scene": "V1",
-    "Shape": "V1",
-    "Link": "V1",
-    "Axes": "V1",
-    "MathRows": "V1",
-    "Code": "V1",
-    "Trace": "V1",
-    "Cells": "V1",
-    "Bars": "V1",
-    "Q": "V1",
-    "Ask": "V1"
-  }
+  "staged": {}
 }

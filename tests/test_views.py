@@ -120,14 +120,14 @@ class Generated(unittest.TestCase):
     def test_library_spec(self):
         lib = gv.library(REG)
         self.assertEqual(lib["root"], "View")
-        self.assertEqual(sorted(lib["components"]), sorted(P11))          # what views.js (P1.1) draws, nothing more
-        self.assertEqual(sorted(lib["schema"]["$defs"]), sorted(P11))
-        self.assertEqual(sorted(n for g in lib["componentGroups"] for n in g["components"]), sorted(P11))
+        self.assertEqual(sorted(lib["components"]), sorted(P11 + SCENE))          # what views.js (P1.1 + the scene family) draws, nothing more
+        self.assertEqual(sorted(lib["schema"]["$defs"]), sorted(P11 + SCENE))
+        self.assertEqual(sorted(n for g in lib["componentGroups"] for n in g["components"]), sorted(P11 + SCENE))
         self.assertTrue(all(isinstance(g["notes"], list) for g in lib["componentGroups"]))
         steps = lib["components"]["Steps"]
         self.assertEqual(list(steps["props"]["properties"]), ["fig", "steps", "front", "head"])   # positional order
         self.assertEqual(steps["props"]["required"], ["steps"])
-        self.assertEqual(steps["signature"], "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])")
+        self.assertEqual(steps["signature"], "Steps(fig?: Graph | Scene, steps: Step[], front?: string, head?: string[])")
         self.assertEqual(lib["schema"]["$defs"]["Steps"]["properties"], steps["props"]["properties"])
         view = lib["components"]["View"]["props"]["properties"]["children"]["items"]["anyOf"]
         self.assertEqual(view, [{"$ref": f"#/$defs/{n}"} for n in gv.shipped(REG)])
@@ -142,7 +142,7 @@ class Generated(unittest.TestCase):
                 continue
             for t in planned:
                 self.assertNotIn(t, text, path)
-            self.assertLessEqual(offered(text), set(P11) | (set(SCENE) if path.endswith("scene-steps.md") else set()), path)
+            self.assertLessEqual(offered(text), set(P11) | (set(SCENE) if path.endswith(("scene-steps.md", "all.md")) else set()), path)
         self.assertIn("`graph.trace`", gv.prompt(REG))
         self.assertIn("`Hints(hints: string≤200[]≤3)`", gv.prompt(REG, "hint-line"))
 
@@ -274,37 +274,38 @@ def contract_sigs():
 
 
 class SceneFamily(unittest.TestCase):
-    """viz MVP (todo 120): the scene family is staged (ships V1): in the registry, the scene-steps prompt, checkers and the gate's
-    catalog (library.json "staged"), but not in library.json's drawn components until views.js draws it (V-B)."""
+    """viz MVP (todo 120): the scene family ships (P1.1, V-B: views.js draws it through Scene, the parts read through it like Step
+    through Steps): in library.json's drawn components, the scene-steps and all prompts, checkers; nothing staged any more."""
 
-    def test_family_is_staged(self):
-        self.assertIn("V1", REG["staged"])
+    def test_family_ships(self):
+        self.assertNotIn("V1", REG.get("staged", {}))
         for n in SCENE:
-            self.assertEqual(REG["components"][n]["ships"], "V1", n)
-        self.assertEqual(sorted(gv.staged(REG)), sorted(SCENE))
-        self.assertFalse(set(SCENE) & set(gv.shipped(REG)))
+            self.assertEqual(REG["components"][n]["ships"], "P1.1", n)
+        self.assertEqual(gv.staged(REG), [])
+        self.assertLessEqual(set(SCENE), set(gv.shipped(REG)))
 
-    def test_staged_in_base_is_caught(self):
+    def test_planned_in_base_is_caught(self):
         r = copy.deepcopy(REG)
         r["base"].append("Scene")
+        r["components"]["Scene"]["ships"] = "planned"
         self.assertTrue(any("Scene is no shipping component" in line for line in gv.problems(r)))
         r = copy.deepcopy(REG)
         r["components"]["Scene"]["ships"] = "V9"
         self.assertTrue(any("Scene: unknown ships V9" in line for line in gv.problems(r)))
 
-    def test_shipped_library_is_unchanged_but_step_gains_ops(self):
+    def test_library_draws_the_family_and_step_gains_ops_and_ask(self):
         lib = gv.library(REG)
-        self.assertEqual(sorted(lib["components"]), sorted(P11))
-        self.assertEqual(lib["components"]["Steps"]["signature"], "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])")
+        self.assertEqual(sorted(lib["components"]), sorted(P11 + SCENE))
+        self.assertNotIn("staged", lib)
+        self.assertEqual(lib["components"]["Steps"]["signature"], "Steps(fig?: Graph | Scene, steps: Step[], front?: string, head?: string[])")
         step = lib["components"]["Step"]["props"]["properties"]
-        self.assertEqual(list(step), ["cap", "nodes", "edges", "tags", "labels", "front", "rows", "ops"])   # ask waits for Ask to ship
+        self.assertEqual(list(step), ["cap", "nodes", "edges", "tags", "labels", "front", "rows", "ops", "ask"])
         self.assertEqual(step["ops"], {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 4})
+        self.assertEqual(step["ask"], {"$ref": "#/$defs/Ask"})
 
-    def test_library_lists_the_staged_family(self):
-        st = gv.library(REG)["staged"]
-        self.assertEqual(sorted(st["components"]), sorted(SCENE))
-        self.assertEqual(sorted(st["schema"]["$defs"]), sorted(P11 + SCENE))
-        defs = st["schema"]["$defs"]
+    def test_library_schema_holds_the_family(self):
+        defs = gv.library(REG)["schema"]["$defs"]
+        self.assertEqual(sorted(defs), sorted(P11 + SCENE))
         self.assertEqual(defs["Steps"]["properties"]["fig"], {"anyOf": [{"$ref": "#/$defs/Graph"}, {"$ref": "#/$defs/Scene"}]})
         self.assertEqual(list(defs["Step"]["properties"])[-2:], ["ops", "ask"])
         self.assertEqual(defs["Step"]["properties"]["ask"], {"$ref": "#/$defs/Ask"})
@@ -321,8 +322,11 @@ class SceneFamily(unittest.TestCase):
     def test_scene_steps_prompt(self):
         text = gv.prompt(REG, "scene-steps")
         self.assertEqual(offered(text), set(REG["base"]) | set(REG["recipes"]["scene-steps"]["components"]))
+        names = list(dict.fromkeys([*REG["base"], *REG["recipes"]["scene-steps"]["components"]]))   # a recipe's signatures name its own pool
         for n in SCENE + ["Steps", "Step"]:
-            self.assertIn(f"`{gv.sig(REG, n, caps=True, pool=gv.pool(REG))}`", text, n)
+            self.assertIn(f"`{gv.sig(REG, n, caps=True, pool=names)}`", text, n)
+        self.assertIn("`Steps(fig?: Scene, steps: Step[]≤8,", text)
+        self.assertIn("`Steps(fig?: Graph, steps: Step[]≤8,", gv.prompt(REG, "steps"))           # a recipe without Scene never names it
         for head in ("## Scene rules", "## Notes: mechanics", "## Notes: calc", "## Notes: cs_trace", "## Example"):
             self.assertIn(head, text)
         for must in ("add ", "set ", "glow ", "hide ", "camera ", "param ", "attach ", "pivot ", "stack ", "scale ", "Never write a pixel",
@@ -331,9 +335,9 @@ class SceneFamily(unittest.TestCase):
         self.assertLessEqual(len(text.splitlines()), 200)
         self.assertIn("p1 = Step(", text)
 
-    def test_other_prompts_never_offer_the_staged_family(self):
+    def test_other_recipes_never_offer_the_family(self):
         for path, text in outputs().items():
-            if path.endswith(".md") and path != gv.SCHEMA_MD and not path.endswith("scene-steps.md"):
+            if path.endswith(".md") and path != gv.SCHEMA_MD and not path.endswith(("scene-steps.md", "all.md")):
                 self.assertFalse(offered(text) & set(SCENE), path)
 
     def test_checkers_carry_the_scene_rows(self):
@@ -342,7 +346,7 @@ class SceneFamily(unittest.TestCase):
         for want in ("scene-schema", "scene-refs", "scene-rels", "scene-expr", "scene-trace", "scene-ops", "scene-steps", "scene-leak",
                      "scene-voice", "scene-repair"):
             self.assertIn(want, ids)
-        self.assertEqual(ch["staged"], {n: "V1" for n in SCENE})
+        self.assertEqual(ch["staged"], {})
 
 
 if __name__ == "__main__":

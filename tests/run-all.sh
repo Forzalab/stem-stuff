@@ -86,6 +86,7 @@ weight() {
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
     copy-math) echo 14 ;;   # W108 copy math as plain text, local run ~13 s (estimate until CI timing)
     toast-note) echo 30 ;;   # W112 toast notes + desktop start line, local run ~30 s (estimate until CI timing)
+    scene) echo 25 ;;   # todo 120 viz MVP: the five scene cases x 2 widths x every step, tween + replay, local run ~20 s (estimate until CI timing)
     *) echo 5 ;;
   esac
 }
@@ -119,6 +120,7 @@ tags() {
     brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
     copy-math) echo "@logic @real-time" ;;   # W108 real clipboard (granted), stub OpenRouter
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
+    scene) echo "@layout @real-time" ;;   # todo 120: scene steppers drawn by views.js + scene.js, real 200 ms tweens (no page.clock)
     *) echo "" ;;
   esac
 }

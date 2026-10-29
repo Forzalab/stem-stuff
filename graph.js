@@ -64,19 +64,25 @@
     flush();
     return s;
   }
-  function arrow(a, b, w, st, head = "fill", dash) {
+  /* the one arrowhead geometry (DESIGN-LANGUAGE §3), in px: { shaft: [a, b'], wedges: [[tip, l, r], ...], open: [l, tip, r] | null }.
+     arrow() below draws it; the scene renderer (scene.js) draws the same parts as DOM (Graph.arrowParts). */
+  function arrowParts(a, b, w, head = "fill") {
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
     const [ux, uy] = norm(b[0] - a[0], b[1] - a[1]), nx = -uy, ny = ux;
     let L = Math.max(8, 4 * w); if (len < 1.6 * L) L = len / 1.6;
     const W = 0.75 * L;
-    const wedge = t => { const bx = t[0] - L * ux, by = t[1] - L * uy;
-      return `<polygon points="${P([t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]])}" style="fill:${st};stroke:${st}" stroke-width="1"/>`; };
+    const wedge = t => { const bx = t[0] - L * ux, by = t[1] - L * uy; return [t, [bx + W / 2 * nx, by + W / 2 * ny], [bx - W / 2 * nx, by - W / 2 * ny]]; };
     const cut = head === "fill" ? 0.6 * L : head === "double" ? 1.35 * L : head === "open" ? 0.3 * w : 0;
-    let s = line([a, [b[0] - cut * ux, b[1] - cut * uy]], st, w, dash);
-    if (head === "fill") s += wedge(b);
-    if (head === "double") s += wedge(b) + wedge([b[0] - 0.75 * L * ux, b[1] - 0.75 * L * uy]);
-    if (head === "open") { const bx = b[0] - L * ux, by = b[1] - L * uy;
-      s += line([[bx + W / 2 * nx, by + W / 2 * ny], b, [bx - W / 2 * nx, by - W / 2 * ny]], st, w); }
+    const wedges = head === "fill" ? [wedge(b)] : head === "double" ? [wedge(b), wedge([b[0] - 0.75 * L * ux, b[1] - 0.75 * L * uy])] : [];
+    let open = null;
+    if (head === "open") { const bx = b[0] - L * ux, by = b[1] - L * uy; open = [[bx + W / 2 * nx, by + W / 2 * ny], b, [bx - W / 2 * nx, by - W / 2 * ny]]; }
+    return { shaft: [a, [b[0] - cut * ux, b[1] - cut * uy]], wedges, open };
+  }
+  function arrow(a, b, w, st, head = "fill", dash) {
+    const g = arrowParts(a, b, w, head);
+    let s = line(g.shaft, st, w, dash);
+    for (const q of g.wedges) s += `<polygon points="${P(q)}" style="fill:${st};stroke:${st}" stroke-width="1"/>`;
+    if (g.open) s += line(g.open, st, w);
     return s;
   }
   function dirAnchor(dx, dy) {
@@ -820,5 +826,5 @@
     }
   }
 
-  root.Graph = { render, tex };
-})(window);
+  root.Graph = { render, tex, arrowParts };
+})(typeof window !== "undefined" ? window : globalThis);   // globalThis: the node tests load it before scene.js

@@ -84,6 +84,92 @@
 .ai-box .vw .cm text { fill: var(--help-ink); }
 .vw .cm.k2 text, .ai-box .vw .cm.k2 text { fill: var(--ink); }
 
+/* Scene (viz MVP, views/scene-contract.md §8, DESIGN-LANGUAGE §10): scene.js writes role classes, never a colour; strokes from the SW
+   table (grid 1, guide 1.5, outline 2, curve 2.5, force 3); focus (glow, one step) = stroke +1, fill 22%, label in --c1, no halo */
+.vw .sc-body :is(polygon, circle, path) { fill: var(--body); stroke: var(--ink); stroke-width: 2; }
+.vw .sc-body.sc-line line { stroke: var(--ink); stroke-width: 2; }
+.vw .sc-guide :is(polygon, circle, path, line) { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 2 4; }
+.vw .sc-ground :is(polygon, circle, path) { fill: var(--body); stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-ground line, .vw .sc-hatch { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-region :is(polygon, circle, path) { fill: var(--c1); fill-opacity: .22; stroke: none; }
+.vw .sc-yours :is(polygon, circle, path, line) { fill: none; stroke: var(--wrong); stroke-width: 2; }
+.vw .sc-right :is(polygon, circle, path, line) { fill: none; stroke: var(--correct); stroke-width: 2; }
+.vw .sc-o .sc-seg, .vw .sc-o .sc-art { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: none; }
+.vw .sc-pt circle { fill: var(--ink); stroke: none; }
+.vw .sc-pt.sc-yours path { stroke: var(--wrong); stroke-width: 2.5; }
+.vw .sc-pt.sc-right circle { fill: none; stroke: var(--correct); stroke-width: 2; }
+.vw .sc-string line { stroke: var(--ink); stroke-width: 1.5; }
+.vw .sc-spring polyline { fill: none; stroke: var(--ink); stroke-width: 2; }
+.vw .sc-vec line { stroke: var(--c1); stroke-width: 3; }
+.vw .sc-vec .hd { fill: var(--c1); stroke: var(--c1); stroke-width: 1; }
+.vw .sc-arrow line, .vw .sc-arrow polyline { fill: none; stroke: var(--ink); stroke-width: 2; }
+.vw .sc-arrow .hd { fill: var(--ink); stroke: var(--ink); stroke-width: 1; }
+.vw .sc-dim .ext { stroke: var(--muted); stroke-width: 1; }
+.vw .sc-dimline line { stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-dimline .hd { fill: var(--muted); stroke: var(--muted); stroke-width: 1; }
+.vw .sc-angle path { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-o.focus :is(polygon, circle, path) { fill: var(--c1); fill-opacity: .22; stroke: var(--c1); stroke-width: 3; }
+.vw .sc-o.focus :is(line, polyline) { stroke: var(--c1); }
+.vw .sc-o.focus .hd { fill: var(--c1); stroke: var(--c1); }
+.vw .sc-o.focus .sc-seg, .vw .sc-o.focus .sc-hatch, .vw .sc-o.focus .sc-art { stroke: var(--c1); }
+.vw .sc-pt.focus circle { fill: var(--c1); fill-opacity: 1; stroke: none; }
+.vw .sc-string.focus line, .vw .sc-dim.focus .sc-dimline line, .vw .sc-angle.focus path { stroke-width: 2.5; }
+.vw .sc-spring.focus polyline, .vw .sc-body.sc-line.focus line { stroke-width: 3; }
+.vw .sc-vec.focus line { stroke-width: 4; }
+.vw .sc-angle.focus path { fill: none; }
+/* labels: KaTeX-sized text on a --knock chip when it crosses a line; a hidden value (sym or ?) in --muted on the chip */
+.vw .sc-lab text { fill: var(--ink); font: 400 0.9375rem var(--font); white-space: pre; }
+.vw .sc-lab tspan.sub { font-size: var(--t-xs); }
+.vw .sc-lab tspan.hid, .vw .sc-lab.hid text { fill: var(--muted); }
+.vw .sc-lab.focus text, .vw .sc-lab.focus tspan { fill: var(--c1); }
+.vw .sc-knock { fill: var(--knock); stroke: none; }
+.vw .sc-lead { stroke: var(--muted); stroke-width: 1; }
+/* axes, bars, cells (side slot when the scene has shapes) */
+.vw .sc-axis line { stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-axis .hd { fill: var(--muted); stroke: var(--muted); stroke-width: 1; }
+.vw .sc-grid { stroke: var(--grid); stroke-width: 1; }
+.vw .sc-tick { fill: var(--muted); font: 400 var(--t-xs) var(--font); font-variant-numeric: tabular-nums; }
+.vw .sc-curve polyline { fill: none; stroke: var(--c1); stroke-width: 2.5; }
+.vw .sc-curve.s2 polyline { stroke: var(--c2); }
+.vw .sc-curve.s3 polyline { stroke: var(--c3); }
+.vw .sc-curve.focus polyline, .vw .sc-tan.focus { stroke-width: 3.5; }
+.vw .sc-area { fill: var(--c1); fill-opacity: .22; stroke: none; }
+.vw .sc-riem polygon { fill: var(--c2); fill-opacity: .22; stroke: var(--c2); stroke-width: 1.5; }
+.vw .sc-tan { stroke: var(--c2); stroke-width: 2.5; }
+.vw .sc-pton { fill: var(--c2); stroke: none; }
+.vw .sc-marker { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.vw .sc-marker.focus { stroke: var(--c1); }
+.vw .sc-bar { stroke: none; }
+.vw .sc-bar.s0 { fill: var(--c1); }
+.vw .sc-bar.s1 { fill: var(--c2); }
+.vw .sc-bar.s2 { fill: var(--c3); }
+.vw .sc-bar.s3 { fill: var(--muted); }
+.vw .sc-cons { fill: none; stroke: var(--ink); stroke-width: 2; }
+.vw .sc-cons.focus { stroke: var(--c1); stroke-width: 3; }
+.vw .sc-cell { fill: var(--body); stroke: var(--muted); stroke-width: 1.5; }
+.vw .sc-cell.hl { fill: var(--c1); fill-opacity: .22; stroke: var(--c1); stroke-width: 3; }
+.vw .sc-ctext { fill: var(--ink); font: 400 0.9375rem var(--mono); }
+.vw .sc-ptr line { stroke: var(--c1); stroke-width: 1.5; }
+.vw .sc-ptr .hd { fill: var(--c1); stroke: var(--c1); stroke-width: 1; }
+/* scene panels: math rows in the bottom callout ('=' aligned), code + trace in a --page well; every slot held from step 1 */
+.vw-math { display: grid; justify-content: center; gap: var(--s1); padding: var(--s2) var(--s3); border: var(--bw-hair) solid var(--ai-line, var(--line));
+  border-radius: 10px; background: var(--ai-tint, var(--float)); font-variant-numeric: tabular-nums; }
+.vw-math.focus { border-color: var(--c1); }
+.vw-math.off, .vw-code.off, .vw-ask.off { visibility: hidden; }
+.vw-mrow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--s2); align-items: baseline; }
+.vw-mrow .l { text-align: right; }
+.vw-mrow .e { color: var(--muted); }
+.vw-code ol { margin: 0; padding: var(--s2) 0; list-style: none; border-radius: 8px; background: var(--page); font: 400 1rem/1.5 var(--mono); }
+.vw-code li { display: flex; gap: var(--s3); padding: 0 var(--s3); }
+.vw-code li.hl { background: var(--float); }
+.vw-code .ln { flex: none; min-width: 2ch; color: var(--muted); text-align: right; }
+.vw-code code { min-width: 0; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.vw-code.focus li.hl { outline: var(--bw) solid var(--c1); outline-offset: calc(-1 * var(--bw)); }
+.vw-vars { display: flex; flex-wrap: wrap; gap: var(--s2); min-height: var(--vw-chip); margin-top: var(--s2); }
+.vw-vars .vw-chip.hid { color: var(--muted); }
+.vw-hid { padding: 0 var(--s1); border-radius: 3px; background: var(--knock); color: var(--muted); }
+.vw-ask .vw-q { margin-top: 0; }
+
 /* L1: Callout = a rule + a tag, never a box */
 .vw-callout { padding-top: var(--s3); border-top: var(--bw) solid var(--line); }
 .vw-tag { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: var(--lh-xs); }

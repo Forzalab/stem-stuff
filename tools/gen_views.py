@@ -252,7 +252,7 @@ def prompt(reg, recipe=None):
     for layer, note in reg["layers"].items():
         here = [n for n in names if reg["components"][n]["layer"] == layer]
         if here:
-            lines += [f"### {layer}: {note}"] + [f"- `{sig(reg, n, caps=True, pool=ok)}`: {reg['components'][n]['desc']}" for n in here]
+            lines += [f"### {layer}: {note}"] + [f"- `{sig(reg, n, caps=True, pool=names)}`: {reg['components'][n]['desc']}" for n in here]
     if rec and rec.get("rules"):
         lines += ["", "## Scene rules"] + [f"- {x}" for x in rec["rules"]]
     for subject, notes in (rec or {}).get("notes", {}).items():
