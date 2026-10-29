@@ -140,7 +140,7 @@
       pts: inclinePts,
       draw(m, k) {
         const v = inclinePts(m).map(k.X);
-        let s = `<polygon points="${P(v)}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
+        let s = `<polygon data-mark="incline" points="${P(v)}" style="fill:var(--body);stroke:${col(m.color)}" stroke-width="${SW.out}"/>`;
         s += hatch(v[0], v[1], m.flip ? "left" : "right");
         const r = 30, a0 = m.flip ? 180 - m.angle : 0, a1 = m.flip ? 180 : m.angle;
         s += arcPath(v[0], r, a0, a1, col("muted"), SW.con);
@@ -159,12 +159,12 @@
         let s;
         if (m.shape === "box" || m.shape === "rod") {
           const w = m.w * k.s, h = Math.max(m.h * k.s, m.shape === "rod" ? 6 : 0), rx = m.shape === "rod" ? Math.min(h / 2, 3) : 2;
-          s = `<rect x="${n2(-w / 2)}" y="${n2(-h / 2)}" width="${n2(w)}" height="${n2(h)}" rx="${rx}" transform="translate(${n2(x)} ${n2(y)}) rotate(${-(m.angle || 0)})" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+          s = `<rect data-mark="body" x="${n2(-w / 2)}" y="${n2(-h / 2)}" width="${n2(w)}" height="${n2(h)}" rx="${rx}" transform="translate(${n2(x)} ${n2(y)}) rotate(${-(m.angle || 0)})" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
         } else if (m.shape === "dot") {
-          s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(6, (m.r || 0) * k.s))}" style="fill:${st}"/>`;
+          s = `<circle data-mark="body" cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(6, (m.r || 0) * k.s))}" style="fill:${st}"/>`;
         } else {
           const r = m.r * k.s;
-          s = `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
+          s = `<circle data-mark="body" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="${fill};stroke:${st}" stroke-width="${SW.out}"/>`;
           if (m.shape === "ring") s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1, r - 5))}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>`;
           s += `<circle cx="${n2(x)}" cy="${n2(y)}" r="2.5" style="fill:${st}"/>`;
         }
@@ -328,6 +328,109 @@
     }
   };
 
+  /* ---- the scene model pre-pass (fable audit 2026-10-29 U1: I-INC-1/2, I-FORCE-1/2/3): the renderer owns contact, not the author.
+     fix(marks) -> { marks, codes }: a box/disk whose bottom is within 0.6 h of a ramp (incline hypotenuse), a surface or a solid seg
+     is snapped along that surface's normal so its bottom edge rests on it (offset h/2 or r), a box at the surface's angle. Points on a
+     body (force tails, arrow/spring/rope ends) ride along with it; a force tail just off a body (within 0.25 of its size) is
+     re-anchored to its centre. Weight (mg, W, F_g) points straight down; on a resting body the normal (N, F_N) is perpendicular to
+     the surface and friction (f, f_k, f_s) along it. Only unambiguous labels are turned; a body far from every surface never moves.
+     codes: "contact" (moved > 0.02 h or turned > 1 deg), "anchor" (a tail re-anchored), "direction" (an arrow turned). livefig.fix
+     is the same code in Python (conformance vectors: tests/fixtures/livefig.json "contact"). */
+  const FIX = { snap: 0.6, tol: 0.02, near: 0.25, turn: 1, down: 0.5 };
+  const WEIGHT = new Set(["mg", "W", "w", "F_g", "F_G", "F_grav"]), NORMAL = new Set(["N", "n", "F_N", "F_n"]), FRICTION = new Set(["f", "f_k", "f_s", "F_f", "F_fr"]);
+  function sym(label) {
+    return typeof label !== "string" ? "" : label.replace(/\$/g, "").split("=")[0]
+      .replace(/\\(vec|mathbf|boldsymbol|overrightarrow|mathrm|text)(?![a-zA-Z])/g, "").replace(/\\[,;: !]/g, "").replace(/[{}\s]/g, "");
+  }
+  const angOf = v => Math.atan2(v[1], v[0]) / deg;
+  const mod = (a, n) => ((a % n) + n) % n;
+  const turnBy = (a, b, n = 360) => { const d = mod(a - b, n); return Math.min(d, n - d); };
+  function solid(m) {
+    if (m.mark !== "body" || !Array.isArray(m.at) || !fin(m.at)) return null;
+    if (m.shape === "box") return m.w > 0 && m.h > 0 ? { box: true, hw: m.w / 2, hh: m.h / 2, H: m.h, size: Math.max(m.w, m.h) } : null;
+    if (m.shape === "dot" || m.shape === "rod" || !(m.r > 0)) return null;     // a point mass or a rod (a ladder leans on purpose)
+    return { box: false, hw: m.r, hh: m.r, H: 2 * m.r, size: 2 * m.r };
+  }
+  function surfacesOf(marks) {
+    const out = [];
+    for (const m of marks) {
+      let a, b, up;                                           // up: +1 free side = left normal of a->b, -1 = right, 0 = the body's side
+      if (m.mark === "incline") { const v = inclinePts(m); a = v[0]; b = v[2]; up = m.flip ? -1 : 1; }
+      else if (m.mark === "surface") { a = m.from; b = m.to; up = m.side === "left" ? -1 : 1; }
+      else if (m.mark === "seg" && !m.dash) { a = m.from; b = m.to; up = 0; }
+      else continue;
+      if (!Array.isArray(a) || !Array.isArray(b) || !fin(a) || !fin(b)) continue;
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L > 0) out.push({ a, b, u: [(b[0] - a[0]) / L, (b[1] - a[1]) / L], L, up });
+    }
+    return out;
+  }
+  const local = (p, q) => rot([p[0] - q.c[0], p[1] - q.c[1]], -q.ang * deg);
+  function outside(l, k) { return k.box ? Math.hypot(Math.max(Math.abs(l[0]) - k.hw, 0), Math.max(Math.abs(l[1]) - k.hh, 0)) : Math.max(Math.hypot(l[0], l[1]) - k.hw, 0); }
+  function fix(marks) {
+    const codes = new Set(), out = marks.map(m => ({ ...m }));
+    const surf = surfacesOf(out), bodies = [];
+    const paths = out.filter(m => m.mark === "path").flatMap(m => { try { return sample(m).filter(fin); } catch { return []; } });
+    for (const m of out) {
+      const k = solid(m);
+      if (!k) continue;
+      const q = { m, k, c: m.at, ang: m.angle || 0 };
+      q.c1 = q.c; q.ang1 = q.ang;
+      bodies.push(q);
+      if (paths.some(p => Math.hypot(p[0] - q.c[0], p[1] - q.c[1]) <= FIX.near * k.size)) continue;   // a body on its trajectory flies
+      let best = null;
+      for (const s of surf) {
+        const rx = q.c[0] - s.a[0], ry = q.c[1] - s.a[1], t = rx * s.u[0] + ry * s.u[1], dl = s.u[0] * ry - s.u[1] * rx;
+        if (t < 0 || t > s.L) continue;
+        const side = s.up || (dl >= 0 ? 1 : -1), gap = side * dl - k.hh;
+        if (Math.abs(gap) > FIX.snap * k.H) continue;
+        if (!s.up && [s.a, s.b].some(p => outside(local(p, q), k) <= FIX.tol * k.size)) continue;   // a seg that starts on the body (a radius, a rope)
+        if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { s, side, t, gap };
+      }
+      if (!best) continue;
+      const { s, side, t, gap } = best, n = [-side * s.u[1], side * s.u[0]];
+      q.c1 = [s.a[0] + t * s.u[0] + k.hh * n[0], s.a[1] + t * s.u[1] + k.hh * n[1]];
+      let tilt = angOf(s.u); if (tilt > 90) tilt -= 180; if (tilt <= -90) tilt += 180;
+      if (k.box) q.ang1 = tilt;
+      q.rest = { n, u: s.u };
+      if (Math.abs(gap) > FIX.tol * k.H || (k.box && turnBy(q.ang, q.ang1, 180) > FIX.turn)) codes.add("contact");
+      m.at = q.c1; if (k.box) m.angle = q.ang1;
+    }
+    /* which body a point is on (inside its outline, or within near x size of it), in the body's authored pose */
+    const owner = p => {
+      let best = null;
+      if (!Array.isArray(p) || !fin(p)) return null;
+      for (const q of bodies) { const l = local(p, q), d = outside(l, q.k); if (d <= FIX.near * q.k.size && (!best || d < best.d)) best = { q, l, d }; }
+      return best;
+    };
+    const ride = o => { const r = rot(o.l, o.q.ang1 * deg); return [o.q.c1[0] + r[0], o.q.c1[1] + r[1]]; };
+    const on = o => o && o.d <= FIX.tol * o.q.k.size;
+    for (const m of out) {
+      if (m.mark === "force") {
+        const o = owner(m.at);
+        if (o) {
+          if (on(o)) m.at = ride(o);
+          else { m.at = o.q.c1; codes.add("anchor"); }
+        }
+        const s = sym(m.label), dir = (m.angle || 0) + (m.frame || 0), rest = o && o.q.rest;
+        let want = null, tol = FIX.turn;
+        if (WEIGHT.has(s)) { want = 270; tol = FIX.down; }
+        else if (rest && NORMAL.has(s)) want = angOf(rest.n);
+        else if (rest && FRICTION.has(s)) { const a = angOf(rest.u); want = turnBy(dir, a) <= turnBy(dir, a + 180) ? a : a + 180; }
+        if (want !== null && turnBy(dir, want) > tol) { m.angle = mod(want - (m.frame || 0), 360); codes.add("direction"); }
+      } else if (m.mark === "arrow") {
+        const o = owner(m.from);
+        if (on(o)) { const p = ride(o), dx = p[0] - m.from[0], dy = p[1] - m.from[1]; m.from = p; if (Array.isArray(m.to)) m.to = [m.to[0] + dx, m.to[1] + dy]; }
+      } else if (m.mark === "spring") {
+        for (const e of ["from", "to"]) { const o = owner(m[e]); if (on(o)) m[e] = ride(o); }
+      } else if (m.mark === "rope" && Array.isArray(m.pts) && m.pts.length) {
+        m.pts = m.pts.slice();
+        for (const i of new Set([0, m.pts.length - 1])) { const o = owner(m.pts[i]); if (on(o)) m.pts[i] = ride(o); }
+      }
+    }
+    return { marks: out, codes: [...codes].sort() };
+  }
+
   /* ---- layout: draw, measure labels, grow padding, redraw (max 3 passes) ---- */
   function mount(el, build) {
     const pad = { l: PAD, r: PAD, t: PAD, b: PAD };
@@ -364,7 +467,7 @@
   }
 
   function scene(g) {
-    const marks = g.marks;
+    const marks = fix(g.marks).marks;                    // contact, anchors and arrow directions first: the renderer owns them
     return (W, pad, k) => {
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
@@ -820,5 +923,5 @@
     }
   }
 
-  root.Graph = { render, tex };
+  root.Graph = { render, tex, fix };
 })(window);

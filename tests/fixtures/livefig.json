@@ -63,7 +63,7 @@
      "mark": "body",
      "at": [
       0,
-      0.9
+      1.143
      ],
      "shape": "box",
      "w": 0.8,
@@ -74,7 +74,7 @@
      "mark": "force",
      "at": [
       0,
-      0.9
+      1.143
      ],
      "angle": 270,
      "len": 1.4,
@@ -84,7 +84,7 @@
      "mark": "force",
      "at": [
       0,
-      0.9
+      1.143
      ],
      "angle": 120,
      "len": 1.2,
@@ -95,7 +95,7 @@
      "mark": "force",
      "at": [
       0,
-      0.9
+      1.143
      ],
      "angle": 210,
      "len": 0.8,
@@ -106,7 +106,7 @@
      "mark": "force",
      "at": [
       0,
-      0.9
+      1.143
      ],
      "angle": 30,
      "len": 1.4,
@@ -269,7 +269,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -342,7 +342,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -353,7 +353,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 270,
       "len": 1.4,
@@ -363,7 +363,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 120,
       "len": 1.2,
@@ -374,7 +374,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 210,
       "len": 0.8,
@@ -385,7 +385,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 30,
       "len": 1.4,
@@ -417,7 +417,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -428,7 +428,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 270,
       "len": 1.4,
@@ -438,7 +438,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 120,
       "len": 1.2,
@@ -449,7 +449,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 210,
       "len": 0.8,
@@ -460,7 +460,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 30,
       "len": 1.4,
@@ -547,7 +547,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -558,7 +558,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 270,
       "len": 1.4,
@@ -568,7 +568,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 120,
       "len": 1.2,
@@ -579,7 +579,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 210,
       "len": 0.8,
@@ -590,7 +590,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 30,
       "len": 1.4,
@@ -645,7 +645,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -684,7 +684,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -695,7 +695,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 0,
       "len": 1,
@@ -725,7 +725,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -736,7 +736,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 270,
       "len": 1,
@@ -766,7 +766,7 @@
       "mark": "body",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "shape": "box",
       "w": 0.8,
@@ -777,7 +777,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 270,
       "len": 1.4,
@@ -787,7 +787,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 120,
       "len": 1.2,
@@ -798,7 +798,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 210,
       "len": 0.8,
@@ -809,7 +809,7 @@
       "mark": "force",
       "at": [
        0,
-       0.9
+       1.143
       ],
       "angle": 30,
       "len": 1.4,
@@ -1002,7 +1002,7 @@
       "mark": "body",
       "at": [
        1,
-       0.8
+       0.719
       ],
       "shape": "box",
       "w": 0.4,
@@ -1013,7 +1013,7 @@
       "mark": "force",
       "at": [
        1,
-       0.8
+       0.719
       ],
       "angle": 270,
       "len": 0.8,
@@ -1755,6 +1755,902 @@
       }
      ]
     }
+   }
+  ]
+ },
+ "contact": {
+  "cases": [
+   {
+    "name": "sunk: the old valid[0] (physics-b), 0.243 into the ramp",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "Free-body diagram of the block on the 30 degree ramp.",
+     "marks": [
+      {
+       "mark": "incline",
+       "at": [
+        -2,
+        -0.3
+       ],
+       "base": 4,
+       "angle": 30
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        0.9
+       ],
+       "shape": "box",
+       "w": 0.8,
+       "h": 0.5,
+       "angle": 30
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.9
+       ],
+       "angle": 270,
+       "len": 1.4,
+       "label": "$mg$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.9
+       ],
+       "angle": 120,
+       "len": 1.2,
+       "label": "$F_N$",
+       "color": "c2"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.9
+       ],
+       "angle": 210,
+       "len": 0.8,
+       "label": "$f_k$",
+       "color": "c3"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.9
+       ],
+       "angle": 30,
+       "len": 1.4,
+       "label": "$40\\ \\text{N}$",
+       "color": "c1"
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       -0.10538475772933653,
+       1.0825317547305482
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 29.999999999999996
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.0825317547305482
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.0825317547305482
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.0825317547305482
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.0825317547305482
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     }
+    ]
+   },
+   {
+    "name": "sunk: the old prompt EXAMPLE, 0.243 into the ramp",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "Forces on the block on the ramp.",
+     "marks": [
+      {
+       "mark": "incline",
+       "at": [
+        -2,
+        0
+       ],
+       "base": 4,
+       "angle": 30
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        1.2
+       ],
+       "shape": "box",
+       "w": 0.8,
+       "h": 0.5,
+       "angle": 30
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.2
+       ],
+       "angle": 270,
+       "len": 1.4,
+       "label": "$mg$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.2
+       ],
+       "angle": 120,
+       "len": 1.2,
+       "label": "$F_N$"
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       0
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       -0.10538475772933653,
+       1.3825317547305482
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 29.999999999999996
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.3825317547305482
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.10538475772933653,
+       1.3825317547305482
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$"
+     }
+    ]
+   },
+   {
+    "name": "floating: valid[0] lifted 0.2 off the ramp",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "Free-body diagram of the block on the 30 degree ramp.",
+     "marks": [
+      {
+       "mark": "incline",
+       "at": [
+        -2,
+        -0.3
+       ],
+       "base": 4,
+       "angle": 30
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        1.343
+       ],
+       "shape": "box",
+       "w": 0.8,
+       "h": 0.5,
+       "angle": 30
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.343
+       ],
+       "angle": 270,
+       "len": 1.4,
+       "label": "$mg$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.343
+       ],
+       "angle": 120,
+       "len": 1.2,
+       "label": "$F_N$",
+       "color": "c2"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.343
+       ],
+       "angle": 210,
+       "len": 0.8,
+       "label": "$f_k$",
+       "color": "c3"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.343
+       ],
+       "angle": 30,
+       "len": 1.4,
+       "label": "$40\\ \\text{N}$",
+       "color": "c1"
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0.08643986920891678,
+       1.1932817547305483
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 29.999999999999996
+     },
+     {
+      "mark": "force",
+      "at": [
+       0.08643986920891678,
+       1.1932817547305483
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0.08643986920891678,
+       1.1932817547305483
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$",
+      "color": "c2"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0.08643986920891678,
+       1.1932817547305483
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$",
+      "color": "c3"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0.08643986920891678,
+       1.1932817547305483
+      ],
+      "angle": 30,
+      "len": 1.4,
+      "label": "$40\\ \\text{N}$",
+      "color": "c1"
+     }
+    ]
+   },
+   {
+    "name": "floating: the old geom.valid[1], 0.081 over a seg ramp",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "The block on the ramp, the ramp angle and the push distance.",
+     "marks": [
+      {
+       "mark": "seg",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        0
+       ]
+      },
+      {
+       "mark": "seg",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ]
+      },
+      {
+       "mark": "body",
+       "at": [
+        1,
+        0.8
+       ],
+       "shape": "box",
+       "w": 0.4,
+       "h": 0.25,
+       "angle": 30
+      },
+      {
+       "mark": "force",
+       "at": [
+        1,
+        0.8
+       ],
+       "angle": 270,
+       "len": 0.8,
+       "label": "$mg$"
+      },
+      {
+       "mark": "right",
+       "at": [
+        2,
+        0
+       ],
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "size": 0.15
+      },
+      {
+       "mark": "angle",
+       "at": [
+        0,
+        0
+       ],
+       "from": [
+        2,
+        0
+       ],
+       "to": [
+        2,
+        1.15
+       ],
+       "label": "$30^\\circ$",
+       "r": 0.4
+      },
+      {
+       "mark": "dim",
+       "from": [
+        0,
+        0
+       ],
+       "to": [
+        2,
+        0
+       ],
+       "label": "$d$",
+       "side": "r"
+      },
+      {
+       "mark": "circle",
+       "c": [
+        2,
+        1.15
+       ],
+       "r": 0.1,
+       "fill": true
+      }
+     ]
+    },
+    "codes": [
+     "contact"
+    ],
+    "want": [
+     {
+      "mark": "seg",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       0
+      ]
+     },
+     {
+      "mark": "seg",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ]
+     },
+     {
+      "mark": "body",
+      "at": [
+       1.034919855357829,
+       0.7392698167689933
+      ],
+      "shape": "box",
+      "w": 0.4,
+      "h": 0.25,
+      "angle": 29.89890183861456
+     },
+     {
+      "mark": "force",
+      "at": [
+       1.034919855357829,
+       0.7392698167689933
+      ],
+      "angle": 270,
+      "len": 0.8,
+      "label": "$mg$"
+     },
+     {
+      "mark": "right",
+      "at": [
+       2,
+       0
+      ],
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "size": 0.15
+     },
+     {
+      "mark": "angle",
+      "at": [
+       0,
+       0
+      ],
+      "from": [
+       2,
+       0
+      ],
+      "to": [
+       2,
+       1.15
+      ],
+      "label": "$30^\\circ$",
+      "r": 0.4
+     },
+     {
+      "mark": "dim",
+      "from": [
+       0,
+       0
+      ],
+      "to": [
+       2,
+       0
+      ],
+      "label": "$d$",
+      "side": "r"
+     },
+     {
+      "mark": "circle",
+      "c": [
+       2,
+       1.15
+      ],
+      "r": 0.1,
+      "fill": true
+     }
+    ]
+   },
+   {
+    "name": "box at 0 on the 30 ramp, weight off the body and tilted, normal and friction off the ramp axes",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "Forces on the block on the ramp.",
+     "marks": [
+      {
+       "mark": "incline",
+       "at": [
+        -2,
+        -0.3
+       ],
+       "base": 4,
+       "angle": 30
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        1.143
+       ],
+       "shape": "box",
+       "w": 0.8,
+       "h": 0.5,
+       "angle": 0
+      },
+      {
+       "mark": "force",
+       "at": [
+        0.1,
+        1.5
+       ],
+       "angle": 260,
+       "len": 1.4,
+       "label": "$mg$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.143
+       ],
+       "angle": 100,
+       "len": 1.2,
+       "label": "$F_N$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.143
+       ],
+       "angle": 200,
+       "len": 0.8,
+       "label": "$f_k$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        1.143
+       ],
+       "angle": 45,
+       "len": 1,
+       "label": "$F$"
+      }
+     ]
+    },
+    "codes": [
+     "anchor",
+     "contact",
+     "direction"
+    ],
+    "want": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       -0.00016267116952706218,
+       1.1432817547305483
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5,
+      "angle": 29.999999999999996
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.00016267116952706218,
+       1.1432817547305483
+      ],
+      "angle": 270,
+      "len": 1.4,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.00016267116952706218,
+       1.1432817547305483
+      ],
+      "angle": 120,
+      "len": 1.2,
+      "label": "$F_N$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.00016267116952706218,
+       1.1432817547305483
+      ],
+      "angle": 210,
+      "len": 0.8,
+      "label": "$f_k$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       -0.00016267116952706218,
+       1.1432817547305483
+      ],
+      "angle": 45,
+      "len": 1,
+      "label": "$F$"
+     }
+    ]
+   },
+   {
+    "name": "far over the ramp: never moved",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "A block in the air over the ramp.",
+     "marks": [
+      {
+       "mark": "incline",
+       "at": [
+        -2,
+        -0.3
+       ],
+       "base": 4,
+       "angle": 30
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        2.4
+       ],
+       "shape": "box",
+       "w": 0.8,
+       "h": 0.5
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        2.4
+       ],
+       "angle": 270,
+       "len": 1,
+       "label": "$mg$"
+      }
+     ]
+    },
+    "codes": [],
+    "want": [
+     {
+      "mark": "incline",
+      "at": [
+       -2,
+       -0.3
+      ],
+      "base": 4,
+      "angle": 30
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       2.4
+      ],
+      "shape": "box",
+      "w": 0.8,
+      "h": 0.5
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       2.4
+      ],
+      "angle": 270,
+      "len": 1,
+      "label": "$mg$"
+     }
+    ]
+   },
+   {
+    "name": "disk sunk into the floor, normal off vertical",
+    "fig": {
+     "type": "graph",
+     "kind": "scene",
+     "alt": "A ball on the floor.",
+     "marks": [
+      {
+       "mark": "surface",
+       "from": [
+        -2,
+        0
+       ],
+       "to": [
+        2,
+        0
+       ]
+      },
+      {
+       "mark": "body",
+       "at": [
+        0,
+        0.15
+       ],
+       "shape": "disk",
+       "r": 0.3
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.15
+       ],
+       "angle": 270,
+       "len": 1,
+       "label": "$mg$"
+      },
+      {
+       "mark": "force",
+       "at": [
+        0,
+        0.15
+       ],
+       "angle": 80,
+       "len": 1,
+       "label": "$N$"
+      }
+     ]
+    },
+    "codes": [
+     "contact",
+     "direction"
+    ],
+    "want": [
+     {
+      "mark": "surface",
+      "from": [
+       -2,
+       0
+      ],
+      "to": [
+       2,
+       0
+      ]
+     },
+     {
+      "mark": "body",
+      "at": [
+       0,
+       0.3
+      ],
+      "shape": "disk",
+      "r": 0.3
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.3
+      ],
+      "angle": 270,
+      "len": 1,
+      "label": "$mg$"
+     },
+     {
+      "mark": "force",
+      "at": [
+       0,
+       0.3
+      ],
+      "angle": 90,
+      "len": 1,
+      "label": "$N$"
+     }
+    ]
    }
   ]
  }
