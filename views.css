@@ -67,7 +67,7 @@
 .vw .el.seen { fill: var(--ink); }
 .vw .col { fill: var(--muted); font: 400 0.8125rem var(--font); text-anchor: middle; }
 /* Geometry (1:1 scale, y up): ink strokes, muted dims and arcs; fits the figure slot min(28svh, half the width) */
-.vw-geo svg { max-height: min(var(--vw-fig), 50vw); }
+.vw-geo svg { max-height: min(var(--vw-fig), 62vw); }   /* W340: 50vw drew labels under 0.8x the reply text at 390 once the frame took in the labels and their clearance */
 .vw .gm { fill: none; stroke: var(--ink); stroke-width: 1.75; }
 .vw .gm-dim, .vw .gm-angle, .vw .gm-right { stroke: var(--muted); stroke-width: 1.25; }
 .vw .gm-arrow { stroke: var(--c1); stroke-width: 2.25; }
