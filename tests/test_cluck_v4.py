@@ -1142,5 +1142,70 @@ class LetterContract(unittest.TestCase):
         self.assertNotIn("nudge", serve.PROMPT_V4.split("[ FORMATTING ]")[1].split("[ ENDFORMATTING ]")[0])   # no rule invites a nudge question
 
 
+def sse_refusal(category="reasoning_extraction"):
+    """an Opus refusal as the API streams it: a message_start, no text, stop_reason refusal with its category"""
+    ev = [{"type": "message_start", "message": {"usage": {"input_tokens": 50, "output_tokens": 1, "cache_read_input_tokens": 7000}}},
+          {"type": "message_delta", "delta": {"stop_reason": "refusal", "stop_details": {"type": "refusal", "category": category}}, "usage": {"output_tokens": 0}},
+          {"type": "message_stop"}]
+    return b"".join(f"event: {e['type']}\ndata: {json.dumps(e)}\n\n".encode() for e in ev)
+
+
+class Visuals(unittest.TestCase):
+    """todo 113 (Tony Oct 28): Cluck's visuals are generous. The VISUALS block (the W113 A/B winner) rides in the cached letter block on both
+    arms whenever a figure context exists; its in-order examples pass the gate (round 1: Opus wrote name=value args and every one was dropped);
+    a REVEAL-yes turn's view may show the answer; each reply logs its $ (both arms, refused tries included) and an Opus refusal says so."""
+
+    def test_block_in_both_arms_system(self):
+        fig = serve.fig_ctx(P1, "a")
+        v4 = dict(fig=fig, bank=serve.bank_block(P1))
+        system = serve._v4_claude_system(v4)
+        self.assertIn(serve.V4_VIEWS, system[0]["text"])
+        self.assertIn("cache_control", system[0])
+        self.assertTrue(system[0]["text"].startswith(serve.PROMPT_V4))          # the letter itself is untouched, byte for byte
+        for need in ("REQUIRED in each reply to a wrong pick", "Why does this work?", "a stepper", "IN ORDER, never name=value", "Table(", "Steps(", "Step("):
+            self.assertIn(need, serve.V4_VIEWS)
+        self.assertNotIn(serve.V4_VIEWS, serve._v4_claude_system(dict(v4, fig=None))[0]["text"], "no figure context: no figure how-to at all")
+
+    def test_examples_pass_the_gate(self):
+        import views_gate
+        ex = serve.V4_VIEWS.split("Examples:\n")[1].split("\nNumbers in a view")[0]
+        progs = ["root" + x for x in ex.split("root")[1:]]
+        self.assertEqual(len(progs), 2)
+        ctx = serve.livefig.context("CPA", "for (int i = 1; i < n; i++) s += i; the weight W acts at the middle, the arm L", "", [10.0])
+        for prog in progs:
+            out, log = views_gate.gate(prog.strip(), ctx)
+            self.assertEqual(log, ["ok"], prog)
+
+    def test_reveal_yes_view_may_show_the_answer(self):
+        self.assertIn(13.0, serve.fig_ctx(P1, "a").answers)
+        self.assertEqual(serve.fig_ctx(P1, "b", reveal=True).answers, [])
+
+    def test_reply_cost_and_refusal_logged(self):
+        logs, calls = [], []
+
+        def fake(req, timeout=None):
+            if "anthropic.com" in req.full_url:
+                calls.append("claude")
+                return Resp(sse_refusal())
+            calls.append("deepseek")
+            return Resp(sse_or(["Deep says hi.\n", "Try again."])[:-len(b"data: [DONE]\n\n")]
+                        + b'data: {"choices": [], "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0.00042}}\n\ndata: [DONE]\n\n')
+        v4 = dict(turns=[{"role": "user", "content": serve.v4_user(P1, "a", serve.WISH_QUERY, False)}], reveal=False, facts=serve.leak_facts(P1),
+                  code="T", arm="claude", bank=serve.bank_block(P1))
+        with mock.patch.dict(os.environ, {"CLAUDE_API": "sk-ant-test", "CLAUDE_MODEL": "claude-opus-5-5"}), mock.patch.object(serve, "KV", (None, None)), \
+                mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "log", lambda *a: logs.append(" ".join(map(str, a)))):
+            serve._claude_spent.clear()
+            serve._last_err.clear()
+            out = "".join(serve._cluck_stream([{"role": "system", "content": "OLD"}, {"role": "user", "content": "q"}], "sk-or", 450, v4=v4))
+        self.assertEqual(out, "Deep says hi.\nTry again.")
+        self.assertEqual(calls, ["claude", "deepseek"])
+        text = "\n".join(logs)
+        self.assertRegex(text, r"claude usage: arm=claude .* usd=0\.\d{5} model=\S+ stop=refusal:reasoning_extraction")
+        self.assertIn("deepseek usage: arm=claude in=10 cached=None out=5 usd=0.00042", text)
+        ans = next(x for x in logs if "answered=" in x)
+        claude_usd = float(re.search(r"claude usage: .*? usd=([\d.]+)", text).group(1))
+        self.assertAlmostEqual(float(re.search(r"usd=([\d.]+)$", ans).group(1)), round(claude_usd + 0.00042, 5), places=5)
+
+
 if __name__ == "__main__":
     unittest.main()

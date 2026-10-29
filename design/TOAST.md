@@ -85,3 +85,20 @@ Rounds 3–4 of the stage-toast mock (`stage-toast.html`, variants a–d, then d
 - **Sharp words (blur).** At rest the toast has no transform (`animation-fill-mode: backwards`, never `both`) and sits on whole px. The reward stickers (`.fx-toast`, `.fx-slots`, `.rw-free`, `.fx-plate`) keep their lean on a `::before` card; their words stay upright. Before/after for Tony's laptop: `mockups/blur-compare.html`.
 - **Next.** The miss `#toast` moves onto `stemToast` in a later PR (its `toast-in … both` in app.css has the same rest-transform issue).
 - **W102 (Oct 28): `#toast` takes the sharp-words rule, not the component.** Moving it onto `stemToast` would change what students see (only under its anchor and never over a control, so the notes at the Scratchpad button, under Next and on a kept choice never show; anchor-wide, a bar and an X, 4 s, X-only close), so that is a design round for Tony. Today `#toast` keeps its own placement, caret and timing, with fill `backwards` (no `to {}`) and whole-px left/top in `placeToast`. Test: `choose-all.pw.mjs` "W102 blur".
+
+## Round 6: the notes move onto the component, and the desktop start line goes bottom-left (W112, Oct 29; todo 112)
+
+Tony's picks on the mock board (Oct 28): Scratchpad tip **A**, Next note **"the stacked one"**, kept choice **A**, HUD tips **B**, pad-mode note **B**. The cover rule stays strict, except that the Next note may lie on the brainrot link for its 2 s.
+
+- **Code.** `toast.js` gains a note mode: `stemToast.note({ text, at, x, prefer, allow, loose })` returns true when the note is on screen. `noteAt / noteHide / notePlace` complete it. It drives the existing `#toast` element and look (app.css), so the classes `.on`, `.up`, `.row` and `--px` keep their meaning. `app.js` `toast()` is now a thin wrapper.
+- **Kinds.**
+  - The Scratchpad tip sits above the button with the caret down.
+  - The Next note sits under Next with a caret and no X. It shows beside a stage toast instead of queueing behind it.
+  - The kept-choice note lies on the kept row's own words.
+  - The HUD tips (every T37 beat, the redo tag too) and the pad-mode note get a caret plus a 44px X (`.toast-x`).
+  - Timing for every note: 2 s, paused while the pointer rests on it. A tap anywhere on it closes it, and so does Esc.
+- **Cover rule.** A note never lies on a live control. It tries under its anchor, then above. A control beside the caret narrows the note so the words wrap. A control right where the caret points rules that side out: the caret always touches its anchor (Tony, Oct 29: a Next note stepped 70 px down onto the question card "looks buggy"). If no place is found, `note()` returns false. The Next note then falls back to the entry line. The onboarding notes are not counted and wait for the next time.
+- **Allowed covers.** A note may lie on its own anchor, on dead controls (`aria-disabled`), and on `allow`: the brainrot link and the level row (the HUD, `.rw-tap`: on a phone the full-width row right under Next; Tony, Oct 29: "COVER") for the Next note; the brainrot link for the HUD tips too (at 1280 it sits right under the count; rewards.pw T37); and `#scratch` for the pad-mode note, because the pad page is all pad. "Copied" stays `loose`, with the old placement, as on prod.
+- **Must stay clear.** `clear` lists boxes a note must not lie on, although they take no tap. For the Next note these are the question card (`#problem`) and the answer area (`#q`). At 390 and 360 the Next note fits between Next and the card, on the level row. At 844×390 it sits over the Notes column, beside the card. Where no such room exists, the press answers on the entry line under the code bar.
+- **img3, the desktop start line.** On prod the start line sat 12px under the answer box, on the Key formulas card at 1440 and 1366, and at 1280×720 it never found room. In the side layout on a screen at least 500px tall, the stage toast now sits bottom-left of the question column, on the viewport's foot. Phones keep it under the question.
+- **Test.** `tests/toast-note.pw.mjs`.
