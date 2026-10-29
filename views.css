@@ -75,6 +75,8 @@
 .vw .gm-pt circle { fill: var(--ink); stroke: none; }
 .vw .gm-t { fill: var(--ink); font: 400 0.875rem var(--font); text-anchor: middle; }
 .vw .gm-t.gm-name { font-weight: 600; }
+.vw .gm-t.knock { stroke: var(--knock); stroke-width: 4; paint-order: stroke; }   /* placed on a stroke (figcheck place): a halo */
+.vw .gm-lead { stroke: var(--muted); stroke-width: 1; }
 /* colour classes (F12): fill AND digit AND k2 hollow, so classes survive greyscale and the warm remap */
 .vw .cm circle { stroke-width: 2; }
 .vw .cm.k1 circle { fill: var(--c1); stroke: var(--c1); }
