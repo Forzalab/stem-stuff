@@ -58,6 +58,21 @@ async function plain(page) {
   assert.equal(await page.$("#q .wl"), null, "a welcome surface on a normal item");
 }
 const act = (page, sel) => page.click(`#q .rp-step[data-state="active"] ${sel}`);
+/* a token's colour as computed (rgb(..)); fcardBg = the Key formulas card's surface (app.css .fcard), read off a throwaway card */
+const tok = (page, name) => page.evaluate(n => {
+  const t = document.createElement("i"); t.style.color = `var(${n})`; document.body.append(t); const c = getComputedStyle(t).color; t.remove(); return c;
+}, name);
+const fcardBg = page => page.evaluate(() => {
+  const t = document.createElement("div"); t.className = "fcard"; document.body.append(t); const c = getComputedStyle(t).backgroundColor; t.remove(); return c;
+});
+const face = (page, sel) => page.$eval(sel, el => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: cs.borderTopColor, ink: cs.color }; });
+/* the welcome's commit buttons (Check, Next) sit on the warm sheet in the warm family, never the blue --action face (Tony, vet w-1) */
+async function warmFace(page, sel) {
+  const [f, help, ink, action, raised] = [await face(page, sel), await tok(page, "--help"), await tok(page, "--help-ink"), await tok(page, "--action"), await tok(page, "--raised")];
+  assert.notEqual(f.bg, action, `${sel}: the blue --action face`);
+  assert.notEqual(f.bg, raised, `${sel}: the navy --raised face`);
+  assert.deepEqual([f.bg, f.line, f.ink], [help, help, ink], `${sel}: not the warm face`);
+}
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 async function fresh(init = {}, viewport = { width: 1280, height: 860 }) {
   const ctx = await browser.newContext({ viewport, serviceWorkers: "block" });
@@ -92,6 +107,24 @@ try {
     assert.notEqual(line.bg, bg.warm, "a Cluck line got the welcome's warm surface");
     assert.deepEqual([line.pad, line.border], ["0px", "0px"], "a Cluck line got the welcome's padding / border");
     assert.equal(await page.$("#fcard"), null, "the Key formulas card gives the sheet step away");
+  });
+
+  await step("the intro line is topic-neutral (Tony, vet w-4: it shows on any item, a pressure one too)", async () => {
+    const intro = await page.textContent("#q .wl .rp-line");
+    assert.ok(intro && intro.length > 5, "no intro line");
+    assert.doesNotMatch(intro, /force|pressure|energy|momentum|motion|speed|veloc|accel|gravit|weight|mass|wave|circuit|current|heat|fluid|torque|rotat|spin|orbit|charge|field|light|piston/i,
+      `a topic word in the intro line: ${intro}`);
+  });
+
+  await step("the choices stand out from the warm sheet (Tony, vet w-1): chips and the shown previews on the Key formulas card's surface", async () => {
+    const [fc, c1, warm] = [await fcardBg(page), await tok(page, "--c1"), await tok(page, "--help-fill")];
+    assert.notEqual(fc, warm);
+    for (const sel of ['#q .rp-step[data-state="active"] .rp-chip', "#q .wl-field"]) {
+      const all = await page.$$eval(sel, els => els.map(el => { const cs = getComputedStyle(el); return { bg: cs.backgroundColor, line: cs.borderTopColor, w: cs.borderTopWidth }; }));
+      assert.ok(all.length >= 2, `${sel}: ${all.length}`);
+      for (const f of all) assert.deepEqual([f.bg, f.line, f.w], [fc, c1, "1px"], `${sel}: not the formula-box surface + its edge`);
+    }
+    assert.equal(await page.$eval("#q .wl-field", el => getComputedStyle(el).color), await tok(page, "--ink"), "a preview in the washed-out muted ink");
     await page.evaluate(() => { window.__t = []; const o = window.stemT; window.stemT = (n, p) => { window.__t.push([n, p]); return o && o(n, p); }; });
   });
 
@@ -107,6 +140,7 @@ try {
     await act(page, '.rp-val-opts .rp-chip[data-v="÷"]');
     await act(page, '.rp-why .rp-chip[data-why="0"]');
     await page.waitForSelector('#q .rp-step[data-id="answer"][data-state="active"] .rp-in', { timeout: 4000 });
+    await warmFace(page, '#q .rp-step[data-state="active"] .rp-check');
     await page.fill('#q .rp-step[data-state="active"] .rp-in', "7");      // wrong: a hint, not a red state
     await page.click('#q .rp-step[data-state="active"] .rp-check');
     await page.waitForSelector('#q .rp-step[data-id="answer"] .rp-miss', { timeout: 4000 });
@@ -122,6 +156,9 @@ try {
 
   await step("its Next goes on to the normal queue: a plain item, the answer box back", async () => {
     const nx = await page.waitForSelector("#q .wl .nx", { timeout: 2000 });
+    await warmFace(page, "#q .wl .nx .nf");
+    const hit = await page.$eval("#q .wl .nx", el => el.getBoundingClientRect().height);
+    assert.ok(hit >= 44, `Next's tap height ${hit}`);
     await nx.click();
     await page.waitForFunction(c => document.querySelector("#pcode")?.textContent !== c, WLC, { timeout: 4000 });
     await plain(page);

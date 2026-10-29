@@ -47,7 +47,7 @@ test("every key an older repair.js reads stays a string", () => {
 });
 test("unchanged lines stay", () => {
   assert.deepEqual([R.intro.fallback, R.intro.alt, R.intro.welcome, R.why, R.check, R.next, R.skip],
-    ["QUACK. Let's walk it through, one step at a time.", "QUACK. Let's waddle a different path!", "Ready to waddle through some forces?",
+    ["QUACK. Let's walk it through, one step at a time.", "QUACK. Let's waddle a different path!", "Ready to waddle through this one?",
      "Why is that?", "Check", "Next", "Skip for now"]);
 });
 test("signs pop (vet-pop-signs): Tony's words, the existing kaomoji in his slot", () => {
@@ -58,5 +58,5 @@ test("the old lines are gone", () => {
   const all = JSON.stringify([R, POPS]);
   for (const old of ["we know where", "Conquered.", "Close. Try another one.", "signs agreed for once", "*waddles to you*",
     "Almost there! Try another option.", "Not that one. Look again.", "Come back to this one later.", "Here it is. Read why",
-    "Nice job!", "Here's the whole way through"]) assert.ok(!all.includes(old), old);
+    "Nice job!", "Here's the whole way through", "through some forces"]) assert.ok(!all.includes(old), old);
 });

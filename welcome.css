@@ -10,11 +10,18 @@ section.wl .rp { margin: 0; padding: 0; background: none; border: 0; border-radi
 section.wl .rp-step { border-top-color: var(--help-line); }
 /* open: every step at full strength, a form to fill; alone: the future steps go back to repair.css's dim label */
 section.wl[data-fade="open"] .rp-step[data-state="future"] { color: var(--ink); opacity: 1; }
+/* the choices (Tony, vet w-1: "washed out" on the sheet): the tappable chips and the shown previews on the Key formulas card's surface,
+   its --c1 edge (app.css .fcard, --fc-tint), ink at full strength (--ink on --fc-tint 14:1); a preview keeps its dashed edge (not a control yet) */
+section.wl .rp-chip { border-color: var(--c1); background: var(--fc-tint); }
+section.wl .rp-chip:hover:not(:disabled) { background: var(--raised); }
 .wl-field { box-sizing: border-box; max-width: 100%; margin: var(--s2) 0 0 calc(1.25rem + var(--s2)); padding: var(--s1) var(--s3); overflow-x: auto;
-  border: var(--bw) dashed var(--help-line); border-radius: 8px; color: var(--help-muted); font-size: var(--t-sm); }
+  border: var(--bw) dashed var(--c1); border-radius: 8px; background: var(--fc-tint); color: var(--ink); font-size: var(--t-sm); }
 .wl-field .katex { font-size: var(--kx); }
 .wl-out { animation: wl-out var(--d-move) ease-in both; }
 @keyframes wl-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wl-out { display: none; animation: none; } }
 /* in the app (app.js welcomeQ): once it is done, the cue's own Next (app.css .nx) closes the card, at its right edge */
 section.wl > .nx { display: block; margin: var(--s3) 0 0 auto; }
+/* the commit buttons on the warm sheet (Tony, vet w-1: "hideous blue on orange"): Check and Next in Cluck's send face, --help-ink on --help
+   7.67:1 (app.css .ask .send); the 44px / 48px hit and the --focus ring stay */
+section.wl :is(.rp-check, .rp-next), section.wl > .nx .nf { border-color: var(--help); background: var(--help); color: var(--help-ink); }
