@@ -2170,11 +2170,12 @@ def text_late(t0, said, last=None, arm="claude"):
     came: never. Two caps (todo 47, bench Oct 23: DeepSeek's low-effort reasoning takes ~9.7 s median to its first word, 9/12 went past 6 s):
     - visible-cap: the first word by CLUCK_FIRST_TEXT_S since the request t0 on the Claude arm (as before), CLUCK_FIRST_TEXT_S_DEEPSEEK
       (default 20) on the DeepSeek arm, which may think that long as long as it keeps streaming its reasoning;
-    - stuck: CLUCK_FIRST_TEXT_S (default 6) since the last progress `last` (a reasoning or text delta, t0 before any; pings don't count),
-      when the caller tracks it (the DeepSeek arm; on the Claude arm both caps are the same 6 s since t0)."""
+    - stuck: CLUCK_FIRST_TEXT_S (default 10; 6 until todo 116, Tony Oct 29 o-116b: Opus's first word takes a median 6.9 s, W113) since
+      the last progress `last` (a reasoning or text delta, t0 before any; pings don't count), when the caller tracks it (the DeepSeek arm;
+      on the Claude arm both caps are the same 10 s since t0)."""
     if said:
         return
-    stuck = _fenv("CLUCK_FIRST_TEXT_S", 6.0)
+    stuck = _fenv("CLUCK_FIRST_TEXT_S", 10.0)
     cap = _fenv("CLUCK_FIRST_TEXT_S_DEEPSEEK", 20.0) if arm == "deepseek" else stuck
     now = time.time()
     if now - t0 > cap:
@@ -2201,7 +2202,7 @@ def _claude_one(system, messages, max_tokens, arm="-"):
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             for raw in r:
-                text_late(t0, said)                  # the Claude arm: the first word by CLUCK_FIRST_TEXT_S (6 s), as before
+                text_late(t0, said)                  # the Claude arm: the first word by CLUCK_FIRST_TEXT_S (10 s since todo 116)
                 line = raw.decode("utf-8", "replace").strip()
                 if not line.startswith("data:"):
                     continue
