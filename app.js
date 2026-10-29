@@ -42,50 +42,25 @@ const onboard = (() => { try {
   if (!Object.keys(localStorage).some(k => k.startsWith("stem-"))) localStorage.setItem("stem-ob", "1");
   return localStorage.getItem("stem-ob") === "1";
 } catch { return false; } })();
-function obToast(n, text, at) {
-  if (!onboard || toastAt || !at || at.hidden) return;                           // a wrong-answer note wins; try again next time
-  try { if (localStorage.getItem("stem-ob-" + n)) return; localStorage.setItem("stem-ob-" + n, "1");
-    if ([1, 2, 3].every(i => localStorage.getItem("stem-ob-" + i))) localStorage.setItem("stem-ob", "done"); } catch { return; }
-  toast(text, at);
+function obToast(n, text, at, o) {
+  if (!onboard || noteAt() || !at || at.hidden) return;                          // a wrong-answer note wins; try again next time
+  try { if (localStorage.getItem("stem-ob-" + n)) return; } catch { return; }
+  if (!toast(text, at, o)) return;                                               // no place yet (the cover rule): it waits for the next time, uncounted
+  try { localStorage.setItem("stem-ob-" + n, "1");
+    if ([1, 2, 3].every(i => localStorage.getItem("stem-ob-" + i))) localStorage.setItem("stem-ob", "done"); } catch { /* shown, not kept */ }
 }
-/* the toast (design/STYLE.md §3 Toast): one look for the "one more try" note and the onboarding notes. Under its anchor with a caret
-   at the verdict mark; above it (.up, caret on the bottom edge) when there is no room below or the anchor floats (the Scratchpad
-   button); on MC it lies on the struck-out choice's text (a dead control, so no live choice is covered) with the caret pointing left
-   at the X badge. 2 s (Tony, Oct 3), paused while the pointer rests on it or the tab is hidden; tap or Esc closes it. Follows the box on scroll. */
-let toastT = 0, toastAt = null, toastLeft = 0, toastSince = 0;
-function placeToast() {
-  const t = $("#toast"); if (!t || !toastAt || !toastAt.isConnected) return;
-  if (!toastAt.getClientRects().length) { hideToast(); return; }                // its anchor went away (the button while the pad is open)
-  const bar = $(".top"), barB = bar && getComputedStyle(bar).position === "sticky" && !bar.contains(toastAt) ? bar.getBoundingClientRect().bottom : -Infinity;
-  if (toastAt.getBoundingClientRect().bottom < barB) { hideToast(); return; }  // scrolled under the pinned bar: no toast pointing at the bar
-  const mk = toastAt.querySelector(".vk, .badge"), mr = mk && mk.getBoundingClientRect();
-  const m = mr && mr.width ? mr : toastAt.getBoundingClientRect(), mx = m.left + m.width / 2;   // a one-row pill has no badge: its centre
-  const b = toastAt.getBoundingClientRect(), row = toastAt.classList.contains("opt") && !!(mr && mr.width);   // on the struck text only beside a badge
-  const gut = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gut")) || 20;
-  t.classList.toggle("row", row);
-  if (row) {                                                                     // on the struck text, after the badge
-    t.classList.remove("up");
-    t.style.maxWidth = Math.max(120, b.right - m.right - 18) + "px";
-    t.style.left = Math.round(m.right + 12) + "px"; t.style.top = Math.round(b.top + b.height / 2 - t.offsetHeight / 2) + "px"; return;   // whole px: sharp words (TOAST.md)
-  }
-  t.style.maxWidth = "";
-  const w = t.offsetWidth, h = t.offsetHeight, bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - dockRoom();
-  let x = mx > b.left + b.width / 2 ? b.right - w : b.left;
-  x = Math.min(Math.max(gut, x), innerWidth - gut - w);
-  const up = toastAt.id === "padFab" || b.bottom + 12 + h > bottom;             // no room under it: flip above, caret on the bottom edge
-  t.classList.toggle("up", up);
-  t.style.left = Math.round(x) + "px"; t.style.top = Math.round(up ? b.top - 12 - h : b.bottom + 12) + "px";   // whole px: sharp words (TOAST.md)
-  t.style.setProperty("--px", Math.max(18, Math.min(w - 18, mx - x)) + "px");
-}
-function hideToast() { clearTimeout(toastT); toastLeft = 0; toastAt = null; $("#toast")?.classList.remove("on"); }
-function armToast(ms) { clearTimeout(toastT); toastLeft = ms; toastSince = Date.now(); toastT = setTimeout(hideToast, ms); }
-function holdToast() { if (toastLeft) { clearTimeout(toastT); toastLeft = Math.max(600, toastLeft - (Date.now() - toastSince)); } }
-function goToast() { if (toastLeft && toastAt) armToast(toastLeft); }
-function toast(text, at) {
-  const t = $("#toast"); if (!t || !at) return;
+/* the note (design/STYLE.md §3 Toast; todo 112: the one toast component's note mode, toast.js stemToast.note, element #toast): a short
+   line with a caret on the thing it is about. Under its anchor, else above it (the Scratchpad button: above first); on a kept choice it
+   lies on the row's own words, caret left at the badge. Strict cover rule: never on a live control, so it may not show (-> false).
+   o: { x: the close button (HUD tips, the pad-mode note: Tony's B), prefer, allow, loose }. 2 s, tap or Esc closes it. */
+const noteAt = () => window.stemToast?.noteAt() || null;
+function hideToast() { window.stemToast?.noteHide(); }
+function placeToast() { window.stemToast?.notePlace(); }
+window.stemToast?.config({ foot: () => dockRoom() });                              // a note keeps off the dock (phones: the code bar, the keyboard)
+function toast(text, at, o = {}) {
+  const T = window.stemToast; if (!T || !at) return false;
   if (mtOpen && mtTile === "q" && $("#q").contains(at)) setTile("a", false);       // the note is about the answer: show it first
-  t.textContent = text; toastAt = at; t.classList.add("on");
-  placeToast(); armToast(2000);
+  return T.note({ text, at, ...o });
 }
 /* the entry line (#entryMsg): every upload / open outcome ends here. tone: bad (red, the default) | warn | ok. The class is reset
    each time, so a green line never colours the next red one. */
@@ -115,19 +90,14 @@ const xInc = r => (r && r.headers.get("x-incident") || "").trim().split(/\s+/);
 /* tp: the request's traceparent (incident.mjs): its trace id goes in the incident, so this E- code and the server's lines link */
 const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where, why || xInc(r)[1] || (r ? "http" : timedOut(e) ? "timeout" : x.phase === "parse" ? "parse" : "network"),
   { status: r && r.status, phase: timedOut(e) ? "timeout" : "headers", server: xInc(r)[0], trace_id: xInc(r)[2] || traceOf(tp), err: e, ms: Date.now() - t0, path, ...x });
-/* a press that cannot move says why (nav.js "drill:note", load()): a toast under Next, else the entry line */
+/* a press that cannot move says why (nav.js "drill:note", load()): a note under Next, else the entry line (never silent, T16).
+   Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast; it may lie on the brainrot link for its 2 s */
 function note(text) {
   const at = $("#qnext");
-  if (at && !at.hidden && at.getClientRects().length) toast(text, at); else entryMsg(text);
+  if (!(at && !at.hidden && at.getClientRects().length && toast(text, at, { allow: ".rot-link" }))) entryMsg(text);
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
-$("#toast")?.addEventListener("click", hideToast);
-$("#toast")?.addEventListener("pointerenter", holdToast);
-$("#toast")?.addEventListener("pointerleave", goToast);
-document.addEventListener("visibilitychange", () => { document.hidden ? holdToast() : goToast(); });
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (toastAt) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the toast, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
-addEventListener("scroll", placeToast, { passive: true });
-addEventListener("resize", placeToast);
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -1048,7 +1018,7 @@ function keptTap(o) {
   window.stemT?.("_kepttap", { choice: o.dataset.id });   // intent.js log only, telemetry.js drops "_" names
   if (S.keptTold) return;
   S.keptTold = true;
-  toast("That one's already correct!", o);
+  if (!toast("That one's already correct!", o)) S.keptTold = false;            // kept A: on the row; no place (the cover rule) = the next tap tries again
 }
 /* Check is live with 1+ ticks (empty is invalid: never sent); prove mode also needs every unlocked row ticked or X'd, every X with its fix */
 function syncTicks() {
@@ -2407,7 +2377,7 @@ function rwSync() {
     RW().gap(bank ? bank.burstGap : undefined);        // T22: the bank's burst_gap_s (absent = the engine's 15 s)
     RW().use(rwKey());
     if (!rwHud) { rwHud = document.createElement("div"); rwHud.id = "rwHud"; $("#qlist").before(rwHud);
-      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) });   // Tony #38: the stage toast sits under the question (or its verdict line)
+      RW().config({ toastAt: () => ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) });   // Tony #38: the stage toast sits under the question (or its verdict line); desktop: bottom-left of its column (toast.js, img3)
       RW().mountHUD(rwHud); }
     else RW().render(0);
   }
@@ -2555,9 +2525,11 @@ function rwRedoTip() {
   if (S && !S.finished && !S.tries.length && r && r.redeem !== false && r.codes.includes(S.code)) rwTip("redo", $("#rtag"));
 }
 function rwTip(beat, at) {
-  if (!rewardOn() || toastAt || !rwSeen(at)) return false;
+  if (!rewardOn() || noteAt() || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
-  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false; localStorage.setItem(k, n + 1); toast(lines[n], at);
+  try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false;
+    if (!toast(lines[n], at, { x: true })) return false;                         // HUD B (Tony, Oct 28): caret + an X. No place (the cover rule): next time, uncounted
+    localStorage.setItem(k, n + 1);
     window.stemT?.("_ob", { beat, n: n + 1 }); return true; }                     // intent.js log only ("ob <beat> <n>"): Jev sees which note it just met
   catch { return false; }                                                        // blocked storage: no way to keep it once, so never
 }
@@ -2733,7 +2705,7 @@ document.addEventListener("click", async e => {
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
   say(ok ? "Copied." : "Copy failed. Try again.");
-  if (ok) toast("Copied", b);   // COPY-PENDING: "Copied". The anchored note (toast()), not stemToast: that one never covers a live control, and under a card row or the answer there always is one, so it never showed
+  if (ok) toast("Copied", b, { loose: true });   // COPY-PENDING: "Copied". loose: the one note that may lie on a control (prod as before, orc v27 default): under a card row or the answer there always is one, so a strict note would never show
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
@@ -3077,7 +3049,7 @@ function applyMT() {
   sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
   clBackSync();
-  if (toastAt && !toastAt.getClientRects().length) hideToast();                 // its anchor just went away (q | a when the page closes)
+  if (noteAt() && !noteAt().getClientRects().length) hideToast();               // its anchor just went away (q | a when the page closes)
   fabSync();
 }
 /* the sizes CSS cannot know: the visible height (phone), and the pad's height (it fills its tile / column) */
@@ -3127,11 +3099,11 @@ function openMT() {
   root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
   if (swapOn) setSwap(false);
   mtOpen = true; mtTile = "q"; mtFit = true;
-  if (toastAt === fab) hideToast();
+  if (noteAt() === fab) hideToast();
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
   applyMT(); layoutDock();
-  setTimeout(() => obToast(2, "Switch question/answer here.", mtMode), 400);
+  setTimeout(() => obToast(2, "Switch question/answer here.", mtMode, { x: true, allow: "#scratch" }), 400);   // pad-mode B (Tony, Oct 28): caret + an X. The pad page is all pad (#scratch, edge to edge): the note may lie on its 2 s of it, never on a button
 }
 let mtSkipPop = false;
 function shutMT() {
@@ -3212,8 +3184,8 @@ function fabSync() {
   fab.hidden = !show; fab.setAttribute("aria-expanded", String(mtOpen));
   if (!show) return;
   fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
-  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Quack up your thoughts here...", fab), 700); }
-  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move me!", fab), 700);
+  if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Quack up your thoughts here...", fab, { prefer: "above" }), 700); }   // Scratchpad tip A: above the button, caret down
+  else if ((mtMem.opens || 0) >= 2 && !mtMem.fabMoved) setTimeout(() => obToast(3, "Drag to move me!", fab, { prefer: "above" }), 700);
 }
 function fabBounds() {
   const h = fab.offsetHeight || 56, s = parseFloat(getComputedStyle(root).getPropertyValue("--s4")) * 16 || 16;
