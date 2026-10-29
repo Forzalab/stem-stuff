@@ -33,6 +33,14 @@ test("offline.js never stores or reads k/", () => {
   assert.ok(!/["'`]k\//.test(off));
 });
 
+test("figcheck.js (fable audit U3) is precached and index.html loads it, as a module, before graph.js (graph.js places labels with it)", () => {
+  assert.ok(src.includes(`"figcheck.js"`), "sw.js BASE");
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const fc = html.search(/<script type="module" src="figcheck\.js"><\/script>/), gr = html.search(/<script src="graph\.js" defer><\/script>/);
+  assert.ok(fc >= 0, "index.html loads figcheck.js as a module (deferred, in document order with the defer scripts)");
+  assert.ok(gr > fc, "before graph.js");
+});
+
 test("the sugar rewards files are precached (design/REWARDS-WIRING.md §6)", () => {
   for (const f of ["rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js",
     "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2"]) assert.ok(src.includes(`"${f}"`), f);
