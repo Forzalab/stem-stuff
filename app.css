@@ -650,6 +650,9 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .cl-cta .ico:first-child { transform-origin: 50% 80%; }
 .cl-cta .ico:last-child { width: 20px; height: 20px; }
 .cl-cta:active { color: var(--help); }
+/* W110: "Why does this work?" under a right-pick reply (app.js clAsk): a quiet outline chip (the cue chip's 8px) over the ask field; a tap asks it in the chat */
+.cl-why { display: inline-flex; align-items: center; min-height: var(--btn); margin: 0 0 var(--s2); padding: 0 var(--s4); border: var(--bw) solid var(--help-line); border-radius: 8px; background: none; color: var(--help-on); font: inherit; cursor: pointer; }
+.cl-why:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) {   /* pressed: the duck tilts once, the chevron nudges toward the sheet */
   .cl-cta:active .ico:first-child { transform: rotate(-14deg); }
   .cl-cta:active .ico:last-child { transform: translateX(3px); }

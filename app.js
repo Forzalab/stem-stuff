@@ -1662,6 +1662,7 @@ let wish = null;   // { code, text, started, done, open, failed, ctl, off }
    Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
 let cluckOff = false;
 const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-PENDING
+const WHY_ASK = "Why does this work?";                                   // COPY-PENDING (W110): the chip under a right-pick reply, and the question it sends
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
    sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
@@ -1678,7 +1679,7 @@ const shouldPrefetch = code => !painting && wishLog().length < WISH_AUTO && seen
    (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
    text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
 const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
-const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (t && Number.isInteger(t.part) ? t.part + ":" : "") + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
 const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
 const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
 function ckPut(key, text) {
@@ -1729,7 +1730,7 @@ async function wishStart(auto) {
   let r = null, bytes = 0;
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto, scratch: scratchTail() }), signal: w.ctl.signal });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail() }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
     fr.h(r);
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
@@ -2283,6 +2284,16 @@ function clAsk(build) {
     inp.addEventListener("input", () => askFit(inp));
   }
   const ready = wishTyped(w) && !w.busy;
+  /* W110 (Tony, Oct 28): Cluck's reply to a RIGHT pick ends on its one reason, no question; this chip offers more. A tap asks it through
+     the chat (clSend). Only under a reply that explains the right try (the box text or Compare's), before any follow-up */
+  const t = S && S.code === w.code ? S.tries.at(-1) : null, k = t && ckKey(w.code, t);
+  const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
+  let wb = ft.querySelector(".cl-why");
+  if (why && !wb) {
+    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why"; wb.textContent = WHY_ASK;
+    wb.addEventListener("click", () => clSend(WHY_ASK));
+    ft.prepend(wb);
+  } else if (!why && wb) wb.remove();
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;
@@ -2319,7 +2330,7 @@ async function clCompare(w) {
   const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto: false, scratch: scratchTail() }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
     fr.h(r);
     if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
     else {
@@ -2351,7 +2362,7 @@ async function clSend(msg) {
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
