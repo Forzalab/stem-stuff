@@ -40,7 +40,10 @@ async function run(browserType, label, opts = {}) {
     const errors = [];
     page.on("pageerror", e => errors.push(String(e)));
     page.on("response", r => { if (r.status() >= 400 && !/offline\.js/.test(r.url())) errors.push(`${r.status()} ${r.url()}`); });
-    page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
+    /* WebKit logs index.html's interactive-widget viewport key (Chromium's keyboard resize; Safari ignores it on purpose, index.html:5) as a
+       console error on every load: that one exact line is the engine's notice, not a page error */
+    const NOTICE = /^Viewport argument key "interactive-widget" not recognized and ignored\.$/;
+    page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text()) && !(label === "webkit" && NOTICE.test(m.text()))) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
     /* pad: phones run it in diet, where the pad lives (phone sugar has none: Tony, Oct 14) */
     const open = async (code, pad) => {
@@ -325,7 +328,8 @@ async function run(browserType, label, opts = {}) {
       assert.ok(await nav.isVisible(), "nav hidden after upload");
       assert.ok(await prev.isDisabled() && await next.isEnabled(), "first question: prev off, next on");
       assert.equal(await page.locator("#qshuf, #qredo").count(), 0, "Shuffle and Redo are gone (D63, D50)");
-      for (const b of [btn, prev, next]) { const r = await b.boundingBox(); assert.ok(r.height >= 48 && r.width >= 48, "nav button under 48px"); }
+      // the page's own CSS-px box: Playwright's boundingBox() in Firefox read #qlistBtn (48px at y 89.42) as 47.99999237 (float error)
+      for (const b of [btn, prev, next]) { const r = await b.evaluate(e => e.getBoundingClientRect().toJSON()); assert.ok(r.height >= 48 && r.width >= 48, `nav button under 48px: ${r.width} x ${r.height}`); }
       // list button: the file name; ".json" dimmed on desktop, hidden on phones (Tony, Sep 30)
       assert.equal((await btn.innerText()).trim(), "Questions", "list button label"); assert.equal(await btn.getAttribute("title"), "bank.json", "its title names the file");
       assert.equal((await prev.textContent()).trim() + (await next.textContent()).trim(), "", "arrows carry text");
