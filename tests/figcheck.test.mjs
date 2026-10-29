@@ -103,6 +103,29 @@ test("I-INC-1 contact: a box 0.24 into a 30° ramp is sunk by 0.24 (snap along t
   assert.deepEqual(F.checkContact([{ id: "gb", shape: F.box("gb", [-3, 0.25], 0.8, 0.5), size: 0.5 }], [inc.surface, ground]), []);
 });
 
+test("I-INC-2 tilt: a box at 0° resting on a 30° ramp is 30° off (turn +30° about its centre); flat at 30°, 120° or within 1° is fine", () => {
+  const inc = F.incline(RAMP), h = 0.5;
+  /** a w x h box at angle a whose lowest corner / edge just touches the hyp above x = 0 (gap 0: I-INC-1 is happy) */
+  const rest = a => { const b0 = F.box("blk", [0, 2], 0.8, h, a), g = F.contactGap(b0, inc.surface); return F.box("blk", [-out30[0] * g, 2 - out30[1] * g], 0.8, h, a); };
+  const body = a => [{ id: "blk", shape: rest(a), size: h }];
+  assert.deepEqual(F.checkContact(body(0), [inc.surface]), [], "the planted box touches: only its angle is wrong");
+  const bad = F.checkTilt(body(0), [inc.surface]);
+  assert.deepEqual(ids(bad), ["I-INC-2"]); assert.deepEqual(bad[0].ids, ["blk", "ramp"]);
+  close(bad[0].amount, 30, 1e-9); assert.equal(bad[0].unit, "deg"); close(bad[0].fix.rotate, 30, 1e-9);
+  close(bad[0].fix.about[0], F.centroid(rest(0))[0], 1e-12);
+  close(F.checkTilt(body(28), [inc.surface])[0].fix.rotate, 2, 1e-9);
+  close(F.checkTilt(body(45), [inc.surface])[0].fix.rotate, -15, 1e-9, "the nearest flat face: turn back 15°, not on 75°");
+  for (const a of [30, 29.2, 30.9, 120, -60, 210]) assert.deepEqual(F.checkTilt(body(a), [inc.surface]), [], `flat at ${a}°`);
+  assert.deepEqual(F.checkTilt([{ id: "d", shape: F.circle("d", onRamp(0.3), 0.3), size: 0.6 }], [inc.surface]), [], "a disk has no angle");
+  assert.deepEqual(F.checkTilt([{ id: "fly", shape: F.box("fly", onRamp(2), 0.8, h, 0), size: h }], [inc.surface]), [], "not resting: no tilt to judge");
+  // screen space (y down): the same box, the same turn (angles stay counter-clockwise with y up)
+  const s = 100, X = p => [200 + p[0] * s, 200 - p[1] * s], ramp = F.surface("ramp", X([-2, 0]), X([2, 4 * Math.tan(30 * deg)]));
+  const scr = F.checkTilt([{ id: "b", shape: F.poly("b", rest(0).pts.map(X)), size: 50 }], [ramp], { space: "screen" });
+  close(scr[0].amount, 30, 1e-9); close(scr[0].fix.rotate, 30, 1e-9);
+  // checkAll runs it
+  assert.deepEqual(ids(F.checkAll({ bodies: body(0), surfaces: [inc.surface] })), ["I-INC-2"]);
+});
+
 test("I-INC-1 in screen space (y down): the same sink in px, the snap vector in screen coordinates", () => {
   const s = 100, X = p => [200 + p[0] * s, 200 - p[1] * s];
   const ramp = F.surface("ramp", X([-2, 0]), X([2, 4 * Math.tan(30 * deg)]));
@@ -256,6 +279,9 @@ test("place(): the free-spot grid (ring 99) when all three rings collide, a fixe
   assert.ok(got.some(p => p.ring > 6 && p.lead), "an outer ring with a leader");
   const spot = F.place([{ key: "s", id: "s", w: 10, t: { pt: [0, 0] }, spot: [5, 6] }], [], [], R);
   assert.deepEqual(spot[0].box, [5, 6, 16, 19]); assert.equal(spot[0].dir, null);
+  // a measured height (graph.js: a KaTeX span) replaces LH for that label only
+  const tall = F.place([{ key: "t", id: "t", w: 10, h: 30, t: { pt: [100, 100] } }, { key: "u", id: "u", w: 10, t: { pt: [200, 100] } }], [], [], R);
+  assert.deepEqual(tall.map(p => p.box[3]), [30, 19]); assert.deepEqual(tall[0].box, [92, 64, 16, 30], "n of the point (centred: 100 - 16 / 2), 6 px up");
   // every candidate of all three rings already taken (spot labels on exactly those boxes): the grid finds a free box
   const T = { pt: [200, 150] }, taken = ["n", "e", "s", "w", "ne", "nw", "se", "sw"].flatMap(d => [6, 24, 46].map(r => ({ key: d + r, id: d + r, w: 40, t: T, spot: F.candBox(T, d, 46, 19, r).slice(0, 2) })));
   const free = F.place([...taken, { key: "z", id: "z", w: 40, t: T }], [], [], { x: 0, y: 0, w: 400, h: 300 });

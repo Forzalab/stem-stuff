@@ -4,7 +4,7 @@
 //   shapes      poly box circle wseg surface incline       convex polygons, circles, width-segments; label rects are [x, y, w, h]
 //   primitives  collide (SAT poly x poly, circle x poly by closest point, circle x circle)  segHitsBox (Liang-Barsky = scene.js)
 //               ptSeg  depthAlong (penetration along a normal)  contactGap (signed gap of a body to a surface along its outward normal)
-//   checks      checkContact I-INC-1  checkOverlap I-BODY-1  checkAnchor I-FORCE-1  checkDirection I-FORCE-2/3  checkLabels I-LBL-1/2
+//   checks      checkContact I-INC-1  checkTilt I-INC-2  checkOverlap I-BODY-1  checkAnchor I-FORCE-1  checkDirection I-FORCE-2/3  checkLabels I-LBL-1/2
 //               checkSteps I-STEP-2/3  checkBalance I-BAL-1  checkAll (one model, every check)
 //   packer      place(): scene.js place() ported as is (8 dirs x 3 rings, overlap score, free grid, leader lines), same numbers
 // A finding is plain data: { id: "I-…", ids: [the objects], amount, unit, kind?, fix? }. `fix` is a suggestion only (snap vector,
@@ -137,21 +137,46 @@ export function contactGap(shape, surf, space = "world") {
 
 // ─── checks ───
 const sizeOf = b => b.size ?? (b.shape.kind === "circle" ? 2 * b.shape.r : Math.min(...[0, 1].map(k => { const v = ptsOf(b.shape).map(p => p[k]); return Math.max(...v) - Math.min(...v); })));
+/** the surface a body rests on: over it, gap in [-size, 0.6·size]; the nearest such surface. null = resting on none */
+function restOn(b, surfaces, space) {
+  const h = sizeOf(b);
+  let best = null;
+  for (const s of surfaces) {
+    const d = sub(s.b, s.a), L = len(d), u = unit(d);
+    const [lo, hi] = projectShape(b.shape, u), a0 = dot(s.a, u);
+    if (hi - a0 <= EPS || lo - a0 >= L - EPS) continue;                       // not over this surface
+    const gap = contactGap(b.shape, s, space);
+    if (gap < -h || gap > 0.6 * h) continue;                                 // not resting on it
+    if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { s, gap, n: outOf(s, space, b.shape) };
+  }
+  return best;
+}
 /** I-INC-1: a body within 0.6·size of a surface (and over it) rests on it: |gap| ≤ tol (0.02·size). The nearest such surface judges. */
 export function checkContact(bodies, surfaces, opts = {}) {
   const space = opts.space || "world", out = [];
   for (const b of bodies) {
-    const h = sizeOf(b), tol = opts.tol ?? 0.02 * h;
-    let best = null;
-    for (const s of surfaces) {
-      const d = sub(s.b, s.a), L = len(d), u = unit(d);
-      const [lo, hi] = projectShape(b.shape, u), a0 = dot(s.a, u);
-      if (hi - a0 <= EPS || lo - a0 >= L - EPS) continue;                     // not over this surface
-      const gap = contactGap(b.shape, s, space);
-      if (gap < -h || gap > 0.6 * h) continue;                               // not resting on it
-      if (!best || Math.abs(gap) < Math.abs(best.gap)) best = { s, gap, n: outOf(s, space, b.shape) };
-    }
+    const tol = opts.tol ?? 0.02 * sizeOf(b), best = restOn(b, surfaces, space);
     if (best && Math.abs(best.gap) > tol) out.push({ id: "I-INC-1", ids: [b.id, best.s.id], amount: Math.abs(best.gap), unit: unitOf(space), kind: best.gap < 0 ? "sunk" : "float", fix: { snap: mul(best.n, -best.gap) } });
+  }
+  return clean(out);
+}
+/** I-INC-2: a polygon body resting on a surface (the I-INC-1 window) lies flat on it: one of its edges is parallel to the surface
+ *  within tol (1°). fix.rotate = the signed turn (degrees, counter-clockwise with y up, as every angle here) about fix.about (centroid).
+ *  Circles have no angle to judge. */
+export function checkTilt(bodies, surfaces, opts = {}) {
+  const space = opts.space || "world", tol = opts.tilt ?? 1, out = [];
+  for (const b of bodies) {
+    if (b.shape.kind === "circle") continue;
+    const best = restOn(b, surfaces, space);
+    if (!best) continue;
+    const t = angleOf(sub(best.s.b, best.s.a), space);
+    let d = null;
+    for (const [p, q] of edges(b.shape.pts)) {
+      let e = angDiff(t, angleOf(sub(q, p), space));                          // turn the edge onto the surface, mod 180
+      if (e > 90) e -= 180; else if (e <= -90) e += 180;
+      if (d === null || Math.abs(e) < Math.abs(d)) d = e;
+    }
+    if (d !== null && Math.abs(d) > tol) out.push({ id: "I-INC-2", ids: [b.id, best.s.id], amount: Math.abs(d), unit: "deg", fix: { rotate: d, about: centroid(b.shape) } });
   }
   return clean(out);
 }
@@ -281,6 +306,7 @@ export function checkAll(m, opts = {}) {
   const space = m.space || opts.space || "world", o = { ...opts, space }, bodies = m.bodies || [], solids = m.solids || [], surfaces = m.surfaces || [];
   return [
     ...checkContact(bodies, surfaces, o),
+    ...checkTilt(bodies, surfaces, o),
     ...checkOverlap([...bodies.map(b => b.shape), ...solids], { ...o, static: solids.map(s => s.id) }),
     ...checkAnchor(m.forces || [], bodies, o),
     ...checkDirection(m.forces || [], { ...o, surfaces }),
@@ -291,7 +317,8 @@ export function checkAll(m, opts = {}) {
 // ─── the label packer: scene.js place() as is (8 candidates around the anchor scored by overlap, a 2nd and 3rd ring with a leader,
 // then a free-spot grid). reqs: [{key, id, w (text width), t: {pt} | {box}, R?, dirs?, spot?, hid?}] in screen px (y down);
 // segs: [{id, pts: [a, b]}] drawn lines; bodies: [{id, box}]; fixed: Map key -> {dir, ring} (a tween keeps its choices).
-// opts: { LH: 19 (label box height), GAP: 6 (first ring) } = scene.js's numbers.
+// opts: { LH: 19 (label box height), GAP: 6 (first ring) } = scene.js's numbers. A req may carry its own measured height h (graph.js
+// labels: KaTeX spans) in place of LH; without it the numbers are scene.js's.
 const DIRS = { e: [1, 0], ne: [1, 1], n: [0, 1], nw: [-1, 1], w: [-1, 0], sw: [-1, -1], s: [0, -1], se: [1, -1] };   // screen: y down, n = up
 const ORDER = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
 /** the box (x, y, w, h) of a label of size w x h on side `dir` of a target (a point, or a box) at distance d */
@@ -309,7 +336,7 @@ export function place(reqs, segs, bodies, R, fixed, opts = {}) {
   const LH = opts.LH ?? 19, GAP = opts.GAP ?? 6;
   const placed = [];
   for (const q of reqs) {
-    const w = q.w + 6, h = LH;
+    const w = q.w + 6, h = q.h ?? LH;
     let best = null;
     const tryOne = (dir, ring, pen) => {
       const box = candBox(q.t, dir, w, h, ring);
@@ -349,6 +376,6 @@ export function leaderOf(t, box) {
 }
 
 const FigCheck = { poly, box, circle, wseg, surface, incline, centroid, ptSeg, depthAlong, collide, segHitsBox, contactGap,
-  checkContact, checkOverlap, checkAnchor, roleOf, checkDirection, checkLabels, checkSteps, checkBalance, checkAll, candBox, overlap, inBox, place, leaderOf };
+  checkContact, checkTilt, checkOverlap, checkAnchor, roleOf, checkDirection, checkLabels, checkSteps, checkBalance, checkAll, candBox, overlap, inBox, place, leaderOf };
 if (typeof globalThis !== "undefined") globalThis.FigCheck = FigCheck;
 export default FigCheck;
