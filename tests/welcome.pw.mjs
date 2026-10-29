@@ -33,11 +33,11 @@ try {
     await page.evaluate(() => window.lab());
     const bg = await page.evaluate(() => {
       const v = getComputedStyle(document.querySelector(".wl")).backgroundColor, t = document.createElement("i");
-      t.style.color = "var(--help-fill)"; document.body.append(t);
-      const warm = getComputedStyle(t).color; t.remove();
+      t.style.backgroundColor = "color-mix(in srgb, var(--help) 6%, var(--help-sheet))"; document.body.append(t);   // pick B's body (Tony 12:41 PT)
+      const warm = getComputedStyle(t).backgroundColor; t.remove();
       return { v, warm, page: getComputedStyle(document.body).backgroundColor };
     });
-    assert.equal(bg.v, bg.warm, "Q1 sits on the warm token");
+    assert.equal(bg.v, bg.warm, "Q1 does not sit on the warm body (--help 6% over --help-sheet)");
     assert.notEqual(bg.v, bg.page, "differently coloured from the page");
     assert.deepEqual(await states(), ["formula:active", "plug:future", "answer:future"]);
     assert.deepEqual(await page.$$eval(".rp-step", s => s.map(x => x.offsetParent !== null && getComputedStyle(x).opacity === "1")), [true, true, true],

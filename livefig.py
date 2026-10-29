@@ -207,8 +207,209 @@ def _labels(g):
     return n
 
 
-def check(g, ctx):
-    """None when the figure may be shown, else the reason it is dropped (a short code, logged; never shown)"""
+# ---------------- the scene model pre-pass: graph.js fix() in Python, same numbers (fable audit 2026-10-29 U1) ----------------
+# A box/disk within 0.6 h of a ramp / surface / solid seg rests on it (bottom edge on the line, a box at its angle); points on a body ride
+# along; a force tail just off a body is re-anchored to its centre; weight points down, normal and friction sit on the surface axes.
+# Codes are findings, not drops: the figure goes out fixed. Conformance: tests/fixtures/livefig.json "contact" want = graph.js output.
+FIX = {"snap": 0.6, "tol": 0.02, "near": 0.25, "turn": 1, "down": 0.5}
+WEIGHT, NORMAL, FRICTION = {"mg", "W", "w", "F_g", "F_G", "F_grav"}, {"N", "n", "F_N", "F_n"}, {"f", "f_k", "f_s", "F_f", "F_fr"}
+_DEG = math.pi / 180
+
+
+def _sym(label):
+    if not isinstance(label, str):
+        return ""
+    s = label.replace("$", "").split("=")[0]
+    s = re.sub(r"\\(vec|mathbf|boldsymbol|overrightarrow|mathrm|text)(?![a-zA-Z])", "", s)
+    return re.sub(r"[{}\s]", "", re.sub(r"\\[,;: !]", "", s))
+
+
+def _pt(p):
+    return isinstance(p, list) and len(p) >= 2 and all(isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) for x in p[:2])
+
+
+def _rot(p, a):
+    return [p[0] * math.cos(a) - p[1] * math.sin(a), p[0] * math.sin(a) + p[1] * math.cos(a)]
+
+
+def _ang(v):
+    return math.atan2(v[1], v[0]) / _DEG
+
+
+def _turn(a, b, n=360):
+    d = (a - b) % n
+    return min(d, n - d)
+
+
+def _num(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
+
+
+def incline_pts(m):
+    """graph.js inclinePts: [foot, base end, top]"""
+    sx = -1 if m.get("flip") else 1
+    b = [m["at"][0] + sx * m["base"], m["at"][1]]
+    return [m["at"], b, [b[0], b[1] + m["base"] * math.tan(m["angle"] * _DEG)]]
+
+
+def _solid(m):
+    if m.get("mark") != "body" or not _pt(m.get("at")):
+        return None
+    w, h, r = _num(m.get("w")), _num(m.get("h")), _num(m.get("r"))
+    if m.get("shape") == "box":
+        return {"box": True, "hw": w / 2, "hh": h / 2, "H": h, "size": max(w, h)} if w > 0 and h > 0 else None
+    if m.get("shape") in ("dot", "rod") or not r > 0:
+        return None
+    return {"box": False, "hw": r, "hh": r, "H": 2 * r, "size": 2 * r}
+
+
+def _surfaces(marks):
+    out = []
+    for m in marks:
+        k = m.get("mark")
+        try:
+            if k == "incline":
+                v = incline_pts(m)
+                a, b, up = v[0], v[2], -1 if m.get("flip") else 1
+            elif k == "surface":
+                a, b, up = m.get("from"), m.get("to"), -1 if m.get("side") == "left" else 1
+            elif k == "seg" and not m.get("dash"):
+                a, b, up = m.get("from"), m.get("to"), 0
+            else:
+                continue
+        except (KeyError, TypeError, IndexError):
+            continue
+        if not _pt(a) or not _pt(b):
+            continue
+        L = math.hypot(b[0] - a[0], b[1] - a[1])
+        if L > 0:
+            out.append({"a": a, "b": b, "u": [(b[0] - a[0]) / L, (b[1] - a[1]) / L], "L": L, "up": up})
+    return out
+
+
+def _local(p, q):
+    return _rot([p[0] - q["c"][0], p[1] - q["c"][1]], -q["ang"] * _DEG)
+
+
+def _outside(l, k):
+    if k["box"]:
+        return math.hypot(max(abs(l[0]) - k["hw"], 0), max(abs(l[1]) - k["hh"], 0))
+    return max(math.hypot(l[0], l[1]) - k["hw"], 0)
+
+
+def fix(marks):
+    """(fixed copy of a scene's marks, sorted finding codes): contact / anchor / direction. Mirrors graph.js fix()."""
+    codes, out = set(), [dict(m) if isinstance(m, dict) else m for m in marks]
+    out_d = [m for m in out if isinstance(m, dict)]
+    surf, bodies = _surfaces(out_d), []
+    paths = [p for m in out_d if m.get("mark") == "path" for p in (m.get("pts") or []) if _pt(p)]
+    for m in out_d:
+        k = _solid(m)
+        if not k:
+            continue
+        q = {"m": m, "k": k, "c": m["at"], "ang": _num(m.get("angle")) or 0}
+        q["c1"], q["ang1"], q["rest"] = q["c"], q["ang"], None
+        bodies.append(q)
+        if any(math.hypot(p[0] - q["c"][0], p[1] - q["c"][1]) <= FIX["near"] * k["size"] for p in paths):
+            continue
+        best = None
+        for s in surf:
+            rx, ry = q["c"][0] - s["a"][0], q["c"][1] - s["a"][1]
+            t, dl = rx * s["u"][0] + ry * s["u"][1], s["u"][0] * ry - s["u"][1] * rx
+            if t < 0 or t > s["L"]:
+                continue
+            side = s["up"] or (1 if dl >= 0 else -1)
+            gap = side * dl - k["hh"]
+            if abs(gap) > FIX["snap"] * k["H"]:
+                continue
+            if not s["up"] and any(_outside(_local(p, q), k) <= FIX["tol"] * k["size"] for p in (s["a"], s["b"])):
+                continue
+            if best is None or abs(gap) < abs(best[3]):
+                best = (s, side, t, gap)
+        if best is None:
+            continue
+        s, side, t, gap = best
+        n = [-side * s["u"][1], side * s["u"][0]]
+        q["c1"] = [s["a"][0] + t * s["u"][0] + k["hh"] * n[0], s["a"][1] + t * s["u"][1] + k["hh"] * n[1]]
+        tilt = _ang(s["u"])
+        tilt = tilt - 180 if tilt > 90 else tilt + 180 if tilt <= -90 else tilt
+        if k["box"]:
+            q["ang1"] = tilt
+        q["rest"] = {"n": n, "u": s["u"]}
+        if abs(gap) > FIX["tol"] * k["H"] or (k["box"] and _turn(q["ang"], q["ang1"], 180) > FIX["turn"]):
+            codes.add("contact")
+        m["at"] = q["c1"]
+        if k["box"]:
+            m["angle"] = q["ang1"]
+
+    def owner(p):
+        best = None
+        if not _pt(p):
+            return None
+        for q in bodies:
+            l = _local(p, q)
+            d = _outside(l, q["k"])
+            if d <= FIX["near"] * q["k"]["size"] and (best is None or d < best[2]):
+                best = (q, l, d)
+        return best
+
+    def ride(o):
+        r = _rot(o[1], o[0]["ang1"] * _DEG)
+        return [o[0]["c1"][0] + r[0], o[0]["c1"][1] + r[1]]
+
+    def on(o):
+        return o is not None and o[2] <= FIX["tol"] * o[0]["k"]["size"]
+
+    for m in out_d:
+        k = m.get("mark")
+        if k == "force":
+            o = owner(m.get("at"))
+            if o:
+                if on(o):
+                    m["at"] = ride(o)
+                else:
+                    m["at"] = o[0]["c1"]
+                    codes.add("anchor")
+            s, frame = _sym(m.get("label")), _num(m.get("frame"))
+            d = (_num(m.get("angle")) or 0) + (frame or 0)
+            rest = o[0]["rest"] if o else None
+            want, tol = None, FIX["turn"]
+            if s in WEIGHT:
+                want, tol = 270, FIX["down"]
+            elif rest and s in NORMAL:
+                want = _ang(rest["n"])
+            elif rest and s in FRICTION:
+                a = _ang(rest["u"])
+                want = a if _turn(d, a) <= _turn(d, a + 180) else a + 180
+            if want is not None and _turn(d, want) > tol:
+                m["angle"] = (want - (frame or 0)) % 360
+                codes.add("direction")
+        elif k == "arrow":
+            o = owner(m.get("from"))
+            if on(o):
+                p = ride(o)
+                dx, dy = p[0] - m["from"][0], p[1] - m["from"][1]
+                m["from"] = p
+                if isinstance(m.get("to"), list):
+                    m["to"] = [m["to"][0] + dx, m["to"][1] + dy]
+        elif k == "spring":
+            for e in ("from", "to"):
+                o = owner(m.get(e))
+                if on(o):
+                    m[e] = ride(o)
+        elif k == "rope" and isinstance(m.get("pts"), list) and m["pts"]:
+            m["pts"] = list(m["pts"])
+            for i in {0, len(m["pts"]) - 1}:
+                o = owner(m["pts"][i])
+                if on(o):
+                    m["pts"][i] = ride(o)
+    return out, sorted(codes)
+
+
+def check(g, ctx, warn=None):
+    """None when the figure may be shown, else the reason it is dropped (a short code, logged; never shown).
+    warn: a list that gets the scene pre-pass findings (contact / anchor / direction): the figure is not dropped for those, it is
+    shown fixed (fixed(g)); the later rules (dash-force, no-force) read the fixed marks."""
     s = schema()
     if s is None:
         return "no-schema"
@@ -229,7 +430,11 @@ def check(g, ctx):
         return "size"
     if _labels(g) > MAX_LABELS:
         return "labels"
-    bodies = [tuple(m["at"]) for m in marks if m.get("mark") == "body"]
+    if kind == "scene":
+        marks, found = fix(marks)
+        if warn is not None:
+            warn.extend(found)
+    bodies =[tuple(m["at"]) for m in marks if m.get("mark") == "body"]
     if any(m.get("mark") == "force" and m.get("dash") and tuple(m["at"]) in bodies for m in marks):
         return "dash-force"                  # SCHEMA.md: a force acting on the body is solid
     if kind == "network":
@@ -265,6 +470,13 @@ def check(g, ctx):
     return None
 
 
+def fixed(g):
+    """the figure as it is drawn: a scene with fix() applied (any other kind, or a figure check() has not passed, as it came)"""
+    if isinstance(g, dict) and g.get("kind") == "scene" and isinstance(g.get("marks"), list):
+        return {**g, "marks": fix(g["marks"])[0]}
+    return g
+
+
 FENCE = re.compile(r"```[ \t]*([A-Za-z]*)[ \t]*\n?([\s\S]*?)\n?[ \t]*```")
 # Opus sometimes fences its figure as :::fig ... ::: (1 of 6 physics replies, Oct 18; the JSON reached the student): a line-start :::
 # is read as ``` (COLONS), and a line ending in ":" or "::" (or a bare newline) is held a chunk in case it opens one (HOLD).
@@ -292,12 +504,14 @@ class Fence:
         if self.shown >= FIGS_MAX:
             return self.log.append("second") or ""
         g = parse(body) if lang in ("fig", "json", "") else None
-        why = "json" if g is None else check(g, self.ctx)
-        self.log.append(why or "ok")
+        warn = []
+        why = "json" if g is None else check(g, self.ctx, warn)
+        self.log.append(why or ("ok:" + "+".join(warn) if warn else "ok"))     # ok:contact+anchor = shown, fixed by the pre-pass
+        # (no finding: sent as written; graph.js still snaps it exactly, the residual is under every tolerance)
         if why:
             return ""
         self.shown += 1
-        return "\n```fig\n" + json.dumps(g, ensure_ascii=False, separators=(",", ":")) + "\n```\n"
+        return "\n```fig\n" + json.dumps(fixed(g) if warn else g, ensure_ascii=False, separators=(",", ":")) + "\n```\n"
 
     def feed(self, chunk):
         self.buf += chunk
@@ -357,8 +571,9 @@ def weave(system):
     return "\n".join(out)
 
 
-EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kinds this question allows
-    "scene": '{"type":"graph","kind":"scene","alt":"Forces on the block on the ramp.","marks":[{"mark":"incline","at":[-2,0],"base":4,"angle":30},{"mark":"body","at":[0,1.2],"shape":"box","w":0.8,"h":0.5,"angle":30},{"mark":"force","at":[0,1.2],"angle":270,"len":1.4,"label":"$mg$"},{"mark":"force","at":[0,1.2],"angle":120,"len":1.2,"label":"$F_N$"}]}',
+EXAMPLE = {   # one tiny valid figure per kind, shown in the prompt for the kinds this question allows (scene: the box RESTS on the ramp:
+    # surface 1.155 at x = 0, + (h/2)/cos 30 = 1.443; it was at 1.2, 0.243 sunk, and taught Opus to sink: fable audit 2026-10-29)
+    "scene": '{"type":"graph","kind":"scene","alt":"Forces on the block on the ramp.","marks":[{"mark":"incline","at":[-2,0],"base":4,"angle":30},{"mark":"body","at":[0,1.443],"shape":"box","w":0.8,"h":0.5,"angle":30},{"mark":"force","at":[0,1.443],"angle":270,"len":1.4,"label":"$mg$"},{"mark":"force","at":[0,1.443],"angle":120,"len":1.2,"label":"$F_N$"}]}',
     "cartesian": '{"type":"graph","kind":"cartesian","alt":"The line y = 2x + 1.","x":{"min":0,"max":4,"label":"$x$"},"y":{"min":0,"max":10,"label":"$y$"},"marks":[{"mark":"fn","y":"2*x+1"}]}',
     "bars": '{"type":"graph","kind":"bars","alt":"Energy before and after.","unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]},{"label":"after","bars":[{"label":"$U$","value":8}]}]}',
     "network": '{"type":"graph","kind":"network","alt":"Only the odd cycle A, B, C, not the whole graph.","nodes":["A","B","C"],"edges":[{"from":"A","to":"B"},{"from":"B","to":"C"},{"from":"C","to":"A"}]}',
