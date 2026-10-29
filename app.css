@@ -342,6 +342,7 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
+.fig-alt { box-sizing: border-box; padding: var(--s3) var(--s4); border: var(--bw) solid var(--line); border-radius: 8px; }   /* graph.js degrade (U7): a figure figcheck could not fix shows its alt text in this plain box */
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
 .lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 

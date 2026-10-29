@@ -187,13 +187,15 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
     const fig = (g, sel = ".lbl") => page.evaluate(([g, sel, src]) => {
       const el = document.getElementById("f"); el._g = null; el.innerHTML = ""; delete el.dataset.figFindings;
       Graph.render(el, g);
-      return { ...new Function("return " + src)()(el, sel), findings: el.dataset.figFindings ?? null };
+      const fig = { findings: el.dataset.figFindings ?? null, svg: !!el.querySelector("svg"), alt: el.classList.contains("fig-alt") ? el.textContent : null };
+      return fig.svg ? { ...new Function("return " + src)()(el, sel), ...fig } : fig;   // degraded (U7): no svg to audit
     }, [g, sel, audit.toString()]);
     await step(`labels: physics-b, no overlap, no label on a stroke (mg vs the ramp hatching), inside, ${label} ${width}`, async () => {
       const r = await fig(FIX.valid[0]);
       assert.equal(r.n, 4, "four force labels");
       assert.deepEqual(r.pairs, [], "labels overlap"); assert.deepEqual(r.strokes, [], "labels on strokes"); assert.deepEqual(r.outside, [], "labels outside the svg");
       assert.equal(r.findings, "", "figcheck: physics-b after Graph.fix has no findings");
+      assert.equal(r.svg, true, "a finding-free figure draws as before");
     });
     await step(`labels: two force labels at one tip, apart, ${label} ${width}`, async () => {
       const r = await fig(TIP);
@@ -204,6 +206,8 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
       const r = await fig(CLASH);
       assert.match(r.findings || "", /^I-[A-Z]+-\d+( I-[A-Z]+-\d+)*$/, "codes only, space separated");
       assert.ok(r.findings.split(" ").includes("I-BODY-1"), r.findings);
+      assert.equal(r.svg, false, "U7: a finding nothing fixed degrades: no svg");
+      assert.equal(r.alt, CLASH.alt, "U7: the alt text in the plain box");
     });
     for (const [name, prog] of GEO) {
       await step(`labels: Geometry ${name}, no overlap, none on a stroke without a knockout, inside, ${label} ${width}`, async () => {

@@ -3,7 +3,9 @@
 //   - two visuals in one reply (a ```fig and an ```openui view: "may mix 2") both draw;
 //   - a Table-only view draws its table (the old "drawn?" check looked for svg / p only and blanked it);
 //   - a stepper (Steps) in a chat view clicks through Back / Next;
-//   - a tiny phone (slot under 300 px) gets a STATIC IMAGE of the same view, never an error box, no horizontal scroll.
+//   - a tiny phone (slot under 300 px) gets a STATIC IMAGE of the same view, never an error box, no horizontal scroll;
+//   - a figure graph.js can't fix (fable audit 2026-10-29 U7: two boxes in each other after Graph.fix) never draws: its alt text in a
+//     plain box, no svg; one fig_check telemetry event with the finding codes and counts only (never a label, the alt, any text).
 // Starts its own serve.py and fake Claude:   node tests/views-static.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -28,12 +30,17 @@ writeFileSync(join(BANKS, "BANK_VS1.json"), JSON.stringify({ v: 1, problems: [P]
 const GEO = 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1.15", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "angle(A,B,C,30°)", "dim(A,C,1.2 m)", "arrow(P,C,push)"], "The ramp at 30 degrees, the push up it.")';
 const TABLE = 'root = View([t])\nt = Table(["step", "you", "the fix"], [["friction", "added", "taken away"], ["spring", "x", "x squared"]])';
 const STEPS = 'root = View([s])\ns = Steps(null, [s1, s2, s3])\ns1 = Step("Push in: **48 J**.")\ns2 = Step("Friction takes some away.")\ns3 = Step("The spring gets what is left.")';
+/* physics-b plus a second block in the first one: the server passes it (livefig.check has no overlap rule), Graph.fix rests both on the
+   ramp, figcheck still finds I-BODY-1 (no auto-fix): the student gets the alt text, never the interpenetrating drawing */
+const CLASH = { ...FIX.valid[0], alt: "Two blocks on the ramp, drawn inside each other.", marks: [...FIX.valid[0].marks, { mark: "body", at: [0.25, 1.3], shape: "box", w: 0.8, h: 0.5, angle: 30 }] };
+const LABELS = FIX.valid[0].marks.filter(m => m.label).map(m => m.label);     // "$mg$", "$F_N$", ...: none may ride in telemetry
 const fence = (lang, body) => "```" + lang + "\n" + body + "\n```";
 const REPLIES = {
   two: ["Not quite.\n\nForces on the block:\n", fence("fig", JSON.stringify(FIX.valid[0])) + "\n", "\nAnd the ramp:\n", fence("openui", GEO) + "\n", "\nTry once more."],
   table: ["Not quite.\n\nYour move next to the fix:\n", fence("openui", TABLE) + "\n", "\nTry once more."],
   steps: ["Not quite.\n\nClick through it:\n", fence("openui", STEPS) + "\n", "\nTry once more."],
   geo: ["Not quite.\n\nThe ramp:\n", fence("openui", GEO) + "\n", "\nTry once more."],
+  clash: ["Not quite.\n\nThe two blocks:\n", fence("fig", JSON.stringify(CLASH)) + "\n", "\nTry once more."],
 };
 let reply = "two";
 const fake = createServer(async (req, res) => {
@@ -57,7 +64,11 @@ async function step(name, fn) {
 }
 const has = async (page, sel) => !!(await page.$(sel));
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const init = () => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
+/* fig_check spy: once every script has set window.stemT (telemetry.js, intent.js and flight.js wrap it while loading; no key here, so
+   nothing leaves the page), wrap it once more and log what the app hands the sender */
+const init = () => { window.__figT = [];
+  addEventListener("load", () => setTimeout(() => { const f = window.stemT; window.stemT = (n, p) => { if (n === "fig_check") window.__figT.push(JSON.parse(JSON.stringify(p))); return f && f(n, p); }; }));
+  try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } };
 async function wish(which, w, h) {
   reply = which;
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: w < 500, isMobile: w < 500, serviceWorkers: "block", reducedMotion: "reduce" });
@@ -81,6 +92,9 @@ try {
     await page.waitForSelector("#cluck .wtext .wview .vw-geo svg", { timeout: 5000 });
     assert.equal(await page.locator("#cluck .wtext .wfig").count(), 2, "two figure slots");
     assert.ok(await has(page, "#cluck .wtext .wfig:not(.wview) svg"), "the fig drew");
+    assert.equal(await page.getAttribute("#cluck .wtext .wfig:not(.wview)", "data-fig-findings"), "", "physics-b is finding-free");
+    assert.equal(await has(page, "#cluck .wtext .wfig.fig-alt"), false, "a finding-free figure is never degraded");
+    assert.deepEqual(await page.evaluate(() => window.__figT), [], "no fig_check for a clean figure");
     await noRaw(page);
     assert.deepEqual(page.errs, []);
     await page.context().close();
@@ -123,6 +137,29 @@ try {
     assert.equal(await has(page, "#cluck .wtext img.vw-static"), false);
     await page.context().close();
   });
+  for (const [w, h] of [[1280, 900], [390, 844]]) {
+    await step(`a figure figcheck can't fix (two blocks in each other) never draws: the alt text in a plain box, no svg; fig_check has codes only, ${w}`, async () => {
+      const page = await wish("clash", w, h);
+      const sel = "#cluck .wtext .wfig:not(.wview)";
+      await page.waitForSelector(sel, { timeout: 5000 });
+      const f = await page.$eval(sel, e => ({ svg: !!e.querySelector("svg"), lbl: e.querySelectorAll(".lbl").length, text: e.textContent.trim(), cls: e.className, find: e.dataset.figFindings }));
+      assert.equal(f.svg, false, "no svg: the interpenetrating drawing never reaches the student");
+      assert.equal(f.lbl, 0, "no labels left over");
+      assert.equal(f.text, CLASH.alt, "the figure's alt text");
+      assert.match(f.cls, /\bfig-alt\b/, "in the plain alt box");
+      assert.ok(f.find.split(" ").includes("I-BODY-1"), f.find);
+      const T = await page.evaluate(() => window.__figT);
+      assert.equal(T.length, 1, `one fig_check per figure render: ${JSON.stringify(T)}`);
+      assert.deepEqual(Object.keys(T[0]).sort(), ["degraded", "fixed", "path", "rules", "step"], "codes and counts only");
+      assert.equal(T[0].path, "graph"); assert.equal(T[0].degraded, true); assert.equal(typeof T[0].fixed, "number");
+      assert.ok(T[0].rules.includes("I-BODY-1") && T[0].rules.every(r => /^I-[A-Z]+-\d+$/.test(r)), JSON.stringify(T[0].rules));
+      const raw = JSON.stringify(T);
+      for (const l of [...LABELS, CLASH.alt, "mg", "F_N", "f_k", "ramp"]) assert.ok(!raw.includes(l), `telemetry carries ${l}: ${raw}`);
+      await noRaw(page);
+      assert.deepEqual(page.errs, []);
+      await page.context().close();
+    });
+  }
 } finally {
   await browser.close();
   srv.kill(); fake.close();
