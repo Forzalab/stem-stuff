@@ -517,7 +517,7 @@
   }
 
   function scene(g) {
-    const marks = fix(g.marks).marks;                    // contact, anchors and arrow directions first: the renderer owns them
+    const pre = fix(g.marks), marks = pre.marks;         // contact, anchors and arrow directions first: the renderer owns them
     const build = (W, pad, k) => {
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
@@ -531,6 +531,7 @@
       return { svg: drawMarks(marks, k), H };
     };
     build.marks = marks;                                 // the final model, for figcheck (render)
+    build.fixed = pre.codes;                             // what the pre-pass fixed (contact / anchor / direction), counted in fig_check
     return build;
   }
 
@@ -569,8 +570,31 @@
     try {
       const m = build.marks ? figModel(build.marks) : {};
       const fs = FC.checkAll({ ...m, labels: el._labels || [], R: el._R });
-      el.dataset.figFindings = [...new Set(fs.map(f => f.id))].sort().join(" ");
-    } catch (e) { console.warn("figcheck", e); }
+      const codes = [...new Set(fs.map(f => f.id))].sort();
+      el.dataset.figFindings = codes.join(" ");
+      return codes;
+    } catch (e) { console.warn("figcheck", e); return []; }
+  }
+  /* ---- degrade + telemetry (fable audit 2026-10-29 U7, §2 verdict ladder: ok -> fixed -> degrade -> telemetry). Every finding
+     checkAll still reports is one nothing fixed: the pre-pass (fix) and the label packer (mount) have run, and the RJ rows have no
+     fix at all. So any finding left = a broken figure, and the student never sees it: the svg goes and the figure's alt text stands
+     in a plain box (.fig-off.fig-alt). The static image path (app.js viewImage) is OpenUI views only; a graph block has no image of its
+     own. A finding-free figure is untouched. Telemetry: one fig_check per figure render that found or fixed something, through the app's
+     sender (window.stemT: a no-op when recording is off), codes and counts only: never a label, the alt, or any of the figure. The
+     same result on a redraw (resize) is not sent twice. */
+  function degrade(el, block) {
+    el.replaceChildren();
+    el.textContent = block.alt || "";
+    el.classList.add("fig-off", "fig-alt");
+    el.dataset.figDegraded = "1";
+    el.style.height = ""; el.style.maxWidth = ""; el.style.marginInline = "";
+  }
+  function figReport(el, rules, fixed, degraded) {
+    if (!rules.length && !fixed.length) return;
+    const p = { path: "graph", rules, fixed: fixed.length, degraded, step: null }, key = JSON.stringify(p);
+    if (el._figSent === key) return;
+    el._figSent = key;
+    try { root.stemT?.("fig_check", p); } catch { /* telemetry is never the figure's problem */ }
   }
 
   function niceStep(span, px) {
@@ -999,6 +1023,7 @@
   function render(el, block) {
     if (typeof math === "undefined") { el.textContent = block.alt || ""; el.classList.add("fig-off"); return; }
     if (!el._g) el._g = prep(block);
+    if (el.dataset.figDegraded) { el.classList.remove("fig-off", "fig-alt"); delete el.dataset.figDegraded; }   // a redraw starts clean
     const g = el._g;
     const build = g.kind === "scene" ? scene(g) : g.kind === "bars" ? bars(g) : g.kind === "circuit" ? circuit(g) : g.kind === "network" ? network(g) : cartesian(g);
     el.style.maxWidth = ""; el.style.marginInline = "";
@@ -1014,7 +1039,9 @@
       el.style.maxWidth = w + "px"; el.style.marginInline = "auto";
       mount(el, build);
     }
-    figFindings(el, build);
+    const rules = figFindings(el, build) || [], degraded = rules.length > 0;
+    if (degraded) degrade(el, block);
+    figReport(el, rules, build.fixed || [], degraded);
   }
 
   root.Graph = { render, tex, fix };
