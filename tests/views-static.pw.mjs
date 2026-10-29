@@ -43,6 +43,9 @@ const REPLIES = {
   // W113 vet: mc-a's own triangle (the AFTER run), whose labels drew at ~12 px on a 1440 desktop
   tri: ["Not quite.\n\nThe slope:\n", fence("openui", 'root = View([fig])\nfig = Geometry("A 0,0; B 4,0; C 4,3", ["seg(A,B)", "seg(B,C)", "seg(A,C)", "right(B,A,C)", "angle(B,A,C,θ)", "dim(A,C,d + x)", "dim(B,C,h = ?)"], "The slope and the height.")') + "\n", "\nTry once more."],
   code: ["Not quite.\n\nSo `lo = mid` does not move **lo**.\n\n", "$$\n\\begin{aligned}\nW_{push} &= 40(1.2) \\\\\nW_{push} &= 48\n\\end{aligned}\n$$\n", "\nTry once more."],
+  // W340 vf-proof-b: the row format V4_MATH teaches (3-5 words that justify the line below, then ONE centred display line, per step)
+  rows: ["Not quite.\n\nTake the case that **breaks**:\n", "$$hi = lo + 1$$\n", "Because $mid$ rounds down, this becomes:\n", "$$mid = lo$$\n",
+    "So `lo = mid` never moves **lo**.\n", "\nTry once more."],
   clash: ["Not quite.\n\nThe two blocks:\n", fence("fig", JSON.stringify(CLASH)) + "\n", "\nTry once more."],
 };
 let reply = "two";
@@ -132,6 +135,18 @@ try {
     assert.equal(await page.locator("#cluck .wtext .katex-display").count(), 1, "one display block");
     assert.equal(await page.locator("#cluck .wtext .katex-display .mtable").count(), 1, "the aligned block renders as one table");
     assert.match(await page.textContent("#cluck .wtext .katex-display annotation"), /\\begin\{aligned\}[\s\S]*40\(1\.2\)[\s\S]*\\\\[\s\S]*48/, "both steps, in order");
+    assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  for (const [w, h] of [[1440, 900], [390, 844]]) await step(`proof rows (W340 vf-proof-b): prose row / one centred display line, alternating, ${w}`, async () => {
+    const page = await wish("rows", w, h);
+    const rows = await page.$$eval("#cluck .wtext > .wl:not(.wgap)", els => els.map(e => ({ math: e.classList.contains("wmath"), n: e.querySelectorAll(".katex-display").length,
+      align: getComputedStyle(e).textAlign, text: e.textContent.trim().slice(0, 40) })));
+    const at = rows.findIndex(r => /Take the case/.test(r.text));
+    assert.ok(at >= 0, JSON.stringify(rows));
+    assert.deepEqual(rows.slice(at, at + 5).map(r => r.math), [false, true, false, true, false], JSON.stringify(rows));
+    for (const r of rows.slice(at, at + 5).filter(r => r.math)) { assert.equal(r.n, 1, "ONE display line per row"); assert.equal(r.align, "center"); }
+    assert.equal(await page.textContent("#cluck .wtext b"), "breaks", "markdown bold in a prose row");
     assert.deepEqual(page.errs, []);
     await page.context().close();
   });

@@ -2820,6 +2820,7 @@ def lamp_cut(text):
 FIG_REASK_TOKENS = 600
 FIG_OUT_RE = re.compile(r"\n```fig\n[^\n]*\n```\n")
 FIG_OK = ("ok", "off", "second")
+FIG_SLOT = "\u0003FIGSLOT\u0003"           # where a dropped fence was (livefig.Fence slot): a re-asked figure goes there
 
 
 def fig_reask(system, user_text, fig, why, code="-"):
@@ -2845,13 +2846,21 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
-    # the re-ask (once) runs AT the dropped fence, so its figure takes that fence's place: right under the line that introduces it (W340)
-    redo = reask if reask and fig is not None and livefig.on() else None
-    xyz, fence = Xyz(), views_gate.Fence(fig, redo)
+    # the re-ask (once) fills the FIRST dropped fence's place (W340 vf-physics-b: appended at the end, "Forces on the block:" sat over a
+    # gap). From that slot on the words are held until the reply ends or the model opens another fence (then they go on and the slot
+    # moves to that fence: its own figure may still win, no re-ask); at the end the re-asked figure goes into the slot, the words after it.
+    ask = reask if reask and fig is not None and livefig.on() else None
+    xyz, fence = Xyz(), views_gate.Fence(fig, FIG_SLOT if ask else None)
     guard = None if reveal else LeakGuard(facts)
-    sent, head = False, ""                       # head: the first visible line so far; None once it went on
+    sent, head, held = False, "", None           # head: the first visible line so far; None once it went on. held: the words after the slot
     for t in chunks:
         vis = fence.feed(xyz.feed(t))
+        if held is not None or FIG_SLOT in vis:
+            held = (held or "") + vis
+            if "```" not in fence.buf:
+                continue
+            vis, held = held.replace(FIG_SLOT, ""), None    # the model opens another fence: it may draw its own; the words go on, and
+            fence.slot = FIG_SLOT                           # the slot moves to that fence if it is dropped too
         if head is not None:
             head, vis = head + vis, lamp_cut(head + vis)
             if "\n" not in vis.lstrip():            # no word yet, or the first line not ended
@@ -2861,13 +2870,14 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
         if vis:
             sent = True
             yield vis
-    vis = fence.feed(xyz.end()) + fence.end()
+    vis = (held or "") + fence.feed(xyz.end()) + fence.end()
     bad = [x for x in fence.log if x not in FIG_OK]
     if bad:
         log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
-    if fence.redo and not fence.shown and bad:              # dropped at the very end (unclosed, too big): one more try, here; "" = words only
-        fence.redo = None
-        vis += reask(bad[0].split(":")[0])
+    if FIG_SLOT in vis:
+        vis = vis.replace(FIG_SLOT, "" if fence.shown else ask(fence.slot_why), 1)
+    elif ask and not fence.shown and bad:                   # dropped at the very end (unclosed, too big): one more try, here; "" = words only
+        vis += ask(bad[0].split(":")[0])
     if head is not None:
         vis = lamp_cut(head + vis)
         vis = vis if vis.strip() else ""
@@ -2936,8 +2946,14 @@ def _view_lines(names):
 # chat views' signatures and in-order examples (Opus wrote name=value args in round 1; the gate dropped them all).
 # Tony's math pick (W113 vet, Oct 29: dyslexic readers): an equation is display math on its own lines, never inline in a sentence; a
 # derivation is ONE aligned block, a step per line, the = signs lined up (app.js joins the $$ lines into one KaTeX display; aligned renders)
-V4_MATH = ("Math: an equation goes on its own lines as display $$...$$, never inside a sentence; a derivation is one "
-           "$$\\begin{aligned} ... \\end{aligned}$$ block, one step per line, the = signs lined up (&=, a \\\\ between steps), like a textbook.")
+# Round 2 (W340 vf-proof-b, Tony Oct 29: "row based latex hybrid ... 3 4 5 words per line followed by math"): a step = a short prose
+# row that justifies the line below, then ONE centred display line; the aligned block stays for a pure algebra chain (function-b shipped)
+V4_MATH = ("Math, row by row (easy to read): each step is a row: a short line of 3-5 words that says why "
+           "(markdown welcome, **bold** the key idea, symbols in $...$), then ONE equation alone on its own line as display "
+           "$$...$$ (it shows centred). Never an equation inside a sentence. Like:\n"
+           "Take the case that breaks:\n$$hi = lo + 1$$\nBecause $mid$ rounds down, this becomes:\n$$mid = lo$$\n"
+           "A pure algebra chain with no reason between its steps may stay one $$\\begin{aligned} ... \\end{aligned}$$ block, "
+           "one step per line, the = signs lined up (&=, a \\\\ between steps).")
 V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"

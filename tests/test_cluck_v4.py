@@ -1221,10 +1221,18 @@ class Visuals(unittest.TestCase):
         self.assertEqual(log, ["ok"], "the givens stay open on a wrong pick")
 
     def test_math_line_pinned(self):
-        # Tony's math pick (W113 vet, Oct 29): display $$ for every equation, a derivation as one aligned block, = signs lined up
-        self.assertEqual(serve.V4_MATH, "Math: an equation goes on its own lines as display $$...$$, never inside a sentence; a derivation is one "
-                         "$$\\begin{aligned} ... \\end{aligned}$$ block, one step per line, the = signs lined up (&=, a \\\\ between steps), like a textbook.")
+        # Tony's math pick, round 2 (W340 vf-proof-b, Oct 29): row by row, 3-5 words of prose that justify the line below, then ONE
+        # centred display line per step; generous markdown + LaTeX; a pure algebra chain (function-b, shipped) may stay one aligned block
+        self.assertEqual(serve.V4_MATH, "Math, row by row (easy to read): each step is a row: a short line of 3-5 words that says why "
+                         "(markdown welcome, **bold** the key idea, symbols in $...$), then ONE equation alone on its own line as display "
+                         "$$...$$ (it shows centred). Never an equation inside a sentence. Like:\n"
+                         "Take the case that breaks:\n$$hi = lo + 1$$\nBecause $mid$ rounds down, this becomes:\n$$mid = lo$$\n"
+                         "A pure algebra chain with no reason between its steps may stay one $$\\begin{aligned} ... \\end{aligned}$$ block, "
+                         "one step per line, the = signs lined up (&=, a \\\\ between steps).")
         self.assertIn("\n" + serve.V4_MATH + "\n", serve.V4_VIEWS)
+        rows = serve.V4_MATH.split("Like:\n")[1].split("\nA pure")[0].split("\n")   # the example alternates prose / one display line
+        self.assertEqual([r.startswith("$$") and r.endswith("$$") for r in rows], [False, True, False, True])
+        self.assertTrue(all(3 <= len(r.split()) <= 6 for r in rows[::2]), rows)
         self.assertIn(serve.V4_MATH, serve._v4_claude_system(dict(fig=serve.fig_ctx(P1, "a"), bank=serve.bank_block(P1)))[0]["text"])
 
     def test_figure_reask_on_the_deepseek_arm(self):
@@ -1286,6 +1294,14 @@ class Visuals(unittest.TestCase):
         self.assertEqual(calls, ["json"])
         self.assertLess(out.index("Forces on the block:"), out.index("```fig"), out)
         self.assertLess(out.index("```fig"), out.index("Try once more."), out)
+        # a later good figure of the model's own still wins: no re-ask, one figure, no slot marker left (livefig.pw's leak-then-good reply)
+        calls.clear()
+        out = "".join(serve.v4_visible(iter(["Words.\n", "```fig\n{bad\n```\n", "Here:\n", "```fig\n" + good + "\n```\n", "End.\n"]),
+                                       True, ("", []), "T_RMP", serve.fig_ctx(p, "a"), reask))
+        self.assertEqual(calls, [])
+        self.assertEqual(out.count("```fig"), 1, out)
+        self.assertNotIn(serve.FIG_SLOT, out)
+        self.assertLess(out.index("Here:"), out.index("```fig"), out)
 
 
 if __name__ == "__main__":
