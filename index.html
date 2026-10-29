@@ -50,6 +50,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <script src="copy/nudge-lines.js" defer></script><!-- J5 Cluck nudge lines (data only), read by intent.js -->
 <script src="copy/seen-lines.js" defer></script><!-- J6 seen lines (data only), read by intent.js -->
 <script src="intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
+<script src="toast.js" defer></script><!-- the one toast (design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
 <script type="module" src="app.js"></script>
 <script type="module" src="nav.js"></script>
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
@@ -59,7 +60,6 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <!-- sugar rewards (design/REWARDS-WIRING.md): inert until app.js calls Rewards.use() in sugar mode -->
 <script src="rewards/icons.js" defer></script>
 <script src="vendor/confetti.browser.js" defer></script>
-<script src="toast.js" defer></script><!-- the one toast (design/TOAST.md round 5): the stage lines today; before engine.js, which shows them -->
 <script src="rewards/engine.js" defer></script>
 <script src="rewards/fx.js" defer></script>
 </head>

@@ -57,6 +57,7 @@
     var top = Math.min(rs[0].top, rs[1].top), need = 0;
     document.querySelectorAll(CTL).forEach(function (e) {
       if (box.contains(e) || !e.getClientRects().length || e.closest("[hidden], [inert]") || getComputedStyle(e).position === "fixed") return;
+      if (e.closest(".stoast, #toast")) return;                             // the toasts float (fixed) and step aside for the duck (toast.js yields): no room for them (W112: the desktop start line now rests at the foot, where the duck rises)
       var b = e.getBoundingClientRect();
       if (rs.some(function (q) { return b.left < q.right && b.right > q.left && b.top < q.bottom && b.bottom > q.top; })) need = Math.max(need, b.bottom - top + 8);
     });
