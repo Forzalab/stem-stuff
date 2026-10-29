@@ -44,6 +44,285 @@ export function texText(src) {
        .replace(/[{}]/g, "").replace(/_/g, "");
   return s.replace(/\s+/g, " ").trim();
 }
+/* ---------- TeX to grader-exact plain text (copy, Tony's answers for todo 108) ----------
+   What a student would type into the answer box (serve.py to_python): (1/2)*m*v^2, sqrt(x^2 + 16), 2*pi*r, e^(-x/2), 3.2e-3.
+   Spaces around = + binary - and relations; none around * / ^. Implicit products get "*", names (sin, sqrt, pi) never split.
+   Past the grader's grammar: ASCII best effort (v_0, vec(F), mu, <=, !=, 30 deg, dx/dt, lim(x->inf) f, int(0, 3) f dx).
+   aligned / cases rows: one per line. Units in \text stay text (3.2 m/s). texText above stays the display (Unicode) form. */
+const PN = { alpha: "alpha", beta: "beta", gamma: "gamma", delta: "delta", epsilon: "epsilon", varepsilon: "epsilon", zeta: "zeta", eta: "eta",
+  theta: "theta", vartheta: "theta", iota: "iota", kappa: "kappa", lambda: "lambda", mu: "mu", nu: "nu", xi: "xi", pi: "pi", varpi: "pi", rho: "rho",
+  varrho: "rho", sigma: "sigma", varsigma: "sigma", tau: "tau", upsilon: "upsilon", phi: "phi", varphi: "phi", chi: "chi", psi: "psi", omega: "omega",
+  Gamma: "Gamma", Theta: "Theta", Lambda: "Lambda", Xi: "Xi", Pi: "Pi", Sigma: "Sigma", Phi: "Phi", Psi: "Psi", Omega: "Omega",
+  infty: "inf", hbar: "hbar", ell: "l", partial: "d", emptyset: "{}", varnothing: "{}" };
+const PO = { le: "<=", leq: "<=", ge: ">=", geq: ">=", ne: "!=", neq: "!=", approx: "~=", sim: "~", simeq: "~=", equiv: "==", cong: "~=", propto: "~",
+  pm: "+-", mp: "-+", to: "->", rightarrow: "->", longrightarrow: "->", Rightarrow: "=>", implies: "=>", Leftarrow: "<=", leftarrow: "<-", gets: "<-",
+  leftrightarrow: "<->", Leftrightarrow: "<=>", iff: "<=>", mapsto: "->", in: "in", notin: "not in", subset: "subset", subseteq: "subseteq", supset: "supset",
+  supseteq: "supseteq", cap: "cap", cup: "cup", setminus: "\\", wedge: "and", land: "and", vee: "or", lor: "or", oplus: "xor", mid: "|", vert: "|",
+  parallel: "||", perp: "perp", ll: "<<", gg: ">>", lt: "<", gt: ">", bmod: "mod", ast: "*" };
+const PW = { neg: "not", lnot: "not", forall: "for all", exists: "exists", therefore: "therefore", because: "because", Box: "[]", square: "[]",
+  Diamond: "<>", lozenge: "<>", Delta: "Delta", nabla: "nabla" };   // prefix words: a space after (Delta x is one quantity, never Delta*x)
+const PF = { sin: 1, cos: 1, tan: 1, sec: 1, csc: 1, cot: 1, sinh: 1, cosh: 1, tanh: 1, arcsin: "asin", arccos: "acos", arctan: "atan", ln: 1, log: 1, exp: 1,
+  lg: "log10", det: 1, gcd: 1, max: 1, min: 1, sgn: 1, arg: 1, Pr: 1 };
+const PL = { lim: 1, sum: 1, prod: 1, int: 1, iint: 1, oint: 1, limsup: 1, liminf: 1, sup: 1, inf: 1 };      // limits prefixes: name(range) body
+const PA = { vec: "vec", overrightarrow: "vec", hat: "hat", widehat: "hat", bar: "bar", overline: "bar", tilde: "tilde", widetilde: "tilde", underline: "" };
+const PTXT = new Set(["text", "textrm", "textit", "textbf", "textsf", "texttt", "mbox", "hbox", "textnormal", "textup"]);
+const PSKIP = new Set(["left", "right", "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr", "biggl", "biggr", "displaystyle", "textstyle",
+  "scriptstyle", "limits", "nolimits", "quad", "qquad", "middle", "mathstrut", "strut", "nonumber", "notag", "boldsymbol", "bm", "mathbf", "mathit",
+  "mathsf", "mathcal", "mathfrak", "mathscr", "mathbb", "mathtt", "rm", "bf", "it", "cal", "htmlClass", "color", "textcolor"]);
+const BARE = ["arcsin", "arccos", "arctan", "sinh", "cosh", "tanh", "sqrt", "sin", "cos", "tan", "sec", "csc", "cot", "exp", "log", "ln", "lim", "pi"];
+const ATOM = /^[\w.]+$/;
+const atomic = (s, lead) => { let d = 0; for (let i = 0; i < s.length; i++) { const c = s[i]; if (c === "(") d++; else if (c === ")") d--; else if (!d && /[ +\-*/=<>,]/.test(c) && !(lead && i === 0 && c === "-")) return false; } return true; };
+const oneParen = s => { if (s[0] !== "(") return false; let d = 0; for (let i = 0; i < s.length; i++) { d += s[i] === "(" ? 1 : s[i] === ")" ? -1 : 0; if (!d) return i === s.length - 1; } return false; };
+const wrapP = (s, lead) => (atomic(s, lead) || oneParen(s)) && s !== "" ? s : `(${s})`;
+const isDiff = (n, d) => /^d(\^\d)?[A-Za-z]?$/.test(n) && /^d[A-Za-z](\^\d)?$/.test(d);   // d/dx, dy/dx, d^2y/dx^2
+
+function texLex(src) {
+  const t = [], s = String(src);
+  for (let i = 0; i < s.length;) {
+    const c = s[i];
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === "\\") {
+      const m = /^\\([A-Za-z]+)\*?|^\\(.)/s.exec(s.slice(i));
+      if (!m) { i++; continue; }
+      i += m[0].length;
+      const n = m[1];
+      if (n && (PTXT.has(n) || n === "operatorname" || (n === "mathrm" && /^\s*\{[^{}]{2,}\}/.test(s.slice(i))))) {   // raw text: read its braces
+        let j = s.indexOf("{", i), d = 0, k = j;
+        if (j < 0 || s.slice(i, j).trim()) continue;
+        for (; k < s.length; k++) { if (s[k] === "{") d++; else if (s[k] === "}" && !--d) break; }
+        const raw = s.slice(j + 1, k).replace(/\\[,;: ]|~/g, " ").replace(/\\([%$&#_{}])/g, "$1").replace(/\\[A-Za-z]+\s*/g, "");
+        t.push(n === "operatorname" ? { fn: raw.trim() } : { txt: raw }); i = k + 1; continue;
+      }
+      if (n === "begin" || n === "end") {
+        const e = /^\s*\{([A-Za-z*]+)\}/.exec(s.slice(i)); if (!e) continue;
+        i += e[0].length;
+        if (n === "begin" && /^array/.test(e[1])) { const a = /^\s*\{[^{}]*\}/.exec(s.slice(i)); if (a) i += a[0].length; }
+        t.push({ [n]: e[1].replace("*", "") }); continue;
+      }
+      t.push(n ? { c: n } : { c: m[2] === "\\" ? "\\\\" : m[2] }); continue;
+    }
+    const num = /^(?:\d+(?:\{,\}\d+)*(?:\.\d+)?|\.\d+)/.exec(s.slice(i));
+    if (num) { t.push({ num: num[0].replace(/\{,\}/g, "") }); i += num[0].length; continue; }
+    if (/[A-Za-z]/.test(c)) {
+      const w = BARE.find(b => s.startsWith(b, i) && !/[A-Za-z]/.test(s[i + b.length] || ""));   // a bare "sin x": the name, never s*i*n
+      if (w) { t.push(w === "pi" ? { c: "pi" } : { c: w === "sqrt" ? "sqrt" : w }); i += w.length; continue; }
+      t.push({ v: c }); i++; continue;
+    }
+    t.push({ ch: c }); i++;
+  }
+  return t;
+}
+
+/* items: { k: "v" value | "f" fraction-like value (wrapped in a product) | "o" operator | "x" text (joined by a space) | "p" prefix (a space after) |
+   "fn" function | "(" | ")" | "nl", t } */
+function texParse(toks) {
+  let i = 0, ints = 0;
+  const env = [];
+  const peek = () => toks[i];
+  const arg = () => {                                           // one argument: a {group} or a single token
+    const k = toks[i];
+    if (!k) return [];
+    if (k.ch === "{") { i++; return seq("}"); }
+    if (k.ch === "}") return [];
+    if (k.num && k.num.length > 1 && /^\d\d/.test(k.num)) { const d = k.num[0]; k.num = k.num.slice(1); return [{ k: "v", t: d }]; }   // \frac12, x^23: one digit
+    return seq(null, 1);
+  };
+  const raw = () => {                                           // a subscript's plain letters (v_{max} is v_max, not v_m*a*x)
+    const k = toks[i];
+    if (k && k.ch === "{") {
+      let j = i + 1, out = "";
+      for (; toks[j] && (toks[j].v || toks[j].num); j++) out += toks[j].v || toks[j].num;
+      if (out && toks[j] && toks[j].ch === "}") { i = j + 1; return out; }
+    } else if (k && (k.v || k.num)) { i++; return (k.v || k.num); }
+    return null;
+  };
+  const sub = () => { const r = raw(); if (r != null) return r; const s = render(arg(), true); return ATOM.test(s) ? s : `(${s})`; };
+  function post(it) {                                           // ^ _ ' ! after an item
+    for (;;) {
+      const k = peek(); if (!k) return it;
+      if (k.ch === "_") { i++; if (it.k === "p") it.lo = render(arg(), true).replace(/ /g, ""); else if (it.k === "fn") it.base = sub(); else it.t += "_" + sub(); continue; }
+      if (k.ch === "^") {
+        i++;
+        const n = peek();
+        if (n && (n.c === "circ" || n.c === "degree")) { i++; return [it, { k: "v", t: "deg", sp: 1 }]; }
+        if (n && n.ch === "{" && toks[i + 1] && toks[i + 1].c === "circ" && toks[i + 2] && toks[i + 2].ch === "}") { i += 3; return [it, { k: "v", t: "deg", sp: 1 }]; }
+        if (n && n.c === "prime") { i++; it.t += "'"; continue; }
+        const e = render(arg(), true);
+        if (it.k === "p") { it.hi = e.replace(/ /g, ""); continue; }
+        if (it.k === "fn") { it.pow = e; continue; }
+        it.t = (it.k === "f" ? `(${it.t})` : it.t) + "^" + (ATOM.test(e) ? e : `(${e})`); it.k = it.k === "f" ? "v" : it.k; continue;
+      }
+      if (k.ch === "'" || k.ch === "!") { i++; it.t += k.ch; continue; }
+      return it;
+    }
+  }
+  function one() {
+    const k = toks[i++];
+    if (k.num) return { k: "v", t: k.num };
+    if (k.v) {
+      if (ints && k.v === "d" && toks[i] && toks[i].v) { ints--; return { k: "x", t: "d" + toks[i++].v }; }
+      return { k: "v", t: k.v };
+    }
+    if (k.txt != null) { const t = k.txt.replace(/\s+/g, " ").trim(); return t ? { k: "x", t } : null; }
+    if (k.fn != null) return { k: "fn", t: k.fn };
+    if (k.begin) {
+      env.push(k.begin);
+      return /matrix/.test(k.begin) ? { k: "(", t: "[" } : /cases|array/.test(k.begin) ? { k: "nl" } : null;
+    }
+    if (k.end) { env.pop(); return /matrix/.test(k.end) ? { k: ")", t: "]" } : /cases|array/.test(k.end) ? { k: "nl" } : null; }
+    if (k.ch != null) {
+      const c = k.ch, e = env[env.length - 1] || "";
+      if (c === "{") {                                         // {x}^{2} (math.js toTex): the group takes the ^ / _ that follows
+        const g = seq("}"), n = toks[i];
+        if (g.length === 1) return g[0];
+        return !g.length ? null : n && (n.ch === "^" || n.ch === "_") ? { k: "v", t: wrapP(render(g, true)) } : g;
+      }
+      if (c === "(" || c === "[") return { k: "(", t: c };
+      if (c === ")" || c === "]") return { k: ")", t: c };
+      if (c === "|") return { k: "|" };
+      if (c === "&") return /cases|array/.test(e) ? { k: "o", t: ",", c: 1 } : /matrix/.test(e) ? { k: "o", t: ",", c: 1 } : null;
+      if (c === "," || c === ";") return { k: "o", t: c, c: 1 };
+      if (c === "*" || c === "/") return { k: "o", t: c };
+      if (c === "~") return null;
+      if ("=+-<>:".includes(c)) return { k: "o", t: c, s: 1 };
+      if (c === ".") return { k: "v", t: ".", tail: 1 };
+      return { k: "x", t: c };
+    }
+    const n = k.c;
+    if (n === "\\\\") return /matrix/.test(env[env.length - 1] || "") ? { k: "o", t: ";", c: 1 } : { k: "nl" };
+    if (n === "," || n === ";" || n === ":" || n === "!" || n === " " || n === ">") return null;
+    if (n === "{" || n === "}") return { k: "x", t: n };
+    if (n === "%" || n === "$" || n === "#" || n === "&" || n === "_") return { k: "v", t: n, tail: n === "%" };
+    if (n === "|") return { k: "x", t: "||" };
+    if (n === "lvert" || n === "lVert") return { k: "|", open: 1 };
+    if (n === "rvert" || n === "rVert") return { k: "|", close: 1 };
+    if (n === "langle") return { k: "(", t: "<" };
+    if (n === "rangle") return { k: ")", t: ">" };
+    if (n === "lbrace") return { k: "x", t: "{" };
+    if (n === "rbrace") return { k: "x", t: "}" };
+    if (n === "left" || n === "right") { if (toks[i] && toks[i].ch === ".") i++; return null; }
+    if (PSKIP.has(n)) { if ((n === "color" || n === "textcolor" || n === "htmlClass") && toks[i] && toks[i].ch === "{") arg(); return null; }
+    if (n === "frac" || n === "dfrac" || n === "tfrac" || n === "cfrac") {
+      const a = render(arg(), true), b = render(arg(), true);
+      if (isDiff(a.replace(/\*/g, ""), b.replace(/\*/g, ""))) { const s = `${a.replace(/\*/g, "")}/${b.replace(/\*/g, "")}`; return /^d(\^\d)?\//.test(s) ? { k: "p", t: s } : { k: "f", t: s }; }
+      return { k: "f", t: `${wrapP(a, 1)}/${wrapP(b)}` };
+    }
+    if (n === "sqrt") {
+      let root = null;
+      if (toks[i] && toks[i].ch === "[") { i++; root = render(seq("]"), true); }
+      const a = render(arg(), true);
+      return root ? { k: "v", t: `${wrapP(a)}^(1/${root})` } : { k: "v", t: `sqrt(${a})` };
+    }
+    if (n === "binom" || n === "dbinom" || n === "tbinom") { const a = render(arg(), true), b = render(arg(), true); return { k: "v", t: `C(${a}, ${b})` }; }
+    if (n === "pmod") return { k: "x", t: `(mod ${render(arg(), true)})` };
+    if (n === "dot" || n === "ddot") { const a = render(arg(), true); return { k: "f", t: n === "dot" ? `d${a}/dt` : `d^2${a}/dt^2` }; }
+    if (n in PA) { const a = render(arg(), true); return PA[n] ? { k: "v", t: `${PA[n]}(${a})` } : { k: "v", t: a }; }
+    if (n === "times" || n === "cdot" || n === "ast") return { k: "o", t: "*" };
+    if (n === "div") return { k: "o", t: "/" };
+    if (n === "circ" || n === "degree") return { k: "v", t: "deg", sp: 1 };
+    if (n === "prime") return { k: "v", t: "'", tail: 1 };
+    if (n === "ldots" || n === "cdots" || n === "dots" || n === "dotsc" || n === "dotsb" || n === "vdots" || n === "ddots") return { k: "x", t: "..." };
+    if (n in PW) return { k: "x", t: PW[n], pre: 1 };
+    if (n in PO) return { k: "o", t: PO[n], s: 1 };
+    if (n in PL) { if (/int/.test(n)) ints++; return { k: "p", t: n }; }
+    if (n in PF) return { k: "fn", t: PF[n] === 1 ? n : PF[n] };
+    if (n in PN) return PN[n] ? { k: "v", t: PN[n] } : null;
+    return { k: "v", t: n };                                     // an unknown command: its name
+  }
+  function seq(stop, single) {
+    const out = [];
+    while (i < toks.length) {
+      const k = toks[i];
+      if (stop && k.ch === stop) { i++; break; }
+      if (!stop && k.ch === "}") { if (single) break; i++; continue; }   // a stray "}" at the top
+      let it = one();
+      if (it == null) { if (single && out.length) break; continue; }
+      if (Array.isArray(it)) { out.push(...it); if (single) break; continue; }
+      if (!single) it = post(it);                                 // x_0^3: a one-token argument takes no ^ _ of its own
+      if (Array.isArray(it)) out.push(...it); else out.push(it);
+      if (single) break;
+    }
+    return out;
+  }
+  return seq(null);
+}
+
+const ends = it => it && (it.k === "v" || it.k === "f" || it.k === ")" || (it.k === "x" && !it.pre));
+const starts = it => it && (it.k === "v" || it.k === "f" || it.k === "(" || it.k === "fn" || it.k === "p" || it.k === "x");
+function texApply(items) {
+  /* | pairs: an opening bar where a value can start, else it closes the last open one */
+  let open = 0;
+  items = items.map((it, j) => {
+    if (it.k !== "|") return it;
+    const prev = items[j - 1];
+    const o = it.open || (!it.close && (!open || !ends(prev)));
+    if (o) { open++; return { k: "(", t: "abs(", abs: 1 }; }
+    open = Math.max(0, open - 1); return { k: ")", t: ")" };
+  });
+  const match = j => { let d = 0; for (let m = j; m < items.length; m++) { if (items[m].k === "(") d++; else if (items[m].k === ")" && !--d) return m; } return items.length - 1; };
+  /* functions, right to left: sin x -> sin(x), sin^2 x -> sin(x)^2, log_2 x -> log(x)/log(2), ln|x| -> ln(abs(x)) */
+  for (let j = items.length - 1; j >= 0; j--) {
+    const f = items[j]; if (f.k !== "fn") continue;
+    let e = j + 1, a;
+    if (items[e] && items[e].k === "(") { const m = match(e); a = render(items.slice(e, m + 1), true); if (!items[e].abs && /^[([]/.test(a) && a.endsWith(")")) a = a.slice(1, -1); e = m + 1; }
+    else { while (items[e] && (items[e].k === "v" || items[e].k === "f") && (e === j + 1 || !items[e].call)) e++; a = render(items.slice(j + 1, e), true); }
+    let name = f.t, t;
+    if (f.pow === "-1" && /^(sin|cos|tan)$/.test(name)) { name = "a" + name; f.pow = null; }
+    if (!a) t = name;
+    else if (f.base && f.base !== "10" && name === "log") t = `log(${a})/log(${f.base})`;
+    else t = `${f.base === "10" && name === "log" ? "log10" : name}(${a})`;
+    if (f.pow) t += "^" + (ATOM.test(f.pow) ? f.pow : `(${f.pow})`);
+    items.splice(j, e - j, { k: f.base && f.base !== "10" && name === "log" ? "f" : "v", t, call: 1 });
+  }
+  /* prefixes: lim_{x->inf} -> lim(x->inf), int_0^3 -> int(0, 3), sum_{i=1}^n -> sum(i = 1, n) */
+  return items.map(it => it.k === "p" && (it.lo != null || it.hi != null) ? { ...it, t: `${it.t}(${[it.lo, it.hi].filter(x => x != null).join(", ")})` } : it);
+}
+
+function render(items, inner) {
+  items = texApply(items);
+  const out = [];                                               // { s, it }
+  let prev = null;
+  const put = (s, it) => out.push({ s, it });
+  for (const it of items) {
+    if (it.k === "nl") { put("\n"); prev = null; continue; }
+    if (it.k === "o") {
+      const bin = ends(prev) || (prev && prev.k === "x");
+      if (it.c) put(it.t + " ");
+      else if (it.s && (it.t === "-" || it.t === "+") && !bin) put(prev && prev.k === "o" && prev.s ? " " + it.t : it.t);   // unary: -x
+      else if (it.s) put(prev ? ` ${it.t} ` : `${it.t} `);
+      else put(it.t);
+      prev = it; continue;
+    }
+    if (it.tail) { put(it.t, it); prev = { k: "v" }; continue; }   // . % ' after anything, no gap
+    if (prev && ends(prev) && starts(it)) {
+      if (it.sp || prev.k === "x" || it.k === "x" || it.k === "p") put(" ");
+      else if (it.k === "(" && /^[fghFGP]'*$/.test(prev.t || "")) { /* f(x): a function's call */ }
+      else put("*", { star: 1 });
+    } else if (prev && (prev.k === "p" || prev.pre) && it.k !== ")") put(" ");
+    else if (prev && prev.k === "o" && prev.s && it.k === "x") { /* "= text": the operator's own space */ }
+    put(it.t ?? "", it);
+    prev = it;
+  }
+  /* a fraction next to * or / is wrapped: (1/2)*m*v^2 */
+  const near = j => [out[j - 1], out[j + 1]].some(n => n && /^[*/]$/.test(n.s));
+  let s = out.map((x, j) => x.it && x.it.k === "f" && near(j) ? `(${x.s})` : x.s).join("");
+  s = s.replace(/[ \t]+/g, " ").replace(/ +([,;)\]])/g, "$1").replace(/([([]) +/g, "$1").replace(/ *\n */g, "\n");
+  return inner ? s.replace(/\n/g, " ").trim() : s.split("\n").map(l => l.trim()).filter(Boolean).join("\n");
+}
+
+export function texPlain(tex) {
+  const s = String(tex ?? "").replace(/(\d+(?:\.\d+)?)\s*\\(?:times|cdot)\s*10\s*\^\s*(?:\{\s*([-+]?\d+)\s*\}|(\d))/g, (_, m, a, b) => `${m}\\sci{e${(a ?? b).replace("+", "")}}`);
+  const toks = texLex(s);
+  /* \sci{e-3}: the joined scientific number, one value, so 3.2e-3 never reads as 3.2*e - 3 */
+  for (let j = 0; j < toks.length; j++) {
+    if (toks[j].c !== "sci") continue;
+    let k = j + 2, e = "";
+    for (; toks[k] && toks[k].ch !== "}"; k++) e += toks[k].v || toks[k].num || toks[k].ch || "";
+    toks.splice(j - 1, k - j + 2, { num: toks[j - 1].num + e });
+    j--;
+  }
+  return render(texParse(toks));
+}
 /* markdown marks out, TeX to plain text; "\$" is a literal dollar (same cut as app.js md()) */
 export function plain(md) {
   const math = [];

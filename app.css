@@ -753,6 +753,19 @@ html.side #work > .orig { margin: 0; }
 .fq:is(:hover, :focus-visible) { color: var(--c1); }
 .fq[aria-expanded="true"] { border-color: var(--c1); background: var(--c1); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* tap-to-copy (todo 108): a formula card row and a revealed answer copy their math as plain, grader-exact text. Quiet like the "?":
+   a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after (44px tall, kept narrow so it never takes the "?"'s) */
+.mcopy { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer; }
+.mcopy .ico { width: 1rem; height: 1rem; }
+.mcopy::after { content: ""; position: absolute; inset: -14px -6px; }
+.fq + .mcopy { margin-left: var(--s1); }
+.mcopy:is(:hover, :focus-visible) { color: var(--c1); }
+.mcopy.done { color: var(--correct); }
+.mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+/* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
+   its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
+.preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
 .fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
 .fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
 .fd-s { overflow-x: auto; overflow-y: hidden; color: var(--ink); }
