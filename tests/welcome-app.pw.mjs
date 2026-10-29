@@ -85,6 +85,12 @@ try {
       return { wl: getComputedStyle(document.querySelector("#q .wl")).backgroundColor, warm };
     });
     assert.equal(bg.wl, bg.warm, "not on the warm token");
+    const line = await page.evaluate(() => {                                   // Cluck's reply lines are div.wl too: welcome.css must not dress them
+      const t = document.createElement("div"); t.className = "wtext"; t.innerHTML = '<div class="wl">a line</div>'; document.body.append(t);
+      const cs = getComputedStyle(t.firstChild), out = { bg: cs.backgroundColor, pad: cs.paddingTop, border: cs.borderTopWidth }; t.remove(); return out;
+    });
+    assert.notEqual(line.bg, bg.warm, "a Cluck line got the welcome's warm surface");
+    assert.deepEqual([line.pad, line.border], ["0px", "0px"], "a Cluck line got the welcome's padding / border");
     assert.equal(await page.$("#fcard"), null, "the Key formulas card gives the sheet step away");
     await page.evaluate(() => { window.__t = []; const o = window.stemT; window.stemT = (n, p) => { window.__t.push([n, p]); return o && o(n, p); }; });
   });

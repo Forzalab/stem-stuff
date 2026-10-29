@@ -74,7 +74,7 @@ weight() {
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
     welcome) echo 5 ;;   # local run ~4 s
-    welcome-app) echo 12 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~10 s (estimate until CI timing)
+    welcome-app) echo 26 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~26 s (estimate until CI timing)
     minicluck) echo 3 ;;   # local run ~3s
     noob) echo 15 ;;   # local run ~15s
     mock) echo 12 ;;   # W103b night-before mock, local run ~10 s
