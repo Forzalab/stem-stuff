@@ -305,7 +305,7 @@ for (const mode of MODES) {
          apart, and under reduced motion it may only fade (opacity keyframes, nothing moves). Everything else: g-next-fade only */
       await page.evaluate(() => { window.__rm = new Set(); window.__fx = new Set(); const t = setInterval(() => document.getAnimations().forEach(a => {
         const tg = a.effect && a.effect.target, n = a.animationName || ("transition:" + a.transitionProperty);
-        if (tg && tg.closest && tg.closest(".fx-ov")) window.__fx.add(n + "[" + [...new Set((a.effect.getKeyframes?.() || []).flatMap(k => Object.keys(k).filter(x => !["offset", "easing", "composite", "computedOffset"].includes(x))))].join(",") + "]");
+        if (tg && tg.closest && tg.closest(".fx-ov, .fx-toast-host")) window.__fx.add(n + "[" + [...new Set((a.effect.getKeyframes?.() || []).flatMap(k => Object.keys(k).filter(x => !["offset", "easing", "composite", "computedOffset"].includes(x))))].join(",") + "]");
         else window.__rm.add(n);
       }), 10); window.__rmt = t; });
       await close(page, type, "right", { code });
