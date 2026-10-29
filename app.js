@@ -1791,11 +1791,59 @@ const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
    wishFigs draws it with Graph.render, the bank-figure path, once per figure (the drawn node is reused on every redraw). */
 const WFIG = /\n?```fig\n([^\n]*)\n```\n?/g, figJSON = [], figEl = [];
 const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.length; figJSON.push(j); } return k; };
-/* a view (P4.1, views_gate.py): the server sends at most one gated OpenUI Lang program per reply as "\n```openui\n<program>\n```\n", in the
+/* a view (P4.1, views_gate.py): the server sends gated OpenUI Lang programs (with ```fig, at most two visuals a reply, todo 113) as "\n```openui\n<program>\n```\n", in the
    same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
 const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
 const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
 const stripFigs = t => t.replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
+/* the static fallback (todo 113 spec, Tony Oct 28: "a STATIC IMAGE of the same visual, never an error box"): every view, once drawn, is drawn
+   again off screen at STATIC_W px and kept as an image (SVG foreignObject, its computed look inlined). A phone too narrow for the view (the
+   slot under TINY_W px, or the view wider than its slot) shows that image, scaled to fit; a later draw of the same program that fails shows it
+   too. Nothing drawn and no image yet: the alt text, as before. */
+const STATIC_W = 420, TINY_W = 300, staticImg = new Map();             // program -> data: URL of its image
+const VIEW_DRAWN = ".vw-slot.on:not(.vw-fallback) > *";                // any drawn child (a Table-only view has no svg or p)
+const LOOK = ["display", "box-sizing", "width", "height", "margin", "padding", "border", "border-collapse", "border-spacing", "font", "line-height",
+  "letter-spacing", "text-align", "vertical-align", "white-space", "color", "background-color", "fill", "stroke", "stroke-width", "stroke-dasharray",
+  "opacity", "text-anchor", "dominant-baseline", "font-variant-numeric", "flex-direction", "flex-wrap", "gap", "align-items", "justify-content"];
+function inlineLook(src, dst) {
+  if (src.nodeType !== 1) return;
+  const cs = getComputedStyle(src);
+  dst.setAttribute("style", LOOK.map(p => `${p}:${cs.getPropertyValue(p)}`).join(";"));
+  dst.removeAttribute("class");
+  for (let i = 0; i < src.children.length; i++) inlineLook(src.children[i], dst.children[i]);
+}
+function viewImage(V, src) {
+  if (staticImg.has(src)) return staticImg.get(src);
+  const host = document.createElement("div");
+  host.className = "wtext";                                              // the reply's own cascade
+  host.style.cssText = `position:fixed;left:-10000px;top:0;width:${STATIC_W}px;visibility:hidden;pointer-events:none`;
+  const ph = document.createElement("div");
+  ph.className = "fig wfig wview";
+  host.append(ph); document.body.append(host);
+  let url = null;
+  try {
+    V.render(src, ph, {});
+    for (const b of ph.querySelectorAll(".vw-foot")) b.remove();           // a stepper's Back / Next: no buttons in a picture
+    if (ph.querySelector(VIEW_DRAWN)) {
+      const copy = ph.cloneNode(true);
+      inlineLook(ph, copy);
+      const w = STATIC_W, h = Math.ceil(ph.getBoundingClientRect().height) + 2;
+      copy.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><foreignObject width="100%" height="100%">${
+        new XMLSerializer().serializeToString(copy)}</foreignObject></svg>`;
+      url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }
+  } catch (e) { console.error(e); }
+  host.remove();
+  if (url) staticImg.set(src, url);
+  return url;
+}
+function showStatic(ph, url, alt) {
+  const img = document.createElement("img");
+  img.className = "vw-static"; img.src = url; img.alt = alt || "figure"; img.decoding = "async";
+  ph.replaceChildren(img); ph.classList.add("wstatic");
+}
+const tooNarrow = ph => ph.clientWidth < TINY_W || [...ph.querySelectorAll(".vw-slot.on > *")].some(x => x.scrollWidth > ph.clientWidth + 1);
 function wishFigs(root) {
   for (const ph of root.querySelectorAll(".wfig[data-f]")) {
     const k = +ph.dataset.f, done = figEl[k];
@@ -1804,8 +1852,13 @@ function wishFigs(root) {
     if (figJSON[k].startsWith(OUI)) {                                     // an ```openui view: views.js draws it into the placeholder
       const src = figJSON[k].slice(1), alt = ouiAlt(src), off = () => { ph.replaceChildren(); ph.textContent = alt; ph.classList.add("fig-off"); };
       ph.classList.add("wview"); ph.setAttribute("role", "figure"); ph.setAttribute("aria-label", alt || "figure");
-      import("./views.js").then(V => { V.render(src, ph, {}); if (!ph.querySelector(".vw-slot.on:not(.vw-fallback) svg, .vw-slot.on:not(.vw-fallback) p")) off(); })
-        .catch(e => { console.error(e); off(); });
+      import("./views.js").then(V => {
+        let drawn = false;
+        try { V.render(src, ph, {}); drawn = !!ph.querySelector(VIEW_DRAWN); } catch (e) { console.error(e); }
+        const url = drawn || staticImg.has(src) ? viewImage(V, src) : null;   // pre-rendered once it drew (W113 static fallback)
+        if (url && (!drawn || tooNarrow(ph))) showStatic(ph, url, alt);
+        else if (!drawn) off();
+      }).catch(e => { console.error(e); if (staticImg.has(src)) showStatic(ph, staticImg.get(src), alt); else off(); });
       if (!done) figEl[k] = ph;
       continue;
     }

@@ -74,16 +74,26 @@ class Stream(unittest.TestCase):
         self.assertEqual(out, "Here is the picture:\n\n```openui\n" + GOOD + "\n```\n\nThen add the squares.")
         self.assertEqual(log, ["oui:ok"])
 
-    def test_one_figure_per_reply_across_fig_and_openui(self):
+    def test_two_visuals_per_reply_across_fig_and_openui(self):
+        # todo 113 (Tony Oct 28: Opus "may mix 2"): a ```fig and a view both go out; a third visual is dropped
         fig = "```fig\n" + livefig.EXAMPLE["bars"] + "\n```"
         out, log = run([fig + "\nand\n```openui\n" + GOOD + "\n```\nend"])
         self.assertIn("```fig", out)
-        self.assertNotIn("```openui", out)
-        self.assertEqual(log, ["ok", "second"])
-        out, log = run(["```openui\n" + GOOD + "\n```\n" + fig])
         self.assertIn("```openui", out)
-        self.assertNotIn("```fig", out)
-        self.assertEqual(log, ["oui:ok", "second"])
+        self.assertEqual(log, ["ok", "oui:ok"])
+        out, log = run(["```openui\n" + GOOD + "\n```\n" + fig + "\n" + fig])
+        self.assertEqual((out.count("```openui"), out.count("```fig")), (1, 1))
+        self.assertEqual(log, ["oui:ok", "ok", "second"])
+
+    def test_a_stepper_may_ride_in_a_chat_view(self):
+        # todo 113: a step ladder / loop trace the student clicks through (Back / Next only, no server call); a Predict still may not
+        steps = ('root = View([s])\ns = Steps(null, [s1, s2], null, ["i", "s"])\n'
+                 's1 = Step("First test: i = 1, s = 0.", null, null, null, null, null, [["1", "0"]])\n'
+                 's2 = Step("Add 1. Now i = 2.", null, null, null, null, null, [["2", "1"]])')
+        prog, log = views_gate.gate(steps, CTX)
+        self.assertEqual(log, ["ok"])
+        self.assertEqual(prog, steps)
+        self.assertIn("chat:Predict", views_gate.gate('root = View([p])\np = Predict(null, "Which?", ["3", "4"], null, null, key.v1)', CTX)[1][0])
 
     def test_bad_fence_dropped_text_streams(self):
         out, log = run(["Look:\n```openui\nroot = Text(\"x\")\n```\nThe text goes on."])

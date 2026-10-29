@@ -977,6 +977,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
+.wtext .wstatic .vw-static { display: block; width: 100%; max-width: 420px; height: auto; }   /* W113: a view's static image (app.js viewImage) */
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
