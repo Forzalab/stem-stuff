@@ -2,19 +2,35 @@
    the one warm surface in the app (Cluck's help family, Q1 only), the ladder sitting flat on it like a form. repair.css lays the steps out;
    this file only warms them and fades the shown inputs. The fade is opacity only; reduced motion drops it (the picture is simply gone).
    The root is section.wl, never bare .wl: Cluck's reply lines are div.wl (app.js wishHTML, app.css .wtext .wl) and both load in the app. */
-section.wl { box-sizing: border-box; max-width: 100%; margin-top: var(--s3); padding: var(--s4); background: var(--help-fill);
-  border: var(--bw) solid var(--help-line); border-radius: 12px; color: var(--ink); }
+/* the box (Tony 12:41 PT, wb-box pick B, "milder, like the textbook's orange box, on our color schema"; brain w119b/box-mock shoot.cjs B): a
+   --help 6% body over --help-sheet in a 1px --ai-line rim (welcome.js gives the section .ai-skin, Cluck's token scope, so --ai-line resolves),
+   Cluck's intro line as a --help tab on its top-left edge (.rp-line below), the room above and inside for the tab's half-height */
+section.wl { position: relative; box-sizing: border-box; max-width: 100%; margin-top: calc(var(--s3) + 14px); padding: var(--s4); padding-top: calc(var(--s4) + 10px);
+  background: color-mix(in srgb, var(--help) 6%, var(--help-sheet)); border: 1px solid var(--ai-line); border-radius: 12px; color: var(--ink); }
+/* the tab: --help-ink on --help 7.67:1, 600, --t-sm, the duck (welcome.js, 20px) in front */
+section.wl .rp-line { position: absolute; top: 0; left: var(--s4); transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px;
+  margin: 0; padding: 4px 12px 4px 8px; border-radius: 8px; background: var(--help); color: var(--help-ink); font-weight: 600; font-size: var(--t-sm); }
+.wl-duck { width: 20px; height: 20px; color: var(--help-ink); flex: none; }
 .wl-stem { margin: 0 0 var(--s3); font-size: var(--t-md); line-height: var(--lh); overflow-wrap: anywhere; }
 .wl-stem .katex { font-size: var(--kx); }
 section.wl .rp { margin: 0; padding: 0; background: none; border: 0; border-radius: 0; }
-section.wl .rp-step { border-top-color: var(--help-line); }
+section.wl .rp-step { border-top-color: var(--help-rule); }
 /* open: every step at full strength, a form to fill; alone: the future steps go back to repair.css's dim label */
 section.wl[data-fade="open"] .rp-step[data-state="future"] { color: var(--ink); opacity: 1; }
+/* the colours say their roles, no blue in the sheet (Tony 12:3x: "button is blue, i dont like blue … a color that emphasizes their roles"):
+   a tap chip = a 1.5px --help edge on --help 10% over --help-sheet, --help-on text (hover 20%); a preview (not a control yet, aria-hidden) =
+   a 1px dashed --help-line edge on a slight --help-on veil, --help-muted text; a step number = --help */
+section.wl .rp-chip { border: 1.5px solid var(--help); background: color-mix(in srgb, var(--help) 10%, var(--help-sheet)); color: var(--help-on); }
+section.wl .rp-chip:hover:not(:disabled) { background: color-mix(in srgb, var(--help) 20%, var(--help-sheet)); }
+section.wl .rp-n { color: var(--help); }
 .wl-field { box-sizing: border-box; max-width: 100%; margin: var(--s2) 0 0 calc(1.25rem + var(--s2)); padding: var(--s1) var(--s3); overflow-x: auto;
-  border: var(--bw) dashed var(--help-line); border-radius: 8px; color: var(--help-muted); font-size: var(--t-sm); }
+  border: 1px dashed var(--help-line); border-radius: 8px; background: color-mix(in srgb, var(--help-on) 6%, transparent); color: var(--help-muted); font-size: var(--t-sm); }
 .wl-field .katex { font-size: var(--kx); }
 .wl-out { animation: wl-out var(--d-move) ease-in both; }
 @keyframes wl-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wl-out { display: none; animation: none; } }
 /* in the app (app.js welcomeQ): once it is done, the cue's own Next (app.css .nx) closes the card, at its right edge */
 section.wl > .nx { display: block; margin: var(--s3) 0 0 auto; }
+/* the commit buttons on the warm sheet (Tony, vet w-1: "hideous blue on orange"): Check and Next in Cluck's send face, --help-ink on --help
+   7.67:1 (app.css .ask .send); the 44px / 48px hit and the --focus ring stay */
+section.wl :is(.rp-check, .rp-next), section.wl > .nx .nf { border-color: var(--help); background: var(--help); color: var(--help-ink); }
