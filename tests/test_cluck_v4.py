@@ -23,7 +23,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "0cf7fba1fb20b8c0dda52282b8fb551a83ef5440098b4d5d08bf02ad649c362e"
+SHA = "d6694ade741aa981b5fa5d4719837e7cba72273b5ac7a225963e05066cffa24d"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -999,7 +999,7 @@ class NoOwnerName(unittest.TestCase):
 PCPA = {"code": "T_CPA", "type": "multi", "body": [{"type": "text", "md": ["Read the loop.", "", "```cpp\nfor (int i = 1; i < n; i++) s += i;\n```"]}],
         "parts": [{"label": "a", "prompt": "Which line is false?", "type": "text", "answer": "End", "accept": ["the end"]},
                   {"label": "b", "prompt": "What does `sumTo(5)` return?", "type": "num", "answer": "10", "tol": 0.0001,
-                   "wrong": [{"match": "15", "error": "misread", "hint": "QUACK. The number 15 is what the claim says."}]},
+                   "wrong": [{"match": "15", "error": "misread", "hint": "QUACK. The number 15 is what the claim says. Trace the loop by hand: what is the last i that gets added?"}]},
                   {"label": "d", "prompt": "With your fix, what is `i` when the loop test fails, for $n = 5$?", "type": "num", "answer": "6", "tol": 0.0001,
                    "wrong": [{"match": "5", "error": "off-by-one", "hint": "QUACK. What does i do after that last pass?"}]}],
         "saccharine": {"key": "sumTo(5) returns 10, not 15. Fix: i <= n. For $n = 5$ the test fails at $i = 6$."}}
@@ -1037,8 +1037,13 @@ class PartVerdict(unittest.TestCase):
         q = serve.explain_prompt(PCPA, B_WRONG)
         self.assertIn("PART (b): What does `sumTo(5)` return?", q)
         self.assertIn("PART KEY: 10", q)
-        self.assertIn("SLIP: The number 15 is what the claim says.", q)  # the part's own authored slip (the grader's hit), not an invented one
+        self.assertTrue(q.endswith("\n\nSLIP: The number 15 is what the claim says."), q)   # the part's own authored slip (the grader's hit), not an invented one
+        self.assertNotIn("?", q.split("SLIP:")[1])                     # round 2 (Tony: "Wrong: zero questions"): the hint's question is not sent
         self.assertEqual(serve.v4_user(PCPA, B_WRONG, serve.WISH_QUERY, False)[0], q + "\n\nRESULT: wrong")
+
+    def test_slip_keeps_statements_only(self):
+        self.assertEqual(serve.statements("QUACK. Trace it. What is the last i? Add them up."), "Trace it. Add them up.")
+        self.assertEqual(serve.statements("What does i do after that last pass?"), "")
 
     def test_single_item_result(self):
         self.assertTrue(serve.v4_user(P1, "b", serve.WISH_QUERY, False)[0].endswith("\n\nRESULT: correct"))   # no KV state needed
@@ -1124,6 +1129,16 @@ class LetterContract(unittest.TestCase):
     def test_nudge_reads_at_grade_3_and_is_plain(self):
         self.assertLessEqual(serve.fk_grade(serve.CLUCK_NUDGE), 3)
         self.assertNotIn("lamp", serve.CLUCK_NUDGE.lower())
+        self.assertNotIn("?", serve.CLUCK_NUDGE)                         # wrong: zero questions (Tony, Oct 29)
+
+    def test_wrong_rule_forbids_questions(self):                       # round 2: "Wrong: zero questions": slip + fix as plain statements
+        rule = next(ln for ln in serve.PROMPT_V4.splitlines() if ln.startswith("- RESULT: wrong → "))
+        self.assertIn("Ask zero questions", rule)
+        self.assertIn("plain statements", rule)
+        ex = serve.PROMPT_V4.split(rule + "\n", 1)[1].splitlines()[0]
+        self.assertTrue(ex.lstrip().startswith("Example: "))
+        self.assertNotIn("?", ex)
+        self.assertNotIn("nudge", serve.PROMPT_V4.split("[ FORMATTING ]")[1].split("[ ENDFORMATTING ]")[0])   # no rule invites a nudge question
 
 
 if __name__ == "__main__":

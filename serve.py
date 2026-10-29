@@ -1844,8 +1844,15 @@ def pick_done(p, done, pick):
     return done
 
 
+def statements(h):
+    """a hint's plain statements only: the "QUACK." tag and every question sentence cut (round 2, Tony Oct 29: "Wrong: zero questions"; an
+    authored hint's question, sent as SLIP, came back as Cluck's question)"""
+    ss = re.split(r"(?<=[.!?])\s+", re.sub(r"^(?:QUACK|Quack)\.\s*", "", h.strip()))
+    return " ".join(x for x in ss if x and not x.endswith("?"))
+
+
 def _unit_slip(u, a):
-    """the grader's authored hint for a wrong typed answer (the `wrong` entry or the slip family it hits), "QUACK." cut; "" for none"""
+    """the grader's authored hint for a wrong typed answer (the `wrong` entry or the slip family it hits) as statements; "" for none"""
     if u.get("type") == "mc":
         return ""
     try:
@@ -1853,7 +1860,7 @@ def _unit_slip(u, a):
     except UNREADABLE:
         return ""
     h = (unit_hit(u, str(a)[:200], sig) or slip_hit(u, sig) or {}).get("hint") or ""
-    return re.sub(r"^(?:QUACK|Quack)\.\s*", "", h)
+    return statements(h)
 
 
 def explain_prompt(p, answer):
