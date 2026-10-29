@@ -17,7 +17,7 @@ permissions:
 concurrency: { group: ship, cancel-in-progress: false }
 jobs:
   ship:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run: { shell: bash }   # -eo pipefail (the default shell has no pipefail)

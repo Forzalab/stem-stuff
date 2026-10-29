@@ -21,7 +21,7 @@ env:
   LANES: 3    # run-all.sh processes per runner (Tony's pick, CI plan PR 10): bench B 4x3 vs 5x2 = wall -23 s, runner-min -26%. The 3-lane flow.pw flakes were view transitions eating raw input (todo 55, #302)
 jobs:
   plan:   # ~10 s: the matrix only (tests/run-all.sh --plan: the same weight() deal as SHARD, so local and CI agree)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.p.outputs.matrix }}
     steps:
@@ -29,7 +29,7 @@ jobs:
       - id: p
         run: echo "matrix=$(tests/run-all.sh --plan "$BLOCKS" "$LANES")" >> "$GITHUB_OUTPUT"
   unit:   # unittest + npm (no browser), next to the blocks so they add no wall-clock
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,9 @@ jobs:
       - run: tests/run-all.sh --quick
   block:   # one runner: LANES run-all.sh processes side by side, each with its own lane of specs, server and port
     needs: plan
-    runs-on: ubuntu-latest
+    # pinned, never ubuntu-latest: it rolled to 26.04 and Playwright 1.56.1 has no browsers there (PR #337 run 40950644957).
+    # Moving off 24.04 = a Playwright bump first (todo 80). Guard: tests/test_ci_image.py
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     name: block ${{ matrix.block }}/${{ matrix.of }}
     strategy:
@@ -65,7 +67,7 @@ jobs:
       - run: |
           cd tests && npm ci
           npm i --no-save "playwright@$(node -p "require('playwright-core/package.json').version")"
-          # no --with-deps: ubuntu-latest already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
+          # no --with-deps: ubuntu-24.04 already has Chromium's system libs. Bench run 39915938764: 25 s vs 37 s, and no apt tail (old installs hit 345-514 s)
           npx playwright install --only-shell chromium
       - name: lanes
         env:
@@ -84,14 +86,14 @@ jobs:
   all:
     needs: [plan, unit, block]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: test "${{ needs.plan.result }}" = success && test "${{ needs.unit.result }}" = success && test "${{ needs.block.result }}" = success
   # bench only: one CSV of this run's job times (queue wait apart from run time) and per-spec seconds from the lane logs
   bench:
     needs: [plan, unit, block]
     if: always() && github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions: { actions: read }
     env:
       GH_TOKEN: ${{ github.token }}
