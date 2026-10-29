@@ -75,8 +75,8 @@ const SHEET = { MOM_CONS: "m_1v_1 + m_2v_2 = (m_1+m_2)v_f", KE: "KE = \\tfrac12 
 const host = document.getElementById("host"), log = document.getElementById("log");
 document.getElementById("stem").innerHTML = Graph.tex(FIX.stem);
 let cur = null;
-/* remote: the ladder as GET /repair sends it (TONY-DECISIONS #29.7): the answer steps lose ok/opts/tol/miss, a pick answer then shows the
-   item's own choices, and the stub below stands in for POST /repair/<code>/check {value, n} -> {ok} (the key stays here, as on the server;
+/* remote: the ladder as GET /repair sends it (TONY-DECISIONS #29.7): the answer steps lose ok/opts/tol/miss, a keyless answer then takes the
+   item's own type (the alt case: an mc item, its own choices), and the stub below stands in for POST /repair/<code>/check {value, n} -> {ok} (the key stays here, as on the server;
    from the 2nd miss on it also sends the answer's display string, #33 A) */
 const KEY = { main: v => Math.abs(parseFloat(String(v).replace(/−/g, "-")) - FIX.answer) <= 0.02 * FIX.answer, alt: v => v === "a" };
 const SHOW = { main: "1.0 m/s", alt: "$1.0$ m/s" };
@@ -88,9 +88,9 @@ const REMOTE = { ...FIX, choices: FIX.repair.alt.steps[2].opts,
 window.lab = o => {
   window.__ev = []; window.__graded = []; window.__ns = []; log.textContent = "";
   if (cur) cur.destroy();
-  const base = o.remote ? REMOTE : FIX;
-  const item = o.label ? { ...base, repair: { ...base.repair, steps: [{ ...base.repair.steps[0], label: o.label }, ...base.repair.steps.slice(1)] } } : base;
   const which = o.variant === "alt" ? "alt" : "main", key = KEY[which];
+  const base = o.remote ? (which === "alt" ? { ...REMOTE, type: "mc" } : REMOTE) : FIX;   // a keyless answer step takes the item's type (todo 117)
+  const item = o.label ? { ...base, repair: { ...base.repair, steps: [{ ...base.repair.steps[0], label: o.label }, ...base.repair.steps.slice(1)] } } : base;
   const grade = (v, n) => { window.__graded.push(v); window.__ns.push(n);                                       // a round trip
     return new Promise(r => setTimeout(() => r(key(v) ? { ok: true } : n >= 2 ? { ok: false, answer: SHOW[which] } : { ok: false }), 50)); };
   cur = Repair.mount(host, item, { variant: o.variant, error: o.error || null, sheet: SHEET, grade: o.remote || o.grade ? grade : undefined, answer: o.answer,

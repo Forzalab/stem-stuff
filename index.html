@@ -45,6 +45,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <script src="graph.js" defer></script>
 <script src="formula-figs.js" defer></script><!-- the formula sheet's pictures (design/FORMULA-FIGS.md): data for graph.js, drawn in the "?" popover -->
 <script src="popover.js" defer></script><!-- the rich-context popup (design/POPOVER.md): before app.js, which opens it -->
+<script src="copy/repair-lines.js" defer></script><script src="repair.js" defer></script><script src="welcome.js" defer></script><!-- the welcome Q1 (DESIGN-v3 §2, todo 119): app.js mounts welcome.js (repair.js's welcome variant) for the bank's welcome item -->
 <script src="telemetry.js" defer></script><!-- before app.js so window.stemT exists for its hooks; the libraries load after the first question -->
 <script src="copy/nudge-lines.js" defer></script><!-- J5 Cluck nudge lines (data only), read by intent.js -->
 <script src="copy/seen-lines.js" defer></script><!-- J6 seen lines (data only), read by intent.js -->
@@ -104,6 +105,8 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <link rel="stylesheet" href="vendor/fonts/press-start-2p.css">
 <link rel="stylesheet" href="rewards/rewards.css">
 <link rel="stylesheet" href="toast.css">
+<link rel="stylesheet" href="repair.css">
+<link rel="stylesheet" href="welcome.css">
 <link rel="stylesheet" href="views.css"><!-- Cluck's ```openui views (P4.1); views.js loads with the first one (modulepreload below) -->
 <link rel="modulepreload" href="views.js">
 <!-- impeccable-disable cramped-padding: the submit arrow sits flush inside its field on purpose (Tony, UI rules 3 and 4) -->

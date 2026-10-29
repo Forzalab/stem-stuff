@@ -590,7 +590,8 @@ async function openBankIn(code, { go = true, quiet = false } = {}) {
   remembered(b.code);
   bankChanged();
   if (!go) return true;
-  const to = bank.codes.includes(b.at) ? b.at : (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];   // resume where you were, else the queue's pick (nav.js)
+  const to = bank.codes.includes(b.at) ? b.at : bank.codes.find(c => welcomeDue(bank.get.get(c)))   // resume where you were, else the welcome Q1 (once),
+    || (window.stemOrder ? window.stemOrder(bank.codes) : bank.codes)[0];                            // else the queue's pick (nav.js)
   if (S && S.code === to && !modeFlip) { putCode(""); entryMsg(""); } else await load(to);
   return true;
 }
@@ -636,13 +637,14 @@ async function load(code) {
     if (e.status !== 404) { retryLoad.hidden = false; retryLoad.onclick = () => load(code); }
     return;
   }
+  const wl = welcomeDue(prob) ? await welcomeLadder(code) : null;         // the welcome Q1: its ladder (none: the item as a normal question)
   entryMsg("");
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
   if (!S || S.code !== code) barOpen(false);                        // another problem opened: the bar goes back to its strip
   if (!S || S.code !== code) wishReset();                                  // a new question: Cluck's wish stops
-  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null };
+  S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
   qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
@@ -708,12 +710,40 @@ function drawFigures() {
   document.querySelectorAll("#blocks .fig").forEach(f => { try { Graph.render(f, f._block); } catch (e) { console.error(e); f.textContent = f._block.alt || ""; f.classList.add("fig-off"); } });
 }
 
+/* ---------- the welcome Q1 (todo 119; brain design-round-66 DESIGN-v3 §2, TONY-DECISIONS #5) ----------
+   A bank's `welcome: true` item opens first on a fresh device, once per bank and device: welcome.js (repair.js's welcome variant; its
+   ladder from GET /repair/<code>, served for this item before any try) takes the answer box's place, the question stays above it.
+   Done: welcome_done (telemetry) + stem-welcome-<bank>, then its Next goes on to the queue (the cue's Next). Not for a returner
+   (stem-noob-<bank>: nav.js sets it at the first answer), nor with no ladder (offline, an error): then it is a normal question. */
+const wlKey = () => "stem-welcome-" + bank.code;
+function welcomeDue(p) {
+  if (!bank || !p || p.welcome !== true || !bank.codes.includes(p.code) || !window.Welcome) return false;
+  try { return !localStorage.getItem(wlKey()) && !localStorage.getItem("stem-noob-" + bank.code); } catch { return false; }
+}
+async function welcomeLadder(code) {
+  try { const r = await net(`repair/${code}`, { headers: { traceparent: traceparent() } }); return r.ok ? await r.json() : null; } catch { return null; }
+}
+function welcomeQ(q) {
+  $("#fcard")?.remove();                                                         // the Key formulas card would answer its sheet step
+  const mine = S, code = S.code;
+  const grade = (value, n) => net(`repair/${code}/check`, { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() },
+    credentials: "same-origin", body: JSON.stringify({ value, n }) }).then(r => r.ok ? r.json() : null, () => null);   // no answer: a hint, never a dead tap
+  const w = Welcome.mount(q, { ...S.prob, repair: S.wl }, { sheet: S.wl.sheet, grade, on: (name, d) => {
+    if (name !== "welcome_done" || S !== mine) return;
+    try { localStorage.setItem(wlKey(), "1"); } catch { /* blocked: it shows again next visit */ }
+    S.finished = true;
+    window.stemT?.("welcome_done", { code, bank: bank && bank.code, why_ok: !!d.why_ok });
+    if (!$("#qnav").hidden) { const nx = nextBtn(); w.el.append(nx); nx.focus({ preventScroll: true }); }
+  } });
+}
+
 /* ---------- MC: one arrow, flush inside the selected choice ---------- */
 const LETTERS = "ABCDE";
 function renderQuestion() {
   const q = $("#q"), p = S.prob;
   q.classList.remove("closed");
   $("#freezeIn").classList.toggle("boxed", p.type === "multi");      // multi: question + boxes in one box (Tony's sketch)
+  if (S.wl) return welcomeQ(q);
   if (p.type === "mc") {
     const list = off() && p.shuffle !== false ? shuffled(shown(p), localSeed() + ":" + p.code) : shown(p);   // server problems arrive shuffled
     const many = all(p);       // pick all: square check badge + the letter beside it, one Check button under the list (CHOOSE-ALL.md §4)
@@ -1477,6 +1507,18 @@ function finish() {
    (e.repeat) never skips a question. Live: g-next-in (app.css) lands it once; a restored question shows it still. No list (#qnav hidden)
    = nowhere to go, so no Next. */
 let painting = false;
+function nextBtn() {                                                             // the cue's Next: nav.js go(1), the same queue as the bar's Next
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "nx" + (painting ? "" : " g-next"); b.setAttribute("aria-label", "Next question");
+  b.innerHTML = `<span class="nf"><span>Next</span>${icon("i-tri")}</span>`;
+  b.addEventListener("click", e => {
+    e.stopPropagation();
+    const n = $("#qnext");
+    if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
+    n.click();
+  });
+  return b;
+}
 function cueCarrier() {
   const p = S.prob, t = S.tries.at(-1) || {};
   if (all(p)) return { box: $("#q .chk"), send: $("#mcGo") };
@@ -1497,15 +1539,9 @@ function cueNext() {
   if (!box || !send) return;
   const h0 = box.matches(".ch") ? box.offsetHeight : 0;                         // a row whose text rewraps round Next keeps Next on Check's old spot
   box.classList.add("cue");
-  send.insertAdjacentHTML("afterend", `<button type="button" class="nx${painting ? "" : " g-next"}" aria-label="Next question"><span class="nf"><span>Next</span>${icon("i-tri")}</span></button>`);
-  const nx = send.nextElementSibling;
+  const nx = nextBtn();
+  send.after(nx);
   if (h0 && Math.abs(box.offsetHeight - h0) > 0.5) nx.style.top = h0 / 2 + "px";
-  nx.addEventListener("click", e => {
-    e.stopPropagation();
-    const n = $("#qnext");
-    if (!n || n.disabled) { dispatchEvent(new CustomEvent("drill:note", { detail: { text: "No more questions, no more eggs." } })); return; }
-    n.click();                                                                   // nav.js go(1): the same queue as the bar's Next
-  });
   const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
   if (!painting) nx.focus({ preventScroll: true });

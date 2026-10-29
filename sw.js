@@ -17,7 +17,7 @@ const BASE = ["./", "index.html", "app.js", "app.css", "nav.js", "nav.css", "off
   "vendor/katex/katex.min.css", "vendor/katex/katex.min.js", "vendor/math.min.js", "vendor/marked.min.js",
   "vendor/fonts/atkinson.css", "vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2", "vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2",
   "vendor/fonts/atkinson-hyperlegible-mono-latin-400-normal.woff2", "vendor/fonts/press-start-2p.css", "vendor/fonts/press-start-2p-latin-400-normal.woff2",
-  "toast.js", "toast.css", "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
+  "toast.js", "toast.css", "copy/repair-lines.js", "repair.js", "repair.css", "welcome.js", "welcome.css", "rewards/engine.js", "rewards/fx.js", "rewards/icons.js", "rewards/rewards.css", "vendor/confetti.browser.js", ...KATEX_FONTS.map(f => "vendor/katex/fonts/KaTeX_" + f + ".woff2")];
 
 // Pure routing decision; also used by tests/offline.test.mjs. scope = registration scope URL.
 function route(url, method, scope) {
