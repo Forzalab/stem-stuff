@@ -1206,6 +1206,54 @@ class Visuals(unittest.TestCase):
         claude_usd = float(re.search(r"claude usage: .*? usd=([\d.]+)", text).group(1))
         self.assertAlmostEqual(float(re.search(r"usd=([\d.]+)$", ans).group(1)), round(claude_usd + 0.00042, 5), places=5)
 
+    def test_wrong_answer_view_never_draws_the_answer(self):
+        # Tony (locked for #332): after a WRONG answer (REVEAL no) a view never draws the answer's numbers; after a right / solved one
+        # (REVEAL yes) it may. The gate itself: the same Table, P1's answer 13.0 in it, dropped on the wrong pick, kept on the solved turn.
+        # An intermediate value the KEY shows (52.0, 4.0) is open either way.
+        import views_gate
+        prog = 'root = View([t])\nt = Table(["work", "time", "power"], [["52.0 J", "4.0 s", "13.0 W"]])'
+        out, log = views_gate.gate(prog, serve.fig_ctx(P1, "a"))
+        self.assertIsNone(out)
+        self.assertIn("t:leak:Table.rows=13", log)
+        out, log = views_gate.gate(prog, serve.fig_ctx(P1, "b", reveal=True))
+        self.assertEqual((out, log), (prog, ["ok"]))
+        out, log = views_gate.gate(prog.replace(', "13.0 W"', "").replace(', "power"', ""), serve.fig_ctx(P1, "a"))
+        self.assertEqual(log, ["ok"], "the givens stay open on a wrong pick")
+
+    def test_math_line_pinned(self):
+        # Tony's math pick (W113 vet, Oct 29): display $$ for every equation, a derivation as one aligned block, = signs lined up
+        self.assertEqual(serve.V4_MATH, "Math: an equation goes on its own lines as display $$...$$, never inside a sentence; a derivation is one "
+                         "$$\\begin{aligned} ... \\end{aligned}$$ block, one step per line, the = signs lined up (&=, a \\\\ between steps), like a textbook.")
+        self.assertIn("\n" + serve.V4_MATH + "\n", serve.V4_VIEWS)
+        self.assertIn(serve.V4_MATH, serve._v4_claude_system(dict(fig=serve.fig_ctx(P1, "a"), bank=serve.bank_block(P1)))[0]["text"])
+
+    def test_figure_reask_on_the_deepseek_arm(self):
+        # W113 vet (physics-b): DeepSeek answered (Opus refused), its scene had no force arrow, the gate dropped it and nothing asked again.
+        # Now a dropped figure is re-asked (Claude, the figure only) whichever arm answered.
+        fix = json.load(open(os.path.join(ROOT, "tests", "fixtures", "livefig.json")))
+        p = dict(fix["problem"], code="T_RMP")
+        bad = '{"type":"graph","kind":"scene","alt":"A block.","marks":[{"mark":"body","at":[0,0],"shape":"box","w":1,"h":0.5}]}'
+        good = json.dumps(fix["valid"][0])
+        calls = []
+
+        def fake(req, timeout=None):
+            if "anthropic.com" in req.full_url:
+                calls.append("claude")
+                return Resp(sse_claude(["```fig\n" + good + "\n```"]))
+            calls.append("deepseek")
+            return Resp(sse_or(["Not quite.\nForces on the block:\n```fig\n" + bad + "\n```\n", "Try again."]))
+        v4 = dict(turns=[{"role": "user", "content": serve.v4_user(p, "a", serve.WISH_QUERY, False)}], reveal=False, facts=serve.leak_facts(p),
+                  code="T_RMP", arm="deepseek", bank=serve.bank_block(p), fig=serve.fig_ctx(p, "a"))
+        with mock.patch.dict(os.environ, {"CLAUDE_API": "sk-ant-test"}), mock.patch.object(serve, "KV", (None, None)), \
+                mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "log", lambda *a: None):
+            serve._claude_spent.clear()
+            serve._last_err.clear()
+            out = "".join(serve._cluck_stream([{"role": "system", "content": "OLD"}, {"role": "user", "content": "q"}], "sk-or", 450, v4=v4))
+        self.assertEqual(calls, ["deepseek", "claude"])
+        self.assertEqual(out.count("```fig"), 1, out)
+        self.assertIn('"force"', out)
+        self.assertNotIn('"A block."', out)
+
 
 if __name__ == "__main__":
     unittest.main()
