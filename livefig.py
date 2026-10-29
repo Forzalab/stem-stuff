@@ -495,8 +495,11 @@ class Fence:
     """the stream filter: text passes as it comes; a ``` fence is held until it closes, then the ONE first good figure goes out as
     "\\n```fig\\n<canonical json>\\n```\\n" in a single chunk and anything else in a fence is dropped. ctx None = strip every fence
     (the OpenRouter path, the kill switch). Never yields raw model JSON."""
-    def __init__(self, ctx):
+    def __init__(self, ctx, redo=None):
         self.ctx, self.buf, self.shown, self.log, self.prev = ctx, "", 0, [], "\n"   # prev: the last model char consumed (line start?)
+        # redo(why) -> a checked fence or "": called ONCE, at a dropped fence while nothing is shown yet; its fence takes the dropped one's
+        # place in the stream (W340 vf-physics-b: the re-asked figure went to the end, "Forces on the block:" sat over a gap)
+        self.redo = redo
 
     def _block(self, lang, body):
         if self.ctx is None:
@@ -533,7 +536,12 @@ class Fence:
                     self.log.append("size")
                     self.buf = ""
                 break
-            out.append(self._block(m.group(1).lower(), m.group(2)))
+            blk = self._block(m.group(1).lower(), m.group(2))
+            if not blk and self.redo and not self.shown and self.log and self.log[-1].split(":")[0] not in ("ok", "off", "second", "views-off"):
+                redo, self.redo = self.redo, None
+                blk = redo(self.log[-1].split(":")[0]) or ""
+                self.shown += bool(blk)
+            out.append(blk)
             self.prev, self.buf = "`", self.buf[m.end():]
         return "".join(out)
 

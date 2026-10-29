@@ -1254,6 +1254,39 @@ class Visuals(unittest.TestCase):
         self.assertIn('"force"', out)
         self.assertNotIn('"A block."', out)
 
+    def test_reasked_figure_lands_in_place(self):
+        # W340 (Tony, vf-physics-b): the re-asked figure came after "Try once more.", so "Forces on the block:" pointed at a gap. The
+        # re-asked fence now replaces the dropped one IN PLACE: right after the line that introduces it, before the words that followed it.
+        fix = json.load(open(os.path.join(ROOT, "tests", "fixtures", "livefig.json")))
+        p = dict(fix["problem"], code="T_RMP")
+        bad = '{"type":"graph","kind":"scene","alt":"A block.","marks":[{"mark":"body","at":[0,0],"shape":"box","w":1,"h":0.5}]}'
+        good = json.dumps(fix["valid"][0])
+
+        def fake(req, timeout=None):
+            if "anthropic.com" in req.full_url:
+                return Resp(sse_claude(["```fig\n" + good + "\n```"]))
+            return Resp(sse_or(["Not quite.\n\nForces on the block:\n```fig\n" + bad + "\n```\n", "\nTry once more."]))
+        v4 = dict(turns=[{"role": "user", "content": serve.v4_user(p, "a", serve.WISH_QUERY, False)}], reveal=False, facts=serve.leak_facts(p),
+                  code="T_RMP", arm="deepseek", bank=serve.bank_block(p), fig=serve.fig_ctx(p, "a"))
+        with mock.patch.dict(os.environ, {"CLAUDE_API": "sk-ant-test"}), mock.patch.object(serve, "KV", (None, None)), \
+                mock.patch("urllib.request.urlopen", side_effect=fake), mock.patch.object(serve, "log", lambda *a: None):
+            serve._claude_spent.clear()
+            serve._last_err.clear()
+            out = "".join(serve._cluck_stream([{"role": "system", "content": "OLD"}, {"role": "user", "content": "q"}], "sk-or", 450, v4=v4))
+        self.assertEqual(out.count("```fig"), 1, out)
+        self.assertRegex(out, r"Forces on the block:\n+```fig\n[^\n]*\n```\n+\s*Try once more\.\s*$", out)
+        # and on v4_visible itself (both arms): the figure sits where the dropped fence was, the words after it stay after it
+        calls = []
+
+        def reask(why):
+            calls.append(why)
+            return "\n```fig\n" + good + "\n```\n"
+        out = "".join(serve.v4_visible(iter(["Not quite.\n\nForces on the block:\n", "```fig\n{bad\n```\n", "\nTry once more."]),
+                                       True, ("", []), "T_RMP", serve.fig_ctx(p, "a"), reask))
+        self.assertEqual(calls, ["json"])
+        self.assertLess(out.index("Forces on the block:"), out.index("```fig"), out)
+        self.assertLess(out.index("```fig"), out.index("Try once more."), out)
+
 
 if __name__ == "__main__":
     unittest.main()

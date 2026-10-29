@@ -2845,7 +2845,9 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     livefig Ctx: a valid figure the model draws still shows; None strips every fence; the Claude arm asks for one: V4_FIG_FIXED + v4_fig_howto), the
     first visible line held until it ends (lamp_cut), then, with REVEAL no, the leak guard (on a trip: the rest dropped, the stream drained so
     the spend is counted, CLUCK_NUDGE sent). Nothing is yielded for a reply that is only notes or blanks (the caller then treats it as empty)."""
-    xyz, fence = Xyz(), views_gate.Fence(fig)
+    # the re-ask (once) runs AT the dropped fence, so its figure takes that fence's place: right under the line that introduces it (W340)
+    redo = reask if reask and fig is not None and livefig.on() else None
+    xyz, fence = Xyz(), views_gate.Fence(fig, redo)
     guard = None if reveal else LeakGuard(facts)
     sent, head = False, ""                       # head: the first visible line so far; None once it went on
     for t in chunks:
@@ -2863,8 +2865,9 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     bad = [x for x in fence.log if x not in FIG_OK]
     if bad:
         log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
-    if reask and fig is not None and livefig.on() and not fence.shown and bad:
-        vis += reask(bad[0].split(":")[0])                  # one more try, the figure only; "" = words only
+    if fence.redo and not fence.shown and bad:              # dropped at the very end (unclosed, too big): one more try, here; "" = words only
+        fence.redo = None
+        vis += reask(bad[0].split(":")[0])
     if head is not None:
         vis = lamp_cut(head + vis)
         vis = vis if vis.strip() else ""
