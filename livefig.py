@@ -23,6 +23,7 @@ MAX_JSON, MAX_MARKS, MAX_LABELS, MAX_NODES, MAX_EDGES, MAX_GROUPS, MAX_BARS, MAX
 # A live network is the key subgraph only (the odd cycle, the path, the cut), never the question's whole graph again: Opus redrew the
 # 10-duck CEQ graph with one edge lit, Oct 18 ("drawing for the sake of drawing"). More nodes: "big"; every vertex of the bank figure: "copy".
 MAX_LIVE_NODES = 6
+FIGS_MAX = 2                       # visuals per reply, ```fig and ```openui together (todo 113 spec, Tony Oct 28: "may mix 2"); a third is dropped
 GEOM_MAX = 1e4                     # any number in the figure: finite, |v| <= this
 # Fields whose numbers are DATA (shown, or drawn from as a value): they must come from the givens and never be the answer.
 # Every other number is free layout geometry (positions, sizes, axis ranges), only capped.
@@ -167,7 +168,9 @@ def context(code, question, key, answer_values, more="", subject=None, verts=(),
     q = nums(question) + [float(WORD_NUMS[w]) for w in re.findall(r"[a-z]+", str(question).lower()) if w in WORD_NUMS]   # "five miles" is given
     boxed = [n for b in re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", str(key)) for n in nums(b)]
     ans = [abs(a) for a in [*answer_values, *boxed] if math.isfinite(a) and a != 0 and not any(_eq(abs(a), g) for g in q)]
-    ans += [a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10]   # the unknown in another unit / power of ten: 23.3 -> 2.33
+    # the unknown in another unit / power of ten: 23.3 -> 2.33; never one the question shows (W113: CPA's answer 10 became 1, so every
+    # loop-trace table that wrote the code's own "i = 1" was dropped as a leak)
+    ans += [s for s in (a / 10 ** math.floor(math.log10(a)) for a in ans if not 1 <= a < 10) if not any(_eq(s, g) for g in q)]
     givens = set(q) | set(nums(more)) | set(nums(key)) | set(range(0, 11))
     return Ctx(code, givens, sorted(set(ans)), kinds_for(subject), verts, drawn)
 
@@ -237,8 +240,9 @@ def check(g, ctx):
             return "network"
         if any((x if isinstance(x, str) else x.get("label", x["id"])).strip("$ ") not in ctx.verts for x in g["nodes"]):
             return "vertex"                  # nodes are the question's own vertices (A, B, ...), never invented ones
-        if ctx.drawn and ctx.verts <= vertices([g]):
-            return "copy"                    # the question's whole graph again: the student already sees it
+        if ctx.drawn and ctx.verts <= vertices([g]) and (ctx.drawn is True or len(g["edges"]) >= ctx.drawn):
+            return "copy"                    # the question's whole graph again: the student already sees it. drawn = its edge count:
+            # a live graph on every vertex with FEWER edges is a subgraph (W113: the MST of CEQ_P7K, 5 of its edges, was dropped as a copy)
         if len(g["nodes"]) > MAX_LIVE_NODES:
             return "big"                     # the key subgraph only
     for k, v in _walk(g, None, []):
@@ -285,7 +289,7 @@ class Fence:
     def _block(self, lang, body):
         if self.ctx is None:
             return self.log.append("off") or ""
-        if self.shown:
+        if self.shown >= FIGS_MAX:
             return self.log.append("second") or ""
         g = parse(body) if lang in ("fig", "json", "") else None
         why = "json" if g is None else check(g, self.ctx)
@@ -401,7 +405,7 @@ The figure shows the SETUP: the objects, the forces or the given values, and the
 # its own layout, so the old path's "every reply", "no code" exception and wish placement go; caps the tail or the gate already state go too.
 RULE_V4 = (RULE
            .replace('FIGURE (the one exception to "no code" in Format: this fence is allowed): draw ONE figure (never two) in every reply unless the reply is pure arithmetic with nothing to picture.',
-                    'FIGURE: when you draw (the letter\'s "Draw readily" line), draw ONE figure (never two).')
+                    'FIGURE: a ```fig block is one figure; a reply holds at most two visuals (VISUALS below).')
            .replace(' At most 6 nodes.', '', 1)
            .replace('\nPhysics never uses "network"; a graph-theory question always does.', '')
            .replace(' In a wish (the numbered steps) it goes right after the sentence on what the pick assumed; in a chat reply, after the first paragraph.',

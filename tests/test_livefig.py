@@ -48,6 +48,11 @@ def duck_net(nodes, alt="Some ducks."):
             "edges": [{"from": a, "to": b} for a, b in DUCK_EDGES if a in nodes and b in nodes]}
 
 
+def serve_ctx_drawn(p):
+    """what serve.fig_ctx tells the gate about the question's own graph (drawn)"""
+    return serve.fig_ctx(p, "3").drawn
+
+
 def duck_ctx():
     body = [{"type": "text", "md": "Every duck gets one snack flavor; feuding ducks differ."}, duck_net(DUCKS, "Ten ducks and their feuds.")]
     return livefig.context("CEQ_PND", body[0]["md"], "", [3.0], subject="cs", verts=livefig.vertices(body), drawn=True)
@@ -129,6 +134,20 @@ class Gate(unittest.TestCase):
         self.assertEqual(len(cycle["edges"]), 5)
         self.assertIsNone(livefig.check(cycle, c))                                      # the question's own labels, 5 nodes: kept
         self.assertIsNone(livefig.check(FIX["network"]["valid"], net_ctx()))            # no bank figure (verts from the text): all of them is fine
+
+    def test_spanning_subgraph_is_not_a_copy(self):
+        # W113: CEQ_P7K's MST (every vertex, 5 of the question's edges) was dropped as "copy"; drawn now carries the question graph's
+        # edge count: every vertex with FEWER edges is a subgraph and goes out; the whole graph again is still a copy
+        n = FIX["network"]
+        body = n["body"] + [dict(n["valid"], alt="The bank's own cycle.")]
+        c = livefig.context("CEQ", n["body"][0]["md"], "", [3.0], subject="discrete", verts=livefig.vertices(body), drawn=4)
+        self.assertEqual(livefig.check(n["valid"], c), "copy")                          # all 4 edges: the same graph again
+        tree = dict(n["valid"], alt="A spanning tree: three of the four edges.", edges=n["valid"]["edges"][:3])
+        self.assertIsNone(livefig.check(tree, c))
+        self.assertEqual(livefig.check(tree, livefig.context("CEQ", n["body"][0]["md"], "", [3.0], subject="discrete", verts=livefig.vertices(body), drawn=True)),
+                         "copy", "drawn=True (no edge count) keeps the old rule")
+        sp = {"code": "CEQ_T1", "type": "num", "body": body, "answer": "3", "saccharine": {"key": "3"}}
+        self.assertEqual(serve_ctx_drawn(sp), 4, "serve passes the question graph's edge count")
         self.assertIsNone(livefig.check(FIX["valid"][0], ctx()))                        # physics untouched
 
     def test_rule_asks_for_the_key_subgraph(self):
@@ -205,10 +224,21 @@ class Stream(unittest.TestCase):
         self.assertNotIn("375", out)
         self.assertEqual(log, ["leak:text=375"])
 
-    def test_one_figure_at_most(self):
-        out, log = self.run_fence([fence(FIX["valid"][0]), "x", fence(FIX["valid"][1])], ctx())
-        self.assertEqual(out.count("```fig"), 1)
-        self.assertEqual(log, ["ok", "second"])
+    def test_two_figures_at_most(self):
+        # todo 113 (Tony Oct 28: "may mix 2"): two visuals per reply; a third is dropped
+        out, log = self.run_fence([fence(FIX["valid"][0]), "x", fence(FIX["valid"][1]), "y", fence(FIX["valid"][0])], ctx())
+        self.assertEqual(out.count("```fig"), 2)
+        self.assertEqual(log, ["ok", "ok", "second"])
+        self.assertEqual(livefig.FIGS_MAX, 2)
+
+    def test_answer_rescaled_to_a_given_is_not_hidden(self):
+        # W113: CPA's answer 10 was also hidden as 1.0 (the power-of-ten form), so a loop-trace table that wrote the code's own
+        # "i = 1" was dropped as a leak; a rescaled value the question shows is not the answer. 10 itself stays hidden.
+        c = livefig.context("CPA", "for (int i = 1; i < n; i++) { s += i; } What does sumTo(5) return?", "", [10.0])
+        self.assertIn(10.0, c.answers)
+        self.assertNotIn(1.0, c.answers)
+        c = livefig.context("X", "A rod hangs from two strings.", "", [23.3])
+        self.assertIn(2.33, [round(a, 2) for a in c.answers], "a rescale the question does not show stays hidden")
 
     def test_unclosed_fence_never_shows(self):
         out, log = self.run_fence(["Hi.\n```fig\n{\"type\": \"graph\", \"kind\""], ctx())
