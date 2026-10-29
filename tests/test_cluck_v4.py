@@ -23,7 +23,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "d6694ade741aa981b5fa5d4719837e7cba72273b5ac7a225963e05066cffa24d"
+SHA = "0dfe67a6004a209d1cd15a8e5ffdfd9f29aaebbd20b0d3a00273a62abf08cf52"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -790,7 +790,7 @@ KEEPALIVE = b": OPENROUTER PROCESSING\n\n"
 class FirstWordCaps(unittest.TestCase):
     """todo 47 (bench Oct 23): the DeepSeek arm thinks ~9.7 s (median) before its first word; reasoning is progress, so it is not cut at 6 s.
     Stuck (nothing but pings for CLUCK_FIRST_TEXT_S) = fall back; thinking with no word by CLUCK_FIRST_TEXT_S_DEEPSEEK (20) = fall back.
-    The Claude arm keeps its 6 s. A fake clock: no real waits."""
+    The Claude arm: CLUCK_FIRST_TEXT_S, 10 s (6 s until todo 116). A fake clock: no real waits."""
     fake, run_arm = Fallbacks.fake, Fallbacks.run_arm
 
     def setUp(self):
@@ -822,17 +822,17 @@ class FirstWordCaps(unittest.TestCase):
         self.assertEqual(self.calls, ["deepseek"])
         self.assertIn("answered=deepseek fallback=False", self.joined())
 
-    def test_silence_7s_is_stuck(self):
-        # one reasoning delta, then only keepalive comments for 7 s (pings are not progress), then words that come too late
-        self.ds = lambda: Clocked(think(1) + KEEPALIVE * 2 + sse_or(["Too late.\n"]), {2: 3.5, 4: 3.5}, self.clock)
+    def test_silence_11s_is_stuck(self):
+        # one reasoning delta, then only keepalive comments for 11 s (pings are not progress), then words that come too late
+        self.ds = lambda: Clocked(think(1) + KEEPALIVE * 2 + sse_or(["Too late.\n"]), {2: 5.5, 4: 5.5}, self.clock)
         self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
         self.assertEqual(self.calls, ["deepseek", "claude"])
         self.assertIn("fallback from=deepseek reason=stuck", self.joined())
         self.assertIn("answered=claude fallback=True reveal=no why=deepseek:stuck", self.joined())
 
-    def test_nothing_at_all_7s_is_stuck(self):
-        # no line at all for 7 s: the first line that comes finds the stream stuck
-        self.ds = lambda: Clocked(sse_or(["Too late.\n"]), {0: 7.0}, self.clock)
+    def test_nothing_at_all_11s_is_stuck(self):
+        # no line at all for 11 s: the first line that comes finds the stream stuck
+        self.ds = lambda: Clocked(sse_or(["Too late.\n"]), {0: 11.0}, self.clock)
         self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
         self.assertIn("fallback from=deepseek reason=stuck", self.joined())
 
@@ -852,14 +852,15 @@ class FirstWordCaps(unittest.TestCase):
             self.assertEqual(self.run_arm("deepseek"), "Claude says hi.\nTry again.")
             self.assertAlmostEqual(self.clock.t - 1_000_000.0, 13.0)
 
-    def test_claude_arm_keeps_6s(self):
-        # pings every 1 s (the Claude guard counts only a word), the word at 7 s: cut at 6 s, DeepSeek answers
-        self.claude = lambda: Clocked(PING * 7 + sse_claude(["Too late.\n"]), {i: 1.0 for i in range(0, 21, 3)}, self.clock)
+    def test_claude_arm_waits_10s(self):
+        # todo 116 (Tony Oct 29, o-116b): 10 s, Opus's first word takes a median 6.9 s (W113). Pings every 1 s (the Claude guard
+        # counts only a word), the word at 11 s: cut at 10 s, DeepSeek answers
+        self.claude = lambda: Clocked(PING * 11 + sse_claude(["Too late.\n"]), {i: 1.0 for i in range(0, 33, 3)}, self.clock)
         self.assertEqual(self.run_arm("claude"), "Deep says hi.\nTry again.")
         self.assertEqual(self.calls, ["claude", "deepseek"])
         self.assertIn("fallback from=claude reason=visible-cap", self.joined())
-        self.calls.clear()                                              # a Claude word at 5.5 s is in time
-        self.claude = lambda: Clocked(sse_claude(["In time.\n"]), {2: 5.5}, self.clock)
+        self.calls.clear()                                              # a Claude word at 9.5 s is in time (it was cut at 6 s before)
+        self.claude = lambda: Clocked(sse_claude(["In time.\n"]), {2: 9.5}, self.clock)
         self.assertEqual(self.run_arm("claude"), "In time.\n")
         self.assertEqual(self.calls, ["claude"])
 
@@ -872,9 +873,9 @@ class FirstWordCaps(unittest.TestCase):
     def test_guard_unit(self):
         t0 = self.clock.t
         self.clock.t = t0 + 15
-        serve.text_late(t0, False, t0 + 10, "deepseek")                  # thinking, the last delta 5 s ago: fine
+        serve.text_late(t0, False, t0 + 7, "deepseek")                   # thinking, the last delta 8 s ago: fine (stuck is 10 s)
         with self.assertRaises(serve.FirstTextLate) as c:
-            serve.text_late(t0, False, t0 + 8, "deepseek")               # 7 s since the last delta
+            serve.text_late(t0, False, t0 + 4, "deepseek")               # 11 s since the last delta
         self.assertEqual(c.exception.reason, "stuck")
         self.assertIsInstance(c.exception, TimeoutError)                  # the callers' except paths still read it as a timeout
         self.clock.t = t0 + 21

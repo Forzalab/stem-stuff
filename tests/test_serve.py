@@ -955,6 +955,35 @@ class Repair(unittest.TestCase):
         self.assertEqual(self.get("PHYS_RPA", "r-none")[0], 403)
         self.assertEqual(self.get("PHYS_RPB", "r-none")[0], 403)
 
+    def test_welcome_q1_before_a_try(self):
+        """todo 119 (DESIGN-v3 §2): the bank's welcome item is drawn from its ladder (welcome.js), so GET /repair and its /check serve it
+        before any try; the answer step stays keyless. `welcome: true` rides in the public payload, the ladder never does."""
+        st, out = self.get("PHYS_WLC", "r-wl")
+        self.assertEqual(st, 200)
+        self.assertEqual([s["id"] for s in out["steps"]], ["given", "sheet", "answer"])
+        self.assertFalse(set(self.KEY) & set(out["steps"][-1]))
+        self.assertEqual(self.check("PHYS_WLC", "r-wl", "a"), (200, {"ok": True}))
+        st, _, raw = serve.dispatch("GET", "/state/PHYS_WLC", f"sid={self.sid('r-wl')}")
+        self.assertEqual(json.loads(raw)["wrong"], 0)                           # not a try
+        fix = copy.deepcopy(self.FIX)
+        fix["PHYS_WLC"]["welcome"] = "yes"                                      # only the schema's `true` opens it
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            self.assertEqual(self.get("PHYS_WLC", "r-wl2")[0], 403)
+        out = serve.public(serve.view(self.FIX["PHYS_WLC"], "sugar"), "s")
+        self.assertIs(out["welcome"], True)
+        self.assertNotIn("repair", out)
+        self.assertNotIn("welcome", serve.public(serve.view(self.FIX["PHYS_RPA"], "sugar"), "s"))
+
+    def test_sheet_tex_for_sheet_steps(self):
+        """a `sheet` step's chips need the formulas, not their ids: `sheet` = {id: tex} for the pool ids on the formula sheet; none: no key."""
+        rows = {"V_AVG": {"id": "V_AVG", "group": "g", "tex": "v=\\frac{d}{t}"}, "MOM_CONS": {"id": "MOM_CONS", "group": "g", "tex": "p=p'"}}
+        with unittest.mock.patch.object(serve, "sheet", lambda: rows):
+            self.assertEqual(self.get("PHYS_WLC", "r-sh")[1]["sheet"], {"V_AVG": "v=\\frac{d}{t}"})   # KE is not on this sheet
+            self.miss("PHYS_RPA", "r-sh")
+            self.assertEqual(self.get("PHYS_RPA", "r-sh")[1]["sheet"], {"MOM_CONS": "p=p'"})
+        with unittest.mock.patch.object(serve, "sheet", lambda: {}):
+            self.assertNotIn("sheet", self.get("PHYS_WLC", "r-sh")[1])
+
     def test_after_a_miss_steps_no_alt(self):
         self.miss("PHYS_RPA", "r-miss")
         st, out = self.get("PHYS_RPA", "r-miss")

@@ -2,8 +2,10 @@
    format: the bank's one `welcome: true` item, drawn by repair.js in its welcome variant (no new widget kinds), on a warm surface.
 
    Welcome.mount(host, item, opts)   draws Q1 (its stem + the ladder) into host (replacing what is there); returns { el, destroy() }
-       opts: { sheet, on(name, data) }   sheet = { id: tex } for `sheet` steps (as Repair.mount)
+       opts: { sheet, grade, on(name, data) }   sheet = { id: tex } for `sheet` steps, grade(value, n) for a keyless answer step (as Repair.mount)
        on: welcome_done { why_ok }   (once, after the last step; welcome is unfailable, so there is no other ending)
+   In the app (todo 119): app.js welcomeQ mounts it in the answer box's place for a fresh device's first item (the question text stays
+   above it, so no item.stem); the ladder comes from GET /repair/<code> (served for the welcome item before any try, with `sheet`).
 
    Fading (Renkl 2002, Atkinson 2003), per step on progress, never a timer:
      open    every step shown at full strength; each future one also shows its input as a picture (.wl-field, aria-hidden), a form to fill
@@ -62,7 +64,7 @@
       }
     }
     const watch = new MutationObserver(dress);                                   // repair.js swaps the card's children on every draw
-    const rp = root.Repair.mount(box, item, { variant: "welcome", sheet: o.sheet, on: (name, data) => {
+    const rp = root.Repair.mount(box, item, { variant: "welcome", sheet: o.sheet, grade: o.grade, on: (name, data) => {
       if (name === "repair_done" && o.on) o.on("welcome_done", { why_ok: data.why_ok });
     } });
     dress();

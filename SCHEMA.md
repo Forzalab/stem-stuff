@@ -1852,7 +1852,7 @@ Five per-item fields, all optional, top level next to `saccharine`. The `problem
 
 **`twin`, `parent_template`**: `"twin": "a", "parent_template": "PHYS_RPA"`. A redo twin of its template: `a` = same question, new numbers (opens after a repair); `b` = the twisted one (queued after the `a` twin wins). Every twin names its template; the template is in the same bank, is not a twin, and carries `repair`. At most one `a` and one `b` per template. `parent_template` only on a twin. Both public.
 
-**`repair`** (server only: `public()` never sends it; `GET /repair/<code>` does, after a recorded wrong try, and `alt` only after a twin miss is recorded). Hand-written per template; twins use their template's ladder.
+**`repair`** (server only: `public()` never sends it; `GET /repair/<code>` does, after a recorded wrong try, and `alt` only after a twin miss is recorded; the `welcome` item's before any try, since its ladder is the question). Hand-written per template; twins use their template's ladder. The response adds `sheet` = `{id: tex}` for the formula-sheet ids its `sheet` steps offer.
 
 ```json
 "repair": {
