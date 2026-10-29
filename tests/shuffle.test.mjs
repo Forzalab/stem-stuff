@@ -345,6 +345,34 @@ test("ramp: no item at the current tier -> the nearest tier still serves; an emp
   assert.equal(ramp(qNew("a"), [], tierOf), null);
 });
 
+/* todo 121 (live served PHYS_C3Z, the `a` twin of PHYS_WYS, to a fresh device): a twin stays out of the deck until its template's miss */
+const twinItems = { PHYS_T1A: {}, PHYS_A1A: { twin: "a", parent_template: "PHYS_T1A" }, PHYS_B1A: { twin: "b", parent_template: "PHYS_T1A" },
+  PHYS_T1B: {}, PHYS_A1B: { twin: "a", parent_template: "PHYS_T1B" }, PHYS_A1C: { twin: "a", parent_template: "PHYS_GONE" } };
+const twinCodes = Object.keys(twinItems), twinOf = c => twinItems[c];
+test("twinGate: a fresh device's ramp never serves an a / b twin before its template's miss", async () => {
+  const { twinGate, ramp, qNew, qShow } = await import("../shuffle.mjs");
+  for (const salt of Array.from({ length: 40 }, (_, i) => "t" + i)) {
+    const st = qNew(salt), run = [];
+    for (let i = 0; i < 4; i++) { const p = ramp(st, twinGate(twinCodes, twinOf, st.seen), () => 1); qShow(st, p.code); run.push(p.code); }
+    assert.ok(!run.some(c => ["PHYS_A1A", "PHYS_B1A", "PHYS_A1B"].includes(c)), `${salt}: ${run}`);
+  }
+});
+test("twinGate: the template's graded miss lets its twins in (only its own); a twin whose template is not in the deck plays", async () => {
+  const { twinGate, qNew, qShow, qAnswer } = await import("../shuffle.mjs");
+  const st = qNew("s");
+  assert.deepEqual(twinGate(twinCodes, twinOf, st.seen), ["PHYS_T1A", "PHYS_T1B", "PHYS_A1C"]);
+  qShow(st, "PHYS_T1A"); qAnswer(st, "PHYS_T1A", true);
+  assert.deepEqual(twinGate(twinCodes, twinOf, st.seen), ["PHYS_T1A", "PHYS_T1B", "PHYS_A1C"], "a right answer opens nothing");
+  qShow(st, "PHYS_T1B"); qAnswer(st, "PHYS_T1B", false);
+  assert.deepEqual(twinGate(twinCodes, twinOf, st.seen), ["PHYS_T1A", "PHYS_T1B", "PHYS_A1B", "PHYS_A1C"]);
+  assert.deepEqual(twinGate(twinCodes, () => undefined, {}), twinCodes, "an unknown item plays");
+});
+test("twinGate leaves the mock alone: mockList still picks a twin per template", async () => {
+  const { mockList } = await import("../shuffle.mjs");
+  const items = [{ code: "PHYS_T1A", exam_q: 1 }, { code: "PHYS_A1A", twin: "a", parent_template: "PHYS_T1A" }];
+  assert.deepEqual(mockList(items, "s"), ["PHYS_A1A"]);
+});
+
 /* ---------- the night-before mock (W103b; PLAN §6.9): 20 PE3 questions in exam order, one try each, then the misses ---------- */
 const X = (code, title, more = {}) => ({ code, title, ...more });
 /* today's BANK_P3X shape: no twin / parent_template / exam_q; the exam position is only in the title */

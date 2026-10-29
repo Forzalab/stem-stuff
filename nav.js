@@ -8,7 +8,7 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
+import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -398,6 +398,7 @@ function init() {
   const dead = c => { const p = off() && off().get(c); return !!p && !!(p.dead || (p.saccharine && p.saccharine.dead)); };   // T28 dead-easy: a sugar warm-up, placed by shuffle.mjs deadOpen / deadLead
   const all = () => { const o = off(); return (o && o.codes ? o.codes() : []).filter(c => !(window.stemHidden && window.stemHidden(c))); };
   const pool = () => all().filter(c => !snack(c) && !dead(c));                 // the queue plays the reals; a snack rides in front of its real
+  const deck = st => twinGate(pool(), c => off() && off().get(c), st.seen);   // todo 121: a twin waits for its template's miss (the mock uses pool)
   /* topic: the bank's topic / parent, else the sugar title's "Question N" (its variants A, B, C group: no near-repeats), else the code */
   const group = p => { const m = /^(.*?\bQuestion\s+\d+)\b/i.exec(String(p.title || (p.saccharine && p.saccharine.title) || "")); return m ? m[1] : null; };
   const topicOf = c => { const p = off() && off().get(c); return (p && (p.topic || p.parent || group(p))) || family(c); };
@@ -462,7 +463,7 @@ function init() {
     }
     const deads = all().filter(dead), od = deadOpen(st, opener(deads));   // T28 P2: a fresh bank opens with 1-2 dead-easy
     if (od) return { e: { c: od, r: 0, redeem: false } };
-    const live = new Set(pool());
+    const live = new Set(deck(st));
     let code = null, redeem = false;
     if (st.then && live.has(st.then) && st.then !== cur) { code = st.then; redeem = !!(st.seen[code] && st.seen[code].owe); }
     else {
@@ -481,8 +482,8 @@ function init() {
   /* the first question of a bank or an upload (app.js openBank, offline.js first()): the queue's pick, but a fresh queue (nothing
      shown or saved yet) starts where the author starts, the first real question of the file */
   window.stemOrder = list => {
-    const live = list.filter(c => !snack(c) && !dead(c) && !(window.stemHidden && window.stemHidden(c)));
-    const st = Q(), fresh = st.pos === 0 && !Object.keys(st.seen).length;
+    const st = Q(), live = twinGate(list.filter(c => !snack(c) && !dead(c) && !(window.stemHidden && window.stemHidden(c))), c => off() && off().get(c), st.seen);
+    const fresh = st.pos === 0 && !Object.keys(st.seen).length;
     const od = deadOpen(st, opener(list.filter(c => dead(c) && !(window.stemHidden && window.stemHidden(c)))));   // T28 P2: a fresh queue starts on a dead-easy
     const p = od ? { code: od } : !live.length ? null : noob() ? ramp(st, live, tierOf) : fresh ? { code: live[0] } : qPick(st, live, topicOf);
     return p ? [p.code, ...list.filter(c => c !== p.code)] : list;
