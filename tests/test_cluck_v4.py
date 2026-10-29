@@ -23,7 +23,7 @@ from test_claude_pipe import Resp, http_error, sse_claude, sse_or  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRAIN = "/home/claude/brain/projects/calc/_files/cluck-voice-bench/sys-tony-v4.txt"
-SHA = "d752703bf7e9839294c6013c50c856b7c30e114052042ad17c313b005a70c46b"
+SHA = "0cf7fba1fb20b8c0dda52282b8fb551a83ef5440098b4d5d08bf02ad649c362e"
 
 
 def prob(code="T_POW", choices=("a", "208 W"), correct="b", extra=None):
@@ -37,6 +37,7 @@ P1 = prob()
 P2 = prob("T_CART", extra={"body": [{"type": "text", "md": "Two carts stick. Find v."}]})
 PMULTI = prob("T_MULTI", correct=["a", "e"], extra={"pick": "all", "choices": [{"id": i, "md": f"opt {i}"} for i in "abcde"]})
 LET, VAL = serve.leak_facts(P1)
+WRONG_A = "\n\nRESULT: wrong"                  # W110: the server grades every pick; "a" is wrong on P1
 
 
 class Slow(Resp):
@@ -90,7 +91,7 @@ class PromptFile(unittest.TestCase):
 class UserTurn(unittest.TestCase):
     def test_layout(self):
         st, dyn = serve.v4_user(P1, "a", "why times?", False, "<XYZ>\nconcept: power\n</XYZ>")
-        self.assertEqual(st, serve.explain_prompt(P1, "a"))
+        self.assertEqual(st, serve.explain_prompt(P1, "a") + WRONG_A)
         self.assertEqual(dyn, "\n\n<XYZ>\nconcept: power\n</XYZ>\n\nREMINDER FROM LAMP: kaomoji, super duper warm. affective. very very conversational. "
                               "REVEAL: no\n\nUSER QUERY: why times?")
         st, dyn = serve.v4_user(P1, "a", serve.WISH_QUERY, True)
@@ -181,7 +182,7 @@ class Reveal(unittest.TestCase):
         st, dyn = serve.v4_user(P1, "b", serve.WISH_QUERY, True, "", True)
         self.assertEqual(st, serve.explain_prompt(P1, "b") + "\n\nRESULT: correct")
         self.assertTrue(dyn.endswith("REVEAL: yes\n\nUSER QUERY: hi cluck <3"))
-        self.assertNotIn("RESULT", "".join(serve.v4_user(P1, "a", serve.WISH_QUERY, True)))   # not solved: no RESULT line
+        self.assertEqual(serve.v4_user(P1, "a", serve.WISH_QUERY, True)[0], serve.explain_prompt(P1, "a") + WRONG_A)   # not solved, a wrong pick: RESULT: wrong (W110)
         self.assertNotIn("RESULT", serve.explain_prompt(P1, "b"))                            # the old path's prompt is unchanged
         hist = [{"role": "assistant", "content": "Quack! my path."}, {"role": "user", "content": "i did 52/4"}]
         turns = serve.v4_chat_turns(P1, "b", hist, [[1, 2, "", "b"], [2, 2, "", "b"]])       # the replay keeps it on every turn
@@ -190,7 +191,7 @@ class Reveal(unittest.TestCase):
         self.assertIn("REVEAL: yes", turns[2]["content"][1])
 
     def test_no_restate_rule_in_the_layout(self):                      # F (Tony, Oct 21): the problem text is not read back
-        self.assertIn("- RESULT: correct → REVEAL: yes; show your path, then ask for theirs.\n", serve.PROMPT_V4)
+        self.assertIn("- RESULT: correct → the student is right. Cheer first, then ONE plain reason, then stop. Ask no question at all.\n", serve.PROMPT_V4)   # Tony, Oct 28 (W110)
         self.assertIn("- As the user and you are using the same lamp, assume the user already knows the problem data. Do not repeat whatever "
                       "the problem already states in its text, which is the text in the QUESTION block.\n", serve.PROMPT_V4)
         st, _ = serve.v4_user(P1, "a", "hi", False)
@@ -352,7 +353,7 @@ class CacheShape(unittest.TestCase):
 
     def test_static_block_identical_across_turns(self):
         t = serve.v4_chat_turns(P1, "a", self.hist(3), self.rows((False, ""), (False, "<XYZ>\n1\n</XYZ>"), (False, "<XYZ>\n2\n</XYZ>"), (True, "<XYZ>\n3\n</XYZ>")))
-        self.assertEqual([m["content"][0] for m in t if m["role"] == "user"], [serve.explain_prompt(P1, "a"), "", "", ""])   # C2: once, on the wish
+        self.assertEqual([m["content"][0] for m in t if m["role"] == "user"], [serve.explain_prompt(P1, "a") + WRONG_A, "", "", ""])   # C2: once, on the wish
         self.assertEqual([m["role"] for m in t], ["user", "assistant", "user", "assistant", "user", "assistant", "user"])
 
     def test_followups_send_the_question_once(self):                   # C2: the bench's chat layout, the question block on the wish turn only
@@ -360,7 +361,7 @@ class CacheShape(unittest.TestCase):
         users = [m for m in t if m["role"] == "user"]
         self.assertEqual(len(users), 4)
         self.assertEqual(sum("".join(m["content"]).count(serve.explain_prompt(P1, "a")) for m in users), 1)
-        self.assertEqual(users[0]["content"][0], serve.explain_prompt(P1, "a"))
+        self.assertEqual(users[0]["content"][0], serve.explain_prompt(P1, "a") + WRONG_A)
         for m in users[1:]:
             self.assertEqual(m["content"][0], "")
             self.assertTrue(m["content"][1].startswith(serve.LAMP))           # no leading blank line: "REMINDER ... USER QUERY: q"
@@ -368,7 +369,7 @@ class CacheShape(unittest.TestCase):
     def test_changed_pick_resends_the_question(self):
         rows = [[1, 0, "", "a"], [2, 0, "", "a"], [3, 0, "", "c"], [4, 0, "", "c"]]
         t = [m for m in serve.v4_chat_turns(P1, "c", self.hist(3), rows) if m["role"] == "user"]
-        self.assertEqual([m["content"][0] for m in t], [serve.explain_prompt(P1, "a"), "", serve.explain_prompt(P1, "c"), ""])
+        self.assertEqual([m["content"][0] for m in t], [serve.explain_prompt(P1, "a") + WRONG_A, "", serve.explain_prompt(P1, "c") + WRONG_A, ""])
 
     def test_solved_followup_carries_result_only(self):
         rows = [[1, 2, "", "b"], [2, 2, "", "b"], [3, 2, "", "b"]]           # reveal 2 = sent on a solved item
@@ -415,7 +416,7 @@ class CacheShape(unittest.TestCase):
         self.assertEqual(a["system"], want)                                         # layer 1: the file, 1h; layer 2: the bank's line
         self.assertEqual(a["system"], b["system"])
         ua, ub = a["messages"][0]["content"], b["messages"][0]["content"]
-        self.assertEqual(ua[0], {"type": "text", "text": serve.explain_prompt(P1, "a"), "cache_control": {"type": "ephemeral"}})   # 5 min
+        self.assertEqual(ua[0], {"type": "text", "text": serve.explain_prompt(P1, "a") + WRONG_A, "cache_control": {"type": "ephemeral"}})   # 5 min
         self.assertNotIn("cache_control", ua[1])                                    # the dynamic block is never cached
         self.assertEqual(a["model"], serve.CLAUDE_MODEL)
         self.assertNotEqual(ua[0]["text"], ub[0]["text"])
@@ -449,7 +450,7 @@ class CacheShape(unittest.TestCase):
         self.assertFalse(d["provider"]["allow_fallbacks"])            # no other OpenRouter host (5 ZDR ones are fp4, never benched): Claude answers
         self.assertEqual(d["provider"]["zdr"], True)
         first = d["messages"][1]["content"]
-        self.assertEqual(first, serve.explain_prompt(P1, "a") + serve.v4_dynamic("", False, serve.WISH_QUERY))   # the blocks joined: the same text
+        self.assertEqual(first, serve.explain_prompt(P1, "a") + WRONG_A + serve.v4_dynamic("", False, serve.WISH_QUERY))   # the blocks joined: the same text
         c = self.sent(self.v4(P1, t), "claude")
         self.assertEqual(first, "".join(b["text"] for b in c["messages"][0]["content"]))   # both arms see the same text
 
@@ -991,6 +992,138 @@ class NoOwnerName(unittest.TestCase):
     @unittest.skipUnless(bank_paths(BRAIN_BANKS), "no brain banks mounted")
     def test_brain_banks(self):
         self.check(bank_paths(BRAIN_BANKS))
+
+
+# W110 (todo 110, prod Oct 28): a multi pick names its part (id, prompt, key) and the server grades THIS pick against that part's key,
+# statelessly (no KV, never a client verdict): RESULT: correct | wrong. A right pick never gets "name the likely slip".
+PCPA = {"code": "T_CPA", "type": "multi", "body": [{"type": "text", "md": ["Read the loop.", "", "```cpp\nfor (int i = 1; i < n; i++) s += i;\n```"]}],
+        "parts": [{"label": "a", "prompt": "Which line is false?", "type": "text", "answer": "End", "accept": ["the end"]},
+                  {"label": "b", "prompt": "What does `sumTo(5)` return?", "type": "num", "answer": "10", "tol": 0.0001,
+                   "wrong": [{"match": "15", "error": "misread", "hint": "QUACK. The number 15 is what the claim says."}]},
+                  {"label": "d", "prompt": "With your fix, what is `i` when the loop test fails, for $n = 5$?", "type": "num", "answer": "6", "tol": 0.0001,
+                   "wrong": [{"match": "5", "error": "off-by-one", "hint": "QUACK. What does i do after that last pass?"}]}],
+        "saccharine": {"key": "sumTo(5) returns 10, not 15. Fix: i <= n. For $n = 5$ the test fails at $i = 6$."}}
+D_RIGHT, B_WRONG = {"part": 2, "answer": "6"}, {"part": 1, "answer": "15"}
+
+
+class PartVerdict(unittest.TestCase):
+    def test_pick_from_the_body(self):
+        self.assertEqual(serve.wish_pick(PCPA, {"answer": "6", "part": 2}), D_RIGHT)
+        for bad in (True, -1, 3, "2", None, 2.0):                      # no part or a bad one: the old bare pick, no part named
+            self.assertEqual(serve.wish_pick(PCPA, {"answer": "6", "part": bad}), "6")
+        self.assertEqual(serve.wish_pick(P1, {"answer": "b", "part": 0}), "b")   # a single item never takes a part
+
+    def test_server_grades_the_pick(self):
+        self.assertIs(serve.pick_ok(PCPA, D_RIGHT), True)
+        self.assertIs(serve.pick_ok(PCPA, {"part": 1, "answer": "6"}), False)   # the same 6 is wrong on part b
+        self.assertIs(serve.pick_ok(PCPA, B_WRONG), False)
+        self.assertIs(serve.pick_ok(PCPA, "6"), None)                    # a multi pick with no part: unknown, never guessed
+        self.assertIs(serve.pick_ok(P1, "b"), True)
+        self.assertIs(serve.pick_ok(P1, "a"), False)
+        self.assertIs(serve.pick_ok(PMULTI, ["e", "a"]), True)
+        self.assertIs(serve.pick_ok(PMULTI, ["a"]), False)
+
+    def test_correct_multi_pick_names_its_part(self):
+        q = serve.explain_prompt(PCPA, D_RIGHT)
+        self.assertIn("PART (d): With your fix, what is `i` when the loop test fails, for $n = 5$?", q)
+        self.assertIn("PART KEY: 6", q)
+        self.assertIn("STUDENT PICKED: 6 (part d)", q)
+        self.assertNotIn("name the likely slip", q)
+        self.assertIn("SLIP: none, the pick is right", q)
+        st, _ = serve.v4_user(PCPA, D_RIGHT, serve.WISH_QUERY, False)
+        self.assertEqual(st, q + "\n\nRESULT: correct")
+
+    def test_wrong_multi_pick_gets_its_parts_slip(self):
+        q = serve.explain_prompt(PCPA, B_WRONG)
+        self.assertIn("PART (b): What does `sumTo(5)` return?", q)
+        self.assertIn("PART KEY: 10", q)
+        self.assertIn("SLIP: The number 15 is what the claim says.", q)  # the part's own authored slip (the grader's hit), not an invented one
+        self.assertEqual(serve.v4_user(PCPA, B_WRONG, serve.WISH_QUERY, False)[0], q + "\n\nRESULT: wrong")
+
+    def test_single_item_result(self):
+        self.assertTrue(serve.v4_user(P1, "b", serve.WISH_QUERY, False)[0].endswith("\n\nRESULT: correct"))   # no KV state needed
+        self.assertTrue(serve.v4_user(P1, "a", serve.WISH_QUERY, False)[0].endswith("\n\nRESULT: wrong"))
+        self.assertNotIn("name the likely slip", serve.explain_prompt(dict(P1, saccharine={"key": "13.0 W"}), "b"))
+        self.assertIn("name the likely slip", serve.explain_prompt(dict(P1, saccharine={"key": "13.0 W"}), "c"))   # a wrong pick still may
+
+    def test_note_gets_the_part_and_the_verdict(self):
+        sent = []
+
+        def fake(payload, key, timeout):
+            sent.append(payload["messages"][1]["content"])
+            return Resp(json.dumps({"choices": [{"message": {"content": json.dumps(
+                {"on_topic": True, "field": "cs", "concept": "c", "asked": "6", "need": "n", "assumed": "a", "real": "r", "reproduces": True,
+                 "gap": "no_signal", "evidence": "", "confidence": "low"})}}]}).encode())
+        with mock.patch.object(serve, "_or_post", side_effect=fake):
+            serve.note(PCPA, D_RIGHT, None, "k")
+        self.assertIn("PART (d)", sent[0])
+        self.assertIn("RESULT: correct", sent[0])
+        self.assertIn("RESULT: correct", serve.CLUCK_NOTE)               # the NOTE knows what a right pick means
+
+    def test_leak_facts_skip_the_part_this_pick_got_right(self):
+        _, vals = serve.leak_facts(PCPA, serve.pick_done(PCPA, [False, False, False], D_RIGHT))
+        self.assertNotIn(6.0, vals)
+        self.assertIn(10.0, vals)                                        # an open part's answer stays a leak
+        self.assertEqual(serve.pick_done(PCPA, [False, False, False], B_WRONG), [False, False, False])
+        self.assertEqual(serve.pick_done(P1, [False], "b"), [True])
+
+
+class PartHandlers(Handlers):
+    """the Oct 28 incident through serve.explain: a multi, part d right, NO solved state on this instance (no KV): RESULT: correct and the
+    reply that says 6 goes out whole (no "not yet" nudge)"""
+    def setUp(self):
+        super().setUp()
+        self.wp = mock.patch.object(serve, "_wish_problem", return_value=dict(PCPA, code="H_1"))
+        self.wp.start()
+
+    def tearDown(self):
+        self.wp.stop()
+        super().tearDown()
+
+    def test_right_part_pick_without_state(self):
+        self.reply = "Yes! **6** is right. The test fails once i is 6.\n"
+        out = self.go(serve.explain, answer="6", part=2)
+        self.assertEqual(out, self.reply)
+        self.assertNotIn(serve.CLUCK_NUDGE, out)
+        w = self.bodies[-1]["messages"][0]["content"]
+        self.assertIn("PART (d)", w[0]["text"])
+        self.assertTrue(w[0]["text"].endswith("\n\nRESULT: correct"))
+        hist = [{"role": "assistant", "content": out}, {"role": "user", "content": "Why does this work?"}]
+        self.go(serve.chat, answer="6", part=2, history=hist)
+        c2 = self.bodies[-1]["messages"]
+        self.assertEqual(c2[0]["content"][0]["text"], w[0]["text"])        # the wish turn replays byte for byte
+        self.assertEqual(c2[-1]["content"][0]["text"], "RESULT: correct")
+
+    def test_wrong_part_pick(self):
+        self.reply = "Not quite. The loop stops early.\n"
+        self.go(serve.explain, answer="15", part=1)
+        w = self.bodies[-1]["messages"][0]["content"]
+        self.assertIn("PART (b)", w[0]["text"])
+        self.assertTrue(w[0]["text"].endswith("\n\nRESULT: wrong"))
+        self.assertIn("REVEAL: no", w[1]["text"])
+
+    test_wish_then_chat_turns = test_solved_wish_then_chat = test_off_without_claude_key_or_deepseek_arm = None
+
+
+class LetterContract(unittest.TestCase):
+    """Tony's contract (Oct 28): right = cheer, ONE plain reason, stop, no question; wrong = "Not quite." + the slip + the fix. Every example
+    line the letter gives reads at Flesch-Kincaid grade 3 or under (serve.fk_grade)."""
+    def test_rules(self):
+        self.assertNotIn("then ask for theirs", serve.PROMPT_V4)
+        self.assertIn("- RESULT: correct → ", serve.PROMPT_V4)
+        self.assertIn("- RESULT: wrong → ", serve.PROMPT_V4)
+        self.assertIn("grade 3", serve.PROMPT_V4)
+        self.assertNotIn("grade 4", serve.PROMPT_V4)
+
+    def test_examples_read_at_grade_3(self):
+        ex = re.findall(r'^\s*Example: "(.+)"$', serve.PROMPT_V4, re.M)
+        self.assertGreaterEqual(len(ex), 2)
+        for e in ex:
+            self.assertLessEqual(serve.fk_grade(e), 3, e)
+
+    def test_nudge_reads_at_grade_3_and_is_plain(self):
+        self.assertLessEqual(serve.fk_grade(serve.CLUCK_NUDGE), 3)
+        self.assertNotIn("lamp", serve.CLUCK_NUDGE.lower())
 
 
 if __name__ == "__main__":
