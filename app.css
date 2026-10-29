@@ -754,12 +754,14 @@ html.side #work > .orig { margin: 0; }
 .fq[aria-expanded="true"] { border-color: var(--c1); background: var(--c1); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 /* tap-to-copy (todo 108): a formula card row and a revealed answer copy their math as plain, grader-exact text. Quiet like the "?":
-   a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after (44px tall, kept narrow so it never takes the "?"'s) */
+   a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after, 44px square like the "?"'s. Each reaches 14px past its mark, so after
+   a "?" it sits 28px off (the row's 8px gap + 20px): the two areas meet, never overlap (W108c: a 12px gap let the copy take the "?"'s right 8px) */
 .mcopy { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 0; background: transparent;
   color: var(--muted); cursor: pointer; }
 .mcopy .ico { width: 1rem; height: 1rem; }
-.mcopy::after { content: ""; position: absolute; inset: -14px -6px; }
-.fq + .mcopy { margin-left: var(--s1); }
+.mcopy::after { content: ""; position: absolute; inset: -14px; }
+.fq + .mcopy { margin-left: 20px; }
+.fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
 .mcopy:is(:hover, :focus-visible) { color: var(--c1); }
 .mcopy.done { color: var(--correct); }
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
