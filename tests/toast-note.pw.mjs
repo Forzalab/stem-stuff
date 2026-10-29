@@ -191,6 +191,20 @@ try {
     await c.close();
   });
 
+  /* T16 never silent: a Next note with no strict place falls back to the entry line (desktop: it shows under the bar), never a note on
+     what it may not cover. Forced here: a test button right under Next takes the only spot */
+  await step("1440 Next note with no strict place: no note on the blocker, the entry line says it on screen", async () => {
+    const { c, p, errors } = await open(1440, 900, { code: "BANK_TNO", seen: true });
+    await p.evaluate(() => { const n = document.querySelector("#qnext").getBoundingClientRect(), b = document.createElement("button");
+      b.id = "blocker"; b.textContent = "x"; Object.assign(b.style, { position: "fixed", left: n.left - 300 + "px", top: n.bottom + 4 + "px", width: n.width + 300 + "px", height: "90px", zIndex: 1 });
+      document.body.append(b); });
+    await p.click("#qnext");
+    await p.waitForFunction(() => { const m = document.querySelector("#entryMsg"); return m.textContent === "This is the only question here." && m.checkVisibility(); }, null, { timeout: 4000 });
+    assert.equal(await p.evaluate(() => !!document.querySelector("#toast.on")), false, "no note on the blocker");
+    assert.deepEqual(errors, []);
+    await c.close();
+  });
+
   /* kept choice A: the note lies on the kept row's own words (a dead control), caret at its badge, no X */
   await step("kept choice A: on the kept row, no X, over no other control (390, 1440)", async () => {
     for (const [w, h] of [[390, 844], [1440, 900]]) {

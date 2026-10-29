@@ -93,11 +93,16 @@ const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where
 /* a press that cannot move says why (nav.js "drill:note", load()): a note under Next, else the entry line (never silent, T16).
    Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast. For its 2 s it may lie on the brainrot link and
    on the level row (the HUD: Tony, Oct 29 "COVER", the phone's full-width row right under Next), never on the question card or the
-   answer area (stepped down onto the card's title it "looks buggy"); no such room = the entry line */
-const NOTE_NEXT = { allow: ".rot-link, .rw-tap", clear: "#problem, #q" };
+   answer area (stepped down onto the card's title it "looks buggy"). On desktop with the brainrot folded or gone (the mock) the Notes
+   pad's top edge sits right under Next: the note may lie on it too (#scratch, like the pad-mode note; mock.pw). No such room = the entry
+   line (under the bar on desktop, under the code bar on a phone); were that line ever out of sight, the old placement: never silent (T16) */
+const NOTE_NEXT = { allow: ".rot-link, .rw-tap, #scratch", clear: "#problem, #q" };
 function note(text) {
-  const at = $("#qnext");
-  if (!(at && !at.hidden && at.getClientRects().length && toast(text, at, NOTE_NEXT))) entryMsg(text);
+  const at = $("#qnext"), there = at && !at.hidden && at.getClientRects().length;
+  if (there && toast(text, at, NOTE_NEXT)) return;
+  entryMsg(text);
+  const m = $("#entryMsg");
+  if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
 addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
