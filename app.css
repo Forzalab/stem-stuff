@@ -1417,3 +1417,74 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
 html.coding.dock-bottom:not(.start) body { background: var(--paper); }
 html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
 html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */
+
+/* ---------- W-mock1 (todos 114 + 118): design mocks for Tony's vet, ONLY under ?mock=<id> (html[data-mock]); existing tokens only ----------
+   The build worker keeps the picked variant (renamed off [data-mock]) and deletes the rest */
+/* 114, both: out of tries the field says wrong (x, your text struck), the answer lives in the box under it; the old line and hint row step aside */
+html[data-mock^="114"] .ff.m-out input { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--wrong); }
+html[data-mock^="114"] #q:has(+ #wish.cue:not([hidden])) .preview { display: none; }
+html[data-mock^="114"] #wish.cue:not([hidden]) + #fb > .cluck { display: none; }
+html[data-mock^="114"] .mbox .mb-row { margin: 0; display: flex; align-items: center; gap: var(--s2); min-height: 2rem; font-size: var(--t-md); color: var(--ink); }
+html[data-mock^="114"] .mbox .mb-row .ico { flex: none; width: 1.25rem; height: 1.25rem; }
+html[data-mock^="114"] .mbox .mb-row.ok .ico { color: var(--correct); }
+html[data-mock^="114"] .mbox .mb-row.no .ico { color: var(--wrong); }
+html[data-mock^="114"] .mbox :is(.mb-k, .ansl > span) { flex: none; min-width: 4.25rem; color: var(--muted); font-size: var(--t-sm); }
+html[data-mock^="114"] .mbox .mb-row b { color: var(--correct); font-weight: var(--w-em); overflow-wrap: anywhere; }
+html[data-mock^="114"] .mbox .mb-row s { color: var(--muted); text-decoration-color: var(--wrong); text-decoration-thickness: 2px; overflow-wrap: anywhere; }
+html[data-mock^="114"] .mbox .mcopy { margin-left: var(--s2); }
+html[data-mock^="114"] .mbox .wbar { flex: none; }
+html[data-mock^="114"] .mb-st { margin: 0 0 var(--s2); display: flex; align-items: center; gap: var(--s2); font-weight: var(--w-em); color: var(--wrong); }
+html[data-mock^="114"] .mb-st .ico { flex: none; width: 1.25rem; height: 1.25rem; }
+html[data-mock^="114"] .mb-st em { font-style: normal; font-weight: 400; color: var(--muted); font-size: var(--t-sm); }
+html[data-mock^="114"] .mb-st em::before { content: "·"; margin-right: var(--s2); }
+
+/* 114a "verdict strip": one --card box, its 1px rim says the state (right = solid green; out = dashed green, the missed-answer line of .opt.right.reveal;
+   a wrong try = dashed red on the hint card). One row: the verdict lines left, the duck chip right. Phone: the chip under them, full width */
+html[data-mock="114a"] #wish .mbox { display: flex; align-items: center; gap: var(--s4); padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  background: var(--card); border: var(--bw) solid var(--correct); border-radius: 12px; }
+html[data-mock="114a"] #wish .mbox.s-out { border-style: dashed; }
+html[data-mock="114a"] .mbox .mb-ans { flex: 1; min-width: 0; display: grid; gap: var(--s1); }
+html[data-mock="114a"] #fb .cluck.s-wrong { border: var(--bw) dashed var(--wrong-rim); }
+html:not(.side)[data-mock="114a"] #wish .mbox { flex-direction: column; align-items: stretch; gap: var(--s3); padding: var(--s3); }
+html:not(.side)[data-mock="114a"] #wish .mbox .cue-chip { width: 100%; }
+
+/* 114b "answer | Cluck": one box, two panes. Left the answer on --card; right Cluck's pane in the --help family (the quack line + the chip
+   restyled warm), one rim round both, a --line divider. Phone: the panes stack, the divider turns horizontal. The wrong try: a --wrong-fill state pill */
+html[data-mock="114b"] #wish .mbox { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); overflow: hidden;
+  background: var(--card); border: var(--bw) solid var(--line); border-radius: 12px; }
+html[data-mock="114b"] #wish .mbox.s-right { border-color: var(--correct); }
+html[data-mock="114b"] .mbox .mb-ans { display: grid; align-content: center; gap: var(--s1); padding: var(--s3) var(--s4); }
+html[data-mock="114b"] .mbox .mb-cl { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  background: var(--help-sheet); border-left: var(--bw) solid var(--help-rule); }
+html[data-mock="114b"] .mbox .mb-say { flex: 1; min-width: 0; color: var(--help-on); font-size: var(--t-sm); }
+html[data-mock="114b"] .mbox .mb-say p { margin: 0; }
+html[data-mock="114b"] .mbox .mb-cl .wbar { margin-left: auto; }
+html[data-mock="114b"] .mbox .cue-chip { background: var(--help-fill); border-color: var(--help-line); color: var(--help-on); }
+html[data-mock="114b"] .mbox .cue-chip:hover { background: var(--help-rule); }
+html[data-mock="114b"] .mb-st { display: inline-flex; padding: var(--s1) var(--s3); border-radius: 6px; background: var(--wrong-fill); color: var(--wrong-on); }
+html[data-mock="114b"] .mb-st .ico { color: var(--wrong); }
+html[data-mock="114b"] .mb-st em { color: var(--wrong-on); }
+html:not(.side)[data-mock="114b"] #wish .mbox { grid-template-columns: minmax(0, 1fr); }
+html:not(.side)[data-mock="114b"] .mbox .mb-cl { border-left: 0; border-top: var(--bw) solid var(--help-rule); flex-wrap: wrap; }
+html:not(.side)[data-mock="114b"] .mbox .mb-cl .wbar { flex: 1 1 100%; }
+html:not(.side)[data-mock="114b"] .mbox .cue-chip { width: 100%; }
+
+/* 118, all: the chip sits INSIDE Cluck's card with room round it (Tony's red circle: it hung on the card's edge, no margin) */
+html[data-mock^="118"] .cl-why { gap: var(--s2); font-size: var(--t-sm); font-weight: var(--w-em); -webkit-tap-highlight-color: transparent; }
+html[data-mock^="118"] .cl-why .ico { flex: none; width: 18px; height: 18px; }
+/* 118a "suggestion pill": under the reply, in its text column; a --help-fill pill, --help-line rim, a chat glyph in --help */
+html[data-mock="118a"] .cl-why { justify-self: start; margin: var(--s4) 0 0; padding: 0 var(--s4) 0 var(--s3); min-height: 40px; border-radius: 16px; background: var(--help-fill); color: var(--help-on); }
+html[data-mock="118a"] .cl-why .ico { color: var(--help); }
+html[data-mock="118a"] .cl-why:hover { border-color: var(--help-deep); }
+/* 118b "quick reply": on the student's side over the ask field, the shape of their own bubble (--ai-ct, 16/16/4/16), a send arrow: tap = sent as yours */
+html[data-mock="118b"] .cl-fi { display: flex; flex-direction: column; }
+html[data-mock="118b"] .cl-why { align-self: flex-end; margin: 0 var(--cl-in) var(--s3); min-height: 44px; padding: 0 var(--s3) 0 var(--s4); border: var(--bw) solid var(--help-line);
+  border-radius: 16px 16px 4px 16px; background: var(--ai-ct); color: var(--help-on); }
+html[data-mock="118b"] .cl-why .ico { color: var(--help); }
+html[data-mock="118b"] .cl-why:hover { border-color: var(--help); }
+/* 118c "CTA line": the reply's last line is the action, the T2 "okay, but how?" look (duck, label, chevron, --help, no fill), a --help-rule above it */
+html[data-mock="118c"] .cl-why { justify-self: stretch; width: 100%; margin: var(--s4) 0 0; padding: var(--s2) 0 0; min-height: var(--btn); border: 0; border-top: var(--bw) solid var(--help-rule);
+  border-radius: 0; background: none; color: var(--help); font-size: var(--t-md); text-align: left; }
+html[data-mock="118c"] .cl-why .ico:first-child { width: 22px; height: 22px; }
+html[data-mock="118c"] .cl-why .ico:last-child { width: 18px; height: 18px; }
+html[data-mock="118c"] .cl-why:hover span { text-decoration: underline; text-underline-offset: 4px; }

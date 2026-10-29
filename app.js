@@ -31,6 +31,11 @@ try {
 
 const $ = s => document.querySelector(s);
 const root = document.documentElement;
+/* W-mock1 (todos 114 + 118, design mocks for Tony's vet): ?mock=114a|114b|118a|118b|118c turns one variant on for this page load.
+   No flag = today's behaviour. Mock code is fenced by MOCK checks; the build worker keeps the picked variant and drops the rest */
+const MOCK = (() => { try { const m = new URLSearchParams(location.search).get("mock"); return /^(114[ab]|118[abc])$/.test(m || "") ? m : ""; } catch { return ""; } })();
+if (MOCK) root.dataset.mock = MOCK;
+const M114 = MOCK.startsWith("114"), M118 = MOCK.startsWith("118");
 const MAX_TRIES = 2;   // tries for everything except a 2-choice mc (maxTries)
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 const icon = (id, cls = "ico") => `<svg class="${cls}" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
@@ -1633,7 +1638,7 @@ function feedback(r, typed) {
   /* right / wrong / out: the answer box (or the MC badge) shows the icon; no words on the page */
   const ff = S.prob.type === "mc" ? null : $("#ff");
   if (ff && r.verdict === "correct") vmark(ff, "i-ok");
-  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); }
+  else if (ff && (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0))) { ff.classList.remove("bad"); vmark(ff, "i-lock"); if (M114) { ff.classList.add("m-out"); vmark(ff, "i-x"); } }
   else if (ff && r.verdict === "wrong") { ff.classList.add("bad"); $("#ansGo").hidden = true; vmark(ff, "i-x"); }
   if (r.verdict === "invalid") h = `<p class="verdict bad">${icon("i-x")}<span>Oops! Can't read <code>${esc(typed)}</code>, try again!</span></p>`;
   else if (r.verdict === "pending") h = `<p class="verdict wait">${icon("i-wait")}<span>Saved! Tap Copy to send to Tony.</span>${incHTML(r.inc)}</p>`;
@@ -1643,6 +1648,8 @@ function feedback(r, typed) {
   if (hintOf(r)) {
     const hintWithQuack = quackHint(hintOf(r), S.code + ":" + S.tries.length);
     quackHtml = `<div class="cluck">${icon("i-duck")}<div><div class="md">${md(hintWithQuack)}</div></div></div>`;
+    if (M114 && r.verdict === "wrong" && r.triesLeft > 0 && S.prob.type !== "mc")   // W-mock1 114: the state, said in the box, not the hue alone
+      quackHtml = `<div class="cluck mbox s-wrong">${icon("i-duck")}<div><p class="mb-st">${icon("i-x")}<span>Not it</span><em>${r.triesLeft} ${r.triesLeft === 1 ? "try" : "tries"} left</em></p><div class="md">${md(hintWithQuack)}</div></div></div>`;
   }
   /* a hint on a tick-all question with tries left sits in the empty room left of Check if it fits in 2 lines (Tony, Oct 5), else under the question.
      Phones: the Scratchpad button sits on that row, so under the question. */
@@ -2017,6 +2024,7 @@ function wishPaint() {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    if (M114) mockBox(el, ok);
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
@@ -2039,6 +2047,21 @@ function wishPaint() {
   clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
+}
+/* W-mock1 114 (Tony, Oct 28: "a major box for answer and ask cluck"): the closed question's answer + the duck chip in ONE box, one row on a wide
+   screen. Right: your answer, green check. Out of tries: yours struck with an x, then the answer with its check + copy. The chip is the same button */
+function mockBox(el, ok) {
+  const p = S.prob, t = S.tries.at(-1), mc = p.type === "mc";
+  if (p.type === "multi" || p.type === "proof") return;
+  const tex = v => { if (p.type === "expr" && typeof math !== "undefined") { try { return renderMath("\\displaystyle " + math.parse(String(v)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* plain */ } } return esc(v); };
+  const optTxt = id => [].concat(id).map(i => document.querySelector(`#q .opt[data-id="${i}"] .txt`)?.innerHTML || esc(i)).join(", ");
+  const mine = mc ? optTxt(t?.c ?? t?.a ?? "") : tex(t?.a ?? $("#ans")?.value ?? "");
+  const key = $("#preview .ansl .mcopy")?.dataset.copy, quack = $("#fb > .cluck .md")?.innerHTML || "";
+  const rows = ok ? `<p class="mb-row ok">${icon("i-ok")}<span class="mb-k">Right</span><b>${mine}</b></p>`
+    : `<p class="mb-row no">${icon("i-x")}<span class="mb-k">Yours</span><s>${mine}</s></p>` + (key != null ? `<p class="mb-row ok">${icon("i-ok")}<span class="mb-k">Answer</span><b>${tex(key)}</b>${mathCopyBtn("Copy answer", key)}</p>` : "");
+  const chip = el.querySelector(".wbar");
+  el.innerHTML = `<div class="mbox ${ok ? "s-right" : "s-out"}"><div class="mb-ans">${rows}</div>${MOCK === "114b" ? `<div class="mb-cl">${quack ? `<div class="mb-say md">${quack}</div>` : ""}</div>` : ""}</div>`;
+  (el.querySelector(".mb-cl") || el.querySelector(".mbox")).append(chip);
 }
 /* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
    One scroll, no tabs (Tony, Oct 5: variant a of design/mockups/cluck-merge.html): Cluck's explanation of your miss on top (the box
@@ -2355,11 +2378,11 @@ function clAsk(build) {
      the chat (clSend). Only under a reply that explains the right try (the box text or Compare's), before any follow-up */
   const t = S && S.code === w.code ? S.tries.at(-1) : null, k = t && ckKey(w.code, t);
   const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
-  let wb = ft.querySelector(".cl-why");
+  let wb = (M118 ? cl.el : ft).querySelector(".cl-why");
   if (why && !wb) {
     wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why"; wb.textContent = WHY_ASK;
     wb.addEventListener("click", () => clSend(WHY_ASK));
-    ft.prepend(wb);
+    if (M118) mockWhy(wb, ft); else ft.prepend(wb);
   } else if (!why && wb) wb.remove();
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
@@ -2369,6 +2392,14 @@ function clAsk(build) {
     const a = document.activeElement;
     if (!a || a === document.body || (a.matches(".cl-x") && cl.el.contains(a))) ft.querySelector("textarea").focus({ preventScroll: true });
   }
+}
+/* W-mock1 118 (Tony, Oct 29: "make that chip have margin ... coherent within the chat app"). a: a suggestion pill under the reply, in its text
+   column. b: a quick-reply bubble on the student's side, over the ask field. c: a CTA line closing the reply (the "okay, but how?" look) */
+function mockWhy(wb, ft) {
+  if (MOCK === "118b") { wb.innerHTML = `<span>${WHY_ASK}</span>${icon("i-send")}`; ft.prepend(wb); return; }
+  wb.innerHTML = MOCK === "118c" ? `${icon("i-duck")}<span>${WHY_ASK}</span>${icon("i-right")}` : `${icon("i-chat")}<span>${WHY_ASK}</span>`;
+  const pane = cl.el.querySelector("#clTabEP"), host = [...pane.querySelectorAll(".msg, .cl-cmp")].filter(m => m.offsetParent).at(-1);
+  if (host) host.append(wb); else pane.querySelector(".cl-thread").before(wb);
 }
 /* G (Tony, Oct 21): the ask box wraps and grows with its text up to its CSS max-height (min(6 lines, 40vh)), then scrolls inside; no animation */
 function askFit(ta) {
