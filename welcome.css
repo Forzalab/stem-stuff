@@ -15,3 +15,5 @@
 .wl-out { animation: wl-out var(--d-move) ease-in both; }
 @keyframes wl-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wl-out { display: none; animation: none; } }
+/* in the app (app.js welcomeQ): once it is done, the cue's own Next (app.css .nx) closes the card, at its right edge */
+.wl > .nx { display: block; margin: var(--s3) 0 0 auto; }

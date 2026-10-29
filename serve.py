@@ -10,8 +10,9 @@
   /b/last.json = this browser's last bank, or null (design/BANK.md). Bank problems are graded like any other (/check).
 - GET /state/<CODE>    -> this browser's tries on one problem: {wrong, done, gen}, or {parts: [{wrong, done, gen}, ...]} for a
   multi (design/DONE.md). No answer, no hints.
-- GET /repair/<CODE>   -> the item's repair ladder {steps, alt?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
-  this browser has a recorded wrong try on it; `alt` only once a twin of the template was missed. Never in /p or /b.
+- GET /repair/<CODE>   -> the item's repair ladder {steps, alt?, sheet?} (SCHEMA.md "Repair ladder"; a twin gets its template's): 403 until
+  this browser has a recorded wrong try on it (the bank's welcome Q1: never 403, its ladder is the question); `alt` only once a twin of
+  the template was missed; `sheet` = {id: tex} for its sheet steps' chips. Never in /p or /b.
   The answer step never carries its key (ok/tol/opts/miss): POST /repair/<CODE>/check {value, n} -> {ok} grades it (same 403/404; not a try);
   a miss with n >= 2 (the client's attempt count) also carries `answer` = display text (a pick / mc: the right options' md; Tony #33 A).
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
@@ -60,7 +61,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 BANK = os.path.abspath(sys.argv[2]) if MAIN and len(sys.argv) > 2 else os.path.join(ROOT, "problems.json")
 BANKS = os.environ.get("STEM_BANKS") or os.path.join(ROOT, "banks")   # practice banks: banks/BANK_XXX.json (design/BANK.md)
 MAX_TRIES = 2  # tries for everything except a 2-choice mc (max_tries)
-PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "twin", "parent_template", "exam_q")
+PUBLIC = ("code", "title", "type", "pick", "fix", "var", "body", "how", "tries", "tip", "formulas", "ladder", "wish", "snack", "dead", "before", "original", "noob", "welcome", "twin", "parent_template", "exam_q")
 DEFAULT_NUDGE = "Time to consult the duck oracle."
 FIX_NUDGE = "All ducks almost in a row... check your math carefully."
 NONE_MISS = "QUACK. Any unticked options? Hmmm. ಠ\u2060_\u2060ಠ"
@@ -1021,7 +1022,8 @@ KEY_STEP = ("ok", "tol", "opts", "miss")    # the answer step's key: never serve
 
 def _ladder(p, sid):
     """(template, ladder, missed codes) for p, or (status, error body) when /repair may not serve it: 404 when there is none,
-    403 until this browser (any redo round too) has a wrong try recorded on p."""
+    403 until this browser (any redo round too) has a wrong try recorded on p. The bank's welcome Q1 (`welcome: true`, DESIGN-v3 §2)
+    is served before any try: its ladder IS the question (welcome.js); its answer step stays keyless like every other."""
     t = problems().get(p["parent_template"]) if p.get("twin") else p
     rp = (t or {}).get("repair")
     if not isinstance(rp, dict) or not rp.get("steps"):
@@ -1029,14 +1031,15 @@ def _ladder(p, sid):
     with _tries_lock:
         _load_tries()
         missed = {k[1] for k, st in _tries.items() if st["wrong"] and (k[0] == sid or k[0].startswith(sid + ":r"))}
-    if p["code"] not in missed:
+    if p["code"] not in missed and not (p.get("welcome") is True and t is p):
         return 403, {"error": "no wrong try yet"}
     return t, rp, missed
 
 
 def repair_of(p, sid):
     """GET /repair/<code>: (status, body). The ladder is the template's (a twin names it in parent_template); 404 / 403 as _ladder.
-    `alt` rides only once a twin of the template was missed. Every answer step loses its key (KEY_STEP): /repair/<code>/check grades it."""
+    `alt` rides only once a twin of the template was missed. Every answer step loses its key (KEY_STEP): /repair/<code>/check grades it.
+    `sheet` = {id: tex} for the ids its `sheet` steps offer that are on the formula sheet (none: no `sheet`)."""
     got = _ladder(p, sid)
     if len(got) == 2:
         return got
@@ -1046,6 +1049,10 @@ def repair_of(p, sid):
     out = {"code": p["code"], "steps": mine(rp["steps"])}
     if rp.get("alt") and any((problems().get(c) or {}).get("parent_template") == t["code"] for c in missed):
         out["alt"] = {"steps": mine(rp["alt"]["steps"])}
+    rows = sheet()                                            # a `sheet` step's chips: id -> tex from the formula sheet (Repair.mount opts.sheet)
+    tex = {i: rows[i]["tex"] for st in out["steps"] + out.get("alt", {}).get("steps", []) if st.get("kind") == "sheet" for i in st.get("pool") or [] if i in rows}
+    if tex:
+        out["sheet"] = tex
     return 200, out
 
 

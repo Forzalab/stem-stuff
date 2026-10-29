@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / copy-math / why-chip, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / copy-math / why-chip / welcome-app, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -74,6 +74,7 @@ weight() {
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip) echo 5 ;; blind|katex-wrap|measure-slots|views-oui) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font|geomarks) echo 1 ;;
     welcome) echo 5 ;;   # local run ~4 s
+    welcome-app) echo 12 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~10 s (estimate until CI timing)
     minicluck) echo 3 ;;   # local run ~3s
     noob) echo 15 ;;   # local run ~15s
     mock) echo 12 ;;   # W103b night-before mock, local run ~10 s
@@ -103,6 +104,7 @@ tags() {
     queue-walk|redo-note|next-reset) echo "@logic @real-time" ;;   # the real 2 s SPAM_MS gate, every run (Tony, round 2; overscroll is the 4th)
     cluck-rise|idle-peek|nudge|seen) echo "@logic @fast-time" ;;   # these install page.clock today
     welcome) echo "@layout @real-time" ;;
+    welcome-app) echo "@layout @real-time" ;;   # todo 119: the welcome Q1 wired into the app (own serve.py, fixture bank)
     minicluck) echo "@layout @real-time" ;;
     noob) echo "@logic @real-time" ;;
     why-chip) echo "@logic @real-time" ;;
@@ -215,7 +217,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|copy-math|why-chip) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|copy-math|why-chip|welcome-app) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac
