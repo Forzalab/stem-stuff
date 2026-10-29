@@ -1770,7 +1770,9 @@ function wishRetry(w) {                                                    // th
    (2+ spaces between cells) in the mono face so its columns line up */
 const WDISP = /^\s*\$\$?([^$]+)\$\$?\s*$/;
 const wishMath = (x, d, m) => { try { return renderMath(x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"), d); } catch { return m; } };
-const wishLine = l => esc(l).replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>") || "&nbsp;";
+/* `code` in a reply (W113 vet: proof-b showed `lo = mid` with its backticks): the code span, never math or bold inside it */
+const wishLine = l => esc(l).split(/`([^`\n]+)`/).map((s, i) => (i % 2 ? `<code class="wcode">${s}</code>`
+  : s.replace(/\$\$?([^$]+)\$\$?/g, (m, x) => wishMath(x, false, m)).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"))).join("") || "&nbsp;";
 const WSTEP = /^\s*(\d{1,2})[.)]\s+(.+)$/;
 /* live figures (serve.py + livefig.py, Claude path only): the server sends at most one checked graph block per reply as
    "\n```fig\n<json>\n```\n". wishHTML puts a .wfig placeholder in its place (an unclosed fence shows nothing: never raw JSON);

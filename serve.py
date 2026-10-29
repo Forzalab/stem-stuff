@@ -2923,6 +2923,10 @@ def _view_lines(names):
 # this work?" answer; Opus picks the view, may mix 2). W113 A/B (6 items x 5 nudges + baseline, real Opus, scratch REPORT.md): the decision
 # table (v2) put the most visuals on screen, show-first (v1) next; this block = v2's table + v1's placement + v5's minimal ink, with the
 # chat views' signatures and in-order examples (Opus wrote name=value args in round 1; the gate dropped them all).
+# Tony's math pick (W113 vet, Oct 29: dyslexic readers): an equation is display math on its own lines, never inline in a sentence; a
+# derivation is ONE aligned block, a step per line, the = signs lined up (app.js joins the $$ lines into one KaTeX display; aligned renders)
+V4_MATH = ("Math: an equation goes on its own lines as display $$...$$, never inside a sentence; a derivation is one "
+           "$$\\begin{aligned} ... \\end{aligned}$$ block, one step per line, the = signs lined up (&=, a \\\\ between steps), like a textbook.")
 V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
@@ -2942,7 +2946,8 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
             "s1 = Step(\"First test: i = 1, s = 0.\", null, null, null, null, null, [[\"1\", \"0\"]])\n"
             "s2 = Step(\"Add 1. Now i = 2.\", null, null, null, null, null, [[\"1\", \"0\"], [\"2\", \"1\"]])\n"
             "Numbers in a view: only the question's or the KEY's own; with REVEAL: no, never the final answer or the right letter. Inside a view "
-            "write plain symbols (θ, x², √2), no $; in your own lines put every formula and symbol in $...$.\n")
+            "write plain symbols (θ, x², √2), no $; in your own lines put every formula and symbol in $...$.\n"
+            + V4_MATH + "\n")
 
 
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
@@ -3054,7 +3059,9 @@ def v4_stream(v4, key, out=None):
         try:
             chunks = _v4_claude_chunks(v4, V4_MAX) if name == "claude" else _v4_deepseek_chunks(v4, key, V4_MAX)
             reask = None
-            if name == "claude" and v4.get("fig") is not None and v4["turns"]:
+            # the figure re-ask (Claude) on BOTH arms (W113 vet: physics-b's Why answer came from DeepSeek after Opus refused, its scene
+            # had no force arrow, the gate dropped it and nothing asked again: no visual, a "Forces on the rod:" line over a gap)
+            if v4.get("fig") is not None and v4["turns"] and (name == "claude" or claude_ready(set(out))):
                 first = v4["turns"][0]["content"]
                 reask = lambda why: fig_reask(_v4_claude_system(v4),   # noqa: E731
                                               first[0] if isinstance(first, (list, tuple)) else str(first), v4["fig"], why, v4["code"])
