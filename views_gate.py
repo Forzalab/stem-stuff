@@ -2,7 +2,7 @@
 profile "stem", next to livefig's ```fig. Gate = parse -> schema -> checker -> leak -> stage per statement (oui.py, views/registry.json);
 a failing statement is dropped, its siblings stay; the root failing (or nothing left to draw) drops the whole fence, the text still streams.
 Numbers a student reads (labels, text) must be givens and never the answer to 3 sig figs: livefig's Ctx / nums / _eq / _sig3, imported.
-Fence: livefig.Fence with an ```openui branch, so the hold-until-closed streaming and the one-figure count (fig + openui) are shared.
+Fence: livefig.Fence with an ```openui branch, so the hold-until-closed streaming and the visual count (fig + openui, livefig.FIGS_MAX) are shared.
 Kill switch CLUCK_VIEWS (default on): 0 / off / false strips every ```openui fence.
 Scene steppers (viz MVP, todo 120; contract views/scene-contract.md): a Steps whose fig is a Scene is checked as one unit by scene_check
 (schema, ids + refs, relations acyclic, the expression grammar, Trace run by the server, ops, step rules, leaks by the server-set stage,
@@ -17,8 +17,9 @@ import livefig
 import oui
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-# What a chat figure may hold: drawings and their captions; never a stepper or a Predict (those need an item and the server's /predict)
-CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout"}
+# What a chat figure may hold: drawings and their captions, and a stepper (todo 113: a step ladder or a loop trace the student clicks
+# through, Back / Next only, no server call); never a Predict (it needs an item and the server's /predict)
+CHAT = {"View", "Geometry", "Graph", "Legend", "Table", "Head", "Text", "Callout", "Steps", "Step"}
 GEO_CAPS = {"pts": 12, "marks": 12, "labels": 6}
 GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2, "label": 1}   # name -> point / number args before the text
 GEO_TEXT = {"dim", "angle", "arrow", "label"}
@@ -1610,7 +1611,7 @@ class Fence(livefig.Fence):
             return super()._block(lang, body)
         if self.ctx is None or not on():
             return self.log.append("views-off") or ""
-        if self.shown:
+        if self.shown >= livefig.FIGS_MAX:
             return self.log.append("second") or ""
         prog, why = gate(body, self.ctx, self.stage)
         self.log.append("oui:" + ",".join(why))

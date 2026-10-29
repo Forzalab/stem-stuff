@@ -1944,7 +1944,7 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         rows = cluck_noted(p, sid, turn[0], xyz)
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
-                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer), imgs=fig_images(p))
+                  code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
 
@@ -2205,7 +2205,7 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                                  headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
                                           "content-type": "application/json"})
     plain, head, held, used = Plain(), True, "", {"input_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "out": 0, "w1h": 0}
-    t0, said = time.time(), False
+    t0, said, stop = time.time(), False, ""
     try:
         with urllib.request.urlopen(req, timeout=25) as r:
             for raw in r:
@@ -2226,6 +2226,9 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                     used["w1h"] = int((u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens") or 0)   # 1h writes cost 2x (T62 system block)
                 elif kind == "message_delta":
                     used["out"] = int((ev.get("usage") or {}).get("output_tokens") or used["out"])
+                    d = ev.get("delta") or {}
+                    if d.get("stop_reason") == "refusal":   # W113: Opus refuses some letter turns (reasoning_extraction): logged, the other arm answers
+                        stop = "refusal:" + str((d.get("stop_details") or {}).get("category") or "-")
                 elif kind == "content_block_delta" and (ev.get("delta") or {}).get("type") == "text_delta":
                     t = ev["delta"].get("text") or ""
                     said = said or bool(t.strip())
@@ -2246,8 +2249,25 @@ def _claude_one(system, messages, max_tokens, arm="-"):
                     yield text
     finally:
         if any(used.values()):
-            claude_add(claude_cost(used))
-            log("claude usage: arm=" + arm + " in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used))
+            usd = claude_cost(used)
+            claude_add(usd)
+            reply_spend(usd)
+            log("claude usage: arm=" + arm + " in={input_tokens} write={cache_creation_input_tokens} read={cache_read_input_tokens} out={out}".format(**used)
+                + f" usd={usd:.5f} model={CLAUDE_MODEL}" + (f" stop={stop}" if stop else ""))
+
+
+# W113 (todo 113, Tony Oct 28: "no cost cap, ill pay": log cost per reply, report weekly): every model call of one Cluck reply adds its $ here
+# (both arms, a refused or empty try, the figure re-ask); the reply's answered line carries the sum (usd=). Per thread = per request.
+_reply_usd = threading.local()
+
+
+def reply_spend(usd=None):
+    """add usd to this request's reply cost (None: reset it to 0); returns the running sum"""
+    if usd is None:
+        _reply_usd.v = 0.0
+    else:
+        _reply_usd.v = getattr(_reply_usd, "v", 0.0) + (usd if isinstance(usd, (int, float)) and math.isfinite(usd) else 0.0)
+    return _reply_usd.v
 
 
 def claude_cost(used):
@@ -2897,12 +2917,48 @@ def _geo_line():
 GEO_LINE = _geo_line()
 
 
+def _view_lines(names):
+    """the lines of views/prompt/all.md for these components, in this order (the generated library prompt: one source of truth)"""
+    try:
+        with open(os.path.join(ROOT, "views", "prompt", "all.md"), encoding="utf-8") as f:
+            lines = [x.strip() for x in f]
+    except OSError:
+        return ""
+    return "\n".join(next((x for x in lines if x.startswith(f"- `{n}(")), "") for n in names).strip()
+
+
+# todo 113 (Tony Oct 28: "use it GENEROUSLY ... IMPRESS THE STUDENT", spec: a visual REQUIRED on every wrong-pick reply and every "Why does
+# this work?" answer; Opus picks the view, may mix 2). W113 A/B (6 items x 5 nudges + baseline, real Opus, scratch REPORT.md): the decision
+# table (v2) put the most visuals on screen, show-first (v1) next; this block = v2's table + v1's placement + v5's minimal ink, with the
+# chat views' signatures and in-order examples (Opus wrote name=value args in round 1; the gate dropped them all).
+V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
+            "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
+            "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
+            "- a loop, an array, a trace: a stepper, one pass per step, one table row per pass; the caption names the bad row\n"
+            "- a function, a curve, a rate: a ```fig cartesian with the point marked\n"
+            "- forces, torque, motion: a ```fig scene (every force an arrow); lengths, angles, lever arms: a Geometry\n"
+            "- energy before and after: ```fig bars\n"
+            "- a factor, a ratio, their value vs the right one: a Table, one column for their move, one for the fix\n"
+            "- an algebra chain: a stepper, the broken step named in its caption\n"
+            "- a proof: a Table with base | assume | prove, or a Callout per part\n"
+            "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
+            "Nothing fits: a stepper. Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
+            "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
+            + _view_lines(("Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nExamples:\n"
+            "root = View([t])\nt = Table([\"step\", \"you did\", \"the fix\"], [[\"arm of W\", \"L\", \"half of L\"]])\n"
+            "root = View([s])\ns = Steps(null, [s1, s2], null, [\"i\", \"s\"])\n"
+            "s1 = Step(\"First test: i = 1, s = 0.\", null, null, null, null, null, [[\"1\", \"0\"]])\n"
+            "s2 = Step(\"Add 1. Now i = 2.\", null, null, null, null, null, [[\"1\", \"0\"], [\"2\", \"1\"]])\n"
+            "Numbers in a view: only the question's or the KEY's own; with REVEAL: no, never the final answer or the right letter. Inside a view "
+            "write plain symbols (θ, x², √2), no $; in your own lines put every formula and symbol in $...$.\n")
+
+
 # spec H (the letter's "Draw readily" line): how to draw on the Claude arm. The fixed part (livefig.RULE_V4 + the OpenUI Geometry line) rides
 # in the cached letter block; only livefig.rule_tail (the kinds THIS question allows) is sent uncached (Tony, Oct 22: split + cache).
 # R6d: the letter's order (L44: "an ```openui Geometry view, else a ```fig block"): the openui lead first, then the ```fig rule
 V4_FIG_FIXED = ("\nWhich fence: for lengths, angles, triangles, pivots, lever arms, vectors and positions, an ```openui Geometry view first; "
                 "for the other kinds below, a ```fig block.\nThe ```openui fence (OpenUI Lang, one statement per line, `root = View([fig])`, "
-                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4)
+                "`fig = Geometry(\"A 0,0; B 3,0\", [\"seg(A,B)\"], \"alt\")`):\n" + GEO_LINE + "\n" + livefig.RULE_V4 + "\n" + V4_VIEWS)
 
 
 def v4_fig_howto(fig):
@@ -2978,8 +3034,10 @@ def _v4_deepseek_chunks(v4, key, max_tokens):
                     yield text
     finally:
         if usage:
-            log("deepseek usage: arm=%s in=%s cached=%s out=%s" % (v4["arm"], usage.get("prompt_tokens"),
-                  (usage.get("prompt_tokens_details") or {}).get("cached_tokens"), usage.get("completion_tokens")))
+            usd = usage.get("cost") if isinstance(usage.get("cost"), (int, float)) else 0.0   # OpenRouter's own $ for the call
+            reply_spend(usd)
+            log("deepseek usage: arm=%s in=%s cached=%s out=%s usd=%.5f" % (v4["arm"], usage.get("prompt_tokens"),
+                  (usage.get("prompt_tokens_details") or {}).get("cached_tokens"), usage.get("completion_tokens"), usd))
 
 
 def v4_stream(v4, key, out=None):
@@ -2989,6 +3047,7 @@ def v4_stream(v4, key, out=None):
     if PROMPT_V4 is None:
         return
     out = set() if out is None else out
+    reply_spend()                                # this reply's $ starts at 0 (W113 cost log)
     order = ["claude", "deepseek"] if v4["arm"] == "claude" else ["deepseek", "claude"]
     why = []                                     # each arm that gave up before its first word: "<arm>:<reason>" (the answered line names them)
     for i, name in enumerate(order):
@@ -3012,7 +3071,7 @@ def v4_stream(v4, key, out=None):
                 yield t
             if sent:
                 log(f"cluck v4 {v4['code']}: arm={v4['arm']} answered={name} fallback={name != v4['arm']} reveal={'yes' if v4['reveal'] else 'no'}"
-                    + (f" why={','.join(why)}" if why else ""))
+                    + (f" why={','.join(why)}" if why else "") + f" usd={reply_spend(0):.5f}")
                 return
             log(f"cluck v4 {v4['code']}: fallback from={name} reason=empty")
             why.append(name + ":empty")
@@ -3103,7 +3162,7 @@ def hidden_values(p):
     return livefig.nums(p.get("answer", ""))
 
 
-def fig_ctx(p, answer, chat=False):
+def fig_ctx(p, answer, chat=False, reveal=False):
     """the livefig.Ctx for this reply (Tony, Oct 17: on the Claude path live figures are Cluck's mainstay, every wish and chat reply
     may carry one; this replaces invariant 1's "gaps only" there), None with CLUCK_LIVE_FIGS=0. An authored bank figure stays on
     the question; Cluck's figure sits in his own message. The Ctx holds the givens a figure may show and the hidden unknown it may not."""
@@ -3113,11 +3172,12 @@ def fig_ctx(p, answer, chat=False):
     body = "\n".join("\n".join(m) if isinstance(m, list) else str(m) for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))
     choices = " ".join(c["md"] for c in shown(p) if not c.get("lock")) if p.get("type") == "mc" else ""
     sheet = " ".join(f["tex"] for f in formulas(p.get("code"), sg.get("part")))
-    hidden_vals = hidden_values(p)
+    hidden_vals = [] if reveal else hidden_values(p)   # W113: REVEAL yes (solved, out of tries): the words show the answer, so may a view
     nets = " ".join(network_data(b) for b in p.get("body", []) if b.get("type") == "graph")   # edge weights are givens
     subject = (_index().get("prof", {}).get(p.get("code")) or {}).get("subject")   # the kinds a figure may be (fail closed)
     return livefig.context(p["code"], body, sg.get("key", ""), hidden_vals, choices + " " + sheet + nets, subject, livefig.vertices(p.get("body", [])),
-                           any(b.get("kind") == "network" for b in p.get("body", [])))   # drawn: its own graph is on screen
+                           max((len(b.get("edges") or []) for b in p.get("body", []) if b.get("kind") == "network"), default=0) or
+                           any(b.get("kind") == "network" for b in p.get("body", [])))   # drawn: its own graph is on screen (its edge count)
 
 
 def _stream_head(cookie_header):
@@ -3615,7 +3675,7 @@ def chat(cookie_header, body):
         if v4_on():
             rows = cluck_noted(p, sid, turn[0], xyz_block(n))
             v4 = dict(turns=v4_chat_turns(p, pick, history, rows), reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), pick)), code=p["code"], arm=cluck_arm(sid),
-                      bank=bank_block(p), fig=fig_ctx(p, pick, chat=True), imgs=fig_images(p))
+                      bank=bank_block(p), fig=fig_ctx(p, pick, chat=True, reveal=turn[1]), imgs=fig_images(p))
         yield from _cluck_stream(context + turns, key, 250, fig_ctx(p, pick, chat=True), v4=v4, out=out)
     return _relay(p, chunks, "chat", head)
 

@@ -2690,7 +2690,7 @@ class DrawRule(unittest.TestCase):
         self.assertLess(fixed.index("```openui"), fixed.index("```fig"))
         self.assertLess(fixed.index(serve.GEO_LINE), fixed.index(serve.livefig.RULE_V4))
         self.assertNotIn("\nOr a ```openui", fixed)                            # openui is not the afterthought
-        self.assertTrue(fixed.endswith(serve.livefig.RULE_V4))
+        self.assertTrue(fixed.endswith(serve.livefig.RULE_V4 + "\n" + serve.V4_VIEWS))   # todo 113: the VISUALS block closes it
 
     def test_split_fixed_cached_tail_uncached(self):
         sys_ = self.system(self.v4(self.ctx()))

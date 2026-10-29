@@ -378,7 +378,14 @@ try {
     // the stub is still streaming (a piece every 150 ms) and only its 3rd piece (the $$ block) overflows 3 lines: wait for the whole reply
     // in the peek (its last piece), then check the fade (todo 94: read after piece 1 only, a 2-line peek, no overflow yet)
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector(".cl-peek .cl-steps")?.textContent || ""), null, { timeout: 6000 });
-    assert.equal(await page.$eval(".cl-peek .cl-steps", s => s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient")), true, "the rest fades under a gradient");
+    // W113: under 3-lane load the peek is redrawn a frame later (peekText: one draw a frame) and its fonts settle late, so one read right
+    // after the text shows was red on main and branch alike (1 in 6 each, 6 parallel runs): wait for the overflow itself, then assert
+    const fade = () => page.$eval(".cl-peek .cl-steps", s => s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient"));
+    const diag = () => page.$eval(".cl-peek .cl-steps", s => `${s.scrollHeight}/${s.clientHeight} fonts=${document.fonts.status} katex=${!!s.querySelector(".katex")}`);
+    try {
+      await page.waitForFunction(() => { const s = document.querySelector(".cl-peek .cl-steps"); return !!s && s.scrollHeight > s.clientHeight; }, null, { timeout: 6000 });
+    } catch (e) { throw new Error("the peek never overflowed: " + await diag()); }
+    assert.equal(await fade(), true, "the rest fades under a gradient: " + await diag());
     await page.evaluate(() => { window.__said = []; });
     await page.click(".cl-peek .cl-cta");
     assert.equal(await page.$(".cl-peek"), null, "open again: the peek steps aside");
