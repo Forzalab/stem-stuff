@@ -84,6 +84,13 @@ export function qPick(st, pool, topicOf = family) {
   if (ready.length) return out(ready.sort(best)[0], "score");
   return out([...live].sort(soon)[0], "soonest");
 }
+/* todo 121 (live served PHYS_C3Z, the `a` twin of PHYS_WYS, to a fresh device): the deck (ramp / qPick pool) holds back an `a` / `b`
+   twin (parent_template) until its template has a graded miss (seen[tpl].miss). A twin whose template is not in the deck plays.
+   The night-before mock keeps its own twin pick (mockList). */
+export function twinGate(codes, itemOf, seen = {}) {
+  const has = new Set(codes);
+  return codes.filter(c => { const t = (itemOf(c) || {}).parent_template; return !t || !has.has(t) || !!(seen[t] && seen[t].miss); });
+}
 /* a showing starts: the slot moves on; its first pick is still to come. redeem = it came back owing a miss (D60/D61 data flag). */
 export function qShow(st, code) {
   st.pos += 1;
