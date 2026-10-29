@@ -477,6 +477,25 @@ class BenchCases(unittest.TestCase):
         self.assertEqual(ticks(views_gate.gate(src, ctx, "post")[0])[10], "L4 i=4 s=10")
 
 
+class Robust(unittest.TestCase):
+    def test_model_text_never_crashes_the_gate(self):
+        import random
+        rnd = random.Random(7)
+        srcs = [ROD, *(b[3] for b in BENCH.values())]
+        for n in range(400):
+            src = rnd.choice(srcs)
+            i = rnd.randrange(len(src))
+            bad = src[:i] + rnd.choice(["", "(", ")", '"', ",", "x", "1e3", "@", ".", " "]) + src[i + rnd.randrange(1, 4):]
+            views_gate.scene_errors(bad, CTX, rnd.choice(["pre", "wrong", "post", "bogus"]))
+            views_gate.gate(bad, CTX, "wrong")
+
+    def test_a_crash_inside_the_checker_is_a_dropped_scene(self):
+        from unittest import mock
+        with mock.patch.object(views_gate._Scene, "check_rels", side_effect=KeyError("boom")):
+            self.assertIn("scene: schema: unreadable scene (KeyError)", views_gate.scene_errors(ROD, CTX))
+            self.assertEqual(views_gate.gate(ROD, CTX)[0], None)
+
+
 class Repair(unittest.TestCase):
     BAD = ROD.replace('"add dT", "glow dT"', '"add dT dW", "glow dT"')
 

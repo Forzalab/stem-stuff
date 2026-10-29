@@ -839,6 +839,8 @@ class _Scene:
 
     def obj_Shape(self, i, p):
         kind = p.get("kind")
+        if kind not in GEOM:
+            return self.err(i, "schema", f"no Shape kind {kind}")
         g = self.geom(i, kind, p.get("geom") or "", GEOM[kind]) or {}
         for k, v in g.items():
             if k in ("from", "to"):
@@ -865,6 +867,8 @@ class _Scene:
 
     def obj_Link(self, i, p):
         kind = p.get("kind")
+        if kind not in LINK_GEOM:
+            return self.err(i, "schema", f"no Link kind {kind}")
         g = self.geom(i, kind, p.get("geom") or "", LINK_GEOM[kind]) or {}
         self.place(i, p.get("from") or "", i)
         self.place(i, p.get("to") or "", i, rel_ok=kind in ("vector", "arrow"))
@@ -1431,7 +1435,12 @@ class _Env:
 def scene_check(steps_el, ctx, stage="wrong"):
     """(errors, ticks) for one Steps whose fig is a Scene: errors = ["<where>: <code>: <detail>", ...] (empty = good), ticks = the
     server-filled Trace ticks {trace id: [tick, ...]} (answer values masked before a solve)"""
-    s = _Scene(steps_el, ctx, stage).run()
+    s = _Scene(steps_el, ctx, stage)
+    try:
+        s.run()
+    except Exception as e:  # noqa: BLE001  (model text that trips the checker is a dropped scene, never a 500)
+        print("views_gate: scene check crash:", type(e).__name__, file=sys.stderr)
+        s.err("scene", "schema", f"unreadable scene ({type(e).__name__})")
     return [f"{w}: {c}: {d}" for w, c, d in s.errs], s.ticks
 
 
