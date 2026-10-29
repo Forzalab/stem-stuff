@@ -166,7 +166,8 @@ digit   = "0".."9" ;
   `pi`, or `x` (only inside an Axes `curve`, error `expr-name` elsewhere). `ref` = a solved prop of a Shape or Link (`x`,`y` = its
   `at` point, `len` = a Link's length).
 - Limits: ≤80 characters, ≤8 nested parens/calls. Errors: `expr-parse` (syntax), `expr-name` (unknown name or func, wrong arg count),
-  `expr-value` (division by zero, sqrt of a negative, non-finite, or |value| > 10000).
+  `expr-value` (division by zero, sqrt of a negative, a non-finite step, or a FINAL value with |value| > 10000; a middle step may pass
+  10000: `397*90/516` is fine).
 
 Conformance vectors (both ports run these; `error` = the code that must be raised; Q values `L=10 T1=100 a=2`):
 ```json
@@ -175,7 +176,8 @@ Conformance vectors (both ports run these; `error` = the code that must be raise
  ["sin(rad(30))", 0.5], ["cos(0)", 1], ["pi", 3.141592653589793], [".5*4", 2], ["10/4", 2.5],
  ["1e3", "expr-parse"], ["2x", "expr-parse"], ["2**3", "expr-parse"], ["(1+2", "expr-parse"], ["", "expr-parse"],
  ["1/0", "expr-value"], ["sqrt(-1)", "expr-value"], ["10001", "expr-value"], ["nope+1", "expr-name"], ["foo(1)", "expr-name"],
- ["sqrt(1,2)", "expr-name"], ["min(1)", "expr-name"], ["x+1", "expr-name"]]
+ ["sqrt(1,2)", "expr-name"], ["min(1)", "expr-name"], ["x+1", "expr-name"],
+ ["T1*T1*2/4", 5000], ["T1*T1+1", "expr-value"]]
 ```
 (`x+1` is an error here because the vectors run outside a curve.)
 
@@ -260,12 +262,14 @@ Step rules (gate; each a test in tests/test_views_gate.py):
 
 Order: parse → schema + caps → ids/refs → relations acyclic + exprs parse/eval → Trace run → ops + step rules → leak → captions.
 
-Leak (hidden stages only; post skips it). The answer set A = the item's hidden values (livefig ctx answers) ∪ every `answer` Q's value.
-Unit variants of a value v: v·10^k (k = -6..6), v·60, v/60, v·3600, v/3600. A number n *hits* A when it is within 0.5% of a variant of
-some a ∈ A, or equal to it at 3 significant figures.
+Leak (hidden stages only; post skips it). The answer set A = the item's hidden values (livefig ctx answers, without the mantissa copies
+livefig adds: those are unit variants) ∪ every `answer` Q's value that no `given` Q shares (a value the problem already shows is no secret).
+Unit variants of a value v: v·10^k (k = -6..6, k ≠ 0), v·60, v/60, v·3600, v/3600. A number n *hits* A when, for some a ∈ A, n is within
+0.5% of a or equal to it at 3 significant figures; or n is within 0.5% / 3 significant figures of a unit variant of a and n is not a
+given (livefig ctx givens, integers 0..12).
 - `leak-q`: a `given` value or an evaluated `derived` value hits A (re-role it as `answer`, or drop it).
 - `leak`: a number written in any string (caption, label, row, Ask q/choices, Bars label, axis label/range, marker value, code line,
-  op value, geom value) hits A.
+  geom value, a `set` op's value or a `param` value) hits A. Ids and indices (`tick`, `hl`, `ptr.*`, `segments`) are no quantity.
 - `not-given` (strings only: captions, labels, rows, Ask, axis labels): a number that is not a given (livefig ctx givens), not an
   integer 0..12, and not the value of a non-leaking `derived` Q at 3 significant figures.
 - Trace ticks: values that hit A are written as `?` by the gate in hidden stages (not an error).
