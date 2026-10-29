@@ -92,9 +92,9 @@ const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where
   { status: r && r.status, phase: timedOut(e) ? "timeout" : "headers", server: xInc(r)[0], trace_id: xInc(r)[2] || traceOf(tp), err: e, ms: Date.now() - t0, path, ...x });
 /* a press that cannot move says why (nav.js "drill:note", load()): a note under Next, else the entry line (never silent, T16).
    Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast. For its 2 s it may lie on the brainrot link and
-   on the HUD's empty tap layer (.rw-tap, the phone's full-width level row), never on the HUD's pieces, the question card or the answer
-   area (Tony, Oct 29: stepped down onto the card's title it "looks buggy"); no such room = the entry line */
-const NOTE_NEXT = { allow: ".rot-link, .rw-tap", clear: "#rwHud .rw-coin, #rwHud .rw-star, #rwHud .rw-bar i, #rwHud .rw-to, #rwHud .rw-streak, #rwHud .rw-counts, #problem, #q" };   // the bar: its fill (the track is the page colour)
+   on the level row (the HUD: Tony, Oct 29 "COVER", the phone's full-width row right under Next), never on the question card or the
+   answer area (stepped down onto the card's title it "looks buggy"); no such room = the entry line */
+const NOTE_NEXT = { allow: ".rot-link, .rw-tap", clear: "#problem, #q" };
 function note(text) {
   const at = $("#qnext");
   if (!(at && !at.hidden && at.getClientRects().length && toast(text, at, NOTE_NEXT))) entryMsg(text);
@@ -2531,7 +2531,7 @@ function rwTip(beat, at) {
   if (!rewardOn() || noteAt() || !rwSeen(at)) return false;
   const k = "stem-ob-rw-" + beat, lines = RW_OB[beat];
   try { const n = +localStorage.getItem(k) || 0; if (n >= lines.length) return false;
-    if (!toast(lines[n], at, { x: true })) return false;                         // HUD B (Tony, Oct 28): caret + an X. No place (the cover rule): next time, uncounted
+    if (!toast(lines[n], at, { x: true, allow: ".rot-link" })) return false;                         // HUD B (Tony, Oct 28): caret + an X. It may lie on the brainrot link for its 2 s (the Next note's exception: at 1280 the link sits right under the count). No place: next time, uncounted
     localStorage.setItem(k, n + 1);
     window.stemT?.("_ob", { beat, n: n + 1 }); return true; }                     // intent.js log only ("ob <beat> <n>"): Jev sees which note it just met
   catch { return false; }                                                        // blocked storage: no way to keep it once, so never

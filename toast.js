@@ -164,8 +164,8 @@
      on it (or the X, or Esc: app.js) closes it. One at a time: a new note replaces the old one at once.
      Cover rule strict (Tony, Oct 28): it never lies on a live control. Under its anchor, else above it; a control beside the caret
      narrows it (the words wrap) instead; no place = no note (note() -> false: the caller falls back or tries next time). It may lie on
-     its own anchor, a dead (aria-disabled) control, and `allow` (the Next note: the brainrot link, Tony OK'd for its 2 s, and the HUD's
-     empty tap layer). `clear`: what it must not lie on although it takes no tap (the Next note: the question card, the HUD's pieces).
+     its own anchor, a dead (aria-disabled) control, and `allow` (the Next note: the brainrot link, Tony OK'd for its 2 s, and the level
+     row: "COVER"). `clear`: what it must not lie on although it takes no tap (the Next note: the question card, the answer area).
      The caret always touches its anchor.
      `loose` (the "Copied" note, unchanged from prod): the old placement, which may cover a control.
      note({ text, at, x, ms, prefer: 'under' | 'above', allow, clear, loose }) -> true when it is on screen */
@@ -264,7 +264,7 @@
     nEl.classList.toggle('has-x', !!o.x);
     if (o.x) { var b = d.createElement('button'); b.type = 'button'; b.className = 'toast-x'; b.setAttribute('aria-label', 'Close'); b.innerHTML = X; nEl.appendChild(b); }
     nCur = o;
-    if (!notePlace()) { nCur = null; return false; }
+    if (!notePlace()) { nCur = null; nEl.textContent = ''; nEl.classList.remove('has-x'); return false; }   // no place: nothing left behind to read
     void nEl.offsetWidth; nEl.classList.add('on');
     nArm(o.ms || 2000);
     return true;
