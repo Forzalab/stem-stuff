@@ -26,7 +26,6 @@
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
   --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
-  --fc-tint: color-mix(in srgb, var(--c1) 10%, var(--paper));   /* the Key formulas card's surface (.fcard); the welcome's choices sit on it too (welcome.css) */
   /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
      kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
   --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
@@ -717,7 +716,8 @@ html.side #work > .orig { margin: 0; }
 /* Key formulas (Tony, Oct 5: a textbook recap block, "hybrid of 4 and 5", design/mockups/formula-use.html ?v=7): the site's blue, a 1px
    --c1 frame on a 10% --c1 tint, the bulb + "Key formulas" notched into the top border (its background is the page above the line and the
    tint below, so the line breaks clean), the formulas centred in order of use, a thin arrow between. Not a field: no hover, no caret */
-.fcard { position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--c1); border-radius: 10px; background: var(--fc-tint); }
+.fcard { --fc-tint: color-mix(in srgb, var(--c1) 10%, var(--paper));
+  position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--c1); border-radius: 10px; background: var(--fc-tint); }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
   padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }

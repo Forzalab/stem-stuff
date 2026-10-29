@@ -38,7 +38,7 @@
 
   function mount(host, item, o = {}) {
     const steps = (item && item.repair && item.repair.steps) || [];
-    const el = h("section", "wl");
+    const el = h("section", "wl ai-skin");                                      // Cluck's token scope (app.css .ai-skin): the rim's --ai-line
     el.dataset.fade = "open";
     if (item.stem) el.append(h("p", "wl-stem", item.stem));
     const box = h("div", "wl-ladder");
@@ -51,6 +51,8 @@
       const rp = box.querySelector(".rp");
       if (!rp) return;
       draws++;
+      const line = rp.querySelector(".rp-line");                                // the tab (welcome.css): the duck in front, on every redraw
+      if (line && !line.querySelector(".wl-duck")) line.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true"><use href="#i-duck"></use></svg>');
       const rows = [...rp.querySelectorAll(".rp-step")];
       if (!fadedAt && rows.some(r => r.dataset.state === "done")) { fadedAt = draws; el.dataset.fade = "alone"; }
       if (fadedAt && fadedAt !== draws) return;                                  // after the fading redraw: labels only, for good
