@@ -164,9 +164,11 @@
      on it (or the X, or Esc: app.js) closes it. One at a time: a new note replaces the old one at once.
      Cover rule strict (Tony, Oct 28): it never lies on a live control. Under its anchor, else above it; a control beside the caret
      narrows it (the words wrap) instead; no place = no note (note() -> false: the caller falls back or tries next time). It may lie on
-     its own anchor, a dead (aria-disabled) control, and `allow` (the Next note: the brainrot link, Tony OK'd for its 2 s).
+     its own anchor, a dead (aria-disabled) control, and `allow` (the Next note: the brainrot link, Tony OK'd for its 2 s, and the HUD's
+     empty tap layer). `clear`: what it must not lie on although it takes no tap (the Next note: the question card, the HUD's pieces).
+     The caret always touches its anchor.
      `loose` (the "Copied" note, unchanged from prod): the old placement, which may cover a control.
-     note({ text, at, x, ms, prefer: 'under' | 'above', allow, loose }) -> true when it is on screen */
+     note({ text, at, x, ms, prefer: 'under' | 'above', allow, clear, loose }) -> true when it is on screen */
   var nCur = null, nT = 0, nLeft = 0, nSince = 0, footRoom = function () { return 0; };
   function nMount() {
     if (nEl && nEl.isConnected) return nEl;
@@ -197,7 +199,19 @@
     var row = a.classList.contains('opt') && !!(mr && mr.width);          // on the kept row's words only beside a badge
     var gut = parseFloat(getComputedStyle(d.documentElement).getPropertyValue('--gut')) || 20, vw = d.documentElement.clientWidth;
     var skip = function (e) { return a.contains(e) || e.contains(a) || e.getAttribute('aria-disabled') === 'true' || (!!o.allow && e.matches(o.allow)); };
-    var free = function (x, y, w, h) { return o.loose ? [] : hits(x, y, w, h, skip, true); };
+    /* the live controls under the box, plus `clear`: what it must not lie on although no tap goes there (the Next note: the question
+       card and the answer area's words, the HUD's own pieces beside its empty tap layer) */
+    var free = function (x, y, w, h) {
+      if (o.loose) return [];
+      var out = hits(x, y, w, h, skip, true), cs = o.clear ? d.querySelectorAll(o.clear) : [];
+      for (var i = 0; i < cs.length; i++) {
+        var r = cs[i].getBoundingClientRect();
+        if (r.width < 2 || r.height < 2 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
+        if (cs[i].checkVisibility && !cs[i].checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+        out.push(r);
+      }
+      return out;
+    };
     t.classList.toggle('row', row);
     if (row) {
       t.classList.remove('up');
@@ -213,11 +227,11 @@
     var sides = o.prefer === 'above' ? ['above', 'under'] : ['under', 'above'];
     if (o.loose) sides = [o.prefer === 'above' || b.bottom + 12 + t.offsetHeight > bottom ? 'above' : 'under'];   // the old rule
     for (var i = 0; i < sides.length; i++) {
-      var lo = gut, hi = vw - gut, up = sides[i] === 'above', y0 = up ? b.top - 12 : b.bottom + 12, step = 0;
+      var lo = gut, hi = vw - gut, up = sides[i] === 'above';
       t.style.maxWidth = '';
-      for (var k = 0; k < 6; k++) {
+      for (var k = 0; k < 4; k++) {
         var w = t.offsetWidth, h = t.offsetHeight;
-        var x = Math.round(Math.min(Math.max(lo, right ? b.right - w : b.left), hi - w)), y = Math.round(up ? y0 - step - h : y0 + step);
+        var x = Math.round(Math.min(Math.max(lo, right ? b.right - w : b.left), hi - w)), y = Math.round(up ? b.top - 12 - h : b.bottom + 12);
         if (!o.loose && (y < top || y + h > bottom)) break;
         var hit = free(x, y, w, h);
         if (!hit.length) {
@@ -226,15 +240,13 @@
           t.style.setProperty('--px', Math.max(18, Math.min(w - 18, mx - x)) + 'px');
           return true;
         }
-        /* a control beside the caret: keep clear of it and let the words wrap. One right where the caret points (a full-width
-           row, the phone HUD under Next): step past it, caret still on the anchor, at most 72px out */
-        var past = 0;
+        /* something beside the caret: keep clear of it and let the words wrap. Something right where the caret points: this side is
+           out (the caret always touches its anchor: Tony, Oct 29, a note stepped 70px down from Next "looks buggy") */
         for (var j = 0; j < hit.length; j++) {
           if (hit[j].right <= mx - 18) lo = Math.max(lo, Math.ceil(hit[j].right) + 8);
           else if (hit[j].left >= mx + 18) hi = Math.min(hi, Math.floor(hit[j].left) - 8);
-          else past = Math.max(past, up ? y0 - hit[j].top + 8 : hit[j].bottom + 8 - y0);
+          else lo = Infinity;
         }
-        if (past) { if (past > 72 || past <= step) break; step = Math.ceil(past); lo = gut; hi = vw - gut; t.style.maxWidth = ''; continue; }
         if (hi - lo < 160 || mx < lo + 18 || mx > hi - 18) break;
         t.style.maxWidth = 'min(26rem, ' + (hi - lo) + 'px)';
       }

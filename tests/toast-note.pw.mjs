@@ -61,6 +61,7 @@ async function pick(p, id) {
 }
 /* the note with this text, held (a pointer rests on it, so its 2 s timer waits), read in the same in-page poll that finds it */
 const note = (p, text) => p.waitForFunction(t => { const e = document.querySelector("#toast.on"); if (!e || e.textContent.trim() !== t) return false;
+  if (e.getAnimations().length) { e.dispatchEvent(new PointerEvent("pointerenter")); return false; }   // read it at rest (its slide-in done)
   e.dispatchEvent(new PointerEvent("pointerenter"));
   const r = e.getBoundingClientRect(), x = e.querySelector(".toast-x");
   return { r: r.toJSON(), up: e.classList.contains("up"), row: e.classList.contains("row"), x: x ? x.getBoundingClientRect().toJSON() : null,
@@ -149,20 +150,36 @@ try {
   }
 
   /* Next "stacked" (Tony Oct 28: "the stacked one"): the note keeps its caret under Next and shows beside a stage toast, not after it;
-     it may lie on the brainrot link for its 2 s (Tony OK'd), nothing else */
-  for (const [w, h] of [[1440, 900], [1366, 768], [390, 844], [844, 390]]) {
-    await step(`${w}x${h} Next note stacked: caret under Next, no X, beside the stage toast, only the brainrot link under it`, async () => {
+     it may lie on the brainrot link and the HUD's empty tap layer for its 2 s, nothing else. Tony Oct 29 ("looks buggy"): on a phone
+     it had stepped 70px down past the HUD row onto the question card; now its caret touches Next and it never lies on the card, the
+     answer area or the HUD's pieces */
+  for (const [w, h] of [[1440, 900], [1366, 768], [390, 844], [360, 740], [844, 390]]) {
+    await step(`${w}x${h} Next note stacked: caret under Next, no X, beside the stage toast, only the brainrot link / HUD tap layer under it`, async () => {
       const { c, p, errors } = await open(w, h, { code: "BANK_TNO", seen: true });
       await p.evaluate(() => { window.Rewards.config({ goal: 4 }); window.stemToast.clear(); const R = window.Rewards; R.mastery({ type: "miss", tpl: "Q1", b: false });
         R.mastery({ type: "repair_done", tpl: "Q1" }); R.mastery({ type: "twin_a", tpl: "Q1", ok: true }); });
       const s = await stageUp(p).catch(() => null);
       if (s) await p.evaluate(() => document.querySelector(".stoast.on").dispatchEvent(new PointerEvent("pointerenter")));   // its 4 s wait: a loaded runner must not time it out before the click lands
       await p.click("#qnext");
+      if (w === 844) {   /* a landscape phone: 43px between Next and the question card, the note is 52px: no room, so no note, and the press
+                            is still answered where the eye can see it (the entry line under the code bar; T16 never silent) */
+        await p.waitForFunction(() => { const m = document.querySelector("#entryMsg"); return m.textContent === "This is the only question here." && m.checkVisibility(); }, null, { timeout: 4000 });
+        assert.equal(await p.evaluate(() => !!document.querySelector("#toast.on")), false, "no note squeezed onto the card");
+        assert.deepEqual(errors, []);
+        await c.close();
+        return;
+      }
       const n = await note(p, "This is the only question here.");
       const a = await rect(p, "#qnext");
       assert.ok(Math.abs(n.mid - (a.left + a.width / 2)) < 2 && n.r.top >= a.bottom && !n.up, "caret under Next " + JSON.stringify([n, a]));
       assert.equal(n.x, null, "no X");
-      assert.deepEqual(await under(p, "#toast", "#qnext, .rot-link"), [], "over a control");
+      assert.deepEqual(await under(p, "#toast", "#qnext, .rot-link, .rw-tap"), [], "over a control");
+      /* the caret's tip (app.css: a 14px square, 45 deg, top -8px -> its tip ~11px over the box) within 8px of Next's bottom edge */
+      assert.ok(Math.abs(n.r.top - 11 - a.bottom) <= 8, `${w}: caret touches Next (tip ${n.r.top - 11}, Next bottom ${a.bottom})`);
+      const off = await p.evaluate(() => { const t = document.querySelector("#toast").getBoundingClientRect();
+        return ["#problem", "#q", "#rwHud .rw-coin", "#rwHud .rw-star", "#rwHud .rw-bar i", "#rwHud .rw-to", "#rwHud .rw-streak"].filter(s => { const e = document.querySelector(s); if (!e || !e.checkVisibility()) return false;
+          const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1 && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top; }); });
+      assert.deepEqual(off, [], `${w}: on the question card / answer area / the HUD's pieces`);
       if (s) assert.equal(await p.evaluate(() => !!document.querySelector(".stoast.on")), true, "stacked: the stage toast stays up beside it");
       assert.deepEqual(errors, []);
       await c.close();

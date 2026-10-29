@@ -91,10 +91,13 @@ const xInc = r => (r && r.headers.get("x-incident") || "").trim().split(/\s+/);
 const reqInc = (where, path, t0, { r, e, why, tp, ...x } = {}) => incident(where, why || xInc(r)[1] || (r ? "http" : timedOut(e) ? "timeout" : x.phase === "parse" ? "parse" : "network"),
   { status: r && r.status, phase: timedOut(e) ? "timeout" : "headers", server: xInc(r)[0], trace_id: xInc(r)[2] || traceOf(tp), err: e, ms: Date.now() - t0, path, ...x });
 /* a press that cannot move says why (nav.js "drill:note", load()): a note under Next, else the entry line (never silent, T16).
-   Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast; it may lie on the brainrot link for its 2 s */
+   Tony's pick "the stacked one" (Oct 28): caret under Next, no X, beside a stage toast. For its 2 s it may lie on the brainrot link and
+   on the HUD's empty tap layer (.rw-tap, the phone's full-width level row), never on the HUD's pieces, the question card or the answer
+   area (Tony, Oct 29: stepped down onto the card's title it "looks buggy"); no such room = the entry line */
+const NOTE_NEXT = { allow: ".rot-link, .rw-tap", clear: "#rwHud .rw-coin, #rwHud .rw-star, #rwHud .rw-bar i, #rwHud .rw-to, #rwHud .rw-streak, #rwHud .rw-counts, #problem, #q" };   // the bar: its fill (the track is the page colour)
 function note(text) {
   const at = $("#qnext");
-  if (!(at && !at.hidden && at.getClientRects().length && toast(text, at, { allow: ".rot-link" }))) entryMsg(text);
+  if (!(at && !at.hidden && at.getClientRects().length && toast(text, at, NOTE_NEXT))) entryMsg(text);
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
 addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (cl && cl.open) clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
