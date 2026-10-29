@@ -6,7 +6,8 @@
        answer = the full card's display string for an answer step with no key on the device (else its worked value)
        error = the slip family (slipMatch / a `wrong` entry: "sign", "drop+sign"), "SLIP_TIE" or null; sheet = { id: tex } for `sheet` steps
        grade(value, n) -> Promise<{ ok, answer? }>: grades a step that has no `ok` (the answer step: its key never ships, TONY-DECISIONS #29.7;
-       the host wires it to POST /repair/<code>/check). Such a pick step with no `opts` shows the item's own choices. Steps with `ok` grade here
+       the host wires it to POST /repair/<code>/check). Such a step takes the item's own type (a twin shares its template's ladder): mc = a
+       pick of the item's choices, num = a number box; another type keeps the ladder's kind. Steps with `ok` grade here
        n = the 1-based try on that step; an `answer` (display string, 2nd miss, #33 A) = the worked solution: stem + answer, try struck, no hue
        on: repair_done { why_ok, variant, ladder, auto } · repair_skip { variant } · repair_next { } (full, after the study pause)
    Repair.blankStep(item, error)    the step id the slip lives in, or null (= the fallback ladder). stemJev.repairBlank's signature
@@ -65,7 +66,10 @@
     const blank = variant === "repair" || alt ? blankOf(steps, o.error) : null;
     const fam = steps.findIndex(s => s.why && s.fam);
     const whyAt = full ? -1 : blank ? steps.findIndex(s => s.id === blank) : welcome && fam >= 0 ? fam : 0;
-    const S = steps.map((st, i) => ({
+    const keyless = st => st.id !== "answer" || st.ok != null ? st             // a twin shares its template's ladder (todo 117): the answer step
+      : item.type === "mc" ? { ...st, kind: "pick", opts: item.choices }        // with no key takes the SHOWN item's type, not the ladder's kind
+      : item.type === "num" ? { ...st, kind: "num", opts: undefined, tol: item.tol } : st;
+    const S = steps.map(keyless).map((st, i) => ({
       st, i, worked: full || (!welcome && st.id !== "answer" && st.id !== blank),
       ask: i === whyAt && !!st.why, state: full ? "done" : "future", ok: false, why: null, tried: new Set(), whyTried: new Set(), miss: "", auto: false
     }));

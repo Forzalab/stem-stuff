@@ -78,6 +78,7 @@ weight() {
     noob) echo 15 ;;   # local run ~15s
     mock) echo 12 ;;   # W103b night-before mock, local run ~10 s
     repair) echo 5 ;;   # C2 local run ~4 s (estimate until CI timing)
+    repair-twin) echo 3 ;;   # W117 keyless answer step takes the shown item's type, local run ~2 s (estimate until CI timing)
     login) echo 5 ;;   # local run ~7 s
     proof) echo 8 ;;   # W107 proof box, local run (estimate until CI timing)
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
@@ -107,6 +108,7 @@ tags() {
     why-chip) echo "@logic @real-time" ;;
     mock) echo "@logic @real-time" ;;   # W103b; waits out the ~0.7 s wrong-answer peek for real
     repair) echo "@layout @fast-time" ;;   # C2 repair ladder lab; installs page.clock for the 10 s study gate
+    repair-twin) echo "@logic @real-time" ;;   # W117 mc template + num twin on one ladder; stub grader, no clock
     login) echo "@logic @real-time" ;;
     proof) echo "@logic @real-time" ;;   # W107 proof box + stub grader
     brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
