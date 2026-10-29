@@ -173,6 +173,26 @@ test("bars: conserve stacks the items in one outline of height total; a param dr
   close(frame(m, 2, "wrong", { doc: makeDocument() }).bars.en.segs[0].h, 0, 1e-9);
 });
 
+test("axes and bars read the same env as every other expression: Q ids and id.prop refs (§3 ref)", () => {
+  const m = parse(prog(['Shape("a", "rect", "w=2 h=1", "0,0")', 'Axes("ax", "0,4 x", "0,a.w*4 y", ["f curve a.w*x"])', 'Bars("b", ["one: a.w", "two: 1"])']));
+  const f = frame(m, 0, "wrong", { doc: makeDocument() });
+  assert.ok(Math.max(...f.ticks.ax.y) >= 5, `y runs 0..a.w*4 = 0..8 (an unread ref falls back to 0..1): ${f.ticks.ax.y}`);
+  const curve = all(f.svg, n => (n.getAttribute("class") || "").startsWith("sc-curve"))[0];
+  assert.ok(curve && curve.childNodes.length === 1, "the curve drew");
+  close(f.bars.b.segs[0].h / f.bars.b.segs[1].h, 2, 1e-9);
+});
+
+test("cells: a grid highlights by r.c or by a plain index read row-major; a pointer moves with set ptr", () => {
+  const m = parse(prog(['Cells("g", "grid", ["1 2", "3 4"], "p:0.1")'], [], [],
+    [["You see it. Where?", ["add g"]], ["Look.", ["glow g"], 'Ask("Which?", ["a", "b"])'], ["Now this.", ["set g hl 3"]], ["Move it.", ["set g ptr.p 1.0"]]]));
+  const hl = k => all(frame(m, k, "wrong", { doc: makeDocument() }).svg, n => (n.getAttribute("class") || "") === "sc-cell hl");
+  assert.equal(hl(0).length, 0);
+  assert.equal(hl(2).length, 1);
+  const f3 = frame(m, 3, "wrong", { doc: makeDocument() }), f2 = frame(m, 2, "wrong", { doc: makeDocument() });
+  const at = f => f.labels.find(l => l.text === "p").box;
+  assert.ok(at(f3)[1] > at(f2)[1], "the pointer went down a row");
+});
+
 // ─── label placer ───
 test("placer: deterministic, every label inside the figure, no two labels overlap (all five cases, every step, both stages)", () => {
   const all5 = cases();

@@ -1794,7 +1794,7 @@ const figKey = j => { let k = figJSON.indexOf(j); if (k < 0) { k = figJSON.lengt
 /* a view (P4.1, views_gate.py): the server sends gated OpenUI Lang programs (with ```fig, at most two visuals a reply, todo 113) as "\n```openui\n<program>\n```\n", in the
    same one-figure slot; its key is the program behind a \u0002 mark. wishFigs draws it with views.js (loaded lazily); nothing drawn: its alt text. */
 const WOUI = /\n?```openui\n([\s\S]*?)\n```\n?/g, OUI = "\u0002";
-const ouiAlt = s => (/^\w+ = Geometry\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";
+const ouiAlt = s => (/^\w+ = (?:Geometry|Scene)\(.*,\s*"((?:[^"\\]|\\.)*)"\)\s*$/m.exec(s) || [])[1] || "";   // a Scene's alt is its last arg too (todo 120)
 const stripFigs = t => t.replace(WFIG, "\n").replace(WOUI, "\n").replace(/```[\s\S]*$/, "");
 /* the static fallback (todo 113 spec, Tony Oct 28: "a STATIC IMAGE of the same visual, never an error box"): every view, once drawn, is drawn
    again off screen at STATIC_W px and kept as an image (SVG foreignObject, its computed look inlined). A phone too narrow for the view (the

@@ -393,6 +393,7 @@ export function solve(model, st, mix = null) {
   }
   for (const r of model.rels) if (r.word === "scale") scale(r.args);
   S.dump = () => dumpOf(S);
+  S.look = look;
   return S;
 
   function solveShape(o) {
@@ -860,7 +861,7 @@ export function frame(model, k, stage = "wrong", opts = {}) {
   }
   function drawAxes(o, B, gAttrs) {
     const id = o.id, rng = t => { const m = /^\s*([^,\s]+)\s*,\s*(\S+)(?:\s+(.*))?$/.exec(String(t || "")); if (!m) return { lo: 0, hi: 1, lab: "" };
-      let lo = 0, hi = 1; try { lo = exprEval(m[1], k2 => (model.qs.has(k2) ? S.q.get(k2) : undefined)) ?? 0; hi = exprEval(m[2], k2 => (model.qs.has(k2) ? S.q.get(k2) : undefined)) ?? 1; } catch { /* */ }
+      let lo = 0, hi = 1; try { lo = exprEval(m[1], S.look) ?? 0; hi = exprEval(m[2], S.look) ?? 1; } catch { /* */ }
       return { lo, hi: hi > lo ? hi : lo + 1, lab: m[3] || "" }; };
     const xr = rng(o.p.x), yr = rng(o.p.y);
     const P = { x: B.x + 34, y: B.y + 16, w: B.w - 34 - 12, h: B.h - 16 - 24 };
@@ -874,7 +875,7 @@ export function frame(model, k, stage = "wrong", opts = {}) {
     for (const v of xt) { const [x] = XA(v, yr.lo); kids.push(el(doc, "line", { class: "sc-grid", x1: r2(x), y1: r2(P.y), x2: r2(x), y2: r2(P.y + P.h) }), Math.abs(v - xr.lo) < 1e-9 && yt.length ? null : el(doc, "text", { class: "sc-tick", x: r2(x), y: r2(P.y + P.h + 15), "text-anchor": "middle" }, fmt3(v))); }
     for (const v of yt) { const [, y] = XA(xr.lo, v); kids.push(el(doc, "line", { class: "sc-grid", x1: r2(P.x), y1: r2(y), x2: r2(P.x + P.w), y2: r2(y) }), el(doc, "text", { class: "sc-tick", x: r2(P.x - 5), y: r2(y + 4.5), "text-anchor": "end" }, fmt3(v))); }
     kids.push(arrowEl(doc, [P.x, P.y + P.h], [P.x + P.w + 8, P.y + P.h], 1.5, "sc-axis"), arrowEl(doc, [P.x, P.y + P.h], [P.x, P.y - 8], 1.5, "sc-axis"));
-    const f = new Map(), ev2 = (t, x) => { try { return exprEval(t, k2 => (model.qs.has(k2) ? S.q.get(k2) : undefined), { allowX: x != null, x }); } catch { return null; } };
+    const f = new Map(), ev2 = (t, x) => { try { return exprEval(t, S.look, { allowX: x != null, x }); } catch { return null; } };
     const items = [...model.items.values()].filter(it => it.ax === id);
     for (const it of items) if (it.kind === "curve") f.set(it.id, x => ev2(it.rest, x));
     for (const it of items) if (it.kind === "line") { const pts = it.rest.split(";").map(s => splitTop(s, ",").map(t => ev2(t.trim()))); f.set(it.id, x => { for (let i = 1; i < pts.length; i++) if (x <= pts[i][0] + 1e-12) { const [a, b] = [pts[i - 1], pts[i]]; return a[1] + (b[1] - a[1]) * (x - a[0]) / ((b[0] - a[0]) || 1); } return pts[pts.length - 1][1]; }); }
@@ -938,7 +939,7 @@ export function frame(model, k, stage = "wrong", opts = {}) {
   }
   function drawBars(o, B, gAttrs) {
     const id = o.id, items = (o.p.items || []).map(s => /^\s*([^:]+?)\s*:\s*(.+)$/.exec(String(s))).filter(Boolean);
-    const val = t => { try { return exprEval(t, k2 => (model.qs.has(k2) ? S.q.get(k2) : undefined)) ?? 0; } catch { return 0; } };
+    const val = t => { try { return exprEval(t, S.look) ?? 0; } catch { return 0; } };
     const vs = items.map(m => Math.max(0, val(m[2]))), tot = o.p.total != null ? Math.max(0, val(o.p.total)) : vs.reduce((a, b) => a + b, 0);
     const kids = [], data = { outline: null, segs: [] }, focus = glow.has(id) ? " focus" : "";
     if (o.p.conserve) {
@@ -974,7 +975,8 @@ export function frame(model, k, stage = "wrong", opts = {}) {
     const x0 = B.x + (B.w - nc * cs) / 2, y0 = B.y + (B.h - nr * cs) / 2 + 8, kids = [];
     rows.forEach((r, ri) => r.forEach((t, ci) => {
       const idx = kind === "grid" ? `${ri}.${ci}` : kind === "stack" ? String(items.length - 1 - ri) : String(ci);
-      const x = x0 + ci * cs, y = y0 + ri * cs, on = hl === idx;
+      const flat = kind === "grid" ? String(rows.slice(0, ri).reduce((a, rr) => a + rr.length, 0) + ci) : null;
+      const x = x0 + ci * cs, y = y0 + ri * cs, on = hl === idx || (flat != null && hl === flat);
       kids.push(el(doc, "rect", { class: `sc-cell${on ? " hl" : ""}`, x: r2(x), y: r2(y), width: r2(cs), height: r2(cs) }),
         el(doc, "text", { class: "sc-ctext", x: r2(x + cs / 2), y: r2(y + cs / 2 + 5), "text-anchor": "middle" }, t));
       if (kind === "array") kids.push(el(doc, "text", { class: "sc-tick", x: r2(x + cs / 2), y: r2(y + cs + 14), "text-anchor": "middle" }, String(ci)));

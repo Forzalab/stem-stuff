@@ -3,7 +3,8 @@
 //   - two visuals in one reply (a ```fig and an ```openui view: "may mix 2") both draw;
 //   - a Table-only view draws its table (the old "drawn?" check looked for svg / p only and blanked it);
 //   - a stepper (Steps) in a chat view clicks through Back / Next;
-//   - a tiny phone (slot under 300 px) gets a STATIC IMAGE of the same view, never an error box, no horizontal scroll.
+//   - a tiny phone (slot under 300 px) gets a STATIC IMAGE of the same view, never an error box, no horizontal scroll;
+//   - a scene stepper (viz MVP, todo 120: Steps(Scene)) draws live on a desktop and as the same static image on a tiny phone.
 // Starts its own serve.py and fake Claude:   node tests/views-static.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -28,12 +29,25 @@ writeFileSync(join(BANKS, "BANK_VS1.json"), JSON.stringify({ v: 1, problems: [P]
 const GEO = 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1.15", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "angle(A,B,C,30°)", "dim(A,C,1.2 m)", "arrow(P,C,push)"], "The ramp at 30 degrees, the push up it.")';
 const TABLE = 'root = View([t])\nt = Table(["step", "you", "the fix"], [["friction", "added", "taken away"], ["spring", "x", "x squared"]])';
 const STEPS = 'root = View([s])\ns = Steps(null, [s1, s2, s3])\ns1 = Step("Push in: **48 J**.")\ns2 = Step("Friction takes some away.")\ns3 = Step("The spring gets what is left.")';
+// a scene that passes the real gate for this problem (stage wrong): the block on the ramp, the push, then friction after an ask
+const SCENE = `root = View([st])
+st = Steps(sc, [p1, p2, p3])
+sc = Scene([ramp, blk, F, fr], [m], ["on blk ramp.hyp 0.4"], "A block pushed up a rough ramp.")
+ramp = Shape("ramp", "triangle", "base=4 height=2 apex=1", "0,0", null, null, "ground")
+blk = Shape("blk", "rect", "w=0.8 h=0.5", null, "block")
+F = Link("F", "vector", "blk.left", "+1.2,0.6", "push")
+fr = Link("fr", "vector", "blk.bottom", "+-0.9,-0.45", "friction")
+m = Q("m", "given", 2.5, "kg")
+p1 = Step("You picked the big k. Look at the block on the ramp.", null, null, null, null, null, null, ["add ramp blk F", "glow F"])
+p2 = Step("Which way does friction act on the block?", null, null, null, null, null, null, ["glow blk"], Ask("Which way?", ["up the ramp", "down the ramp"]))
+p3 = Step("Draw friction down the ramp, against the motion.", null, null, null, null, null, null, ["add fr", "glow fr"])`;
 const fence = (lang, body) => "```" + lang + "\n" + body + "\n```";
 const REPLIES = {
   two: ["Not quite.\n\nForces on the block:\n", fence("fig", JSON.stringify(FIX.valid[0])) + "\n", "\nAnd the ramp:\n", fence("openui", GEO) + "\n", "\nTry once more."],
   table: ["Not quite.\n\nYour move next to the fix:\n", fence("openui", TABLE) + "\n", "\nTry once more."],
   steps: ["Not quite.\n\nClick through it:\n", fence("openui", STEPS) + "\n", "\nTry once more."],
   geo: ["Not quite.\n\nThe ramp:\n", fence("openui", GEO) + "\n", "\nTry once more."],
+  scene: ["Not quite.\n\nStep through it:\n", fence("openui", SCENE) + "\n", "\nTry once more."],
 };
 let reply = "two";
 const fake = createServer(async (req, res) => {
@@ -110,6 +124,32 @@ try {
     assert.equal(im.alt, "The ramp at 30 degrees, the push up it.");
     assert.equal(im.src, "data:image/svg+xml;chars");
     assert.ok(im.ok, "the image decodes");
+    assert.ok(im.w > 100, `drawn wide enough: ${im.w}`);
+    assert.equal(await has(page, "#cluck .wtext .wview.fig-off"), false);
+    const sc = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+    assert.ok(sc[0] <= sc[1], `no horizontal scroll: ${sc}`);
+    assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  await step("a scene stepper on a desktop: drawn live (svg), Next moves it on, no static image, no error", async () => {
+    const page = await wish("scene", 1280, 900);
+    await page.waitForSelector("#cluck .wtext .wview .vw-scene .vw-sc svg", { timeout: 5000 });
+    assert.match(await page.textContent("#cluck .wview .vw-n"), /Step 1 of 3/);
+    assert.equal(await page.locator('#cluck .wview [data-id="fr"]').count(), 0);
+    await page.click("#cluck .wview .vw-foot button:nth-child(2)");
+    await page.click("#cluck .wview .vw-foot button:nth-child(2)");
+    await page.waitForSelector('#cluck .wview [data-id="fr"]', { timeout: 2000 });
+    assert.equal(await has(page, "#cluck .wtext img.vw-static"), false);
+    await noRaw(page);
+    assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  await step("a scene stepper on a tiny phone (280 px): the static image of the same scene, its alt, no error box, no sideways scroll", async () => {
+    const page = await wish("scene", 280, 640);
+    await page.waitForSelector("#cluck .wtext .wview img.vw-static", { timeout: 6000 });
+    const im = await page.$eval("#cluck .wtext .wview img.vw-static", i => ({ alt: i.alt, ok: i.complete && i.naturalWidth > 0, w: i.getBoundingClientRect().width, svg: decodeURIComponent(i.src).includes("sc-") || decodeURIComponent(i.src).includes("<svg") }));
+    assert.equal(im.alt, "A block pushed up a rough ramp.");
+    assert.ok(im.ok && im.svg, "the image decodes and holds the drawn scene");
     assert.ok(im.w > 100, `drawn wide enough: ${im.w}`);
     assert.equal(await has(page, "#cluck .wtext .wview.fig-off"), false);
     const sc = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);

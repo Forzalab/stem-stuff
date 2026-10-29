@@ -91,3 +91,14 @@ Picked from five mockups (A–E); this is variant C, "pure ink". Tony first chos
 - Do not color by mark type: a pink arc reads as acceleration, an orange block as velocity, a blue velocity arrow as a force. Section 1 colors stay for graphs (series) and for figures whose only job is to compare kinds of vectors.
 - Angle room: an angle arc's radius is about half its arrows' length or more. Two angles at one point use clearly different radii, so their labels do not stack. The label sits outside the arc and clear of the arrow labels. Check at 390px before shipping.
 - A label never states a value the question asks the student to find.
+
+## 10. Scene steppers (viz MVP, Oct 29; contract `views/scene-contract.md` §8, plan shape-schema §11d)
+
+Drawn by `scene.js` through views.js (`Steps(<Scene>, [steps])`). The model writes world units and roles; these rules are the renderer's.
+1. **Focus, one per step** (`glow`): stroke +1, fill 22% of `--c1`, label in `--c1`. No halo, no shadow, no glow filter. It replaces every older "highlight" look in a scene.
+2. **Motion**: a figure change may travel the figure's whole size, 200 ms ease-out, transform and opacity only (positions, turns, camera, fades), driven by Next/Back taps only (no autoplay, no scrubber); reduced motion = instant. The 14 px travel cap stays for chrome.
+3. **Status colours**: `--wrong` only on the student's own mark (role `yours`: ring or X + a short word), `--correct` only after a solve (role `right`, post stage). Never a fill.
+4. **Hidden quantities**: before a solve an answer shows its symbol or `?` in `--muted` on a `--knock` chip; a plot drops every numeric tick within 15% of a hidden value. Middle values (derived) show.
+5. **Density**: at most 12 marks and 6 labels per step, 2 caption lines (reserved), 1 accent (the focus), 1 figure.
+6. **Slots**: the figure is one 360 x 240 box (world fit 1:1, y up); bars, cells and a plot beside shapes go to the side third; math rows to the bottom callout (`=` aligned); code + trace under the figure. Nothing is drawn over the scene; every panel holds its slot from step 1, so nothing jumps.
+7. **Dark first**: judged and benched on Cluck's `.ai-box` tokens (`--c1` = `--help`); labels never cross a line without a `--knock` chip, and a label that has to move away from its anchor gets a 1 px `--muted` leader line.
