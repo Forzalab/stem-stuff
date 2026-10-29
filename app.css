@@ -650,6 +650,9 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 .cl-cta .ico:first-child { transform-origin: 50% 80%; }
 .cl-cta .ico:last-child { width: 20px; height: 20px; }
 .cl-cta:active { color: var(--help); }
+/* W110: "Why does this work?" under a right-pick reply (app.js clAsk): a quiet outline chip (the cue chip's 8px) over the ask field; a tap asks it in the chat */
+.cl-why { display: inline-flex; align-items: center; min-height: var(--btn); margin: 0 0 var(--s2); padding: 0 var(--s4); border: var(--bw) solid var(--help-line); border-radius: 8px; background: none; color: var(--help-on); font: inherit; cursor: pointer; }
+.cl-why:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) {   /* pressed: the duck tilts once, the chevron nudges toward the sheet */
   .cl-cta:active .ico:first-child { transform: rotate(-14deg); }
   .cl-cta:active .ico:last-child { transform: translateX(3px); }
@@ -753,6 +756,21 @@ html.side #work > .orig { margin: 0; }
 .fq:is(:hover, :focus-visible) { color: var(--c1); }
 .fq[aria-expanded="true"] { border-color: var(--c1); background: var(--c1); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+/* tap-to-copy (todo 108): a formula card row and a revealed answer copy their math as plain, grader-exact text. Quiet like the "?":
+   a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after, 44px square like the "?"'s. Each reaches 14px past its mark, so after
+   a "?" it sits 28px off (the row's 8px gap + 20px): the two areas meet, never overlap (W108c: a 12px gap let the copy take the "?"'s right 8px) */
+.mcopy { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer; }
+.mcopy .ico { width: 1rem; height: 1rem; }
+.mcopy::after { content: ""; position: absolute; inset: -14px; }
+.fq + .mcopy { margin-left: 20px; }
+.fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
+.mcopy:is(:hover, :focus-visible) { color: var(--c1); }
+.mcopy.done { color: var(--correct); }
+.mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+/* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
+   its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
+.preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
 .fd-sym { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
 .fd-sym li { display: grid; grid-template-columns: minmax(2.5rem, max-content) minmax(0, 1fr) auto; align-items: baseline; gap: var(--s2); }
 .fd-s { overflow-x: auto; overflow-y: hidden; color: var(--ink); }

@@ -855,7 +855,7 @@ function formulaCard() {
   sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
     const arrow = steps.find(x => x.k === "arrow" && x.to === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
-    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}</li>`
+    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}${mathCopyBtn("Copy formula")}</li>`
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
@@ -1586,7 +1586,7 @@ function reveal(r, part) {
   if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(String(c)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
   host.querySelector(".ansl")?.remove();
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
-  host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b></p>`);
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b>${mathCopyBtn("Copy answer", String(c))}</p>`);
   if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
@@ -1662,6 +1662,7 @@ let wish = null;   // { code, text, started, done, open, failed, ctl, off }
    Cluck entries (wishOnWrong); a press that already asked (w.off) gets one line in the sheet, never silence */
 let cluckOff = false;
 const CLUCK_OFF = "Eggs-tra help currently unavailable.";              // COPY-PENDING
+const WHY_ASK = "Why does this work?";                                   // COPY-PENDING (W110): the chip under a right-pick reply, and the question it sends
 /* B7 (ii) (Tony, Oct 18): ONE decision whether a wrong answer streams Cluck's reply in the background, so it is there when the duck (or
    the hint card's CTA) opens him. Jev plugs in here later. Now: only the first PREFETCH_Q questions opened this session (distinct codes,
    sessionStorage "stem-seen-q"), only within the hourly auto budget (WISH_AUTO), never on a restore. No = the "Explain my mistake" chip
@@ -1678,7 +1679,7 @@ const shouldPrefetch = code => !painting && wishLog().length < WISH_AUTO && seen
    (a new deploy = new prompts = a fresh reply), value { text, t }; the last 30 kept, none older than 7 days. A revisit or a reload shows the
    text at once: no new call, no wait lines, no caret. Blocked or full storage = no cache, as before */
 const CK = "stem-cluck", CK_MAX = 30, CK_TTL = 7 * 864e5;
-const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
+const ckKey = (code, t) => { const p = t ? (t.c ?? t.a ?? "") : ""; return code + "|" + (t && Number.isInteger(t.part) ? t.part + ":" : "") + (Array.isArray(p) ? [...p].map(String).sort().join(",") : String(p)) + "|" + (document.querySelector('meta[name="stem-build"]')?.content || "dev"); };
 const ckAll = () => { try { const o = JSON.parse(localStorage.getItem(CK)); return o && typeof o === "object" ? Object.entries(o).filter(([, v]) => v && typeof v.text === "string" && Date.now() - v.t < CK_TTL) : []; } catch { return []; } };
 const ckGet = key => ckAll().find(([k]) => k === key)?.[1].text || "";
 function ckPut(key, text) {
@@ -1729,7 +1730,7 @@ async function wishStart(auto) {
   let r = null, bytes = 0;
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto, scratch: scratchTail() }), signal: w.ctl.signal });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto, scratch: scratchTail() }), signal: w.ctl.signal });   // part: a multi's part (W110); the server grades the pick itself
     fr.h(r);
     if (!r.ok || !r.body) {
       const sc = xInc(r)[0];                                               // a 503 with a server code (out of credit): a failure shown like any other;
@@ -2283,6 +2284,16 @@ function clAsk(build) {
     inp.addEventListener("input", () => askFit(inp));
   }
   const ready = wishTyped(w) && !w.busy;
+  /* W110 (Tony, Oct 28): Cluck's reply to a RIGHT pick ends on its one reason, no question; this chip offers more. A tap asks it through
+     the chat (clSend). Only under a reply that explains the right try (the box text or Compare's), before any follow-up */
+  const t = S && S.code === w.code ? S.tries.at(-1) : null, k = t && ckKey(w.code, t);
+  const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
+  let wb = ft.querySelector(".cl-why");
+  if (why && !wb) {
+    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why"; wb.textContent = WHY_ASK;
+    wb.addEventListener("click", () => clSend(WHY_ASK));
+    ft.prepend(wb);
+  } else if (!why && wb) wb.remove();
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
   ft.querySelector(".send").disabled = !ready;
@@ -2319,7 +2330,7 @@ async function clCompare(w) {
   const fail = x => { inc = reqInc("explain", "/explain", t0, { q: w.code, tp, ...x }); };
   try {
     r = await fetch("explain", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", auto: false, scratch: scratchTail() }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, auto: false, scratch: scratchTail() }) });
     fr.h(r);
     if (!r.ok || !r.body) { if (r.status !== 429) fail({ r }); }
     else {
@@ -2351,7 +2362,7 @@ async function clSend(msg) {
   const t0 = Date.now(), tp = traceparent(), fail = x => { err = "fail"; inc = reqInc("chat", "/chat", t0, { q: w.code, tp, ...x }); }, fr = frReq("chat", tp);
   try {
     r = await fetch("chat", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin", signal: w.ctl.signal,
-      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
+      body: JSON.stringify({ code: w.code, answer: t.c ?? t.a ?? "", part: t.part, scratch: scratchTail(), history: [{ role: "assistant", content: w.text }, ...w.chat] }) });
     fr.h(r);
     if (r.status === 429) err = ((await r.json().catch(() => ({}))).error === "limit") ? "limit" : "hourly";
     else if (!r.ok || !r.body) fail({ r });
@@ -2628,7 +2639,10 @@ async function copyPad() {
   if (!S) return;
   const b = $("#copy"), box = S.box;
   box.snapshot();
-  const payload = stringify(build({ code: S.code, start: S.start, tries: S.tries, hints: S.hints, explain: box.el.value, history: box.getHistory() }));
+  /* a choice try's a is the choice's markdown: its $math$ goes out as texPlain, the same plain text a drag copies (todo 108). The notes stay as typed */
+  const mdm = md => typeof md === "string" ? mdMathPlain(md) : md;
+  const tries = S.tries.map(t => t.c == null ? t : { ...t, a: Array.isArray(t.a) ? t.a.map(mdm) : t.a?.tick ? { ...t.a, tick: t.a.tick.map(mdm) } : mdm(t.a) });
+  const payload = stringify(build({ code: S.code, start: S.start, tries, hints: S.hints, explain: box.el.value, history: box.getHistory() }));
   const ok = await copyText(payload);
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
@@ -2644,6 +2658,82 @@ document.addEventListener("click", async e => {
   b.classList.toggle("done", ok);
   b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
   say(ok ? "Copied." : "Copy failed. Try again.");
+  clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
+}, true);
+
+/* ================= copy math as plain text (todo 108, Tony's answers: plan and-a-todo-list-dapper-yeti) =================
+   KaTeX renders htmlAndMathml (screen readers; the MathML's annotation is the TeX source), so a drag over math copied both the hidden
+   MathML text and the visible glyphs ("x2x^2"). One capture copy listener: a formula the selection touches is copied whole, as texPlain
+   (nav.js) of its TeX, grader-exact; the words around it pass through as plain text, one line per block. A phone's long-press Copy fires
+   the same event. A selection with no math is left to the browser. intent.js / flight.js keep logging the copy (they only read it). */
+let texPlain = null;
+import("./nav.js").then(m => { texPlain = m.texPlain; });             // nav.js is its own module script after this one: no import, so the order stays
+const katexOf = n => (n && (n.nodeType === 1 ? n : n.parentElement))?.closest(".katex") || null;
+const mathPlain = k => {
+  const tex = k.querySelector('annotation[encoding="application/x-tex"]');
+  return tex && texPlain ? texPlain(tex.textContent) : (k.querySelector(".katex-html") || k).textContent;
+};
+/* markdown's $..$ / $$..$$ to texPlain, the rest as written ("\$" is a literal dollar, the same cut as md()) */
+const mdMathPlain = md => !texPlain ? md : md.replace(/\\\$/g, "\u0001").replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g, (_, a, b) => texPlain(a ?? b)).replace(/\u0001/g, "$");
+function selPlain(r) {
+  r = r.cloneRange();
+  const ks = katexOf(r.startContainer), ke = katexOf(r.endContainer);
+  if (ks && ks === ke) return mathPlain(ks);                          // inside one formula: the whole formula
+  if (ks) r.setStartBefore(ks);                                       // half a formula: snap to all of it
+  if (ke) r.setEndAfter(ke);
+  let out = "";
+  const visit = node => {
+    if (!r.intersectsNode(node)) return;
+    if (node.nodeType === 3) {
+      const a = node === r.startContainer ? r.startOffset : 0, b = node === r.endContainer ? r.endOffset : node.data.length;
+      const t = node.data.slice(a, b);
+      out += /^pre/.test(getComputedStyle(node.parentElement).whiteSpace) ? t : t.replace(/\s+/g, " ");
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    if (node.classList.contains("katex")) { out += mathPlain(node); return; }
+    if (node.tagName === "BR") { out += "\n"; return; }
+    const d = getComputedStyle(node).display;
+    if (d === "none") return;
+    const block = !/^inline/.test(d) && d !== "contents";
+    if (block) out += "\n";
+    node.childNodes.forEach(visit);
+    if (block) out += "\n";
+  };
+  const top = r.commonAncestorContainer;
+  if (top.nodeType === 3) visit(top); else top.childNodes.forEach(visit);
+  return out.replace(/[ \t]*\n[ \t]*/g, "\n").replace(/\n+/g, "\n").replace(/ {2,}/g, " ").trim();
+}
+function touchesMath(r) {
+  if (katexOf(r.startContainer) || katexOf(r.endContainer)) return true;
+  const top = r.commonAncestorContainer;
+  return top.nodeType === 1 && [...top.querySelectorAll(".katex")].some(k => r.intersectsNode(k));
+}
+document.addEventListener("copy", e => {
+  try {
+    const sel = getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount || !e.clipboardData || /^(INPUT|TEXTAREA)$/.test(e.target?.tagName)) return;
+    const rs = Array.from({ length: sel.rangeCount }, (_, n) => sel.getRangeAt(n));
+    if (!rs.some(touchesMath)) return;                                // no math: the browser's own copy
+    const text = rs.map(selPlain).join("\n");
+    e.clipboardData.setData("text/plain", text);
+    e.clipboardData.setData("text/html", esc(text).replace(/\n/g, "<br>"));   // a rich paste gets the same plain text, never the MathML again
+    e.preventDefault();
+  } catch (x) { console.error(x); }                                   // never break a copy: the browser's own then
+}, true);
+/* the tap-to-copy button on a formula card row and on a revealed answer: the same plain text a drag copies, then i-ok and a toast */
+function mathCopyBtn(label, plainText) {
+  return `<button type="button" class="mcopy" aria-label="${label}" title="${label}"${plainText != null ? ` data-copy="${esc(plainText)}"` : ""}>${icon("i-copy")}</button>`;   // COPY-PENDING: "Copy formula", "Copy answer"
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest?.(".mcopy"); if (!b) return;
+  e.stopPropagation();
+  const k = b.parentElement.querySelector(".katex");
+  const ok = await copyText(k ? mathPlain(k) : b.dataset.copy || "");
+  b.classList.toggle("done", ok);
+  b.querySelector("use").setAttribute("href", ok ? "#i-ok" : "#i-x");
+  say(ok ? "Copied." : "Copy failed. Try again.");
+  if (ok) toast("Copied", b);   // COPY-PENDING: "Copied". The anchored note (toast()), not stemToast: that one never covers a live control, and under a card row or the answer there always is one, so it never showed
   clearTimeout(b.doneT); b.doneT = setTimeout(() => { b.classList.remove("done"); b.querySelector("use").setAttribute("href", "#i-copy"); }, 2000);
 }, true);
 
