@@ -30,9 +30,20 @@ def tools(reg, live_only=False):
 
 
 def shipped(reg):
-    """Components that ship (drawn by the renderer) and whose checker, if any, ships too. Registry order."""
-    live = tools(reg, live_only=True)
-    return [n for n, c in reg["components"].items() if c["ships"] != "planned" and c.get("checker") in (None, *live)]
+    """Components that ship (drawn by the renderer) and whose checker, if any, ships too. Registry order. Staged ones (reg.staged) do not."""
+    live, wait = tools(reg, live_only=True), ("planned", *reg.get("staged", {}))
+    return [n for n, c in reg["components"].items() if c["ships"] not in wait and c.get("checker") in (None, *live)]
+
+
+def staged(reg):
+    """Components whose ships tag is a staged one (reg.staged): contract locked, the drawing still in flight. Registry order."""
+    return [n for n, c in reg["components"].items() if c["ships"] in reg.get("staged", {})]
+
+
+def pool(reg):
+    """What the gate's catalog and a staged recipe's prompt may name: shipped + staged, registry order."""
+    ok = set(shipped(reg)) | set(staged(reg))
+    return [n for n in reg["components"] if n in ok]
 
 
 def engine_tools():
@@ -54,9 +65,9 @@ def schema_problems(reg, where, s):
         if "maxItems" not in s:
             out.append(f"{where}: list with no maxItems")
         out += schema_problems(reg, where + "[]", s.get("items", {}))
-    ref = s.get("$ref", "")
-    if ref and ref.removeprefix("#/$defs/") not in reg["components"]:
-        out.append(f"{where}: $ref {ref} is no component")
+    for ref in [s.get("$ref", ""), *(x.get("$ref", "") for x in s.get("anyOf", []))]:
+        if ref and ref.removeprefix("#/$defs/") not in reg["components"]:
+            out.append(f"{where}: $ref {ref} is no component")
     if "x-enum" in s and not isinstance(reg.get(s["x-enum"]), list):
         out.append(f"{where}: x-enum {s['x-enum']} is no registry list")
     return out
@@ -74,6 +85,8 @@ def problems(reg, served=None):
         if name not in ok:
             out.append(f"root/base: {name} is no shipping component")
     for name, c in comps.items():
+        if c["ships"] != "planned" and c["ships"] not in reg.get("staged", {}) and not re.fullmatch(r"P\d+\.\d+", c["ships"]):
+            out.append(f"{name}: unknown ships {c['ships']}")
         if c["layer"] not in reg["layers"]:
             out.append(f"{name}: unknown layer {c['layer']}")
         if c["kind"] not in ("layout", "domain", "interaction"):
@@ -111,28 +124,52 @@ def problems(reg, served=None):
             out.append(f"recipe {r}: stages must be a non-empty subset of {sorted(STAGES)}")
         if rec["length"] not in ("S", "M"):
             out.append(f"recipe {r}: length S or M")
+        for k, v in [("rules", rec.get("rules")), ("example", rec.get("example")), *((f"notes.{n}", x) for n, x in rec.get("notes", {}).items())]:
+            if v is not None and not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+                out.append(f"recipe {r}: {k} must be a list of lines")
     for ref, d in reg["refs"].items():
         if set(d["stages"]) - STAGES:
             out.append(f"ref {ref}: bad stage")
     return out
 
 
-def expand(reg, s):
-    """A registry prop schema → plain JSON Schema: x-any = any shipping component, x-enum = a registry list."""
+DROP = object()   # expand(): a schema that names only components outside the pool (its prop is left out of that view)
+
+
+def expand(reg, s, pool=None):
+    """A registry prop schema → plain JSON Schema: x-any = any shipping component, x-enum = a registry list. pool = the component
+    names this view may name (default: shipped); a $ref outside it is dropped (an anyOf keeps the rest, one left = that $ref)."""
+    pool = set(shipped(reg)) if pool is None else set(pool)
     if isinstance(s, list):
-        return [expand(reg, v) for v in s]
+        return [x for x in (expand(reg, v, pool) for v in s) if x is not DROP]
     if not isinstance(s, dict):
         return s
     if s.get("x-any"):
         return {"anyOf": [{"$ref": f"#/$defs/{n}"} for n in shipped(reg)]}
-    out = {k: expand(reg, v) for k, v in s.items() if k != "x-enum"}
+    if "$ref" in s and s["$ref"].removeprefix("#/$defs/") not in pool:
+        return DROP
+    out = {}
+    for k, v in s.items():
+        if k == "x-enum":
+            continue
+        x = expand(reg, v, pool)
+        if x is not DROP:
+            out[k] = x
+    if "items" in s and "items" not in out:
+        return DROP
+    if "anyOf" in s:
+        if not out["anyOf"]:
+            return DROP
+        if len(out["anyOf"]) == 1:
+            return out["anyOf"][0]
     if "x-enum" in s:
         out["enum"] = reg[s["x-enum"]]
     return out
 
 
-def ts(s, caps=False):
-    """A prop schema as a signature type (the vendored prompt generator's spelling); caps=True adds ≤N."""
+def ts(s, caps=False, every=None):
+    """A prop schema as a signature type (the vendored prompt generator's spelling); caps=True adds ≤N. An anyOf of every shipping
+    component (x-any; every = their count) is "Component", a shorter anyOf the union "A | B" ("(A | B)[]" as list items)."""
     if "enum" in s:
         return " | ".join(f'"{v}"' for v in s["enum"])
     if "$ref" in s:
@@ -140,18 +177,31 @@ def ts(s, caps=False):
     if caps and s.get("pattern", "").startswith("^key\\."):
         return "key.<id>"
     if "anyOf" in s:
-        return "Component"
+        names = [x.get("$ref", "").removeprefix("#/$defs/") for x in s["anyOf"]]
+        return "Component" if every is None or len(names) >= every or not all(names) else " | ".join(names)
     t = s.get("type")
     if t == "array":
-        return (ts(s["items"], caps) if "items" in s else "any") + "[]" + (f"≤{s['maxItems']}" if caps and "maxItems" in s else "")
+        item = ts(s["items"], caps, every) if "items" in s else "any"
+        item = f"({item})" if " | " in item and "anyOf" in s.get("items", {}) else item
+        return item + "[]" + (f"≤{s['maxItems']}" if caps and "maxItems" in s else "")
     if t == "string" and caps and "maxLength" in s:
         return f"string≤{s['maxLength']}"
     return {"integer": "number", None: "any"}.get(t, t)
 
 
-def sig(reg, name, caps=False):
+def sig(reg, name, caps=False, pool=None):
+    c, every = reg["components"][name], len(shipped(reg))
+    props = [(p, expand(reg, s, pool)) for p, s in c["props"].items()]
+    return f"{name}(" + ", ".join(p + ("" if p in c["required"] else "?") + ": " + ts(x, caps, every) for p, x in props if x is not DROP) + ")"
+
+
+def _spec(reg, name, names):
+    """one component's LibrarySpec entry (signature, description, layer, kind, props) and $defs entry, naming only `names`"""
     c = reg["components"][name]
-    return f"{name}(" + ", ".join(p + ("" if p in c["required"] else "?") + ": " + ts(expand(reg, s), caps) for p, s in c["props"].items()) + ")"
+    ex = expand(reg, c["props"], names)
+    props = {"type": "object", "properties": ex, "required": [r for r in c["required"] if r in ex]}
+    return ({"signature": sig(reg, name, pool=names), "description": c["desc"], "layer": c["layer"], "kind": c["kind"], "props": props},
+            {"description": c["desc"], **props})
 
 
 def library(reg):
@@ -160,19 +210,22 @@ def library(reg):
     names = shipped(reg)
     defs, comps = {}, {}
     for name in names:
-        c = reg["components"][name]
-        props = {"type": "object", "properties": expand(reg, c["props"]), "required": c["required"]}
-        defs[name] = {"description": c["desc"], **props}
-        comps[name] = {"signature": sig(reg, name), "description": c["desc"], "layer": c["layer"], "kind": c["kind"], "props": props}
+        comps[name], defs[name] = _spec(reg, name, names)
     groups = [{"name": layer, "notes": [note], "components": [n for n in names if reg["components"][n]["layer"] == layer]}
               for layer, note in reg["layers"].items()]
-    return {"id": "stem", "version": reg["version"], "root": reg["root"], "schema": {"$defs": defs}, "components": comps,
-            "componentGroups": [g for g in groups if g["components"]], "marks": reg["marks"]}
+    out = {"id": "stem", "version": reg["version"], "root": reg["root"], "schema": {"$defs": defs}, "components": comps,
+           "componentGroups": [g for g in groups if g["components"]], "marks": reg["marks"]}
+    if staged(reg):   # contract locked, drawing in flight: the gate's catalog (views_gate.catalog) reads staged.schema
+        full = pool(reg)
+        specs = {n: _spec(reg, n, full) for n in full}
+        out["staged"] = {"note": "; ".join(reg["staged"].values()), "components": {n: specs[n][0] for n in staged(reg)},
+                         "schema": {"$defs": {n: specs[n][1] for n in full}}}
+    return out
 
 
 def prompt(reg, recipe=None):
     rec = reg["recipes"].get(recipe) if recipe else None
-    ok = shipped(reg)
+    ok = shipped(reg) if rec is None or not set(rec["components"]) & set(staged(reg)) else pool(reg)
     names = ok if rec is None else [n for n in dict.fromkeys([*reg["base"], *rec["components"]]) if n in ok]
     stages = rec["stages"] if rec else sorted(STAGES, key=["pre", "wrong", "post"].index)
     lines = [f"# View prompt: {'all components' if rec is None else 'recipe ' + recipe} (library {reg['version']}, profile {reg['profile']})",
@@ -199,7 +252,13 @@ def prompt(reg, recipe=None):
     for layer, note in reg["layers"].items():
         here = [n for n in names if reg["components"][n]["layer"] == layer]
         if here:
-            lines += [f"### {layer}: {note}"] + [f"- `{sig(reg, n, caps=True)}`: {reg['components'][n]['desc']}" for n in here]
+            lines += [f"### {layer}: {note}"] + [f"- `{sig(reg, n, caps=True, pool=ok)}`: {reg['components'][n]['desc']}" for n in here]
+    if rec and rec.get("rules"):
+        lines += ["", "## Scene rules"] + [f"- {x}" for x in rec["rules"]]
+    for subject, notes in (rec or {}).get("notes", {}).items():
+        lines += ["", f"## Notes: {subject}"] + [f"- {x}" for x in notes]
+    if rec and rec.get("example"):
+        lines += ["", "## Example", "```", *rec["example"], "```"]
     return "\n".join(lines) + "\n"
 
 
@@ -210,7 +269,8 @@ def checkers(reg):
                            for n, c in reg["components"].items() if "checker" in c],
             "refs": {ref: d["stages"] for ref, d in reg["refs"].items()},
             "marks": reg["marks"], "banned_props": reg["banned_props"], "key_ref_props": reg["key_ref_props"], "key_ref": reg["key_ref"],
-            "cluck_caps": {n: c["cluck"] for n, c in reg["components"].items() if "cluck" in c}}
+            "cluck_caps": {n: c["cluck"] for n, c in reg["components"].items() if "cluck" in c},
+            "staged": {n: reg["components"][n]["ships"] for n in staged(reg)}}
 
 
 def views_schema(reg):
@@ -235,7 +295,7 @@ def schema_block(reg):
              "| Ref | Allowed stages | What |", "|---|---|---|"]
     lines += [f"| `{r}.*` | {', '.join(d['stages'])} | {d['desc']} |" for r, d in reg["refs"].items()]
     lines += ["", "| Component | Layer | Kind | Ships | Args | Checker |", "|---|---|---|---|---|---|"]
-    lines += [f"| {n} | {x['layer']} | {x['kind']} | {x['ships']} | `{sig(reg, n, caps=True)}` | {x.get('checker', '')} |" for n, x in c.items()]
+    lines += [f"| {n} | {x['layer']} | {x['kind']} | {x['ships']} | `{sig(reg, n, caps=True, pool=pool(reg))}` | {x.get('checker', '')} |" for n, x in c.items()]
     lines += ["", "| Recipe | Stages | Length | Components |", "|---|---|---|---|"]
     lines += [f"| {r} | {', '.join(x['stages'])} | {x['length']} | {', '.join(x['components'])} |" for r, x in reg["recipes"].items()]
     lines += ["", "| Engine | Ships | Tools |", "|---|---|---|"]

@@ -40,6 +40,46 @@
     {
       "id": "copy-words",
       "desc": "copy_gate.py on the view's student-facing strings: Flesch-Kincaid grade 2-4 on the whole view text (TeX and numbers stripped; skipped under 20 words), no term from views/allow/<course>-black.json (tools/jargon.py), no slot over its character budget, no blocking aiw.lint_view_strings finding"
+    },
+    {
+      "id": "scene-schema",
+      "desc": "a Steps whose fig is a Scene: scene components only inside it (Q in qs, Ask on a Step); geom keys per kind; scene Steps leave the Graph args null; Q roles (an answer has an expr and never a value)"
+    },
+    {
+      "id": "scene-refs",
+      "desc": "ids match ^[A-Za-z][A-Za-z0-9_]{0,15}$, are unique in the scene (objects, Axes items, Q), are not reserved; every op / relation / anchor / {token} / q / code id exists; every object is added by some step"
+    },
+    {
+      "id": "scene-rels",
+      "desc": "relations parse (attach on pivot align distribute stack set scale), form a directed acyclic graph, one writer per prop"
+    },
+    {
+      "id": "scene-expr",
+      "desc": "every expression parses with the one EBNF (views/scene-contract.md §3) and evaluates finite, |v| <= 10000"
+    },
+    {
+      "id": "scene-trace",
+      "desc": "the server runs each Trace's Code (Python subset) and writes its ticks; the model never writes them"
+    },
+    {
+      "id": "scene-ops",
+      "desc": "ops parse (add set glow hide camera param), set only settable props, act on visible ids"
+    },
+    {
+      "id": "scene-steps",
+      "desc": "3-6 steps; one change per step after the first; the last step shows geometry; an ask before the last, answered by the next step; density 12 marks / 6 labels; captions <= 15 words"
+    },
+    {
+      "id": "scene-leak",
+      "desc": "before a solve (stage pre / wrong, set by the server) no string number and no given / derived value hits the answer (3 sig figs or 0.5%, unit variants); string numbers are givens; middle values allowed"
+    },
+    {
+      "id": "scene-voice",
+      "desc": "captions talk to the student and pass the voice lints (no dashes, no !, no hype, no not-X-but-Y, no question answered, no objects acting like people)"
+    },
+    {
+      "id": "scene-repair",
+      "desc": "a failing scene: one repair round with the error list (max 10), then the Steps is dropped and the reply goes out text only"
     }
   ],
   "components": [
@@ -146,5 +186,18 @@
       "rows": 8,
       "cols": 4
     }
+  },
+  "staged": {
+    "Scene": "V1",
+    "Shape": "V1",
+    "Link": "V1",
+    "Axes": "V1",
+    "MathRows": "V1",
+    "Code": "V1",
+    "Trace": "V1",
+    "Cells": "V1",
+    "Bars": "V1",
+    "Q": "V1",
+    "Ask": "V1"
   }
 }

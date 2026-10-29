@@ -240,6 +240,14 @@
               "maxItems": 5
             },
             "maxItems": 12
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 4
           }
         },
         "required": [
@@ -695,7 +703,7 @@
       }
     },
     "Step": {
-      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][])",
+      "signature": "Step(cap: string, nodes?: string, edges?: string, tags?: string, labels?: string[], front?: string[], rows?: string[][], ops?: string[])",
       "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
       "layer": "L1",
       "kind": "layout",
@@ -745,6 +753,14 @@
               "maxItems": 5
             },
             "maxItems": 12
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 4
           }
         },
         "required": [
@@ -1062,5 +1078,1382 @@
     "k1",
     "k2",
     "k3"
-  ]
+  ],
+  "staged": {
+    "note": "viz MVP scene family (todo 120): contract views/scene-contract.md locked; views.js draws it with V-B. Until then library.json lists it under \"staged\" (the gate's catalog and the scene-steps prompt use it), never in the drawn components",
+    "components": {
+      "Scene": {
+        "signature": "Scene(objs: (Shape | Link | Axes | MathRows | Code | Trace | Cells | Bars)[], qs?: Q[], rels?: string[], alt?: string)",
+        "description": "A scene in world units (y up): objects, quantities, relations; only as Steps.fig. The renderer solves it and owns every pixel and label spot (views/scene-contract.md)",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "objs": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Shape"
+                  },
+                  {
+                    "$ref": "#/$defs/Link"
+                  },
+                  {
+                    "$ref": "#/$defs/Axes"
+                  },
+                  {
+                    "$ref": "#/$defs/MathRows"
+                  },
+                  {
+                    "$ref": "#/$defs/Code"
+                  },
+                  {
+                    "$ref": "#/$defs/Trace"
+                  },
+                  {
+                    "$ref": "#/$defs/Cells"
+                  },
+                  {
+                    "$ref": "#/$defs/Bars"
+                  }
+                ]
+              },
+              "maxItems": 12
+            },
+            "qs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Q"
+              },
+              "maxItems": 10
+            },
+            "rels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 12
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          "required": [
+            "objs"
+          ]
+        }
+      },
+      "Shape": {
+        "signature": "Shape(id: string, kind: \"rect\" | \"circle\" | \"triangle\" | \"polygon\" | \"line\" | \"point\", geom: string, at?: string, label?: string, art?: \"ball\" | \"block\" | \"cart\" | \"pulley\" | \"battery\" | \"resistor\" | \"bulb\" | \"capacitor\" | \"magnet\" | \"lens\" | \"mirror\" | \"piston\" | \"thermometer\" | \"flame\" | \"snowflake\", role?: \"body\" | \"guide\" | \"ground\" | \"region\" | \"yours\" | \"right\")",
+        "description": "A shape: geom \"w=10 h=0.4 segments=10\", at a point \"0,3\" or an anchor \"rod.right\"; label may hold {qid} tokens",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "rect",
+                "circle",
+                "triangle",
+                "polygon",
+                "line",
+                "point"
+              ]
+            },
+            "geom": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "at": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "art": {
+              "type": "string",
+              "enum": [
+                "ball",
+                "block",
+                "cart",
+                "pulley",
+                "battery",
+                "resistor",
+                "bulb",
+                "capacitor",
+                "magnet",
+                "lens",
+                "mirror",
+                "piston",
+                "thermometer",
+                "flame",
+                "snowflake"
+              ]
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "body",
+                "guide",
+                "ground",
+                "region",
+                "yours",
+                "right"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "geom"
+          ]
+        }
+      },
+      "Link": {
+        "signature": "Link(id: string, kind: \"arrow\" | \"vector\" | \"spring\" | \"string\" | \"dimension\" | \"angle\", from: string, to: string, label?: string, q?: string, geom?: string)",
+        "description": "A connector between two points or anchors; a vector's to may be relative \"+0,-1.5\"; q = a Q id",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "arrow",
+                "vector",
+                "spring",
+                "string",
+                "dimension",
+                "angle"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "to": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "q": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "geom": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "from",
+            "to"
+          ]
+        }
+      },
+      "Axes": {
+        "signature": "Axes(id: string, x: string, y: string, items: string[])",
+        "description": "A plot frame: x / y \"min,max label\", items \"f curve x^2/2+1\", \"R riemann f 0 4 n left\", \"m marker y 60 your guess\"",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "x": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "y": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "id",
+            "x",
+            "y",
+            "items"
+          ]
+        }
+      },
+      "MathRows": {
+        "signature": "MathRows(id: string, rows: string[])",
+        "description": "Math, one step per row, aligned on the first =; {qid} tokens",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "maxItems": 4
+            }
+          },
+          "required": [
+            "id",
+            "rows"
+          ]
+        }
+      },
+      "Code": {
+        "signature": "Code(id: string, lang: \"python\" | \"js\", lines: string[])",
+        "description": "Source lines; the highlight follows a Trace or set hl",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "lang": {
+              "type": "string",
+              "enum": [
+                "python",
+                "js"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "maxItems": 12
+            }
+          },
+          "required": [
+            "id",
+            "lang",
+            "lines"
+          ]
+        }
+      },
+      "Trace": {
+        "signature": "Trace(id: string, code: string, vars: string, ticks?: string[])",
+        "description": "The engine runs a Code and shows vars per tick; never write ticks (the server fills them)",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "code": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "vars": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "ticks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 24
+            }
+          },
+          "required": [
+            "id",
+            "code",
+            "vars"
+          ]
+        }
+      },
+      "Cells": {
+        "signature": "Cells(id: string, kind: \"array\" | \"stack\" | \"grid\", items: string[], ptrs?: string)",
+        "description": "An array, stack or grid of cells; ptrs \"i:0 j:4\"",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "array",
+                "stack",
+                "grid"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 12
+            },
+            "ptrs": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "items"
+          ]
+        }
+      },
+      "Bars": {
+        "signature": "Bars(id: string, items: string[], total?: string, conserve?: boolean)",
+        "description": "Bars \"label: expr\"; conserve = they share the total, so a drain shows",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 6
+            },
+            "total": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "conserve": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "items"
+          ]
+        }
+      },
+      "Q": {
+        "signature": "Q(id: string, role: \"given\" | \"derived\" | \"answer\" | \"unknown\", value?: number, unit?: string, expr?: string, sym?: string)",
+        "description": "A quantity: given (value), derived (expr), answer (expr, shown only after a solve), unknown (symbol)",
+        "layer": "L1",
+        "kind": "layout",
+        "props": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "given",
+                "derived",
+                "answer",
+                "unknown"
+              ]
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "maxLength": 12
+            },
+            "expr": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "sym": {
+              "type": "string",
+              "maxLength": 16
+            }
+          },
+          "required": [
+            "id",
+            "role"
+          ]
+        }
+      },
+      "Ask": {
+        "signature": "Ask(q: string, choices: string[])",
+        "description": "A question with 2-4 choices on a scene step; the next step shows the answer to it",
+        "layer": "L1",
+        "kind": "interaction",
+        "props": {
+          "type": "object",
+          "properties": {
+            "q": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "minItems": 2,
+              "maxItems": 4
+            }
+          },
+          "required": [
+            "q",
+            "choices"
+          ]
+        }
+      }
+    },
+    "schema": {
+      "$defs": {
+        "View": {
+          "description": "The root: its children are painted in order, each into a slot reserved when the root arrives",
+          "type": "object",
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/View"
+                  },
+                  {
+                    "$ref": "#/$defs/Head"
+                  },
+                  {
+                    "$ref": "#/$defs/Text"
+                  },
+                  {
+                    "$ref": "#/$defs/Legend"
+                  },
+                  {
+                    "$ref": "#/$defs/Table"
+                  },
+                  {
+                    "$ref": "#/$defs/Callout"
+                  },
+                  {
+                    "$ref": "#/$defs/Steps"
+                  },
+                  {
+                    "$ref": "#/$defs/Step"
+                  },
+                  {
+                    "$ref": "#/$defs/Hints"
+                  },
+                  {
+                    "$ref": "#/$defs/Predict"
+                  },
+                  {
+                    "$ref": "#/$defs/Reveal"
+                  },
+                  {
+                    "$ref": "#/$defs/Answer"
+                  },
+                  {
+                    "$ref": "#/$defs/Doodle"
+                  },
+                  {
+                    "$ref": "#/$defs/Graph"
+                  },
+                  {
+                    "$ref": "#/$defs/Geometry"
+                  }
+                ]
+              },
+              "maxItems": 6
+            }
+          },
+          "required": [
+            "children"
+          ]
+        },
+        "Head": {
+          "description": "Title and one-line subtitle of a view",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "sub": {
+              "type": "string",
+              "maxLength": 140
+            }
+          },
+          "required": [
+            "title"
+          ]
+        },
+        "Text": {
+          "description": "A paragraph; **bold** is the only emphasis",
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "maxLength": 400
+            }
+          },
+          "required": [
+            "text"
+          ]
+        },
+        "Legend": {
+          "description": "Legend chips, each \"mark label\"; the sample is drawn with the figure's own class",
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 32
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "items"
+          ]
+        },
+        "Table": {
+          "description": "A small table: header cells, then rows of cells",
+          "type": "object",
+          "properties": {
+            "head": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 5
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "maxItems": 5
+              },
+              "maxItems": 12
+            }
+          },
+          "required": [
+            "head",
+            "rows"
+          ]
+        },
+        "Callout": {
+          "description": "A section with a rule and a short tag (\"Where it breaks\"), never a box",
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 400
+            }
+          },
+          "required": [
+            "tag",
+            "text"
+          ]
+        },
+        "Steps": {
+          "description": "A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below",
+          "type": "object",
+          "properties": {
+            "fig": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Graph"
+                },
+                {
+                  "$ref": "#/$defs/Scene"
+                }
+              ]
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Step"
+              },
+              "maxItems": 8,
+              "minItems": 1
+            },
+            "front": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "head": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 5
+            }
+          },
+          "required": [
+            "steps"
+          ]
+        },
+        "Step": {
+          "description": "One step: caption, node marks \"A:cur B:front\", edge marks \"A-B:tree\", tags \"A:0\", edge labels [\"A-B:new\"], frontier, table rows",
+          "type": "object",
+          "properties": {
+            "cap": {
+              "type": "string",
+              "maxLength": 140
+            },
+            "nodes": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "edges": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "tags": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 12
+            },
+            "front": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 8
+              },
+              "maxItems": 8
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "maxItems": 5
+              },
+              "maxItems": 12
+            },
+            "ops": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 4
+            },
+            "ask": {
+              "$ref": "#/$defs/Ask"
+            }
+          },
+          "required": [
+            "cap"
+          ]
+        },
+        "Hints": {
+          "description": "A hint ladder: one hint at a time",
+          "type": "object",
+          "properties": {
+            "hints": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "maxItems": 3,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "hints"
+          ]
+        },
+        "Predict": {
+          "description": "Pick an answer; the pick is posted with the answer ref to the server, the page never resolves or draws it",
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string",
+              "maxLength": 24
+            },
+            "q": {
+              "type": "string",
+              "maxLength": 140
+            },
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 5,
+              "minItems": 2
+            },
+            "struck": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 4
+            },
+            "tries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "answer": {
+              "type": "string",
+              "maxLength": 48,
+              "pattern": "^key\\.[A-Za-z0-9_.-]+$"
+            }
+          },
+          "required": [
+            "q",
+            "choices",
+            "answer"
+          ]
+        },
+        "Reveal": {
+          "description": "A visible locked row; its body arrives as a second program when the stage changes",
+          "type": "object",
+          "properties": {
+            "lock": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "body": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/View"
+                  },
+                  {
+                    "$ref": "#/$defs/Head"
+                  },
+                  {
+                    "$ref": "#/$defs/Text"
+                  },
+                  {
+                    "$ref": "#/$defs/Legend"
+                  },
+                  {
+                    "$ref": "#/$defs/Table"
+                  },
+                  {
+                    "$ref": "#/$defs/Callout"
+                  },
+                  {
+                    "$ref": "#/$defs/Steps"
+                  },
+                  {
+                    "$ref": "#/$defs/Step"
+                  },
+                  {
+                    "$ref": "#/$defs/Hints"
+                  },
+                  {
+                    "$ref": "#/$defs/Predict"
+                  },
+                  {
+                    "$ref": "#/$defs/Reveal"
+                  },
+                  {
+                    "$ref": "#/$defs/Answer"
+                  },
+                  {
+                    "$ref": "#/$defs/Doodle"
+                  },
+                  {
+                    "$ref": "#/$defs/Graph"
+                  },
+                  {
+                    "$ref": "#/$defs/Geometry"
+                  }
+                ]
+              },
+              "maxItems": 4
+            }
+          },
+          "required": [
+            "lock"
+          ]
+        },
+        "Answer": {
+          "description": "The boxed answer and one sentence",
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 140
+            }
+          },
+          "required": [
+            "value"
+          ]
+        },
+        "Doodle": {
+          "description": "A small drawing when nothing else fits (visual first)",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "duck",
+                "heart",
+                "star",
+                "spark"
+              ]
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "Graph": {
+          "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"",
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "edges": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "cols": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "marks": {
+              "type": "string",
+              "maxLength": 400
+            }
+          },
+          "required": [
+            "nodes",
+            "edges"
+          ]
+        },
+        "Geometry": {
+          "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer",
+          "type": "object",
+          "properties": {
+            "pts": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "marks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 12
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          "required": [
+            "pts",
+            "marks"
+          ]
+        },
+        "Scene": {
+          "description": "A scene in world units (y up): objects, quantities, relations; only as Steps.fig. The renderer solves it and owns every pixel and label spot (views/scene-contract.md)",
+          "type": "object",
+          "properties": {
+            "objs": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Shape"
+                  },
+                  {
+                    "$ref": "#/$defs/Link"
+                  },
+                  {
+                    "$ref": "#/$defs/Axes"
+                  },
+                  {
+                    "$ref": "#/$defs/MathRows"
+                  },
+                  {
+                    "$ref": "#/$defs/Code"
+                  },
+                  {
+                    "$ref": "#/$defs/Trace"
+                  },
+                  {
+                    "$ref": "#/$defs/Cells"
+                  },
+                  {
+                    "$ref": "#/$defs/Bars"
+                  }
+                ]
+              },
+              "maxItems": 12
+            },
+            "qs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Q"
+              },
+              "maxItems": 10
+            },
+            "rels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 12
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          "required": [
+            "objs"
+          ]
+        },
+        "Shape": {
+          "description": "A shape: geom \"w=10 h=0.4 segments=10\", at a point \"0,3\" or an anchor \"rod.right\"; label may hold {qid} tokens",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "rect",
+                "circle",
+                "triangle",
+                "polygon",
+                "line",
+                "point"
+              ]
+            },
+            "geom": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "at": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "art": {
+              "type": "string",
+              "enum": [
+                "ball",
+                "block",
+                "cart",
+                "pulley",
+                "battery",
+                "resistor",
+                "bulb",
+                "capacitor",
+                "magnet",
+                "lens",
+                "mirror",
+                "piston",
+                "thermometer",
+                "flame",
+                "snowflake"
+              ]
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "body",
+                "guide",
+                "ground",
+                "region",
+                "yours",
+                "right"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "geom"
+          ]
+        },
+        "Link": {
+          "description": "A connector between two points or anchors; a vector's to may be relative \"+0,-1.5\"; q = a Q id",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "arrow",
+                "vector",
+                "spring",
+                "string",
+                "dimension",
+                "angle"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "to": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "q": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "geom": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "from",
+            "to"
+          ]
+        },
+        "Axes": {
+          "description": "A plot frame: x / y \"min,max label\", items \"f curve x^2/2+1\", \"R riemann f 0 4 n left\", \"m marker y 60 your guess\"",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "x": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "y": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "id",
+            "x",
+            "y",
+            "items"
+          ]
+        },
+        "MathRows": {
+          "description": "Math, one step per row, aligned on the first =; {qid} tokens",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "maxItems": 4
+            }
+          },
+          "required": [
+            "id",
+            "rows"
+          ]
+        },
+        "Code": {
+          "description": "Source lines; the highlight follows a Trace or set hl",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "lang": {
+              "type": "string",
+              "enum": [
+                "python",
+                "js"
+              ]
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "maxItems": 12
+            }
+          },
+          "required": [
+            "id",
+            "lang",
+            "lines"
+          ]
+        },
+        "Trace": {
+          "description": "The engine runs a Code and shows vars per tick; never write ticks (the server fills them)",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "code": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "vars": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "ticks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxItems": 24
+            }
+          },
+          "required": [
+            "id",
+            "code",
+            "vars"
+          ]
+        },
+        "Cells": {
+          "description": "An array, stack or grid of cells; ptrs \"i:0 j:4\"",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "array",
+                "stack",
+                "grid"
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "maxItems": 12
+            },
+            "ptrs": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "items"
+          ]
+        },
+        "Bars": {
+          "description": "Bars \"label: expr\"; conserve = they share the total, so a drain shows",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 6
+            },
+            "total": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "conserve": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "items"
+          ]
+        },
+        "Q": {
+          "description": "A quantity: given (value), derived (expr), answer (expr, shown only after a solve), unknown (symbol)",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 16
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "given",
+                "derived",
+                "answer",
+                "unknown"
+              ]
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "maxLength": 12
+            },
+            "expr": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "sym": {
+              "type": "string",
+              "maxLength": 16
+            }
+          },
+          "required": [
+            "id",
+            "role"
+          ]
+        },
+        "Ask": {
+          "description": "A question with 2-4 choices on a scene step; the next step shows the answer to it",
+          "type": "object",
+          "properties": {
+            "q": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 24
+              },
+              "minItems": 2,
+              "maxItems": 4
+            }
+          },
+          "required": [
+            "q",
+            "choices"
+          ]
+        }
+      }
+    }
+  }
 }

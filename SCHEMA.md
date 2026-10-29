@@ -360,8 +360,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | Math | L0 | domain | planned | `Math(tex: string≤200)` | symbolic.simplify |
 | Chips | L0 | layout | planned | `Chips(items: string≤32[]≤8)` |  |
 | Callout | L1 | layout | P1.1 | `Callout(tag: string≤24, text: string≤400)` |  |
-| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
-| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12)` |  |
+| Steps | L1 | interaction | P1.1 | `Steps(fig?: Graph | Scene, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)` |  |
+| Step | L1 | layout | P1.1 | `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12, ops?: string≤40[]≤4, ask?: Ask)` |  |
 | Hints | L1 | interaction | P1.1 | `Hints(hints: string≤200[]≤3)` |  |
 | Predict | L1 | interaction | P1.1 | `Predict(tag?: string≤24, q: string≤140, choices: string≤24[]≤5, struck?: string≤24[]≤4, tries?: number, answer: key.<id>)` |  |
 | Reveal | L1 | interaction | P1.1 | `Reveal(lock: string≤80, body?: Component[]≤4)` |  |
@@ -375,6 +375,17 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | ITable | L1 | domain | planned | `ITable(kind: "kmap" | "truth" | "matrix" | "dp", spec: any)` | logic.truth_table |
 | Graph | L2 | domain | P1.1 | `Graph(nodes: string≤600, edges: string≤600, cols?: string≤200, marks?: string≤400)` | graph.trace |
 | Geometry | L1 | layout | P1.1 | `Geometry(pts: string≤240, marks: string≤80[]≤12, alt?: string≤160)` |  |
+| Scene | L1 | layout | V1 | `Scene(objs: (Shape | Link | Axes | MathRows | Code | Trace | Cells | Bars)[]≤12, qs?: Q[]≤10, rels?: string≤80[]≤12, alt?: string≤160)` |  |
+| Shape | L1 | layout | V1 | `Shape(id: string≤16, kind: "rect" | "circle" | "triangle" | "polygon" | "line" | "point", geom: string≤80, at?: string≤40, label?: string≤40, art?: "ball" | "block" | "cart" | "pulley" | "battery" | "resistor" | "bulb" | "capacitor" | "magnet" | "lens" | "mirror" | "piston" | "thermometer" | "flame" | "snowflake", role?: "body" | "guide" | "ground" | "region" | "yours" | "right")` |  |
+| Link | L1 | layout | V1 | `Link(id: string≤16, kind: "arrow" | "vector" | "spring" | "string" | "dimension" | "angle", from: string≤40, to: string≤40, label?: string≤40, q?: string≤16, geom?: string≤40)` |  |
+| Axes | L1 | layout | V1 | `Axes(id: string≤16, x: string≤40, y: string≤40, items: string≤80[]≤8)` |  |
+| MathRows | L1 | layout | V1 | `MathRows(id: string≤16, rows: string≤60[]≤4)` |  |
+| Code | L1 | layout | V1 | `Code(id: string≤16, lang: "python" | "js", lines: string≤60[]≤12)` |  |
+| Trace | L1 | layout | V1 | `Trace(id: string≤16, code: string≤16, vars: string≤60, ticks?: string≤80[]≤24)` |  |
+| Cells | L1 | layout | V1 | `Cells(id: string≤16, kind: "array" | "stack" | "grid", items: string≤24[]≤12, ptrs?: string≤60)` |  |
+| Bars | L1 | layout | V1 | `Bars(id: string≤16, items: string≤40[]≤6, total?: string≤40, conserve?: boolean)` |  |
+| Q | L1 | layout | V1 | `Q(id: string≤16, role: "given" | "derived" | "answer" | "unknown", value?: number, unit?: string≤12, expr?: string≤80, sym?: string≤16)` |  |
+| Ask | L1 | interaction | V1 | `Ask(q: string≤100, choices: string≤24[]≤4)` |  |
 | FlowNet | L2 | domain | planned | `FlowNet(flow: any)` | graph.maxflow |
 | Plot | L2 | domain | planned | `Plot(data: any)` | numeric.sample |
 | Riemann | L2 | domain | planned | `Riemann(data: any)` | numeric.riemann |
@@ -390,6 +401,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
 | twin-compare | pre, wrong, post | M | Compare, Steps, Step, Graph, Legend |
 | slider-explore | pre, post | M | Slider, Plot, Riemann |
 | concept-match | pre, wrong, post | M | Callout, MatchQuiz, Table |
+| scene-steps | pre, wrong, post | M | Steps, Step, Scene, Shape, Link, Axes, MathRows, Code, Trace, Cells, Bars, Q, Ask |
 | answer-table | post | S | Answer, Table, Chips |
 
 | Engine | Ships | Tools |
@@ -431,6 +443,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "twin-compare",
           "slider-explore",
           "concept-match",
+          "scene-steps",
           "answer-table"
         ]
       },

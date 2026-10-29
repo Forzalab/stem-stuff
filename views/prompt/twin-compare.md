@@ -38,6 +38,6 @@ Recipe: two methods or two algorithms side by side, in sync. Length M. Stages: p
 ### L1: learning components: subject-blind, know data shapes only
 - `Doodle(kind: "duck" | "heart" | "star" | "spark", text?: string≤80)`: A small drawing when nothing else fits (visual first)
 - `Steps(fig?: Graph, steps: Step[]≤8, front?: string≤32, head?: string≤24[]≤5)`: A stepper: one figure, the steps, an optional frontier row and status table; Back/Next below
-- `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12)`: One step: caption, node marks "A:cur B:front", edge marks "A-B:tree", tags "A:0", edge labels ["A-B:new"], frontier, table rows
+- `Step(cap: string≤140, nodes?: string≤200, edges?: string≤300, tags?: string≤200, labels?: string≤40[]≤12, front?: string≤8[]≤8, rows?: string≤40[]≤5[]≤12, ops?: string≤40[]≤4)`: One step: caption, node marks "A:cur B:front", edge marks "A-B:tree", tags "A:0", edge labels ["A-B:new"], frontier, table rows
 ### L2: renderers of engine data: every value comes from an engine result
 - `Graph(nodes: string≤600, edges: string≤600, cols?: string≤200, marks?: string≤400)`: A graph: nodes "A 48 100, B 160 48", edges "A>B, A-C" (> directed), column labels "48 depth 0", marks "A:done u0:k1"

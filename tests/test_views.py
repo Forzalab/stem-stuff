@@ -142,7 +142,7 @@ class Generated(unittest.TestCase):
                 continue
             for t in planned:
                 self.assertNotIn(t, text, path)
-            self.assertLessEqual(offered(text), set(P11), path)
+            self.assertLessEqual(offered(text), set(P11) | (set(SCENE) if path.endswith("scene-steps.md") else set()), path)
         self.assertIn("`graph.trace`", gv.prompt(REG))
         self.assertIn("`Hints(hints: string≤200[]≤3)`", gv.prompt(REG, "hint-line"))
 
@@ -248,6 +248,101 @@ class Slots(unittest.TestCase):
         self.assertEqual(r["root"]["typeName"], "View")
         out = aiw.lint_view_strings(["$t.title", "$t.a_very_long_slot_id_here"])
         self.assertTrue(all(o["ok"] and not o["block"] for o in out))
+
+
+SCENE = ["Scene", "Shape", "Link", "Axes", "MathRows", "Code", "Trace", "Cells", "Bars", "Q", "Ask"]
+CONTRACT = os.path.join(ROOT, "views", "scene-contract.md")
+
+
+def contract_sigs():
+    """{name: signature} from §1 of views/scene-contract.md (the V-A/V-B contract), Art / Role aliases expanded"""
+    with open(CONTRACT) as f:
+        doc = f.read()
+    sec = doc[doc.index("## 1. Components"):doc.index("### 1a.")]
+    alias = {a: re.search(rf"`{a}` = (`[^\n]*?`)(?: \(|\.\n)", sec).group(1) for a in ("Art", "Role")}
+    alias = {a: v.replace("`", "") for a, v in alias.items()}
+    out = {}
+    for block in re.findall(r"```\n([\s\S]*?)```", sec):
+        for line in block.splitlines():
+            m = re.match(r"^(\w+)\((.*?)\)(?:\s{2,}\(.*\))?$", line.strip())
+            if m:
+                text = f"{m.group(1)}({m.group(2)})"
+                for a, v in alias.items():
+                    text = text.replace(f": {a},", f": {v},").replace(f": {a})", f": {v})")
+                out[m.group(1)] = text
+    return out
+
+
+class SceneFamily(unittest.TestCase):
+    """viz MVP (todo 120): the scene family is staged (ships V1): in the registry, the scene-steps prompt, checkers and the gate's
+    catalog (library.json "staged"), but not in library.json's drawn components until views.js draws it (V-B)."""
+
+    def test_family_is_staged(self):
+        self.assertIn("V1", REG["staged"])
+        for n in SCENE:
+            self.assertEqual(REG["components"][n]["ships"], "V1", n)
+        self.assertEqual(sorted(gv.staged(REG)), sorted(SCENE))
+        self.assertFalse(set(SCENE) & set(gv.shipped(REG)))
+
+    def test_staged_in_base_is_caught(self):
+        r = copy.deepcopy(REG)
+        r["base"].append("Scene")
+        self.assertTrue(any("Scene is no shipping component" in line for line in gv.problems(r)))
+        r = copy.deepcopy(REG)
+        r["components"]["Scene"]["ships"] = "V9"
+        self.assertTrue(any("Scene: unknown ships V9" in line for line in gv.problems(r)))
+
+    def test_shipped_library_is_unchanged_but_step_gains_ops(self):
+        lib = gv.library(REG)
+        self.assertEqual(sorted(lib["components"]), sorted(P11))
+        self.assertEqual(lib["components"]["Steps"]["signature"], "Steps(fig?: Graph, steps: Step[], front?: string, head?: string[])")
+        step = lib["components"]["Step"]["props"]["properties"]
+        self.assertEqual(list(step), ["cap", "nodes", "edges", "tags", "labels", "front", "rows", "ops"])   # ask waits for Ask to ship
+        self.assertEqual(step["ops"], {"type": "array", "items": {"type": "string", "maxLength": 40}, "maxItems": 4})
+
+    def test_library_lists_the_staged_family(self):
+        st = gv.library(REG)["staged"]
+        self.assertEqual(sorted(st["components"]), sorted(SCENE))
+        self.assertEqual(sorted(st["schema"]["$defs"]), sorted(P11 + SCENE))
+        defs = st["schema"]["$defs"]
+        self.assertEqual(defs["Steps"]["properties"]["fig"], {"anyOf": [{"$ref": "#/$defs/Graph"}, {"$ref": "#/$defs/Scene"}]})
+        self.assertEqual(list(defs["Step"]["properties"])[-2:], ["ops", "ask"])
+        self.assertEqual(defs["Step"]["properties"]["ask"], {"$ref": "#/$defs/Ask"})
+        objs = defs["Scene"]["properties"]["objs"]["items"]["anyOf"]
+        self.assertEqual([o["$ref"].split("/")[-1] for o in objs], ["Shape", "Link", "Axes", "MathRows", "Code", "Trace", "Cells", "Bars"])
+
+    def test_signatures_match_the_contract(self):   # contract cross-check (v22 lesson): registry == views/scene-contract.md §1
+        want = contract_sigs()
+        for n in SCENE:
+            self.assertEqual(gv.sig(REG, n, caps=True, pool=gv.pool(REG)), want[n], n)
+        self.assertEqual(gv.sig(REG, "Steps", caps=True, pool=gv.pool(REG)), want["Steps"])
+        self.assertTrue(gv.sig(REG, "Step", caps=True, pool=gv.pool(REG)).endswith(", ops?: string≤40[]≤4, ask?: Ask)"))
+
+    def test_scene_steps_prompt(self):
+        text = gv.prompt(REG, "scene-steps")
+        self.assertEqual(offered(text), set(REG["base"]) | set(REG["recipes"]["scene-steps"]["components"]))
+        for n in SCENE + ["Steps", "Step"]:
+            self.assertIn(f"`{gv.sig(REG, n, caps=True, pool=gv.pool(REG))}`", text, n)
+        for head in ("## Scene rules", "## Notes: mechanics", "## Notes: calc", "## Notes: cs_trace", "## Example"):
+            self.assertIn(head, text)
+        for must in ("add ", "set ", "glow ", "hide ", "camera ", "param ", "attach ", "pivot ", "stack ", "scale ", "Never write a pixel",
+                     "one change", "ask"):
+            self.assertIn(must, text, must)
+        self.assertLessEqual(len(text.splitlines()), 200)
+        self.assertIn("p1 = Step(", text)
+
+    def test_other_prompts_never_offer_the_staged_family(self):
+        for path, text in outputs().items():
+            if path.endswith(".md") and path != gv.SCHEMA_MD and not path.endswith("scene-steps.md"):
+                self.assertFalse(offered(text) & set(SCENE), path)
+
+    def test_checkers_carry_the_scene_rows(self):
+        ch = gv.checkers(REG)
+        ids = [g["id"] for g in ch["gate"]]
+        for want in ("scene-schema", "scene-refs", "scene-rels", "scene-expr", "scene-trace", "scene-ops", "scene-steps", "scene-leak",
+                     "scene-voice", "scene-repair"):
+            self.assertIn(want, ids)
+        self.assertEqual(ch["staged"], {n: "V1" for n in SCENE})
 
 
 if __name__ == "__main__":
