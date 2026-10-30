@@ -73,7 +73,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `var` | `expr` | defaults to `x`. For physics, use `t`. | yes |
 | `choices` | `mc` | 2–8 `{ "id": "a", "md": "$9$", "lock"?: true }`. Up to 5 are shown (A–E). `lock` pins a choice to its slot ("none of these", DNE). | yes |
 | `shuffle` | `mc` | default `true`: choices are shuffled once per browser (same order on every reload; locked ones stay put). `false`: authored order (rarely wanted: leave it out; a converted problem never sets it just to keep its order). | yes |
-| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). 2–4 boxes. A part may instead be `"type": "mc"` with the mc fields (`choices`, `correct`, `wrong`, `shuffle`, `pick`, `miss`, `fix`; `how` on pick all only), the same rules as a top-level `mc`; a multi with an mc part may have up to 26 parts, since each part is loaded as its own mc question (code + A, B, C..., `unfold`). | label + prompt + type only |
+| `parts` | `multi` | the boxes, in order: `{ "label"?: "A", "prompt"?: "...", "type": "num" \| "expr" \| "text", "answer", "accept"?, "tol"?, "points"?, "var"?, "wrong"?, "unit"? }`. Labels default to A, B, C, D. `prompt` is the sub-question for that box (next row). 2–4 boxes. A part may instead be `"type": "mc"` with the mc fields (`choices`, `correct`, `wrong`, `shuffle`, `pick`, `miss`, `fix`; `how` on pick all only), the same rules as a top-level `mc`; a multi with an mc part may have up to 26 parts, since each part is loaded as its own mc question (code + A, B, C..., `unfold`). | label + prompt + type only |
 | `parts[].prompt` | `multi`, optional | the sub-question for that box: `md` string or array of lines, same format as a `text` block (markdown, `$..$` KaTeX). The page shows it as **a)**, **b)**, **c)**, **d)** with its own box beside it (phone: box under it), each box with its own submit arrow. Put the shared givens in `body` and each question in its part's `prompt`. A part without a `prompt` is just its "a)" and its box. Keep `how` for typing instructions, not questions. | yes |
 | `answer` | `num`, `expr`, `text` | `num`/`expr`: math.js string, or exactly `"dne"`. `text`: the exact answer text. | **no** |
 | `accept` | `text` | other spellings that also count (`["T", "true"]`) | **no** |
@@ -85,6 +85,8 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `nudge` | all but `mc` | Cluck's hint for a wrong answer that matches nothing in `wrong` | **no** |
 | `noob` | all, optional | `{ "tier": 1 \| 2 \| 3 }`: the noob ramp's author tier (see "Repair ladder, noob tier, welcome, twins") | yes |
 | `welcome` | all, optional | `true` on the bank's one welcome Q1 | yes |
+| `unit` | `num`, a `num` part of a `multi`; optional | the answer's unit, KaTeX-safe text, at most 16 characters: `"m/s^2"`, `"10^4 kg·m^2/s"`, `"°C"`, `"%"`; `""` = unitless. Tony, Oct 29: "every answer shall show the units". Schema only for now (the display is W132); not on `expr`, `text`, `mc` or their parts | not yet (no display) |
+| `twist` | all, optional | `true` = a twist of a real exam question; the app will show a Twist chip (Tony's twist chip ask, todo 133). Schema only for now; not on a part | not yet (no display) |
 | `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
 | `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
 | `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
@@ -707,6 +709,8 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         "noob": {"type": "object", "required": ["tier"], "additionalProperties": false, "description": "noob ramp (DESIGN-v3 §1): author tier, 1 easy, 2 medium, 3 hard; shuffle.mjs ramp reads it",
           "properties": {"tier": {"enum": [1, 2, 3]}}},
         "welcome": {"const": true, "description": "the bank's welcome Q1 (DESIGN-v3 §2): at most one per bank, needs repair (welcome.js renders it through repair.js)"},
+        "unit": {"type": "string", "maxLength": 16, "description": "num only: the answer's unit, KaTeX-safe text (\"m/s^2\", \"10^4 kg·m^2/s\", \"°C\", \"%\"); \"\" = unitless. Schema only for now: the display is W132"},
+        "twist": {"type": "boolean", "description": "a twist of a real exam question; the app shows a Twist chip (todo 133). Schema only for now"},
         "twin": {"enum": ["a", "b"], "description": "a redo twin of parent_template: a = same question, new numbers; b = the twisted one. Needs parent_template"},
         "parent_template": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$", "description": "twin: the code of its template item in this bank (not a twin, carries repair); one a and one b per template"},
         "repair": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the repair ladder (SCHEMA.md \"Repair ladder\"); GET /repair/<code> after a recorded wrong try",
@@ -887,6 +891,10 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
         {
           "if": {"not": {"properties": {"type": {"const": "mc"}}}},
           "then": {"properties": {"pick": false}}
+        },
+        {
+          "if": {"not": {"properties": {"type": {"const": "num"}}}},
+          "then": {"properties": {"unit": false}}
         },
         {
           "if": {"properties": {"type": {"const": "proof"}}, "required": ["type"]},
@@ -1072,9 +1080,14 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "items": {
             "$ref": "#/$defs/wrong"
           }
-        }
+        },
+        "unit": {"type": "string", "maxLength": 16, "description": "num part only: the answer's unit, KaTeX-safe text (\"m/s^2\", \"10^4 kg·m^2/s\", \"°C\", \"%\"); \"\" = unitless. Schema only for now: the display is W132"}
       },
       "allOf": [
+        {
+          "if": {"not": {"properties": {"type": {"const": "num"}}}},
+          "then": {"properties": {"unit": false}}
+        },
         {
           "if": {
             "properties": {

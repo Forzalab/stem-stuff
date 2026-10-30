@@ -308,3 +308,51 @@ test("budget: 12 marks + 6 labels, every check + the packer, ≤ 2 ms in Node (C
   console.log(`figcheck bench: 12 marks + 6 labels: median ${med.toFixed(3)} ms, p95 ${p95.toFixed(3)} ms`);
   assert.ok(med < 10, `median ${med} ms`);
 });
+
+// ─── angles (W340 §2, I-ANG-1a-d): Geometry's right / angle marks against the points they name ───
+const TRI = { A: [0, 0], B: [4, 0], C: [4, 3] };                      // mc-a's slope: the right angle is at B, θ belongs at A
+const CROWD = { A: [0, 0], B: [4, 0], C: [0, 3] };                    // geomarks' crowded triangle: the right angle is at A
+const mk = (k, n, text = "") => ({ k, names: n.split(""), text });
+test("angles: angleAt / angleNumber read the drawing and the label", () => {
+  close(F.angleAt(TRI.B, TRI.A, TRI.C), 90, 1e-9); close(F.angleAt(TRI.A, TRI.B, TRI.C), 36.87, 0.01);
+  assert.equal(F.angleNumber("90°"), 90); assert.equal(F.angleNumber("30 °"), 30); assert.equal(F.angleNumber("36.9°"), 36.9);
+  assert.equal(F.angleNumber("θ"), null); assert.equal(F.angleNumber("d + x"), null); assert.equal(F.angleNumber("30"), null, "a bare number is not an angle");
+});
+test("I-ANG-1a-d vertex: a right box goes where the drawing is square; a symbolic angle never shares it (mc-a: θ at A, not B)", () => {
+  const r = F.resolveAngles(TRI, [mk("right", "BAC"), mk("angle", "BAC", "θ")]);
+  assert.deepEqual(r.findings, []);
+  assert.deepEqual(r.marks.map(m => m.vertex), ["B", "A"], "right(B,A,C) at B (first = vertex); angle(B,A,C,θ) at A (the middle: B is square)");
+  assert.deepEqual(r.marks[1].rays, ["B", "C"]);
+});
+test("I-ANG-1c/1d: a numeric label goes to the vertex whose drawn angle it is (0.5°); none fits = a finding", () => {
+  let r = F.resolveAngles(CROWD, [mk("right", "ABC"), mk("angle", "BAC", "90°"), mk("angle", "ABC", "θ")]);
+  assert.deepEqual(r.findings, [], "the crowded triangle as #343 wrote it: 90° moves to A, θ to B");
+  assert.deepEqual(r.marks.map(m => m.vertex), ["A", "A", "B"]);
+  r = F.resolveAngles(CROWD, [mk("right", "ABC"), mk("angle", "CBA", "90°")]);    // planted bad: 90° at B (or C), the square corner is A
+  assert.deepEqual(ids(r.findings), ["I-ANG-1c"]);
+  r = F.resolveAngles(CROWD, [mk("angle", "ABC", "40°")]);                          // 36.87° at B, 90° at A: 40° is neither
+  assert.deepEqual(ids(r.findings), ["I-ANG-1d"]); close(r.findings[0].amount, 3.13, 0.01);
+  r = F.resolveAngles(CROWD, [mk("angle", "BAC", "36.9°")]);                        // first = B: 36.87°, the label fits as written
+  assert.deepEqual(r.findings, []); assert.equal(r.marks[0].vertex, "B");
+  r = F.resolveAngles(TRI, [mk("right", "CAB")]);                                   // a right box where nothing is square (C, A)
+  assert.deepEqual(ids(r.findings), ["I-ANG-1c"]);
+});
+test("I-ANG-1b: a vertex with a right-angle box never carries a non-90° angle", () => {
+  const RECT = { A: [0, 0], B: [4, 0], C: [4, 3], D: [0, 3] };
+  const r = F.resolveAngles(RECT, [mk("right", "ABD"), mk("right", "BAC"), mk("angle", "ABC", "θ")]);
+  assert.deepEqual(ids(r.findings), ["I-ANG-1b"]);
+  assert.deepEqual(ids(F.resolveAngles(RECT, [mk("right", "ABD"), mk("angle", "ABD", "90°")]).findings), [], "90° on its own box is fine");
+});
+test("I-ANG-1a: an angle label sits at its own arc's vertex (its centre is nearer that vertex than any other point)", () => {
+  const P = { A: [0, 0], B: [100, 0] };
+  assert.deepEqual(F.checkAngleLabels([{ id: "m1", vertex: "A", box: [10, -20, 16, 18] }], P), []);
+  const f = F.checkAngleLabels([{ id: "m1", vertex: "A", box: [80, -20, 16, 18] }], P);
+  assert.deepEqual(ids(f), ["I-ANG-1a"]); assert.deepEqual(f[0].ids, ["m1", "B"]);
+});
+test("place(): opts.clear keeps a label that clear from every stroke when there is room; 0 = the golden behaviour", () => {
+  const segs = [{ id: "s", pts: [[0, 50], [200, 50]] }], R = { x: 0, y: 0, w: 200, h: 120 };
+  const q = () => [{ key: 0, id: "t", w: 20, t: { pt: [100, 50] }, dirs: ["n"] }];
+  const gap = b => Math.min(Math.abs(b[1] + b[3] - 50), Math.abs(b[1] - 50));
+  assert.ok(gap(F.place(q(), segs, [], R, null, { LH: 18 })[0].box) < 10);
+  assert.ok(gap(F.place(q(), segs, [], R, null, { LH: 18, clear: 10 })[0].box) >= 10);
+});

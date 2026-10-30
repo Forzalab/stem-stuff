@@ -122,10 +122,48 @@ const TIP = { type: "graph", kind: "scene", alt: "two forces at one tip", marks:
   { mark: "force", at: [0, 0], angle: 0, len: 1.2, label: "$F$" }] };
 const CLASH = { type: "graph", kind: "scene", alt: "two boxes in each other", marks: [
   { mark: "body", at: [0, 3], shape: "box", w: 1, h: 1 }, { mark: "body", at: [0.5, 3.2], shape: "box", w: 1, h: 1 }] };
+/* W340 §2: the crowded triangle as #343 wrote it drew "90°" at B while the square corner is A (Tony: "bruh"). Corrected good = the
+   vertex first, as views.js reads it (90° at A, θ at B); planted bad = 90° at B where no reading fits (BAD_GEO: degrades, I-ANG-1c) */
 const GEO = [
-  ["crowded right triangle", 'root = View([g])\ng = Geometry("A 0,0; B 4,0; C 0,3; M 2,0", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(A,B,C)", "angle(B,A,C,90°)", "angle(A,B,C,$\\\\theta$)", "dim(A,B,4 m)", "dim(A,C,3 m)", "arrow(A,M,F)", "label(A,origin)"], "A crowded right triangle.")'],
+  ["crowded right triangle", 'root = View([g])\ng = Geometry("A 0,0; B 4,0; C 0,3; M 2,0", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(A,B,C)", "angle(A,B,C,90°)", "angle(B,A,C,$\\\\theta$)", "dim(A,B,4 m)", "dim(A,C,3 m)", "arrow(A,M,F)", "label(A,origin)"], "A crowded right triangle.")'],
   ["ramp (views-static)", 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1.15", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "angle(A,B,C,30°)", "dim(A,C,1.2 m)", "arrow(P,C,push)"], "The ramp at 30 degrees, the push up it.")'],
+  // W340 mc-a: Opus's own slope (right(B,A,C) = the box at B; angle(B,A,C,θ) = ∠BAC: θ at A, never at the square corner B)
+  ["mc-a slope", 'root = View([fig])\nfig = Geometry("A 0,0; B 4,0; C 4,3", ["seg(A,B)", "seg(B,C)", "seg(A,C)", "right(B,A,C)", "angle(B,A,C,θ)", "dim(A,C,d + x)", "dim(B,C,h = ?)"], "The slope and the height.")'],
 ];
+const AT = { "crowded right triangle": { "90°": "A", "θ": "B" }, "ramp (views-static)": { "30°": "A" }, "mc-a slope": { "θ": "A" } };
+const CLEAR = { "mc-a slope": { 1440: 10, 390: 8, 360: 8 } };   // px from every stroke and dot (the brief: mc-a; a 30° wedge has no such room)
+const BAD_GEO = [
+  ["90° at B (the square corner is A)", 'root = View([g])\ng = Geometry("A 0,0; B 4,0; C 0,3", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(A,B,C)", "angle(C,B,A,90°)"], "A right triangle.")', "I-ANG-1c"],
+  ["40° where 36.9° is drawn", 'root = View([g])\ng = Geometry("A 0,0; B 4,0; C 0,3", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "angle(B,A,C,40°)"], "A right triangle.")', "I-ANG-1d"],
+  ["θ on a right-angle box", 'root = View([g])\ng = Geometry("A 0,0; B 4,0; C 4,3; D 0,3", ["seg(A,B)", "seg(B,C)", "seg(A,C)", "right(A,B,D)", "right(B,A,C)", "angle(A,B,C,θ)"], "A rectangle cut.")', "I-ANG-1b"],
+];
+/* in the page: each label's smallest distance (screen px) to a stroke or a dot of the svg (leader lines are the label's own) */
+function clearance(root) {
+  const svg = root.querySelector("svg"), pt = svg.createSVGPoint(), segs = [];
+  for (const e of svg.querySelectorAll("line, path, circle, polygon")) {
+    if (e.classList.contains("gm-lead")) continue;
+    const m = e.getScreenCTM(), T = (x, y) => { pt.x = x; pt.y = y; const q = pt.matrixTransform(m); return [q.x, q.y]; };
+    let P = [];
+    if (e.tagName === "line") P = [T(+e.getAttribute("x1"), +e.getAttribute("y1")), T(+e.getAttribute("x2"), +e.getAttribute("y2"))];
+    else if (e.tagName === "polygon") { P = e.getAttribute("points").trim().split(/\s+/).map(p => T(...p.split(",").map(Number))); P.push(P[0]); }
+    else { const L = e.getTotalLength(); for (let i = 0; i <= 24; i++) { const q = e.getPointAtLength(L * i / 24); P.push(T(q.x, q.y)); } }
+    const what = (e.getAttribute("class") || e.parentNode.getAttribute("class") || e.tagName).split(" ").join(".");
+    for (let i = 0; i + 1 < P.length; i++) segs.push([P[i], P[i + 1], what]);
+  }
+  const dPS = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
+  const cross = (p, r, s, t) => { const d = (r[0] - p[0]) * (t[1] - s[1]) - (r[1] - p[1]) * (t[0] - s[0]); if (!d) return false;
+    const u = ((s[0] - p[0]) * (t[1] - s[1]) - (s[1] - p[1]) * (t[0] - s[0])) / d, v = ((s[0] - p[0]) * (r[1] - p[1]) - (s[1] - p[1]) * (r[0] - p[0])) / d; return u >= 0 && u <= 1 && v >= 0 && v <= 1; };
+  const dBox = (q, a, b) => {                                // 0 if the segment enters the box, else the gap
+    const inB = p => p[0] >= q.x && p[0] <= q.x + q.width && p[1] >= q.y && p[1] <= q.y + q.height;
+    if (inB(a) || inB(b)) return 0;
+    const C = [[q.x, q.y], [q.x + q.width, q.y], [q.x + q.width, q.y + q.height], [q.x, q.y + q.height]];
+    for (let i = 0; i < 4; i++) if (cross(a, b, C[i], C[(i + 1) % 4])) return 0;
+    return Math.min(...C.map(c => dPS(c, a, b)), ...[0, 1, 2, 3].flatMap(i => [a, b].map(p => dPS(p, C[i], C[(i + 1) % 4]))));
+  };
+  return [...svg.querySelectorAll("text")].map(t => { const q = t.getBoundingClientRect(); let best = [1e9, ""];
+    for (const [a, b, w] of segs) { const d = dBox(q, a, b); if (d < best[0]) best = [d, w]; }
+    return { t: t.textContent.trim(), at: t.dataset.at || null, d: +best[0].toFixed(1), what: best[1] }; });
+}
 const TYPES = { ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".woff2": "font/woff2" };
 const PAGE = `<!doctype html><html><head><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="views.css"><link rel="stylesheet" href="vendor/katex/katex.min.css"><style>body{padding:16px;max-width:720px;margin:auto}</style></head>
 <body class="ai-box"><div id="f" class="fig"></div><div id="v" class="vw"></div>
@@ -211,16 +249,33 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
     });
     for (const [name, prog] of GEO) {
       await step(`labels: Geometry ${name}, no overlap, none on a stroke without a knockout, inside, ${label} ${width}`, async () => {
-        const r = await page.evaluate(async ([prog, src]) => {
+        const r = await page.evaluate(async ([prog, src, csrc]) => {
           const V = await import("/views.js"), v = document.getElementById("v"); v.innerHTML = "";
           const h = V.render(prog, v, { document });
-          return { errors: h.errors.map(e => String(e.code || e.message || e)), ...new Function("return " + src)()(v, "text") };
-        }, [prog, audit.toString()]);
+          const at = Object.fromEntries([...v.querySelectorAll("text[data-at]")].map(t => [t.textContent.trim(), t.dataset.at]));
+          return { errors: h.errors.map(e => String(e.code || e.message || e)), findings: v.querySelector(".vw-geo")?.dataset.figFindings ?? null, at,
+            clear: new Function("return " + csrc)()(v), ...new Function("return " + src)()(v, "text") };
+        }, [prog, audit.toString(), clearance.toString()]);
         assert.deepEqual(r.errors, []);
-        assert.ok(r.n >= 7, `${r.n} texts`);
+        assert.ok(r.n >= 6, `${r.n} texts`);
         assert.deepEqual(r.pairs, [], "labels overlap"); assert.deepEqual(r.unknocked, [], "a label on a stroke without a knockout"); assert.deepEqual(r.outside, [], "labels outside the svg");
+        assert.equal(r.findings, "", "figcheck: no finding on the figure");
+        for (const [t, v] of Object.entries(AT[name] || {})) assert.equal(r.at[t], v, `I-ANG-1a: "${t}" sits at its own vertex ${v}: ${JSON.stringify(r.at)}`);
+        if (CLEAR[name]) {
+          const tight = r.clear.filter(c => c.d < CLEAR[name][width]);
+          assert.deepEqual(tight, [], `mc-a: every label >= ${CLEAR[name][width]} px from every stroke`);
+        }
       });
     }
+    for (const [name, prog, code] of BAD_GEO) await step(`planted bad Geometry: ${name} -> ${code}, the figure never draws, ${label} ${width}`, async () => {
+      const r = await page.evaluate(async prog => {
+        const V = await import("/views.js"), v = document.getElementById("v"); v.innerHTML = "";
+        const h = V.render(prog, v, { document });
+        return { errors: h.errors.map(e => `${e.code} ${e.message}`), svg: !!v.querySelector(".vw-geo svg") };
+      }, prog);
+      assert.equal(r.svg, false, "no drawing");
+      assert.ok(r.errors.some(e => e.startsWith("fig-finding") && e.includes(code)), JSON.stringify(r.errors));
+    });
     await step(`no page errors, ${label} ${width}`, async () => assert.deepEqual(errs, []));
     await page.close();
   }

@@ -29,7 +29,8 @@ writeFileSync(join(BANKS, "BANK_VS1.json"), JSON.stringify({ v: 1, problems: [P]
 
 const GEO = 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1.15", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "angle(A,B,C,30°)", "dim(A,C,1.2 m)", "arrow(P,C,push)"], "The ramp at 30 degrees, the push up it.")';
 const TABLE = 'root = View([t])\nt = Table(["step", "you", "the fix"], [["friction", "added", "taken away"], ["spring", "x", "x squared"]])';
-const STEPS = 'root = View([s])\ns = Steps(null, [s1, s2, s3])\ns1 = Step("Push in: **48 J**.")\ns2 = Step("Friction takes some away.")\ns3 = Step("The spring gets what is left.")';
+// W340: a stepper carries its figure (a figure-less Steps is dropped by the gate, re-asked, else plain lines: shotqa stepper / stepper-plain)
+const STEPS = 'root = View([s])\ns = Steps(g, [s1, s2, s3])\ng = Graph("W 40 40, F 160 40, S 280 40", "W>F, F>S")\ns1 = Step("Push in: **48 J**.", "W:cur")\ns2 = Step("Friction takes some away.", "W:done F:cur", "W-F:tree")\ns3 = Step("The spring gets what is left.", "W:done F:done S:cur", "W-F:tree F-S:tree")';
 /* physics-b plus a second block in the first one: the server passes it (livefig.check has no overlap rule), Graph.fix rests both on the
    ramp, figcheck still finds I-BODY-1 (no auto-fix): the student gets the alt text, never the interpenetrating drawing */
 const CLASH = { ...FIX.valid[0], alt: "Two blocks on the ramp, drawn inside each other.", marks: [...FIX.valid[0].marks, { mark: "body", at: [0.25, 1.3], shape: "box", w: 0.8, h: 0.5, angle: 30 }] };
@@ -40,6 +41,12 @@ const REPLIES = {
   table: ["Not quite.\n\nYour move next to the fix:\n", fence("openui", TABLE) + "\n", "\nTry once more."],
   steps: ["Not quite.\n\nClick through it:\n", fence("openui", STEPS) + "\n", "\nTry once more."],
   geo: ["Not quite.\n\nThe ramp:\n", fence("openui", GEO) + "\n", "\nTry once more."],
+  // W113 vet: mc-a's own triangle (the AFTER run), whose labels drew at ~12 px on a 1440 desktop
+  tri: ["Not quite.\n\nThe slope:\n", fence("openui", 'root = View([fig])\nfig = Geometry("A 0,0; B 4,0; C 4,3", ["seg(A,B)", "seg(B,C)", "seg(A,C)", "right(B,A,C)", "angle(B,A,C,θ)", "dim(A,C,d + x)", "dim(B,C,h = ?)"], "The slope and the height.")') + "\n", "\nTry once more."],
+  code: ["Not quite.\n\nSo `lo = mid` does not move **lo**.\n\n", "$$\n\\begin{aligned}\nW_{push} &= 40(1.2) \\\\\nW_{push} &= 48\n\\end{aligned}\n$$\n", "\nTry once more."],
+  // W340 vf-proof-b: the row format V4_MATH teaches (3-5 words that justify the line below, then ONE centred display line, per step)
+  rows: ["Not quite.\n\nTake the case that **breaks**:\n", "$$hi = lo + 1$$\n", "Because $mid$ rounds down, this becomes:\n", "$$mid = lo$$\n",
+    "So `lo = mid` never moves **lo**.\n", "\nTry once more."],
   clash: ["Not quite.\n\nThe two blocks:\n", fence("fig", JSON.stringify(CLASH)) + "\n", "\nTry once more."],
 };
 let reply = "two";
@@ -114,6 +121,33 @@ try {
     assert.match(await page.textContent("#cluck .wview .vw-n"), /Step 1 of 3/);
     await page.click("#cluck .wview .vw-foot button:nth-child(2)");
     assert.match(await page.textContent("#cluck .wview .vw-cap"), /Friction/);
+    await page.mouse.move(0, 0);                                         // not hovered: the resting look
+    const look = await page.$eval("#cluck .wview .vw-foot button:nth-child(2)", b => { const c = getComputedStyle(b), r = getComputedStyle(document.querySelector("#cluck"));
+      const hex = v => v.trim().replace(/^#(..)(..)(..)$/, (m, x, y, z) => `rgb(${[x, y, z].map(h => parseInt(h, 16)).join(", ")})`);
+      return [c.color === hex(r.getPropertyValue("--help")), c.borderTopColor === hex(r.getPropertyValue("--help-line")), c.backgroundColor]; });
+    assert.deepEqual(look, [true, true, "rgba(0, 0, 0, 0)"], "W113 vet: Back / Next in the chat's --help family, no navy fill");
+    assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  await step("`code` in a reply is a code span (no backticks); an aligned $$ derivation is one display, one row per step", async () => {
+    const page = await wish("code", 1280, 900);
+    assert.equal(await page.textContent("#cluck .wtext code.wcode"), "lo = mid");
+    assert.doesNotMatch(await page.textContent("#cluck .wtext"), /`/);
+    assert.equal(await page.locator("#cluck .wtext .katex-display").count(), 1, "one display block");
+    assert.equal(await page.locator("#cluck .wtext .katex-display .mtable").count(), 1, "the aligned block renders as one table");
+    assert.match(await page.textContent("#cluck .wtext .katex-display annotation"), /\\begin\{aligned\}[\s\S]*40\(1\.2\)[\s\S]*\\\\[\s\S]*48/, "both steps, in order");
+    assert.deepEqual(page.errs, []);
+    await page.context().close();
+  });
+  for (const [w, h] of [[1440, 900], [390, 844]]) await step(`proof rows (W340 vf-proof-b): prose row / one centred display line, alternating, ${w}`, async () => {
+    const page = await wish("rows", w, h);
+    const rows = await page.$$eval("#cluck .wtext > .wl:not(.wgap)", els => els.map(e => ({ math: e.classList.contains("wmath"), n: e.querySelectorAll(".katex-display").length,
+      align: getComputedStyle(e).textAlign, text: e.textContent.trim().slice(0, 40) })));
+    const at = rows.findIndex(r => /Take the case/.test(r.text));
+    assert.ok(at >= 0, JSON.stringify(rows));
+    assert.deepEqual(rows.slice(at, at + 5).map(r => r.math), [false, true, false, true, false], JSON.stringify(rows));
+    for (const r of rows.slice(at, at + 5).filter(r => r.math)) { assert.equal(r.n, 1, "ONE display line per row"); assert.equal(r.align, "center"); }
+    assert.equal(await page.textContent("#cluck .wtext b"), "breaks", "markdown bold in a prose row");
     assert.deepEqual(page.errs, []);
     await page.context().close();
   });
@@ -131,10 +165,14 @@ try {
     assert.deepEqual(page.errs, []);
     await page.context().close();
   });
-  await step("a desktop keeps the live view (no static image)", async () => {
-    const page = await wish("geo", 1280, 900);
+  for (const [w, h] of [[1440, 900], [390, 844]]) await step(`${w} px keeps the live view (no static image); its labels draw at 0.8x the reply's text or more (W113 vet: mc-a's labels were tiny)`, async () => {
+    const page = await wish("tri", w, h);
     await page.waitForSelector("#cluck .wtext .wview .vw-geo svg", { timeout: 5000 });
     assert.equal(await has(page, "#cluck .wtext img.vw-static"), false);
+    // the drawn size: the label's font in user units x the svg's scale (meet: the smaller of width and height ratios)
+    const [label, body] = await page.$eval("#cluck .wview .vw-geo svg", s => { const t = s.querySelector(".gm-t:not(.gm-name)"), r = s.getBoundingClientRect(), v = s.viewBox.baseVal;
+      return [parseFloat(getComputedStyle(t).fontSize) * Math.min(r.width / v.width, r.height / v.height), parseFloat(getComputedStyle(document.querySelector("#cluck .wtext")).fontSize)]; });
+    assert.ok(label >= 0.8 * body, `label ${label.toFixed(1)} px vs reply text ${body} px`);
     await page.context().close();
   });
   for (const [w, h] of [[1280, 900], [390, 844]]) {
