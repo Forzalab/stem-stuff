@@ -231,7 +231,8 @@
       body.append(val);
       if (s.ask) {
         const w = whyUi(s);
-        if (s.state === "future" || (live && !s.ok)) lock(w, "rp-ghost", null); else if (s.why != null) lock(w, "rp-locked", s.why);
+        if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.style.visibility = "hidden"; w.dataset.room = ""; }   // its room stays, unseen until its step's pick:
+        else if (s.why != null) lock(w, "rp-locked", s.why);                    // "Why half?" before d/2 gives the answer away (W129 shot QA)
         body.append(w);
       }
       li.append(body);
