@@ -1,5 +1,5 @@
 """OpenUI Lang 1.0 for the server gate (render plan v2, Part A; sprint box P0.5): stdlib only, no JS engine on the Python function.
-A port of the vendored lang-core 1.0.1 (vendor/openui-lang.mjs, tools/openui/build.sh): lexer, statement split, auto-close,
+A port of the vendored lang-core 1.0.2 (vendor/openui-lang.mjs, tools/openui/build.sh): lexer, statement split, auto-close,
 expressions, schema-aware materialize + validation, the stream-end evaluator, patch merge and the streaming parser's
 completed-statement scan. Same AST and result shapes as upstream (dicts with the same keys), so a gate log reads like theirs.
 Proof it agrees: tests/test_oui.py runs every spec fixture (tests/fixtures/openui/1.0) here and diffs the canonical result with the

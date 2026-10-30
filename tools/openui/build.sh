@@ -6,15 +6,15 @@
 #   tests/fixtures/openui/1.0/        spec/fixtures/1.0, as is (tests only; tools/build_public.py skips tests/)
 #   tests/fixtures/openui/prompt.txt  the prompt the OFFICIAL npm build (real zod) prints for library.json (pins zod-shim.mjs)
 # usage: tools/openui/build.sh <openui checkout at the pinned tag>
-#   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch @openuidev/lang-core@1.0.1 https://github.com/thesysdev/openui /tmp/openui
+#   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch @openuidev/lang-core@1.0.2 https://github.com/thesysdev/openui /tmp/openui
 #   tools/openui/build.sh /tmp/openui
 # Needs node + npx (esbuild and the npm package are fetched at the pinned versions). Same input, same bytes out.
 # Patches (nothing else changes; the source is upstream's):
 #   zod/v4, zod/v4/core -> tools/openui/zod-shim.mjs   (built-in function/step schemas are only read for prompt signatures)
 #   src/telemetry/runtime.ts -> tools/openui/telemetry-stub.ts   (no PostHog calls; the npm postinstall is not shipped at all)
 set -euo pipefail
-VERSION=1.0.1                                         # @openuidev/lang-core, tag @openuidev/lang-core@1.0.1
-COMMIT=eb20708b9cc41afced5625e99e6ce8ec2f8a5435        # that tag's commit
+VERSION=1.0.2                                         # @openuidev/lang-core, tag @openuidev/lang-core@1.0.2
+COMMIT=f08a660535e55b5b2a24a0eb68568edaf9e4fe4b        # that tag's commit
 ESBUILD=0.25.10
 here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/../.." && pwd)"
 src="${1:?usage: tools/openui/build.sh <openui checkout>}"; src="$(cd "$src" && pwd)"

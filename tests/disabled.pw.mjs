@@ -26,6 +26,9 @@ async function open(page, code, verdicts) {
 }
 const WRONG2 = [{ verdict: "wrong", triesLeft: 1 }, { verdict: "wrong", triesLeft: 0 }];
 const RIGHT = [{ verdict: "correct", triesLeft: 2 }];
+/* the next try waits for this one's grade, not a fixed 150 ms: a wrong grade hides Check until the box is edited (app.js feedback), so a grade
+   that lands after the next fill (CPU load, 3 CI lanes) hid Check for good and the click timed out (sleep-over-precondition) */
+const graded = (page, n) => page.waitForFunction(k => window.__drill.state.tries.length >= k, n, { timeout: 5000 });
 const waitFb = page => page.waitForSelector("#q .vk, #q .opt.right, #fb .verdict, #q.closed", { timeout: 4000 });   // graded: the box / badge icon, a line in #fb, or the closed question (T17b-1: no out-of-tries line)
 
 /* every answer control: aria-disabled, not-allowed cursor, no change on hover, clicks do nothing */
@@ -64,7 +67,8 @@ async function run(w, h) {
   /* wait for option i to be live: a reopened problem paints its cached record first and the /state reconcile re-enables it a
      moment later (app.js load → paint → syncServer); CI was red once on this race (design/TESTING.md) */
   const pickMC = async i => { await page.waitForFunction(n => document.querySelectorAll("#q .opt:not(:disabled)").length > n, i, { timeout: 5000 });
-    const o = (await page.$$("#q .opt:not(:disabled)"))[i]; await o.click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await page.waitForTimeout(150); };
+    const t0 = await page.evaluate(() => window.__drill.state.tries.length);
+    const o = (await page.$$("#q .opt:not(:disabled)"))[i]; await o.click(); await page.click("#q .ch:has(.opt[aria-checked=true]) .send"); await graded(page, t0 + 1); };
 
   await step(`${w} mc: locked after two wrong`, async () => {
     await open(page, "CALC1_X2P", WRONG2);
@@ -80,7 +84,7 @@ async function run(w, h) {
   });
   await step(`${w} num: locked`, async () => {
     await open(page, "CALC1_T6B", WRONG2);
-    for (const v of ["1", "2"]) { await page.fill("#ans", v); await page.click("#ansGo"); await page.waitForTimeout(150); }
+    for (const [k, v] of ["1", "2"].entries()) { await page.fill("#ans", v); await page.click("#ansGo"); await graded(page, k + 1); }
     await waitFb(page);
     await shot("num-locked");
     if (!ONLY_SHOTS) await assertDead(page);
@@ -93,7 +97,8 @@ async function run(w, h) {
   });
   await step(`${w} multi: locked`, async () => {
     await open(page, "CSCI26_M5V", [...WRONG2, ...WRONG2]);
-    for (const part of [0, 1]) for (const v of ["1", "2"]) { await page.locator("#q .ans").nth(part).fill(v); await page.click(`#go${part}`); await page.waitForTimeout(150); }   // each part has its own tries
+    let k = 0;
+    for (const part of [0, 1]) for (const v of ["1", "2"]) { await page.locator("#q .ans").nth(part).fill(v); await page.click(`#go${part}`); await graded(page, ++k); }   // each part has its own tries
     await waitFb(page);
     await shot("multi-locked");
     if (!ONLY_SHOTS) await assertDead(page);

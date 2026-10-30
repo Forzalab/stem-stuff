@@ -1536,6 +1536,28 @@ def _source(stmts, root_kids):
     return "\n".join([f"root = View([{', '.join(root_kids)}])"] + [raw for sid, raw in stmts])
 
 
+def bare_steps(el):
+    """W340 (Tony, Oct 29 17:3x: a stepper needs a real picture per step): a Steps with neither a figure nor a table is dropped
+    ("steps-nofig"); the reply re-asks once for the figure, in place, else shows its captions as plain numbered lines (steps_plain)"""
+    p = (el.get("props") or {}) if el.get("typeName") == "Steps" else None
+    return "steps-nofig" if p is not None and not p.get("fig") and not p.get("head") else None
+
+
+def steps_plain(body):
+    """the captions of a dropped figure-less Steps as plain numbered lines ("" when there is none): the stepper's words, no chrome"""
+    try:
+        res = oui.parse(body, catalog(), "View")
+    except Exception:  # noqa: BLE001
+        return ""
+    for k in (res.get("root") or {}).get("props", {}).get("children") or []:
+        if isinstance(k, dict) and bare_steps(k):
+            caps = [str((s.get("props") or {}).get("cap") or "").strip() for s in k["props"].get("steps") or [] if isinstance(s, dict)]
+            caps = [c for c in caps if c]
+            if caps:
+                return "\n" + "\n".join(f"**{i}.** {c}" for i, c in enumerate(caps, 1)) + "\n"   # bold "1.": a plain line, not the app's step widget (it would take in the lines after it)
+    return ""
+
+
 def gate(body, ctx, stage="wrong"):
     """(program text, log codes) for one closed ```openui fence body; program None = the whole fence is dropped. stage = pre | wrong |
     post, set by the server (never the model): before a solve a scene shows no answer number"""
@@ -1583,6 +1605,7 @@ def gate(body, ctx, stage="wrong"):
                                for el in _elements(k, []) if el.get("typeName") == "Trace" and el["props"].get("id") in ticks})
         for el in [] if _scene_steps(k) else _elements(k, []):
             why = why or errs.get(el.get("statementId")) or check_element(el, ctx)
+        why = why or bare_steps(k)
         if why:
             log.append(f"{sid}:{why}")
         else:
@@ -1602,8 +1625,8 @@ class Fence(livefig.Fence):
     """livefig.Fence plus the ```openui branch: same hold-until-closed stream, one figure per reply across ```fig and ```openui.
     stage = the server's reveal stage for a scene (default wrong = fail closed)"""
 
-    def __init__(self, ctx, stage="wrong"):
-        super().__init__(ctx)
+    def __init__(self, ctx, slot=None, stage="wrong"):   # slot: livefig.Fence's re-ask marker (W340); stage keyword-only in use
+        super().__init__(ctx, slot)
         self.stage = stage
 
     def _block(self, lang, body):
@@ -1615,6 +1638,8 @@ class Fence(livefig.Fence):
             return self.log.append("second") or ""
         prog, why = gate(body, self.ctx, self.stage)
         self.log.append("oui:" + ",".join(why))
+        if any(w.endswith(":steps-nofig") for w in why):   # a figure-less stepper: its captions wait as plain lines (livefig.Fence.plain)
+            self.plain = steps_plain(body)
         if prog is None:
             return ""
         self.shown += 1

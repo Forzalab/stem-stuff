@@ -1,0 +1,118 @@
+{
+ "v": 20261022,
+ "problems": [
+  {
+   "code": "PHYS_UNA",
+   "title": "Fuzzy rule with a NOT",
+   "type": "num",
+   "body": [
+    {
+     "type": "text",
+     "md": "Fuzzy: NOT = 1 - x, AND = min, OR = max. Rule: IF hot AND NOT humid THEN fan high. hot $= .6$, humid $= .75$. How strongly does the rule fire?"
+    }
+   ],
+   "how": "A decimal, like .5",
+   "answer": "0.25",
+   "form": "1-0.75",
+   "ignore_slips": [
+    "0.5"
+   ],
+   "wrong": [
+    {
+     "match": "0.6",
+     "error": "negation",
+     "hint": "QUACK. The rule says NOT humid. Did humid get flipped before the AND?"
+    },
+    {
+     "match": "0.75",
+     "error": "negation",
+     "hint": "QUACK. That's humid itself. The rule wants NOT humid. Flip it, then AND."
+    }
+   ],
+   "nudge": "QUACK. NOT first. Then AND. One number each, on paper.",
+   "unit": "m/s^2",
+   "twist": true
+  },
+  {
+   "code": "PHYS_UNB",
+   "title": "Two-set count",
+   "type": "multi",
+   "body": [
+    {
+     "type": "text",
+     "md": "$|A| = 10$, $|B| = 7$, $|A \\cap B| = 3$."
+    }
+   ],
+   "how": "Two whole numbers, in the order asked.",
+   "parts": [
+    {
+     "prompt": "How many are in $A \\cup B$?",
+     "type": "num",
+     "answer": "14",
+     "form": "10+7-3",
+     "ignore_slips": [
+      "7"
+     ],
+     "wrong": [
+      {
+       "match": "17",
+       "error": "counting",
+       "hint": "QUACK. You counted the overlap twice. How many times should it count?"
+      }
+     ],
+     "tol": 0.0001,
+     "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)",
+     "unit": "10^4 kg·m^2/s"
+    },
+    {
+     "prompt": "How many are in exactly one set?",
+     "type": "num",
+     "answer": "11",
+     "form": "10+7-2*3",
+     "wrong": [
+      {
+       "match": "14",
+       "error": "misread",
+       "hint": "QUACK. Exactly one. Should the overlap be in that count at all?"
+      }
+     ],
+     "tol": 0.0001,
+     "tol_why": "wiggle test: g, pi and every decimal datum +-1 in its last digit leave the key unchanged (integers and fractions are exact)",
+     "unit": ""
+    }
+   ],
+   "nudge": "QUACK. Draw the two circles. Fill the middle first.",
+   "twist": false
+  },
+  {
+   "code": "PHYS_UNC",
+   "title": "Even or odd",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Every integer is even or odd."
+    }
+   ],
+   "choices": [
+    {
+     "id": "t",
+     "md": "TRUE"
+    },
+    {
+     "id": "f",
+     "md": "FALSE"
+    }
+   ],
+   "correct": "t",
+   "wrong": [
+    {
+     "choice": "f",
+     "error": "misread",
+     "hint": "QUACK. Pick any integer. Is it ever neither?"
+    }
+   ],
+   "twist": true
+  }
+ ]
+}

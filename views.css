@@ -67,14 +67,16 @@
 .vw .el.seen { fill: var(--ink); }
 .vw .col { fill: var(--muted); font: 400 0.8125rem var(--font); text-anchor: middle; }
 /* Geometry (1:1 scale, y up): ink strokes, muted dims and arcs; fits the figure slot min(28svh, half the width) */
-.vw-geo svg { max-height: min(var(--vw-fig), 50vw); }
+.vw-geo svg { max-height: min(var(--vw-fig), 62vw); }   /* W340: 50vw drew labels under 0.8x the reply text at 390 once the frame took in the labels and their clearance */
 .vw .gm { fill: none; stroke: var(--ink); stroke-width: 1.75; }
 .vw .gm-dim, .vw .gm-angle, .vw .gm-right { stroke: var(--muted); stroke-width: 1.25; }
 .vw .gm-arrow { stroke: var(--c1); stroke-width: 2.25; }
 .vw .gm-arrow polygon { fill: var(--c1); stroke: none; }
 .vw .gm-pt circle { fill: var(--ink); stroke: none; }
-.vw .gm-t { fill: var(--ink); font: 400 0.875rem var(--font); text-anchor: middle; }
+.vw .gm-t { fill: var(--ink); font: 400 1.125rem var(--font); text-anchor: middle; }   /* W113 vet: 0.875rem drew at 11 px on a phone (meet scale ~0.8) */
 .vw .gm-t.gm-name { font-weight: 600; }
+.vw .gm-t.knock { stroke: var(--knock); stroke-width: 4; paint-order: stroke; }   /* placed on a stroke (figcheck place): a halo */
+.vw .gm-lead { stroke: var(--muted); stroke-width: 1; }
 /* colour classes (F12): fill AND digit AND k2 hollow, so classes survive greyscale and the warm remap */
 .vw .cm circle { stroke-width: 2; }
 .vw .cm.k1 circle { fill: var(--c1); stroke: var(--c1); }

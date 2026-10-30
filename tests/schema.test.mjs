@@ -555,6 +555,33 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
   });
 }
 
+// unit + twist (W132a, SCHEMA.md "One problem"): unit = an optional answer unit on a num item or a num part (<= 16 chars, "" = unitless);
+// twist = an optional boolean on any item. The schema only: nothing renders them yet.
+{
+  const file = new URL("./fixtures/unit-twist.json", import.meta.url), fx = JSON.parse(readFileSync(file, "utf8"));
+  const edit = f => { const b = structuredClone(fx); f(Object.fromEntries(b.problems.map(p => [p.code, p]))); return b; };
+  test("unit + twist: the fixture validates (num unit, num part units incl. \"\", twist true/false on num, multi, mc)", () => {
+    assert.ok(validate(fx), JSON.stringify(validate.errors, null, 1));
+    const r = spawnSync("node", [fileURLToPath(new URL("../tools/schema-check.mjs", import.meta.url)), fileURLToPath(file)], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+  });
+  test("unit + twist: the schema refuses junk", () => {
+    const bad = {
+      "unit of 17 chars": p => { p.PHYS_UNA.unit = "kg·m^2/s per mole"; },
+      "part unit of 17 chars": p => { p.PHYS_UNB.parts[0].unit = "x".repeat(17); },
+      "unit not a string": p => { p.PHYS_UNA.unit = 5; },
+      "twist as a string": p => { p.PHYS_UNA.twist = "yes"; },
+      "twist as a number on mc": p => { p.PHYS_UNC.twist = 1; },
+      "unit on an mc item": p => { p.PHYS_UNC.unit = "m"; },
+      "unit on a multi item": p => { p.PHYS_UNB.unit = "m"; },
+      "unit on a text part": p => { Object.assign(p.PHYS_UNB.parts[1], { type: "text", answer: "eleven" }); delete p.PHYS_UNB.parts[1].form; },
+      "twist on a part": p => { p.PHYS_UNB.parts[0].twist = true; },
+    };
+    for (const [name, f] of Object.entries(bad)) assert.ok(!validate(edit(f)), name);
+    assert.ok(validate(edit(p => { p.PHYS_UNA.unit = "x".repeat(16); })), "16 chars is fine");
+  });
+}
+
 // the proof type (W107, SCHEMA.md "Proof items"): a whole induction proof, graded by Cluck on 3 rubric rows; the key block never leaves the server
 test("proof: the fixture validates; it needs proof + how; 3 rubric rows base | assume | prove; no answer keys of the other types", () => {
   const fx = JSON.parse(readFileSync(new URL("./fixtures/proof-bank.json", import.meta.url), "utf8"));

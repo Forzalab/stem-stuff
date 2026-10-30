@@ -256,8 +256,13 @@ test("Geometry: every mark kind is an SVG element in one 1:1 figure", () => {
   const texts = cls("gm-t").map(n => n.textContent);
   for (const s of ["3 m", "θ", "F", "top", "A", "B", "C", "O"]) assert.ok(texts.includes(s), s);
   assert.equal(one(m, "vw-geo").getAttribute("aria-label"), "A right triangle with legs 3 and 4.");
-  const [, , w, hh] = svg[0].getAttribute("viewBox").split(" ").map(Number);
-  assert.ok(Math.abs((w - 68) / (hh - 68) - 3 / 4) < 1e-6, "1:1 scale: the drawing keeps the 3 by 4 box");
+  // 1:1 scale: the drawing keeps the 3 by 4 box (W340: the viewBox now grows to the placed labels, so read the legs themselves)
+  const L = n => Math.hypot(+n.getAttribute("x2") - +n.getAttribute("x1"), +n.getAttribute("y2") - +n.getAttribute("y1"));
+  const [ab, bc, ca] = cls("gm-seg").map(L);
+  assert.ok(Math.abs(ab / bc - 3 / 4) < 1e-6 && Math.abs(ca / bc - 5 / 4) < 1e-6, "1:1 scale: the drawing keeps the 3 by 4 box");
+  const [x0, y0, w, hh] = svg[0].getAttribute("viewBox").split(" ").map(Number);
+  for (const n of cls("gm-seg")) for (const [x, y] of [["x1", "y1"], ["x2", "y2"]].map(([a, b]) => [+n.getAttribute(a), +n.getAttribute(b)]))
+    assert.ok(x > x0 && x < x0 + w && y > y0 && y < y0 + hh, "the drawing is inside the viewBox");
 });
 
 test("Geometry: over a cap (13 marks, 7 labels) or a mark on an unknown point drops the statement", () => {

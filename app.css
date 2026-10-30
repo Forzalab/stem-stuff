@@ -342,6 +342,7 @@ html.sugar .rtag.rt-won { border-color: var(--correct); }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
 .fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
+.fig-alt { box-sizing: border-box; padding: var(--s3) var(--s4); border: var(--bw) solid var(--line); border-radius: 8px; }   /* graph.js degrade (U7): a figure figcheck could not fix shows its alt text in this plain box */
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
 .lbl.tick { font-size: var(--t-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 
@@ -977,6 +978,10 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext { font-size: var(--t-md); line-height: var(--lh); overflow-x: auto; overflow-y: hidden; color: var(--ai-text); }   /* y hidden: no scroller nested in .cl-bd */
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
+.wtext .wcode { font-family: var(--mono); font-size: .9em; background: var(--help-fill); color: var(--help-on); padding: 0 var(--s1); border-radius: 4px; }   /* `code` in Cluck's reply */
+#cluck .vw-foot .btn { background: none; color: var(--help); border-color: var(--help-line); }   /* a stepper's Back / Next in Cluck: the chat's --help family */
+#cluck .vw-foot .btn:hover { background: var(--help-fill); }
+#cluck .vw-foot .btn[disabled] { color: var(--help-muted); border-color: var(--help-rule); background: none; cursor: default; }
 .wtext .wstatic .vw-static { display: block; width: 100%; max-width: 420px; height: auto; }   /* W113: a view's static image (app.js viewImage) */
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }

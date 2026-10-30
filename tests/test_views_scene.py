@@ -205,8 +205,10 @@ class Primitives(unittest.TestCase):
         prog, log = views_gate.gate('root = View([s, t])\ns = Shape("a", "point", "", "1,1")\nt = Text("You see it.")', CTX)
         self.assertEqual(log, ["s:scene-outside:Shape"])
         self.assertIn("scene-outside", codes(build([RECT, 'Q("z", "given", 2)'])))
-        prog, log = views_gate.gate('root = View([g])\ng = Steps(null, [Step("hi")])', CTX)
+        prog, log = views_gate.gate('root = View([s])\ns = Steps(g, [Step("hi", "a:cur")])\ng = Graph("a 40 40, b 160 40", "a>b")', CTX)
         self.assertEqual(log, ["ok"])      # a Graph stepper keeps its old chat rule (main #332 / todo 113: a stepper may ride in chat)
+        prog, log = views_gate.gate('root = View([g])\ng = Steps(null, [Step("hi")])', CTX)
+        self.assertEqual(log, ["g:steps-nofig", "empty"])   # main #340 (W340): a stepper with no figure is dropped, re-asked, else plain lines
 
     def test_scene_step_leaves_graph_args_null(self):
         src = build([RECT]).replace('Step("You drew this. Where do you start?", null', 'Step("You drew this. Where do you start?", "a:cur"')
