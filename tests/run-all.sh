@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / copy-math / why-chip / welcome-app / views-static / toast-note / twin-first, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / copy-math / why-chip / welcome-app / views-static / toast-note / twin-first / desk-layout, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -51,6 +51,9 @@ declare -A PART_ENV=(
   [next-cue@2]="NC_MODE=diet"
   [upload-replace@1]="UR_ONLY=^393:"   # by width (every step opens its own context); no spaces: the env is split on whitespace
   [upload-replace@2]="UR_ONLY=^1280:"
+  [desk-layout@1]="SIZES=720x800,721x800,1024x768"     # by size (W129; each size opens its own contexts): the breakpoint, then laptops,
+  [desk-layout@2]="SIZES=1280x720,1366x768,1440x900"   # then big screens + zoom; commas only (the env is split on whitespace)
+  [desk-layout@3]="SIZES=1920x1080,2560x1440,1366x768@1.25,1366x768@1.5"
 )
 parts_of() { local p; for p in "${!PART_ENV[@]}"; do [ "${p%%@*}" = "$1" ] && echo "$p"; done | LC_ALL=C sort; }
 units() {   # every schedulable name: a spec's parts if it has any, else the spec
@@ -87,6 +90,7 @@ weight() {
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
     copy-math) echo 14 ;;   # W108 copy math as plain text, local run ~13 s (estimate until CI timing)
     toast-note) echo 30 ;;   # W112 toast notes + desktop start line, local run ~30 s (estimate until CI timing)
+    desk-layout) echo 194 ;; desk-layout@1) echo 55 ;; desk-layout@2) echo 58 ;; desk-layout@3) echo 81 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
     *) echo 5 ;;
   esac
 }
@@ -120,6 +124,7 @@ tags() {
     brainrot) echo "@logic @real-time" ;;   # W105 stub YouTube players report onError over postMessage
     copy-math) echo "@logic @real-time" ;;   # W108 real clipboard (granted), stub OpenRouter
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
+    desk-layout@1|desk-layout@2|desk-layout@3) echo "@layout @real-time" ;;   # W129 L1-L6: the desktop columns, the pixel-diff gate on every tap
     *) echo "" ;;
   esac
 }
@@ -222,7 +227,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|copy-math|why-chip|welcome-app|views-static|toast-note|twin-first) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|copy-math|why-chip|welcome-app|views-static|toast-note|twin-first|desk-layout) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

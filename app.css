@@ -682,7 +682,7 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
    height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
 /* docked: all 3 in one box that scrolls sideways (Tony, Oct 5), two in view, a visible thin bar */
 .rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory; }
-.rot.docked .vid { flex: none; width: min(calc(40dvh * 9 / 16), calc((100% - var(--s5)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card */
+.rot.docked .vid { flex: none; width: min(calc(min(40dvh, 100dvh - 22rem) * 9 / 16), calc((100% - var(--s5)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card. A short window (under ~880px: 1366x768 at 150%) gives up video height first, 22rem stays for the bar, the labels, a 96px notes box and the foot (W129 L3: the column fits) */
 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
 .rot-hd { display: none; }
 /* the label row's one control (Tony, Oct 5): a quiet text link, level with "Explain"; 44px tall to touch */
@@ -851,9 +851,10 @@ html.side #work > .orig { margin: 0; }
 @keyframes wember { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
 .cl > * { position: relative; }
 .cl[hidden] { display: none; }
-html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--s4)); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen */
+html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--s7)); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen. The foot keeps main's own bottom padding (--s7), so the page is never taller than the window for it (W129 L1: no page scroll that looks like the column scrolling itself) and the ask field ends 24px above the fixed footer (#privacy / #ver, L3) */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
+html.side #work.cl-on .rot.docked .vid { width: min(calc(min(40dvh, 100dvh - 28rem) * 9 / 16), calc((100% - var(--s5)) / 2)); }   /* a short window with the sheet open: the videos give up height first, so the bar, a few lines and the ask field still fit (W129 L1 / L3, 1366x768 at 125%) */
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
 /* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
@@ -979,6 +980,7 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 .wtext.wrun { cursor: pointer; }   /* a tap skips the typing: pointer only while it types */
 .wtext .wfig { margin: var(--s3) 0; cursor: default; }   /* a live figure in Cluck's message (livefig.py): the bank .fig frame, nothing of its own */
 .wtext .wstatic .vw-static { display: block; width: 100%; max-width: 420px; height: auto; }   /* W113: a view's static image (app.js viewImage) */
+.cl-peek.gone { visibility: hidden; }                       /* desktop with the sheet open: its room stays (app.js wishPaint, W129 L4) */
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
@@ -1235,7 +1237,7 @@ html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the box trapped the wheel; a contain scroller capped below the fold) */
-html.side #work { position: sticky; top: var(--s4); align-self: start; }   /* the notes pad stays in view while the page scrolls the question */
+html.side #work { position: sticky; top: var(--s4); align-self: start; min-height: calc(100dvh - var(--cl-top, 100dvh) - var(--s7)); box-sizing: border-box; }   /* the notes pad stays in view while the page scrolls the question. At least the window below its top (W129 L4): the body centres the page ("snug in the center", below), so a column that shrank (the brainrot fold, notes capped at 48rem, a short Cluck reply) re-centred the whole page under the student */
 html.side:not(.dock-bottom) .freeze, html.side:not(.dock-bottom) .freeze.stuck, html.side:not(.dock-bottom) #work { top: calc(var(--top-h, 0px) + var(--s4)); }   /* under the pinned desktop bar */
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }

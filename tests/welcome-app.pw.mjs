@@ -186,12 +186,12 @@ try {
       await cv(page, "backgroundColor", "color-mix(in srgb, var(--help) 20%, var(--help-sheet))"), "a chip's hover is not --help 20%");
     await page.mouse.move(0, 0);
     const veil = await cv(page, "backgroundColor", "color-mix(in srgb, var(--help-on) 6%, transparent)");
-    const fields = await page.$$eval("#q .wl-field", els => els.map(el => { const cs = getComputedStyle(el);
+    const fields = await page.$$eval("#q .rp-ghost .rp-chip", els => els.map(el => { const cs = getComputedStyle(el);   // W129: a future step's chips, drawn in place, not live yet
       return { bg: cs.backgroundColor, line: cs.borderTopColor, w: cs.borderTopWidth, style: cs.borderTopStyle, ink: cs.color }; }));
     assert.ok(fields.length >= 2, `previews: ${fields.length}`);
-    for (const f of fields) assert.deepEqual(f, { bg: veil, line: await tok(page, "--help-line"), w: "1px", style: "dashed", ink: await tok(page, "--help-muted") },
-      "a preview off its role (1px dashed --help-line, --help-on 6% veil, --help-muted)");
-    console.log("      (decorative, aria-hidden) a preview's --help-muted on its veil:", (await contrast(page, "#q .wl-field")).toFixed(2) + ":1");
+    for (const f of fields) assert.deepEqual(f, { bg: veil, line: await tok(page, "--help-line"), w: w15, style: "dashed", ink: await tok(page, "--help-muted") },
+      "a preview off its role (the live chip's 1.5px edge, dashed --help-line, --help-on 6% veil, --help-muted)");
+    console.log("      (decorative, aria-hidden) a preview's --help-muted on its veil:", (await contrast(page, "#q .rp-ghost .rp-chip")).toFixed(2) + ":1");
     const ns = await page.$$eval("#q .rp-n", els => els.map(el => getComputedStyle(el).color));
     assert.ok(ns.length >= 4 && ns.every(c => c === help), `a step number off --help: ${ns}`);
     const rn = await contrast(page, "#q .rp-n");

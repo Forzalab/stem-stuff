@@ -7,10 +7,9 @@
    In the app (todo 119): app.js welcomeQ mounts it in the answer box's place for a fresh device's first item (the question text stays
    above it, so no item.stem); the ladder comes from GET /repair/<code> (served for the welcome item before any try, with `sheet`).
 
-   Fading (Renkl 2002, Atkinson 2003), per step on progress, never a timer:
-     open    every step shown at full strength; each future one also shows its input as a picture (.wl-field, aria-hidden), a form to fill
-     alone   once a step is done the shown inputs fade away for good: the done step is one ✓ line (repair.js), the rest a label only
-   repair.js owns the steps and redraws its whole card on every tap; this file only watches those redraws and adds the pictures.
+   No fading on a tap (W129, brain projects/calc/_files/w129/PLAN.md L6, Tony 15:5x PT: "there shall be no jank at all"): repair.js's welcome
+   variant draws every step's input from the start (a future one as an inert preview) and keeps it in place once done, so a tap changes
+   its own row and the next one, and nothing else moves. This file only adds the duck to the intro tab on every redraw.
    Unfailable comes from repair.js's welcome variant (a wrong tap = the next hint, no ✗, no auto-fill). Text lands as textContent;
    `$..$` math goes through Graph.tex (escapes the text around it).
 */
@@ -27,43 +26,16 @@
     }
     return el;
   }
-  /* a future step's input, as a picture: the blank the student will fill (fill = its line with ▢, num = an empty box, pick / sheet = the chips' text) */
-  function picture(st, sheet) {
-    if (st.kind === "fill") return "$" + String(st.tex).replace("▢", "\\square") + "$";
-    if (st.kind === "num") return "▢" + (st.unit ? " " + st.unit : "");
-    if (st.kind === "pick") return (st.opts || []).map(p => p.md).join("  ·  ");
-    if (st.kind === "sheet") return (st.pool || []).map(id => sheet && sheet[id] ? "$" + sheet[id] + "$" : id).join("  ·  ");
-    return "";
-  }
-
   function mount(host, item, o = {}) {
-    const steps = (item && item.repair && item.repair.steps) || [];
     const el = h("section", "wl ai-skin");                                      // Cluck's token scope (app.css .ai-skin): the rim's --ai-line
-    el.dataset.fade = "open";
     if (item.stem) el.append(h("p", "wl-stem", item.stem));
     const box = h("div", "wl-ladder");
     el.append(box);
     host.replaceChildren(el);
 
-    let fadedAt = 0;                                                             // the redraw count when the fade happened (0 = not yet)
-    let draws = 0;
-    function dress() {
-      const rp = box.querySelector(".rp");
-      if (!rp) return;
-      draws++;
-      const line = rp.querySelector(".rp-line");                                // the tab (welcome.css): the duck in front, on every redraw
+    function dress() {                                                           // the tab (welcome.css): the duck in front, on every redraw
+      const line = box.querySelector(".rp .rp-line");
       if (line && !line.querySelector(".wl-duck")) line.insertAdjacentHTML("afterbegin", '<svg class="icon wl-duck" aria-hidden="true"><use href="#i-duck"></use></svg>');
-      const rows = [...rp.querySelectorAll(".rp-step")];
-      if (!fadedAt && rows.some(r => r.dataset.state === "done")) { fadedAt = draws; el.dataset.fade = "alone"; }
-      if (fadedAt && fadedAt !== draws) return;                                  // after the fading redraw: labels only, for good
-      for (const r of rows) {
-        if (r.dataset.state !== "future") continue;
-        const st = steps.find(s => s.id === r.dataset.id);
-        const f = h("div", fadedAt ? "wl-field wl-out" : "wl-field", st && picture(st, o.sheet));
-        f.setAttribute("aria-hidden", "true");
-        if (fadedAt) f.addEventListener("animationend", () => f.remove());
-        r.append(f);
-      }
     }
     const watch = new MutationObserver(dress);                                   // repair.js swaps the card's children on every draw
     const rp = root.Repair.mount(box, item, { variant: "welcome", sheet: o.sheet, grade: o.grade, on: (name, data) => {

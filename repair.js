@@ -18,7 +18,9 @@
      alt      the item's `alt` ladder by the same rule (no authored alt → the main ladder, fallback only: never the same blank twice)
      welcome  every step blank, why on the fam step (else step 1); unfailable: a wrong tap is a hint, no red, no auto-fill
      full     the worked solution, every step ✓; Next dim for STUDY_MS, then "come back later" is the student's call
-   A step: reveal one at a time (done = one ✓ line, active = open, future = a dim label). A wrong try: ✗ on it + the miss line; TRIES
+   A step: reveal one at a time (done = one ✓ line, active = open, future = a dim label). Welcome keeps the form instead (W129, PLAN L6 "no
+   jank"): every step's input is drawn from the start and never leaves its place: future = an inert preview, active = live, done = locked
+   with the pick marked (the ✓ in the head); a row never shrinks, so a tap changes its own row and the next one and moves nothing else. A wrong try: ✗ on it + the miss line; TRIES
    wrong → it fills itself in with its why shown and moves on. ✓ / ✗ are glyphs, never hue alone. All text lands as textContent;
    `$..$` math goes through Graph.tex (escapes the text around it).
    Lines (copy/repair-lines.js, contract v2): doneBy{L1,L2,L3,tail} else done; hintBy{far[],two,three[]} by the welcome wrong-tap count else
@@ -128,9 +130,9 @@
     }
     function judge(s, v, right) {
       const st = s.st;
-      if (right) { s.ok = true; s.miss = ""; s.val = v; }
+      if (right) { s.ok = true; s.val = v; if (welcome) s.missGone = true; else s.miss = ""; }   // welcome: the hint line keeps its room, emptied (a row never shrinks)
       else {
-        s.tried.add(String(v)); missed = true;
+        s.tried.add(String(v)); missed = true; s.missGone = false;
         const h = welcome ? hint() : L().miss || "";
         s.miss = (st.miss && st.miss[v]) || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
@@ -139,9 +141,9 @@
     }
     function tryWhy(s, i) {
       const w = s.st.why;
-      if (i === w.ok) { s.why = i; s.miss = ""; }
+      if (i === w.ok) { s.why = i; if (welcome) s.missGone = true; else s.miss = ""; }
       else {
-        whyOk = false; s.whyTried.add(i); missed = true;
+        whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false;
         s.miss = welcome ? hint() : L().miss || "";
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
@@ -150,7 +152,7 @@
     function settle() {
       const focusIn = el.contains(document.activeElement);
       advance(); draw();
-      if (focusIn) { const f = el.querySelector('.rp-step[data-state="active"] :is(button:not(:disabled), input)') || el.querySelector(".rp-next"); if (f) f.focus(); }
+      if (focusIn) { const f = el.querySelector('.rp-step[data-state="active"] :is(button:not(:disabled), input:not(:disabled))') || el.querySelector(".rp-next"); if (f) f.focus(welcome ? { preventScroll: true } : undefined); }   // welcome: focus never scrolls the page under the student (W129 L6); the page is the one scroller, theirs
     }
 
     /* ---- drawing ---- */
@@ -197,7 +199,44 @@
       box.append(opts);
       return box;
     }
+    /* welcome (W129): a box that is not answerable now is still drawn, in place: its controls disabled (never `inert`: toast.js would take the
+       inert rows for empty page and slide its card onto the ladder), hidden from a screen reader; `picked` marks the answer */
+    function lock(box, how, picked) {
+      box.classList.add(how);
+      box.setAttribute("aria-hidden", "true");
+      box.querySelectorAll("button, input").forEach(c => { c.disabled = true; c.tabIndex = -1; });
+      if (picked != null) box.querySelectorAll(".rp-chip").forEach(c => c.classList.toggle("rp-picked", (c.dataset.why != null ? c.dataset.why : c.dataset.v) === String(picked)));
+      const inp = box.querySelector(".rp-in"); if (inp && picked != null) inp.value = String(picked);
+    }
+    function keptEl(s) {
+      const st = s.st, li = h("li", "rp-step"), live = s.state === "active";
+      li.dataset.id = st.id; li.dataset.state = s.state;
+      if (live) li.setAttribute("aria-current", "step");
+      const head = h("div", "rp-head"), n = h("span", "rp-n", String(s.i + 1));
+      if (s.auto && !L().auto) n.dataset.auto = "";
+      head.append(n, h("span", "rp-label", st.label));
+      if (s.ok) head.append(h("span", "sr-only", shown(s)));                     // the value for a screen reader: the locked chips are aria-hidden
+      head.append(h("span", "rp-ok", "✓"));                                      // always there (welcome.css hides it until done): its room never moves the label
+      li.append(head);
+      const body = h("div", "rp-body"), val = valueUi(s);
+      const pick = s.ok ? (s.val != null ? s.val : st.ok) : null;
+      if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
+      body.append(val);
+      if (s.ask) {
+        const w = whyUi(s);
+        if (s.state === "future" || (live && !s.ok)) lock(w, "rp-ghost", null); else if (s.why != null) lock(w, "rp-locked", s.why);
+        body.append(w);
+      }
+      li.append(body);
+      if (s.miss && s.state !== "future") {
+        const m = h("p", "rp-miss", s.miss);
+        if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
+        li.append(m);
+      }
+      return li;
+    }
     function stepEl(s) {
+      if (welcome) return keptEl(s);
       const st = s.st, li = h("li", "rp-step");
       li.dataset.id = st.id; li.dataset.state = s.state;
       if (s.state === "active") li.setAttribute("aria-current", "step");
