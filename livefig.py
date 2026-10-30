@@ -495,8 +495,14 @@ class Fence:
     """the stream filter: text passes as it comes; a ``` fence is held until it closes, then the ONE first good figure goes out as
     "\\n```fig\\n<canonical json>\\n```\\n" in a single chunk and anything else in a fence is dropped. ctx None = strip every fence
     (the OpenRouter path, the kill switch). Never yields raw model JSON."""
-    def __init__(self, ctx):
+    def __init__(self, ctx, slot=None):
         self.ctx, self.buf, self.shown, self.log, self.prev = ctx, "", 0, [], "\n"   # prev: the last model char consumed (line start?)
+        # slot: a marker emitted ONCE in place of the first fence dropped while nothing is shown (slot_why = its reason), so a caller can
+        # put a re-asked figure exactly there (W340 vf-physics-b: it went to the end, "Forces on the block:" sat over a gap)
+        self.slot, self.slot_why = slot, None
+        # plain: words a dropped fence leaves behind (views_gate: a figure-less stepper's captions as numbered lines). They go out in the
+        # fence's place; with a slot they wait (slot_plain) for the re-ask, and show only if it brings no figure
+        self.plain, self.slot_plain = "", ""
 
     def _block(self, lang, body):
         if self.ctx is None:
@@ -533,7 +539,14 @@ class Fence:
                     self.log.append("size")
                     self.buf = ""
                 break
-            out.append(self._block(m.group(1).lower(), m.group(2)))
+            blk = self._block(m.group(1).lower(), m.group(2))
+            plain, self.plain = self.plain, ""
+            if not blk and self.slot and not self.shown and self.log and self.log[-1].split(":")[0] not in ("ok", "off", "second", "views-off"):
+                why = "steps-nofig" if plain else self.log[-1].split(":")[0]
+                blk, self.slot, self.slot_why, self.slot_plain = self.slot, None, why, plain
+            elif not blk:
+                blk = plain
+            out.append(blk)
             self.prev, self.buf = "`", self.buf[m.end():]
         return "".join(out)
 

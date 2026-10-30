@@ -314,6 +314,56 @@ export function checkAll(m, opts = {}) {
   ];
 }
 
+// ─── angles (W340 §2, I-ANG-1a-d): Geometry's right(…) / angle(…) marks against the points they name. A mark names 3 points; the
+// vertex is the first (views.js's grammar) or, when the drawing contradicts that and fits the middle one (∠BAC, the textbook way the
+// model also writes), the middle. I-ANG-1c: a right box or a "90°" label needs a square corner there (0.5°); I-ANG-1d: a numeric
+// label = the drawn angle (0.5°); I-ANG-1b: a vertex with a right box never carries a non-90° angle; I-ANG-1a: the label sits at its
+// own vertex (checkAngleLabels, after placement). Angles are the unsigned angle between the two rays, 0..180.
+export const angleAt = (at, u, v) => { const a = sub(u, at), b = sub(v, at); return Math.abs(Math.atan2(cross(a, b), dot(a, b))) / DEG; };
+/** the degrees a label states ("30°", "90 °", "36.9°"), else null (θ, a length, a bare number) */
+export const angleNumber = text => { const m = /^\s*(\d+(?:\.\d+)?)\s*°\s*$/.exec(String(text ?? "")); return m ? +m[1] : null; };
+/** pts {name: [x, y]}, marks [{k: "right"|"angle", names: [n0, n1, n2], text?}] -> { marks: [{...m, vertex, rays: [a, b]}], findings } */
+export function resolveAngles(pts, marks, tol = 0.5) {
+  const findings = [], P = n => pts[n];
+  const opt = (m, i) => { const [n0, n1, n2] = m.names, v = i ? n1 : n0, rays = i ? [n0, n2] : [n1, n2];
+    return P(v) && P(rays[0]) && P(rays[1]) ? { vertex: v, rays, deg: angleAt(P(v), P(rays[0]), P(rays[1])) } : null; };
+  const out = marks.map(m => ({ ...m }));
+  const square = new Set();
+  out.forEach((m, i) => {                                            // the right boxes first: the angles read where they sit
+    if (m.k !== "right") return;
+    const c = [opt(m, 0), opt(m, 1)], pick = c.find(o => o && Math.abs(o.deg - 90) <= tol);
+    Object.assign(m, pick || c[0] || {});
+    if (!pick) findings.push({ id: "I-ANG-1c", ids: ["m" + i, m.vertex], amount: c[0] ? Math.abs(c[0].deg - 90) : 0, unit: "deg", kind: "right" });
+    else square.add(m.vertex);
+  });
+  out.forEach((m, i) => {
+    if (m.k !== "angle") return;
+    const c = [opt(m, 0), opt(m, 1)], want = angleNumber(m.text);
+    let pick;
+    if (want != null) {
+      pick = c.find(o => o && Math.abs(o.deg - want) <= tol);
+      if (!pick) findings.push({ id: want === 90 ? "I-ANG-1c" : "I-ANG-1d", ids: ["m" + i, c[0]?.vertex], amount: Math.min(...c.filter(Boolean).map(o => Math.abs(o.deg - want)), 180), unit: "deg" });
+    } else pick = c[0] && square.has(c[0].vertex) && c[1] && !square.has(c[1].vertex) ? c[1] : c[0];
+    Object.assign(m, pick || c[0] || {});
+    if (pick && square.has(m.vertex) && !(want === 90 || (want == null && Math.abs(m.deg - 90) <= tol)))
+      findings.push({ id: "I-ANG-1b", ids: ["m" + i, m.vertex], amount: Math.abs(m.deg - 90), unit: "deg" });
+  });
+  return { marks: out, findings: clean(findings) };
+}
+/** I-ANG-1a: labels [{id, vertex (a point name), box [x, y, w, h]}] in the same space as pts: the box centre is nearest its own vertex */
+export function checkAngleLabels(labels, pts) {
+  const out = [];
+  for (const l of labels) {
+    const c = [l.box[0] + l.box[2] / 2, l.box[1] + l.box[3] / 2], own = pts[l.vertex];
+    if (!own) continue;
+    const d0 = len(sub(c, own));
+    let near = null;
+    for (const [n, p] of Object.entries(pts)) if (n !== l.vertex && len(sub(c, p)) < d0 - EPS && (!near || len(sub(c, p)) < near.d)) near = { n, d: len(sub(c, p)) };
+    if (near) out.push({ id: "I-ANG-1a", ids: [l.id, near.n], amount: d0 - near.d, unit: "px", fix: { move: l.id, to: own } });
+  }
+  return clean(out);
+}
+
 // ─── the label packer: scene.js place() as is (8 candidates around the anchor scored by overlap, a 2nd and 3rd ring with a leader,
 // then a free-spot grid). reqs: [{key, id, w (text width), t: {pt} | {box}, R?, dirs?, spot?, hid?}] in screen px (y down);
 // segs: [{id, pts: [a, b]}] drawn lines; bodies: [{id, box}]; fixed: Map key -> {dir, ring} (a tween keeps its choices).
@@ -333,7 +383,8 @@ const area = b => b[2] * b[3];
 export const overlap = (p, q) => Math.max(0, Math.min(p[0] + p[2], q[0] + q[2]) - Math.max(p[0], q[0])) * Math.max(0, Math.min(p[1] + p[3], q[1] + q[3]) - Math.max(p[1], q[1]));
 export const inBox = (b, R) => b[0] >= R.x - 1e-9 && b[1] >= R.y - 1e-9 && b[0] + b[2] <= R.x + R.w + 1e-9 && b[1] + b[3] <= R.y + R.h + 1e-9;
 export function place(reqs, segs, bodies, R, fixed, opts = {}) {
-  const LH = opts.LH ?? 19, GAP = opts.GAP ?? 6;
+  const LH = opts.LH ?? 19, GAP = opts.GAP ?? 6, C = opts.clear ?? 0;   // clear (W340 mc-a): a box this far from a stroke or a dot scores as on it
+  const grow = b => (C ? [b[0] - C, b[1] - C, b[2] + 2 * C, b[3] + 2 * C] : b);
   const placed = [];
   for (const q of reqs) {
     const w = q.w + 6, h = q.h ?? LH;
@@ -343,8 +394,9 @@ export function place(reqs, segs, bodies, R, fixed, opts = {}) {
       let sc = pen;
       if (!inBox(box, q.R || R)) sc += 1e5;
       for (const p of placed) if (overlap(box, p.box) > 0) sc += 1e4 + overlap(box, p.box);
-      for (const s of segs) if (segHitsBox(s.pts[0], s.pts[1], box)) sc += s.id === q.id ? 12 : 30;
-      for (const b of bodies) if (b.id !== q.id && overlap(box, b.box) > 0) sc += 20 * overlap(box, b.box) / area(box);
+      const near = grow(box);
+      for (const s of segs) if (segHitsBox(s.pts[0], s.pts[1], near)) sc += s.id === q.id ? 12 : 30;
+      for (const b of bodies) if (b.id !== q.id && overlap(near, b.box) > 0) sc += 20 * overlap(near, b.box) / area(near);
       if (!best || sc < best.sc) best = { box, sc, dir, ring };
     };
     const f = fixed && fixed.get(q.key);
@@ -375,7 +427,7 @@ export function leaderOf(t, box) {
   return Math.hypot(q[0] - p[0], q[1] - p[1]) > 8 ? [p, q] : null;
 }
 
-const FigCheck = { poly, box, circle, wseg, surface, incline, centroid, ptSeg, depthAlong, collide, segHitsBox, contactGap,
+const FigCheck = { angleAt, angleNumber, resolveAngles, checkAngleLabels, poly, box, circle, wseg, surface, incline, centroid, ptSeg, depthAlong, collide, segHitsBox, contactGap,
   checkContact, checkTilt, checkOverlap, checkAnchor, roleOf, checkDirection, checkLabels, checkSteps, checkBalance, checkAll, candBox, overlap, inBox, place, leaderOf };
 if (typeof globalThis !== "undefined") globalThis.FigCheck = FigCheck;
 export default FigCheck;

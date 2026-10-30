@@ -95,6 +95,20 @@ class Stream(unittest.TestCase):
         self.assertEqual(prog, steps)
         self.assertIn("chat:Predict", views_gate.gate('root = View([p])\np = Predict(null, "Which?", ["3", "4"], null, null, key.v1)', CTX)[1][0])
 
+    def test_a_stepper_without_a_figure_is_dropped_its_captions_stay_as_plain_lines(self):
+        # W340 (Tony, Oct 29 17:3x: "wtf are those 3 bubbles"): a stepper needs a real figure (or a table) per step; captions only =
+        # dropped (steps-nofig). With no re-ask (this Fence has no slot) its captions go out in its place as plain numbered lines.
+        bare = ('root = View([s])\ns = Steps(null, [s1, s2])\ns1 = Step("Push in: the work along the ramp.")\n'
+                's2 = Step("Friction takes its share.")')
+        prog, log = views_gate.gate(bare, CTX)
+        self.assertIsNone(prog)
+        self.assertEqual(log, ["s:steps-nofig", "empty"])
+        self.assertEqual(views_gate.steps_plain(bare), "\n**1.** Push in: the work along the ramp.\n**2.** Friction takes its share.\n")
+        out, log = run(["Click through:\n```openui\n" + bare + "\n```\nTry once more."])
+        self.assertEqual(out, "Click through:\n\n**1.** Push in: the work along the ramp.\n**2.** Friction takes its share.\n\nTry once more.")
+        graph = bare.replace("Steps(null, [s1, s2])", 'Steps(g, [s1, s2])\ng = Graph("W 40 40, F 140 40", "W>F")')
+        self.assertEqual(views_gate.gate(graph, CTX)[1], ["ok"], "a stepper with its figure passes")
+
     def test_bad_fence_dropped_text_streams(self):
         out, log = run(["Look:\n```openui\nroot = Text(\"x\")\n```\nThe text goes on."])
         self.assertEqual(out, "Look:\n\nThe text goes on.")

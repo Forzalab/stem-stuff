@@ -14,7 +14,7 @@
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
 import { createParser, mergeStatements } from "./vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
-import { place } from "./figcheck.js";
+import { place, resolveAngles, checkAngleLabels } from "./figcheck.js";
 
 const SCHEMA = toSchema(LIB);
 const REG = new Map();
@@ -337,8 +337,8 @@ export function geoModel(p) {
     let o;
     if (k === "seg") o = { k, a: P(a[0]), b: P(a[1]) };
     else if (k === "circle") { if (!(+a[1] > 0)) throw badGeo("circle radius"); o = { k, c: P(a[0]), r: +a[1] }; }
-    else if (k === "right") o = { k, at: P(a[0]), u: P(a[1]), v: P(a[2]) };
-    else if (k === "angle") o = { k, at: P(a[0]), u: P(a[1]), v: P(a[2]), text: rest(3) };
+    else if (k === "right") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]) };
+    else if (k === "angle") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]), text: rest(3) };
     else if (k === "arrow") o = { k, a: P(a[0]), b: P(a[1]), text: rest(2) };
     else if (k === "label") o = { k, at: P(a[0]), text: rest(1) };
     else {
@@ -349,32 +349,49 @@ export function geoModel(p) {
     out.push(o);
   }
   if (labels > GEO_CAPS.labels) throw tooLong(`${labels} > ${GEO_CAPS.labels} labels`);
-  return { pts, marks: out };
+  /* W340 §2 (I-ANG-1b-d, figcheck resolveAngles): each right / angle mark's vertex is checked against the drawing: the first point,
+     or the middle one when the drawing says so (∠BAC: mc-a's θ was drawn at the square corner B); what fits nowhere is a finding */
+  const ang = out.map((o, i) => [o, i]).filter(([o]) => o.k === "right" || o.k === "angle");
+  const res = resolveAngles(pts, ang.map(([o]) => ({ k: o.k, names: o.names, text: plainTex(o.text || "") })));
+  res.marks.forEach((r, j) => { const o = ang[j][0]; if (r.vertex) Object.assign(o, { vertex: r.vertex, at: pts[r.vertex], u: pts[r.rays[0]], v: pts[r.rays[1]] }); });
+  return { pts, marks: out, findings: res.findings.map(f => ({ ...f, ids: [f.ids[0] && "m" + ang[+f.ids[0].slice(1)][1], ...f.ids.slice(1)] })) };
 }
 /* Labels (fable audit 2026-10-29 U3, I-LBL-1/2): every text (point names first, then the marks' labels) is a request to figcheck.js
    place() (= scene.js's packer) in viewBox units: its usual side first (point names away from the figure's centre, a dim / arrow
    label on its normal, an angle label on the bisector just outside the arc), then the other sides, outer rings with a leader line,
    then a free spot; scored by overlap with texts already placed and the strokes drawn. Text widths are estimated (GEO_EM per char:
    the figure is built before it is in the page). A text left on a stroke gets class knock (a halo in the card's colour). */
-const GEO_FONT = 14, GEO_EM = 0.6 * GEO_FONT, GEO_LH = 18, GEO_ASC = 13.5;
+/* the font = views.css .gm-t (1.125rem = 18 user units, W113 vet); the estimate was still 14 there, so labels drew wider than placed and
+   crossed strokes on firefox (geomarks, CI red at ec817d1). GEO_CLEAR (W340 mc-a, "farther out, balanced"): a label keeps this far from
+   every stroke and dot when it can (~10 px at 390, ~12 px at 1440 at the usual scale); a dim / arrow label goes out on its normal. */
+const GEO_FONT = 18, GEO_EM = 0.6 * GEO_FONT, GEO_LH = 22, GEO_ASC = 17, GEO_CLEAR = 14, GEO_PAD = 90;   // GEO_PAD: room around the drawing a label may use
 const DIR8 = (dx, dy) => ["e", "se", "s", "sw", "w", "nw", "n", "ne"][Math.round(((Math.atan2(dy, dx) / Math.PI * 180) + 360) % 360 / 45) % 8];   // screen: y down
-const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
+const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"], DIRS8_RING = ["e", "se", "s", "sw", "w", "nw", "n", "ne"];
 function drawGeometry(doc, g, t) {
   const all = Object.values(g.pts), ext = [...all];
   for (const m of g.marks) if (m.k === "circle") ext.push([m.c[0] - m.r, m.c[1] - m.r], [m.c[0] + m.r, m.c[1] + m.r]);
   const xs = ext.map(p => p[0]), ys = ext.map(p => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  const span = Math.max(x1 - x0, y1 - y0) || 1, k = 240 / span, pad = 34;      // one scale for x and y (1:1)
+  const span = Math.max(x1 - x0, y1 - y0) || 1, k = 240 / span, pad = 20;      // one scale for x and y (1:1); the viewBox grows to the labels (below)
   const W = (x1 - x0) * k + 2 * pad, H = (y1 - y0) * k + 2 * pad;
   const X = p => (p[0] - x0) * k + pad, Y = p => (y1 - p[1]) * k + pad;      // y up
   const segs = [], reqs = [], dots = [];
   const stroke = (id, ...pts) => { for (let i = 0; i + 1 < pts.length; i++) segs.push({ id, pts: [pts[i], pts[i + 1]] }); };
   /** a text to place: its string (a slot or plain), the point it names, its usual side (a screen vector) */
-  const label = (id, s, at, dx, dy, cls = "gm-t") => {
+  const label = (id, s, at, dx, dy, cls = "gm-t", vertex = null, near = false) => {
     const m = SLOT.exec(s), slot = m && m[1], filled = slot && t && Object.hasOwn(t, slot) ? String(t[slot]) : null;
     const text = filled ?? (slot || plainTex(s)), d = DIR8(dx, dy);
-    reqs.push({ key: reqs.length, id, w: Math.max(1, [...text].length) * GEO_EM, h: GEO_LH, t: { pt: at }, dirs: [d, ...DIRS8.filter(x => x !== d)],
-      text, cls, slot: slot && filled == null ? slot : null });
+    const i8 = DIRS8_RING.indexOf(d), dirs = near ? [0, 1, 7, 2, 6].map(j => DIRS8_RING[(i8 + j) % 8]) : [d, ...DIRS8.filter(x => x !== d)];
+    let R;                                          // I-ANG-1a: an angle label's own region, a square on its vertex half-way to the next point
+    if (vertex) {
+      const vx = X(g.pts[vertex]), vy = Y(g.pts[vertex]);
+      const half = Math.min(...Object.entries(g.pts).filter(([n]) => n !== vertex).map(([, p]) => Math.hypot(X(p) - vx, Y(p) - vy)), 1e4) / 2;
+      R = { x: vx - half, y: vy - half, w: 2 * half, h: 2 * half };
+    }
+    const req = { key: reqs.length, id, w: Math.max(1, [...text].length) * GEO_EM, h: GEO_LH, t: { pt: at }, dirs, vertex, R,
+      text, cls, slot: slot && filled == null ? slot : null };
+    reqs.push(req);
+    return req;
   };
   const cx = all.reduce((s, p) => s + X(p), 0) / all.length, cy = all.reduce((s, p) => s + Y(p), 0) / all.length;
   for (const [id, p] of Object.entries(g.pts)) { const x = X(p), y = Y(p); dots.push({ id: "pt:" + id, box: [x - 2.5, y - 2.5, 5, 5] }); label("pt:" + id, id, [x, y], x - cx, y - cy, "gm-t gm-name"); }
@@ -400,11 +417,24 @@ function drawGeometry(doc, g, t) {
         kids.push(h(doc, "path", { class: "gm gm-right", d: `M${ox + ax * s},${oy + ay * s} L${ox + (ax + bx) * s},${oy + (ay + by) * s} L${ox + bx * s},${oy + by * s}` }));
         stroke(id, [ox + ax * s, oy + ay * s], [ox + (ax + bx) * s, oy + (ay + by) * s], [ox + bx * s, oy + by * s]);
       } else {
-        const r = 22, cross = ax * by - ay * bx;
+        const cross = ax * by - ay * bx, a0 = Math.atan2(ay, ax), da = Math.atan2(cross, ax * bx + ay * by);
+        const mx = ax + bx, my = ay + by, ML = Math.hypot(mx, my) || 1, ux = mx / ML, uy = my / ML;
+        /* I-ANG-1a + W340 mc-a ("farther out, balanced"): the label sits ON the bisector, inside its angle, GEO_CLEAR off both rays
+           (a circle of the label's half-diagonal: t = (clear + rho) / sin(half-angle)), and the arc is drawn just inside it, so θ reads
+           in its corner, not on a stroke. No room on the bisector (a thin wedge, a near point): the usual sides of the arc tip. */
+        const req = m.text ? label(id, m.text, [ox + ux * 24, oy + uy * 24], mx, my, "gm-t", m.vertex || null, true) : null;
+        let r = 22;
+        if (req) {
+          const rho = Math.hypot(req.w + 6, req.h) / 2, sa = Math.sin(Math.abs(da) / 2), tt = sa > 0.05 ? (GEO_CLEAR + rho) / sa : Infinity;
+          const reach = Math.min(Math.hypot(X(m.u) - ox, Y(m.u) - oy), Math.hypot(X(m.v) - ox, Y(m.v) - oy)) * 0.7;
+          if (tt <= Math.min(reach, req.R ? req.R.w / 2 : Infinity)) {
+            req.spot = [ox + ux * tt - (req.w + 6) / 2, oy + uy * tt - req.h / 2];
+            r = Math.max(22, tt - rho - GEO_CLEAR);
+          }
+        }
         kids.push(h(doc, "path", { class: "gm gm-angle", d: `M${ox + ax * r},${oy + ay * r} A${r},${r} 0 0 ${cross > 0 ? 1 : 0} ${ox + bx * r},${oy + by * r}` }));
-        const a0 = Math.atan2(ay, ax), da = Math.atan2(cross, ax * bx + ay * by);
         stroke(id, ...Array.from({ length: 9 }, (_, j) => [ox + r * Math.cos(a0 + da * j / 8), oy + r * Math.sin(a0 + da * j / 8)]));
-        if (m.text) { const mx = ax + bx, my = ay + by, L = Math.hypot(mx, my) || 1; label(id, m.text, [ox + (mx / L) * (r + 2), oy + (my / L) * (r + 2)], mx, my); }
+        if (req && !req.spot) req.t = { pt: [ox + ux * (r + 2), oy + uy * (r + 2)] };
       }
     } else if (m.k === "dim") {
       const ax = X(m.a), ay = Y(m.a), bx = X(m.b), by = Y(m.b), L = Math.hypot(bx - ax, by - ay) || 1;
@@ -423,16 +453,29 @@ function drawGeometry(doc, g, t) {
       label(id, m.text, [x, y], x - cx, y - cy);
     }
   });
-  const placed = place(reqs, segs, dots, { x: 0, y: 0, w: W, h: H }, null, { LH: GEO_LH });
+  const placed = place(reqs, segs, dots, { x: -GEO_PAD, y: -GEO_PAD, w: W + 2 * GEO_PAD, h: H + 2 * GEO_PAD }, null, { LH: GEO_LH, GAP: GEO_CLEAR + 3, clear: GEO_CLEAR });
+  const vpts = Object.fromEntries(Object.entries(g.pts).map(([n, p]) => [n, [X(p), Y(p)]]));
+  const angLabels = () => placed.filter(q => q.vertex).map(q => ({ id: q.id, vertex: q.vertex, box: q.box }));
+  const findings = [...(g.findings || []), ...checkAngleLabels(angLabels(), vpts)];
   for (const q of placed) {
-    if (q.lead) kids.push(h(doc, "line", { class: "gm-lead", x1: q.lead[0][0], y1: q.lead[0][1], x2: q.lead[1][0], y2: q.lead[1][1] }));
+    if (q.lead) {                                   // the leader stops 5 units short of the box: a glyph may stand past its estimated box (firefox θ)
+      const [[ax, ay], [bx, by]] = q.lead, L = Math.hypot(bx - ax, by - ay) || 1, cut = Math.min(5, L / 2);
+      kids.push(h(doc, "line", { class: "gm-lead", x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
+    }
   }
   for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
   for (const q of placed) {
     const x = +(q.box[0] + q.box[2] / 2).toFixed(2), y = +(q.box[1] + (q.box[3] - GEO_LH) / 2 + GEO_ASC).toFixed(2);
-    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : ""), x, y, "data-slot": q.slot }, q.text));
+    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : ""), x, y, "data-slot": q.slot, "data-at": q.vertex }, q.text));   // data-at: an angle label's vertex
   }
-  return h(doc, "svg", { viewBox: `0 0 ${W.toFixed(1)} ${H.toFixed(1)}`, "aria-hidden": "true", focusable: "false" }, kids);
+  // the viewBox = the drawing + every placed label (+ a margin): a label is placed where it reads best, the frame follows it, centred
+  const bx = [...segs.flatMap(s => s.pts), ...dots.flatMap(d => [[d.box[0], d.box[1]], [d.box[0] + d.box[2], d.box[1] + d.box[3]]]),
+    ...placed.flatMap(q => [[q.box[0], q.box[1]], [q.box[0] + q.box[2], q.box[1] + q.box[3]]])];
+  const m = 6, vx0 = Math.min(...bx.map(p => p[0])) - m, vy0 = Math.min(...bx.map(p => p[1])) - m;
+  const vw = Math.max(...bx.map(p => p[0])) + m - vx0, vh = Math.max(...bx.map(p => p[1])) + m - vy0;
+  const svg = h(doc, "svg", { viewBox: `${vx0.toFixed(1)} ${vy0.toFixed(1)} ${vw.toFixed(1)} ${vh.toFixed(1)}`, "aria-hidden": "true", focusable: "false" }, kids);
+  svg._findings = [...new Set(findings.map(f => f.id))].sort();
+  return svg;
 }
 const SAMPLE_NODE = new Set(["cur", "done", "front", "rec", "idle"]);
 function sample(doc, mark) {
@@ -462,7 +505,13 @@ register("Legend", (p, c) => c.h("div", { class: "vw-chips", role: "list", "aria
 })));
 register("Table", (p, c) => table(c.doc, p.head || [], p.rows || []));
 register("Graph", (p, c) => c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure" }, drawGraph(c.doc, graphModel(p))));
-register("Geometry", (p, c) => c.h("div", { class: "vw-fig vw-geo", role: "img", "aria-label": p.alt || "figure" }, drawGeometry(c.doc, geoModel(p), c.t)));
+/* a finding (I-ANG-*) nothing fixed: the figure never draws (W340 §2; the U7 ladder): the statement fails, the chat shows its static image
+   or alt text. Clean: data-fig-findings="" (codes only, shotqa / geomarks read it) */
+register("Geometry", (p, c) => {
+  const svg = drawGeometry(c.doc, geoModel(p), c.t);
+  if (svg._findings.length) throw Object.assign(new Error(`figure findings: ${svg._findings.join(" ")}`), { code: "fig-finding", findings: svg._findings });
+  return c.h("div", { class: "vw-fig vw-geo", role: "img", "aria-label": p.alt || "figure", "data-fig-findings": "" }, svg);
+});
 
 // ─── L1 ───
 register("Callout", (p, c) => c.h("div", { class: "vw-callout" }, c.h("div", { class: "vw-tag" }, p.tag), c.h("p", null, c.rich(p.text))));
