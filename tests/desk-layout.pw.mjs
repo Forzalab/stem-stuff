@@ -82,7 +82,9 @@ async function context(browser, size, init) {
 /* the start line's toast (W112) lives 4 s with a running bar: let it go before the flow, so only taps change pixels */
 async function settle(page) {
   await page.evaluate(() => document.fonts && document.fonts.ready);
-  await page.waitForFunction(() => { const t = document.querySelector(".stoast"); return !t || !t.getClientRects().length || getComputedStyle(t).visibility === "hidden" || getComputedStyle(t).opacity === "0"; }, null, { timeout: 9000 }).catch(() => {});
+  const up = () => { const t = document.querySelector(".stoast"); return !!t && !!t.getClientRects().length && getComputedStyle(t).visibility !== "hidden" && getComputedStyle(t).opacity !== "0"; };
+  const shown = await page.waitForFunction(up, null, { timeout: 4000 }).then(() => true, () => false);   // it may come late (WebKit): wait for it to show
+  if (shown) { await page.click(".stoast-x"); await page.waitForFunction(u => !(0, eval)(u)(), up.toString(), { timeout: 9000 }); }   // closed by its X; no room = it never shows
   await page.mouse.move(1, 1);
   await page.waitForTimeout(700);
 }
@@ -196,7 +198,7 @@ async function column(page, tag, size) {
   for (const [name, box] of [["ask field", m.ask], ["notes", m.notes]]) {
     if (!box) continue;
     assert.ok(box.y >= 0 && box.b <= m.ih, `${tag}: L3 the ${name} is cut by the window (${Math.round(box.y)}..${Math.round(box.b)} of ${m.ih})`);
-    for (const f of foot) if (f.x < box.r && f.r > box.x) assert.ok(box.b <= f.y - 8 + 0.5, `${tag}: L3 the ${name} ends ${Math.round(f.y - box.b)}px above the footer (want >= 8)`);
+    for (const f of foot) if (f.x < box.r && f.r > box.x) assert.ok(box.b <= f.y - 8 + 0.5, `${tag}: L3 the ${name} ends ${Math.round(f.y - box.b)}px above the footer (want >= 8; ${name} ${Math.round(box.y)}..${Math.round(box.b)}, footer ${Math.round(f.y)}..${Math.round(f.b)}, window ${m.ih})`);
   }
   if (m.toast) for (const f of foot) assert.ok(!(m.toast.x < f.r && m.toast.r > f.x && m.toast.y < f.b && m.toast.b > f.y), `${tag}: L5 a toast on the footer`);
   const wheel = await page.evaluate(() => [scrollY, document.querySelector("#work").scrollTop]);
@@ -222,7 +224,10 @@ try {
           await page.waitForSelector('#q .wl .rp-step[data-state="active"] .rp-chip', { timeout: 10000 });
           await settle(page);
           const act = sel => `#q .rp-step[data-state="active"] ${sel}`;
-          const tapIn = sel => Object.assign(async () => { await page.click(act(sel)); }, { prep: () => page.locator(act(sel)).first().scrollIntoViewIfNeeded() });
+          /* a tap where the student sees it: scrolled into view first (prep, before the shots), then a plain mouse click at its centre (page.click
+             would scroll again inside the shots on WebKit) */
+          const tapIn = sel => { let at = null; return Object.assign(async () => { await page.mouse.click(at.x, at.y); }, { prep: async () => {
+            const l = page.locator(act(sel)).first(); await l.scrollIntoViewIfNeeded(); await page.waitForTimeout(100); const b = await l.boundingBox(); at = { x: b.x + b.width / 2, y: b.y + b.height / 2 }; } }); };
           const chipAllow = sel => async c => [...changedRows(c), ...(await page.$$eval(act(sel), els => els.map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })))];
           await gate(page, "1-pick", size, tapIn('.rp-chip[data-v="a"]'), async c => changedRows(c));
           await gate(page, "2-sheet", size, tapIn('.rp-chip[data-v="PRESSURE"]'), async c => changedRows(c));
