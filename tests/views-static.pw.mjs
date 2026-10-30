@@ -29,7 +29,8 @@ writeFileSync(join(BANKS, "BANK_VS1.json"), JSON.stringify({ v: 1, problems: [P]
 
 const GEO = 'root = View([ramp])\nramp = Geometry("A 0,0; B 4,0; C 4,2.3; P 2,1.15", ["seg(A,B)", "seg(B,C)", "seg(C,A)", "right(B,A,C)", "angle(A,B,C,30°)", "dim(A,C,1.2 m)", "arrow(P,C,push)"], "The ramp at 30 degrees, the push up it.")';
 const TABLE = 'root = View([t])\nt = Table(["step", "you", "the fix"], [["friction", "added", "taken away"], ["spring", "x", "x squared"]])';
-const STEPS = 'root = View([s])\ns = Steps(null, [s1, s2, s3])\ns1 = Step("Push in: **48 J**.")\ns2 = Step("Friction takes some away.")\ns3 = Step("The spring gets what is left.")';
+// W340: a stepper carries its figure (a figure-less Steps is dropped by the gate, re-asked, else plain lines: shotqa stepper / stepper-plain)
+const STEPS = 'root = View([s])\ns = Steps(g, [s1, s2, s3])\ng = Graph("W 40 40, F 160 40, S 280 40", "W>F, F>S")\ns1 = Step("Push in: **48 J**.", "W:cur")\ns2 = Step("Friction takes some away.", "W:done F:cur", "W-F:tree")\ns3 = Step("The spring gets what is left.", "W:done F:done S:cur", "W-F:tree F-S:tree")';
 /* physics-b plus a second block in the first one: the server passes it (livefig.check has no overlap rule), Graph.fix rests both on the
    ramp, figcheck still finds I-BODY-1 (no auto-fix): the student gets the alt text, never the interpenetrating drawing */
 const CLASH = { ...FIX.valid[0], alt: "Two blocks on the ramp, drawn inside each other.", marks: [...FIX.valid[0].marks, { mark: "body", at: [0.25, 1.3], shape: "box", w: 0.8, h: 0.5, angle: 30 }] };

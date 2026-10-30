@@ -2819,6 +2819,7 @@ def lamp_cut(text):
 
 FIG_REASK_TOKENS = 600
 FIG_OUT_RE = re.compile(r"\n```fig\n[^\n]*\n```\n")
+OUI_OUT_RE = re.compile(r"\n```openui\n[\s\S]*?\n```\n")
 FIG_OK = ("ok", "off", "second")
 FIG_SLOT = "\u0003FIGSLOT\u0003"           # where a dropped fence was (livefig.Fence slot): a re-asked figure goes there
 
@@ -2829,6 +2830,10 @@ def fig_reask(system, user_text, fig, why, code="-"):
     Never an error to the student."""
     ask = (user_text + "\n\nYour figure for this question was dropped (" + why + "). Send ONLY one ```fig fence, the figure as ONE line of JSON, "
            "nothing before or after it. Follow FIGURE exactly; numbers only from the question or the KEY, never the answer.")
+    if why == "steps-nofig":   # W340: a stepper with no picture (Tony: a real figure per step, never bubbles): the same steps, now drawn
+        ask = (user_text + "\n\nYour stepper had no figure. Send ONLY one ```openui fence: the same Steps with its figure, a Graph (first "
+               "argument) whose node / edge marks change in every Step, or a table (head + rows) when the slip is a trace; nothing before "
+               "or after it. Numbers only from the question or the KEY, never the answer.")
     try:
         gate = views_gate.Fence(fig)
         out = "".join(gate.feed(t) for t in _claude_one(system,
@@ -2836,7 +2841,7 @@ def fig_reask(system, user_text, fig, why, code="-"):
     except Exception as e:  # noqa: BLE001
         log(f"fig {code} reask: {type(e).__name__}")
         return ""
-    m = FIG_OUT_RE.search(out)
+    m = (OUI_OUT_RE if why == "steps-nofig" else FIG_OUT_RE).search(out)
     log(f"fig {code} reask: " + (",".join(gate.log) or "none") + ("" if m else " -> words only"))
     return m.group(0) if m else ""
 
@@ -2859,7 +2864,7 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
             held = (held or "") + vis
             if "```" not in fence.buf:
                 continue
-            vis, held = held.replace(FIG_SLOT, ""), None    # the model opens another fence: it may draw its own; the words go on, and
+            vis, held = held.replace(FIG_SLOT, fence.slot_plain), None    # the model opens another fence: it may draw its own; the words go on, and
             fence.slot = FIG_SLOT                           # the slot moves to that fence if it is dropped too
         if head is not None:
             head, vis = head + vis, lamp_cut(head + vis)
@@ -2874,8 +2879,8 @@ def v4_visible(chunks, reveal, facts, code="-", fig=None, reask=None):
     bad = [x for x in fence.log if x not in FIG_OK]
     if bad:
         log(f"fig {code} v4: " + ",".join(fence.log))      # reason codes only
-    if FIG_SLOT in vis:
-        vis = vis.replace(FIG_SLOT, "" if fence.shown else ask(fence.slot_why), 1)
+    if FIG_SLOT in vis:   # the re-ask's figure; none: what the dropped fence left (a figure-less stepper's captions as numbered lines)
+        vis = vis.replace(FIG_SLOT, fence.slot_plain if fence.shown else ask(fence.slot_why) or fence.slot_plain, 1)
     elif ask and not fence.shown and bad:                   # dropped at the very end (unclosed, too big): one more try, here; "" = words only
         vis += ask(bad[0].split(":")[0])
     if head is not None:
@@ -2954,6 +2959,10 @@ V4_MATH = ("Math, row by row (easy to read): each step is a row: a short line of
            "Take the case that breaks:\n$$hi = lo + 1$$\nBecause $mid$ rounds down, this becomes:\n$$mid = lo$$\n"
            "A pure algebra chain with no reason between its steps may stay one $$\\begin{aligned} ... \\end{aligned}$$ block, "
            "one step per line, the = signs lined up (&=, a \\\\ between steps).")
+# W340 (Tony, Oct 29 17:3x, on a captions-only stepper's generic bubbles: "it needs an Opus-drawn picture per step"): the rule + an example
+# that carries its figure; views_gate drops a figure-less Steps (steps-nofig), the reply re-asks once in place, else plain numbered lines
+V4_STEPS_RULE = ("A stepper MUST carry a figure that changes in every step: a Graph as its first argument with each Step's node / edge marks, "
+                 "and a table (head + rows) when the slip is a trace; never captions alone.")
 V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and in each answer to \"Why does this work?\"; anywhere else it is "
             "welcome. Put it right after your first line; then at most 3 short lines that say what the picture can't.\n"
             "Pick the view from the slip, the first row that fits (mix two only when the slip has two parts; at most 2 per reply):\n"
@@ -2965,13 +2974,13 @@ V4_VIEWS = ("\nVISUALS: a visual is REQUIRED in each reply to a wrong pick and i
             "- an algebra chain: a stepper, the broken step named in its caption\n"
             "- a proof: a Table with base | assume | prove, or a Callout per part\n"
             "- graph theory: a ```fig network of the few key nodes only, never the whole graph again\n"
-            "Nothing fits: a stepper. Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
+            "Nothing fits: a stepper. " + V4_STEPS_RULE + " Minimal ink: one idea per visual, at most 6 marks or rows, labels in the student's symbols, no decoration.\n"
             "More views (```openui; OpenUI Lang takes arguments IN ORDER, never name=value; null skips an optional one; one statement per line):\n"
             + _view_lines(("Table", "Steps", "Step", "Callout", "Head", "Text")) + "\nExamples:\n"
             "root = View([t])\nt = Table([\"step\", \"you did\", \"the fix\"], [[\"arm of W\", \"L\", \"half of L\"]])\n"
-            "root = View([s])\ns = Steps(null, [s1, s2], null, [\"i\", \"s\"])\n"
-            "s1 = Step(\"First test: i = 1, s = 0.\", null, null, null, null, null, [[\"1\", \"0\"]])\n"
-            "s2 = Step(\"Add 1. Now i = 2.\", null, null, null, null, null, [[\"1\", \"0\"], [\"2\", \"1\"]])\n"
+            "root = View([s])\ns = Steps(g, [s1, s2], null, [\"i\", \"s\"])\ng = Graph(\"i 40 40, s 160 40\", \"i>s\")\n"
+            "s1 = Step(\"First test: i = 1, s = 0.\", \"i:cur\", null, null, null, null, [[\"1\", \"0\"]])\n"
+            "s2 = Step(\"Add 1. Now i = 2.\", \"i:done s:cur\", \"i-s:tree\", null, null, null, [[\"1\", \"0\"], [\"2\", \"1\"]])\n"
             "Numbers in a view: only the question's or the KEY's own; with REVEAL: no, never the final answer or the right letter. Inside a view "
             "write plain symbols (θ, x², √2), no $; in your own lines put every formula and symbol in $...$.\n"
             + V4_MATH + "\n")

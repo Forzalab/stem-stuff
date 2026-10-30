@@ -1235,6 +1235,51 @@ class Visuals(unittest.TestCase):
         self.assertTrue(all(3 <= len(r.split()) <= 6 for r in rows[::2]), rows)
         self.assertIn(serve.V4_MATH, serve._v4_claude_system(dict(fig=serve.fig_ctx(P1, "a"), bank=serve.bank_block(P1)))[0]["text"])
 
+    def test_stepper_prompt_carries_a_figure(self):
+        # W340 (Tony: a real figure per step): the rule says a Steps MUST carry a figure that changes per step, and the example shows one
+        import views_gate
+        self.assertNotIn("Steps(null", serve.V4_VIEWS)
+        self.assertIn(serve.V4_STEPS_RULE, serve.V4_VIEWS)
+        self.assertIn('s = Steps(g, [s1, s2], null, ["i", "s"])\ng = Graph(', serve.V4_VIEWS)
+        ex = serve.V4_VIEWS.split('s = Steps(g, [s1, s2]')[1].split("Numbers in a view")[0]
+        prog = 'root = View([s])\ns = Steps(g, [s1, s2]' + ex.rstrip("\n")
+        out, log = views_gate.gate(prog, serve.fig_ctx(P1, "a"))
+        self.assertEqual(log, ["ok"], prog)                                # the example passes the gate as written
+        self.assertEqual(len({l.split('", "')[1] for l in prog.splitlines() if l.startswith("s1 =") or l.startswith("s2 =")}), 2, "its marks change per step")
+
+    def test_a_stepper_without_a_figure_is_reasked_in_place_else_plain_lines(self):
+        # W340 (Tony, Oct 29 17:3x): a Steps with no figure is dropped; ONE re-ask for the same steps with their figure, in place;
+        # none: its captions as plain numbered lines, in place (no stepper chrome, no fake visual)
+        p = dict(P1)
+        bare = ('root = View([s])\ns = Steps(null, [s1, s2])\ns1 = Step("Push in: the work along the ramp.")\n'
+                's2 = Step("Friction takes its share.")')
+        drawn = bare.replace("Steps(null, [s1, s2])", 'Steps(g, [s1, s2])\ng = Graph("W 40 40, F 140 40", "W>F")').replace(
+            's2 = Step("Friction takes its share.")', 's2 = Step("Friction takes its share.", "W:done F:cur")')
+        parts = ["Not quite.\n\nClick through:\n", "```openui\n" + bare + "\n```\n", "\nTry once more."]
+        calls = []
+
+        def reask(answer):
+            def f(why):
+                calls.append(why)
+                return answer
+            return f
+        out = "".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask("\n```openui\n" + drawn + "\n```\n")))
+        self.assertEqual(calls, ["steps-nofig"])
+        self.assertIn("Graph(", out)
+        self.assertLess(out.index("Click through:"), out.index("```openui"), out)
+        self.assertLess(out.index("```openui"), out.index("Try once more."), out)
+        self.assertNotIn("Push in", out.split("```")[0] + out.split("```")[-1])
+        calls.clear()
+        out = "".join(serve.v4_visible(iter(parts), True, ("", []), "T_ST", serve.fig_ctx(p, "a"), reask("")))
+        self.assertEqual(calls, ["steps-nofig"])
+        self.assertNotIn("```", out)
+        self.assertRegex(out, r"Click through:\n+\*\*1\.\*\* Push in: the work along the ramp\.\n\*\*2\.\*\* Friction takes its share\.\n+\s*Try once more\.$")
+        # fig_reask asks for the openui stepper and keeps only a checked ```openui fence
+        with mock.patch.object(serve, "_claude_one", return_value=iter(["```openui\n" + drawn + "\n```"])) as one:
+            got = serve.fig_reask([{"type": "text", "text": "S"}], "Q", serve.fig_ctx(p, "a"), "steps-nofig", "T_ST")
+        self.assertIn("stepper had no figure", one.call_args[0][1][0]["content"])
+        self.assertTrue(got.startswith("\n```openui\n") and "Graph(" in got, got)
+
     def test_figure_reask_on_the_deepseek_arm(self):
         # W113 vet (physics-b): DeepSeek answered (Opus refused), its scene had no force arrow, the gate dropped it and nothing asked again.
         # Now a dropped figure is re-asked (Claude, the figure only) whichever arm answered.

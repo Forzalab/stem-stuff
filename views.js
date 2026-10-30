@@ -523,15 +523,8 @@ register("Steps", (p, c) => {
   if (!steps.length) return c.h("div", { class: "vw-steps wait" });      // its steps have not arrived yet: hold the slot
   const st = c.state(() => ({ i: 0 }));
   st.i = Math.min(st.i, steps.length - 1);
-  /* W340 vf-stepper ("empty UI apart from the buttons"): the prompt's example writes Steps(null, ...) and a stepper of captions only drew a
-     sentence and two buttons, no figure. With no figure and no table it now draws its own: the step ladder, one numbered node per
-     step (done, current, still to come), so every step shows where it is in the chain. Nothing in it comes from the model but the count. */
-  const ladder = !p.fig && !p.head && steps.length > 1;
-  const g = p.fig ? graphModel(p.fig.props) : ladder ? { pos: Object.fromEntries(steps.map((_, i) => [String(i + 1), [36 + i * 84, 36]])), cols: [], marks: {},
-    edges: steps.slice(1).map((_, i) => ({ a: String(i + 1), b: String(i + 2), dir: true, key: `${i + 1}-${i + 2}` })) } : null;
-  const ladderSt = i => ({ nodes: Object.fromEntries(steps.map((_, j) => [String(j + 1), j < i ? "done" : j === i ? "cur" : "idle"])),
-    edges: Object.fromEntries(steps.slice(1).map((_, j) => [`${j + 1}-${j + 2}`, j < i ? "tree" : "idle"])) });
-  const fig = g && c.h("div", { class: `vw-fig${ladder ? " vw-ladder" : ""}`, role: "img", "aria-label": ladder ? "step ladder: which step of the chain this is" : "figure, one step at a time" });
+  const g = p.fig ? graphModel(p.fig.props) : null;
+  const fig = g && c.h("div", { class: "vw-fig", role: "img", "aria-label": "figure, one step at a time" });
   const front = c.h("div", { class: "vw-chips vw-front" });
   const cap = c.h("p", { class: "vw-cap", "aria-live": "polite" });
   const body = c.h("tbody");
@@ -540,7 +533,7 @@ register("Steps", (p, c) => {
   const foot = c.h("div", { class: "vw-foot" }, back, next, n);
   const show = () => {
     const s = steps[st.i], nodes = Object.fromEntries(pairs(s.nodes));
-    if (g) fig.replaceChildren(drawGraph(c.doc, g, ladder ? ladderSt(st.i) : { nodes, edges: Object.fromEntries(pairs(s.edges)), tags: Object.fromEntries(pairs(s.tags)),
+    if (g) fig.replaceChildren(drawGraph(c.doc, g, { nodes, edges: Object.fromEntries(pairs(s.edges)), tags: Object.fromEntries(pairs(s.tags)),
       labels: Object.fromEntries((s.labels || []).map(t => { const i = t.indexOf(":"); return [t.slice(0, i), t.slice(i + 1)]; })) }));
     front.replaceChildren(...chips(c.doc, s.front || [], true));
     cap.replaceChildren(...c.rich(s.cap));

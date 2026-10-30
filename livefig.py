@@ -500,6 +500,9 @@ class Fence:
         # slot: a marker emitted ONCE in place of the first fence dropped while nothing is shown (slot_why = its reason), so a caller can
         # put a re-asked figure exactly there (W340 vf-physics-b: it went to the end, "Forces on the block:" sat over a gap)
         self.slot, self.slot_why = slot, None
+        # plain: words a dropped fence leaves behind (views_gate: a figure-less stepper's captions as numbered lines). They go out in the
+        # fence's place; with a slot they wait (slot_plain) for the re-ask, and show only if it brings no figure
+        self.plain, self.slot_plain = "", ""
 
     def _block(self, lang, body):
         if self.ctx is None:
@@ -537,8 +540,12 @@ class Fence:
                     self.buf = ""
                 break
             blk = self._block(m.group(1).lower(), m.group(2))
+            plain, self.plain = self.plain, ""
             if not blk and self.slot and not self.shown and self.log and self.log[-1].split(":")[0] not in ("ok", "off", "second", "views-off"):
-                blk, self.slot, self.slot_why = self.slot, None, self.log[-1].split(":")[0]
+                why = "steps-nofig" if plain else self.log[-1].split(":")[0]
+                blk, self.slot, self.slot_why, self.slot_plain = self.slot, None, why, plain
+            elif not blk:
+                blk = plain
             out.append(blk)
             self.prev, self.buf = "`", self.buf[m.end():]
         return "".join(out)

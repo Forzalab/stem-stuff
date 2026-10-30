@@ -35,8 +35,9 @@ const NOFORCE = { type: "graph", kind: "scene", alt: "A block.", marks: [{ mark:
 const STEPS = 'root = View([s])\ns = Steps(g, [s1, s2, s3])\ng = Graph("W 40 60, F 160 30, U 160 90, S 280 60", "W>F, W>U, W>S")\n' +
   's1 = Step("The push puts work in.", "W:cur")\ns2 = Step("Friction and gravity take their share on the way up.", "W:done F:cur U:cur", "W-F:tree W-U:tree")\n' +
   's3 = Step("The spring gets what is left.", "W:done F:done U:done S:cur", "W-F:tree W-U:tree W-S:tree")';
-/* the vet's own stepper (fix2-vet stepper-1440x900.png): captions only, Steps(null, ...) as the prompt's example writes it; it drew the
-   buttons and a sentence, no figure ("empty UI apart from the buttons") */
+/* the vet's own stepper (fix2-vet stepper-1440x900.png): captions only, Steps(null, ...); it drew the buttons and a sentence, no figure
+   ("empty UI apart from the buttons"). Tony (Oct 29 17:3x): a stepper needs a real figure per step, never generic bubbles: the server
+   re-asks once for the figure, in place ("stepper": the re-ask brings STEPS); still none: plain numbered lines ("stepper-plain") */
 const BARE = 'root = View([s])\ns = Steps(null, [s1, s2, s3])\ns1 = Step("Push in: the work along the ramp.")\ns2 = Step("Friction and gravity take their share on the way up.")\ns3 = Step("The spring gets what is left.")';
 const TRI = 'root = View([fig])\nfig = Geometry("A 0,0; B 4,0; C 4,3", ["seg(A,B)", "seg(B,C)", "seg(A,C)", "right(B,A,C)", "angle(B,A,C,θ)", "dim(A,C,d + x)", "dim(B,C,h = ?)"], "The slope and the height.")';
 /* the vet cards (brain _files/w113/fix2-vet): replies from a fake Claude, deterministic */
@@ -46,6 +47,7 @@ const CARDS = {
   "proof-b": ["Not quite.\n\nTake the case that **breaks**:\n", "$$hi = lo + 1$$\n", "Because $mid$ rounds down, this becomes:\n", "$$mid = lo$$\n",
     "So `lo = mid` never moves **lo**.\n", "\nTry once more."],
   "stepper": ["Not quite.\n\nClick through where the 48 J goes:\n", fence("openui", BARE) + "\n", "\nTry once more."],
+  "stepper-plain": ["Not quite.\n\nClick through where the 48 J goes:\n", fence("openui", BARE) + "\n", "\nTry once more."],
   "stepper-graph": ["Not quite.\n\nClick through where the work goes:\n", fence("openui", STEPS) + "\n", "\nTry once more."],
   "mc-a": ["Not quite.\n\nThe slope:\n", fence("openui", TRI) + "\n", "\nTry once more."],
 };
@@ -56,7 +58,8 @@ const fake = createServer(async (req, res) => {
   res.writeHead(200, { "content-type": "text/event-stream" });
   const ev = o => res.write(`data: ${JSON.stringify(o)}\n\n`);
   ev({ type: "message_start", message: { usage: { input_tokens: 10, output_tokens: 1 } } });
-  for (const p of /was dropped/.test(body) ? [REASK] : CARDS[card]) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }
+  const parts = /stepper had no figure/.test(body) ? [fence("openui", card === "stepper-plain" ? BARE : STEPS)] : /was dropped/.test(body) ? [REASK] : CARDS[card];
+  for (const p of parts) { ev({ type: "content_block_delta", index: 0, delta: { type: "text_delta", text: p } }); await new Promise(r => setTimeout(r, 30)); }
   ev({ type: "message_delta", usage: { output_tokens: 50 } }); ev({ type: "message_stop" }); res.end();
 });
 await new Promise(r => fake.listen(0, "127.0.0.1", r));
@@ -140,11 +143,36 @@ const checkFig = (r, what) => {
   assert.deepEqual(r.findings, [], `${what}: data-fig-findings`);
   for (const a of r.angles) assert.equal(a.near, a.at, `${what}: angle label "${a.t}" is at ${a.near}, not its vertex ${a.at} (I-ANG-1a)`);
 };
-const shot = async (page, name, w, h) => {
-  if (!SHOTS) return;
+/* the shot frames the figure and, when it fits, the reply's last line too; then no text line may be cut at the fold (orc QA: a stray
+   "–" under the stepper's Back / Next at 1440 was the top of "Try once more." showing through the fade over the footer) and no line may be
+   only a dash or blanks */
+const frame = async page => {
   const f = page.locator("#cluck .wtext .wfig").first();
   if (await f.count()) await f.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: join(SHOTS, `${name}-${w}x${h}.png`) });
+  await page.evaluate(() => {
+    const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), last = document.querySelector("#cluck .wtext > :last-child");
+    if (!sc || !last) return;
+    const S = sc.getBoundingClientRect(), L = last.getBoundingClientRect(), F = document.querySelector("#cluck .wtext .wfig")?.getBoundingClientRect();
+    const fold = (sc, S) => S.bottom - (sc.classList.contains("below") ? parseFloat(getComputedStyle(sc.nextElementSibling || sc, "::before").height) || 40 : 0);   // the fade over the footer hides what is under it
+    if (L.bottom > fold(sc, S) && (!F || L.bottom - F.top <= S.height - 8)) sc.scrollTop = sc.scrollHeight;
+  });
+  await page.waitForTimeout(150);
+  const bad = await page.evaluate(() => {
+    const sc = document.querySelector("#cluck .wtext")?.closest(".cl-bd") || document.querySelector("#cluck .cl-bd"), S = sc.getBoundingClientRect(), out = [];
+    const fold = (sc, S) => S.bottom - (sc.classList.contains("below") ? parseFloat(getComputedStyle(sc.nextElementSibling || sc, "::before").height) || 40 : 0);   // the fade over the footer hides what is under it
+    const B = fold(sc, S);
+    for (const e of document.querySelectorAll("#cluck .wtext > .wl:not(.wgap), #cluck .wtext .vw-cap, #cluck .wtext .vw-n")) {
+      const r = e.getBoundingClientRect(), t = e.textContent.trim();
+      if (r.height && r.top < S.bottom - 1 && r.bottom > B + 1) out.push(`cut at the fold: "${t.slice(0, 30)}"`);
+      if (r.height && t && /^[\s\-–—]+$/.test(t)) out.push(`a dash-only line: "${t}"`);
+    }
+    return out;
+  });
+  assert.deepEqual(bad, [], "the shot cuts no line");
+};
+const shot = async (page, name, w, h) => {
+  await frame(page);
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, `${name}-${w}x${h}.png`) });
 };
 
 try {
@@ -194,6 +222,17 @@ try {
         if (i < 3) await page.click("#cluck .wview .vw-foot button:nth-child(2)");
       }
       assert.equal(new Set(seen).size, 3, "the figure changes with the step");
+      assert.deepEqual(page.errs, []);
+      await page.context().close();
+    });
+    await step(`stepper-plain ${w}x${h}: no figure even after the re-ask -> the steps as plain numbered lines, no stepper, no fake visual`, async () => {
+      const page = await open("stepper-plain", w, h);
+      assert.equal(await page.locator("#cluck .wtext .vw-steps, #cluck .wtext .vw-foot, #cluck .wtext .wfig").count(), 0, "no stepper chrome, no figure slot");
+      assert.equal(await page.locator("#cluck .wtext .wstep").count(), 0, "plain lines, not the step widget");
+      const lines = await page.$$eval("#cluck .wtext > .wl", els => els.map(e => e.textContent.trim()).filter(t => /^\d\. /.test(t)));
+      assert.deepEqual(lines, ["1. Push in: the work along the ramp.", "2. Friction and gravity take their share on the way up.", "3. The spring gets what is left."]);
+      assert.doesNotMatch(await page.textContent("#cluck .wtext"), /```|Steps\(|root =/);
+      await shot(page, "stepper-plain", w, h);
       assert.deepEqual(page.errs, []);
       await page.context().close();
     });
