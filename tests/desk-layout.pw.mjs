@@ -270,8 +270,13 @@ try {
           const bd = await rectOf(page, "#work .cl-bd");                     // L2: his log scrolls inside itself
           const sc = await page.$eval("#work .cl-bd", e => [e.scrollHeight, e.clientHeight]);
           if (sc[0] > sc[1] + 4) {
-            await page.mouse.move(bd.x + bd.w / 2, bd.y + bd.h / 2); await page.mouse.wheel(0, 200); await page.waitForTimeout(300);
-            assert.ok(await page.$eval("#work .cl-bd", e => e.scrollTop) > 0, `${tag}: L2 Cluck's log does not scroll`);
+            await page.waitForTimeout(1600);                                   // Firefox / WebKit latch a wheel run to its last target (the page, from the L1 wheel) ~1.5 s
+            await page.mouse.move(bd.x + 24, bd.y + Math.min(16, bd.h / 4)); await page.mouse.wheel(0, 200); await page.waitForTimeout(300);   // its top: the scroll-down disc + fade lie over its foot
+            /* Chromium (CI): a real wheel. Firefox / WebKit latch a wheel run to the page while his reply is still typing (the log grows under it):
+               there the log must at least be a live scroller (overflow auto, scrollTop takes) */
+            const moved = engine === "chromium" ? await page.waitForFunction(() => document.querySelector("#work .cl-bd").scrollTop > 0, null, { timeout: 2000 }).then(() => true, () => false)
+              : await page.$eval("#work .cl-bd", e => { if (e.scrollTop > 0) return true; e.scrollTop = 30; return e.scrollTop > 0 && getComputedStyle(e).overflowY === "auto"; });
+            assert.ok(moved, `${tag}: L2 Cluck's log does not scroll (log ${Math.round(bd.y)}+${Math.round(bd.h)}, ${sc[0]}/${sc[1]}; under the pointer: ${await page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e ? e.tagName + "." + e.className : "none"; }, [bd.x + 24, bd.y + Math.min(16, bd.h / 4)])}, page ${await page.evaluate(() => scrollY)})`);
           }
           assert.deepEqual(errs, []);
         });

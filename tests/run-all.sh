@@ -90,7 +90,7 @@ weight() {
     brainrot) echo 5 ;;   # W105 dead-video swap, local run ~4 s (estimate until CI timing)
     copy-math) echo 14 ;;   # W108 copy math as plain text, local run ~13 s (estimate until CI timing)
     toast-note) echo 30 ;;   # W112 toast notes + desktop start line, local run ~30 s (estimate until CI timing)
-    desk-layout) echo 194 ;; desk-layout@1) echo 55 ;; desk-layout@2) echo 58 ;; desk-layout@3) echo 81 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
+    desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
     *) echo 5 ;;
   esac
 }

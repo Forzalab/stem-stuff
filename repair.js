@@ -152,7 +152,14 @@
     function settle() {
       const focusIn = el.contains(document.activeElement);
       advance(); draw();
-      if (focusIn) { const f = el.querySelector('.rp-step[data-state="active"] :is(button:not(:disabled), input:not(:disabled))') || el.querySelector(".rp-next"); if (f) f.focus(welcome ? { preventScroll: true } : undefined); }   // welcome: focus never scrolls the page under the student (W129 L6); the page is the one scroller, theirs
+      if (focusIn) {
+        let f = el.querySelector('.rp-step[data-state="active"] :is(button:not(:disabled), input:not(:disabled))') || el.querySelector(".rp-next");
+        if (f && welcome && f.matches("input")) {                               // WebKit reveals a focused text box even with preventScroll: one off screen
+          const r = f.getBoundingClientRect();                                  // takes the focus on its row instead (Tab goes on into it)
+          if (r.top < 0 || r.bottom > innerHeight) { f = f.closest(".rp-step"); f.tabIndex = -1; }
+        }
+        if (f) f.focus(welcome ? { preventScroll: true } : undefined);         // welcome: focus never scrolls the page under the student (W129 L6); the page is the one scroller, theirs
+      }
     }
 
     /* ---- drawing ---- */
