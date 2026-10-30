@@ -3,6 +3,7 @@
 ship.sh runs from a copy in a temp root, so this checkout's banks/ and .env stay out; HOME is a temp dir and SHIP_BRAIN_SEARCH is empty, so ~/brain and /home/claude/brain do too.
 Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import base64
+import functools
 import http.server
 import json
 import threading
@@ -31,6 +32,23 @@ def put(base, rel, text):
     with open(p, "w") as f:
         f.write(text)
     return p
+
+
+FIG_CODE = "CALC1_A9R"                                                   # a num item whose body[1] is a graph block
+FIG_ASSETS = ("graph.js", "app.css", "vendor/math.min.js")              # + vendor/katex/: what fig_png.mjs's page loads
+
+
+@functools.lru_cache(None)
+def chromium():
+    """can tests/node_modules/playwright-core launch Chromium (fig_png.mjs's browser lookup)? The unit CI job has none."""
+    env = dict(os.environ)
+    if not env.get("PLAYWRIGHT_BROWSERS_PATH") and os.path.isdir("/opt/pw-browsers"):
+        env["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/pw-browsers"
+    js = "require(%r).chromium.launch().then(b => b.close())" % os.path.join(ROOT, "tests", "node_modules", "playwright-core")
+    try:
+        return subprocess.run(["node", "-e", js], capture_output=True, env=env, timeout=60).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
 
 
 class Stub:
@@ -242,7 +260,7 @@ class Gate(unittest.TestCase):
     set (an older bank only warns) gets to `vercel deploy`. Vercel is a fake npx on PATH that logs its args; the root is a git repo with
     an origin, so the run gets as far as a real one."""
     FILES = ("tools/ship.sh", "tools/brain_banks.py", "tools/version.sh", "tools/slips.py", "tools/tol.py", "tools/schema-check.mjs",
-             "slips.py", "SCHEMA.md", "tests/schemas.mjs")
+             "slips.py", "SCHEMA.md", "tests/schemas.mjs", "tools/fig_png.mjs") + FIG_ASSETS
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="stem-gate-")
@@ -251,6 +269,7 @@ class Gate(unittest.TestCase):
         for f in self.FILES:
             os.makedirs(os.path.dirname(os.path.join(self.root, f)), exist_ok=True)
             shutil.copy(os.path.join(ROOT, f), os.path.join(self.root, f))
+        shutil.copytree(os.path.join(ROOT, "vendor", "katex"), os.path.join(self.root, "vendor", "katex"))
         os.symlink(os.path.join(ROOT, "tests", "node_modules"), os.path.join(self.root, "tests", "node_modules"))
         put(self.root, ".gitignore", "tests/node_modules\n")
         put(self.root, "banks/.keep", "")
@@ -263,20 +282,34 @@ class Gate(unittest.TestCase):
         git(self.root, "remote", "add", "origin", origin)
         git(self.root, "push", "-q", "origin", "side:main")
         self.bin, self.log = os.path.join(self.tmp, "bin"), os.path.join(self.tmp, "npx.log")
-        put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) echo https://t.vercel.app ;; esac\n' % self.log)
+        self.figs = os.path.join(self.tmp, "deployed-figs")                # what the upload's banks/figs held at `vercel deploy`
+        put(self.bin, "npx", '#!/bin/sh\necho "$*" >>"%s"\ncase "$*" in *" deploy"*) cp -r banks/figs "%s" 2>/dev/null; echo https://t.vercel.app ;; esac\n'
+            % (self.log, self.figs))
         os.chmod(os.path.join(self.bin, "npx"), 0o755)
         with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
-            self.num = next(p for p in json.load(f)["problems"] if p["type"] == "num" and p.get("form"))
+            ps = json.load(f)["problems"]
+        self.num = next(p for p in ps if p["type"] == "num" and p.get("form"))
+        self.fig = next(p for p in ps if p["code"] == FIG_CODE)
 
     def bank(self, d, name, v=20261022, **change):
         p = {k: x for k, x in {**self.num, **change}.items() if x is not None}
         return put(os.path.join(self.tmp, d), name + ".json", json.dumps({"v": v, "problems": [p]}))
 
-    def ship(self, banks, path=None):
+    def ship(self, banks, path=None, brain=None):
         e = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "SHIP_", "GIT_", "VERCEL_"))}
-        e.update(HOME=self.tmp, SHIP_NO_BRAIN="1", PATH=path or self.bin + os.pathsep + e["PATH"])
-        return subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo", os.path.join(self.tmp, banks)],
-                              capture_output=True, text=True, env=e, timeout=120)
+        e.update(HOME=self.tmp, PATH=path or self.bin + os.pathsep + e["PATH"])
+        e.update(BRAIN_DIR=brain, SHIP_BRAIN_SEARCH="") if brain else e.update(SHIP_NO_BRAIN="1")
+        return subprocess.run(["bash", os.path.join(self.root, "tools", "ship.sh"), "demo", *([os.path.join(self.tmp, banks)] if banks else [])],
+                              capture_output=True, text=True, env=e, timeout=180)
+
+    def fig_brain(self):
+        """a brain clone whose exam bank (like BANK_P3X) has one figure item: the bank exists only there, never in banks/ or banks/figs/"""
+        brain = os.path.join(self.tmp, "brain")
+        put(brain, "projects/calc/_files/exam3-bank/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [self.fig]}))
+        git(brain, "init", "-q")
+        git(brain, "add", "-A")
+        git(brain, "commit", "-q", "-m", "bank")
+        return brain
 
     def deployed(self):
         if not os.path.exists(self.log):
@@ -315,14 +348,81 @@ class Gate(unittest.TestCase):
         self.assertFalse(self.deployed())
 
 
+    @unittest.skipUnless(chromium(), "no Chromium for playwright-core (tests/node_modules + PLAYWRIGHT_BROWSERS_PATH)")
+    def test_brain_bank_figure_ships_its_png(self):
+        # todo 134: Exam 3's figures (brain-only BANK_P3X) had no banks/figs PNG in the deploy, so serve.fig_images skipped them
+        r = self.ship(None, brain=self.fig_brain())
+        self.assertIn("demo ready: https://t.vercel.app", r.stdout, r.stderr)   # (the fake Vercel's smoke is red: not checked here)
+        self.assertIn("BANK_FIG(brain)", r.stdout)
+        self.assertTrue(self.deployed())
+        png = os.path.join(self.figs, FIG_CODE + "-1.png")
+        self.assertTrue(os.path.isfile(png), "deployed banks/figs: %s" % (os.listdir(self.figs) if os.path.isdir(self.figs) else None))
+        with open(png, "rb") as f:
+            self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
+        self.assertNotIn(".render.html", os.listdir(self.figs))
+
+    def test_a_figure_without_png_stops_before_vercel(self):
+        # the renderer fails (here: ImageMagick; on a runner with no Chromium, the launch) -> the PNG gate stops the deploy
+        put(self.bin, "convert", "#!/bin/sh\nexit 1\n")
+        os.chmod(os.path.join(self.bin, "convert"), 0o755)
+        r = self.ship(None, brain=self.fig_brain())
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertIn("figure PNG", r.stderr)
+        self.assertIn("nothing deployed", r.stderr)
+        self.assertNotIn("deploying", r.stdout)
+        self.assertFalse(self.deployed())
+
+
+class FigPng(unittest.TestCase):
+    """tools/fig_png.mjs --root DIR: renders and checks DIR's problems.json + DIR/banks/*.json into DIR/banks/figs (ship.sh points it at the
+    deploy dir, which holds the brain banks); without --root it is this checkout, as before."""
+    CODE = "ZZFIG_W1F"   # not in this checkout: a PNG for it here would mean --root leaked into the repo
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="stem-figpng-")
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        with open(os.path.join(ROOT, "problems.json"), encoding="utf-8") as f:
+            p = next(p for p in json.load(f)["problems"] if p["code"] == FIG_CODE)
+        put(self.tmp, "banks/BANK_FIG.json", json.dumps({"v": 20261022, "problems": [dict(p, code=self.CODE)]}))
+        self.png = os.path.join(self.tmp, "banks", "figs", self.CODE + "-1.png")
+
+    def fig(self, *args):
+        return subprocess.run(["node", os.path.join(ROOT, "tools", "fig_png.mjs"), "--root", self.tmp, *args],
+                              capture_output=True, text=True, timeout=120)
+
+    def test_check_fails_on_a_bank_figure_with_no_png(self):
+        r = self.fig("--check")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn(self.CODE + "-1.png", r.stderr)
+        put(self.tmp, "banks/figs/%s-1.png" % self.CODE, "png")
+        r = self.fig("--check")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("ok 1 figure PNGs", r.stdout)
+
+    @unittest.skipUnless(chromium(), "no Chromium for playwright-core (tests/node_modules + PLAYWRIGHT_BROWSERS_PATH)")
+    def test_render_writes_into_root_only(self):
+        for a in FIG_ASSETS:
+            put(self.tmp, a, "")
+            shutil.copy(os.path.join(ROOT, a), os.path.join(self.tmp, a))
+        shutil.copytree(os.path.join(ROOT, "vendor", "katex"), os.path.join(self.tmp, "vendor", "katex"))
+        self.assertFalse(os.path.exists(self.png))
+        r = self.fig()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(self.png, "rb") as f:
+            self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(sorted(os.listdir(os.path.dirname(self.png))), [self.CODE + "-1.png"])
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "banks", "figs", self.CODE + "-1.png")))
+        self.assertEqual(self.fig("--check").returncode, 0)
+
+
 class Workflow(unittest.TestCase):
     """.github/workflows/ship.yml installs what the gate needs before tools/ship.sh runs (run 54 on 2026-10-25 stopped at the gate:
-    "needs node and tests/node_modules", nothing deployed)."""
+    "needs node and tests/node_modules", nothing deployed). The figure PNGs (tools/fig_png.mjs) need Chromium and ImageMagick too."""
     def test_gate_deps_before_ship(self):
         with open(os.path.join(ROOT, ".github", "workflows", "ship.yml")) as f:
             y = f.read()
         ship = y.index('tools/ship.sh "$MODE"')
-        for need in ("pip install sympy", "cd tests && npm ci"):
+        for need in ("pip install sympy", "cd tests && npm ci", "install --only-shell chromium", "imagemagick"):   # + the figure PNG gate
             self.assertIn(need, y)
             self.assertLess(y.index(need), ship, need)
 
