@@ -102,7 +102,7 @@ try {
       assert.ok(L.u.gap > 0 && L.u.gap < 6, "a thin gap, on the value's line: " + L.u.gap);
       assert.ok(L.u.dy < 4, "same line: " + L.u.dy);
       hUnit = L.h;
-      await page.waitForFunction(() => /2\.02/.test(document.querySelector("#sr").textContent), null, { timeout: 4000 }).catch(() => {});   // say() writes it after its gap
+      for (let i = 0; i < 80 && !/2\.02/.test(await page.textContent("#sr")); i++) await page.waitForTimeout(50);   // say() writes the line after its gap
       assert.match(await page.textContent("#sr"), /2\.02\s?m\/s2/, "the spoken line says the unit too");
     });
     await step(`${w}: Copy answer copies the value only`, async () => {
