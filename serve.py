@@ -44,6 +44,7 @@ import zoneinfo
 
 import sympy
 
+import expr
 import livefig
 import slips
 import views_gate
@@ -1211,14 +1212,25 @@ def _grade(p, st, body, multi, idx, reveal=False):
             hit = next((w for w in p.get("wrong", []) if w.get("choice") == sig), None)
     else:
         u = p["parts"][idx] if multi else p
-        text = str(body.get("answer", ""))[:200]
-        try:
-            sig = signature(u, text)
+        text = str(body.get("answer", ""))[:expr.MAX_LEN if expr_unit(p, u) else 200]
+        if expr_unit(p, u) and st["wrong"]:                  # W137: after a miss the box wants the whole working (never a try until it reads)
+            if expr.is_bare_number(text):
+                return reply({"verdict": "expr_needed", "triesLeft": left(), "prompt": expr.PROMPT, "exprMode": True})
+            try:
+                tree, sig = expr.evaluate(text, bank_g(p))
+            except expr.ExprError as e:
+                return reply({"verdict": "unparsed", "triesLeft": left(), "syntax": e.msg, "pos": e.pos, "exprMode": True})
             correct = unit_correct(u, sig)
-        except UNREADABLE:
-            return reply({"verdict": "invalid", "triesLeft": left()})
-        if not correct:
-            hit = unit_hit(u, text, sig) or slip_hit(u, sig)
+            if not correct:
+                hit = expr_hit(p, u, idx, text, tree, sig)
+        else:
+            try:
+                sig = signature(u, text)
+                correct = unit_correct(u, sig)
+            except UNREADABLE:
+                return reply({"verdict": "invalid", "triesLeft": left()})
+            if not correct:
+                hit = unit_hit(u, text, sig) or slip_hit(u, sig)
     if correct:
         st["done"] = True
         fams = sorted({w["error"] for w in (p["parts"][idx] if multi else p).get("wrong", []) if isinstance(w.get("error"), str)})
@@ -1229,10 +1241,290 @@ def _grade(p, st, body, multi, idx, reveal=False):
         st["wrong"].append(sig)
     out = {"verdict": "wrong", "triesLeft": left(), "hint": (hit or {}).get("hint") or p.get("nudge", DEFAULT_NUDGE)}   # a SLIP_TIE collide: the plain nudge
     if hit:
-        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide", "spot") if k in hit})
+        out.update({k: hit[k] for k in ("error", "struck", "fixWrong", "kept", "collide", "spot", "diag") if k in hit})
+    if p["type"] in ("num", "multi") and expr_unit(p, p["parts"][idx] if multi else p) and left() > 0:
+        out["exprMode"] = True                               # W137: the next try is the whole working
     if repeat:
         out["repeat"] = True
     return reply(shut(out) if left() <= 0 else out)
+
+
+# ---------------- W137 expression answers (todo 137, brain _files/w137): EXPR_MODE on the allowlisted banks ----------------
+# After one wrong try on a typed num answer / num part with a `form`, the box asks for the whole working (expr.PROMPT). It is graded by
+# its value (the item's tol); a miss gets L1 (expr.l1: the tree vs `form` + the slips families) and, when L1 names no family, POST
+# /diagnose asks Sonnet (L3, TUTOR-LITE prompt, diagnosis JSON v1.1). Off (the default) = the old box, byte for byte.
+EXPR_BANKS_DEFAULT = ("BANK_P3X", "BANK_P3Q")
+EXPR_CONF = 0.6                              # an L3 read below this: the plain nudge
+EXPR_LEARN_KEY = "stem:expr:learn"           # Upstash list: {ts_day, item, expr_norm, diagnosis}; no device / session id (GRILL round 3)
+EXPR_LEARN_MAX = 5000
+EXPR_DX_KEY = "stem:expr:dx:"                # + sha1(cache key): one L3 diagnosis per (item, part, normalised working), any student
+EXPR_DX_TTL = 30 * 86400
+_expr_cache = {}
+
+
+def expr_mode():
+    return os.environ.get("EXPR_MODE", "").strip().lower() in ("1", "on", "true", "yes")
+
+
+def expr_banks():
+    raw = os.environ.get("EXPR_BANKS", "")
+    return tuple(b.strip() for b in raw.split(",") if b.strip()) or EXPR_BANKS_DEFAULT
+
+
+def bank_of(code):
+    return next((b for b, codes in banks().items() if code in codes), None)
+
+
+def bank_g(p):
+    """the bank's g (9.8 default): a problem's `g`, else 9.8"""
+    try:
+        return float(p.get("g", expr.G_DEFAULT))
+    except (TypeError, ValueError):
+        return expr.G_DEFAULT
+
+
+def expr_unit(p, u):
+    """True when this answer box takes expressions after a miss: EXPR_MODE on, the item in an allowlisted bank, a typed num unit with a form"""
+    return (expr_mode() and u.get("type") == "num" and isinstance(u.get("form"), str) and u["form"].strip() != ""
+            and bank_of(p["code"]) in expr_banks())
+
+
+def _expr_view_off(d):
+    off = (d.get("student_view") or {}).get("off")
+    return {"span": off["span"]} if off and off.get("span") else None
+
+
+def expr_hit(p, u, idx, text, tree, sig):
+    """L1 on a wrong working: {hint, error?, diag: {source, family, off, msg, pending}}. diag never carries the form or a key number."""
+    try:
+        r = expr.l1(text, u["form"], bank_g(p))
+    except (expr.ExprError, RecursionError):
+        r = None
+    fam = r and r["family"]
+    if r and not fam:
+        sh = slip_hit(u, sig)                                # the value-only slips read (it sees folded forms the tree can't)
+        fam = sh.get("error") if sh else None
+        r["family"] = fam
+    hint = family_hint(fam) if fam else p.get("nudge", DEFAULT_NUDGE)
+    if not r:
+        return {"hint": hint}
+    d = expr.diagnosis(p["code"], idx, text, sig, r)
+    typed = expr.literals(tree, skip_exp=False)
+    why = expr.leak(d, typed, hidden_values(p), leak_scan, u["form"])
+    if why:
+        log(f"expr L1 leak {p['code']}: {why}")
+        d["student_view"].update(affirm=[], off=None, explain_each=[])
+    msg = expr.render(d, family_line=family_hint(fam) if fam else None)
+    out = {"hint": hint, "diag": {"source": "L1", "family": fam, "off": _expr_view_off(d), "msg": msg, "pending": not fam}}
+    if fam:
+        out["error"] = fam
+    return out
+
+
+def expr_seen(sid, code):
+    """the items this browser tried this session, oldest first (server-side; never the model's guess): [(code, title)]"""
+    with _tries_lock:
+        _load_tries()
+        codes = [k[1] for k in _tries if k[0] == sid and k[1] != code]
+    out = []
+    for c in codes:
+        if c not in [x for x, _ in out]:
+            q = problems().get(c)
+            out.append((c, (q or {}).get("title", "")))
+    return out[-5:]
+
+
+def expr_where(p, u, seen_):
+    """recall.where from the student's own history: the last problem when it shares a formula-sheet row with this one, else the formula card"""
+    mine = set((sugar(p).get("part") or []))
+    if seen_:
+        q = problems().get(seen_[-1][0]) or {}
+        if mine & set(sugar(q).get("part") or []):
+            return "the last problem"
+    return "the formula card" if mine else None
+
+
+def _question_text(p, u):
+    parts = [b.get("md") for b in p.get("body", []) if b.get("type") == "text"]
+    text = "\n".join("\n".join(x) if isinstance(x, list) else str(x) for x in parts if x)
+    if u is not p and u.get("prompt"):
+        text += "\nThis part: " + str(u["prompt"])
+    return text[:3000]
+
+
+def _l3_user(p, u, text, r, seen_):
+    return json.dumps({"question": _question_text(p, u), "correct_formula": u["form"], "student_expression": text,
+                       "seen": [t for _, t in seen_],
+                       "rule_based_read": {"right_spans": [a["span"] for a in r["affirm"]], "off_span": (r.get("off") or {}).get("span")}},
+                      ensure_ascii=False)
+
+
+EXPR_MODEL = os.environ.get("EXPR_MODEL", "claude-sonnet-5-5")
+EXPR_OR_MODEL = os.environ.get("EXPR_OR_MODEL", "anthropic/claude-sonnet-5.5")
+
+
+def _l3_claude(user, timeout):
+    params = claude_params(EXPR_MODEL, 900)
+    params["output_config"] = dict(params["output_config"], format={"type": "json_schema", "schema": expr.DIAG_SCHEMA})
+    payload = dict(params, system=[{"type": "text", "text": expr.L3_SYSTEM}, {"type": "text", "text": expr.L3_FIELDS, "cache_control": CACHE}],
+                   messages=[{"role": "user", "content": user}])
+    req = urllib.request.Request(CLAUDE_BASE + "/v1/messages", data=json.dumps(payload).encode(), method="POST",
+                                 headers={"x-api-key": os.environ.get("CLAUDE_API", ""), "anthropic-version": "2023-06-01",
+                                          "content-type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        m = json.load(resp)
+    u = m.get("usage") or {}
+    used = {k: int(u.get(k) or 0) for k in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")}
+    used.update(out=int(u.get("output_tokens") or 0), w1h=0)
+    i, o = claude_price(EXPR_MODEL)
+    usd = (used["input_tokens"] * i + used["cache_creation_input_tokens"] * i * CACHE_WRITE + used["cache_read_input_tokens"] * i * CACHE_READ
+           + used["out"] * o) / 1e6
+    claude_add(usd)
+    log(f"expr l3 usage: in={used['input_tokens']} out={used['out']} usd={usd:.5f} model={EXPR_MODEL} stop={m.get('stop_reason')}")
+    if m.get("stop_reason") == "refusal":
+        raise OSError("refusal")
+    return json.loads("".join(b.get("text", "") for b in m.get("content", []) if b.get("type") == "text"))
+
+
+def _l3_openrouter(user, timeout):
+    key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not key:
+        raise OSError("no openrouter key")
+    payload = {"model": EXPR_OR_MODEL, "max_tokens": 900, "provider": {"zdr": True, "data_collection": "deny"},
+               "response_format": {"type": "json_schema", "json_schema": {"name": "diagnosis", "strict": True, "schema": expr.DIAG_SCHEMA}},
+               "messages": [{"role": "system", "content": expr.L3_SYSTEM + "\n" + expr.L3_FIELDS}, {"role": "user", "content": user}]}
+    with _or_post(payload, key, timeout) as resp:
+        m = json.load(resp)
+    return json.loads(m["choices"][0]["message"]["content"])
+
+
+def expr_l3(user):
+    """Sonnet (the Claude arm), then the same model on OpenRouter; None when both fail (the caller nudges)"""
+    timeout = _fenv("EXPR_L3_TIMEOUT", 12.0)
+    arms = ([_l3_claude] if claude_ok() else []) + [_l3_openrouter]
+    for arm in arms:
+        try:
+            return arm(user, timeout)
+        except Exception as e:  # noqa: BLE001
+            log(f"expr l3 {arm.__name__}: {type(e).__name__}: {str(e)[:120]}")
+    return None
+
+
+def _expr_store(row):
+    """one anonymised learn row to Upstash, in the background: never blocks the reply, never fatal"""
+    if not all(KV):
+        return
+
+    def run():
+        try:
+            _kv("LPUSH", EXPR_LEARN_KEY, json.dumps(row, ensure_ascii=False))
+            _kv("LTRIM", EXPR_LEARN_KEY, 0, EXPR_LEARN_MAX - 1)
+        except Exception as e:  # noqa: BLE001
+            log(f"expr store: {type(e).__name__}")
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _dx_get(key):
+    if key in _expr_cache:
+        return _expr_cache[key]
+    if all(KV):
+        try:
+            raw = _kv("GET", EXPR_DX_KEY + hashlib.sha1(key.encode()).hexdigest())
+            if raw:
+                _expr_cache[key] = json.loads(raw)
+                return _expr_cache[key]
+        except Exception:  # noqa: BLE001
+            pass
+    return None
+
+
+def _dx_put(key, val):
+    _expr_cache[key] = val
+    if all(KV):
+        try:
+            _kv("SET", EXPR_DX_KEY + hashlib.sha1(key.encode()).hexdigest(), json.dumps(val), "EX", EXPR_DX_TTL)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def expr_family(f):
+    """an L3 family as stored: a slips family id (slips.FAMILIES) or "new:<slug>"; anything else becomes new:<sanitised slug>; none: None"""
+    if not f:
+        return None
+    f = str(f).strip()
+    if f in slips.FAMILIES:
+        return f
+    slug = re.sub(r"[^a-z0-9]+", "-", f.lower().removeprefix("new:")).strip("-")[:40]
+    return "new:" + slug if slug else None
+
+
+def diagnose(p, sid, b):
+    """POST /diagnose {code, part?, expr, round?}: the L3 read of a working this browser already got graded wrong (the tries record proves
+    it, so this is no free probe). (status, {source, family, off, msg, budget?}). Counts against Cluck's hourly cap; cached."""
+    multi = p["type"] == "multi"
+    idx = b.get("part") if multi else None
+    if multi and (isinstance(idx, bool) or not isinstance(idx, int) or not 0 <= idx < len(p["parts"])):
+        return 400, {"error": "part"}
+    u = p["parts"][idx] if multi else p
+    text = str(b.get("expr", ""))[:expr.MAX_LEN]
+    if not expr_unit(p, u):
+        return 404, {"error": "off"}
+    try:
+        tree, val = expr.evaluate(text, bank_g(p))
+    except expr.ExprError:
+        return 400, {"error": "unparsed"}
+    rnd = b.get("round")
+    with _tries_lock:
+        _load_tries()
+        rs = _round_sid(sid, rnd) if isinstance(rnd, int) and not isinstance(rnd, bool) and 0 < rnd < 2 ** 31 else sid
+        st = _tries.get((rs, p["code"], idx) if multi else (rs, p["code"]))
+        tried = bool(st) and any(isinstance(x, float) and same(val, x, u.get("tol", 1e-6)) for x in st["wrong"])
+    if not tried:
+        return 403, {"error": "not a graded try"}
+    r = expr.l1(text, u["form"], bank_g(p))
+    key = expr.cache_key(p["code"], idx, r["norm"])
+    hit = _dx_get(key)
+    if hit:
+        return 200, dict(hit, cached=True)
+    seen_ = expr_seen(sid, p["code"])
+    where = expr_where(p, u, seen_)
+    nudge = {"source": "L1", "off": None, "msg": expr.NUDGE}
+    if not explain_allowed(sid, False):
+        return 200, dict(nudge, budget="hourly")
+    l3 = expr_l3(_l3_user(p, u, text, r, seen_))
+    if not isinstance(l3, dict) or not expr.valid(l3):
+        log(f"expr l3 {p['code']}: {'no reply' if l3 is None else 'bad schema'}")
+        return 200, nudge
+    d = expr.trim(expr.tidy(expr.diagnosis(p["code"], idx, text, val, r, source="L3", model=EXPR_MODEL, l3=l3), r))
+    d["family"] = expr_family(d["family"])
+    if (d["student_view"].get("recall") or {}) and where:
+        d["student_view"]["recall"]["where"] = where
+    why = expr.leak(d, expr.literals(tree, skip_exp=False), hidden_values(p), leak_scan, u["form"])
+    if why or d["confidence"] < EXPR_CONF:
+        d["leak"]["numbers"] = [why] if why else []
+        log(f"expr l3 {p['code']}: nudge ({why or 'confidence %.2f' % d['confidence']})")
+        out = nudge
+    else:
+        out = {"source": "L3", "off": _expr_view_off(d), "msg": expr.render(d, where=where)}   # L3's family is stored, never shown
+    if d["learn"]["store"] and not why:
+        _expr_store({"ts_day": datetime.date.today().isoformat(), "item": p["code"], "part": idx, "expr_norm": r["norm"], "diagnosis": d})
+    _dx_put(key, out)
+    return 200, out
+
+
+def expr_explain_store(p, b):
+    """POST /diagnose/explain {code, part?, pairs: {literal: meaning}}: the student's "what each number means" lines, kept only as
+    anonymised {item, literal -> meaning} pairs (GRILL round 4). Literals must be numbers, meanings short text."""
+    pairs = b.get("pairs")
+    if not isinstance(pairs, dict) or not pairs or len(pairs) > 8:
+        return 400, {"error": "pairs"}
+    clean_ = {}
+    for k, v in pairs.items():
+        if not expr.NUM_RE.fullmatch(str(k).strip()) or not isinstance(v, str) or not v.strip():
+            return 400, {"error": "pairs"}
+        clean_[str(k).strip()] = PII_RE.sub("", v).strip()[:120]
+    _expr_store({"ts_day": datetime.date.today().isoformat(), "item": p["code"], "part": b.get("part"), "explain": clean_})
+    return 200, {"ok": True}
 
 
 # ---------------- HTTP ----------------
@@ -3747,7 +4039,7 @@ def _dispatch(method, path, cookie_header, body, ua):
         return log_incident(cookie_header, body, ua)
     if method == "POST":
         rc = REPAIR_CHECK_PATH.match(path)
-        if path not in ("/check", "/narrate") and not rc:
+        if path not in ("/check", "/narrate", "/diagnose", "/diagnose/explain") and not rc:
             return None
         sid, cookie = new_sid(cookie_header)
         try:
@@ -3765,6 +4057,10 @@ def _dispatch(method, path, cookie_header, body, ua):
             return _json(404, {"verdict": "invalid"}, cookie)
         if rc:
             return _json(*repair_check(p, view(p, mode), sid, b), cookie)
+        if path == "/diagnose":                       # W137: L3 on a graded wrong working
+            return _json(*diagnose(view(p, mode), sid, b), cookie)
+        if path == "/diagnose/explain":
+            return _json(*(expr_explain_store(p, b) if expr_unit(p, p) or p["type"] == "multi" else (404, {"error": "off"})), cookie)
         return _json(200, grade(view(p, mode), sid, b, reveal=mode == "sugar"), cookie)
     if path == "/health":
         return health()
