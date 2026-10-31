@@ -106,11 +106,6 @@ try {
     assert.equal(await page.evaluate(() => document.querySelector("#qlist").hidden), true, "the list stayed open");
   });
 
-  await step("a small 'Explore other banks' link in the list: it opens the code box", async () => {
-    await page.click("#qlistBtn");
-    await page.click("#qbanks");
-    assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), "code");
-  });
   await ctx.close();
 
   await step("a returner (stem-noob-BANK_P2X) skips the opener", async () => {

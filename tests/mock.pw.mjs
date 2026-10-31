@@ -1,4 +1,5 @@
-// The night-before mock (W103b, PLAN §6.9; shuffle.mjs mockList / mockNext / mockAnswer, nav.js): ?mock=1 or the #qmodes button plays the
+// The night-before mock (W103b, PLAN §6.9; shuffle.mjs mockList / mockNext / mockAnswer / mockNight, nav.js): ?mock=1 or a mock night
+// (W139: no button; Sun / Tue / Thu 18:00-03:59 local, once per night per device; on a fake clock here) plays the
 // front bank's PE3 questions in exam order (title "X3 Q<n> ..., practice" until exam_q / twins land), ONE try each, no hint / Cluck
 // peek / reveal; then the score line, and each miss comes back in exam order with the normal flow (hint, a second try, Cluck).
 // A fixture bank stands in for BANK_P3X. Starts its own serve.py with a throwaway banks/ folder:   node tests/mock.pw.mjs [port]
@@ -63,12 +64,12 @@ try {
   const page = await ctx.newPage();
   const errs = []; page.on("pageerror", e => errs.push(e.message));
 
-  await step("?mock=1: the mock opens on X3 Q1, the query goes, the button hides while it runs", async () => {
+  await step("?mock=1: the mock opens on X3 Q1, the query goes; no mock button, no 'Explore other banks' (W139)", async () => {
     await page.goto(BASE + "/?mock=1");
     await opened(page, "PHYS_MQ1");
     assert.equal(new URL(page.url()).search, "", "the ?mock=1 query stayed");
     assert.deepEqual(await page.evaluate(() => window.stemMock.state().list), ["PHYS_MQ1", "PHYS_MQ2", "PHYS_MQ3"], "exam order, templates only");
-    assert.equal(await page.$eval("#qmock", b => b.hidden), true, "the mock button shows while the mock runs");
+    assert.equal(await page.locator("#qmock, #qbanks").count(), 0, "a removed button is back");
   });
   await step("mock phase: a wrong answer closes the question (one try), no hint, no pips, no Cluck peek", async () => {
     await answer(page, "999");
@@ -99,21 +100,46 @@ try {
     assert.equal(await page.evaluate(() => window.stemMock.on()), false);
     await next(page);
     await page.waitForFunction(() => window.stemMock.state().done === true, null, { timeout: 4000 });
-    assert.equal(await page.$eval("#qmock", b => b.hidden), false, "the button is back");
   });
-  await step("the #qmodes button on X3 Q1 itself restarts it in place (a fresh round, no 'only question' note); a reload keeps the mock", async () => {
-    await page.evaluate(() => { location.hash = "#PHYS_MQ1"; });
-    await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ1" && document.querySelector("#q").classList.contains("closed"), null, { timeout: 8000 })
-      .catch(() => { throw new Error("X3 Q1 by its code: not shown closed (its mock try)"); });
-    await page.click("#qlistBtn");
-    await page.click("#qmock");
+  /* the night, on a fake clock (a real user: navigator.webdriver is false; nav.js keeps automation on a real clock out of it) */
+  const night = async (t, clear = true) => {
+    if (clear) await page.evaluate(() => localStorage.removeItem("stem-mock-night"));
+    await page.clock.setSystemTime(new Date(t));
+  };
+  const load = async c => { await page.goto("about:blank"); await page.goto(BASE + "/#" + c); };   // a real load (a hash-only goto keeps the page)
+  await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false, configurable: true }); } catch { /* */ } try { Object.defineProperty(navigator, "webdriver", { get: () => false, configurable: true }); } catch { /* */ } });
+  await page.clock.install({ time: new Date("2026-10-31T15:00:00") });   // a Saturday afternoon (local time)
+  await step("a normal day (Saturday 15:00, Monday 04:00, Wednesday 21:00): no mock starts", async () => {
+    for (const t of ["2026-10-31T15:00:00", "2026-11-02T04:00:00", "2026-11-04T21:00:00"]) {
+      await night(t);
+      await load("PHYS_MQ2");
+      await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ2", null, { timeout: 8000 });
+      await page.waitForTimeout(600);
+      assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), null, t);
+      assert.equal(await page.evaluate(() => window.stemMock.state()?.done), true, t + ": the finished mock restarted");
+    }
+  });
+  await step("a mock night (Sunday 21:00) opened on X3 Q1 itself restarts it in place (a fresh round, no 'only question' note); a reload keeps the mock", async () => {
+    await night("2026-11-01T21:00:00");
+    await load("PHYS_MQ1");
     await opened(page, "PHYS_MQ1").catch(async () => { throw new Error("the restart did not reopen X3 Q1: " + JSON.stringify(await page.evaluate(() => ({ m: window.stemMock.state(), item: window.stemQueue.item(), closed: document.querySelector("#q").classList.contains("closed"), toast: document.querySelector("#toast")?.textContent })))); });
     assert.equal(await page.evaluate(() => window.stemMock.state().at), 1, "X3 Q1 is the mock's first");
+    assert.equal(await page.evaluate(() => localStorage.getItem("stem-mock-night")), "2026-11-01");
     assert.equal(await page.evaluate(() => window.stemMock.on()), true);
     assert.doesNotMatch(await page.evaluate(() => document.querySelector("#toast")?.textContent || ""), /only question/);
     await page.reload();
     await page.waitForFunction(() => document.querySelector("#pcode")?.textContent === "PHYS_MQ1", null, { timeout: 8000 });
     await next(page); await opened(page, "PHYS_MQ2");
+  });
+  await step("once per night: Monday 01:00 (still Sunday night) does not restart it; Tuesday 18:00 (a new night) does", async () => {
+    await night("2026-11-02T01:00:00", false);
+    await load("PHYS_MQ2"); await opened(page, "PHYS_MQ2");
+    await page.waitForTimeout(600);
+    assert.equal(await page.evaluate(() => window.stemMock.state().at), 2, "the same night restarted the mock");
+    await night("2026-11-03T18:00:00", false);
+    await load("PHYS_MQ2");
+    await page.waitForFunction(() => window.stemMock.state()?.at === 1 && localStorage.getItem("stem-mock-night") === "2026-11-03", null, { timeout: 8000 });
+    await opened(page, "PHYS_MQ1");
     assert.deepEqual(errs, [], "no page errors");
   });
   await ctx.close();
