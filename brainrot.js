@@ -12,12 +12,12 @@
    placed once and only moves when the layout crosses the breakpoint. A slow link gets none of it (slow() below).
    Docked, a label row heads the column, level with the question's "Question" label: a speech bubble + "Explain" (Tony, Oct 5, explain-column.html
    D1), and one quiet text link, "Show / Hide curated brainrot", that folds / unfolds the players (Tony, Oct 5: "no buttons, just a link";
-   the – / ✕ overlays and the 36px "Show video" bar are gone there). Docked, all 3 videos sit in one box that scrolls sideways.
-   The players are 9:16 frames, side by side, capped at 40vh; a landscape video is centre-cropped, a Short fills.
+   the – / ✕ overlays and the 36px "Show video" bar are gone there). Docked, all 5 videos sit side by side in one box, no sideways scroll.
+   The players are 9:16 frames, side by side, capped at 40vh and shrunk to fit the box's width; a landscape video is centre-cropped, a Short fills.
    While Cluck's sheet is open (desktop) the players fold and the label row stays; they come back when it shuts, unless the header button
    was used in between (Tony, Oct 5: at 1366x768 the sheet had 177 px under them).
-   Curated brainrots (Tony, Oct 5): CATS = his 8 playlists (3 on Oct 5, 5 on Oct 26; tools/brainrot_list.py writes it, a hand-curated fallback for a failing Oct 26 feed). Each page load picks 6 random categories, one video each (Tony, Oct 29: "add 3 more brainrot vid for desktop"): docked shows the 6 in one
-   sideways-scrolling row (4-6 load when scrolled to), the corner 2. */
+   Curated brainrots (Tony, Oct 5): CATS = his 8 playlists (3 on Oct 5, 5 on Oct 26; tools/brainrot_list.py writes it, a hand-curated fallback for a failing Oct 26 feed). Each page load picks 5 random categories, one video each (Tony, Oct 29: "add 3 more brainrot vid for desktop"; Oct 31: "the brianrot shelf
+   current shows only 3 vid. can u make it 5?"): docked shows all 5 in one row, every one in view, the corner 2. */
 (() => {
   /* list:start (tools/brainrot_list.py writes this block: [category, [[YouTube id, title, 1 = a Short]]]; don't hand-edit) */
   const CATS = [
@@ -33,7 +33,7 @@
   // list:end
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const any = a => a[Math.floor(Math.random() * a.length)];
-  const PICK = shuffle(CATS.map((_, i) => i)).slice(0, 6), VIDS = PICK.map(c => any(CATS[c][1]));   // 6 random categories, one video each, new every load (Tony, Oct 26: 3; Oct 29: "add 3 more brainrot vid for desktop"); the corner shows 2 (app.css)
+  const PICK = shuffle(CATS.map((_, i) => i)).slice(0, 5), VIDS = PICK.map(c => any(CATS[c][1]));   // 5 random categories, one video each, new every load (Tony, Oct 26: 3; Oct 29: 6 behind a sideways scroll; Oct 31: 5, all in view); the corner shows 2 (app.css)
   const esc = t => t.replace(/[&"<]/g, c => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;" })[c]);
   const RM = matchMedia("(prefers-reduced-motion: reduce)");
   const G = 16, root = document.documentElement;
@@ -118,15 +118,8 @@
     el = document.createElement("div");
     el.id = "rot"; el.className = "rot"; el.setAttribute("role", "region"); el.setAttribute("aria-label", "Video corner"); el.hidden = true;
     duo = document.createElement("div"); duo.className = "duo";
-    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe ${i > 2 ? "data-src" : "src"}="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
+    duo.innerHTML = VIDS.map(([id, t, short], i) => `<div class="vid${short ? " short" : ""}">${i ? "" : `<div class="ctl"><button type="button" data-act="min" aria-label="Make video small">${ico("i-min")}</button><button type="button" data-act="x" aria-label="Hide video for now">${ico("i-x")}</button></div>`}<iframe src="${src(id)}" title="${esc(t)}, muted"${i > 1 ? ' loading="lazy"' : ""} allow="autoplay; encrypted-media; picture-in-picture; compute-pressure" referrerpolicy="strict-origin-when-cross-origin" tabindex="-1"></iframe></div>`).join("");
     duo.querySelectorAll("iframe").forEach(listen);
-    /* 4-6 (docked only: the corner keeps 2) wait until the row is scrolled to them: loading="lazy" alone still loads a frame a few
-       screens off (Chromium's lazy-load margin), so their src goes in when the frame first shows inside the box (Tony, Oct 29) */
-    const later = [...duo.querySelectorAll("iframe[data-src]")];
-    if (later.length) {
-      const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting || e.intersectionRatio < 0.1) return; io.unobserve(e.target); const f = e.target.querySelector("iframe"); f.src = f.dataset.src; f.removeAttribute("data-src"); }), { threshold: [0.1] });
-      later.forEach(f => io.observe(f.parentElement));   // a tenth in view: the few px of the 4th that peek past the 3rd are not a scroll
-    }
     tab = document.createElement("button");
     Object.assign(tab, { type: "button", className: "rtab" }); tab.dataset.act = "open"; tab.setAttribute("aria-label", "Show video");
     const hd = document.createElement("div"); hd.className = "rot-hd";      // docked only (app.css): the column's label row

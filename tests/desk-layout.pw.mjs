@@ -293,53 +293,60 @@ try {
         await ctx.close();
       }
     }
-    /* todo 135 (Tony, Oct 29: "add 3 more brainrot vid for desktop"): docked, 6 categories (one video each) in the same box, one row
-       that scrolls sideways, same 9:16 frames and height cap, so the column is as tall as with 3; 4-6 lazy. The corner keeps 2; a phone gets none */
-    {
-      const { ctx, page, errs } = await context(browser, { viewport: { width: 1440, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
+    /* todo 135 (Tony, Oct 29: "add 3 more brainrot vid for desktop"; Oct 31, W135b: "the brianrot shelf current shows only 3 vid. can u make
+       it 5?"): docked, 5 categories (one video each) in the same box, all 5 side by side and fully inside it, no sideways scroll, same 9:16
+       frames, shrunk to fit the width; every one loads (nothing waits off screen). The box is never taller than the 3-wide row it replaced
+       (W129 L3/L6). The corner keeps 2; a phone gets none */
+    for (const [w, h] of [[1440, 900], [1366, 768], [1280, 720], [1920, 1080]].filter(([w, h]) => SIZES.some(z => z.name === `${w}x${h}`))) {   // each in the lane that runs its size
+      const { ctx, page, errs } = await context(browser, { viewport: { width: w, height: h }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
       const asked = []; await ctx.route(/youtube-nocookie\.com\/embed\//, r => { asked.push(new URL(r.request().url()).pathname.split("/").pop()); return r.fallback(); });
-      await step(`${engine} 1440x900: docked brainrot shows 6 videos from 6 categories, one sideways-scrolling row, the column as tall as with 3 (todo 135)`, async () => {
+      await step(`${engine} ${w}x${h}: docked brainrot shows 5 videos from 5 categories, all inside the box, no sideways scroll, no taller than before (W135b)`, async () => {
         await page.goto(BASE + "/#" + PLAIN);
         await page.waitForSelector("#work .rot.docked .vid", { timeout: 10000 });
         await settle(page);
         const m = () => page.evaluate(() => {
           const d = document.querySelector("#rot .duo"), v = [...d.querySelectorAll(".vid")].map(x => x.getBoundingClientRect()), w = document.querySelector("#work").getBoundingClientRect();
-          return { srcs: [...d.querySelectorAll("iframe")].map(f => f.src || f.dataset.src), lazy: [...d.querySelectorAll("iframe")].map(f => f.getAttribute("loading")), cats: window.stemBrainrot.cats.map(([, l]) => l.map(([id]) => id)),
+          const dr = d.getBoundingClientRect(), cs = getComputedStyle(d), px = k => parseFloat(cs[k]);
+          const inL = dr.left + d.clientLeft + px("paddingLeft"), inR = dr.left + d.clientLeft + d.clientWidth - px("paddingRight");
+          /* the 3-wide row's frame (main, 8479509: app.css .rot.docked .vid): min(40dvh, 100dvh - 22rem) * 9 / 16 wide, at most half the box less one gap */
+          const rem = parseFloat(getComputedStyle(document.documentElement).fontSize), gap = 1.5 * rem;
+          const was = Math.min(Math.min(0.4 * innerHeight, innerHeight - 22 * rem) * 9 / 16, (inR - inL - gap) / 2) * 16 / 9;
+          return { srcs: [...d.querySelectorAll("iframe")].map(f => f.getAttribute("src")), cats: window.stemBrainrot.cats.map(([, l]) => l.map(([id]) => id)),
             row: v.every(r => Math.abs(r.top - v[0].top) < 1 && Math.abs(r.height - v[0].height) < 1 && Math.abs(r.width - v[0].width) < 1), tall: v.every(r => Math.abs(r.height / r.width - 16 / 9) < 0.02),
-            cap: v.every(r => r.height <= innerHeight * 0.4 + 1), side: d.scrollWidth > d.clientWidth + 1 && getComputedStyle(d).overflowX === "auto",
-            duo: Math.round(d.getBoundingClientRect().height), rot: Math.round(document.querySelector("#rot").getBoundingClientRect().height), work: [Math.round(w.top), Math.round(w.height)],
-            notes: Math.round(document.querySelector("#scratch").getBoundingClientRect().height),
-            pad: [Math.round(v[0].left - d.getBoundingClientRect().left - d.clientLeft), parseFloat(getComputedStyle(d).paddingLeft)] };
+            cap: v.every(r => r.height <= innerHeight * 0.4 + 1), scroll: [d.scrollWidth, d.clientWidth],
+            inside: v.every(r => r.left >= inL - 0.5 && r.right <= inR + 0.5 && r.top >= dr.top && r.bottom <= dr.bottom), lefts: v.map(r => Math.round(r.left) + "+" + Math.round(r.width)), box: [Math.round(inL), Math.round(inR)],
+            grew: v.map(r => r.height).filter(x => x > was + 1), was: Math.round(was),
+            duo: Math.round(dr.height), rot: Math.round(document.querySelector("#rot").getBoundingClientRect().height), work: [Math.round(w.top), Math.round(w.height)],
+            notes: Math.round(document.querySelector("#scratch").getBoundingClientRect().height) };
         });
-        const six = await m(), before = asked.slice();
-        assert.equal(six.srcs.length, 6, `6 players docked: ${six.srcs.length}`);
-        const catOf = s => six.cats.findIndex(ids => ids.some(id => s.includes("/embed/" + id + "?")));
-        assert.equal(new Set(six.srcs.map(catOf).filter(k => k >= 0)).size, 6, `6 different categories: ${six.srcs.map(catOf)}`);
-        assert.equal(new Set(six.srcs.map(s => new URL(s).pathname)).size, 6, "no video twice");
-        assert.deepEqual([six.row, six.tall, six.cap, six.side], [true, true, true, true], `one row of same-size 9:16 frames, <= 40vh, scrolling sideways: ${JSON.stringify(six)}`);
-        assert.deepEqual(six.lazy.slice(3), ["lazy", "lazy", "lazy"], "videos 4-6 load lazily");
-        assert.ok(six.srcs.slice(3).every(s => !before.some(id => s.includes("/embed/" + id + "?"))), `videos 4-6 loaded before the row was scrolled: asked ${before}; ${await page.$eval("#rot .duo", d => JSON.stringify([d.getBoundingClientRect().toJSON(), [...d.children].map(v => Math.round(v.getBoundingClientRect().left) + "+" + Math.round(v.getBoundingClientRect().width))]))}`);
-        await page.$eval("#rot .duo", d => d.scrollTo({ left: d.scrollWidth, behavior: "instant" }));
-        for (let t = Date.now(); new Set(asked).size < 6 && Date.now() - t < 5000;) await page.waitForTimeout(100);
-        assert.equal(new Set(asked).size, 6, `scrolled to the end, all 6 load: ${asked}`);
-        await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await page.waitForTimeout(300);
-        { const p = (await m()).pad; assert.equal(p[0], p[1], `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
-        if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, "brainrot-6-1440.png") });
-        /* the same page with 3: drop 4-6 and measure again (the box's height is one row, so nothing moves) */
+        const five = await m();
+        assert.equal(five.srcs.length, 5, `5 players docked: ${five.srcs.length}`);
+        assert.ok(five.srcs.every(Boolean), `every player has its src (no lazy src on scroll: nothing is off screen): ${five.srcs}`);
+        const catOf = s => five.cats.findIndex(ids => ids.some(id => s.includes("/embed/" + id + "?")));
+        assert.equal(new Set(five.srcs.map(catOf).filter(k => k >= 0)).size, 5, `5 different categories: ${five.srcs.map(catOf)}`);
+        assert.equal(new Set(five.srcs.map(s => new URL(s).pathname)).size, 5, "no video twice");
+        assert.deepEqual([five.row, five.tall, five.cap], [true, true, true], `one row of same-size 9:16 frames, <= 40vh: ${JSON.stringify(five)}`);
+        assert.ok(five.scroll[0] <= five.scroll[1], `no sideways scroll (scrollWidth ${five.scroll[0]} > clientWidth ${five.scroll[1]})`);
+        assert.ok(five.inside, `all 5 frames fully inside the box ${five.box}: ${five.lefts}`);
+        assert.deepEqual(five.grew, [], `no frame taller than the 3-wide row's ${five.was}px (W129 L3/L6)`);
+        for (let t = Date.now(); new Set(asked).size < 5 && Date.now() - t < 5000;) await page.waitForTimeout(100);
+        assert.equal(new Set(asked).size, 5, `all 5 load, no scroll: ${asked}`);
+        if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, `brainrot-5-${w}x${h}.png`) });
+        /* the same page with 3: drop 4-5 and measure again (the box's height is one row, so nothing moves) */
         await page.$$eval("#rot .vid", vs => vs.slice(3).forEach(v => v.remove())); await page.waitForTimeout(100);
         const three = await m();
-        assert.deepEqual([six.duo, six.rot, six.work, six.notes], [three.duo, three.rot, three.work, three.notes], "the column with 6 vs with 3 (box, rot, #work top + height, notes)");
+        assert.deepEqual([five.duo, five.rot, five.work, five.notes], [three.duo, three.rot, three.work, three.notes], "the column with 5 vs with 3 (box, rot, #work top + height, notes)");
         assert.deepEqual(errs, []);
       });
       await ctx.close();
     }
     {
       const { ctx, page } = await context(browser, { viewport: { width: 710, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
-      await step(`${engine} 710x900 (not side by side, not a phone): the floating corner still shows 2 of the 6, all different`, async () => {
+      await step(`${engine} 710x900 (not side by side, not a phone): the floating corner still shows 2 of the 5, all different`, async () => {
         await page.goto(BASE + "/#" + PLAIN);
         await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await page.waitForTimeout(400);
         const c = await page.evaluate(() => { const f = [...document.querySelectorAll("#rot iframe")]; return { n: f.length, seen: f.filter(x => x.parentElement.getClientRects().length).length, ids: new Set(f.map(x => new URL(x.src || x.dataset.src).pathname)).size }; });
-        assert.deepEqual(c, { n: 6, seen: 2, ids: 6 });
+        assert.deepEqual(c, { n: 5, seen: 2, ids: 5 });
       });
       await ctx.close();
     }
