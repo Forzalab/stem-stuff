@@ -22,7 +22,7 @@ mkdirSync(banks); mkdirSync(SHOTS, { recursive: true });
 const SENTINEL = "Zq7xSENTINELwv";
 const txt = md => [{ type: "text", md }];
 writeFileSync(join(banks, "BANK_FLY.json"), JSON.stringify({ v: 1, problems: [
-  { code: "CALC1_FL1", title: "Fl 1", type: "text", answer: "derivative", body: txt("Which word? " + "Long line. ".repeat(80)) },
+  { code: "CALC1_FL1", title: "Fl 1", type: "text", answer: "derivative", body: txt("Which word? " + Array(40).fill("Long line. ".repeat(8)).join("\n\n")) },
   { code: "CALC1_FL2", title: "Fl 2", type: "mc", shuffle: false, body: txt("Pick one."), correct: "a", choices: ["one", "two", "three", "four"].map((md, i) => ({ id: "abcd"[i], md })),
     saccharine: { title: "Fl 2", key: "Tick: a", slip: { b: "Two is not one." } } }] }));
 const logs = [];
@@ -68,7 +68,7 @@ async function busyThenWrong(page) {
   await page.type("#ans", SENTINEL);
   await page.keyboard.press("Backspace"); await page.keyboard.press("ArrowLeft");
   await page.type("#scratch", SENTINEL + " x");
-  await page.mouse.wheel(0, 600); await page.waitForTimeout(400);
+  await page.mouse.move(640, 450); await page.mouse.wheel(0, 600); await page.waitForTimeout(400);   // a real page scroll (Oct 31: the old body fit the window, so the only "scroll" entry was the brainrot duo's snap)
   await page.setViewportSize({ width: 1100, height: 820 }); await page.waitForTimeout(400);
   await page.evaluate(() => { location.hash = "#CALC1_FL2"; });
   await page.waitForFunction(() => /^#CALC1_FL2/.test(location.hash) && document.querySelector('.opt[data-id="b"]'), null, { timeout: 8000 });
