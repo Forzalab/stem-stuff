@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import katex from "katex";
 import { compile, evaluate } from "mathjs";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { schema, validator, bank, repairFaults } from "./schemas.mjs";
@@ -579,6 +581,19 @@ const docFaults = d => d && d.purpose !== undefined && !(typeof d.purpose === "s
     };
     for (const [name, f] of Object.entries(bad)) assert.ok(!validate(edit(f)), name);
     assert.ok(validate(edit(p => { p.PHYS_UNA.unit = "x".repeat(16); })), "16 chars is fine");
+  });
+  // W132 lint: a num item / num part with no `unit` key warns on stderr (the gate still passes); "" = unitless on purpose, no warning
+  test("unit lint (W132): problems.json passes but warns on its one blank num (CALC1_A9R); a fixture with every unit set warns on none", () => {
+    const run = f => spawnSync("node", [fileURLToPath(new URL("../tools/schema-check.mjs", import.meta.url)), f], { encoding: "utf8" });
+    const r = run(fileURLToPath(new URL("../problems.json", import.meta.url)));
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stderr, /^problems: warn: 1 num without a unit: CALC1_A9R$/m);
+    const tmp = join(mkdtempSync(join(tmpdir(), "unl-")), "BANK_UNL.json"), b = edit(p => { delete p.PHYS_UNA.unit; delete p.PHYS_UNB.parts[0].unit; });
+    writeFileSync(tmp, JSON.stringify(b));
+    const w = run(tmp);
+    assert.equal(w.status, 0, "a warning, never a fail");
+    assert.match(w.stderr, /BANK_UNL: warn: 2 num without a unit: PHYS_UNA, PHYS_UNB\.A/);
+    assert.equal(run(fileURLToPath(file)).stderr, "", "the W132a fixture sets every unit");
   });
 }
 

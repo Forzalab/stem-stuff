@@ -25,6 +25,7 @@
         }
       ],
       "answer": "12",
+      "unit": "",
       "form": "2^2+2*2+4",
       "wrong": [
         {
@@ -246,6 +247,7 @@
         }
       ],
       "answer": "9.8*(sin(30 deg) - 0.2*cos(30 deg))",
+      "unit": "m/s^2",
       "form": "9.8*(sin(30*pi/180)-0.2*cos(30*pi/180))",
       "tol": 0.01,
       "wrong": []
@@ -358,6 +360,7 @@
         }
       ],
       "answer": "2.0*9.8*sin(25 deg)/150",
+      "unit": "m",
       "form": "2.0*9.8*sin(25*pi/180)/150",
       "ignore_slips": [
         "0.05635",
@@ -443,6 +446,7 @@
           "prompt": "How many are in $A \\cup B$?",
           "type": "num",
           "answer": "14",
+          "unit": "",
           "form": "10+7-3",
           "ignore_slips": [
             "7"
@@ -461,6 +465,7 @@
           "prompt": "How many are in exactly one set?",
           "type": "num",
           "answer": "11",
+          "unit": "",
           "form": "10+7-2*3",
           "wrong": [
             {
@@ -676,6 +681,7 @@
       ],
       "how": "A decimal, like .5",
       "answer": "0.25",
+      "unit": "",
       "form": "1-0.75",
       "ignore_slips": [
         "0.5"
@@ -820,6 +826,7 @@
       ],
       "how": "The full number, no commas.",
       "answer": "7800000",
+      "unit": "",
       "form": "26*25*24*10*10*5",
       "wrong": [
         {
@@ -1219,6 +1226,7 @@
           "prompt": "How cold is $61^\\circ\\text{F}$ tea?",
           "type": "num",
           "answer": "0.3",
+          "unit": "",
           "form": "(70-61)/(70-40)",
           "wrong": [
             {
@@ -1234,6 +1242,7 @@
           "prompt": "How cold is $85^\\circ\\text{F}$ tea?",
           "type": "num",
           "answer": "0",
+          "unit": "",
           "form": "0",
           "ignore_slips": [
             "0"
@@ -1262,6 +1271,7 @@
         }
       ],
       "answer": "12",
+      "unit": "",
       "form": "7+6+5-3*2",
       "ignore_slips": [
         "24",
@@ -1299,6 +1309,7 @@
         }
       ],
       "answer": "25",
+      "unit": "",
       "form": "12*2+1",
       "wrong": [
         {
@@ -1332,6 +1343,7 @@
         }
       ],
       "answer": "9",
+      "unit": "",
       "form": "9",
       "wrong": [
         {
@@ -1360,6 +1372,7 @@
         }
       ],
       "answer": "11",
+      "unit": "",
       "form": "26-15",
       "wrong": [
         {
@@ -1388,6 +1401,7 @@
         }
       ],
       "answer": "14",
+      "unit": "",
       "form": "(4+4-1)*2",
       "wrong": [
         {
@@ -1450,6 +1464,7 @@
         }
       ],
       "answer": "2",
+      "unit": "",
       "form": "2",
       "ignore_slips": [
         "4"
@@ -3627,6 +3642,7 @@
         }
       ],
       "answer": "120",
+      "unit": "",
       "form": "10*9*8/(3*2*1)",
       "wrong": [
         {
@@ -3660,6 +3676,7 @@
         }
       ],
       "answer": "120",
+      "unit": "",
       "form": "5*4*3*2*1",
       "wrong": [
         {
@@ -3693,6 +3710,7 @@
         }
       ],
       "answer": "360",
+      "unit": "",
       "form": "6*5*4*3*2*1/(2*1)",
       "wrong": [
         {
@@ -3726,6 +3744,7 @@
         }
       ],
       "answer": "60",
+      "unit": "",
       "form": "5*4*3*2*1/(2*1)",
       "wrong": [
         {
@@ -3759,6 +3778,7 @@
         }
       ],
       "answer": "180",
+      "unit": "",
       "form": "6*5*4*3*2*1/(2*1*2*1)",
       "wrong": [
         {
@@ -3793,6 +3813,7 @@
       ],
       "how": "The full number, no commas.",
       "answer": "158184000",
+      "unit": "",
       "form": "9*26^3*10^3",
       "wrong": [
         {
@@ -3826,6 +3847,7 @@
         }
       ],
       "answer": "72",
+      "unit": "",
       "form": "4*6*3",
       "wrong": [
         {
@@ -3859,6 +3881,7 @@
         }
       ],
       "answer": "28",
+      "unit": "",
       "form": "8*7/2",
       "wrong": [
         {
@@ -3897,6 +3920,7 @@
           "prompt": "How many ways can the coach pick a captain and a co-captain?",
           "type": "num",
           "answer": "132",
+          "unit": "",
           "form": "12*11",
           "wrong": [
             {
@@ -3917,6 +3941,7 @@
           "prompt": "How many ways can the coach pick 2 players to carry the water?",
           "type": "num",
           "answer": "66",
+          "unit": "",
           "form": "12*11/2",
           "wrong": [
             {
@@ -3952,6 +3977,7 @@
           "prompt": "How many codes are there if digits may repeat?",
           "type": "num",
           "answer": "10000",
+          "unit": "",
           "form": "10^4",
           "ignore_slips": [
             "100"
@@ -3975,6 +4001,7 @@
           "prompt": "How many codes are there if no digit repeats?",
           "type": "num",
           "answer": "5040",
+          "unit": "",
           "form": "10*9*8*7",
           "wrong": [
             {
@@ -4005,6 +4032,7 @@
         }
       ],
       "answer": "3439",
+      "unit": "",
       "form": "10^4-9^4",
       "wrong": [
         {
@@ -4038,6 +4066,7 @@
         }
       ],
       "answer": "720",
+      "unit": "",
       "form": "6*5*4*3*2*1",
       "wrong": [
         {
@@ -4071,6 +4100,7 @@
         }
       ],
       "answer": "48",
+      "unit": "",
       "form": "4*3*2*1*2",
       "wrong": [
         {
@@ -4104,6 +4134,7 @@
         }
       ],
       "answer": "84",
+      "unit": "",
       "form": "9*8*7/(3*2*1)",
       "wrong": [
         {
@@ -4142,6 +4173,7 @@
           "prompt": "How many ways can the club pick a president, a treasurer and a secretary?",
           "type": "num",
           "answer": "336",
+          "unit": "",
           "form": "8*7*6",
           "wrong": [
             {
@@ -4162,6 +4194,7 @@
           "prompt": "How many ways can the club pick a 3-person committee?",
           "type": "num",
           "answer": "56",
+          "unit": "",
           "form": "8*7*6/(3*2*1)",
           "wrong": [
             {
@@ -4192,6 +4225,7 @@
         }
       ],
       "answer": "1024",
+      "unit": "",
       "form": "2^10",
       "wrong": [
         {
@@ -4225,6 +4259,7 @@
         }
       ],
       "answer": "45",
+      "unit": "",
       "form": "10*9/2",
       "wrong": [
         {
@@ -4258,6 +4293,7 @@
         }
       ],
       "answer": "3024",
+      "unit": "",
       "form": "9*8*7*6",
       "wrong": [
         {
@@ -4291,6 +4327,7 @@
         }
       ],
       "answer": "3125",
+      "unit": "",
       "form": "5^5",
       "wrong": [
         {
@@ -4324,6 +4361,7 @@
         }
       ],
       "answer": "64",
+      "unit": "",
       "form": "2^6",
       "wrong": [
         {
@@ -4497,6 +4535,7 @@
           "prompt": "What is $\\deg(c)$?",
           "type": "num",
           "answer": "4",
+          "unit": "",
           "form": "1+1+2",
           "ignore_slips": [
             "2"
@@ -4515,6 +4554,7 @@
           "prompt": "What is the sum of the degrees of all four vertices?",
           "type": "num",
           "answer": "12",
+          "unit": "",
           "form": "2*6",
           "wrong": [
             {
@@ -4592,6 +4632,7 @@
           "prompt": "How many leaves does the tree have?",
           "type": "num",
           "answer": "3",
+          "unit": "",
           "form": "3",
           "wrong": [
             {
@@ -4607,6 +4648,7 @@
           "prompt": "What is the height of the tree?",
           "type": "num",
           "answer": "3",
+          "unit": "",
           "form": "3",
           "wrong": [
             {
