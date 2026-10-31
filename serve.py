@@ -526,7 +526,8 @@ def shuffled(choices, seed):
 
 
 def public(p, sid=""):
-    """What the browser may see: no answer, accept, points, tol, correct, wrong, nudge. sid seeds the mc shuffle."""
+    """What the browser may see: no answer, accept, points, tol, correct, wrong, nudge, twist (W133). A num's `unit` (item or part) goes
+    (W132). sid seeds the mc shuffle."""
     out = {k: p[k] for k in PUBLIC if k in p}
     if p.get("type") == "mc":
         ch = shown(p)
@@ -534,7 +535,9 @@ def public(p, sid=""):
             ch = shuffled(ch, sid + ":" + p["code"])
         out["choices"] = [{k: c[k] for k in ("id", "md", "lock") if k in c} for c in ch]
     if p.get("type") == "multi":
-        out["parts"] = [{k: q[k] for k in ("label", "prompt", "type", "var") if k in q} for q in p["parts"]]
+        out["parts"] = [{k: q[k] for k in ("label", "prompt", "type", "var", *(("unit",) if q.get("type") == "num" else ())) if k in q} for q in p["parts"]]
+    if p.get("type") == "num" and "unit" in p:              # W132: the answer line shows it after the value; a unit never gives the number away
+        out["unit"] = p["unit"]
     return out
 
 

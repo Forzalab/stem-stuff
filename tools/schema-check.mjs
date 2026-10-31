@@ -15,6 +15,11 @@ for (const f of args.filter(a => a !== "--repair")) {
     const errs = validate(doc) ? repairFaults(doc, { need })   // the gate reads shapes the schema has vouched for
       : validate.errors.map(e => `${e.instancePath || "/"} ${e.message}${e.params?.additionalProperty ? ` (${e.params.additionalProperty})` : ""}`);
     if (errs.length) why = errs.slice(0, N).join("; ") + (errs.length > N ? ` (+${errs.length - N} more)` : "");
+    if (!why) {   // W132 lint: a num item / num part with no `unit` key warns (stderr), never fails; "" = unitless on purpose
+      const bare = doc.problems.flatMap(p => p.type === "num" ? (p.unit == null ? [p.code] : [])
+        : p.type === "multi" ? p.parts.flatMap((q, i) => q.type === "num" && q.unit == null ? [`${p.code}.${q.label || "ABCDEFGHIJ"[i]}`] : []) : []);
+      if (bare.length) console.error(`${basename(f, ".json")}: warn: ${bare.length} num without a unit: ${bare.slice(0, 8).join(", ")}${bare.length > 8 ? ` (+${bare.length - 8} more)` : ""}`);
+    }
   } catch (e) { why = e.message; }   // not JSON, unreadable
   if (why) { bad++; console.log(`${basename(f, ".json")}: ${why}`); }
 }
