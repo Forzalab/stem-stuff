@@ -12,7 +12,9 @@
 # deploy: a partial bank set never ships. The token is never printed.
 # Gate, before any Vercel step: every BANK_*.json that will deploy must pass `tools/slips.py --strict` and the SCHEMA.md "problems"
 # schema (tools/schema-check.mjs; needs node + tests/node_modules, else it fails). One failure = nothing deployed. A bank older than
-# slips.CUTOFF still ships, with one warning line: "BANK_X v1: stops loading <sunset>".
+# slips.CUTOFF still ships, with one warning line: "BANK_X v1: stops loading <sunset>". Then every graph block in the deploy
+# (origin/main's problems.json + every bank above, brain ones too) gets its banks/figs/<code>-<i>.png (tools/fig_png.mjs --root on
+# the deploy dir; serve.fig_images sends it to the Claude arm) and `fig_png.mjs --check` must pass (needs Chromium + ImageMagick).
 #   --no-brain (or SHIP_NO_BRAIN=1) skips the brain. --print-banks prints "NAME<tab>SOURCE<tab>PATH" per bank and stops
 #   (no gate, no worktree, no Vercel; demo|live optional).
 # A checkout on main pulls itself first (fast-forward only; a new ship.sh restarts the run). A deploy still stops if
@@ -117,16 +119,20 @@ if [ -n "$PRINT" ]; then
   exit 0
 fi
 
-# --- gate: every BANK_*.json about to deploy passes slips.py --strict and the SCHEMA.md "problems" schema, or nothing deploys
-# (design/BANK-MIGRATION.md §1). This checkout's tools; no node / tests/node_modules = a failure, never a skip. ---
+# --- gate: every BANK_*.json about to deploy passes slips.py --strict and the SCHEMA.md "problems" schema, and every figure in the
+# deploy dir $W has its PNG, or nothing deploys (design/BANK-MIGRATION.md §1). This checkout's tools; no node / tests/node_modules =
+# a failure, never a skip. ---
 GATE=()
 while IFS="$(printf '\t')" read -r name src path; do case "$name" in BANK_*.json) GATE+=("$path") ;; esac; done <<<"$CHOSEN"
 gate() {
-  [ "${#GATE[@]}" -gt 0 ] || return 0
   if ! command -v node >/dev/null || [ ! -d "$ROOT/tests/node_modules/ajv" ]; then
     warn "gate: needs node and tests/node_modules (cd tests && npm ci) to check the banks, nothing deployed"; return 1
   fi
   local out rc=0
+  # figure PNGs (todo 134): the brain banks are only in $W, so render there; a graph block with no PNG after that = red
+  node "$ROOT/tools/fig_png.mjs" --root "$W" || warn "gate: fig_png.mjs could not render the figures (above)"
+  out="$(node "$ROOT/tools/fig_png.mjs" --root "$W" --check 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: figure PNGs missing (above), nothing deployed"; rc=1; }
+  [ "${#GATE[@]}" -gt 0 ] || return "$rc"
   out="$(python3 "$ROOT/tools/slips.py" --strict "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: slips.py --strict failed (above), nothing deployed"; rc=1; }
   out="$(node "$ROOT/tools/schema-check.mjs" "${GATE[@]}" 2>&1)" || { printf '%s\n' "$out" >&2; warn "gate: schema failed (above), nothing deployed"; rc=1; }
   # v < slips.CUTOFF: still ships, with a warning (the sunset date is the Version-table row's, SCHEMA.md)
@@ -148,14 +154,14 @@ W="$(mktemp -d)"; LOG="$(mktemp)"   # the log stays outside the upload
 git -C "$ROOT" fetch -q origin main
 # This script runs from your checkout but deploys origin/main. A checkout that was never pulled runs an old ship.sh (Oct 3:
 # the phone's pre-brain copy shipped live with only BANK_PSY6). Stop instead.
-if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py tools/version.sh; then
+if ! git -C "$ROOT" diff --quiet origin/main -- tools/ship.sh tools/brain_banks.py tools/version.sh tools/fig_png.mjs; then
   warn "this ship.sh is not origin/main's: run  git -C \"$ROOT\" pull --ff-only  then ship again"; exit 1
 fi
-gate || exit 1
 git -C "$ROOT" worktree add -q --detach "$W" origin/main
 printf '%s\n' "$CHOSEN" | while IFS="$(printf '\t')" read -r name src path; do
   [ -n "$name" ] && cp "$path" "$W/banks/$name"
 done
+gate || exit 1   # after the copy: the figure PNGs are rendered into (and checked in) $W
 VJSON="$(bash "$ROOT/tools/version.sh" --stamp "$W")"   # version.json → build_public stamps sw.js + the badge (design/DEPLOY.md)
 VPR="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["pr"])' <<<"$VJSON")"
 echo "deploying origin/main @ $(git -C "$W" rev-parse --short HEAD) ($VPR) as $MODE"

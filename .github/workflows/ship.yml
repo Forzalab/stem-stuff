@@ -45,6 +45,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22", cache: npm, cache-dependency-path: tests/package-lock.json }
       - run: cd tests && npm ci
+      # the figure PNG gate (tools/fig_png.mjs --root, todo 134) draws the brain banks' figures: Chromium for playwright-core (no
+      # --with-deps: ubuntu-24.04 has its libs, see tests.yml) + ImageMagick's convert (installed only if the image lacks it)
+      - run: cd tests && npx playwright-core install --only-shell chromium
+      - run: command -v convert >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }
       # ship.sh runs every Vercel command as `npx -y vercel@latest`: warm that cache once (and log the version)
       - run: npx -y vercel@latest --version
       - name: tools/ship.sh
