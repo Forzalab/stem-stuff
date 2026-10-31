@@ -312,16 +312,16 @@ try {
             pad: [Math.round(v[0].left - d.getBoundingClientRect().left - d.clientLeft), parseFloat(getComputedStyle(d).paddingLeft)] };
         });
         const six = await m(), before = asked.slice();
-        assert.equal(six.srcs.length, 6, `6 players docked: ${six.srcs.length}`);
+        assert.equal(six.srcs.length, 5, `5 players docked: ${six.srcs.length}`);
         const catOf = s => six.cats.findIndex(ids => ids.some(id => s.includes("/embed/" + id + "?")));
-        assert.equal(new Set(six.srcs.map(catOf).filter(k => k >= 0)).size, 6, `6 different categories: ${six.srcs.map(catOf)}`);
-        assert.equal(new Set(six.srcs.map(s => new URL(s).pathname)).size, 6, "no video twice");
+        assert.equal(new Set(six.srcs.map(catOf).filter(k => k >= 0)).size, 5, `5 different categories: ${six.srcs.map(catOf)}`);
+        assert.equal(new Set(six.srcs.map(s => new URL(s).pathname)).size, 5, "no video twice");
         assert.deepEqual([six.row, six.tall, six.cap, six.side], [true, true, true, true], `one row of same-size 9:16 frames, <= 40vh, scrolling sideways: ${JSON.stringify(six)}`);
-        assert.deepEqual(six.lazy.slice(3), ["lazy", "lazy", "lazy"], "videos 4-6 load lazily");
-        assert.ok(six.srcs.slice(3).every(s => !before.some(id => s.includes("/embed/" + id + "?"))), `videos 4-6 loaded before the row was scrolled: asked ${before}; ${await page.$eval("#rot .duo", d => JSON.stringify([d.getBoundingClientRect().toJSON(), [...d.children].map(v => Math.round(v.getBoundingClientRect().left) + "+" + Math.round(v.getBoundingClientRect().width))]))}`);
+        assert.deepEqual(six.lazy.slice(3), ["lazy", "lazy"], "videos 4-5 load lazily");
+        assert.ok(six.srcs.slice(4).every(s => !before.some(id => s.includes("/embed/" + id + "?"))), `videos 4-6 loaded before the row was scrolled: asked ${before}; ${await page.$eval("#rot .duo", d => JSON.stringify([d.getBoundingClientRect().toJSON(), [...d.children].map(v => Math.round(v.getBoundingClientRect().left) + "+" + Math.round(v.getBoundingClientRect().width))]))}`);
         await page.$eval("#rot .duo", d => d.scrollTo({ left: d.scrollWidth, behavior: "instant" }));
-        for (let t = Date.now(); new Set(asked).size < 6 && Date.now() - t < 5000;) await page.waitForTimeout(100);
-        assert.equal(new Set(asked).size, 6, `scrolled to the end, all 6 load: ${asked}`);
+        for (let t = Date.now(); new Set(asked).size < 5 && Date.now() - t < 5000;) await page.waitForTimeout(100);
+        assert.equal(new Set(asked).size, 5, `scrolled to the end, all 5 load: ${asked}`);
         await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await page.waitForTimeout(300);
         { const p = (await m()).pad; assert.equal(p[0], p[1], `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
         if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, "brainrot-6-1440.png") });
@@ -339,7 +339,7 @@ try {
         await page.goto(BASE + "/#" + PLAIN);
         await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await page.waitForTimeout(400);
         const c = await page.evaluate(() => { const f = [...document.querySelectorAll("#rot iframe")]; return { n: f.length, seen: f.filter(x => x.parentElement.getClientRects().length).length, ids: new Set(f.map(x => new URL(x.src || x.dataset.src).pathname)).size }; });
-        assert.deepEqual(c, { n: 6, seen: 2, ids: 6 });
+        assert.deepEqual(c, { n: 5, seen: 2, ids: 5 });
       });
       await ctx.close();
     }

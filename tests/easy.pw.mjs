@@ -139,7 +139,7 @@ try {
     assert.equal(await page.$eval("#mcGo", b => b.disabled), false, "Check needs a tick");
   });
 
-  await step("sugar: Key formulas, in order of use; the brainrot corner: 6 muted players, 6 different categories (todo 135)", async () => {
+  await step("sugar: Key formulas, in order of use; the brainrot corner: 5 muted players, 5 different categories (W135b)", async () => {
     assert.deepEqual(await page.$eval("#fcard", f => { const r = f.getBoundingClientRect(), cs = getComputedStyle(f), nr = f.querySelector(".fc-notch").getBoundingClientRect(), rows = [...f.querySelectorAll("li.f")].map(e => e.getBoundingClientRect());
       return { role: f.getAttribute("role"), label: f.getAttribute("aria-label"), notch: f.querySelector(".fc-notch").textContent.trim(), onBorder: Math.abs((nr.top + nr.bottom) / 2 - r.top) <= 2,
         n: rows.length, arrows: f.querySelectorAll('li.to[aria-hidden="true"]').length, centred: rows.every(q => Math.abs((q.left - r.left) - (r.right - q.right)) <= 2),
@@ -148,17 +148,17 @@ try {
       { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(146, 192, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
     const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
-    assert.equal(srcs.length, 6);
+    assert.equal(srcs.length, 5);
     const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots: 3 playlists (Tony, Oct 5) + 5 hand-curated (Oct 26); 6 random categories per load, one video each (Oct 29)
     assert.equal(cats.length, 8);
     const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
     for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
-    assert.equal(new Set(srcs.map(catOf)).size, 6, "6 different categories");
+    assert.equal(new Set(srcs.map(catOf)).size, 5, "5 different categories");
     const r = await page.$eval("#rot", e => e.getBoundingClientRect().toJSON());
     const hits = await page.$$eval("#q .opt, #mcGo", (es, r) => es.filter(e => { const c = e.getBoundingClientRect(); return r.x < c.right && r.x + r.width > c.left && r.y < c.bottom && r.y + r.height > c.top; }).length, r);
     assert.equal(hits, 0, "the corner covers an answer control");
     const dock = await page.$eval("#rot", e => { const v = [...e.querySelectorAll(".vid")].map(x => x.getBoundingClientRect());   // desktop: "B: top of notes" (Tony, Oct 4)
-      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 6 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
+      return { parent: e.parentElement.id, first: e.parentElement.firstElementChild === e, dock: e.classList.contains("docked"), side: v.length === 5 && Math.abs(v[0].top - v[1].top) < 1 && v[1].left > v[0].right }; });
     assert.deepEqual(dock, { parent: "work", first: true, dock: true, side: true }, "docked at the top of the notes column, players side by side");
     assert.ok(await page.$eval("#xb", e => e.getClientRects().length > 0), "no original, no wrong pick yet: the scratchpad is the default (Tony, Oct 5)");
     const head = await page.evaluate(() => {                            // video-bar.html ?v=1 (Tony, Oct 5): "Cluck" level with "Question"

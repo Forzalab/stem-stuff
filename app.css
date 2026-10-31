@@ -696,9 +696,19 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
 /* 9:16 frames side by side, at most 40vh tall (Tony, Oct 5); a landscape video is centre-cropped: its iframe is 136% of the frame's
    height (the title strip and logo cropped, as in the corner) and 16:9 wide, i.e. 1.36 x (16/9)^2 = 429.83% of the frame's width */
 /* docked: all 3 in one box that scrolls sideways (Tony, Oct 5), two in view, a visible thin bar */
-.rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--s3); }   /* 6 videos (todo 135): a snap keeps the box's inner padding at the start (the thin scrollbar stays: app.css:61) */
-.rot.docked .vid { flex: none; width: min(calc(min(40dvh, 100dvh - 22rem) * 9 / 16), calc((100% - var(--s5)) / 2)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card. A short window (under ~880px: 1366x768 at 150%) gives up video height first, 22rem stays for the bar, the labels, a 96px notes box and the foot (W129 L3: the column fits) */
+.rot.docked .duo { display: flex; gap: var(--s5); width: 100%; padding: var(--s3); border-radius: 10px; background: var(--qbox); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--s3); }   /* 5 videos (todo 135, W135b): a snap keeps the box's inner padding at the start (the thin scrollbar stays: app.css:61) */
+.rot.docked .vid { flex: none; width: min(calc(min(40dvh, 100dvh - 22rem) * 9 / 16), calc((100% - 3 * var(--s5)) / 3.5)); aspect-ratio: 9 / 16; scroll-snap-align: start; box-shadow: none; border: var(--bw) solid var(--line); }   /* Tony, Oct 6: variant B, more room between the videos, each its own card. A short window (under ~880px: 1366x768 at 150%) gives up video height first, 22rem stays for the bar, the labels, a 96px notes box and the foot (W129 L3: the column fits) */
 .rot.docked .vid:not(.short) iframe { left: -164.92%; width: 429.83%; }
+/* 3.5 in view (W135b, Tony Oct 31: "we can fit 3.5 visually, 5 total"): 3 frames + 3 gaps + half the 4th fill the box, the 5th waits behind the
+   scroll. The cue ("with gradient fade as a scorll cue too"): a fade to the box's own colour over the edge that has more row behind it, gone at
+   that end (brainrot.js ends()); it lays over the box, takes no room and no clicks */
+.shelf { position: relative; }
+.shelf .fade { display: none; }
+.rot.docked .fade { display: block; position: absolute; z-index: 1; top: 0; bottom: 0; width: 3rem; pointer-events: none; transition: opacity .2s ease-out; }
+.rot.docked .fade.l { left: 0; border-radius: 10px 0 0 10px; background: linear-gradient(to right, var(--qbox), transparent); }
+.rot.docked .fade.r { right: 0; border-radius: 0 10px 10px 0; background: linear-gradient(to left, var(--qbox), transparent); }
+.rot.docked .shelf.at-start .fade.l, .rot.docked .shelf.at-end .fade.r { opacity: 0; }
+.rot.docked.stashed .fade { display: none; }
 .rot-hd { display: none; }
 /* the label row's one control (Tony, Oct 5): a quiet text link, level with "Explain"; 44px tall to touch */
 .rot-link { display: none; }
@@ -869,7 +879,8 @@ html.side #work > .orig { margin: 0; }
 html.side #work.cl-on { position: sticky; top: var(--s4); align-self: start; display: flex; flex-direction: column; max-height: calc(100dvh - var(--cl-top, var(--s4)) - var(--foot, var(--s7))); }   /* the column is the sticky one; as tall as its content, at most the window below where the column starts (--cl-top, app.js layoutMT; Tony, Oct 6: no empty bottom). Past that the sheet's body scrolls and the ask field stays on screen. The foot keeps main's own bottom padding (--foot, app.js padFoot: --s7, more when the footer's box is taller), so the page is never taller than the window for it (W129 L1: no page scroll that looks like the column scrolling itself) and the ask field ends 24px above the fixed footer (#privacy / #ver, L3) */
 html.side #work.cl-on > :not(.cl, #rot) { display: none; }                  /* it fills the notes column under the videos (Tony, Oct 5: "videos stay above"); hint card and pad step aside */
 html.side #work.cl-on > #rot { flex: none; }
-html.side #work.cl-on .rot.docked .vid { width: min(calc(min(40dvh, 100dvh - 32rem) * 9 / 16), calc((100% - var(--s5)) / 2)); }   /* a window under ~1040px with the sheet open: the videos give up height first, so his text keeps its lines (the sheet now ends 48px up, clear of the footer: W129 L3) and the bar + ask field fit at 1366x768 at 125% (L1) */
+html.side #work.cl-on > .cl { flex-grow: 1; }   /* the sheet fills the column under the videos, however tall they are (W135b: 3.5 in view made them shorter) */
+html.side #work.cl-on .rot.docked .vid { width: min(calc(min(40dvh, 100dvh - 32rem) * 9 / 16), calc((100% - 3 * var(--s5)) / 3.5)); }   /* a window under ~1040px with the sheet open: the videos give up height first, so his text keeps its lines (the sheet now ends 48px up, clear of the footer: W129 L3) and the bar + ask field fit at 1366x768 at 125% (L1) */
 html.side .cl { flex: 0 1 auto; min-height: 0; border-radius: 10px; box-shadow: var(--shadow-3); }   /* E's R card (Tony, Oct 5): one container, one plain shadow, no border, no warm shade */
 /* phone = popup K1, shape P3 (Tony, Oct 13): docked under the question's first two lines (app.js clTop sets --cl-top), the site's 10px (the phone dock is now 30px, to 0 at full: CHATBOX PICK r2, Oct 13 + Oct 17; desktop keeps 10px)
    squircle, a 1px --edge (4.6:1 on --paper; the sheet itself is 1.02:1). No orange top line, no dim on the question */
