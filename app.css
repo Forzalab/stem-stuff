@@ -594,6 +594,12 @@ html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::befor
    the math down inside .pvi past 3 lines */
 .preview > .pvi { transform-origin: 0 0; }
 @media (prefers-reduced-motion: reduce) { .preview { transition: none; } }
+/* W137 expression answers: the working's own value, dim; the off span underlined; the prompt / syntax line under the box */
+.preview .xval { color: var(--muted); opacity: .75; white-space: nowrap; }
+.preview .xoff { color: var(--wrong-rim); text-decoration-color: currentColor; }
+.xline { margin: var(--s1) 0 0 var(--s3); color: var(--muted); font-size: var(--t-sm); line-height: 1.5; }
+.xline:empty { display: none; }
+.xline.bad, .xline.nudge { color: var(--ink); }
 /* Tony's todo 95 "ghost gap": the sheet open hides #wish (the duck chip under the closed question); the spent room would show as a blank band, so it goes
    with the chip, in the same move (Check itself still moves nothing: the chip holds the place until the sheet opens) */
 #q:has(+ #wish[hidden]) .preview.spent { display: none; }

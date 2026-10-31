@@ -1153,6 +1153,7 @@ function wireFF() {
       go.disabled = ins.some(x => !x.value.trim());
       const ff = $("#ff"); if (ff.classList.contains("bad")) { ff.classList.remove("bad"); vmark(ff, null); go.hidden = false; }
       if (!pv) return;
+      if (xOn(null)) { xPreview(pv, inp.value, null); const ln = $("#xline"); if (ln && ln.classList.contains("bad")) { ln.className = "xline"; ln.textContent = X_PROMPT; } return; }   // W137: the working + its value
       pv.innerHTML = "";
       const t = inp.value.trim(); if (!t || !mathy || typeof math === "undefined") return;
       try { pv.innerHTML = /^dne$/i.test(t) ? "DNE" : renderMath(math.parse(t).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* still typing */ }
@@ -1182,6 +1183,87 @@ function pvFit(pv) {
   if (!pv._room) { pv.style.height = room + "px"; void pv.offsetHeight; }   // lock it at the line first, so the first step animates too
   pv._room = need; pv.style.height = need + "px";
 }
+/* ---------- W137 expression answers (todo 137; serve.py EXPR_MODE, expr.py): after one miss on a typed num answer / num part of an
+   Exam 3 bank, the server's reply says exprMode and the box asks for the whole working (X_PROMPT). Under the box: the working, rendered
+   (KaTeX), and its own value dim "(= 67.87)", live as they type (never the right answer: only what they typed). A bare number gets the
+   prompt, a syntax slip a friendly line: neither is a try. A wrong working: Cluck opens with the 6 moves (diag.msg; L3 via POST /diagnose
+   when L1 named no family), the off span underlined in the rendered working. The flag off: the server never says exprMode, nothing here runs. */
+const X_PROMPT = "Type your whole working, e.g. 2.5*9.8/(pi*0.4^2)";   // expr.PROMPT
+const XNAMES = /^(sqrt|sin|cos|tan|asin|acos|atan|exp|log|ln|abs|pi|g)$/i;
+const xClean = t => String(t).replace(/[×·]/g, "*").replace(/÷/g, "/").replace(/π/g, "pi").replace(/√/g, "sqrt").replace(/−/g, "-")
+  .replace(/[A-Za-z]+/g, w => XNAMES.test(w) ? w.toLowerCase() : w);
+const xImplicit = t => /(\d|\))\s*(?![eE][-+]?\d)[A-Za-z(]|\)\s*[\d.]/.test(t);                 // expr.py refuses hidden multiplying: no value then
+const xVal = v => Math.abs(v) >= 1e5 || (v !== 0 && Math.abs(v) < 1e-3) ? v.toExponential(3).replace(/\.?0+e/, "e").replace(/e\+?(-?\d+)/, "×10^$1") : String(Number(v.toPrecision(4)));
+const xKey = i => i == null ? "ff" : "p" + i;
+const xOn = i => !!S?.xm?.has(xKey(i));
+function xPreview(pv, text, off) {
+  if (!pv) return;
+  const t = xClean(String(text || "").trim()).replace(/\bln\(/g, "log(");
+  pv.innerHTML = "";
+  if (!t || typeof math === "undefined") return;
+  let node; try { node = math.parse(t); } catch { return; }                                    // still typing
+  const opt = { parenthesis: "keep", implicit: "show" };
+  let want = null, hit = false;
+  if (off) try { want = math.parse(xClean(off).replace(/\bln\(/g, "log(")).toString(); } catch { want = null; }
+  let tex;
+  try { tex = node.toTex({ ...opt, handler: n => { if (want && !hit && n.toString() === want) { hit = true; return `\\htmlClass{xoff}{\\underline{${n.toTex(opt)}}}`; } } }); } catch { return; }
+  let v = null;
+  if (!xImplicit(t)) try { const r = node.evaluate({ g: Number(S?.prob?.g) || 9.8 }); if (typeof r === "number" && Number.isFinite(r)) v = r; } catch { v = null; }
+  pv.innerHTML = `<span class="xexpr">${renderMath(tex, false)}</span>${v == null ? "" : ` <span class="xval">(= ${esc(xVal(v))})</span>`}`;
+  if (pv.id === "preview") pvFit(pv);
+}
+function xEls(i) {                                                         // the box's preview (the working) and its prompt line
+  if (i == null) {
+    const pv = $("#preview"); if (!pv) return {};
+    let ln = $("#xline"); if (!ln) { ln = document.createElement("p"); ln.id = "xline"; ln.className = "xline"; ln.setAttribute("aria-live", "polite"); pv.after(ln); }
+    return { pv, ln, inp: $("#ans") };
+  }
+  const { row, box, inp } = partEls(i);
+  let pv = row.querySelector(".xpv"), ln = row.querySelector(".xline");
+  if (!pv) { pv = document.createElement("div"); pv.className = "preview xpv"; pv.setAttribute("aria-hidden", "true"); box.after(pv); }
+  if (!ln) { ln = document.createElement("p"); ln.className = "xline"; ln.setAttribute("aria-live", "polite"); pv.after(ln); }
+  return { pv, ln, inp };
+}
+function xOpen(i) {                                                        // the box now wants the whole working
+  (S.xm ||= new Set()).add(xKey(i));
+  const { ln, inp } = xEls(i);
+  if (inp) inp.placeholder = X_PROMPT;
+  if (ln) { ln.className = "xline"; ln.textContent = X_PROMPT; }
+}
+function xLine(i, r) {                                                     // not a try: the prompt again, or the syntax line
+  const { ln } = xEls(i); if (!ln) return;
+  ln.className = "xline " + (r.verdict === "unparsed" ? "bad" : "nudge");
+  ln.textContent = r.verdict === "unparsed" ? r.syntax || "I can't read that working." : r.prompt || X_PROMPT;
+  say(ln.textContent);
+}
+function xCluck(msg) {                                                     // Cluck's 6 moves, as his message; he opens (the wrong-answer prefetch path)
+  if (!S || !msg) return;
+  if (wish && wish.ctl) wish.ctl.abort();
+  wish = newWish();
+  Object.assign(wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
+  wishPaint();
+  clOpen("explain", "#wish .wchip", true);
+  if (wish.open) wishDraw();
+}
+async function xDiag(r, text, i) {                                         // a wrong working: underline + Cluck; L3 when L1 named no family
+  const d = r.diag; if (!d) return;
+  const { pv, ln } = xEls(i);
+  if (pv) { pv.classList.remove("spent"); xPreview(pv, text, d.off?.span); }
+  if (ln) { ln.className = "xline"; ln.textContent = ""; }
+  xCluck(d.msg);
+  if (!d.pending) return;
+  const mine = S, w = wish;
+  try {
+    const rd = window.stemRedo.has(S.code) ? { round: window.stemRedo.get().n } : {};
+    const res = await net("diagnose", { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() }, credentials: "same-origin",
+      body: JSON.stringify({ code: S.code, expr: text, ...(i == null ? {} : { part: i }), ...rd }) });
+    const o = res.ok ? await res.json() : null;
+    if (!o || S !== mine || wish !== w || !o.msg) return;
+    Object.assign(w, { text: o.msg, shown: o.msg.length, pos: o.msg.length });
+    wishPaint(); if (w.open) wishDraw();
+    if (pv && o.off?.span) xPreview(pv, text, o.off.span);
+  } catch { /* the L1 moves stay */ }
+}
 async function submitFF() {
   const ins = [...document.querySelectorAll("#q .ans")], vals = ins.map(x => x.value.trim());
   if (vals.some(v => !v) || S.finished || busy) return;
@@ -1191,8 +1273,12 @@ async function submitFF() {
     const mine = S, r = await check(S.code, { answer: vals[0] });
     if (S !== mine) return;
     if (r.verdict === "timeout") { feedback(r); return; }  // not a try: the text stays, retry resends it
+    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(null); xLine(null, r); return; }   // W137: not a try, the text stays
     const closes = r.verdict === "correct" || r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict !== "invalid") { record({ a: t }, r); const pv = $("#preview"); if (pv) { if (closes) pv.classList.add("spent"); else pv.innerHTML = ""; } }   // closing: the preview hides but keeps its room (nothing moves, T17b-1)
+    if (r.diag) xDiag(r, vals[0], null);                    // W137: before feedback(), so wishOnWrong finds Cluck's 6 moves, not a new /explain
+    else if (xOn(null)) { const ln = $("#xline"); if (ln) ln.textContent = ""; }
+    if (r.exprMode && !closes) xOpen(null);
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     else if (r.verdict === "wrong") pips(r, ...pipsAt());
@@ -1252,7 +1338,7 @@ function wireParts() {
   S.parts = S.prob.parts.map(() => ({ shut: false, ok: false }));
   S.prob.parts.forEach((_, i) => {
     const { inp, go, box } = partEls(i);
-    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); vmark(box, null); });   // the arrow appears once there is text (like the code box)
+    inp.addEventListener("input", () => { go.hidden = !inp.value.trim(); box.classList.remove("bad"); vmark(box, null); if (xOn(i)) xPreview(xEls(i).pv, inp.value, null); });   // the arrow appears once there is text (like the code box); W137: the working + its value
     inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitPart(i); } });   // Enter submits THIS box
     go.addEventListener("click", () => submitPart(i));
   });
@@ -1292,7 +1378,10 @@ async function submitPart(i) {
     const mine = S, r = await check(S.code, { part: i, answer: v });
     if (S !== mine) return;
     if (r.verdict === "timeout") { partFeedback(i, r); layoutFreeze(); return; }   // not a try: the text stays, retry resends it
+    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(i); xLine(i, r); layoutFreeze(); return; }   // W137: not a try
     if (r.verdict !== "invalid") record({ a: v, part: i }, r);
+    if (r.diag) xDiag(r, v, i);
+    if (r.exprMode && r.verdict === "wrong" && r.triesLeft > 0) xOpen(i);
     const spent = r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0);
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
