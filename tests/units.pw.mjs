@@ -1,7 +1,8 @@
 // W132 answer units (todo 132; Tony Oct 29 "every answer shall show the units", LOCKED "green ok, but put units in white"):
 //   the sugar reveal's "Answer" line (and a multi part's hint slot) shows value + U+2009 + unit: the value green + bold as before,
 //   the unit in the plain ink (--ink), regular weight, ^n as a superscript. Unitless ("" or no unit) = the value only, no gap,
-//   the old markup. Copy = the value only (WebAssign has its own unit box). serve.py lets `unit` through, never `twist` or the key.
+//   the old markup. Copy = the value only (WebAssign has its own unit box). serve.py lets `unit` through, never the key; `twist: true`
+//   goes too since W133 (the Twist chip, tests/twist.pw.mjs).
 // Screens: 390x844, 1366x768, 1440x900. Starts its own serve.py with a throwaway banks/ folder:   node tests/units.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -73,9 +74,9 @@ const line = (page, sel) => page.evaluate(sel => {
 
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
-  await step("serve: /p/ carries `unit` (num item, num parts), never `twist` or the key", async () => {
+  await step("serve: /p/ carries `unit` (num item, num parts) and `twist: true` (W133), never the key", async () => {
     const a = await (await fetch(`${BASE}/p/PHYS_U01.json`)).json();
-    assert.equal(a.unit, "m/s^2"); assert.ok(!("twist" in a) && !("answer" in a), JSON.stringify(a));
+    assert.equal(a.unit, "m/s^2"); assert.equal(a.twist, true); assert.ok(!("answer" in a), JSON.stringify(a));
     const m = await (await fetch(`${BASE}/p/PHYS_U04.json`)).json();
     assert.deepEqual(m.parts.map(q => q.unit), ["kg·m^2/s", ""]); assert.ok(!m.parts.some(q => "answer" in q));
     assert.ok(!("unit" in (await (await fetch(`${BASE}/p/PHYS_U03.json`)).json())));

@@ -12,7 +12,10 @@
    `both`), and it sits on whole px, so its text keeps subpixel AA.
    Today: the stage lines (rewards/engine.js), and the notes (note() below, todo 112): the old #toast's kinds, its look and element.
    show({ text, num: [from, to], from, to, at, ms, until }): text may hold "{#}", the number that counts from num[0] to num[1]; from / to are
-   the bar's fill (0..1); at = the anchor element or a function returning it. */
+   the bar's fill (0..1); at = the anchor element or a function returning it.
+   The short toast (W133, todo 133: the twist toast): bar: false = no progress bar (a line, not a count); action: { label, run } = one
+   outlined .btn under the words (never .btn-go), a tap runs it and closes the toast; clear = a selector of boxes it must never lie on
+   although they take no tap (the twist toast: the answer area #q, the ladder in it, Next); onshow() = called once it is on screen. */
 (function (g) {
   'use strict';
   var d = g.document, el = null, q = [], cur = null, timer = 0, left = 0, since = 0, raf = 0, wait = 0, nEl = null;
@@ -54,7 +57,16 @@
     }
     return out;
   }
-  var covers = function (x, y, w, h) { return hits(x, y, w, h).length > 0; };
+  var covers = function (x, y, w, h) {
+    if (hits(x, y, w, h).length) return true;
+    var cs = cur && cur.clear ? d.querySelectorAll(cur.clear) : [];
+    for (var i = 0; i < cs.length; i++) {                                // `clear`: never on these boxes, tap or no tap (W133)
+      var r = cs[i].getBoundingClientRect();
+      if (r.width < 1 || r.height < 1 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
+      return true;
+    }
+    return false;
+  };
   /* desktop = the side layout (question column left, Explain + Notes right) on a screen tall enough for a foot; a landscape phone
      (844x390) is side too but has no foot to spare, so it stays a phone here */
   var desk = function () { var vv = g.visualViewport; return d.documentElement.classList.contains('side') && (vv ? vv.height : innerHeight) >= 500; };
@@ -130,8 +142,9 @@
     cur = o; mount();
     el.classList.remove('out', 'on');
     el.style.width = '';
+    actionPut(o);
     el.querySelector('.stoast-t').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
-    if (!place()) { cur = null; clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
+    if (!place()) { cur = null; actionPut({}); clearTimeout(wait); wait = setTimeout(next, 250); return; }   // no room under its anchor yet: wait for a scroll
     q.shift();
     el.querySelector('.sr-only').textContent = String(o.text).split('{#}').join(o.num ? o.num[1] : '');
     count(o);
@@ -143,8 +156,18 @@
       if (!place() || yields()) hide(true);                              // scrolled out of its room, a control came under it, the duck rose or Cluck opened: gone at once (no exit motion beside the answer's: one blink)
     }, 120);
     arm(o.ms || 4000);
+    if (o.onshow) try { o.onshow(); } catch (e) { /* the caller's */ }
   }
-  function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; next(); }
+  /* the short toast's parts (W133): no bar, and at most one action button under the words */
+  function actionPut(o) {
+    el.classList.toggle('stoast-short', o.bar === false);
+    var old = el.querySelector('.stoast-a'); if (old) old.remove();
+    if (!o.action || !o.action.label) return;
+    var b = d.createElement('button'); b.type = 'button'; b.className = 'btn stoast-a'; b.textContent = o.action.label;
+    b.addEventListener('click', function () { var run = o.action.run; hide(true); if (run) run(); });
+    el.querySelector('.stoast-b').appendChild(b);
+  }
+  function done() { if (!el) return; el.classList.remove('on', 'out'); cur = null; actionPut({}); next(); }
   function hide(quiet) {
     clearTimeout(timer); left = 0;
     if (!cur || !el) return;
