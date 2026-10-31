@@ -1,0 +1,119 @@
+{
+ "v": 20261030,
+ "problems": [
+  {
+   "code": "PHYS_DU1",
+   "title": "Sled on a made-up hill",
+   "type": "num",
+   "body": [
+    {
+     "type": "text",
+     "md": "A sled speeds up from rest to $6\\ \\text{m/s}$ in $3\\ \\text{s}$. Find its acceleration, in $\\text{m/s}^2$."
+    }
+   ],
+   "answer": "2",
+   "form": "6/3",
+   "wrong": [],
+   "nudge": "QUACK. Change in speed over time.",
+   "unit": "m/s^2",
+   "twist": true
+  },
+  {
+   "code": "PHYS_DU2",
+   "title": "Toy car distance",
+   "type": "num",
+   "body": [
+    {
+     "type": "text",
+     "md": "A toy car rolls at $0.5\\ \\text{m/s}$ for $8\\ \\text{s}$. How far does it go, in $\\text{m}$?"
+    }
+   ],
+   "answer": "4",
+   "form": "0.5*8",
+   "wrong": [],
+   "nudge": "QUACK. Speed times time.",
+   "unit": "m"
+  },
+  {
+   "code": "PHYS_DU3",
+   "title": "Ratio of two springs",
+   "type": "num",
+   "body": [
+    {
+     "type": "text",
+     "md": "Spring A has $k = 30$, spring B has $k = 10$ (same units). What is $k_A / k_B$?"
+    }
+   ],
+   "answer": "3",
+   "form": "30/10",
+   "wrong": [],
+   "nudge": "QUACK. Divide.",
+   "unit": ""
+  },
+  {
+   "code": "PHYS_DU4",
+   "title": "Two blocks",
+   "type": "multi",
+   "body": [
+    {
+     "type": "text",
+     "md": "Block P is $2\\ \\text{kg}$, block Q is $5\\ \\text{kg}$."
+    }
+   ],
+   "parts": [
+    {
+     "prompt": "Total mass, in kg?",
+     "type": "num",
+     "answer": "7",
+     "form": "2+5",
+     "wrong": [],
+     "unit": "kg"
+    },
+    {
+     "prompt": "Mass ratio Q/P?",
+     "type": "num",
+     "answer": "2.5",
+     "form": "5/2",
+     "wrong": [],
+     "unit": ""
+    }
+   ],
+   "nudge": "QUACK. One part at a time.",
+   "how": "Two numbers, in the order asked."
+  },
+  {
+   "code": "PHYS_DU5",
+   "title": "Which is a vector",
+   "type": "mc",
+   "body": [
+    {
+     "type": "text",
+     "md": "Which one is a vector?"
+    }
+   ],
+   "choices": [
+    {
+     "id": "a",
+     "md": "mass"
+    },
+    {
+     "id": "b",
+     "md": "velocity"
+    },
+    {
+     "id": "c",
+     "md": "time"
+    }
+   ],
+   "correct": "b",
+   "twist": false,
+   "wrong": [
+    {
+     "choice": "a",
+     "error": "algebra",
+     "hint": "QUACK. Mass has no direction."
+    }
+   ]
+  }
+ ]
+}
