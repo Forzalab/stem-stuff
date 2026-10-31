@@ -14,7 +14,8 @@
   this browser has a recorded wrong try on it (the bank's welcome Q1: never 403, its ladder is the question); `alt` only once a twin of
   the template was missed; `sheet` = {id: tex} for its sheet steps' chips. Never in /p or /b.
   The answer step never carries its key (ok/tol/opts/miss): POST /repair/<CODE>/check {value, n} -> {ok} grades it (same 403/404; not a try);
-  a miss with n >= 2 (the client's attempt count) also carries `answer` = display text (a pick / mc: the right options' md; Tony #33 A).
+  a miss with n >= 2 (the client's attempt count) also carries `answer` = display text (a pick / mc: the right options' md; Tony #33 A);
+  a num miss graded by the item's key carries /check's {error, hint} (its `wrong`, then slips; todo 130).
 - Tries are kept in tries.json (next to this script, or $STEM_TRIES), so a restart keeps them. Tony may hand-edit it:
   deleting an entry resets that problem (or part) for that browser (the page sees a newer gen and drops its cached state).
 - The bank file itself, keys, logs and server files are never served.
@@ -1068,11 +1069,13 @@ def repair_check(p, u, sid, body):
     rule); a twin, or a step with no ok, by the item's own key (/check's unit_correct and tol rules; mc: the right id, pick all: "a,c").
     n: the client's 1-based attempt count on the step; a miss with n >= 2 carries `answer` (Tony #33 A) = display text: the step's ok,
     else the item's (answer_of), a num with the step's unit; a pick / mc: the right option's md (the answer step ships no opts, so the
-    client cannot map an id), pick all: the right options' md joined ", " in option order."""
+    client cannot map an id), pick all: the right options' md joined ", " in option order. A num miss graded by the item's key also carries
+    /check's {error, hint} (todo 130): its `wrong` entries, then the slips of its `form` (a g=10 answer -> "g"); never a value."""
     got = _ladder(p, sid)
     if len(got) == 2:
         return got
     t, rp, _ = got
+    fam = {}                                                  # {error, hint} of a miss graded by the item's own key (as /check)
     value = body.get("value") if isinstance(body, dict) else None
     if not isinstance(value, str) or not value.strip() or len(value) > 200:
         return 400, {"error": "invalid"}
@@ -1088,18 +1091,22 @@ def repair_check(p, u, sid, body):
             return 400, {"error": "invalid"}
         else:
             try:
-                ok = unit_correct(g, signature(g, value))
+                sig = signature(g, value)
+                ok = unit_correct(g, sig)
             except UNREADABLE:
                 return 400, {"error": "invalid"}
+            if not ok and g is u and u["type"] == "num":     # todo 130: graded by the item's key -> /check's hint: `wrong`, then slips of `form`
+                hit = unit_hit(u, value, sig) or slip_hit(u, sig) or {}
+                fam = {k: hit[k] for k in ("error", "hint") if k in hit} if hit.get("hint") else {}   # a SLIP_TIE collide (no hint): none
     n = body.get("n")
     if ok or type(n) is not int or n < 2:
-        return 200, {"ok": ok}
+        return 200, {"ok": ok, **fam}
     if own and step.get("kind") == "pick" or not own and u["type"] == "mc":                 # display text: the right options' md
         ids = {step["ok"]} if own else rights(u)
         a = ", ".join(c.get("md", c["id"]) for c in (step.get("opts") if own else None) or u.get("choices") or [] if c["id"] in ids)
     else:
         a = step["ok"] if own else answer_of(u)
-    return 200, {"ok": False, "answer": a + (" " + step["unit"] if step.get("kind") == "num" and step.get("unit") else "")}
+    return 200, {"ok": False, "answer": a + (" " + step["unit"] if step.get("kind") == "num" and step.get("unit") else ""), **fam}
 
 
 def answer_of(u):

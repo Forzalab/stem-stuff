@@ -22,7 +22,7 @@ const TMP = mkdtempSync(join(tmpdir(), "welcome-app-")), BANKS = join(TMP, "bank
 const WLC = "PHYS_WQ1";
 const num = (code, n, tier) => ({ code, type: "num", answer: String(n + 2), body: [{ type: "text", md: `Plain ${n}: 2 + ${n}` }], noob: { tier } });
 const welcome = {
-  code: WLC, type: "num", answer: "4", tol: 0.01, welcome: true, noob: { tier: 1 },
+  code: WLC, type: "num", answer: "4", form: "8/2", tol: 0.01, welcome: true, noob: { tier: 1 },   // form: its slips name a family (todo 130)
   body: [{ type: "text", md: "A $2\\ \\text{m}$ wide piston carries $8\\ \\text{N}$ spread over $2\\ \\text{m}^2$. Find the pressure, in $\\text{Pa}$." }],
   repair: { steps: [
     { id: "who", label: "Which force presses down?", kind: "pick", opts: [{ id: "a", md: "the load's" }, { id: "b", md: "the air's" }], ok: "a" },
@@ -214,9 +214,11 @@ try {
     await act(page, '.rp-why .rp-chip[data-why="0"]');
     await page.waitForSelector('#q .rp-step[data-id="answer"][data-state="active"] .rp-in', { timeout: 4000 });
     await warmFace(page, '#q .rp-step[data-state="active"] .rp-check');
-    await page.fill('#q .rp-step[data-state="active"] .rp-in', "7");      // wrong: a hint, not a red state
+    await page.fill('#q .rp-step[data-state="active"] .rp-in', "0.25");   // wrong (A/F flipped: form 8/2's reciprocal slip): a hint, not a red state
     await page.click('#q .rp-step[data-state="active"] .rp-check');
     await page.waitForSelector('#q .rp-step[data-id="answer"] .rp-miss', { timeout: 4000 });
+    assert.equal(await page.$eval('#q .rp-step[data-id="answer"] .rp-miss', el => el.textContent.trim()),   // todo 130: the slip family's line,
+      "QUACK. Your math got RATIO-ed (not on Twitter).", "the keyless answer's miss is not the slip family's line");   // not the generic tier
     await page.fill('#q .rp-step[data-state="active"] .rp-in', "4");
     await page.click('#q .rp-step[data-state="active"] .rp-check');
     await page.waitForSelector('#q .rp-step[data-id="answer"][data-state="done"]', { timeout: 4000 });

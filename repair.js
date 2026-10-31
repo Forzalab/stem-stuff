@@ -118,7 +118,7 @@
         Promise.resolve(o.grade(v, s.n)).then(r => {
           s.busy = false;
           if (gone) return;
-          if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true);
+          if (!r || r.ok === true || r.answer == null) return judge(s, v, !!r && r.ok === true, r && typeof r.hint === "string" ? r.hint : "");   // todo 130: the server's slip / wrong line
           const p = st.kind === "pick" && optsOf(st).find(p => p.id === v);         // the step fills in with it; no miss / auto line under it
           solved = { wrong: p ? p.md : String(v), answer: String(r.answer) };
           missed = true; fillIn(s); s.miss = ""; s.shown = solved.answer; settle();
@@ -128,13 +128,13 @@
       judge(s, v, st.kind === "num" ? Math.abs(num(v) - Number(st.ok)) <= (st.tol != null ? st.tol : TOL) * (Math.abs(Number(st.ok)) || 1)
         : String(v) === String(st.ok));
     }
-    function judge(s, v, right) {
+    function judge(s, v, right, said) {                                         // said: the server's {error, hint} line for this miss (a slip family), else ""
       const st = s.st;
       if (right) { s.ok = true; s.val = v; if (welcome) s.missGone = true; else s.miss = ""; }   // welcome: the hint line keeps its room, emptied (a row never shrinks)
       else {
         s.tried.add(String(v)); missed = true; s.missGone = false;
         const h = welcome ? hint() : L().miss || "";
-        s.miss = (st.miss && st.miss[v]) || h;
+        s.miss = (st.miss && st.miss[v]) || said || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
       }
       settle();
