@@ -1803,8 +1803,8 @@ function wishEl() {
 function wishReset() {
   if (wish && wish.ctl) wish.ctl.abort();
   wish = null;
-  const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; }
-  document.querySelectorAll(".cl-peek").forEach(p => p.remove());
+  const el = $("#wish"); if (el) { el.innerHTML = ""; el.hidden = true; el.classList.remove("gone"); }
+  document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
   clReset();
 }
 const newWish = () => ({ code: S.code, text: "", started: true, done: false, open: false, failed: 0, shown: 0, at: 0, said: false, chat: [], busy: false, out: false });
@@ -2093,7 +2093,9 @@ function peekText() {                                                       // t
 const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
   const el = wishEl(), w = wish;
-  document.querySelectorAll(".cl-peek").forEach(p => p.remove());
+  const room = Math.max(0, ...[...document.querySelectorAll(".cl-peek, .cl-room")].map(p => p.getBoundingClientRect().height));   // the room the peek had (W129 L4)
+  document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
+  el.classList.remove("gone");
   if (!w || [404, 503].includes(w.failed)) {
     el.hidden = true;
     if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
@@ -2113,8 +2115,12 @@ function wishPaint() {
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
-    if (!off) (host || el.querySelector(".cluck > div")).insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
-    el.hidden = off || !!host;
+    const keep = off && sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
+    const into = host || el.querySelector(".cluck > div");                  // box (W129 L4: taking it out shortened the page, which a scrolled short window paid for with a jump)
+    if (!off) into.insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
+    else if (keep) into.insertAdjacentHTML("beforeend", `<div class="cl-room" aria-hidden="true" style="height:${room}px"></div>`);
+    el.hidden = (off && !keep) || !!host;
+    el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
   } else {
     const label = !w.started ? "Explain my mistake" : "Oops, didn't load. Tap to try again.";
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
@@ -2266,7 +2272,10 @@ function clOpen(tab, from, auto) {                                        // aut
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
-  if (sideMQ.matches && !auto) cl.el.scrollIntoView({ block: "start", behavior: reduceMQ.matches ? "auto" : "smooth" });   // the sheet is one screen tall: its ask field lands in view
+  if (sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
+    const ft = cl.el.querySelector(".cl-ft"), r = ft.getBoundingClientRect();   // #work.cl-on), so the page moves only when the field is really off screen (W129 L4: "start" scrolled the page under the student)
+    if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" });
+  }
 }
 function clClose(dismiss) {
   if (!cl || !cl.open) return;
@@ -2349,6 +2358,7 @@ function clBack() {
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
+window.stemLayout = () => { if (S) layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
 window.stemIdleTap = () => {
   const w = wish;
   if (w && S && w.code === S.code && (!w.started || w.failed) && ![404, 503].includes(w.failed)) {   // B7 (Tony, Oct 19, pick b): no prefetch (or it failed): the duck
@@ -3260,13 +3270,38 @@ function layoutMT() {
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
     if (!S || !S.box || (!mtOpen && !sideMQ.matches)) return;
-    if (sideMQ.matches) root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px");   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
+    if (sideMQ.matches) { padFoot(); pageTop(); root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px"); }   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
     if (mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
+    else if (sideMQ.matches) mtCap = Math.max(96, Math.floor(innerHeight - dockRoom() - (ta.getBoundingClientRect().top - work.getBoundingClientRect().top + workRest()) - padFoot()));   // side: where the box sits with the page at its top, not where the sticky column happens to be now (a tap on a scrolled page re-sized it: W129 L6); down to 96px, so the column fits a short window (1366x768 at 150%, L3)
     else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
     root.style.setProperty("--pad-max", mtCap + "px");
     S.box.limit();
   };
   fill(); requestAnimationFrame(fill);
+}
+/* the room under the notes box and Cluck's sheet (app.css --foot): main's own bottom padding (--s7), so the page is exactly the window for
+   them (W129 L1: no page scroll on a short question, which read as the Explain column scrolling itself), and at least 8px over the fixed
+   footer's box (#privacy's 44px tap target in Firefox; L3 / L5: no tap on the notes lands on the link) */
+function padFoot() {
+  const pv = $("#privacy"), r = pv && pv.getClientRects().length ? pv.getBoundingClientRect() : null;
+  const room = Math.ceil(Math.max(24, parseFloat(getComputedStyle($("main")).paddingBottom) || 0, r ? innerHeight - r.top + 8 : 0));
+  root.style.setProperty("--foot", room + "px");
+  return room;
+}
+/* the spare room above the bar when the body centres the page up-down (app.css "snug in the center": auto margins), so the notes column's
+   floor (app.css html.side #work min-height) leaves the same room under the page: centred stays centred (easy.pw zoomed out to heck), a
+   column that shrinks still re-centres nothing (W129 L4). 0 when the page starts at the top (taller than the window, the start page, the bar docked at the bottom) */
+function pageTop() {
+  const bar = $("body > .top"), on = !root.classList.contains("start") && !root.classList.contains("dock-bottom") && bar && bar.getClientRects().length;
+  const t = on ? Math.max(0, Math.round(bar.getBoundingClientRect().top + scrollY)) : 0;
+  root.style.setProperty("--pg-top", t + "px");
+  return t;
+}
+let workD = 0;                                                                     // the notes column's top below the sentinel, read while the page is at its top
+function workRest() {                                                              // the notes column's top in the window with the page at its top (it is sticky)
+  const s = sentinel.getBoundingClientRect().top;
+  if (scrollY === 0) workD = work.getBoundingClientRect().top - s;
+  return s + scrollY + workD;
 }
 function mtSave() { try { localStorage.setItem("stem-mt", JSON.stringify(mtMem)); } catch { /* private mode: defaults next time */ } }
 function setRatio(r, animate = true) {

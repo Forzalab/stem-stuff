@@ -1,7 +1,8 @@
 // welcome.js (DESIGN-v3 §2, TONY-DECISIONS #5): Q1 = the bank's `welcome` item through repair.js's welcome variant, driven through its lab
-// page (design/welcome-lab.html; a hand-made dead-easy item, no fetch). Warm surface; opens with every sub-step shown (label + its input);
-// the first step done collapses to ✓ and the rest fade to a label only, so the student walks alone; one why on the faded (fam) step;
-// unfailable (a wrong tap is the next hint: no ✗, no red); the last step → welcome_done. Reduced motion: no fade animation. 360px, text only.
+// page (design/welcome-lab.html; a hand-made dead-easy item, no fetch). Warm surface; opens with every sub-step shown (label + its input,
+// a future one as a disabled, aria-hidden preview); the form stays put (W129, PLAN L6 "no jank"): a done step keeps its chips locked with
+// the pick lit and a ✓, the next goes live in place, no row moves; one why on the fam step; unfailable (a wrong tap is the next hint: no ✗,
+// no red); the last step → welcome_done. Nothing in it animates. 360px, text only.
 //   node tests/welcome.pw.mjs                          (the lab from disk)
 //   node tests/welcome.pw.mjs http://localhost:8832    (the lab through serve.py)
 import { createRequire } from "node:module";
@@ -27,7 +28,8 @@ try {
   const states = () => page.$$eval(".rp-step", s => s.map(x => x.dataset.id + ":" + x.dataset.state));
   const ev = () => page.evaluate(() => window.__ev);
   const act = sel => page.click(`.rp-step[data-state="active"] ${sel}`);
-  const fields = id => page.$$eval(`.rp-step[data-id="${id}"] .wl-field:not(.wl-out)`, f => f.length);   // a sub-step's shown input (not one fading out)
+  const fields = id => page.$$eval(`.rp-step[data-id="${id}"] .rp-val-ui.rp-ghost`, f => f.length);   // a sub-step's shown input, as a preview (not answerable yet)
+  const tops = () => page.$$eval(".rp-step", s => s.map(x => Math.round(x.getBoundingClientRect().top)));
 
   await step("open: a warm surface (not the page's), every step shown at full strength, each future one with its input", async () => {
     await page.evaluate(() => window.lab());
@@ -45,7 +47,8 @@ try {
     assert.equal(await page.$$eval('.rp-step[data-id="formula"] .rp-val-opts .rp-chip', c => c.length), 3, "step one: its chips");
     assert.equal(await fields("plug"), 1, "step two shows its input");
     assert.equal(await fields("answer"), 1, "the last step shows its input");
-    assert.equal(await page.getAttribute('.wl-field', "aria-hidden"), "true", "a shown input is a picture, not a control");
+    assert.equal(await page.getAttribute('.rp-ghost', "aria-hidden"), "true", "a shown input is a preview, not a control");
+    assert.equal(await page.$$eval('.rp-ghost :is(button, input)', c => c.every(x => x.disabled)), true, "a preview's chips are not live");
     assert.match(await page.textContent(".rp-line"), /\S/, "the warm line");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "no sideways scroll at 360");
   });
@@ -66,16 +69,17 @@ try {
     assert.equal(await page.getAttribute('.rp-step[data-id="formula"]', "data-state"), "active", "unfailable: no auto-fill");
   });
 
-  await step("step one filled → collapses to ✓; step two is faded (label + its own input, no shown sub-step), the last a label only", async () => {
+  await step("step one filled → ✓, its chips stay locked with the pick lit; step two goes live in place; no row moves", async () => {
+    const t0 = await tops();
     await act('.rp-val-opts .rp-chip[data-v="a"]');
     assert.deepEqual(await states(), ["formula:done", "plug:active", "answer:future"]);
     assert.match(await page.textContent('.rp-step[data-id="formula"]'), /✓/);
-    assert.equal(await page.$$eval('.rp-step[data-id="formula"] .rp-body', b => b.length), 0, "collapsed to one line");
-    assert.equal(await fields("plug"), 0, "step two: no shown sub-step");
-    assert.equal(await fields("answer"), 0, "faded: the last step is a label only");
-    assert.equal(await page.$$eval('.rp-step[data-id="answer"] :is(input, button, .wl-field:not(.wl-out))', c => c.length), 0);
-    assert.equal(await page.getAttribute(".wl", "data-fade"), "alone");
-    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why .rp-chip', c => c.length), 3, "one why on the faded step");
+    assert.deepEqual(await page.$$eval('.rp-step[data-id="formula"] .rp-locked .rp-chip', c => c.map(x => [x.dataset.v, x.disabled, x.classList.contains("rp-picked")])),
+      [["a", true, true], ["b", true, false], ["c", true, false]], "step one: locked, the pick lit");
+    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-val-opts .rp-chip:not(:disabled)', c => c.length) > 0, true, "step two: live");
+    assert.equal(await fields("answer"), 1, "the last step keeps its preview");
+    assert.deepEqual(await tops(), t0, "a row moved");
+    assert.equal(await page.$$eval('.rp-step[data-id="plug"] .rp-why .rp-chip', c => c.length), 3, "one why on the fam step");
     assert.equal(await page.$$eval(".rp-why", w => w.length), 1, "only one why");
   });
 
@@ -92,14 +96,14 @@ try {
     assert.equal(await page.$$eval(".rp-skip", s => s.length), 0, "no skip on Q1");
   });
 
-  await step("reduced motion: the fade does not animate (a fading sub-step is simply gone)", async () => {
-    const p = await browser.newPage({ viewport: { width: 360, height: 800 }, reducedMotion: "reduce" });
-    await p.goto(LAB);
-    await p.click('.rp-step[data-state="active"] .rp-val-opts .rp-chip[data-v="a"]');
-    const out = await p.$$eval(".wl-out", o => o.map(x => getComputedStyle(x).display));
-    assert.ok(out.every(d => d === "none"), "fading sub-steps: " + out.join(","));
-    assert.equal(await p.$$eval(".wl *", x => x.filter(e => getComputedStyle(e).animationName !== "none").length), 0, "nothing animates");
-    await p.close();
+  await step("nothing animates on a tap (no fade, no slide), with or without reduced motion", async () => {
+    for (const reducedMotion of ["no-preference", "reduce"]) {
+      const p = await browser.newPage({ viewport: { width: 360, height: 800 }, reducedMotion });
+      await p.goto(LAB);
+      await p.click('.rp-step[data-state="active"] .rp-val-opts .rp-chip[data-v="a"]');
+      assert.equal(await p.$$eval(".wl *", x => x.filter(e => getComputedStyle(e).animationName !== "none").length), 0, `something animates (${reducedMotion})`);
+      await p.close();
+    }
   });
 
   await step("text only: a label with markup lands as text, never as an element", async () => {

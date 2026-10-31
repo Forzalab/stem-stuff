@@ -195,6 +195,7 @@
       el.classList.toggle("stashed", stashed);
       link.dataset.act = stashed ? "open" : "min"; link.setAttribute("aria-expanded", String(!stashed));
       link.textContent = (stashed ? "Show" : "Hide") + " curated brainrot";
+      window.stemLayout?.();                                 // the notes under it re-fill now, before paint: the column keeps its height (W129 L4: no re-centred page)
       return;
     }
     el.classList.toggle("stashed", stashed);

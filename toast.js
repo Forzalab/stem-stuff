@@ -48,7 +48,8 @@
       if ((nEl && nEl.contains(e)) || (!note && el && el.contains(e)) || e.closest('[hidden], [inert]') || (skip && skip(e))) continue;
       var r = e.getBoundingClientRect();
       if (r.width < 2 || r.height < 2 || r.right <= x || r.left >= x + w || r.bottom <= y || r.top >= y + h) continue;
-      if (e.checkVisibility ? !e.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : !e.getClientRects().length) continue;
+      /* [data-room]: unseen now, shown in place later (repair.js: a welcome step's "why" before its pick). A toast laid on it would have to move off it then */
+      if (!e.closest('[data-room]') && (e.checkVisibility ? !e.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : !e.getClientRects().length)) continue;
       out.push(r);
     }
     return out;
