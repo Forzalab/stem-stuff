@@ -94,6 +94,9 @@ await step("an /explain 504 after typing, scrolling and a resize: one report wit
   assert.equal(early[0].split(" ")[0], "boot", early.slice(0, 5));
   assert.ok(early.includes("net b s") && early.includes("net b h"), "the bank's boot-time request: " + early.slice(0, 12));
   assert.ok(early.indexOf("net b s") < early.findIndex(e => e.startsWith("nav ")), "before the first question opened");
+  /* the slow path, every run: a busy page (CI block 4 under load, Oct 31: ~16 ResizeObserver entries, not ~9) logs more than 64 entries
+     between boot and the error, so the boot-time header must survive however many came since: 64 layout entries before the busy part */
+  await page.evaluate(() => { for (let i = 0; i < 64; i++) window.stemFR.log("ro", "#pad", 100 + i, 40); });
   await busyThenWrong(page);
   const [b] = await waitFor(page, x => x.where === "explain" && x.fr && x.fr.ring);
   assert.ok(b, "a report with a snapshot: " + JSON.stringify(page.beacons).slice(0, 400));

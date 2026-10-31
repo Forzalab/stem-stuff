@@ -83,6 +83,9 @@ try {
   for (const [w, h] of [[390, 844], [1366, 768], [1440, 900]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, serviceWorkers: "block" });
     await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
+    /* the slow path, every run: say() (app.js) blanks #sr and writes the line 30 ms later; CI block 4 under load read it inside that gap
+       (Oct 31, 56efe32). Stretch that one 30 ms timer to 600 ms so a read that does not wait for the spoken line fails every time */
+    await ctx.addInitScript(() => { const st = window.setTimeout; window.setTimeout = function (f, ms, ...a) { return st.call(this, f, ms === 30 ? 600 : ms, ...a); }; });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     const page = await ctx.newPage();
     let hUnit = NaN;
@@ -99,6 +102,7 @@ try {
       assert.ok(L.u.gap > 0 && L.u.gap < 6, "a thin gap, on the value's line: " + L.u.gap);
       assert.ok(L.u.dy < 4, "same line: " + L.u.dy);
       hUnit = L.h;
+      await page.waitForFunction(() => /2\.02/.test(document.querySelector("#sr").textContent), null, { timeout: 4000 }).catch(() => {});   // say() writes it after its gap
       assert.match(await page.textContent("#sr"), /2\.02\s?m\/s2/, "the spoken line says the unit too");
     });
     await step(`${w}: Copy answer copies the value only`, async () => {
