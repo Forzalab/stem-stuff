@@ -17,6 +17,7 @@
   var W = window, D = document, P = W.performance;
   var RING = 256, KB = 32, SNAP_RING = 64, SNAP_KB = 20, CAP = 16384, THROTTLE = 250;
   var R = [], K = [];                          // the ring and the keyboard sub-ring (a typing burst cannot evict the net / cluck history)
+  var HEAD = [];                               // the boot-time header (boot, flag, mq): every snapshot carries it, however busy the page was since
   var now = function () { return P && P.now ? Math.round(P.now()) : 0; };
 
   /* ---- pure helpers (exported as stemFR._t for tests/flight.test.mjs) ---- */
@@ -67,7 +68,7 @@
     if (ev === "in") return push(K, KB, [t100(), "kb", "in", label(el), inputType(e.inputType), flags(e, el), was == null ? null : was, n]);
     return push(K, KB, [t100(), "kb", ev, label(el), null, flags(e, el), n]);
   }
-  /* the incident snapshot: the last SNAP_RING entries + SNAP_KB kb entries + page { before, at }; over CAP bytes: the oldest ring entries
+  /* the incident snapshot: the boot-time header + the last SNAP_RING entries (64 in all) + SNAP_KB kb entries + page { before, at }; over CAP bytes: the oldest ring entries
      go first, then page.before, then the kb entries, then the page */
   function fit(o, cap) {
     var s = JSON.stringify(o);
@@ -190,7 +191,8 @@
       perfFlush();                                                     // the long tasks so far, in this report
       log("inc", r.code, r.where, r.reason);
       var b4 = before ? Object.assign({ age_ms: now() - before.t }, before.p) : null;
-      return fit({ ring: R.slice(-SNAP_RING), kb: K.slice(-SNAP_KB), page: { before: b4, at: page() },
+      var tail = R.slice(-SNAP_RING), head = HEAD.filter(function (e) { return tail.indexOf(e) < 0; });   // a header that scrolled out leads, in the same 64
+      return fit({ ring: head.concat(tail.slice(head.length)), kb: K.slice(-SNAP_KB), page: { before: b4, at: page() },
         dev: { dpr: W.devicePixelRatio, vw: W.innerWidth, vh: W.innerHeight, mem: W.navigator.deviceMemory || null, cores: W.navigator.hardwareConcurrency || null,
           tier: W.stemFx ? W.stemFx.tier : null } }, Math.min(CAP, cap || CAP));
     } catch (x) { return null; }
@@ -212,6 +214,7 @@
     portrait: "(orientation: portrait)", pwa: "(display-mode: standalone)" };
   var mqState = function () { var s = []; for (var k in MQ) s.push(k + ":" + mm(MQ[k])); return s.join(" "); };
   log("mq", mqState());
+  HEAD = R.slice();
   for (var q in MQ) { try { var l = W.matchMedia(MQ[q]); if (l && l.addEventListener) l.addEventListener("change", function () { log("mq", mqState()); }); } catch (x) { /* old Safari */ } }
 
   /* throttled kinds: the event only marks "dirty"; one timer reads the numbers at most every THROTTLE ms */

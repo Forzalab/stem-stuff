@@ -115,6 +115,8 @@ test("snapshot: last 64 ring + last 20 kb + page.at (state, no text); cut to the
   for (let i = 0; i < 40; i++) fire("doc:keydown", kd("x", nodes["#scratch"]));
   const s = FR.snap({ code: "E-7K3QX", where: "explain", reason: "http", status: 504 });
   assert.equal(s.ring.length, 64);
+  assert.equal(s.ring.slice(0, 3).map(e => e[1]).join(" "), "boot flag mq", "the boot-time header leads every snapshot, however many entries came since (CI block 4, Oct 31)");
+  assert.equal(s.ring.at(-1)[1], "inc", "the newest entries stay");
   assert.equal(s.kb.length, 20);
   assert.equal(s.page.at.app.q, "CALC1_FL2");
   assert.equal(s.page.at.hash, "#CALC1_FL2");
