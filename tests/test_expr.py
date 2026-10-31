@@ -13,14 +13,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import expr  # noqa: E402
 import serve  # noqa: E402
 
-GOLD = "Sqrt(10^2+12.5^2+2.5^2)*40*(2*Pi)/60"                         # Tony's golden example (shape only; never solved here)
-GOLD_FORM = "(1*5.0^2+2*5.0^2+3*5.0^2+4*5.0^2)*(40*2*pi/60)"            # I (point masses, axis y) times alpha (rev/min per s -> rad/s^2)
+GOLD = "Sqrt(7^2+8.5^2+1.5^2)*30*(2*Pi)/60"                         # the golden example's SHAPE with invented numbers
+GOLD_FORM = "(2*3.0^2+3*3.0^2+5*3.0^2+6*3.0^2)*(30*2*pi/60)"            # invented numbers (no bank item): I (point masses, axis y) times alpha
 
 
 class Parser(unittest.TestCase):
     def test_accepts_the_form_grammar_plus_g(self):
-        for t in ["1200*9.8/(pi*1^2)", "1200*g/(pi*1^2)", GOLD, "-3^2", "2^-1", "sqrt(2)*sin(30*pi/180)", "asin(0.5)+acos(0.5)+atan(1)",
-                  "exp(1)*ln(2)*log(3)*abs(-4)", "1.5e3/2", ".5*2", "3 × 4 ÷ 2", "2·π", "√(4)", "2**3", "1200*9.8/(PI*1^2)"]:
+        for t in ["900*9.8/(pi*0.8^2)", "900*g/(pi*0.8^2)", GOLD, "-3^2", "2^-1", "sqrt(2)*sin(30*pi/180)", "asin(0.5)+acos(0.5)+atan(1)",
+                  "exp(1)*ln(2)*log(3)*abs(-4)", "1.5e3/2", ".5*2", "3 × 4 ÷ 2", "2·π", "√(4)", "2**3", "900*9.8/(PI*0.8^2)"]:
             expr.parse(t)
 
     def test_refuses_with_a_friendly_line(self):
@@ -34,15 +34,15 @@ class Parser(unittest.TestCase):
     def test_bare_number(self):
         for t in ["3.82", "-4", "1.2e3", "6.78e1", "1.07x10^14", "5*10^3", " 12 "]:
             self.assertTrue(expr.is_bare_number(t), t)
-        for t in ["3*4", "1200*9.8", "sqrt(2)", "pi", "g"]:
+        for t in ["3*4", "900*9.8", "sqrt(2)", "pi", "g"]:
             self.assertFalse(expr.is_bare_number(t), t)
 
 
 class Evaluator(unittest.TestCase):
     def test_values(self):
-        self.assertAlmostEqual(expr.evaluate("1200*9.8/(pi*1^2)")[1], 1200 * 9.8 / 3.141592653589793)
-        self.assertAlmostEqual(expr.evaluate("1200*g")[1], 1200 * 9.8)
-        self.assertAlmostEqual(expr.evaluate("1200*g", g=9.81)[1], 1200 * 9.81)
+        self.assertAlmostEqual(expr.evaluate("900*9.8/(pi*0.8^2)")[1], 900 * 9.8 / (3.141592653589793 * 0.64))
+        self.assertAlmostEqual(expr.evaluate("900*g")[1], 900 * 9.8)
+        self.assertAlmostEqual(expr.evaluate("900*g", g=9.81)[1], 900 * 9.81)
         self.assertAlmostEqual(expr.evaluate("2^3^2")[1], 512)
         self.assertAlmostEqual(expr.evaluate("-3^2")[1], -9)
         self.assertAlmostEqual(expr.evaluate("8/2/2")[1], 2)
@@ -64,36 +64,36 @@ class Evaluator(unittest.TestCase):
 class Aligner(unittest.TestCase):
     def test_golden_shape_alpha_affirmed_sqrt_off(self):
         r = expr.l1(GOLD, GOLD_FORM)
-        self.assertEqual(r["affirm"], [{"span": "40*(2*Pi)/60", "what": "that part"}])
-        self.assertEqual(r["off"]["span"], "Sqrt(10^2+12.5^2+2.5^2)")
+        self.assertEqual(r["affirm"], [{"span": "30*(2*Pi)/60", "what": "that part"}])
+        self.assertEqual(r["off"]["span"], "Sqrt(7^2+8.5^2+1.5^2)")
         self.assertEqual(r["off"]["what"], "the square root")
-        self.assertEqual(r["explain_each"], ["10", "12.5", "2.5"])        # the student's own numbers; the exponent 2s are not "numbers"
+        self.assertEqual(r["explain_each"], ["7", "8.5", "1.5"])        # the student's own numbers; the exponent 2s are not "numbers"
         self.assertIsNone(r["family"])                                      # no known family: L3's job
 
     def test_affirm_never_holds_the_off_piece(self):
-        r = expr.l1("1200*9.8/(pi*2^2)", "1200*9.8/(pi*1^2)")
-        self.assertEqual(r["off"]["span"], "2^2")
+        r = expr.l1("900*9.8/(pi*1.6^2)", "900*9.8/(pi*0.8^2)")
+        self.assertEqual(r["off"]["span"], "1.6^2")
         self.assertEqual(r["affirm"], [])
 
     def test_families_as_transforms(self):
         for stu, form, fam in [("5+3*2", "5-3*2", "sign"), ("-(3*4)", "3*4", "sign"), ("2*3/4", "2*4/3", "reciprocal"),
-                               ("1200*10/(pi*1^2)", "1200*9.8/(pi*1^2)", "g"), ("(3*4)^2", "3*4", "power"), ("3*sqrt(4+5)", "3*(4+5)", "power"),
+                               ("900*10/(pi*0.8^2)", "900*9.8/(pi*0.8^2)", "g"), ("(3*4)^2", "3*4", "power"), ("3*sqrt(4+5)", "3*(4+5)", "power"),
                                ("3*4*2", "3*4", "factor"), ("3*4/2", "3*4", "factor"), ("3*4/1000", "3*4", "units"), ("3*4", "3*4/1000", "units"),
                                ("3+4", "3+4+5", "drop"), ("2*cos(0.5)", "2*sin(0.5)", "trig")]:
             self.assertEqual(expr.l1(stu, form)["family"], fam, (stu, form))
 
     def test_g_typed_as_g_is_no_slip(self):
-        r = expr.l1("1200*g/(pi*1^2)", "1200*9.8/(pi*1^2)")
+        r = expr.l1("900*g/(pi*0.8^2)", "900*9.8/(pi*0.8^2)")
         self.assertTrue(all(p["status"] == "same" for p in r["pairs"]))
         self.assertIsNone(r["family"])
 
-    def test_tie_by_value_is_no_tie_by_tree(self):                         # E3 YZF: 80 = 800/g only when g is 10: the tree says which
+    def test_tie_by_value_is_no_tie_by_tree(self):                         # a value tie (800/10 = 80 = 784/9.8) is no tie in the tree
         self.assertEqual(expr.l1("800/10", "800/9.8")["family"], "g")
 
 
 def l3_reply(**kw):
-    v = {"affirm": [{"span": "40*(2*Pi)/60", "what": "α part"}], "off": {"span": "Sqrt(10^2+12.5^2+2.5^2)", "what": "the square root"},
-         "explain_each": ["10", "12.5", "2.5"], "recall": {"rule": "moment of inertia rule for point masses", "decider": "The axis is y."},
+    v = {"affirm": [{"span": "30*(2*Pi)/60", "what": "α part"}], "off": {"span": "Sqrt(7^2+8.5^2+1.5^2)", "what": "the square root"},
+         "explain_each": ["7", "8.5", "1.5"], "recall": {"rule": "moment of inertia rule for point masses", "decider": "The axis is y."},
          "next": "Write I_y as a sum with four terms, one term per mass.", "guard": "Keep the square root out of it."}
     v.update(kw.pop("view", {}))
     return dict({"family": None, "concept": "perpendicular distance to the axis", "confidence": 0.9, "student_view": v}, **kw)
@@ -111,24 +111,29 @@ class DiagnosisJson(unittest.TestCase):
 
     def test_six_moves_in_order(self):
         r = expr.l1(GOLD, GOLD_FORM)
-        d = expr.diagnosis("PHYS_X", None, GOLD, 67.87, r, source="L3", model="claude-sonnet-5-5", l3=l3_reply())
+        d = expr.diagnosis("PHYS_X", None, GOLD, 34.91, r, source="L3", model="claude-sonnet-5-5", l3=l3_reply())
         self.assertEqual(d["v"], "1.1")
         msg = expr.render(d, where="the last problem")
         parts = msg.split("\n\n")
         self.assertEqual(len(parts), 6)
-        self.assertIn("α part is right: `40*(2*Pi)/60`. Keep it.", parts[0])
+        self.assertIn("α part is right: `30*(2*Pi)/60`. Keep it.", parts[0])
         self.assertIn("square root is the part that's off", parts[1])
-        self.assertIn("the 10, the 12.5, and the 2.5", parts[2])
+        self.assertIn("the 7, the 8.5, and the 1.5", parts[2])
         self.assertIn("from the last problem", parts[3])
         self.assertIn("The axis is y.", parts[3])
         self.assertTrue(parts[4].startswith("Write I_y"))
         self.assertEqual(parts[5], "Keep the square root out of it.")
 
+    def test_affirm_frame_reads_plain(self):                          # live sample Oct 30: what "the angular acceleration conversion"
+        r = expr.l1(GOLD, GOLD_FORM)
+        d = expr.diagnosis("PHYS_X", None, GOLD, 34.91, r, source="L3", l3=l3_reply(view={"affirm": [{"span": "30*(2*Pi)/60", "what": "the α part"}]}))
+        self.assertTrue(expr.render(d).startswith("Your α part is right"))
+
     def test_l1_only_uses_the_same_slots(self):
-        r = expr.l1("1200*10/(pi*1^2)", "1200*9.8/(pi*1^2)")
-        d = expr.diagnosis("PHYS_X", None, "1200*10/(pi*1^2)", 1.0, r)
+        r = expr.l1("900*10/(pi*0.8^2)", "900*9.8/(pi*0.8^2)")
+        d = expr.diagnosis("PHYS_X", None, "900*10/(pi*0.8^2)", 1.0, r)
         msg = expr.render(d, family_line="QUACK. Fun fact.")
-        self.assertTrue(msg.startswith("This part is right: `1200*`") or msg.startswith("The 10 is"), msg)   # affirm first when it can
+        self.assertTrue(msg.startswith("This part is right: `900*`") or msg.startswith("The 10 is"), msg)   # affirm first when it can
         self.assertTrue(msg.endswith("QUACK. Fun fact."))
         self.assertIn("The 10 is the part that's off", msg)
 
@@ -136,13 +141,13 @@ class DiagnosisJson(unittest.TestCase):
 class Trim(unittest.TestCase):
     def test_long_fields_drop_and_frames_stay_plain(self):          # the live Sonnet sample (Oct 30) wrote sentences into "what" and "rule"
         r = expr.l1(GOLD, GOLD_FORM)
-        d = expr.diagnosis("PHYS_X", None, GOLD, 67.87, r, source="L3", l3=l3_reply(view={
-            "affirm": [{"span": "40*(2*Pi)/60", "what": "Converting rpm per second into radians per second squared is done correctly."}],
-            "off": {"span": "Sqrt(10^2+12.5^2+2.5^2)", "what": "This stands in for the moment of inertia about the y-axis, but it is built like a vector."},
+        d = expr.diagnosis("PHYS_X", None, GOLD, 34.91, r, source="L3", l3=l3_reply(view={
+            "affirm": [{"span": "30*(2*Pi)/60", "what": "Converting rpm per second into radians per second squared is done correctly."}],
+            "off": {"span": "Sqrt(7^2+8.5^2+1.5^2)", "what": "This stands in for the moment of inertia about the y-axis, but it is built like a vector."},
             "recall": {"rule": "Moment of inertia of point masses is the sum over particles of mass times the square of its perpendicular distance.", "decider": "The axis is y."},
             "guard": "Do not take a square root or combine distances like a vector length when adding up moment of inertia."}))
         msg = expr.render(expr.trim(d))
-        self.assertTrue(msg.startswith("This part is right: `40*(2*Pi)/60`. Keep it.\n\nThis part is off: `Sqrt("), msg)
+        self.assertTrue(msg.startswith("This part is right: `30*(2*Pi)/60`. Keep it.\n\nThis part is off: `Sqrt("), msg)
         self.assertNotIn("sum over particles", msg)
         self.assertIn("The axis is y.", msg)
         self.assertNotIn("Do not take", msg)
@@ -154,7 +159,7 @@ class LeakGuard(unittest.TestCase):
         self.typed = expr.literals(expr.parse(GOLD), skip_exp=False)
 
     def d(self, **kw):
-        return expr.diagnosis("PHYS_X", None, GOLD, 67.87, self.r, source="L3", l3=l3_reply(**kw))
+        return expr.diagnosis("PHYS_X", None, GOLD, 34.91, self.r, source="L3", l3=l3_reply(**kw))
 
     def test_clean(self):
         self.assertIsNone(expr.leak(self.d(), self.typed, [1.047], serve.leak_scan, GOLD_FORM))
@@ -163,22 +168,22 @@ class LeakGuard(unittest.TestCase):
         self.assertEqual(expr.leak(self.d(view={"next": "You should get 1.047 kJ."}), self.typed, [1.047], None, GOLD_FORM), "answer_digits")
 
     def test_a_number_the_student_did_not_type(self):
-        self.assertEqual(expr.leak(self.d(view={"guard": "Use 5 m, not 12.5."}), self.typed, [], None, GOLD_FORM), "number")
+        self.assertEqual(expr.leak(self.d(view={"guard": "Use 3 m, not 8.5."}), self.typed, [], None, GOLD_FORM), "number")
 
     def test_students_own_numbers_pass(self):
-        self.assertIsNone(expr.leak(self.d(view={"guard": "The 12.5 is not a distance to the axis."}), self.typed, [], None, GOLD_FORM))
+        self.assertIsNone(expr.leak(self.d(view={"guard": "The 8.5 is not a distance to the axis."}), self.typed, [], None, GOLD_FORM))
 
     def test_formula_and_prompt(self):
         self.assertEqual(expr.leak(self.d(view={"next": "Type " + GOLD_FORM}), self.typed, [], None, GOLD_FORM), "number")
         self.assertEqual(expr.leak(self.d(view={"next": "Type the thing"}), self.typed, [], lambda t: [1], GOLD_FORM), "prompt")
 
     def test_tidy_keeps_only_the_students_own(self):
-        d = expr.tidy(self.d(view={"explain_each": ["10^2", "the 12.5", "5", "2.5"], "affirm": [{"span": "40*2*pi", "what": "x"}],
+        d = expr.tidy(self.d(view={"explain_each": ["7^2", "the 8.5", "5", "1.5"], "affirm": [{"span": "30*2*pi", "what": "x"}],
                                    "off": {"span": "sqrt(5^2)", "what": "x"}}), self.r)
         sv = d["student_view"]
-        self.assertEqual(sv["explain_each"], ["10", "12.5", "2.5"])
+        self.assertEqual(sv["explain_each"], ["7", "8.5", "1.5"])
         self.assertEqual(sv["affirm"], [])
-        self.assertEqual(sv["off"], {"span": "Sqrt(10^2+12.5^2+2.5^2)", "what": "the square root"})
+        self.assertEqual(sv["off"], {"span": "Sqrt(7^2+8.5^2+1.5^2)", "what": "the square root"})
         self.assertIsNone(expr.leak(d, self.typed, [], None, GOLD_FORM))
 
     def test_span_must_be_the_students(self):
@@ -187,8 +192,8 @@ class LeakGuard(unittest.TestCase):
 
 
 def item(code, form, answer, **kw):
-    return dict({"code": code, "type": "num", "title": "rectangle torque", "form": form, "answer": answer, "tol": 0.01,
-                 "body": [{"type": "text", "md": "Four masses on a rectangle turn about the y axis."}]}, **kw)
+    return dict({"code": code, "type": "num", "title": "spinning frame", "form": form, "answer": answer, "tol": 0.01,
+                 "body": [{"type": "text", "md": "Four masses on a frame turn about the y axis."}]}, **kw)
 
 
 class Glue(unittest.TestCase):
@@ -200,8 +205,8 @@ class Glue(unittest.TestCase):
         os.makedirs(os.path.join(tmp, "banks"))
         for m in self.ps:
             m.start()
-        ans = 250 * 40 * 2 * 3.141592653589793 / 60
-        probs = [item("PHYS_GX1", GOLD_FORM, str(ans)), item("PHYS_GX2", "1200*9.8/(pi*1^2)", str(1200 * 9.8 / 3.141592653589793)),
+        ans = 144 * 30 * 2 * 3.141592653589793 / 60
+        probs = [item("PHYS_GX1", GOLD_FORM, str(ans)), item("PHYS_GX2", "900*9.8/(pi*0.8^2)", str(900 * 9.8 / (3.141592653589793 * 0.64))),
                  {"code": "PHYS_GX3", "type": "multi", "title": "parts", "body": [{"type": "text", "md": "x"}],
                   "parts": [dict(item("", "3*4", "12"), label="a"), dict(item("", "5*6", "30"), label="b")]}]
         with open(os.path.join(tmp, "banks", "BANK_P3X.json"), "w") as f:
@@ -244,10 +249,10 @@ class Glue(unittest.TestCase):
             self.assertEqual((r1["verdict"], r1["exprMode"]), ("wrong", True))
             r = self.g("PHYS_GX2", "s2", answer="3.74e3")                     # a bare number: the prompt, not a grade
             self.assertEqual((r["verdict"], r["triesLeft"], r["prompt"]), ("expr_needed", 1, expr.PROMPT))
-            r = self.g("PHYS_GX2", "s2", answer="1200*9.8/(pi1^2)")           # a syntax slip: a friendly line, not a try
+            r = self.g("PHYS_GX2", "s2", answer="900*9.8/(pi0.8^2)")           # a syntax slip: a friendly line, not a try
             self.assertEqual((r["verdict"], r["triesLeft"]), ("unparsed", 1))
             self.assertIn("Put *", r["syntax"])
-            r = self.g("PHYS_GX2", "s2", answer="1200*10/(pi*1^2)")           # wrong working: L1 names the family
+            r = self.g("PHYS_GX2", "s2", answer="900*10/(pi*0.8^2)")           # wrong working: L1 names the family
             self.assertEqual((r["verdict"], r["triesLeft"], r["error"]), ("wrong", 0, "g"))
             self.assertEqual(r["diag"]["source"], "L1")
             self.assertFalse(r["diag"]["pending"])
@@ -257,7 +262,7 @@ class Glue(unittest.TestCase):
     def test_right_working_is_right(self):
         with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}):
             self.g("PHYS_GX2", "s3", answer="1")
-            r = self.g("PHYS_GX2", "s3", answer="1200*g/(pi*1^2)")
+            r = self.g("PHYS_GX2", "s3", answer="900*g/(pi*0.8^2)")
         self.assertEqual(r["verdict"], "correct")
 
     def test_multi_part_boxes(self):
@@ -270,11 +275,11 @@ class Glue(unittest.TestCase):
 
     def test_golden_shape_asks_l3(self):
         with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}):
-            self.g("PHYS_GX1", "s5", answer="67.8")
+            self.g("PHYS_GX1", "s5", answer="34.9")
             r = self.g("PHYS_GX1", "s5", answer=GOLD)
         self.assertTrue(r["diag"]["pending"])
-        self.assertEqual(r["diag"]["off"], {"span": "Sqrt(10^2+12.5^2+2.5^2)"})
-        self.assertTrue(r["diag"]["msg"].startswith("This part is right: `40*(2*Pi)/60`"))
+        self.assertEqual(r["diag"]["off"], {"span": "Sqrt(7^2+8.5^2+1.5^2)"})
+        self.assertTrue(r["diag"]["msg"].startswith("This part is right: `30*(2*Pi)/60`"))
 
     def d(self, sid, text, code="PHYS_GX1"):
         p = serve.lookup(code, "diet")
@@ -289,16 +294,16 @@ class Glue(unittest.TestCase):
         stored = []
         with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}), unittest.mock.patch.object(serve, "expr_l3", return_value=l3_reply()) as l3, \
                 unittest.mock.patch.object(serve, "_expr_store", side_effect=stored.append):
-            self.g("PHYS_GX1", "s7", answer="67.8")
+            self.g("PHYS_GX1", "s7", answer="34.9")
             self.g("PHYS_GX1", "s7", answer=GOLD)
             st, out = self.d("s7", GOLD)
             self.assertEqual((st, out["source"]), (200, "L3"))
             self.assertEqual(len(out["msg"].split("\n\n")), 6)
-            self.assertEqual(out["off"], {"span": "Sqrt(10^2+12.5^2+2.5^2)"})
+            self.assertEqual(out["off"], {"span": "Sqrt(7^2+8.5^2+1.5^2)"})
             user = json.loads(l3.call_args[0][0])
             self.assertEqual(user["student_expression"], GOLD)
             self.assertEqual(user["correct_formula"], GOLD_FORM)
-            self.assertEqual(self.d("s7", "sqrt(10^2+12.5^2+2.5^2)*40*2*pi/60")[1].get("cached"), True)   # same working, another spelling
+            self.assertEqual(self.d("s7", "sqrt(7^2+8.5^2+1.5^2)*30*2*pi/60")[1].get("cached"), True)   # same working, another spelling
             self.assertEqual(l3.call_count, 1)
         row = stored[0]
         self.assertEqual(set(row), {"ts_day", "item", "part", "expr_norm", "diagnosis"})
@@ -310,13 +315,13 @@ class Glue(unittest.TestCase):
             sid = "s8" + why
             with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}), unittest.mock.patch.object(serve, "expr_l3", return_value=reply), \
                     unittest.mock.patch.object(serve, "_expr_store"):
-                self.g("PHYS_GX1", sid, answer="67.8")
+                self.g("PHYS_GX1", sid, answer="34.9")
                 self.g("PHYS_GX1", sid, answer=GOLD)
                 self.assertEqual(self.d(sid, GOLD)[1]["msg"], expr.NUDGE, why)
         serve._expr_cache.clear()
         with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}), unittest.mock.patch.object(serve, "expr_l3") as l3, \
                 unittest.mock.patch.object(serve, "explain_allowed", return_value=False):
-            self.g("PHYS_GX1", "s9", answer="67.8")
+            self.g("PHYS_GX1", "s9", answer="34.9")
             self.g("PHYS_GX1", "s9", answer=GOLD)
             out = self.d("s9", GOLD)[1]
             self.assertEqual((out["msg"], out["budget"]), (expr.NUDGE, "hourly"))

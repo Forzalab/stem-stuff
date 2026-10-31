@@ -629,7 +629,7 @@ def render(d, family_line=None, where=None):
     sv = d["student_view"]
     lines = []
     for a in sv.get("affirm") or []:
-        w = a.get("what") or "that part"
+        w = re.sub(r"^(the|your)\s+", "", a.get("what") or "that part", flags=re.I) if a.get("what") != "that part" else "that part"
         lines.append(f"Your {w} is right: `{a['span']}`. Keep it." if w != "that part" else f"This part is right: `{a['span']}`. Keep it.")
     off = sv.get("off")
     if off:
@@ -665,11 +665,11 @@ L3_SYSTEM = """You help a physics student find the mistake in their own work. Yo
 L3_FIELDS = """Field notes (keep every shown field short; the app adds the frame words around them):
 - student_view.affirm[].span and student_view.off.span: copied exactly from the student's expression.
 - affirm[].what and off.what: a noun phrase of 2 to 6 words naming the piece ("the α part", "the square root"). No sentence, no verdict.
-- explain_each: only the student's own numbers inside the off span, as typed (["10", "12.5"]). No questions.
+- explain_each: only the student's own numbers inside the off span, as typed (["7", "8.5"]). No questions.
 - recall.rule: the name of the idea in 3 to 8 words ("moment of inertia of point masses"). Never how it is computed, never a formula.
 - recall.decider: one short sentence, the one fact from the question that decides it ("The axis is y."). Not what to do with it.
 - next: one instruction of at most 16 words that sets up the structure without solving it.
 - guard: at most 10 words that block the wrong path.
 - family: one of distribute, sign, drop, reciprocal, power, factor, dream, trig, units, g when it fits, else null.
 - No numbers in any field except the student's own.
-Example of the style (another question, another student): affirm what "the α part"; off what "the square root"; explain_each ["10", "12.5", "2.5"]; recall rule "moment of inertia of point masses", decider "The axis is y."; next "Write I_y as a sum with four terms, one term per mass."; guard "Keep the square root out of it."."""
+Example of the style (another question, another student): affirm what "the α part"; off what "the square root"; explain_each ["7", "8.5", "1.5"]; recall rule "moment of inertia of point masses", decider "The axis is y."; next "Write I_y as a sum with four terms, one term per mass."; guard "Keep the square root out of it."."""

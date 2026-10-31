@@ -20,21 +20,21 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const free = () => new Promise(res => { const s = tcp().listen(0, () => { const p = s.address().port; s.close(() => res(p)); }); });
 const PORT = +(process.argv[2] || 8851), OFFP = await free(), FAKE = await free(), SHOTS = process.argv[3] || "";
 const TMP = mkdtempSync(join(tmpdir(), "expr-")), BANKS = join(TMP, "banks");
-const GOLD = "Sqrt(10^2+12.5^2+2.5^2)*40*(2*Pi)/60";
-const FORM = "(1*5.0^2+2*5.0^2+3*5.0^2+4*5.0^2)*(40*2*pi/60)";
-const ANS = String(250 * 40 * 2 * Math.PI / 60);
+const GOLD = "Sqrt(7^2+8.5^2+1.5^2)*30*(2*Pi)/60";
+const FORM = "(2*3.0^2+3*3.0^2+5*3.0^2+6*3.0^2)*(30*2*pi/60)";
+const ANS = String(144 * 30 * 2 * Math.PI / 60);
 const body = md => [{ type: "text", md }];
 mkdirSync(BANKS);
 writeFileSync(join(BANKS, "BANK_P3X.json"), JSON.stringify({ v: 20261022, problems: [
-  { code: "PHYS_XG1", title: "X3 Q6 rectangle torque, practice", type: "num", answer: ANS, form: FORM, tol: 0.01,
-    body: body("Four particles ($m_1..m_4$ = 1..4 kg) sit on the corners of a rectangle $2a \\times 2b$, $a$ = 5.0 m, $b$ = 10 m. It turns about the y axis through its centre and speeds up by 40 rev/min each second. Find the torque, in N·m.") },
-  { code: "PHYS_XG2", title: "X3 Q1 piston, practice", type: "num", answer: String(1200 * 9.8 / Math.PI), form: "1200*9.8/(pi*1^2)", tol: 0.01,
-    body: body("A 1200 kg car sits on a piston of radius 1 m. Find the pressure, in Pa.") },
+  { code: "PHYS_XG1", title: "Practice: spinning frame", type: "num", answer: ANS, form: FORM, tol: 0.01,
+    body: body("Four particles ($m_1..m_4$ = 2, 3, 5, 6 kg) sit on the corners of a frame $2a \\times 2b$, $a$ = 3.0 m, $b$ = 7.0 m. It turns about the y axis through its centre and speeds up by 30 rev/min each second. Find the torque, in N·m.") },
+  { code: "PHYS_XG2", title: "Practice: lift piston", type: "num", answer: String(900 * 9.8 / (Math.PI * 0.64)), form: "900*9.8/(pi*0.8^2)", tol: 0.01,
+    body: body("A 900 kg crate sits on a piston of radius 0.8 m. Find the pressure, in Pa.") },
 ] }));
 /* the fake Claude (Messages API, non-stream): the L3 diagnosis as structured JSON text, the golden answer's shape */
 const L3 = { family: null, concept: "perpendicular distance to the axis", confidence: 0.9, student_view: {
-  affirm: [{ span: "40*(2*Pi)/60", what: "α part" }], off: { span: "Sqrt(10^2+12.5^2+2.5^2)", what: "the square root" },
-  explain_each: ["10", "12.5", "2.5"], recall: { rule: "moment of inertia rule for point masses", decider: "The axis is y." },
+  affirm: [{ span: "30*(2*Pi)/60", what: "α part" }], off: { span: "Sqrt(7^2+8.5^2+1.5^2)", what: "the square root" },
+  explain_each: ["7", "8.5", "1.5"], recall: { rule: "moment of inertia rule for point masses", decider: "The axis is y." },
   next: "Write I_y as a sum with four terms, one term per mass.", guard: "Keep the square root out of it." } };
 let fakeCalls = 0;
 const fake = createServer((req, res) => {
@@ -81,7 +81,7 @@ try {
 
     await step(`${w}: first try is a number, as today; the miss turns the box to the whole working`, async () => {
       await page.goto(`${BASE}/#PHYS_XG1`); await opened(page, "PHYS_XG1");
-      const r = await send(page, "67.8");
+      const r = await send(page, "34.9");
       assert.equal(r.verdict, "wrong"); assert.equal(r.exprMode, true);
       await page.waitForFunction(() => document.querySelector("#xline")?.textContent.startsWith("Type your whole working"));
       assert.equal(await page.getAttribute("#ans", "placeholder"), "Type your whole working, e.g. 1200*9.8/(pi*1^2)");
@@ -94,7 +94,7 @@ try {
       await shot(page, `expr-${w}-prompt`);
     });
     await step(`${w}: a syntax slip is a friendly line, never a try`, async () => {
-      const n = await nTries(page), r = await send(page, "1200*9.8/(pi1^2)");
+      const n = await nTries(page), r = await send(page, "900*9.8/(pi0.8^2)");
       assert.equal(r.verdict, "unparsed");
       assert.match(await page.textContent("#xline"), /Put \*/);
       assert.equal(await nTries(page), n);
@@ -104,9 +104,9 @@ try {
       await page.type("#ans", GOLD, { delay: 0 });
       await page.waitForFunction(() => document.querySelector("#preview .xval"));
       const t = await page.textContent("#preview .xval");
-      assert.equal(t, "(= 67.87)");
+      assert.equal(t, "(= 34.91)");
       assert.ok(await page.$("#preview .xexpr .katex"), "the working is not rendered");
-      assert.ok(!(await page.textContent("#preview")).includes("1047"), "the right answer showed");
+      assert.ok(!(await page.textContent("#preview")).includes("452"), "the right answer showed");
       const op = await page.$eval("#preview .xval", e => +getComputedStyle(e).opacity);
       assert.ok(op < 1, "the value is not dim");
       await shot(page, `expr-${w}-live`);
@@ -116,14 +116,14 @@ try {
       assert.equal(r.verdict, "wrong"); assert.equal(r.diag.pending, true);
       await page.waitForFunction(() => /Keep the square root out of it/.test(document.querySelector("#cluck")?.textContent || ""), null, { timeout: 8000 });
       const txt = (await page.textContent("#cluck")).replace(/\s+/g, " ");
-      const order = ["α part is right", "square root is the part that's off", "the 10, the 12.5, and the 2.5", "The axis is y.", "Write I_y as a sum", "Keep the square root out of it."];
+      const order = ["α part is right", "square root is the part that's off", "the 7, the 8.5, and the 1.5", "The axis is y.", "Write I_y as a sum", "Keep the square root out of it."];
       const at = order.map(s => txt.indexOf(s));
       assert.ok(at.every(i => i >= 0), "a move is missing: " + JSON.stringify(at));
       assert.deepEqual([...at].sort((a, b) => a - b), at, "the moves are out of order");
       assert.equal(await page.$eval("#cluck", e => !e.hidden && e.getBoundingClientRect().height > 0), true, "Cluck did not open");
       assert.ok(await page.$("#preview .xoff"), "no underline on the off span");
-      assert.match(await page.textContent("#preview .xoff"), /10/);
-      assert.ok(!txt.includes("250") && !txt.includes("1047") && !txt.includes("5.0"), "a key number leaked");
+      assert.match(await page.textContent("#preview .xoff"), /7/);
+      assert.ok(!txt.includes("144") && !txt.includes("452") && !txt.includes("3.0"), "a key number leaked");
       await page.waitForTimeout(300);
       await shot(page, `expr-${w}-cluck`);
     });
