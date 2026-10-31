@@ -1484,7 +1484,9 @@ def diagnose(p, sid, b):
     if not isinstance(l3, dict) or not expr.valid(l3):
         log(f"expr l3 {p['code']}: {'no reply' if l3 is None else 'bad schema'}")
         return 200, nudge
-    d = expr.diagnosis(p["code"], idx, text, val, r, source="L3", model=EXPR_MODEL, l3=l3)
+    d = expr.trim(expr.tidy(expr.diagnosis(p["code"], idx, text, val, r, source="L3", model=EXPR_MODEL, l3=l3), r))
+    if d["family"] not in slips.FAMILIES:                    # a family is a slips id or new:<slug> (GRILL v1); free text becomes a new: slug
+        d["family"] = "new:" + re.sub(r"[^a-z0-9]+", "-", str(d["family"]).lower()).strip("-")[:40] if d["family"] else None
     if (d["student_view"].get("recall") or {}) and where:
         d["student_view"]["recall"]["where"] = where
     why = expr.leak(d, expr.literals(tree, skip_exp=False), hidden_values(p), leak_scan, u["form"])

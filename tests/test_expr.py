@@ -133,6 +133,21 @@ class DiagnosisJson(unittest.TestCase):
         self.assertIn("The 10 is the part that's off", msg)
 
 
+class Trim(unittest.TestCase):
+    def test_long_fields_drop_and_frames_stay_plain(self):          # the live Sonnet sample (Oct 30) wrote sentences into "what" and "rule"
+        r = expr.l1(GOLD, GOLD_FORM)
+        d = expr.diagnosis("PHYS_X", None, GOLD, 67.87, r, source="L3", l3=l3_reply(view={
+            "affirm": [{"span": "40*(2*Pi)/60", "what": "Converting rpm per second into radians per second squared is done correctly."}],
+            "off": {"span": "Sqrt(10^2+12.5^2+2.5^2)", "what": "This stands in for the moment of inertia about the y-axis, but it is built like a vector."},
+            "recall": {"rule": "Moment of inertia of point masses is the sum over particles of mass times the square of its perpendicular distance.", "decider": "The axis is y."},
+            "guard": "Do not take a square root or combine distances like a vector length when adding up moment of inertia."}))
+        msg = expr.render(expr.trim(d))
+        self.assertTrue(msg.startswith("This part is right: `40*(2*Pi)/60`. Keep it.\n\nThis part is off: `Sqrt("), msg)
+        self.assertNotIn("sum over particles", msg)
+        self.assertIn("The axis is y.", msg)
+        self.assertNotIn("Do not take", msg)
+
+
 class LeakGuard(unittest.TestCase):
     def setUp(self):
         self.r = expr.l1(GOLD, GOLD_FORM)
@@ -156,6 +171,15 @@ class LeakGuard(unittest.TestCase):
     def test_formula_and_prompt(self):
         self.assertEqual(expr.leak(self.d(view={"next": "Type " + GOLD_FORM}), self.typed, [], None, GOLD_FORM), "number")
         self.assertEqual(expr.leak(self.d(view={"next": "Type the thing"}), self.typed, [], lambda t: [1], GOLD_FORM), "prompt")
+
+    def test_tidy_keeps_only_the_students_own(self):
+        d = expr.tidy(self.d(view={"explain_each": ["10^2", "the 12.5", "5", "2.5"], "affirm": [{"span": "40*2*pi", "what": "x"}],
+                                   "off": {"span": "sqrt(5^2)", "what": "x"}}), self.r)
+        sv = d["student_view"]
+        self.assertEqual(sv["explain_each"], ["10", "12.5", "2.5"])
+        self.assertEqual(sv["affirm"], [])
+        self.assertEqual(sv["off"], {"span": "Sqrt(10^2+12.5^2+2.5^2)", "what": "the square root"})
+        self.assertIsNone(expr.leak(d, self.typed, [], None, GOLD_FORM))
 
     def test_span_must_be_the_students(self):
         self.assertEqual(expr.leak(self.d(view={"off": {"span": "sqrt(5^2)", "what": "x"}}), self.typed, [], None, GOLD_FORM), "span")
@@ -310,6 +334,8 @@ class Glue(unittest.TestCase):
         with open(os.path.join(serve.ROOT, "vercel.json")) as f:
             rw = json.load(f)["rewrites"]
         self.assertIn({"source": "/diagnose", "destination": "/api/index?path=/diagnose"}, rw)
+        with open(os.path.join(serve.ROOT, "vercel.json")) as f:
+            self.assertIn("expr.py", json.load(f)["functions"]["api/index.py"]["includeFiles"])   # serve.py imports it on Vercel too
 
 
 class Privacy(unittest.TestCase):

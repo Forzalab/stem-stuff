@@ -530,6 +530,31 @@ def shown_fields(d):
     return [x for x in out if x]
 
 
+def _first_num(x):
+    m = NUM_RE.search(str(x))
+    return m.group(0) if m else None
+
+
+def tidy(d, l1r):
+    """an L3 view made safe to check before the leak guard: an affirm span that is not the student's own text goes; an off span that
+    is not goes back to L1's; explain_each keeps only numbers the student typed (as typed: "10^2" -> "10"). Never adds anything new."""
+    sv = d.get("student_view") or {}
+    flat = clean(d.get("attempt", {}).get("expr", "")).replace(" ", "").lower()
+    mine = lambda sp: bool(sp) and clean(sp).replace(" ", "").lower() in flat  # noqa: E731
+    sv["affirm"] = [a for a in sv.get("affirm") or [] if mine(a.get("span"))]
+    if sv.get("off") and not mine(sv["off"].get("span")):
+        sv["off"] = {k: l1r["off"][k] for k in ("span", "what")} if l1r.get("off") else None
+    typed = literals(parse(d.get("attempt", {}).get("expr", "")), skip_exp=False)
+    each = []
+    for x in sv.get("explain_each") or []:
+        n = _first_num(x)
+        hit = next((t for t in typed if n is not None and _same(float(t), float(n))), None)
+        if hit is not None and hit not in each:
+            each.append(hit)
+    sv["explain_each"] = each or l1r.get("explain_each", [])
+    return d
+
+
 def leak(d, typed, banned, scan=None, form=""):
     """None when every shown field is clean, else why: a number the student didn't type (key / option digits never ride: any number not
     typed is refused, banned ones are named), the correct formula, or a prompt word (scan = serve.leak_scan, W92). The spans (affirm/off/
@@ -573,6 +598,30 @@ def _and(xs):
     return xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + ", and " + xs[-1]
 
 
+CAPS = {"what": 40, "rule": 70, "decider": 110, "next": 130, "guard": 80}   # a longer field is not a move: dropped (render skips it)
+
+
+def trim(d):
+    """L3's fields over CAPS go (a long 'what' falls back to the frame's plain words): the moves stay short, the way TUTOR-LITE wants"""
+    sv = d.get("student_view") or {}
+    for a in sv.get("affirm") or []:
+        if len(a.get("what") or "") > CAPS["what"] or (a.get("what") or "").rstrip().endswith("."):
+            a["what"] = "that part"
+    if sv.get("off") and (len(sv["off"].get("what") or "") > CAPS["what"] or (sv["off"].get("what") or "").rstrip().endswith(".")):
+        sv["off"]["what"] = "one part"
+    rc = sv.get("recall")
+    if rc:
+        for k in ("rule", "decider"):
+            if len(rc.get(k) or "") > CAPS[k]:
+                rc[k] = ""
+        if not rc.get("rule") and not rc.get("decider"):
+            sv["recall"] = None
+    for k in ("next", "guard"):
+        if len(sv.get(k) or "") > CAPS[k]:
+            sv[k] = None
+    return d
+
+
 def render(d, family_line=None, where=None):
     """the 6 moves as Cluck's message (plain lines, Cluck voice), in order affirm -> off -> explain_each -> recall -> next -> guard; a slot
     with nothing is skipped. family_line: L1's family hint (the recall slot when L3 gave none). where: recall's place, from the server's
@@ -584,7 +633,8 @@ def render(d, family_line=None, where=None):
         lines.append(f"Your {w} is right: `{a['span']}`. Keep it." if w != "that part" else f"This part is right: `{a['span']}`. Keep it.")
     off = sv.get("off")
     if off:
-        lines.append(f"{_cap(off.get('what') or 'one part')} is the part that's off: `{off['span']}`.")
+        w = off.get("what") or "one part"
+        lines.append(f"This part is off: `{off['span']}`." if w == "one part" else f"{_cap(w)} is the part that's off: `{off['span']}`.")
     each = sv.get("explain_each") or []
     if each:
         lines.append(f"Write down what each number there means: {_and(each)}. One line each." if len(each) > 1
@@ -592,7 +642,8 @@ def render(d, family_line=None, where=None):
     rc = sv.get("recall")
     if rc and (rc.get("rule") or rc.get("decider")):
         place = f" from {where}" if where else ""
-        lines.append(" ".join(x for x in (_sentence(f"Then go back to the {rc['rule']}{place}") if rc.get("rule") else "", _sentence(rc.get("decider"))) if x))
+        rule = re.sub(r"^the\s+", "", rc.get("rule") or "", flags=re.I)
+        lines.append(" ".join(x for x in (_sentence(f"Then go back to the {rule}{place}") if rule else "", _sentence(rc.get("decider"))) if x))
     elif family_line:
         lines.append(family_line)
     if sv.get("next"):
@@ -611,4 +662,14 @@ def cache_key(item, part, n):
 
 
 L3_SYSTEM = """You help a physics student find the mistake in their own work. You get the question, the correct formula as an expression, and the student's expression. Fill the JSON schema. Rules: compare the two expressions piece by piece. Mark what is right by its exact text. Name the one part that is off by what it is, never by its value. Ask the student to say what each of their own numbers in that part means. If the needed rule appeared earlier (given in `seen`), point to where; otherwise name the idea in plain words. Give one next action and one short guardrail. Never write the answer, any number from the correct formula or the options, or the correct formula itself. Short, warm, plain sentences. If you are not sure, set confidence below 0.6 and keep the hint general."""
-L3_FIELDS = """Field notes: student_view.affirm[].span and student_view.off.span are copied exactly from the student's expression. explain_each lists the student's own numbers inside the off span, as typed. recall.rule names the idea in words (no symbols, no numbers); recall.decider is the one fact from the question that decides it, in words. next and guard contain no numbers."""
+L3_FIELDS = """Field notes (keep every shown field short; the app adds the frame words around them):
+- student_view.affirm[].span and student_view.off.span: copied exactly from the student's expression.
+- affirm[].what and off.what: a noun phrase of 2 to 6 words naming the piece ("the α part", "the square root"). No sentence, no verdict.
+- explain_each: only the student's own numbers inside the off span, as typed (["10", "12.5"]). No questions.
+- recall.rule: the name of the idea in 3 to 8 words ("moment of inertia of point masses"). Never how it is computed, never a formula.
+- recall.decider: one short sentence, the one fact from the question that decides it ("The axis is y."). Not what to do with it.
+- next: one instruction of at most 16 words that sets up the structure without solving it.
+- guard: at most 10 words that block the wrong path.
+- family: one of distribute, sign, drop, reciprocal, power, factor, dream, trig, units, g when it fits, else null.
+- No numbers in any field except the student's own.
+Example of the style (another question, another student): affirm what "the α part"; off what "the square root"; explain_each ["10", "12.5", "2.5"]; recall rule "moment of inertia of point masses", decider "The axis is y."; next "Write I_y as a sum with four terms, one term per mass."; guard "Keep the square root out of it."."""
