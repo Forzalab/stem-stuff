@@ -40,3 +40,7 @@
   .stoast.out { animation: stoast-fade-out .15s linear forwards; }
   .stoast-bar i { transition: none; }
 }
+/* the short toast (W133, todo 133: the twist toast): a line and one outlined action, no bar. The action is the site's secondary .btn
+   sized to its words (the popover's .pop-act precedent), never .btn-go (STYLE.md §4: the filled one is the page's submit) */
+.stoast-short .stoast-bar { display: none; }
+.stoast-a { justify-self: start; width: auto; padding: 0 var(--s3); font: inherit; white-space: nowrap; }

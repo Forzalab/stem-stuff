@@ -86,7 +86,7 @@ not a bank and is never dropped. To move a bank up, follow design/BANK-MIGRATION
 | `noob` | all, optional | `{ "tier": 1 \| 2 \| 3 }`: the noob ramp's author tier (see "Repair ladder, noob tier, welcome, twins") | yes |
 | `welcome` | all, optional | `true` on the bank's one welcome Q1 | yes |
 | `unit` | `num`, a `num` part of a `multi`; optional | the answer's unit, KaTeX-safe text, at most 16 characters: `"m/s^2"`, `"10^4 kg·m^2/s"`, `"°C"`, `"%"`; `""` = unitless. Tony, Oct 29: "every answer shall show the units". Schema only for now (the display is W132); not on `expr`, `text`, `mc` or their parts | not yet (no display) |
-| `twist` | all, optional | `true` = a twist of a real exam question; the app will show a Twist chip (Tony's twist chip ask, todo 133). Schema only for now; not on a part | not yet (no display) |
+| `twist` | all, optional | `true` = a twist of a real exam question; the app shows a Twist chip in the question header, and the first twist on a device a one-time toast (todo 133, W133). Not on a part | yes, only as `true` |
 | `twin` | all, optional | `"a"` (same question, new numbers) or `"b"` (the twisted one): a redo twin of `parent_template` | yes |
 | `parent_template` | with `twin` | the code of the twin's template item, in the same bank | yes |
 | `proof` | `proof` (required) | the key of a proof item: `reference`, `rubric`, `keys`, `hints` (see "Proof items") | **no** |
@@ -710,7 +710,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
           "properties": {"tier": {"enum": [1, 2, 3]}}},
         "welcome": {"const": true, "description": "the bank's welcome Q1 (DESIGN-v3 §2): at most one per bank, needs repair (welcome.js renders it through repair.js)"},
         "unit": {"type": "string", "maxLength": 16, "description": "num only: the answer's unit, KaTeX-safe text (\"m/s^2\", \"10^4 kg·m^2/s\", \"°C\", \"%\"); \"\" = unitless. Schema only for now: the display is W132"},
-        "twist": {"type": "boolean", "description": "a twist of a real exam question; the app shows a Twist chip (todo 133). Schema only for now"},
+        "twist": {"type": "boolean", "description": "a twist of a real exam question; the app shows a Twist chip (todo 133)"},
         "twin": {"enum": ["a", "b"], "description": "a redo twin of parent_template: a = same question, new numbers; b = the twisted one. Needs parent_template"},
         "parent_template": {"type": "string", "pattern": "^(?!(?:BANK|DIET|SUGAR|ADMIN|UNADMIN)_)[A-Z][A-Z0-9]{2,5}_[A-Z0-9]{3,6}$", "description": "twin: the code of its template item in this bank (not a twin, carries repair); one a and one b per template"},
         "repair": {"type": "object", "required": ["steps"], "additionalProperties": false, "description": "server only: the repair ladder (SCHEMA.md \"Repair ladder\"); GET /repair/<code> after a recorded wrong try",

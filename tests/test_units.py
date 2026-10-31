@@ -1,5 +1,5 @@
 """W132 (todo 132, Tony Oct 29: "every answer shall show the units"): serve.public() lets an answer's `unit` through to the page
-(a num item, a num part of a multi), never `twist` (W133) and never the key. tests/fixtures/units-demo.json is made up (no brain bank
+(a num item, a num part of a multi), and never the key. `twist` (W133) goes only as `true` (the Twist chip): test_twist.py. tests/fixtures/units-demo.json is made up (no brain bank
 items: those never enter the repo): num with m/s^2 + twist, num m, num "", a multi with a kg part and a "" part, an mc.
 answer_of() stays the value only: the copy button copies it."""
 import json
@@ -41,11 +41,13 @@ class PublicUnit(unittest.TestCase):
                     self.assertEqual(pq.get("unit"), q["unit"], p["code"])
         self.assertEqual(n, 4)
 
-    def test_no_twist_no_key(self):
+    def test_no_key(self):                               # W133: `twist: true` now reaches the page (test_twist.py); the key never does
         self.assertTrue(any("twist" in p for p in DEMO))
         for p in DEMO + UT:
-            pub = json.dumps(serve.public(p, "s1"))
-            for k in ("twist", "answer", "accept", "tol", "wrong", "nudge", "form"):
+            pub = serve.public(p, "s1")
+            self.assertEqual(pub.get("twist"), True if p.get("twist") is True else None, p["code"])
+            pub = json.dumps(pub)
+            for k in ("answer", "accept", "tol", "wrong", "nudge", "form"):
                 self.assertNotIn(f'"{k}"', pub, p["code"])
 
     def test_unitless_and_absent(self):

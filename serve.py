@@ -526,8 +526,8 @@ def shuffled(choices, seed):
 
 
 def public(p, sid=""):
-    """What the browser may see: no answer, accept, points, tol, correct, wrong, nudge, twist (W133). A num's `unit` (item or part) goes
-    (W132). sid seeds the mc shuffle."""
+    """What the browser may see: no answer, accept, points, tol, correct, wrong, nudge. A num's `unit` (item or part) goes
+    (W132). `twist` goes only as `true` (W133: the Twist chip; a false or junk twist stays home). sid seeds the mc shuffle."""
     out = {k: p[k] for k in PUBLIC if k in p}
     if p.get("type") == "mc":
         ch = shown(p)
@@ -538,6 +538,8 @@ def public(p, sid=""):
         out["parts"] = [{k: q[k] for k in ("label", "prompt", "type", "var", *(("unit",) if q.get("type") == "num" else ())) if k in q} for q in p["parts"]]
     if p.get("type") == "num" and "unit" in p:              # W132: the answer line shows it after the value; a unit never gives the number away
         out["unit"] = p["unit"]
+    if p.get("twist") is True:                               # W133: the question header's Twist chip; a twist gives nothing away
+        out["twist"] = True
     return out
 
 

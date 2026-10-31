@@ -664,6 +664,7 @@ async function load(code) {
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
   rwSync();
   rwRedoTip();
+  twistToast();
   origRender();
   padRule();
   window.stemBrainrot?.sync();
@@ -680,6 +681,7 @@ function render() {
      the tip read as a give-away). Sugar only, like the tip was; prob.tip stays on the problem, unshown */
   const lead = modeOf() === "sugar" && typeof prob.title === "string" ? prob.title.trim().replace(/\s+/g, " ") : "";
   if (lead) { const t = document.createElement("p"); t.className = "ptitle"; t.textContent = lead; blocks.append(t); }
+  if (prob.twist === true) twistChip(blocks);                             // W133: a twist item's "Twist" chip, left of the title (none: nothing at all)
   const C = snackChg();
   if (C?.pairs.length) {
     const c = document.createElement("p"); c.className = "chg-chip";
@@ -704,6 +706,38 @@ function render() {
   clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
   applyMT();
   layoutFreeze();
+}
+/* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
+   An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
+   shows one, else a header row of its own). A tap opens a note popover (popover.js, design/POPOVER.md) with TWIST_POP. The first twist
+   on this device also gets the short toast (toast.js: no bar, one action): TWIST_TOAST + "What is that?", which opens the chip's popover.
+   Once per device: localStorage TWIST_KEY, set when the toast is on screen (blocked storage: no toast, never a toast every time).
+   The toast keeps off the answer area (#q: the box, the ladder, the choices) and Next, tap or no tap. No twist: no chip, no row, no toast. */
+const TWIST_TOAST = "You found a twist.", TWIST_ACT = "What is that?";
+const TWIST_POP = "You’ll see twists often. These twists change one detail from real exam questions, which will improve retention.";
+const TWIST_KEY = "stem-twist-seen";
+let twistAsked = false;                                                    // queued once per page load (a re-load of the same code never queues a second)
+function twistChip(blocks) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "twist-chip"; b.id = "twistChip"; b.textContent = "Twist";
+  b.addEventListener("click", () => twistPop(b, true));
+  let row = blocks.querySelector(".ptitle");
+  if (!row) { row = document.createElement("p"); row.className = "ptitle twist-row"; blocks.append(row); }
+  row.prepend(b);
+}
+function twistPop(b, toggle) {
+  const o = { variant: "note", label: "What is a twist?", build: el => { const p = document.createElement("p"); p.textContent = TWIST_POP; el.append(p); } };
+  return toggle ? Pop.toggle(b, o) : Pop.open(b, o);
+}
+function twistToast() {
+  const T = window.stemToast, code = S && S.code;
+  if (!T || !S || S.prob.twist !== true || twistAsked) return;
+  try { if (localStorage.getItem(TWIST_KEY)) return; } catch { return; }
+  twistAsked = true;
+  T.show({ text: TWIST_TOAST, bar: false, ms: 6000, until: Date.now() + 15000, clear: "#q, .nx",
+    at: () => S && S.code === code ? ($("#fb")?.textContent.trim() ? $("#fb") : $("#q")) : null,
+    onshow: () => { try { localStorage.setItem(TWIST_KEY, "1"); } catch { /* shown, not kept */ } },
+    action: { label: TWIST_ACT, run: () => { const b = $("#twistChip"); if (!b || S.code !== code) return; b.scrollIntoView({ block: "nearest" }); twistPop(b, false); } } });
 }
 /* a snack in sugar: what it changed from its original (chg.mjs), once per problem; else null */
 function snackChg() {
