@@ -921,6 +921,24 @@ class Repair(unittest.TestCase):
         self.assertEqual(out["steps"][2]["opts"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["opts"])   # fill chips stay served
         self.assertEqual(out["steps"][2]["ok"], self.FIX["PHYS_RPA"]["repair"]["steps"][2]["ok"])
 
+    def test_check_names_the_slip_family(self):
+        """todo 130 (live: a welcome ladder's keyless num answer typed with g=10 got the generic hint): a miss on an answer step graded by
+        the item's own key carries the same {error, hint} as /check: the item's `wrong` entries first, then the slips of its `form`.
+        Synthetic welcome item (BQ3's shape): F = 300(9.8) N over 2 m^2, in kPa."""
+        fix = {**self.FIX, "PHYS_WSG": {
+            "code": "PHYS_WSG", "type": "num", "answer": "1.47", "form": "300*9.8/2/1000", "tol": 0.01, "welcome": True,
+            "wrong": [{"match": "0.15", "error": "misread", "hint": "QUACK. Is a mass a force?"}],
+            "nudge": "QUACK. The plain nudge.", "body": [{"type": "text", "md": "x"}],
+            "repair": {"steps": [{"id": "who", "label": "Who?", "kind": "pick", "opts": [{"id": "a", "md": "A"}], "ok": "a"},
+                                 {"id": "answer", "label": "Final answer", "kind": "num"}]}}}
+        with unittest.mock.patch.object(serve, "problems", lambda: fix):
+            self.assertEqual(self.check("PHYS_WSG", "r-slip", "1.5"), (200, {"ok": False, "error": "g", "hint": serve.FAMILY_HINT["g"]}))
+            self.assertEqual(self.check("PHYS_WSG", "r-slip", "0.15"), (200, {"ok": False, "error": "misread", "hint": "QUACK. Is a mass a force?"}))
+            self.assertEqual(self.check("PHYS_WSG", "r-slip", "7"), (200, {"ok": False}))                # no family: the ladder's own hint tier
+            self.assertEqual(self.check("PHYS_WSG", "r-slip", "1.47"), (200, {"ok": True}))
+            st, _, raw = serve.dispatch("POST", "/repair/PHYS_WSG/check", f"sid={self.sid('r-slip')}", b'{"value": "1.5", "n": 2}')
+            self.assertEqual(json.loads(raw), {"ok": False, "answer": "1.47", "error": "g", "hint": serve.FAMILY_HINT["g"]})
+
     def test_check_is_not_a_try(self):
         self.miss("PHYS_RPA", "r-try")
         before = serve.dispatch("GET", "/state/PHYS_RPA", f"sid={self.sid('r-try')}")[2]
