@@ -293,6 +293,65 @@ try {
         await ctx.close();
       }
     }
+    /* todo 135 (Tony, Oct 29: "add 3 more brainrot vid for desktop"): docked, 6 categories (one video each) in the same box, one row
+       that scrolls sideways, same 9:16 frames and height cap, so the column is as tall as with 3; 4-6 lazy. The corner keeps 2; a phone gets none */
+    {
+      const { ctx, page, errs } = await context(browser, { viewport: { width: 1440, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
+      const asked = []; await ctx.route(/youtube-nocookie\.com\/embed\//, r => { asked.push(new URL(r.request().url()).pathname.split("/").pop()); return r.fallback(); });
+      await step(`${engine} 1440x900: docked brainrot shows 6 videos from 6 categories, one sideways-scrolling row, the column as tall as with 3 (todo 135)`, async () => {
+        await page.goto(BASE + "/#" + PLAIN);
+        await page.waitForSelector("#work .rot.docked .vid", { timeout: 10000 });
+        await settle(page);
+        const m = () => page.evaluate(() => {
+          const d = document.querySelector("#rot .duo"), v = [...d.querySelectorAll(".vid")].map(x => x.getBoundingClientRect()), w = document.querySelector("#work").getBoundingClientRect();
+          return { srcs: [...d.querySelectorAll("iframe")].map(f => f.src || f.dataset.src), lazy: [...d.querySelectorAll("iframe")].map(f => f.getAttribute("loading")), cats: window.stemBrainrot.cats.map(([, l]) => l.map(([id]) => id)),
+            row: v.every(r => Math.abs(r.top - v[0].top) < 1 && Math.abs(r.height - v[0].height) < 1 && Math.abs(r.width - v[0].width) < 1), tall: v.every(r => Math.abs(r.height / r.width - 16 / 9) < 0.02),
+            cap: v.every(r => r.height <= innerHeight * 0.4 + 1), side: d.scrollWidth > d.clientWidth + 1 && getComputedStyle(d).overflowX === "auto",
+            duo: Math.round(d.getBoundingClientRect().height), rot: Math.round(document.querySelector("#rot").getBoundingClientRect().height), work: [Math.round(w.top), Math.round(w.height)],
+            notes: Math.round(document.querySelector("#scratch").getBoundingClientRect().height),
+            pad: [Math.round(v[0].left - d.getBoundingClientRect().left - d.clientLeft), parseFloat(getComputedStyle(d).paddingLeft)] };
+        });
+        const six = await m(), before = asked.slice();
+        assert.equal(six.srcs.length, 6, `6 players docked: ${six.srcs.length}`);
+        const catOf = s => six.cats.findIndex(ids => ids.some(id => s.includes("/embed/" + id + "?")));
+        assert.equal(new Set(six.srcs.map(catOf).filter(k => k >= 0)).size, 6, `6 different categories: ${six.srcs.map(catOf)}`);
+        assert.equal(new Set(six.srcs.map(s => new URL(s).pathname)).size, 6, "no video twice");
+        assert.deepEqual([six.row, six.tall, six.cap, six.side], [true, true, true, true], `one row of same-size 9:16 frames, <= 40vh, scrolling sideways: ${JSON.stringify(six)}`);
+        assert.deepEqual(six.lazy.slice(3), ["lazy", "lazy", "lazy"], "videos 4-6 load lazily");
+        assert.ok(six.srcs.slice(3).every(s => !before.some(id => s.includes("/embed/" + id + "?"))), `videos 4-6 loaded before the row was scrolled: asked ${before}; ${await page.$eval("#rot .duo", d => JSON.stringify([d.getBoundingClientRect().toJSON(), [...d.children].map(v => Math.round(v.getBoundingClientRect().left) + "+" + Math.round(v.getBoundingClientRect().width))]))}`);
+        await page.$eval("#rot .duo", d => d.scrollTo({ left: d.scrollWidth, behavior: "instant" }));
+        for (let t = Date.now(); new Set(asked).size < 6 && Date.now() - t < 5000;) await page.waitForTimeout(100);
+        assert.equal(new Set(asked).size, 6, `scrolled to the end, all 6 load: ${asked}`);
+        await page.$eval("#rot .duo", d => d.scrollTo({ left: 0, behavior: "instant" })); await page.waitForTimeout(300);
+        { const p = (await m()).pad; assert.equal(p[0], p[1], `scrolled back, the first video sits in the box's padding (a snap ate it): ${p}`); }
+        if (process.env.SHOT_DIR) await page.screenshot({ path: join(process.env.SHOT_DIR, "brainrot-6-1440.png") });
+        /* the same page with 3: drop 4-6 and measure again (the box's height is one row, so nothing moves) */
+        await page.$$eval("#rot .vid", vs => vs.slice(3).forEach(v => v.remove())); await page.waitForTimeout(100);
+        const three = await m();
+        assert.deepEqual([six.duo, six.rot, six.work, six.notes], [three.duo, three.rot, three.work, three.notes], "the column with 6 vs with 3 (box, rot, #work top + height, notes)");
+        assert.deepEqual(errs, []);
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await context(browser, { viewport: { width: 710, height: 900 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
+      await step(`${engine} 710x900 (not side by side, not a phone): the floating corner still shows 2 of the 6, all different`, async () => {
+        await page.goto(BASE + "/#" + PLAIN);
+        await page.waitForSelector("#rot:not([hidden]):not(.docked) .vid", { timeout: 10000 }); await page.waitForTimeout(400);
+        const c = await page.evaluate(() => { const f = [...document.querySelectorAll("#rot iframe")]; return { n: f.length, seen: f.filter(x => x.parentElement.getClientRects().length).length, ids: new Set(f.map(x => new URL(x.src || x.dataset.src).pathname)).size }; });
+        assert.deepEqual(c, { n: 6, seen: 2, ids: 6 });
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await context(browser, { viewport: { width: 390, height: 844 }, zoom: 1 }, { "stem-welcome-BANK_DSK": "1" });
+      await step(`${engine} 390x844: a phone still gets no brainrot (no box, no player: Tony, Oct 17)`, async () => {
+        await page.goto(BASE + "/#" + PLAIN);
+        await page.waitForSelector("#ans", { timeout: 10000 }); await page.waitForTimeout(1500);
+        assert.deepEqual(await page.evaluate(() => [!!document.querySelector("#rot:not([hidden])"), document.querySelectorAll("iframe").length]), [false, 0]);
+      });
+      await ctx.close();
+    }
     await browser.close();
   }
 } finally {

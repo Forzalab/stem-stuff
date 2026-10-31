@@ -32,7 +32,7 @@ async function step(name, fn) {
 }
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
 
-/* one page on the sugar start page (the players warm up parked, all 3 built): cats = the fixture CATS, verdict(id, seen) = the code the
+/* one page on the sugar start page (the players warm up parked, all built: one per category, up to 6): cats = the fixture CATS, verdict(id, seen) = the code the
    stub reports for that id (0 = plays); seen = the ids requested so far, in order. -> { page, seen, told, ids() } */
 async function open(cats, verdict) {
   const c = await b.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
@@ -55,9 +55,9 @@ async function open(cats, verdict) {
   await c.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); } catch { /* */ } });
   const page = await c.newPage();
   await page.goto(BASE + "/");
-  await page.waitForFunction(() => document.querySelectorAll("#rot iframe").length === 3, null, { timeout: 8000 });
-  await page.evaluate(() => document.querySelectorAll("#rot iframe").forEach(f => f.removeAttribute("loading")));   // the lazy third, parked off screen, loads too
-  const ids = () => page.$$eval("#rot iframe", fs => fs.map(f => new URL(f.src).pathname.split("/").pop()));
+  await page.waitForFunction(n => document.querySelectorAll("#rot iframe").length === n, Math.min(cats.length, 6), { timeout: 8000 });   // one per category, up to 6 (todo 135)
+  await page.evaluate(() => document.querySelectorAll("#rot iframe").forEach(f => f.removeAttribute("loading")));   // the lazy third, parked off screen, loads too (4-6 wait for a scroll: no src yet)
+  const ids = () => page.$$eval("#rot iframe", fs => fs.map(f => new URL(f.src || f.dataset.src).pathname.split("/").pop()));
   return { c, page, seen, told, other, ids };
 }
 const catOf = (cats, id) => cats.findIndex(([, v]) => v.some(x => x[0] === id));
@@ -115,6 +115,33 @@ await step("153 (no Referer: every video would fail the same) is not swapped", a
   assert.equal(told.length, 3, `the 3 stubs reported 153: ${told}`);
   await page.waitForTimeout(500);
   assert.deepEqual(await ids(), before);
+  await c.close();
+});
+
+await step("6 categories, 6 slots (todo 135): a dead one is swapped for its category's unused video, never one waiting in slots 4-6", async () => {
+  const cats = "abcdefgh".split("").map(x => [x.toUpperCase(), [v(x.repeat(10) + "1"), v(x.repeat(10) + "2")]]);
+  const first = new Map();
+  const { c, page, ids, seen } = await open(cats, id => { const k = catOf(cats, id); if (!first.has(k)) first.set(k, id); return first.get(k) === id ? 150 : 0; });
+  const at0 = await ids();
+  assert.equal(new Set(at0.map(id => catOf(cats, id))).size, 6, `6 slots, 6 categories: ${at0}`);
+  for (let t = Date.now(); first.size < 3 && Date.now() - t < 8000;) await page.waitForTimeout(100);   // slots 1-3 load (4-6 wait for a scroll)
+  await page.waitForFunction(dead => [...document.querySelectorAll("#rot iframe")].every(f => !dead.some(d => (f.src || f.dataset.src).includes("/embed/" + d))), [...first.values()], { timeout: 8000 });
+  const now = await ids();
+  assert.equal(new Set(now).size, 6, `no repeat across all 6: ${now} (asked ${seen})`);
+  assert.deepEqual(now.map(id => catOf(cats, id)), at0.map(id => catOf(cats, id)), "each slot stays in its category");
+  assert.deepEqual(now.slice(3), at0.slice(3), "slots 4-6 untouched, still unloaded");
+  await c.close();
+});
+
+await step("6 categories of one video each: a dead slot has nothing free (the other 5 are all shown) and keeps YouTube's message", async () => {
+  const cats = "abcdef".split("").map(x => [x.toUpperCase(), [v(x.repeat(10) + "1")]]);
+  const { c, page, ids, told } = await open(cats, (id, seen) => (seen.length ? 0 : 150));   // the first asked is dead
+  for (let t = Date.now(); !told.length && Date.now() - t < 8000;) await page.waitForTimeout(100);
+  assert.equal(told.length, 1, `one 150: ${told}`);
+  await page.waitForTimeout(500);
+  const now = await ids();
+  assert.equal(new Set(now).size, 6, `no repeat: ${now}`);
+  assert.ok(now.includes(told[0]), `the dead slot was left as it was: ${now}`);
   await c.close();
 });
 
