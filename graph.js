@@ -39,7 +39,7 @@
       if (k in ex && !(m.mark === "path" && k !== "fn" && !m.t)) {
         const v = m.mark === "shade" ? (m.var || "x") : ex[k];
         out[k] = fnOf(m[k], v);
-      } else out[k] = numify(m[k], k);
+      } else out[k] = m.mark === "axes" && (k === "x" || k === "y") ? m[k] : numify(m[k], k);   // the axes mark's x / y are its labels
     }
     if (m.mark === "shade" && !out.g) out.g = () => 0;
     return out;
@@ -201,7 +201,8 @@
     arrow: {
       pts: m => [m.from, m.to],
       draw(m, k) {
-        const a = k.X(m.from), b = k.X(m.to), c = col(m.color || "ink");
+        const q = k.cross && k.cross.get(m);
+        const a = k.X(m.from), b = q ? q.tip : k.X(m.to), c = col(m.color || "ink");
         if (m.label) k.label(m.label, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], m.anchor || "n", m.color);
         let s = arrow(a, b, SW.out, c, "fill", m.dash ? DASH.ghost : "");
         if (m.both) s += arrow(b, a, SW.out, c, "fill", m.dash ? DASH.ghost : "");
@@ -300,13 +301,14 @@
     axes: {
       pts: m => [m.at, add(m.at, rot([m.len || 1, 0], (m.angle || 0) * deg)), add(m.at, rot([0, m.len || 1], (m.angle || 0) * deg))],
       draw(m, k) {
-        const a = (m.angle || 0) * deg, o = k.X(m.at), ex = k.X(add(m.at, rot([m.len || 1, 0], a))), ey = k.X(add(m.at, rot([0, m.len || 1], a)));
+        const a = (m.angle || 0) * deg, o = k.X(m.at), len = Math.max((m.len || 1) * k.s, k.axisMin || 0);   // todo 136: never shorter than axisMin px
+        const ex = [o[0] + len * Math.cos(a), o[1] - len * Math.sin(a)], ey = [o[0] - len * Math.sin(a), o[1] - len * Math.cos(a)];
         if (m.x) k.label(m.x, ex, dirAnchor(ex[0] - o[0], ex[1] - o[1]), "muted");
         if (m.y) k.label(m.y, ey, dirAnchor(ey[0] - o[0], ey[1] - o[1]), "muted");
         return arrow(o, ex, SW.axis, col("muted")) + arrow(o, ey, SW.axis, col("muted"));
       }
     },
-    text: { pts: m => [m.at], draw(m, k) { k.label(m.text, k.X(m.at), m.anchor || "c", m.color); return ""; } },
+    text: { pts: m => [m.at], draw(m, k) { const q = k.cross && k.cross.get(m); if (q) k.label(m.text, q.at, q.anchor, m.color, "", false, q.dirs); else k.label(m.text, k.X(m.at), m.anchor || "c", m.color); return ""; } },
     /* geometry marks (H bridge, Oct 22): angles are taken on screen, so they stay true with or without equal: true */
     right: {
       pts: m => [m.at, m.from, m.to],
@@ -342,8 +344,9 @@
     circle: {
       pts: m => [add(m.c, [-m.r, -m.r]), add(m.c, [m.r, m.r])],
       draw(m, k) {
-        const [x, y] = k.X(m.c), r = m.r * k.s, c = col(m.color || "ink");
+        const q = k.cross && k.cross.get(m), [x, y] = k.X(m.c), r = q ? q.r : m.r * k.s, c = col(m.color || "ink");
         rec(ring([x, y], r, 0, 360, 24));
+        if (q) return `<g data-mark="axis-z"><circle data-mark="circle" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:none;stroke:${c}" stroke-width="${SW.out}"/><circle cx="${n2(x)}" cy="${n2(y)}" r="${n2(Math.max(1.5, r / 3))}" style="fill:${c}"/></g>`;
         if (m.label) k.label(m.label, [x + r * Math.SQRT1_2, y - r * Math.SQRT1_2], m.anchor || "ne", m.color);
         return `<circle data-mark="circle" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}" style="fill:${m.fill ? c : "none"};fill-opacity:${FILL};stroke:${c}" stroke-width="${SW.out}"${m.dash ? ` stroke-dasharray="${DASH.guide}"` : ""}/>`;
       }
@@ -461,11 +464,17 @@
      stroke is marked knock (its --knock background covers the line). The first two passes may place a label up to 60 px outside the
      svg, so the padding grows as before; the last pass keeps every label inside the svg. Without FigCheck: the anchors as given. */
   const SLACK = 60;
+  /* the shortest axis-cross arrow on screen (todo 136): 1.5 label heights, never under 25 px (a 15 px label: 25 px) */
+  function axisMinOf(el) {
+    const sp = document.createElement("span"); sp.className = "lbl"; sp.style.visibility = "hidden"; el.appendChild(sp);
+    const fs = parseFloat(getComputedStyle(sp).fontSize) || 15; sp.remove();
+    return Math.max(25, 1.5 * fs);
+  }
   function mount(el, build) {
-    const pad = { l: PAD, r: PAD, t: PAD, b: PAD }, FC = root.FigCheck;
+    const pad = { l: PAD, r: PAD, t: PAD, b: PAD }, FC = root.FigCheck, axisMin = axisMinOf(el);
     for (let pass = 0; pass < 3; pass++) {
       const W = el.clientWidth, labels = [], strokes = [];
-      const k = { label: (text, at, anchor, color, cls = "", html = false) => labels.push({ text, at, anchor, color, cls, html, id: CUR }) };
+      const k = { axisMin, label: (text, at, anchor, color, cls = "", html = false, dirs = null) => labels.push({ text, at, anchor, color, cls, html, dirs, id: CUR }) };
       REC = strokes; CUR = -1;
       let built;
       try { built = build(W, pad, k); } finally { REC = null; }
@@ -490,7 +499,7 @@
         const R = pass < 2 ? { x: -SLACK, y: -SLACK, w: W + 2 * SLACK, h: H + 2 * SLACK } : { x: 0, y: 0, w: W, h: H };
         const fixedFirst = items.map((it, i) => [it.fixed ? 0 : 1, i]).sort((p, q) => p[0] - q[0] || p[1] - q[1]).map(p => items[p[1]]);
         /* the packer's box is the span + 3 px each side: a fixed label's box sits 3 px left of its span */
-        const reqs = fixedFirst.map((it, i) => ({ key: i, id: it.L.id, w: it.w, h: it.h, t: { pt: it.L.at }, ...(it.fixed ? { spot: [it.x - 3, it.y] } : { dirs: [it.a, ...DIRS8.filter(d => d !== it.a)] }) }));
+        const reqs = fixedFirst.map((it, i) => ({ key: i, id: it.L.id, w: it.w, h: it.h, t: { pt: it.L.at }, ...(it.fixed ? { spot: [it.x - 3, it.y] } : { dirs: it.L.dirs || [it.a, ...DIRS8.filter(d => d !== it.a)] }) }));
         try { placed = FC.place(reqs, strokes, [], R, null, { GAP: OFF }); } catch (e) { console.warn("labels", e); placed = null; }
         if (placed) placed.forEach((p, i) => { const it = fixedFirst[i]; it.x = p.box[0] + 3; it.y = p.box[1]; it.knock = p.knock && !it.fixed; it.lead = p.lead; });
       }
@@ -516,8 +525,63 @@
       .map(([, i, m]) => { CUR = i; try { return S[m.mark].draw(m, k); } catch (e) { console.warn("mark", m.mark, e); return ""; } }).join("");
   }
 
+  /* ---- axis crosses (todo 136): two or three arrows from one tail, at right angles, each named by a short text mark near its tip,
+     maybe a small circle on the tail named by a text near it (z out of the page). Authored in world units, so on a phone (the 28svh
+     cap) the cross came out ~10 px with its letters on the arrows and the origin. The renderer owns it: crossesOf() finds each cross
+     once; crossPlan() then, at the drawn scale, gives every arrow at least axisMin px, puts each letter past its tip (anchored away
+     from the tail, so the label packer starts there), grows the z ring to >= 11 px with a dot (⊙) and puts z in the empty quadrant.
+     A cross already axisMin long or more is drawn as authored (desktop unchanged). */
+  const shortText = m => m.mark === "text" && typeof m.text === "string" && m.text.replace(/\$|\\[a-z]+|[{}\s]/g, "").length <= 3;
+  function crossesOf(marks) {
+    const out = [], arrows = marks.filter(m => m.mark === "arrow" && !m.both && !m.label && Array.isArray(m.from) && Array.isArray(m.to) && fin(m.from) && fin(m.to));
+    const used = new Set();
+    for (const a of arrows) {
+      if (used.has(a)) continue;
+      const len = v => Math.hypot(v.to[0] - v.from[0], v.to[1] - v.from[1]), L = len(a);
+      if (!(L > 0)) continue;
+      const eq = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) <= 1e-6 * (1 + L);
+      const grp = arrows.filter(b => !used.has(b) && eq(b.from, a.from) && len(b) > 0 && len(b) < 2 * L && 2 * len(b) > L);
+      const u = b => [(b.to[0] - b.from[0]) / len(b), (b.to[1] - b.from[1]) / len(b)];
+      if (grp.length < 2 || !grp.every((b, i) => grp.every((c, j) => i === j || Math.abs(u(b)[0] * u(c)[0] + u(b)[1] * u(c)[1]) < 0.2))) continue;
+      const o = a.from, R = Math.max(...grp.map(len));
+      const ring = marks.find(m => m.mark === "circle" && Array.isArray(m.c) && eq(m.c, o) && m.r > 0 && m.r <= 0.4 * R) || null;
+      const names = new Map();
+      for (const t of marks.filter(m => shortText(m) && Array.isArray(m.at) && fin(m.at) && Math.hypot(m.at[0] - o[0], m.at[1] - o[1]) <= 1.6 * R)) {
+        let best = null;
+        for (const b of grp) { const d = Math.hypot(t.at[0] - b.to[0], t.at[1] - b.to[1]); if (d <= 0.6 * len(b) && (!best || d < best.d)) best = { b, d }; }
+        if (best) names.set(t, best.b);
+        else if (ring && Math.hypot(t.at[0] - o[0], t.at[1] - o[1]) <= 0.6 * R) names.set(t, ring);
+      }
+      if (![...names.values()].some(v => v !== ring)) continue;     // no letter on any arrow: two arrows, not a cross
+      grp.forEach(b => used.add(b));
+      out.push({ o, arrows: grp, ring, names });
+    }
+    return out;
+  }
+  const RING8 = ["e", "ne", "n", "nw", "w", "sw", "s", "se"], fan = a => { const i = RING8.indexOf(a); return [RING8[(i + 1) % 8], RING8[(i + 7) % 8]]; };
+  function crossPlan(crosses, k) {
+    const plan = new Map(), min = k.axisMin || 0;
+    for (const c of crosses) {
+      const O = k.X(c.o), dirs = new Map();
+      for (const b of c.arrows) { const e = k.X(b.to); dirs.set(b, { u: norm(e[0] - O[0], e[1] - O[1]), px: Math.hypot(e[0] - O[0], e[1] - O[1]) }); }
+      if (Math.min(...[...dirs.values()].map(d => d.px)) >= min) continue;   // long enough: as authored
+      for (const [b, d] of dirs) plan.set(b, { tip: [O[0] + d.u[0] * Math.max(d.px, min), O[1] + d.u[1] * Math.max(d.px, min)] });
+      const r = c.ring ? Math.max(c.ring.r * k.s, 5.5) : 0;
+      if (c.ring) plan.set(c.ring, { r });
+      /* z goes where no arrow points: opposite the sum of the arrow directions (x right + y up -> lower left) */
+      const sum = [...dirs.values()].reduce((s, d) => [s[0] + d.u[0], s[1] + d.u[1]], [0, 0]), w = norm(-sum[0], -sum[1]);
+      for (const [t, b] of c.names) {
+        if (b === c.ring) plan.set(t, { at: [O[0] + w[0] * r, O[1] + w[1] * r], anchor: dirAnchor(w[0], w[1]) });
+        else { const p = plan.get(b).tip, d = dirs.get(b), a = dirAnchor(d.u[0], d.u[1]);   // the packer may only slide it round the tip, never back over the arrow
+          plan.set(t, { at: [p[0] + 2 * d.u[0], p[1] + 2 * d.u[1]], anchor: a, dirs: [a, ...fan(a)] }); }
+      }
+    }
+    return plan;
+  }
+
   function scene(g) {
     const pre = fix(g.marks), marks = pre.marks;         // contact, anchors and arrow directions first: the renderer owns them
+    const crosses = crossesOf(marks);
     const build = (W, pad, k) => {
       const pts = marks.filter(m => S[m.mark]).flatMap(m => S[m.mark].pts(m)).filter(fin);
       const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
@@ -528,6 +592,7 @@
       const ox = pad.l + ((W - pad.l - pad.r) - (x1 - x0) * s) / 2;
       const H = Math.round((y1 - y0) * s + pad.t + pad.b);
       Object.assign(k, { s, marks, X: p => [ox + (p[0] - x0) * s, pad.t + (y1 - p[1]) * s] });
+      k.cross = crosses.length ? crossPlan(crosses, k) : null;
       return { svg: drawMarks(marks, k), H };
     };
     build.marks = marks;                                 // the final model, for figcheck (render)
