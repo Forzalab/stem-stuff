@@ -1447,6 +1447,17 @@ def _dx_put(key, val):
             pass
 
 
+def expr_family(f):
+    """an L3 family as stored: a slips family id (slips.FAMILIES) or "new:<slug>"; anything else becomes new:<sanitised slug>; none: None"""
+    if not f:
+        return None
+    f = str(f).strip()
+    if f in slips.FAMILIES:
+        return f
+    slug = re.sub(r"[^a-z0-9]+", "-", f.lower().removeprefix("new:")).strip("-")[:40]
+    return "new:" + slug if slug else None
+
+
 def diagnose(p, sid, b):
     """POST /diagnose {code, part?, expr, round?}: the L3 read of a working this browser already got graded wrong (the tries record proves
     it, so this is no free probe). (status, {source, family, off, msg, budget?}). Counts against Cluck's hourly cap; cached."""
@@ -1477,7 +1488,7 @@ def diagnose(p, sid, b):
         return 200, dict(hit, cached=True)
     seen_ = expr_seen(sid, p["code"])
     where = expr_where(p, u, seen_)
-    nudge = {"source": "L1", "family": None, "off": None, "msg": expr.NUDGE}
+    nudge = {"source": "L1", "off": None, "msg": expr.NUDGE}
     if not explain_allowed(sid, False):
         return 200, dict(nudge, budget="hourly")
     l3 = expr_l3(_l3_user(p, u, text, r, seen_))
@@ -1485,8 +1496,7 @@ def diagnose(p, sid, b):
         log(f"expr l3 {p['code']}: {'no reply' if l3 is None else 'bad schema'}")
         return 200, nudge
     d = expr.trim(expr.tidy(expr.diagnosis(p["code"], idx, text, val, r, source="L3", model=EXPR_MODEL, l3=l3), r))
-    if d["family"] not in slips.FAMILIES:                    # a family is a slips id or new:<slug> (GRILL v1); free text becomes a new: slug
-        d["family"] = "new:" + re.sub(r"[^a-z0-9]+", "-", str(d["family"]).lower()).strip("-")[:40] if d["family"] else None
+    d["family"] = expr_family(d["family"])
     if (d["student_view"].get("recall") or {}) and where:
         d["student_view"]["recall"]["where"] = where
     why = expr.leak(d, expr.literals(tree, skip_exp=False), hidden_values(p), leak_scan, u["form"])
@@ -1495,7 +1505,7 @@ def diagnose(p, sid, b):
         log(f"expr l3 {p['code']}: nudge ({why or 'confidence %.2f' % d['confidence']})")
         out = nudge
     else:
-        out = {"source": "L3", "family": d["family"], "off": _expr_view_off(d), "msg": expr.render(d, where=where)}
+        out = {"source": "L3", "off": _expr_view_off(d), "msg": expr.render(d, where=where)}   # L3's family is stored, never shown
     if d["learn"]["store"] and not why:
         _expr_store({"ts_day": datetime.date.today().isoformat(), "item": p["code"], "part": idx, "expr_norm": r["norm"], "diagnosis": d})
     _dx_put(key, out)

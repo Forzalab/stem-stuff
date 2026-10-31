@@ -84,7 +84,7 @@ try {
       const r = await send(page, "34.9");
       assert.equal(r.verdict, "wrong"); assert.equal(r.exprMode, true);
       await page.waitForFunction(() => document.querySelector("#xline")?.textContent.startsWith("Type your whole working"));
-      assert.equal(await page.getAttribute("#ans", "placeholder"), "Type your whole working, e.g. 1200*9.8/(pi*1^2)");
+      assert.equal(await page.getAttribute("#ans", "placeholder"), "Type your whole working, e.g. 2.5*9.8/(pi*0.4^2)");
     });
     await step(`${w}: a bare number gets the prompt, not a grade (no try used)`, async () => {
       const n = await nTries(page), r = await send(page, "67.9");

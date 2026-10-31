@@ -327,6 +327,23 @@ class Glue(unittest.TestCase):
             self.assertEqual((out["msg"], out["budget"]), (expr.NUDGE, "hourly"))
             l3.assert_not_called()
 
+    def test_l3_family_is_a_slips_id_or_new_slug_and_never_shown(self):
+        self.assertEqual(serve.expr_family("dream"), "dream")
+        self.assertEqual(serve.expr_family("rotational dynamics: torque from I"), "new:rotational-dynamics-torque-from-i")
+        self.assertEqual(serve.expr_family("new:Vector Length As I!"), "new:vector-length-as-i")
+        self.assertIsNone(serve.expr_family(None))
+        self.assertIsNone(serve.expr_family("!!!"))
+        stored = []
+        with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}), unittest.mock.patch.object(serve, "expr_l3", return_value=l3_reply(family="Vector length used as I")), \
+                unittest.mock.patch.object(serve, "_expr_store", side_effect=stored.append):
+            self.g("PHYS_GX1", "s10", answer="34.9")
+            self.g("PHYS_GX1", "s10", answer=GOLD)
+            out = self.d("s10", GOLD)[1]
+        self.assertEqual(out["source"], "L3")
+        self.assertNotIn("family", out)
+        self.assertNotIn("Vector", json.dumps(out))
+        self.assertEqual(stored[0]["diagnosis"]["family"], "new:vector-length-used-as-i")
+
     def test_explain_pairs_only(self):
         stored = []
         with unittest.mock.patch.dict(os.environ, {"EXPR_MODE": "1"}), unittest.mock.patch.object(serve, "_expr_store", side_effect=stored.append):

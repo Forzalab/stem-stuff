@@ -1188,7 +1188,7 @@ function pvFit(pv) {
    (KaTeX), and its own value dim "(= 67.87)", live as they type (never the right answer: only what they typed). A bare number gets the
    prompt, a syntax slip a friendly line: neither is a try. A wrong working: Cluck opens with the 6 moves (diag.msg; L3 via POST /diagnose
    when L1 named no family), the off span underlined in the rendered working. The flag off: the server never says exprMode, nothing here runs. */
-const X_PROMPT = "Type your whole working, e.g. 1200*9.8/(pi*1^2)";   // expr.PROMPT
+const X_PROMPT = "Type your whole working, e.g. 2.5*9.8/(pi*0.4^2)";   // expr.PROMPT
 const XNAMES = /^(sqrt|sin|cos|tan|asin|acos|atan|exp|log|ln|abs|pi|g)$/i;
 const xClean = t => String(t).replace(/[×·]/g, "*").replace(/÷/g, "/").replace(/π/g, "pi").replace(/√/g, "sqrt").replace(/−/g, "-")
   .replace(/[A-Za-z]+/g, w => XNAMES.test(w) ? w.toLowerCase() : w);

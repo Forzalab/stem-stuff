@@ -10,7 +10,7 @@ import re
 
 FUNCS = ("sqrt", "sin", "cos", "tan", "asin", "acos", "atan", "exp", "log", "ln", "abs")
 G_DEFAULT = 9.8
-PROMPT = "Type your whole working, e.g. 1200*9.8/(pi*1^2)"   # the box's copy once it wants an expression (BRIEF W137 step 2)
+PROMPT = "Type your whole working, e.g. 2.5*9.8/(pi*0.4^2)"   # the box's copy once it wants an expression (BRIEF W137 step 2; orc: a neutral example that matches no bank item)
 MAX_LEN = 300
 REL = 1e-9                     # two literals / factors are the same quantity within this (relative)
 
