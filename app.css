@@ -992,7 +992,8 @@ html.side .cl-ft .ask { border-radius: 0 0 10px 10px; }
 #cluck .vw-foot .btn:hover { background: var(--help-fill); }
 #cluck .vw-foot .btn[disabled] { color: var(--help-muted); border-color: var(--help-rule); background: none; cursor: default; }
 .wtext .wstatic .vw-static { display: block; width: 100%; max-width: 420px; height: auto; }   /* W113: a view's static image (app.js viewImage) */
-.cl-peek.gone { visibility: hidden; }                       /* desktop with the sheet open: its room stays (app.js wishPaint, W129 L4) */
+#wish.gone { visibility: hidden; }                          /* desktop with the sheet open: no chip, no peek, their room stays (app.js wishPaint .cl-room, W129 L4) */
+.cl-room { flex: none; }
 .cl-peek .wfig { display: none; }                          /* the peek is the start of the text only */
 .wtext.wreply { cursor: auto; }
 .wtext > * { max-width: 58ch; }                                           /* ~65 characters a line, at 1920 too */
@@ -1249,7 +1250,7 @@ html.side:not(.start) body > main { width: 100%; margin-bottom: auto; }
 html.side #sentinel { grid-column: 1 / -1; }
 html.side .freeze, html.side .freeze.stuck { grid-column: 1; grid-row: 2; position: sticky; top: var(--s4); margin: 0; padding: 0; background: none; box-shadow: none; border: 0; min-width: 0; }
 html.side .freeze-in { max-height: none; overflow: visible; }   /* one scroller on desktop: the page (Tony, Oct 18: the box trapped the wheel; a contain scroller capped below the fold) */
-html.side #work { position: sticky; top: var(--s4); align-self: start; min-height: calc(100dvh - var(--cl-top, 100dvh) - var(--foot, var(--s7))); box-sizing: border-box; }   /* the notes pad stays in view while the page scrolls the question. At least the window below its top (W129 L4): the body centres the page ("snug in the center", below), so a column that shrank (the brainrot fold, notes capped at 48rem, a short Cluck reply) re-centred the whole page under the student */
+html.side #work { position: sticky; top: var(--s4); align-self: start; min-height: calc(100dvh - var(--cl-top, 100dvh) - var(--foot, var(--s7)) - var(--pg-top, 0px)); box-sizing: border-box; }   /* the notes pad stays in view while the page scrolls the question. At least the window below its top (W129 L4): the body centres the page ("snug in the center", below), so a column that shrank (the brainrot fold, notes capped at 48rem, a short Cluck reply) re-centred the whole page under the student. Less the room above the bar (--pg-top, app.js pageTop): a centred page keeps as much room below it as above */
 html.side:not(.dock-bottom) .freeze, html.side:not(.dock-bottom) .freeze.stuck, html.side:not(.dock-bottom) #work { top: calc(var(--top-h, 0px) + var(--s4)); }   /* under the pinned desktop bar */
 html.side .freeze.clipped .freeze-in { -webkit-mask-image: none; mask-image: none; }
 html.side .more { display: none; }
