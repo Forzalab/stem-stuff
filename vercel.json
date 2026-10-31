@@ -47,6 +47,14 @@
       "destination": "/api/index?path=/check"
     },
     {
+      "source": "/diagnose",
+      "destination": "/api/index?path=/diagnose"
+    },
+    {
+      "source": "/diagnose/explain",
+      "destination": "/api/index?path=/diagnose/explain"
+    },
+    {
       "source": "/narrate",
       "destination": "/api/index?path=/narrate"
     },
