@@ -207,7 +207,7 @@ try {
     { const [r, c] = await d.$$eval("#rot .rot-hd, #cluck", es => es.map(e => e.getBoundingClientRect().toJSON()));
       assert.ok(r.height > 0 && r.bottom <= c.top + 1, "the label row stays above the sheet (Tony, Oct 5): " + JSON.stringify([r, c])); }
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), false, "the sheet is open: the players stay, shown by default (Tony, Oct 6)");
-    assert.ok(await d.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.getAttribute("src")))), "muted autoplay");
+    assert.ok(await d.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.src || f.dataset.src))), "muted autoplay");
     await d.click("#rot .rot-link");
     assert.equal(await d.$eval("#rot", e => e.classList.contains("stashed")), true, "the link hides them");
     await d.click("#rot .rot-link");
@@ -453,7 +453,7 @@ try {
     await p4.waitForSelector("#work > #rot.docked:not([hidden])", { timeout: 4000 });
     const st = () => p4.$eval("#rot", e => [e.classList.contains("stashed"), e.querySelector(".rot-link").textContent]);
     assert.deepEqual(await st(), [false, "Hide curated brainrot"], "shown by default");
-    assert.ok(await p4.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.getAttribute("src")))), "muted autoplay");
+    assert.ok(await p4.$$eval("#rot iframe", fs => fs.every(f => /[?&]autoplay=1&mute=1&/.test(f.src || f.dataset.src))), "muted autoplay");
     await p4.click("#rot .rot-link");
     assert.deepEqual(await st(), [true, "Show curated brainrot"], "hidden");
     await p4.click("#rot .rot-link");

@@ -147,9 +147,9 @@ try {
         tex: !!f.querySelector(".f .katex"), old: !!f.querySelector(".st, .n, .g, .then, .hd") }; }),   // Tony, Oct 5: "hybrid of 4 and 5" (design/mockups/formula-use.html ?v=7)
       { role: "note", label: "Key formulas, in order", notch: "Key formulas", onBorder: true, n: 2, arrows: 1, centred: true, frame: "rgb(146, 192, 255) 1px", tinted: true, tex: true, old: false });
     await page.waitForSelector("#rot:not([hidden])", { timeout: 4000 });
-    const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.getAttribute("src")));   // every one has its src: all 5 are in view (W135b)
+    const srcs = await page.$$eval("#rot iframe", fs => fs.map(f => f.src || f.dataset.src));   // 4-6: their src waits for the row to scroll to them
     assert.equal(srcs.length, 5);
-    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots: 3 playlists (Tony, Oct 5) + 5 hand-curated (Oct 26); 5 random categories per load, one video each (Oct 31)
+    const cats = await page.evaluate(() => window.stemBrainrot.cats);   // curated brainrots: 3 playlists (Tony, Oct 5) + 5 hand-curated (Oct 26); 6 random categories per load, one video each (Oct 29)
     assert.equal(cats.length, 8);
     const catOf = s => cats.findIndex(([, v]) => v.some(([id]) => s.includes("/embed/" + id + "?")));
     for (const s of srcs) { assert.ok(catOf(s) >= 0 && /mute=1/.test(s) && /youtube-nocookie/.test(s), s); }
@@ -183,7 +183,7 @@ try {
     assert.equal(await page.textContent(b), "Show curated brainrot");
     assert.equal(await page.isVisible("#rot .rot-hd .xb-label"), true, "the label row stays");
     await page.click(b); assert.equal(await folded(), false, "and brings them back");
-    assert.deepEqual(await page.$eval("#rot .duo", d => { const b = d.getBoundingClientRect(); return [d.scrollWidth <= d.clientWidth, [...d.querySelectorAll(".vid")].every(v => { const r = v.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right; })]; }), [true, true], "5 videos in one box, all inside it: no sideways scroll (W135b)");
+    assert.deepEqual(await page.$eval("#rot .duo", d => [d.scrollWidth > d.clientWidth + 20, getComputedStyle(d).overflowX]), [true, "auto"], "3 videos in one box: the third scrolls in sideways");
   });
 
   await step("sugar (phone width, 390): no brainrot corner, no preconnect, no request to YouTube (Tony, Oct 17)", () => noRot("/", null, { width: 390, height: 844 }));
