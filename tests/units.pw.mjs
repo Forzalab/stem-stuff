@@ -66,7 +66,7 @@ const line = (page, sel) => page.evaluate(sel => {
   const probe = document.createElement("i"); probe.style.color = "var(--ink)"; l.appendChild(probe);
   const ink = cs(probe).color; probe.style.color = "var(--correct)"; const green = cs(probe).color; probe.remove();
   const br = b.getBoundingClientRect(), ur = u?.getBoundingClientRect();
-  return { text: l.textContent, b: b.textContent, bColor: cs(b).color, bWeight: +cs(b).fontWeight, ink, green,
+  return { h: l.getBoundingClientRect().height, text: l.textContent, b: b.textContent, bColor: cs(b).color, bWeight: +cs(b).fontWeight, ink, green,
     u: u ? { text: u.textContent, html: u.innerHTML, color: cs(u).color, weight: +cs(u).fontWeight, sup: u.querySelector("sup")?.textContent ?? null,
       gap: ur.left - br.right, dy: Math.abs((ur.top + ur.bottom) / 2 - (br.top + br.bottom) / 2), prev: u.previousSibling?.textContent ?? null } : null };
 }, sel);
@@ -85,6 +85,7 @@ try {
     await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
     await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
     const page = await ctx.newPage();
+    let hUnit = NaN;
     await openBank(page);
     await step(`${w}: the Answer line = value (green, bold, as before) + U+2009 + unit (--ink, regular, ^2 a superscript)`, async () => {
       await lockOut(page, "PHYS_U01");
@@ -97,6 +98,7 @@ try {
       assert.equal(L.u.color, L.ink, "the unit is the plain ink (white)"); assert.equal(L.u.weight, 400, "the unit is regular weight");
       assert.ok(L.u.gap > 0 && L.u.gap < 6, "a thin gap, on the value's line: " + L.u.gap);
       assert.ok(L.u.dy < 4, "same line: " + L.u.dy);
+      hUnit = L.h;
       assert.match(await page.textContent("#sr"), /2\.02\s?m\/s2/, "the spoken line says the unit too");
     });
     await step(`${w}: Copy answer copies the value only`, async () => {
@@ -116,6 +118,7 @@ try {
         await lockOut(page, c);
         const L = await line(page, "#q .ansl");
         assert.equal(L.u, null, c); assert.ok(!L.text.includes(" "), c);
+        assert.ok(Math.abs(L.h - hUnit) < 0.5, `no jank: the line with m/s^2 is as tall as the unitless one (${hUnit} vs ${L.h})`);
         assert.equal(await page.$eval("#q .ansl b", b => b.parentElement.className), "ansl", c + ": the old markup");
       }
     });

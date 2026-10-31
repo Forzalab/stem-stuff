@@ -1600,10 +1600,11 @@ function reveal(r, part) {
   if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(String(c)).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
   host.querySelector(".ansl")?.remove();
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
-  host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span><b>${val}</b>${mathCopyBtn("Copy answer", String(c))}</p>`);
+  const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b>\u2009<span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;   // W132: value green + thin space + unit in ink; copy = the value only
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${icon("i-ok")}<span>Answer</span>${unit}${mathCopyBtn("Copy answer", String(c))}</p>`);
   if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
-  return "The answer: " + host.querySelector(".ansl b").textContent.replace(/\s+/g, " ").trim() + ".";
+  return "The answer: " + (host.querySelector(".ansl .ansv") || host.querySelector(".ansl b")).textContent.replace(/\s+/g, " ").trim() + ".";
 }
 /* the duck chip (sugar, questions with Cluck's key only): right = "See Cluck's steps", out of tries = "Ask Cluck". A tap pays no XP */
 function cueChip(still) {
