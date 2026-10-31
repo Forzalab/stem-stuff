@@ -78,6 +78,7 @@ weight() {
     expr) echo 12 ;;   # W137: 3 screen sizes + flag off, own servers; local run ~11 s
     welcome-app) echo 26 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~26 s (estimate until CI timing)
     minicluck) echo 3 ;;   # local run ~3s
+    axis-cross) echo 3 ;;   # todo 136: the x/y/z cross at 360/390/414 + 1440, chromium, no server; local run ~3 s
     noob) echo 15 ;;   # local run ~15s
     mock) echo 12 ;;   # W103b night-before mock, local run ~10 s
     twin-first) echo 9 ;;   # todo 121 twin held for its template's miss, own server, local run ~8 s
@@ -103,7 +104,7 @@ weight() {
 tags() {
   case "$1" in
     blur|fab|flow|font|katex-wrap|measure-slots|overscroll|polish|reload|swap) echo "@engine @real-time" ;;
-    bar|blink-fx|cluck-more|codeblock|disabled|dismiss|geomarks|livefig|popover|privacy-reach|render|views|views-oui|views-static) echo "@layout @real-time" ;;
+    axis-cross|bar|blink-fx|cluck-more|codeblock|disabled|dismiss|geomarks|livefig|popover|privacy-reach|render|views|views-oui|views-static) echo "@layout @real-time" ;;
     ux-flows@phone|ux-flows@desk|next-cue@1|next-cue@2) echo "@layout @real-time" ;;
     autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|next-dead|prefix) echo "@logic @real-time" ;;
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;
