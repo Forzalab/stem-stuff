@@ -717,9 +717,18 @@ const TWIST_TOAST = "You found a twist.", TWIST_ACT = "What is that?";
 const TWIST_POP = "You’ll see twists often. These twists change one detail from real exam questions, which will improve retention.";
 const TWIST_KEY = "stem-twist-seen";
 let twistAsked = false;                                                    // queued once per page load (a re-load of the same code never queues a second)
+/* the chip's own glyph (W139, Tony Oct 31): three drawn variants, 16px, strokes in currentColor; a swap = change TWIST_ICON's key.
+   A: a ribbon turning over once. B: an arrow bending back on itself. C: a twisted pair */
+const TWIST_SVG = {
+  A: '<path d="M1.5 4.5h3c3.5 0 3.5 7 7 7h3M1.5 11.5h3c3.5 0 3.5-7 7-7h3"/>',
+  B: '<path d="M4 13.5V7.5a4 4 0 0 1 8 0v3.5"/><path d="M9.5 8.5 12 11l2.5-2.5"/>',
+  C: '<path d="M1.5 8c1.6-4.3 4.9-4.3 6.5 0s4.9 4.3 6.5 0M1.5 8c1.6 4.3 4.9 4.3 6.5 0s4.9-4.3 6.5 0"/>',
+};
+const TWIST_ICON = TWIST_SVG.A;
 function twistChip(blocks) {
   const b = document.createElement("button");
-  b.type = "button"; b.className = "twist-chip"; b.id = "twistChip"; b.textContent = "Twist";
+  b.type = "button"; b.className = "qtag twist-chip"; b.id = "twistChip";
+  b.innerHTML = `<svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${TWIST_ICON}</svg><span>Twist</span>`;
   b.addEventListener("click", () => twistPop(b, true));
   let row = blocks.querySelector(".ptitle");
   if (!row) { row = document.createElement("p"); row.className = "ptitle twist-row"; blocks.append(row); }
@@ -1615,7 +1624,7 @@ function retryTag() {
   const won = !!S && S.finished && (S.prob.type === "multi" ? !!S.solved : S.tries.some(x => x.v === "correct"));
   const k = !on ? null : !S.finished ? (r.redeem !== false ? "owe" : "review") : won ? (r.redeem !== false ? "won" : "kept") : "out";
   t.hidden = !k;
-  t.className = "rtag" + (k ? " rt-" + k : "");
+  t.className = "qtag rtag" + (k ? " rt-" + k : "");
   t.innerHTML = k ? `${icon(RTAG[k][1])}<span>${RTAG[k][0]}</span>` : "";
 }
 function finish() {
