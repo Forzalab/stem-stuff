@@ -8,7 +8,7 @@
    The front door (DESIGN-v3 §1, Tony #2-#4): the front bank is the one "/" opens (serve.py's "last" for a new browser); serve.py FRONT
    is the one source, its payload says "front": the bar title (window.stemBank.front). Its bar says only that title, and Next plays the
    noob ramp (shuffle.mjs ramp) until "Shuffle" (the queue above). */
-import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn } from "./shuffle.mjs";
+import { glue, family, twinGate, qNew, qPick, qShow, qAnswer, qMigrate, qLoad, qSave, deadOpen, deadLead, ramp, rampAnswer, skipAhead, mockList, familiesMet, mockNew, mockNext, mockAnswer, mockOn, mockNight } from "./shuffle.mjs";
 import { isBankId, bareBank } from "./codes.mjs";
 /* ?bank=P2X or ?bank=BANK_P2X (the instructor's link) -> that bank code, else null */
 export function deepBank(search) {
@@ -369,12 +369,21 @@ if (typeof location !== "undefined" && deepBank(location.search)) {
   const u = new URLSearchParams(location.search); u.delete("bank");
   history.replaceState(history.state, "", location.pathname + (String(u) ? "?" + u : "") + location.hash);
 }
-/* ?mock=1 (the night-before link, W103b): the front bank starts its mock once it is open (update); the query goes, so a reload resumes it */
+/* ?mock=1 (the night-before link, W103b) or a mock night (below): the front bank starts its mock once it is open (update); the query goes, so a reload resumes it */
 let wantMock = false;
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("mock") === "1") {
   wantMock = true;
   const u = new URLSearchParams(location.search); u.delete("mock");
   history.replaceState(history.state, "", location.pathname + (String(u) ? "?" + u : "") + location.hash);
+}
+/* the night (shuffle.mjs mockNight, W139): once per night per device (MOCK_NIGHT holds the night's key, set when it starts); storage
+   blocked = it still starts, with no repeat guard. Not under automation (navigator.webdriver): a spec on a real clock never wanders into it */
+const MOCK_NIGHT = "stem-mock-night";
+let mockNightKey = null;
+if (!wantMock && typeof navigator !== "undefined" && !navigator.webdriver) {
+  const k = mockNight(new Date());
+  let seen = null; try { seen = localStorage.getItem(MOCK_NIGHT); } catch { /* blocked: no guard */ }
+  if (k && seen !== k) { wantMock = true; mockNightKey = k; }
 }
 if (typeof document !== "undefined" && document.getElementById("qnav")) init();
 
@@ -382,7 +391,7 @@ function init() {
   const $ = s => document.querySelector(s);
   const root = document.documentElement;
   const nav = $("#qnav"), btn = $("#qlistBtn"), name = $("#qlistName"), panel = $("#qlist"), list = panel.querySelector("ol"), prev = $("#qprev"), next = $("#qnext");
-  const modes = $("#qmodes"), mix = $("#qmix"), skip = $("#qskip"), mockBtn = $("#qmock");
+  const modes = $("#qmodes"), mix = $("#qmix"), skip = $("#qskip");
   const bank = () => window.stemBank && window.stemBank.code ? window.stemBank : null;
   const off = () => bank() || window.stemOffline;                    // the live list: get(c), codes()
   const rd = () => window.stemRedo || null;                          // a Redeem showing's own grading namespace (app.js)
@@ -504,9 +513,8 @@ function init() {
     const on = codes.length > 0;
     const file = !bank() && on && o.fileName ? o.fileName(cur) || o.fileName(codes[0]) || "" : "";
     name.textContent = bank() ? (front() ? bank().front : bank().code) : "Questions";   // which bank you are in, at a glance (Tony, Oct 5; design/COPY-CTA.md); the front bank: its title only (Tony #4)
-    modes.hidden = !front();                                         // Shuffle / Skip this question / Explore other banks: the front bank's list only
+    modes.hidden = !front();                                         // Shuffle / Skip this question: the front bank's list only
     if (front()) { $("#qmixTx").textContent = Q().mix ? "Start with easy ones" : "Shuffle"; $("#qmixIco").hidden = !!Q().mix; skip.hidden = !!Q().mix; }   // the label in its span, so the shuffle icon stays (shown with "Shuffle" only)
-    mockBtn.hidden = !!(Q().mock && Q().mock.miss === null && !Q().mock.done);   // the mock is running: no restart
     btn.setAttribute("aria-label", "Question list");
     btn.title = bank() ? bank().code : file;                                // which bank or file: on hover, for Tony
     nav.hidden = !on;
@@ -611,11 +619,11 @@ function init() {
   prev.addEventListener("click", () => go(-1));
   mix.addEventListener("click", () => { const st = Q(); st.mix = !st.mix; save(); update(cur); });   // the student switches the order (Tony #3)
   skip.addEventListener("click", () => { skipAhead(Q()); save(); go(1); });                           // strong starters: a tier up, and on
-  $("#qbanks").addEventListener("click", () => $("#code").focus());   // the code box comes with the list: type a bank code there
   next.addEventListener("click", () => go(1));
   /* the night-before mock (W103b): the front bank's exam-order list (shuffle.mjs mockList), from its first question */
   let reload = null;                                                 // one same-code reload asked of app.js (stemMock.again)
   function startMock() {
+    if (mockNightKey) { try { localStorage.setItem(MOCK_NIGHT, mockNightKey); } catch { /* blocked: no guard */ } mockNightKey = null; }
     const st = Q(), o = off();
     st.mock = mockNew(mockList(pool().map(c => ({ code: c, ...o.get(c) })), st.salt));
     st.hist = st.hist.slice(0, st.at + 1); save();                   // Next plays the mock, not the history ahead
@@ -625,7 +633,6 @@ function init() {
     }
     go(1);
   }
-  mockBtn.addEventListener("click", startMock);
   list.addEventListener("click", e => { if (e.target.closest("a")) close(true); });   // the link itself navigates (#CODE)
   panel.addEventListener("keydown", e => {
     const r = rows(), i = r.indexOf(document.activeElement);
@@ -651,7 +658,7 @@ function init() {
     save();
   });
   addEventListener("drill:problem", e => { const c = e.detail && e.detail.code; if (c && all().includes(c)) shown(c); update(c);
-    if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1: once the first question has opened, so app.js's first load never overwrites the mock's hash
+    if (wantMock && front()) { wantMock = false; setTimeout(startMock); } });   // ?mock=1 or the night: once the first question has opened, so app.js's first load never overwrites the mock's hash
   addEventListener("drill:marks", () => { if (!nav.hidden) update(cur); });   // offline.js: a mark changed (the list ticks)
   addEventListener("drill:bank", () => update(cur));                         // a bank opened or left (app.js)
   const s = window.__drill && window.__drill.state;                   // a problem loaded before this module ran
