@@ -216,6 +216,15 @@ export function familiesMet(items, seen = {}) {
   for (const f of fam.values()) if ((f.twin.length ? f.twin : f.tpl).some(ok)) met++;
   return { met, of: fam.size };
 }
+/* the night-before mock starts by itself (W139, Tony Oct 31: no button) on a Sunday, Tuesday or Thursday NIGHT, device local time:
+   18:00-03:59, the small hours counted to the evening before (Mon 01:00 = Sunday night). The night's key (its evening's date), else null */
+export const MOCK_NIGHTS = [0, 2, 4], NIGHT_FROM = 18, NIGHT_TO = 4;
+export function mockNight(d) {
+  const h = d.getHours();
+  if (h >= NIGHT_TO && h < NIGHT_FROM) return null;
+  const e = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (h < NIGHT_TO ? 1 : 0));
+  return MOCK_NIGHTS.includes(e.getDay()) ? `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}-${String(e.getDate()).padStart(2, "0")}` : null;
+}
 export const mockNew = list => ({ list: [...list], at: 0, res: {}, miss: null, back: 0, done: false });
 /* the mock phase is on for code: no peek, no Cluck hint, no ladder, one try (app.js, peek.js, repair.js read it through nav.js) */
 export const mockOn = (m, code) => !!m && !m.done && m.miss === null && m.list.includes(code);
