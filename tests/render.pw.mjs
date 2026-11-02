@@ -71,10 +71,11 @@ async function run(browserType, label, opts = {}) {
           return c.textContent;
         });
         for (const re of RAW) assert.ok(!re.test(text), `raw TeX ${re} visible in ${code}: …${(text.match(new RegExp(".{0,30}" + re.source + ".{0,30}")) || [""])[0]}…`);
-        // locked rule: every force arrow is one blue (c1 #7ab8ff); only velocity/acceleration differ
+        // W163 (supersedes "every force arrow is one blue"): force arrows take palette hues, never the legacy c1 blue / c2 / c3 and never red or green by default
         const forces = await page.evaluate(() => [...document.querySelectorAll('#freeze [data-mark="force"][data-kind="force"] polyline, #freeze [data-mark="force"][data-kind="force"] polygon')]
           .map(e => getComputedStyle(e).stroke));
-        for (const st of forces) assert.equal(st, "rgb(146, 192, 255)", `force stroke ${st} in ${code}`);
+        const AUTO_RGB = ["#5eb8ff", "#ffd23f", "#e0803a", "#8f78f5", "#f87fe0", "#2fd9e6"].map(h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(", ")})`);
+        for (const st of forces) assert.ok(AUTO_RGB.includes(st), `force stroke ${st} in ${code}`);
         if (/^PHYS-(F3N|S2K)$/.test(code)) {
           assert.ok(forces.length >= 3, `expected force arrows in ${code}`);
           assert.equal(await page.locator('#freeze [data-kind="kin"]').count(), 0, `non-blue force in ${code}`);

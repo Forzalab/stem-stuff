@@ -14,7 +14,7 @@
 // The component list lives in views-lib.js (P0.2 generates it); the drawings below are the only look-free code that knows it.
 import { createParser, mergeStatements } from "./vendor/openui-lang.mjs";
 import { LIB, toSchema, MARKS, DOODLES } from "./views-lib.js";
-import { place, resolveAngles, checkAngleLabels } from "./figcheck.js";
+import { place, resolveAngles, checkAngleLabels, autoHues, AUTO_HUES } from "./figcheck.js";
 
 const SCHEMA = toSchema(LIB);
 const REG = new Map();
@@ -287,7 +287,7 @@ function graphModel(p) {
 /** Emphasis layer (W157, semantic): 1 main (default), 2 given, 3 context. Anything else is layer 1. views.css / app.css .ly2 .ly3 re-point the ink tokens. */
 const layerNo = v => (+v === 2 || +v === 3 ? +v : 1);
 /** tone = a figure palette hue name (the app.css --fig-<hue>-1..3 scales); anything else is rejected (bad-value), never a free colour. */
-export const TONES = ["ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark"];
+export const TONES = ["ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark", ...AUTO_HUES];
 const toneOf = v => { if (!TONES.includes(v)) throw Object.assign(new Error(`tone "${String(v).slice(0, 12)}"`), { code: "bad-value" }); return v; };
 const lyc = (n, tone) => (tone ? ` tn-${tone}` : "") + (n > 1 ? ` ly${n}` : "");
 function drawGraph(doc, g, st = {}) {
@@ -350,7 +350,7 @@ export function geoModel(p) {
     else if (k === "circle") { if (!(+a[1] > 0)) throw badGeo("circle radius"); o = { k, c: P(a[0]), r: +a[1] }; }
     else if (k === "right") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]) };
     else if (k === "angle") o = { k, names: a.slice(0, 3), at: P(a[0]), u: P(a[1]), v: P(a[2]), text: rest(3) };
-    else if (k === "arrow") o = { k, a: P(a[0]), b: P(a[1]), text: rest(2) };
+    else if (k === "arrow") o = { k, a: P(a[0]), b: P(a[1]), text: rest(2), ends: `${a[0]}>${a[1]}` };
     else if (k === "label") o = { k, at: P(a[0]), text: rest(1) };
     else {
       const side = a.length > 3 && /^(left|right)$/i.test(a[a.length - 1]) ? a.pop().toLowerCase() : null;
@@ -360,6 +360,11 @@ export function geoModel(p) {
     out.push(layer > 1 || tone ? { ...o, layer, tone } : o);
   }
   if (labels > GEO_CAPS.labels) throw tooLong(`${labels} > ${GEO_CAPS.labels} labels`);
+  /* W163 auto-hue: an arrow (a force / vector) with no tone= gets a palette hue keyed by its own label (else its end points), never its position in
+     the list, so the same figure paints the same colours on every render. Segments, circles, angles stay ink: structure is not a role. */
+  const akey = o => (o.text ? o.text.replace(/[$\s{}]/g, "") : o.ends);
+  const hues = autoHues(out.filter(o => o.k === "arrow" && !o.tone).map(akey));
+  out.forEach((o, i) => { if (o.k === "arrow") { const { ends, ...rest } = o; out[i] = o.tone ? rest : { ...rest, layer: o.layer || 1, tone: hues.get(akey(o)) }; } });
   /* W340 §2 (I-ANG-1b-d, figcheck resolveAngles): each right / angle mark's vertex is checked against the drawing: the first point,
      or the middle one when the drawing says so (∠BAC: mc-a's θ was drawn at the square corner B); what fits nowhere is a finding */
   const ang = out.map((o, i) => [o, i]).filter(([o]) => o.k === "right" || o.k === "angle");

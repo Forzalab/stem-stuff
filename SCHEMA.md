@@ -190,7 +190,7 @@ Error types: `sign`, `op-swap`, `order-ops`, `arithmetic`, `algebra`, `off-by-fa
 - The server grades with **sympy** (`deploy.sh` installs it). It reads the same syntax, but only these tokens get through: numbers, `+ - * / ^`, parentheses, implicit multiplication (`2x`, `3pi`), `pi`, `e`, `deg`, `sqrt abs exp ln log log10 sin cos tan asin acos atan sec csc cot sinh cosh tanh`. Stick to these in `answer`, `match` and `points`.
 
 ## Colors, labels, anchors
-- `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`. Never hex.
+- `color` is a token name only: `c1` (blue, main), `c2` (orange), `c3` (violet), `ink`, `muted`, `ok`, `bad`, `mark`, or a palette hue `sky`, `amber`, `orange`, `violet`, `pink`, `cyan` (Tailwind-style; W163). Never hex. A scene `force` with no `color` gets its own palette hue automatically (deterministic, keyed by its label, no green or red), so each force reads as its own color; set `color` only to override. `ok` / `bad` mean right / wrong: use them for that only.
 - `label` is plain text with optional `$..$`. Keep it to **6 labels or fewer per graph**.
 - `anchor` says which side of the point the label sits on: `n ne e se s sw w nw c`.
 - `dash: true` draws a dashed line. Use it for asymptotes, guides and "ghost" forces. A force acting on the body is always solid; dashed forces are only ones NOT acting on it (a force whose `at` is a `body` mark's `at` must not be dashed; tests enforce this).
@@ -498,7 +498,7 @@ Marks (the only state words): `cur`, `done`, `front`, `rec`, `idle`, `tree`, `se
     "range": {"$ref": "#/$defs/pt"},
     "expr": {"type": "string", "minLength": 1, "description": "math.js expression in x (fn/shade/tangent) or t (param)"},
     "label": {"type": "string", "minLength": 1, "maxLength": 80, "description": "Plain text with optional $..$ KaTeX"},
-    "color": {"enum": ["c1", "c2", "c3", "ink", "muted", "ok", "bad", "mark"], "description": "Token name; never hex"},
+    "color": {"enum": ["c1", "c2", "c3", "ink", "muted", "ok", "bad", "mark", "sky", "amber", "orange", "violet", "pink", "cyan"], "description": "Token name; never hex. A scene force with no color (or c1 / c2 / c3, which a force always ignored) gets its own palette hue automatically (sky amber orange violet pink cyan; no green or red), keyed by its label: leave it off"},
     "anchor": {"enum": ["c", "n", "ne", "e", "se", "s", "sw", "w", "nw"], "description": "Which side of the point the label sits on"},
     "md": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "array", "minItems": 1, "items": {"type": "string"}, "description": "Lines, joined with \\n"}]},
     "text": {"type": "object", "required": ["type", "md"], "additionalProperties": false, "properties": {"type": {"const": "text"}, "md": {"$ref": "#/$defs/md"}}},
