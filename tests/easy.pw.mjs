@@ -362,6 +362,7 @@ try {
     await page.waitForSelector(".cl-peek .cl-cta", { timeout: 6000 });     // B7 ii (Tony, Oct 18): the sheet stays closed, the reply streams in the background
     assert.equal(await page.isHidden("#cluck"), true, "a wrong answer never opens Cluck by itself");
     assert.equal(asked, 1, "the first wrong answer asks /explain, narration or not");
+    await page.evaluate(() => { document.querySelector(".cl-peek .cl-cta").dataset.w141 = "1"; });   // W141: marks the CTA from before the sheet opened; the 44px assert below says whether the CTA after the X is this node
     await page.click(".cl-peek .cl-cta");
     await page.waitForFunction(() => document.querySelector("#cluck:not([hidden]) #clTabEP:not([hidden])"), null, { timeout: 6000 });
     assert.ok(await page.$("#cluck .wtext .wcaret") && !(await page.$("#cluck .wtext .wl")), "the thinking caret comes first, alone: " + await page.innerHTML("#cluck .wtext"));
@@ -377,7 +378,13 @@ try {
     await page.click("#cluck .cl-x");                                        // closed: the peek + CTA are the way back, then open again from the top
     assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "okay, but how?", "E1 = T2, wording b (Tony, Oct 13)");
     assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
-    assert.ok((await page.$eval(".cl-peek .cl-cta", b => b.getBoundingClientRect().height)) >= 44, "the CTA is a 44px target");
+    { const info = await page.$eval(".cl-peek .cl-cta", b => {   // W141: the CI red was never reproduced; if it reds again the message names the state
+        const chain = []; for (let e = b; e; e = e.parentElement) { const c = getComputedStyle(e), r = e.getBoundingClientRect();
+          chain.push({ el: e.tagName.toLowerCase() + "." + e.className, display: c.display, visibility: c.visibility, transform: c.transform, opacity: c.opacity, height: c.height, rectH: r.height }); if (e.matches(".cl-peek")) break; }
+        const r = b.getBoundingClientRect();
+        return { rect: [r.x, r.y, r.width, r.height].map(Math.round), sameNodeAsBeforeSheetOpened: b.dataset.w141 === "1", isConnected: b.isConnected, chain };
+      });
+      assert.ok(info.rect[3] >= 44, "the CTA is a 44px target: " + JSON.stringify(info)); }
     assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "Q3 = C: Cluck's steps inline, under the hint");
     // the stub is still streaming (a piece every 150 ms) and only its 3rd piece (the $$ block) overflows 3 lines: wait for the whole reply
     // in the peek (its last piece), then check the fade (todo 94: read after piece 1 only, a 2-line peek, no overflow yet)
@@ -482,22 +489,34 @@ try {
       const a0 = asked;
       if (n === 1) await page.evaluate(() => {                              // every state the reply passes through (Tony, Oct 12: the blink follows words, not lines)
         window.__rv = []; window.__rt = []; window.__rf = [];
+        // W141: a state is stamped with the frame time the app itself computed its dt from (rAF's timestamp), not with performance.now() in the observer:
+        // that is later by the frame's own work, and under load the page's clock and this one drifted by more than the budget below
+        const raf0 = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = cb => raf0(t => { window.__ft = t; cb(t); });
         const tick = t => { window.__rf.push(t); if (window.__rf.length < 6000) requestAnimationFrame(tick); }; requestAnimationFrame(tick);   // the page's own frames
         new MutationObserver(() => { const r = document.querySelector("#cluck .wreply:last-of-type"); if (!r) return; const c = r.cloneNode(true); c.querySelectorAll(".katex-mathml").forEach(m => m.remove());
-          const t = c.textContent.replace(/\s+/g, " ").trim(); if (t !== window.__rv.at(-1)) { window.__rv.push(t); window.__rt.push(performance.now()); } }).observe(document.querySelector("#cluck"), { subtree: true, childList: true, characterData: true });
+          const t = c.textContent.replace(/\s+/g, " ").trim(); if (t !== window.__rv.at(-1)) { window.__rv.push(t); window.__rt.push(window.__ft ?? performance.now()); } }).observe(document.querySelector("#cluck"), { subtree: true, childList: true, characterData: true });
       });
       await page.fill("#cluck .ask textarea", "why step " + n + "?"); await page.click("#cluck .ask .send");
       await page.waitForFunction(k => document.querySelectorAll("#cluck .wreply").length === k && !document.querySelector("#cluck.wbusy"), n, { timeout: 9000 });
       if (n === 1) {
+        await page.waitForFunction(() => /Egg-cellent/.test(window.__rv.at(-1) || "") && !document.querySelector("#cluck .wreply:last-of-type .wcaret"), null, { timeout: 9000 });   // W141: wait for the end state (whole reply drawn, caret gone), not for a number of frames
         const [rv, rt, rf] = await page.evaluate(() => [window.__rv, window.__rt, window.__rf]), words = t => t.split(" ").filter(Boolean).length;
         // the reveal runs on elapsed time (wishType: 35 chars/s): after a late frame (CPU load, 3 CI lanes) it shows what it owes, ~5 chars a word,
         // in that frame or the next one: the budget counts the time since the state before the last
-        const owed = i => 2 + Math.floor((rt[i] - rt[Math.max(0, i - 2)]) * 35 / 1000 / 5);
+        // W141: not "~5 chars a word": this reply's words are short (3.8 on average) and the first 23 chars are 6 words, so the 5-char guess owed 5 and
+        // read red under 3-lane load once the frame-count assert above stopped hiding it. Count the reply's own next words that fit in the chars owed,
+        // plus one for the word the cut rounds up to (wishCut moves to a word end)
+        const fw = rv.at(-1).split(" ").filter(Boolean);
+        const owed = i => { const j = Math.max(0, i - 2), B = (rt[i] - rt[j]) * 35 / 1000; let k = 0, c = 0;
+          while (words(rv[j]) + k < fw.length && c + fw[words(rv[j]) + k].length <= B) { c += fw[words(rv[j]) + k].length + 1; k++; } return 1 + k; };
         // W113: a state needs a frame to paint in; under 3-lane load the page got fewer than 10 frames for the whole reveal and the count read
         // 9 (red on main 5 in 6 at 6x load). Count the page's own frames over the reveal: at least 10 states, or one per frame when fewer
         // came (the per-state word budget below still catches a line landing at once)
         const frames = rf.filter(t => t >= rt[0] && t <= rt.at(-1)).length;
-        assert.ok(rv.length >= Math.max(2, Math.min(10, frames)), `the reply types out, it does not land a line (a chunk) at a time: ${rv.length} states in ${frames} frames, ${Math.round(rt.at(-1) - rt[0])} ms`);
+        // W141: the count of states follows the load (a state is one draw of >= 1 word, a formula is one state): 3-lane runs gave 8-9 states in 13-15 frames and
+        // the old min(10, frames) bar wanted 10 (red 5 of 12). What the step owes: the animation ran at all (>= 2 partial states before the whole reply, so
+        // >= 3 states) and no state adds more than it owes (next assert: a line landing at once fails there)
+        assert.ok(rv.length >= 3, `the reply types out, it does not land a line (a chunk) at a time: ${rv.length} states in ${frames} frames, ${Math.round(rt.at(-1) - rt[0])} ms`);
         assert.ok(rv.every((t, i) => words(t) - (i ? words(rv[i - 1]) : 0) <= owed(i)), "each state adds a word, not a line: " + JSON.stringify(rv.slice(0, 12).map((t, i) => [t, i ? Math.round(rt[i] - rt[i - 1]) : 0])));
         assert.ok(rv.every(t => !/[$\\]/.test(t)), "a formula shows whole or not at all, never as raw TeX: " + rv.find(t => /[$\\]/.test(t)));
       }
