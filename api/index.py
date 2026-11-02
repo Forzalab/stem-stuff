@@ -20,8 +20,9 @@ def app(environ, start_response):
         n = 0
     body = environ["wsgi.input"].read(min(n, serve.POST_MAX + 1)) if n > 0 else b""
     stream = serve.STREAMS.get(path.split("?")[0]) if environ.get("REQUEST_METHOD") == "POST" else None
-    if stream:                                                 # Cluck's streams: /explain, /chat
-        status, headers, chunks = stream(environ.get("HTTP_COOKIE", ""), body)
+    staged = None if stream or environ.get("REQUEST_METHOD") != "POST" else serve.STAGED_POSTS.get(path.split("?")[0], lambda *a: None)(environ.get("HTTP_COOKIE", ""), body)
+    if stream or staged:                                       # Cluck's streams: /explain, /chat; a proof Check that asked for stages
+        status, headers, chunks = staged or stream(environ.get("HTTP_COOKIE", ""), body)
         start_response(f"{status} {REASON.get(status, '')}", list(headers.items()))
         return chunks                                          # an iterable: the runtime sends it as it comes (or all at once)
     res = serve.dispatch(environ.get("REQUEST_METHOD", "GET"), path, environ.get("HTTP_COOKIE", ""), body, environ.get("HTTP_USER_AGENT", ""))
