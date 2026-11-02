@@ -77,6 +77,7 @@ weight() {
     codeblock|flight|views) echo 7 ;; mode-reset|reveal) echo 6 ;; nudge|part-feedback|why-chip) echo 5 ;; blind|katex-wrap|measure-slots|views-oui|views-static) echo 4 ;;
     popover) echo 10 ;; mcclick|privacy-reach) echo 3 ;; blur|font) echo 1 ;;
     geomarks) echo 12 ;;  # wgeo U1: + the ramp contact check on chromium/firefox/webkit at 1440 + 390; U3: + labels at 1440/390/360 (graph.js + Geometry); local run ~12.5 s (CI has chromium only: ~5 s)
+    proof-timeout) echo 6 ;;   # todo 109 item 1: fake clock, own server, local run ~5 s (estimate until CI timing)
     welcome) echo 5 ;;   # local run ~4 s
     expr) echo 12 ;;   # W137: 3 screen sizes + flag off, own servers; local run ~11 s
     welcome-app) echo 26 ;;   # todo 119 welcome Q1 in the app, own server, 7 screen sizes, local run ~26 s (estimate until CI timing)
