@@ -748,7 +748,7 @@ html.side #work > .orig { margin: 0; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
-.fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: 0 var(--s1); }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped */
+.fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: .5em var(--s1); margin-block: -.5em; }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped. The .5em above and below holds a \frac / \tfrac12 / \sqrt that rises or drops past the 1.4 line (overflow-x: auto makes y clip too: the ½ in K = ½mv² lost its bottom, todo 115, Oct 29); the -.5em margin gives it back, so the rows sit where they did */
 .fcard .fm .katex { white-space: nowrap; }
 .fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
@@ -793,6 +793,11 @@ html.side #work > .orig { margin: 0; }
 .mcopy:is(:hover, :focus-visible) { color: var(--c1); }
 .mcopy.done { color: var(--correct); }
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+@media (hover: hover) and (pointer: fine) {   /* a formula card's copy shows only near its math (Tony, Oct 29): invisible at rest but still in the row (no shift) and still focusable; the row's hover or focus brings it back. Touch has no hover, so it stays visible there */
+  .fcard li.f .mcopy { opacity: 0; transition: opacity .15s; }
+  .fcard li.f:is(:hover, :focus-within) .mcopy, .fcard li.f .mcopy.done { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .fcard li.f .mcopy { transition: none; } }
 /* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
    its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
 .preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
