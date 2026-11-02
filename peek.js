@@ -38,11 +38,21 @@
     box.style.setProperty("--sun-x", (cx - x0 + BLEED) + "px");           // the sun core under the duck, always
   }
   function up() { return !!box && !box.hidden && !box.classList.contains("out"); }
+  function jiggle() {                                                        // the sunrise nudges the Ask Cluck door once (none with reduced motion)
+    var d = document.getElementById("door");
+    if (!d || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    d.classList.remove("jiggle"); void d.offsetWidth; d.classList.add("jiggle");
+    clearTimeout(d.jt); d.jt = setTimeout(function () { d.classList.remove("jiggle"); }, 800);
+  }
   function rise(o) {
     build(); clearTimeout(outT);
     onTap = o.onTap || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
     box.querySelector(".ck-say").textContent = o.line || "";
-    box.querySelector(".ck-peek").setAttribute("aria-label", o.label || "Cluck");
+    var pk = box.querySelector(".ck-peek"), st = side.matches;               // W98c PR1: desktop = a status (one door: Ask Cluck); the phone's duck stays the tap
+    pk.setAttribute("aria-label", o.label || "Cluck"); pk.disabled = st; pk.tabIndex = st ? -1 : 0;
+    if (st) pk.setAttribute("aria-hidden", "true"); else pk.removeAttribute("aria-hidden");
+    box.classList.toggle("status", st); if (st) box.setAttribute("role", "status"); else box.removeAttribute("role");
+    if (st) { box.querySelector(".ck-say").textContent = o.line && /click|tap|ask|need help|stuck/i.test(o.line) ? "Cluck's right here." : (o.line || ""); jiggle(); }
     box.classList.remove("on", "out"); box.hidden = false; place();
     void box.offsetWidth;                                                   // restart: every rise plays the sunrise from the top
     box.classList.add("on");

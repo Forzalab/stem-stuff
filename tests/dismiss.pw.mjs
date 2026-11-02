@@ -1,8 +1,7 @@
 // Dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor"). html.side: the X, Escape or the sash dragged
 // to the right edge fold the right column; one centred column, the question one type step up, no "Question" label. Under the verdict a
-// 44px+ row (#clBack) brings it back: its name is plain ("See Cluck's explanation"), its rotating line is aria-hidden, "Show him" stays.
-// Reduced motion: one static line. The humour kind is a stable hash of telemetry's own id (window.stemHk), forced by #hk=<kind>, a fixed
-// default without an id. Phones: unchanged. Own serve.py + a stub OpenRouter.
+// W98c PR1 (Tony Nov 2 09:55 design change): the "Show him" row (#clBack) and its humour kinds are gone; the one Ask Cluck door (#door) is the
+// way back (the reduced-motion / hk-bucket / duck-kind steps went with the row). Phones: unchanged. Own serve.py + a stub OpenRouter.
 //   node tests/dismiss.pw.mjs <port> [shots dir]
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
@@ -87,10 +86,10 @@ async function cluck(vp, { hash = "", motion = "no-preference", hk = null, close
 }
 const state = page => page.evaluate(() => {
   const vis = s => { const e = document.querySelector(s); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== "none"; };
-  const b = document.querySelector("#clBack"), f = document.querySelector("#freeze").getBoundingClientRect(), m = document.querySelector("#main").getBoundingClientRect();
+  const b = document.querySelector("#door"), f = document.querySelector("#freeze").getBoundingClientRect(), m = document.querySelector("#main").getBoundingClientRect();
   return { gone: document.documentElement.classList.contains("cl-gone"), open: window.stemCluckOpen(), work: vis("#work"), sash: vis("#sash"), label: vis(".freeze .q-label"),
-    back: vis("#clBack"), backH: b ? b.getBoundingClientRect().height : 0, name: b && b.getAttribute("aria-label"), hkHidden: b && b.querySelector(".hk").getAttribute("aria-hidden"),
-    go: b && b.querySelector(".hk-go").textContent, line: b && b.querySelector(".hk-t").textContent, last: !!b && !b.nextElementSibling && b.parentElement.id === "freezeIn",
+    back: vis("#door"), backH: b ? b.getBoundingClientRect().height : 0, name: null, hkHidden: null,
+    go: null, line: null, last: true,
     fs: parseFloat(getComputedStyle(document.querySelector("#problem")).fontSize), gapL: f.left - m.left, gapR: m.right - f.right, hscroll: document.documentElement.scrollWidth > innerWidth };
 });
 const ev = (page, n) => page.evaluate(n => window.__ev.filter(e => e[0] === n).map(e => e[1]), n);
@@ -106,20 +105,11 @@ await step("desktop: the X folds the column; one centred column, a bigger questi
   assert.ok(s.fs > s0.fs, `the question steps up (${s0.fs} -> ${s.fs})`);
   assert.ok(Math.abs(s.gapL - s.gapR) <= 2, `centred: ${s.gapL} | ${s.gapR}`);
   assert.ok(!s.hscroll, "no sideways scroll");
-  assert.ok(s.back && s.backH >= 44 && s.last, "the row shows, 44px+, last under the verdict: " + JSON.stringify(s));
-  assert.equal(s.name, "See Cluck's explanation", "a plain accessible name");
-  assert.equal(s.hkHidden, "true", "the rotating line is aria-hidden");
-  assert.equal(s.go, "Show him", "the action word stays");
-  assert.equal(s.line, KINDS.deadpan, "no telemetry id (local run): the fixed default kind");
-  assert.deepEqual(await ev(page, "cluck_back_seen"), [{ hk: "deadpan" }], "one exposure, with its kind");
+  assert.ok(s.back && s.backH >= 44, "the Ask Cluck door is the way back, 44px+: " + JSON.stringify(s));
   await page.screenshot({ path: join(SHOTS, "dismiss-1-gone-1280.png") });
-  await page.waitForFunction(l => document.querySelector("#clBack .hk-t").textContent !== l, s.line, { timeout: 6000 });
-  assert.ok(await page.$eval("#clBack .hk-t", t => t.classList.contains("roll")), "the next line slides in");
-  assert.equal((await state(page)).go, "Show him", "only the line rotates");
-  await page.click("#clBack");
+  await page.click("#door");
   const r = await state(page);
   assert.ok(!r.gone && r.open && r.work && r.sash && !r.back, "restored, Cluck open: " + JSON.stringify(r));
-  assert.equal((await ev(page, "cluck_open")).at(-1).hk, "deadpan", "the open event carries the kind");
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
 });
@@ -129,7 +119,7 @@ await step("desktop: Escape dismisses; the sash dragged to the right edge dismis
   await page.keyboard.press("Escape");
   let s = await state(page);
   assert.ok(s.gone && s.back && !s.work, "Escape: " + JSON.stringify(s));
-  await page.click("#clBack");
+  await page.click("#door");
   s = await state(page);
   assert.ok(!s.gone && s.open, "back: " + JSON.stringify(s));
   const b = await page.locator("#sash").boundingBox(), y = b.y + 200, x0 = b.x + b.width / 2;
@@ -138,51 +128,9 @@ await step("desktop: Escape dismisses; the sash dragged to the right edge dismis
   await page.mouse.up(); await page.waitForTimeout(200);
   s = await state(page);
   assert.ok(s.gone && !s.open && s.back && !s.work, "dragged to the right edge: " + JSON.stringify(s));
-  await page.click("#clBack");
+  await page.click("#door");
   s = await state(page);
   assert.ok(!s.gone && s.open && s.work, "back again: " + JSON.stringify(s));
-  assert.deepEqual(page.errs, [], "no page errors");
-  await page.context().close();
-});
-
-await step("reduced motion: one static line, no slide", async () => {
-  const page = await cluck(DESK, { motion: "reduce" });
-  await page.click("#cluck .cl-bar .cl-x");
-  const l = (await state(page)).line;
-  await page.waitForTimeout(4500);
-  const s = await state(page);
-  assert.ok(s.back, "the row shows");
-  assert.equal(s.line, l, "the line stays put");
-  assert.equal(await page.$eval("#clBack .hk-t", t => t.classList.contains("roll")), false, "no slide");
-  assert.deepEqual(page.errs, [], "no page errors");
-  await page.context().close();
-});
-
-await step("the bucket: a stable hash of the one telemetry id; stemHk picks the kind; #hk=<kind> forces it", async () => {
-  const page = await cluck(DESK, { hk: 2 });
-  const b = await page.evaluate(() => { const B = window.__stemTelemetry.bucket, ids = ["t1", "tabc123", "tlz9x0q", "t" + "x".repeat(40)]; return { same: ids.map(i => B(i, 4) === B(i, 4)), range: ids.every(i => B(i, 4) >= 0 && B(i, 4) < 4), junk: [B("", 4), B(null, 4), B("t1", 0)], spread: new Set(Array.from({ length: 64 }, (_, i) => B("t" + i.toString(36) + "q", 4))).size }; });
-  assert.deepEqual(b.same, [true, true, true, true], "same id, same bucket");
-  assert.ok(b.range && b.spread === 4, "all four buckets in use: " + JSON.stringify(b));
-  assert.deepEqual(b.junk, [0, 0, 0], "no id: bucket 0, never throws");
-  assert.equal(await page.evaluate(() => !/hk|bucket/i.test(document.cookie) && !Object.keys(localStorage).some(k => /hk|bucket/i.test(k))), true, "no new cookie, no new storage");
-  await page.click("#cluck .cl-bar .cl-x");
-  assert.equal((await state(page)).line, KINDS.duck, "stemHk -> 2 = duck");
-  await page.context().close();
-  const p2 = await cluck(DESK, { hash: "&hk=nerd", hk: 0 });
-  await p2.click("#cluck .cl-bar .cl-x");
-  assert.equal((await state(p2)).line, KINDS.nerd, "#hk=nerd beats the hash");
-  assert.deepEqual(await ev(p2, "cluck_back_seen"), [{ hk: "nerd" }]);
-  assert.deepEqual(p2.errs, [], "no page errors");
-  await p2.context().close();
-});
-
-await step("duck kind: its 2nd line is a random pick from Cluck's idle pool (Tony #36), no more \"folded, not offended\"", async () => {
-  const page = await cluck(DESK, { hk: 2 });
-  await page.evaluate(() => { Math.random = () => 0.99; });                    // deterministic: the pool's last line
-  await page.click("#cluck .cl-bar .cl-x");
-  assert.equal((await state(page)).line, KINDS.duck);
-  await page.waitForFunction(l => document.querySelector("#clBack .hk-t").textContent !== l, KINDS.duck, { timeout: 6000 });
-  assert.equal((await state(page)).line, "Cluck's getting his ducks in a row", "Math.random 0.99: the pool's last line");
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
 });
@@ -215,27 +163,26 @@ await step("1920x1080 + 393x852: greyscale shots (STYLE.md §7.16); 1920 dismiss
 /* E (Tony, Oct 21): "Show him" is never on screen with "okay, but how?" or "See Cluck's steps" */
 const ctas = page => page.evaluate(() => {
   const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden";
-  return { how: [...document.querySelectorAll(".cl-peek .cl-cta")].some(vis), back: vis(document.querySelector("#clBack")) };
+  return { how: [...document.querySelectorAll(".cl-peek .cl-cta")].some(vis), back: vis(document.querySelector("#door")) };
 });
 const one = async (page, what) => { const c = await ctas(page); assert.ok(!(c.how && c.back), `${what}: both Cluck CTAs up ${JSON.stringify(c)}`); return c; };
-await step("E desktop 1280: with the 'okay, but how?' peek up, no 'Show him' row; open / dismiss / Escape / reopen never show both", async () => {
+await step("E desktop 1280: the door is the one control: open / dismiss / Escape / reopen show it and no other CTA", async () => {
   const page = await cluck(DESK, { close: false });
   await one(page, "open");
   await page.click("#cluck .cl-bar .cl-x");
   let c = await one(page, "dismissed (X)");
-  assert.ok(c.how && !c.back, "dismissed with the peek: only 'okay, but how?' " + JSON.stringify(c));
+  assert.ok(!c.how && c.back, "dismissed: only the door (no 'okay, but how?', no 'Show him') " + JSON.stringify(c));
   assert.equal(await page.evaluate(() => document.documentElement.classList.contains("cl-gone")), true, "the column folded");
-  await page.click(".cl-peek .cl-cta");
+  await page.click("#door");
   await page.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 });
-  await one(page, "reopened from the peek");
+  await one(page, "reopened from the door");
   await page.keyboard.press("Escape"); await page.waitForTimeout(200);
   c = await one(page, "dismissed (Escape)");
-  assert.ok(c.how && !c.back, "Escape: only 'okay, but how?' " + JSON.stringify(c));
+  assert.ok(!c.how && c.back, "Escape: only the door " + JSON.stringify(c));
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForFunction(() => window.__drill.state.finished, null, { timeout: 5000 });
   c = await one(page, "question closed");
-  const cmp = await page.evaluate(() => [...document.querySelectorAll("#wish .cue-ok")].some(e => e.getClientRects().length > 0));
-  assert.ok(!c.how && !c.back && cmp, "solved: 'See Cluck's steps' is the one CTA, no 'Show him' row " + JSON.stringify({ ...c, cmp }));
+  assert.ok(!c.how && c.back, "solved: the door is the one control (no 'See Cluck's steps' chip, no 'Show him' row) " + JSON.stringify(c));
   assert.deepEqual(page.errs, [], "no page errors");
   await page.context().close();
 });

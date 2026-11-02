@@ -1,4 +1,5 @@
 // Incidents (Tony, Oct 19; SCHEMA.md "Incidents"): a Cluck failure keeps its old words and adds "Send Tony this code: E-XXXXX" (or the
+// W98c PR1 (Tony 09:55 design change): viewport 600 wide = the phone layout: the failure code reads in the #wish chip there; on desktop that chip is gone (the code shows in the sheet after the Ask Cluck door tap, cluck-door.pw)
 // server's S-XXXXX from X-Incident); the reason never shows, except in Tony's debug mode (?debug=1). Every failure sends one /log/incident
 // beacon. Cases: /explain 502 + X-Incident, a plain 500, headers then a dropped connection (phase stream), and an OpenRouter out of
 // credit end to end (serve.py fails fast: 503 budget_cap). Own serve.py + a stub OpenRouter.
@@ -70,7 +71,7 @@ const REASONS = /upstream|http|network|budget|credit|stream|timeout|empty|cap|ex
 
 /* the bank's question, a wrong pick: Cluck's reply is asked for in the background (the first question this session) */
 async function wrong({ explain, debug = false, off = false } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: 600, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   if (explain) await ctx.route("**/explain", explain);
@@ -104,7 +105,7 @@ await step("a plain 500 (no header): the page's own E- code; the sheet says \"Co
   const t = await chip(page);
   assert.match(t, /^Oops, didn't load\. Tap to try again\. Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, t);
   const code = t.match(CODE)[0];
-  await page.click("#wish .wchip");                                    // a tap = Try again (still 500): a new code
+  await page.click("#door, #wish .wchip");                                    // a tap = Try again (still 500): a new code
   await page.waitForFunction(c => { const x = document.querySelector("#cluck .wtext")?.innerText || ""; return /Couldn't load Cluck\./.test(x) && /Send Tony this code: E-/.test(x) && !x.includes(c); }, code, { timeout: 8000 });
   const sheet = await page.evaluate(() => document.querySelector("#cluck .wtext").innerText.replace(/\s+/g, " ").trim());
   assert.match(sheet, /^Couldn't load Cluck\. Try again Send Tony this code: E-[2-9A-HJ-NP-Z]{5}$/, sheet);
@@ -162,7 +163,7 @@ await step("OpenRouter out of credit (402), end to end: fast 503 + X-Incident bu
 });
 
 await step("/check times out twice in a row (P2): the 2nd is its own incident, timeout_x2, with its own snapshot (not a dup of the 1st)", async () => {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block" });
+  const ctx = await browser.newContext({ viewport: { width: 600, height: 900 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
   await ctx.route("**/check", () => {});                               // never answers: net() aborts it after 8 s

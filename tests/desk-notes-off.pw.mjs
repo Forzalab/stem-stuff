@@ -56,8 +56,8 @@ try {
       if (SHOT) await page.screenshot({ path: join(SHOT, `desk-${w}-${mode}-load.png`) });
       await page.fill("#ans", "1"); await page.keyboard.press("Enter");
       if (mode === "sugar") {
-        await page.waitForSelector(".cl-peek .cl-cta", { timeout: 8000 });
-        await page.click(".cl-peek .cl-cta");
+        await page.waitForSelector("#door", { timeout: 8000 });
+        await page.click("#door");
         await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });
         await page.waitForTimeout(600);
         await check("after Explain Cluck opened");

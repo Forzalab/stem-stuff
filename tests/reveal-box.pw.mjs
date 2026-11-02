@@ -62,7 +62,7 @@ for (const [W, H] of [[390, 844], [1280, 800]]) for (const outcome of ["right", 
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/before-${outcome}-${W}.png` });
   await go(outcome === "right" ? "3.03" : "2");
   await page.waitForSelector("#q .nx", { timeout: 5000 });
-  await page.waitForSelector(".cue-chip", { timeout: 5000 });
+  await page.waitForSelector(".cue-chip, #door", { timeout: 5000 });
   await page.waitForTimeout(1500);
   const after = await pos(page);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/${outcome === "right" ? "correct" : "wrong"}-${W}.png` });
@@ -76,7 +76,7 @@ for (const [W, H] of [[390, 844], [1280, 800]]) for (const outcome of ["right", 
     assert.ok(Math.abs(after.nx.top + after.nx.height / 2 - before.chk.top - before.chk.height / 2) <= 1 && Math.abs(dy) <= 1, `Next moved: centre ${after.nx.top + after.nx.height / 2} vs Check ${before.chk.top + before.chk.height / 2}`);
   });
   await step(`${T}: Ask Cluck is the field's flush right segment (brown, inline SVG duck); Next is outside`, async () => {
-    const g = await page.evaluate(`(() => { const R = ${R}; const ff = document.querySelector("#ff"), chip = ff.querySelector(".cue-chip"), nx = document.querySelector("#q .nx");
+    const g = await page.evaluate(`(() => { const R = ${R}; const ff = document.querySelector("#ff"), chip = ff.querySelector(".cue-chip, .door"), nx = document.querySelector("#q .nx");
       const cs = chip && getComputedStyle(chip), tok = n => { const d = document.createElement("i"); d.style.color = "var(--" + n + ")"; document.body.append(d); const c = getComputedStyle(d).color; d.remove(); return c; };
       return { ff: R(ff), chip: R(chip), nx: R(nx), inside: !!chip, nxIn: ff.contains(nx), svg: !!chip?.querySelector("svg.dk"), img: !!chip?.querySelector("img"),
         bg: cs?.backgroundColor, fill: tok("help-fill"), line: tok("help-line"), on: tok("help-on"), col: cs?.color, bt: cs?.borderTopColor, br: cs?.borderRightColor, bb: cs?.borderBottomColor, bl: cs?.borderLeftColor,

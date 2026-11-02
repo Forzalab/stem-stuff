@@ -12,6 +12,7 @@ import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+const pk = page => page.viewportSize().width >= 720 ? "#door" : ".ck-peek";   // W98c PR1 (Tony 09:55 design change): on desktop the sunrise is a status; Ask Cluck (#door) is the tap
 const require = createRequire(import.meta.url);
 let pw;
 try { pw = require("playwright"); } catch { try { pw = require("/opt/node22/lib/node_modules/playwright"); } catch { pw = require("/opt/node-tools/node_modules/playwright"); } }
@@ -112,7 +113,7 @@ for (const [tag, vp] of VPS) {
     assert.ok(duck.op === 1 && duck.top < vp.height && duck.bottom > 0, "the duck is up, on screen: " + JSON.stringify(duck));
     assert.match(await page.textContent(".cl-peek .cl-steps"), /POOF! A wish is a wish\./, "the hint card already shows the start of Cluck's text");
     await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}.png`) });
-    await page.click(".ck-peek");
+    await page.click(pk(page));
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});                  // a tap skips the typing
@@ -142,7 +143,7 @@ for (const [tag, vp] of VPS) {
     await page.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
     await page.waitForTimeout(600);
     assert.equal(asked, 0, "no Cluck request"); assert.equal(page.ai, 0, "no /explain");
-    await page.click(".ck-peek");                                       // Tony, Oct 19 (pick b): an explicit duck tap asks, as the chip does
+    await page.click(pk(page));                                       // Tony, Oct 19 (pick b): an explicit duck tap asks, as the chip does
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
     await page.click("#cluck .wtext").catch(() => {});
@@ -180,7 +181,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   assert.equal(asked, 2, "Q3: no prefetch"); assert.equal(page.ai, 2, "Q3: no /explain yet");
   assert.equal(await cluckOpen(page), false, "Q3: Cluck stays closed");
   assert.equal(await up(page), true, "Q3: the duck rises");
-  await page.click(".ck-peek");                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
+  await page.click(pk(page));                                         // Tony, Oct 19 (pick b): the duck opens Cluck right away, a fresh request
   await page.clock.runFor(300);
   assert.equal(await cluckOpen(page), true, "the duck opens Cluck");
   await page.click("#cluck .wtext").catch(() => {});
@@ -198,7 +199,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await p2.waitForFunction(() => /Explain my mistake/.test(document.querySelector("#wish")?.textContent || ""), null, { timeout: 4000 });
   await p2.waitForTimeout(600);
   assert.equal(asked, 0, "Q3 via the chip: nothing yet");
-  await p2.click("#wish .wchip");
+  await p2.click("#door, #wish .wchip");
   await p2.clock.runFor(300);
   assert.equal(await cluckOpen(p2), true, "the chip opens Cluck");
   await p2.waitForFunction(() => /Egg-cellent/.test(localStorage.getItem("stem-cluck") || ""), null, { timeout: 8000, polling: 100 });
@@ -249,7 +250,7 @@ for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the d
   await riseDone(page);
   bad.push(...(await clash(page, "body")).map(s => "miss, duck up: " + s));
   await page.screenshot({ path: join(SHOTS, `b7-duck-risen-${tag}-v2.png`) });
-  await page.click(".ck-peek");
+  await page.click(pk(page));
   await page.clock.runFor(600);
   await page.click("#cluck .wtext").catch(() => {});
   await page.clock.runFor(2000);

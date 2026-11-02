@@ -840,7 +840,7 @@ function renderQuestion() {
       </div><div class="preview" id="preview" aria-hidden="true"></div>`;
     wireFF();
   }
-  formulaCard();
+  formulaCard(); doorSync();
 }
 /* sugar: Key formulas (Tony, Oct 5, design/mockups/formula-use.html ?v=7): the question's formula-sheet rows (saccharine.part) in the order
    they get used, centred, a thin arrow between, under a "Key formulas" label notched into the box's border. Under the answer, before the hint */
@@ -1678,14 +1678,17 @@ function rboxSync() {
   ff.classList.add("rbox");
   const ok = ff.classList.contains("ok");
   ff.classList.toggle("tight", ff.parentElement.clientWidth < 480);        // the label needs room: below it, the duck-only segment (the mock's 390 fallback)
-  const wb = document.querySelector("#wish .wbar"), btn = wb && wb.querySelector(".wchip");
-  if (btn) {
-    ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());
-    const img = btn.querySelector("img.dk");
-    if (img) { const t = document.createElement("template"); t.innerHTML = DUCK; const svg = t.content.firstChild; if (img.classList.contains("g-nod")) svg.classList.add("g-nod"); img.replaceWith(svg); }
-    btn.hidden = wishEl().hidden;
-    ff.insertBefore(btn, ff.querySelector(".nx"));
-    wb.remove();
+  if (sideMQ.matches) doorSync();                                          // W98c PR1: desktop: the door is the field's flush right segment (it replaced the adopted #wish chip)
+  else {                                                                   // phones: unchanged, the #wish chip is adopted
+    const wb = document.querySelector("#wish .wbar"), btn = wb && wb.querySelector(".wchip");
+    if (btn) {
+      ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());
+      const img = btn.querySelector("img.dk");
+      if (img) { const t = document.createElement("template"); t.innerHTML = DUCK; const svg = t.content.firstChild; if (img.classList.contains("g-nod")) svg.classList.add("g-nod"); img.replaceWith(svg); }
+      btn.hidden = wishEl().hidden;
+      ff.insertBefore(btn, ff.querySelector(".nx"));
+      wb.remove();
+    }
   }
   if (ok && !document.querySelector("#q .ansl")) {                         // right: the line says it too; the value is what the student typed
     const u = S.prob, host = $("#preview"), v = $("#ans").value.trim();
@@ -1698,6 +1701,36 @@ function rboxSync() {
       pvFit(host);
     }
   }
+}
+/* W98c PR1 (Tony Nov 2 09:44-09:59; cluckbtn v3c): desktop has ONE way into Cluck, the Ask Cluck door. It appears with the first try (never before:
+   no pre-answer Cluck, no server change), stays after grading, on every Cluck-able question (a key, or a snack's steps); questions with no key
+   get none. It hides while Cluck is open and is back on close. Typed + closed (sugar reveal box): the field's flush right segment; pick all: the
+   left of the Check row; else its own row under the question. Killed on desktop: the #wish chips, "okay, but how?", "Show him", the origin card. */
+const doorOn = () => sideMQ.matches && !!S && modeOf() === "sugar" && !cluckOff && !mockHold() && (!!S.prob.wish || !!origEl) && (S.tries.length > 0 || S.finished) && !(cl && cl.open);
+function doorTap() {
+  if (origEl) { clOpen("steps", "#door"); return; }                        // the free steps exist: no new AI call
+  if (!wish || wish.code !== S.code) { wish = Object.assign(newWish(), { started: false }); wishFromCache(wish); }
+  const w = wish; w.tapped = true;
+  if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call */ }
+  else if (!w.started || w.failed) wishRetry(w);
+  else if (w.key && S.finished && cueRight() && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", "#door"); clCompare(w); return; }   // right after a miss: the text explains the miss
+  clOpen("explain", "#door");
+}
+function doorSync() {
+  let d = document.getElementById("door");
+  if (!doorOn()) { d?.remove(); document.getElementById("doorRow")?.remove(); return; }
+  if (!d) {
+    d = document.createElement("button"); d.type = "button"; d.id = "door"; d.className = "door"; d.setAttribute("aria-controls", "cluck"); d.setAttribute("aria-expanded", "false");
+    d.innerHTML = `${DUCK}<span>Ask Cluck</span>`;
+    d.addEventListener("click", doorTap);
+  }
+  const ff = document.querySelector("#q #ff.ff.rbox"), chk = $("#q .chk");
+  const home = ff || chk;
+  if (home) { document.getElementById("doorRow")?.remove(); if (d.parentElement !== home) home.insertBefore(d, ff ? ff.querySelector(".nx") : chk.firstChild); return; }
+  let row = document.getElementById("doorRow");
+  if (!row) { row = document.createElement("div"); row.id = "doorRow"; row.className = "door-row"; }
+  if (row.parentElement !== $("#q") || row.nextSibling) $("#q").append(row);
+  if (d.parentElement !== row) row.append(d);
 }
 function cueNext() {
   document.querySelectorAll("#q .nx").forEach(x => x.remove());
@@ -1827,7 +1860,7 @@ function feedback(r, typed) {
   const rev = reveal(r);
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
-  rboxSync();
+  rboxSync(); doorSync();
   if (r.verdict === "wrong") wishOnWrong();
   window.stemBrainrot?.sync();
 }
@@ -2171,6 +2204,7 @@ function peekText() {                                                       // t
 const ctaHTML = (label, open) => `<button type="button" class="cl-cta" aria-expanded="${!!open}" aria-controls="cluck">${icon("i-duck")}<span>${esc(label)}</span>${icon("i-right")}</button>`;
 function wishPaint() {
   const el = wishEl(), w = wish;
+  const desk = sideMQ.matches;                                               // W98c PR1: desktop has one door (#door, doorSync); no chip, no "okay, but how?"
   const room = Math.max(0, ...[...document.querySelectorAll(".cl-peek, .cl-room")].map(p => p.getBoundingClientRect().height));   // the room the peek had (W129 L4)
   document.querySelectorAll(".cl-peek, .cl-room").forEach(p => p.remove());
   el.classList.remove("gone");
@@ -2188,22 +2222,23 @@ function wishPaint() {
   if (cue) {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
-    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
+    el.innerHTML = desk ? "" : `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
+    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk, #door .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
     const keep = off && sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
     const into = host || el.querySelector(".cluck > div");                  // box (W129 L4: taking it out shortened the page, which a scrolled short window paid for with a jump)
-    if (!off) into.insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
+    if (!off) into.insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${desk ? "" : ctaHTML("okay, but how?", w.open)}</div>`);
     else if (keep) into.insertAdjacentHTML("beforeend", `<div class="cl-room" aria-hidden="true" style="height:${room}px"></div>`);
     el.hidden = (off && !keep) || !!host;
     el.classList.toggle("gone", keep && !host);                             // #wish's own card: unseen, its room kept
   } else {
     const label = !w.started ? "Explain my mistake" : "Oops, didn't load. Tap to try again.";
-    el.innerHTML = `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
+    el.innerHTML = desk ? "" : `<div class="wbar"><button type="button" class="wchip rw-skin rw-chip${w.tapped ? "" : " rw-wiggle"}" aria-expanded="${w.open}" aria-controls="cluck"><span class="rw-coin2" aria-hidden="true">${icon("i-duck")}</span><span>${label}${w.started ? incHTML(w.inc, false) : ""}</span></button></div>`;
   }
-  rboxSync();
+  if (desk && !el.querySelector(".cl-peek, .cl-room, .cluck")) el.hidden = true;
+  rboxSync(); doorSync();
   const btn = document.querySelector(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta");
   btn?.addEventListener("click", () => {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
@@ -2340,6 +2375,7 @@ function clPlace() {                                                        // s
   const home = sideMQ.matches ? $("#work") : document.body;
   if (cl.el.parentElement !== home) home.append(cl.el);
   $("#work").classList.toggle("cl-on", cl.open && sideMQ.matches);
+  doorSync();                                                               // the door hides while Cluck is open, back on close
   window.stemBrainrot?.sheet(cl.open && sideMQ.matches);
   document.documentElement.classList.toggle("cl-open", cl.open && !sideMQ.matches);
 }
@@ -2410,23 +2446,9 @@ function hkShow(b, roll) {
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
 function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok, .rbox .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
-function clBackSync() {
-  const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
-  let b = $("#clBack");
-  if (!show) { if (b) b.hidden = true; hkStop(); return; }
-  if (!b) {
-    b = document.createElement("button"); b.type = "button"; b.id = "clBack"; b.className = "cl-back"; b.hidden = true;
-    b.setAttribute("aria-label", "See Cluck's explanation");
-    b.innerHTML = `${icon("i-duck")}<span class="hk" aria-hidden="true"><span class="hk-t"></span></span><span class="hk-go" aria-hidden="true">Show him</span>`;
-    b.addEventListener("click", clBack);
-  }
-  const home = $("#freezeIn");
-  if (b.parentElement !== home || b.nextElementSibling) home.append(b);       // under the verdict (and Cluck's chip / peek), last in the column
-  if (!b.hidden) return;
-  b.hidden = false; hkI = 0; hkShow(b, false);
-  window.stemT?.("cluck_back_seen", { hk: hkKind() });                      // the A/B exposure (telemetry.js: a no-op when off)
+function clBackSync() {                                                    // W98c PR1: "Show him" is gone (the door is always there, the sunrise is the cue); only the old row is cleared
+  const b = $("#clBack"); if (b) b.hidden = true;
   hkStop();
-  if (!reduceMQ.matches) hkT = setInterval(() => { if (b.hidden || !b.isConnected) { hkStop(); return; } hkI++; hkShow(b, true); }, 3600);   // reduced motion: one static line
 }
 function clBack() {
   const w = wish, said = !!w && !!S && w.code === S.code && w.started && !w.failed && ![404, 503].includes(w.failed);
@@ -3473,7 +3495,7 @@ sash.addEventListener("keydown", e => {
   e.preventDefault();
   setRatio(a[Math.max(0, Math.min(a.length - 1, to))], false);
 });
-if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); clPlace(); layoutFreeze(); });
+if (sideMQ.addEventListener) sideMQ.addEventListener("change", () => { applyMT(); origPlace(); clPlace(); layoutFreeze(); if (S && wish) wishPaint(); doorSync(); });
 
 /* the Scratchpad button (phones, STYLE.md §3): shown while the pad is off and no answer field has focus. Tap = the pad page. Drag: it
    follows the finger; on release it snaps to the nearer side edge and stays between the top and the bottom bar, where it was dropped

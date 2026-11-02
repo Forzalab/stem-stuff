@@ -84,8 +84,8 @@ async function open(which, w, h) {
   await page.goto(BASE + "/#CALC1_VS1");
   await page.waitForFunction(() => location.hash === "#CALC1_VS1" && !document.querySelector("#freeze").hidden, null, { timeout: 8000 });
   await page.click('#q .opt[data-id="a"]'); await page.click('#q .ch[data-id="a"] .send');
-  await page.waitForSelector("#wish:not([hidden]) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 8000 });
-  if (!(await page.locator("#cluck .wtext").count())) await page.click("#wish:not([hidden]) .wchip, .cl-peek .cl-cta");
+  await page.waitForSelector("#door, #wish:not([hidden]) .wchip, .cl-peek .cl-cta, #cluck .wtext", { timeout: 8000 });
+  if (!(await page.locator("#cluck .wtext").count())) await page.click("#door, #wish:not([hidden]) .wchip, .cl-peek .cl-cta");
   await page.waitForFunction(() => /once more/.test(document.querySelector("#cluck .wtext")?.textContent || "") && !document.querySelector("#cluck .wcaret"), null, { timeout: 15000 });
   await page.waitForTimeout(500);                                      // views.js is imported lazily
   const rot = page.getByText("Hide curated brainrot");                 // the docked players (blank: youtube is blocked here) fold away, as the vet shots had them

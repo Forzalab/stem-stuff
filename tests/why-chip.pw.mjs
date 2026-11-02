@@ -67,7 +67,7 @@ async function part(page, i, v) {
 }
 /* the closed question's "See Cluck's steps" -> Compare's reply for the right try, typed out; then the chip */
 async function compare(page) {
-  await page.click("#wish .cue-ok");
+  await page.click("#door, #wish .cue-ok");
   await page.waitForFunction(() => /Power is work/.test(document.querySelector("#cluck .cl-cmp")?.textContent || "") && !document.querySelector("#cluck .cl-cmp .wcaret"), null, { timeout: 8000 });
   await page.waitForSelector("#cluck .cl-why", { state: "visible", timeout: 4000 });
 }
@@ -128,7 +128,7 @@ await step("multi (the Oct 28 path): finished, 'See Cluck\'s steps' asks /explai
   await part(page, 0, "5");
   await part(page, 0, "6");
   await part(page, 1, "10");
-  await page.click("#wish .cue-ok");
+  await page.click("#door, #wish .cue-ok");
   for (let i = 0; i < 50 && !page.sent.explain.length; i++) await page.waitForTimeout(100);
   assert.deepEqual([page.sent.explain.at(-1)?.answer, page.sent.explain.at(-1)?.part], ["10", 1], "the pick names its part");
   await page.click("#cluck .wtext").catch(() => {});                    // a tap skips the typing

@@ -146,7 +146,7 @@ await step("debug mode (?debug=1): the error card shows the diag line; a retry i
   const page = await open({ explain: r => r.fulfill({ status: 504, body: "" }), debug: true });
   await busyThenWrong(page);
   await waitFor(page, x => x.where === "explain");
-  await page.click("#wish .wchip");                                          // try again: the same failure, the sheet opens
+  await page.click("#door, #wish .wchip");                                          // try again: the same failure, the sheet opens
   await page.waitForFunction(() => document.querySelector("#cluck .wl .inc-diag"), null, { timeout: 8000 });
   const d = await page.evaluate(() => document.querySelector("#cluck .wl .inc-diag").textContent);
   assert.match(d, /^v.+ · explain 504 · \d+\.\d s · AI: (ok|err|cap|\?)$/, d);
@@ -160,7 +160,7 @@ await step("chat fails after a typed question: its report has the chat field's k
   const page = await open({ explain: r => r.fulfill({ status: 200, contentType: "text/plain; charset=utf-8", body: "POOF! Tick: a." }), chat: r => r.fulfill({ status: 500, body: "" }) });
   await busyThenWrong(page);
   await page.waitForFunction(() => window.__drill.page.wish?.end, null, { timeout: 8000 });
-  if (await page.isHidden("#cluck")) await page.click("#wish .wchip, .cl-peek .cl-cta, .cue-chip");
+  if (await page.isHidden("#cluck")) await page.click("#door, #wish .wchip, .cl-peek .cl-cta, .cue-chip");
   await page.waitForFunction(() => document.querySelector("#cluck .ask textarea") && !document.querySelector("#cluck .wtext.wrun"), null, { timeout: 8000 });   // the reply is typed out: the field stays put
   await page.click("#cluck .ask textarea");
   await page.type("#cluck .ask textarea", SENTINEL + " why");

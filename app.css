@@ -1528,11 +1528,28 @@ html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dv
 .ff.rbox.cue:not(.ok) input { color: var(--wrong-on); text-decoration: line-through; text-decoration-color: var(--wrong); }
 .ff.rbox.ok input { color: var(--correct-on); }
 .ff.rbox .vk { order: 1; position: static; flex: none; width: var(--ico); height: auto; margin-right: var(--s2); }
-.ff.rbox > .wchip { order: 2; position: relative; flex: none; align-self: stretch; box-sizing: border-box; height: auto; margin: calc(-1 * var(--bw)) calc(-1 * var(--bw)) calc(-1 * var(--bw)) auto; padding: 0 var(--s3);
+.ff.rbox > :is(.wchip, .door) { order: 2; position: relative; flex: none; align-self: stretch; box-sizing: border-box; height: auto; margin: calc(-1 * var(--bw)) calc(-1 * var(--bw)) calc(-1 * var(--bw)) auto; padding: 0 var(--s3);
   display: inline-flex; align-items: center; gap: var(--s2);
   background: var(--help-fill); color: var(--help-on); border: var(--bw) solid var(--help-line); border-radius: 0 10px 10px 0; z-index: 1; }
-.ff.rbox > .wchip:hover { background: color-mix(in srgb, var(--help-fill), var(--help-on) 8%); }
-.ff.rbox > .wchip .dk { flex: none; display: block; width: 22px; height: 19px; pointer-events: none; }   /* Tony 03:20: a small inline icon beside the label, nothing above the field */
-.ff.rbox.tight > .wchip { width: 56px; justify-content: center; padding: 0; }
-.ff.rbox.tight > .wchip > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the word stays for screen readers */
+.ff.rbox > :is(.wchip, .door):hover { background: color-mix(in srgb, var(--help-fill), var(--help-on) 8%); }
+.ff.rbox > :is(.wchip, .door) .dk { flex: none; display: block; width: 22px; height: 19px; pointer-events: none; }   /* Tony 03:20: a small inline icon beside the label, nothing above the field */
+.ff.rbox.tight > :is(.wchip, .door) { width: 56px; justify-content: center; padding: 0; }
+.ff.rbox.tight > :is(.wchip, .door) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the word stays for screen readers */
 #wish.cue:empty { display: none; }
+
+/* ---------- W98c PR1: the Ask Cluck door (app.js doorSync; Tony Nov 2 09:44-09:59, brain mock-opus/cluckbtn/v3c.html) ----------
+   The desktop's only Cluck control. Standalone (its own row, or the left of the pick-all Check row): the mock's brown button, the small inline duck.
+   In a closed typed field it is the segment above (.ff.rbox > .door). Hides while Cluck is open (doorOn). The sunrise only jiggles it (peek.js). */
+.door-row { display: flex; align-items: center; margin-top: var(--s3); }
+.door-row .door, .chk > .door { flex: none; height: var(--btn); display: inline-flex; align-items: center; gap: var(--s2); padding: 0 var(--s4); margin-right: auto;
+  background: var(--help-fill); color: var(--help-on); border: var(--bw) solid var(--help-line); border-radius: 10px; font: inherit; font-weight: 700; font-size: var(--t-sm); cursor: pointer; }
+.door-row .door:hover, .chk > .door:hover { background: color-mix(in srgb, var(--help-fill), var(--help-on) 8%); }
+.door .dk { flex: none; display: block; width: 22px; height: 19px; pointer-events: none; }
+.door:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.door.jiggle { animation: door-jig .7s ease-in-out 1; }
+@keyframes door-jig { 0%, 100% { transform: none; } 15% { transform: rotate(-4deg) translateX(-2px); } 35% { transform: rotate(4deg) translateX(2px); } 55% { transform: rotate(-3deg); } 75% { transform: rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .door.jiggle { animation: none; } }
+/* the sunrise on desktop is a status, not a control (peek.js .status): no pointer, no hover, no focus */
+.ck-rise.status .ck-peek { pointer-events: none; cursor: default; }
+/* the free-steps card: killed on desktop (the sheet opens by itself; the door reopens it) */
+@media (min-width: 720px) { #orig { display: none; } }

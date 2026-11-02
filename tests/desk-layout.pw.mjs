@@ -268,12 +268,12 @@ try {
             await page.click("#work .rot-link"); await page.waitForTimeout(400);
           }
           await page.fill("#ans", "1"); await page.keyboard.press("Enter");
-          await page.waitForSelector(".cl-peek .cl-cta", { timeout: 8000 });
+          await page.waitForSelector("#door", { timeout: 8000 });
           await page.waitForTimeout(1500); await page.mouse.move(1, 1);
           /* allowed: the card the CTA sits in, Cluck's duck (peek.js .ck-rise: it sinks when he opens), the Explain column */
           const card = await page.evaluate(() => [document.querySelector(".cl-peek")?.closest(".cluck") || document.querySelector(".cl-peek"), document.querySelector(".ck-rise")]
             .filter(e => e && e.getClientRects().length).map(e => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }));
-          await gate(page, "cluck-open", size, Object.assign(() => page.click(".cl-peek .cl-cta"), { live: true }), async c => [...card, { x: c.q0["#work"][0], y: Math.min(c.q0["#work"][1], c.q1["#work"][1]), w: c.q0["#work"][2], h: size.viewport.height }]);
+          await gate(page, "cluck-open", size, Object.assign(() => page.click("#door"), { live: true }), async c => [...card, { x: c.q0["#work"][0], y: Math.min(c.q0["#work"][1], c.q1["#work"][1]), w: c.q0["#work"][2], h: size.viewport.height }]);
           await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });
           await page.waitForTimeout(600);
           await column(page, `${tag} cluck`, size);
