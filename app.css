@@ -526,6 +526,30 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
+   Locked: a --muted padlock, words in --muted with the lead in --ink. Redeemed: the lead is the retry tag's
+   word in --correct at the same --w-em (no new size, no bold green). Feather burst: live redeem only, motion allowed only */
+.guard { position: relative; display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: var(--bw) solid var(--edge); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; pointer-events: none; }
+/* locked: the mock's frosted veil. The row rises over the lower choices; its ::before blurs what is behind it, faded in from the top by a mask. Next stays above it */
+.guard.lock { margin-top: calc(-1 * var(--s7)); padding: var(--s7) 0 0; border-top: 0; isolation: isolate; }
+.guard.lock::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(transparent, var(--page) 55%); -webkit-backdrop-filter: blur(var(--s2)); backdrop-filter: blur(var(--s2));
+  -webkit-mask-image: linear-gradient(transparent, #000 45%); mask-image: linear-gradient(transparent, #000 45%); }
+@media (prefers-reduced-transparency: reduce) { .guard.lock::before { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--page) 88%, transparent); } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .guard.lock::before { background: color-mix(in srgb, var(--page) 88%, transparent); } }
+.q.closed .nx { z-index: 1; }
+.guard p { margin: 0; }
+.guard b { color: var(--ink); font-weight: var(--w-em); }
+.guard .gd-win { color: var(--correct); }
+.gd-burst { position: relative; flex: none; width: var(--s6); height: var(--s6); }   /* anchor for the feather burst (no icon) */
+.gd-lock { flex: none; order: -1; width: var(--s5); height: var(--s5); color: var(--muted); }
+.gd-lock .ico { width: 100%; height: 100%; }
+.burst i { position: absolute; left: 50%; top: 50%; width: var(--s1); height: var(--s2); margin: calc(-0.5 * var(--s2)) 0 0 calc(-0.5 * var(--s1)); border-radius: 50% 50% 50% 0; background: var(--reward); opacity: 0; }
+.burst i:nth-child(1) { --a: 0deg; } .burst i:nth-child(2) { --a: 45deg; } .burst i:nth-child(3) { --a: 90deg; } .burst i:nth-child(4) { --a: 135deg; }
+.burst i:nth-child(5) { --a: 180deg; } .burst i:nth-child(6) { --a: 225deg; } .burst i:nth-child(7) { --a: 270deg; } .burst i:nth-child(8) { --a: 315deg; }
+@media (prefers-reduced-motion: no-preference) {
+  .guard.won.live .burst i { animation: gd-fl 700ms ease-out both; }
+}
+@keyframes gd-fl { from { opacity: 1; transform: rotate(var(--a)) translateY(0); } to { opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--s5))); } }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
 .ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.

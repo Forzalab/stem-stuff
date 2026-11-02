@@ -1627,6 +1627,20 @@ function retryTag() {
   t.className = "qtag rtag" + (k ? " rt-" + k : "");
   t.innerHTML = k ? `${icon(RTAG[k][1])}<span>${RTAG[k][0]}</span>` : "";
 }
+/* W104 Sleeping guard (MC only): a closed item says so in a row under the choices, three cues so colour never carries it: the lock, the words,
+   Cluck napping on it. A Redeem closed right wakes him instead: the feather burst plays on the live moment only (a revisit is still, and
+   reduced motion never gets one). Kind copy; no clock (nothing on the page knows when it comes back). */
+function guard() {
+  $("#q .guard")?.remove();
+  if (!S || S.prob.type !== "mc") return;
+  const r = window.stemRedo.get(), redeem = !!r && r.codes.includes(S.code) && r.redeem !== false;
+  const won = S.tries.some(x => x.v === "correct");
+  if (won && !redeem) return;
+  const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
+  $("#q").insertAdjacentHTML("beforeend", won
+    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
+    : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
+}
 function finish() {
   S.finished = true;
   document.querySelectorAll("#q .pips").forEach(x => x.classList.add("spent"));   // hidden, its room kept: a closing tap never moves the page (T17b-1)
@@ -1635,6 +1649,7 @@ function finish() {
   document.querySelectorAll("#q .send").forEach(b => { b.hidden = true; });
   cueNext();
   retryTag();
+  guard();
   const mine = S, still = painting;
   queueMicrotask(() => { if (S === mine) cueChip(still); });   // after feedback(): a wrong last try makes its own wish first (wishOnWrong)
 }
