@@ -12,7 +12,8 @@ const GRID = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-*/
 const MATH = "=<>()[]{}^_|&!~.,:;'\"%$#@?\\→←↔⇒⇔∧∨¬⊕≠≤≥±×÷·√∞πθλμσΔΣ∫∂°²³½∈∉⊂∪∩∀∃ℝ";
 
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const page = await b.newPage();
+const page = await (await b.newContext()).newPage();
+await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch
 await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
 await page.waitForSelector("#scratch");
 const r = await page.evaluate(async ({ GRID, MATH }) => {

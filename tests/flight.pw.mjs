@@ -65,6 +65,7 @@ async function open({ explain, chat, debug = false } = {}) {
 }
 /* typing (answer field + notes, real key events), a scroll and a resize on question 1; then question 2, notes again, a wrong pick */
 async function busyThenWrong(page) {
+  await page.addStyleTag({ content: "#xb { visibility: visible !important; }" });   // sugar-hides-notes: this flow needs Explain (sugar only), where desktop hides #xb; un-hide it so the notes field still gets real keys (its kb report entries are the point)
   await page.type("#ans", SENTINEL);
   await page.keyboard.press("Backspace"); await page.keyboard.press("ArrowLeft");
   await page.type("#scratch", SENTINEL + " x");

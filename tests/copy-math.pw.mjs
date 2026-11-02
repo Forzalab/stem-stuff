@@ -57,8 +57,9 @@ async function step(name, fn) {
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
 }
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
-async function open(vp, code, touch = false) {
+async function open(vp, code, touch = false, diet = false) {
   const ctx = await browser.newContext({ viewport: vp, hasTouch: touch, isMobile: touch, serviceWorkers: "block" });
+  if (diet) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch / Copy my work
   await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
   await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
@@ -235,7 +236,7 @@ for (const [tag, vp, touch] of [["1280", DESK, false], ["390", PHONE, true]]) {
 }
 
 await step("Copy my work: a choice try's math goes out as the same plain text (one converter)", async () => {
-  const { ctx, page } = await open(DESK, "CALC1_CM3");
+  const { ctx, page } = await open(DESK, "CALC1_CM3", false, true);
   await page.click('.opt[data-id="a"]'); await page.click('.ch[data-id="a"] .send');
   await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 5000 });
   await page.fill("#scratch", "kept as typed: $x^2$");
