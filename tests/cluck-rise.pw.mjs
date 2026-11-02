@@ -225,7 +225,7 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
     const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     if (e.matches(".ck-say") || x < 0 || x >= W || y < 0 || y >= H) continue;   // the line is not a target (pointer-events: none)
     const h = document.elementFromPoint(x, y);
-    if (h && stuck(h) && !stuck(e)) continue;                                  // a row scrolled under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
+    if (scrollY > 0 && h && stuck(h) && !stuck(e)) continue;                                  // a row SCROLLED under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). At scrollY 0 it is still a clash. 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
     if (!h || !(h === e || e.contains(h))) out.push(`${nm(e)} covered at its centre by ${h ? nm(h) : "nothing"}`);
   }
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
@@ -239,6 +239,16 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
   return out;
 }, [CTL, scope]);
 const OVPS = [["360x780", { width: 360, height: 780 }], ["390x844", { width: 390, height: 844 }], ["393x852", { width: 393, height: 852 }], ["393x659", { width: 393, height: 659 }], ["1280x900", { width: 1280, height: 900 }]];
+await step("the cover check still fails a row under a sticky bar at scroll 0 (only a scrolled page is exempt)", async () => {
+  const page = await open({ width: 393, height: 659 });
+  await page.evaluate(() => { scrollTo(0, 0); const r = document.querySelector("#q .opt").getBoundingClientRect();
+    const d = document.createElement("div"); d.style.cssText = "position:sticky;top:0;height:0;z-index:99999";
+    d.innerHTML = `<button style="position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px">x</button>`; document.body.prepend(d); });
+  assert.equal(await page.evaluate(() => scrollY), 0);
+  const hit = await clash(page, "body");
+  assert.ok(hit.some(m => /covered at its centre/.test(m)), "a row under the HUD at rest must be reported: " + JSON.stringify(hit));
+  await page.context().close();
+});
 const riseDone = async page => { await settle(page); await page.clock.runFor(1000); await settle(page); };
 for (const [tag, vp] of OVPS) await step(`${tag}: no overlapping controls: the duck up after a miss, out of tries (Next), and Cluck open`, async () => {
   const phone = vp.width < 500, bad = [];

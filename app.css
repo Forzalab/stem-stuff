@@ -7,7 +7,7 @@
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
      Tony's round 7 PICKER 1, 2, 4, 8). Ink (Tony, Nov 2): black page + surface, 1 control fill, 1 line. Every colour is a role */
-  --page: #000; --card: #000; --float: #1a1a1a; --line: #4d4d4d; --ink: #fff; --muted: #a3a3a3;
+  --page: #000; --card: #000; --float: #1a1a1a; --line: #666666; --ink: #fff; --muted: #a3a3a3;
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
   --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.

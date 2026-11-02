@@ -43,7 +43,7 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 | `--card` | #000 | the SURFACE: the question box and its kin (`--qbox`). Black like the page: surfaces are outlined by a 1px inset `--line`, not a lighter slab |
 | `--sheet` | #161616 | the CONTROL fill: buttons, every choice, the list card. Its own token, one step above the black surface, so fill-first buttons keep their shape (PROPOSAL value: the mock had no control fill) |
 | `--float` | #1a1a1a | raised: hover, selected list row, glass controls, the neutral Next (`--raised`) |
-| `--line` | #4d4d4d | the one line colour: dividers, control edges, the 1px row edge (`--edge`) |
+| `--line` | #666666 | the one line colour: dividers, control edges, the 1px row edge (`--edge`) |
 | `--ink` | #fff | body text, icons in buttons |
 | `--muted` | #a3a3a3 | secondary text, placeholders, locked state (`--hint`) |
 | `--action` / `--focus` | #3b9eff | the commit colour: Go, Check, the selected choice (1px ring + filled badge, `--action-ink` black letter; hover `--action-on` #70b8ff), focus ring, caret |
@@ -62,7 +62,7 @@ Source: unified v5 (brain `chat-redesign-2026-10-13/unified-v5/TOKENS.md` = roun
 
 **Soft verdict fills** (Tony, Nov 2: "less red saturation for the fill, the green too"): `--wrong-fill` #28191a and `--correct-fill` #14221c (OKLCH lightness kept, chroma halved). The only fills under a box or row: the answer bar's verdict wash (strip PR-B) and the sugar kept row. Never under text that needs more than their 10:1, never on a large area.
 
-**Ink is the site theme** (strip ship spec, Tony Nov 2: "ink whole site"): one black ground (page and surface), `--sheet` a step lighter so buttons keep their shape, `--line` #4d4d4d (2.5:1 on black), `--ink` white, `--action` #3b9eff with a black label, figures keep their own `--c1` / `--grid`. Ink replaces the navy ladder (page #050c16, card #101c2c, line #394a61, action #92c0ff); contrast of text on `--page` is 21:1 (white), `--muted` 8.3:1, `--wrong` 6.2:1, `--correct` 13.3:1 (NOTES Round 3 table, to re-measure in §7). There is no theme switch. Greyscale and Impeccable (§7) still apply.
+**Ink is the site theme** (strip ship spec, Tony Nov 2: "ink whole site"): one black ground (page and surface), `--sheet` a step lighter so buttons keep their shape, `--line` #666666 (3.7:1 on black, 3.2:1 on `--sheet`: control edges need 3:1, WCAG 1.4.11), `--ink` white, `--action` #3b9eff with a black label, figures keep their own `--c1` / `--grid`. Ink replaces the navy ladder (page #050c16, card #101c2c, line #394a61, action #92c0ff); contrast of text on `--page` is 21:1 (white), `--muted` 8.3:1, `--wrong` 6.2:1, `--correct` 13.3:1 (NOTES Round 3 table, to re-measure in §7). There is no theme switch. Greyscale and Impeccable (§7) still apply.
 
 There is no warning color. The warm family is never a warning and never a figure series on the page; the one exception is a live figure inside Cluck (below). `--mark` is retired: Cluck's duck glyph and a snack's changed-number underline use `--help`.
 

@@ -83,7 +83,7 @@ test("§2.1 surface vs control vs figure tokens are split; soft fills; Ink is th
   assert.equal(tok("wrong-fill"), "#28191a");
   assert.equal(tok("correct-fill"), "#14221c");
   assert.match(tok("shadow-2"), /rgb\(0 0 0 \/ 0\.6\)/);
-  assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#000", "#000", "#161616", "#4d4d4d", "#fff", "#3b9eff"], "Ink is the site theme (Tony, Nov 2)");
+  assert.deepEqual([tok("page"), tok("card"), tok("sheet"), tok("line"), tok("ink"), tok("action")], ["#000", "#000", "#161616", "#666666", "#fff", "#3b9eff"], "Ink is the site theme (Tony, Nov 2)");
   assert.ok(!/data-theme/.test(read("app.css") + read("app.js")), "Ink is not a switch: it is :root");
   assert.match(read("app.css"), /\.p, \.boxed \.q[^{]*\{ box-shadow: inset 0 0 0 1px var\(--line\); \}/, "black surfaces are outlined, not lighter slabs");
 });
