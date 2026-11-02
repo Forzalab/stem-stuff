@@ -840,7 +840,7 @@ flow(34, "brainrot-corner", async (page, w) => {
 });
 
 flow(35, "sugar-vs-diet", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(700);
+  await page.goto(BASE + "/"); await homeReady(page);
   await showCode(page);
   await page.fill("#code", "DIET_" + C.single); await page.press("#code", "Enter");
   await opened(page, C.single); await page.waitForTimeout(500);
@@ -851,7 +851,7 @@ flow(35, "sugar-vs-diet", async (page, w) => {
 
 flow(36, "old-diet-cookie", async (page, w, ctx) => {
   await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }]);
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await page.goto(BASE + "/"); await homeReady(page);
   const sugar = await page.evaluate(async () => (await import("./mode.mjs")).modeOf() === "sugar");
   const ck = Object.fromEntries((await ctx.cookies()).map(c => [c.name, c.value]));
   assert.equal(sugar, true); assert.equal(ck["stem-mode"], undefined); assert.equal(ck["stem-mode-v"], "2");
@@ -904,7 +904,7 @@ flow(47, "swap-keyboard", async (page, w) => {
   assert.ok(await vis(page, "#padPeek"), "the pad peek");
   assert.ok(await vis(page, "#ans"), "the answer box in view");
   await page.screenshot({ path: join(OUT, `47-swap-keyboard-393-chromium.png`) });
-  await page.setViewportSize({ width: 393, height: 852 }); await page.waitForTimeout(450);
+  await page.setViewportSize({ width: 393, height: 852 }); await frames(page);
   return "keyboard up (viewport 55%): problem pane + pad peek (shot at keyboard-up size)";
 }, { padPhone: true, noFinalShot393: true });
 
