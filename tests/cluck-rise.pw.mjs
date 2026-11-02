@@ -225,6 +225,7 @@ const clash = (page, scope) => page.evaluate(([sel, scope]) => {
     const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     if (e.matches(".ck-say") || x < 0 || x >= W || y < 0 || y >= H) continue;   // the line is not a target (pointer-events: none)
     const h = document.elementFromPoint(x, y);
+    if (h && stuck(h) && !stuck(e)) continue;                                  // a row scrolled under a sticky bar (the HUD): scrolling, not a layout clash (same rule as the pair check below). 1px of page height flips this at 393x659 (Ink, one line weight: state rows no longer shrink 1px)
     if (!h || !(h === e || e.contains(h))) out.push(`${nm(e)} covered at its centre by ${h ? nm(h) : "nothing"}`);
   }
   for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
