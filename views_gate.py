@@ -22,7 +22,7 @@ GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2
 GEO_TEXT = {"dim", "angle", "arrow", "label"}
 PT_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$")
 MARK_RE = re.compile(r"^\s*([a-z]+)\s*\((.*)\)\s*$")
-TONES = {"ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark"}     # the figure palette (app.css --fig-<hue>-1..3); views.js TONES
+TONES = {"ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark", "sky", "amber", "orange", "violet", "pink", "cyan"}     # the figure palette (app.css --fig-<hue>-1..3); views.js TONES
 EMPH_RE = re.compile(r"^(layer|tone)\s*=\s*(\w+)$", re.I)
 _c = {}
 

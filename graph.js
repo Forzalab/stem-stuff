@@ -11,7 +11,9 @@
   const HATCH = { len: 10, gap: 8, inset: 4 };
   const OFF = 6, PAD = 16, FILL = 0.22;
   const deg = Math.PI / 180;
-  const col = c => `var(--${c || "ink"})`;
+  const AUTO = (root.FigCheck && root.FigCheck.AUTO_HUES) || ["sky", "amber", "orange", "violet", "pink", "cyan"];   // W163 palette hues: --fig-<hue>-<layer>
+  const FIGHUE = [...AUTO, "ok", "bad", "mark"];   // hues with real --fig-<hue>-1..3 steps (ok / bad / mark have no bare --ok token)
+  const col = (c, n = 1) => (FIGHUE.includes(c) ? `var(--fig-${c}-${n})` : `var(--${c || "ink"})`);
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
   function tex(s) {
@@ -99,16 +101,22 @@
      to their contrast-checked blends (app.css --*-mix2 / --*-mix3). Never opacity. Anything but 2 or 3 is layer 1. */
   const layerOf = m => (m && (m.layer === 2 || m.layer === 3) ? m.layer : 1);
   const lyr = (n, svg) => (n > 1 && svg ? `<g class="ly${n}">${svg}</g>` : svg);
-  const labelColor = c => ["c1", "c2", "c3", "ok", "bad", "mark"].includes(c) ? col(c) : col("ink");
-  /* Locked rule: every force arrow is c1. Only velocity (c2) and acceleration (c3) keep their own colour;
-     a "force" mark is treated as one of those only when its label is \vec v... or \vec a... */
+  const labelColor = (c, n = 1) => FIGHUE.includes(c) ? col(c, n) : ["c1", "c2", "c3"].includes(c) ? col(c) : col("ink");
+  /* Force arrows (W163, supersedes "every force arrow is c1"): a force / vector with no colour of its own gets its own palette hue, keyed by its
+     label (or id / name), so each force reads as its own colour. An explicit palette hue, ok, bad, mark, ink or muted wins; c1 / c2 / c3 on a force
+     were always ignored (the old locked rule), so they now mean "no opinion" and join the auto-hues. Velocity (\vec v) and acceleration (\vec a)
+     keep their c2 open / c3 double heads when they name that colour. data-kind stays "force" (filled head) unless the arrow is a c2 / c3 kinematic. */
   const KIN = /^\$?\\vec\s*\{?\s*[va](?![a-zA-Z])/;
-  function vecStyle(m) {
+  const LEGACY = ["c1", "c2", "c3"];
+  const forceKey = m => String(m.id ?? m.name ?? (typeof m.label === "string" && m.label.trim() ? sym(m.label) : `@${m.at}>${m.angle}:${m.len}`));
+  const wantsAuto = m => !(m.color && !LEGACY.includes(m.color));
+  function vecStyle(m, hues) {
     const kin = typeof m.label === "string" && KIN.test(m.label.trim());
     const c = kin ? (m.color || "c1") : "c1";
-    if (c === "c2") return { c, w: SW.vec, head: "open" };
-    if (c === "c3") return { c, w: SW.vec, head: "double" };
-    return { c, w: m.dash ? SW.out : SW.force, head: "fill" };
+    const hue = !wantsAuto(m) ? m.color : c === "c1" && hues && hues.get(forceKey(m));
+    if (c === "c2") return { c, hue: null, w: SW.vec, head: "open" };
+    if (c === "c3") return { c, hue: null, w: SW.vec, head: "double" };
+    return { c, hue: hue || null, w: m.dash ? SW.out : SW.force, head: "fill" };
   }
   const rot = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
   const add = (p, q) => [p[0] + q[0], p[1] + q[1]];
@@ -197,9 +205,9 @@
     force: {
       pts: m => [m.at, forceTip(m)],
       draw(m, k) {
-        const v = vecStyle(m), a = k.X(m.at), b = k.X(forceTip(m));
-        if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), v.c);
-        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}">${arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "")}</g>`;
+        const v = vecStyle(m, k.hues), a = k.X(m.at), b = k.X(forceTip(m)), n = layerOf(m), hue = v.hue || v.c;
+        if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), hue);
+        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}"${v.hue ? ` data-hue="${v.hue}"` : ""}>${arrow(a, b, v.w, col(hue, n), v.head, m.dash ? DASH.ghost : "")}</g>`;
       }
     },
     arrow: {
@@ -491,7 +499,7 @@
         if (!L.at || !fin(L.at)) continue;
         const sp = document.createElement("span");
         sp.className = "lbl " + L.cls + (L.layer > 1 ? " ly" + L.layer : ""); sp.setAttribute("aria-hidden", "true");
-        sp.innerHTML = L.html ? L.text : tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color);
+        sp.innerHTML = L.html ? L.text : tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color, L.layer);
         el.appendChild(sp);
         const w = sp.offsetWidth, h = sp.offsetHeight, a = L.anchor || "c", o = a === "c" ? 0 : a.length === 2 ? OFF * 0.7 : OFF;
         const fx = a.includes("e") ? 0 : a.includes("w") ? -1 : -0.5, fy = a.includes("n") ? -1 : a.includes("s") ? 0 : -0.5;
@@ -525,6 +533,7 @@
   const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
 
   function drawMarks(marks, k) {
+    if (root.FigCheck && root.FigCheck.autoHues) k.hues = root.FigCheck.autoHues(marks.filter(m => m.mark === "force" && wantsAuto(m)).map(forceKey));   // the whole figure's keys, not the draw order
     return marks.filter(m => S[m.mark]).map((m, i) => [LAYER[m.mark] ?? 5, i, m]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
       .map(([, i, m]) => { CUR = i; LAY = layerOf(m); try { return lyr(LAY, S[m.mark].draw(m, k)); } catch (e) { console.warn("mark", m.mark, e); return ""; } finally { LAY = 1; } }).join("");
   }
