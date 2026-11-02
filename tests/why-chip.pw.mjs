@@ -94,6 +94,35 @@ await step("mc: a miss, then right: Compare's reply has the chip; a tap asks it 
   await page.context().close();
 });
 
+/* W118c (Tony, Oct 29/Nov 2): the chip is the reply's last line, a CTA (duck, label, chevron, --help, no fill) under a --help-rule line, inside the card */
+await step("118c: the chip is the last child of the last reply bubble, no fill, --help-rule above, inside the card, tap >= 44px (390x844, 1366x768)", async () => {
+  const page = await open("CALC1_WHY1");
+  await mc(page, "b");
+  for (let i = 0; i < 50 && !page.sent.explain.length; i++) await page.waitForTimeout(100);
+  await mc(page, "a");
+  await compare(page);
+  for (const [w, h] of [[390, 844], [1366, 768]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => {
+      const chip = document.querySelector("#cluck .cl-why"), host = [...document.querySelectorAll("#cluck .msg, #cluck .cl-cmp")].filter(m => m.offsetParent).at(-1);
+      const cs = getComputedStyle(chip), b = chip.getBoundingClientRect(), c = host.getBoundingClientRect();
+      const probe = document.createElement("i"); probe.style.color = "var(--help-rule)"; document.body.append(probe);
+      const rule = getComputedStyle(probe).color; probe.remove();
+      return { inside: host.contains(chip), last: host.lastElementChild === chip, bg: cs.backgroundColor, bgi: cs.backgroundImage,
+        topW: cs.borderTopWidth, topC: cs.borderTopColor, rule, l: b.left - c.left, rr: c.right - b.right, h: b.height };
+    });
+    const tag = `${w}x${h}`;
+    assert.ok(r.inside && r.last, `${tag}: chip is the last child of the last reply bubble`);
+    assert.ok(r.bg === "rgba(0, 0, 0, 0)" && r.bgi === "none", `${tag}: no fill (${r.bg} ${r.bgi})`);
+    assert.ok(parseFloat(r.topW) > 0 && r.topC === r.rule, `${tag}: top rule is --help-rule (${r.topW} ${r.topC} vs ${r.rule})`);
+    assert.ok(r.l >= -0.5 && r.rr >= -0.5, `${tag}: chip inside the card horizontally (left ${r.l}, right ${r.rr})`);
+    assert.ok(r.h >= 44, `${tag}: tap target ${r.h}px`);
+  }
+  assert.deepEqual(page.errs, []);
+  await page.context().close();
+});
+
 await step("multi (the Oct 28 path): finished, 'See Cluck\'s steps' asks /explain with the last try's part; the chip asks /chat with it", async () => {
   const page = await open("CALC1_WHY2");
   await part(page, 0, "5");
