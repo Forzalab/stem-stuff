@@ -4,11 +4,12 @@
      node tools/bench_seen.mjs dump.jsonl [--out label-sheet.csv]        → label-sheet.csv: sid,code,window,rule,label (label blank)
      node tools/bench_seen.mjs dump.jsonl --labels labels.csv            → rule precision / recall against the filled label column (y / n)
    The rule is intent.js's own tree (loaded, not copied; trap_beaten needs the item's distractor families, which a dump does not carry: inert here), fed the state rebuilt from the item's lines up to its first right pick.
-   jevShadow(lines, client, model?): the Jev-model shadow (microsoft/microsoft-decision-1; typesafe/jev-1.14 is the 2nd arm) as a body for an INJECTED client only. No default network here,
+   jevShadow(lines, client, model?): the Jev-model shadow (jevModel() from tools/jev-model.mjs, env JEV_MODEL; typesafe/jev-1.14 is the 2nd arm) as a body for an INJECTED client only. No default network here,
    and the page never loads this file. */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import { jevModel } from "./jev-model.mjs";
 
 const SRC = readFileSync(new URL("../intent.js", import.meta.url), "utf8");
 export const tree = (() => { const w = { URLSearchParams }; w.window = w; vm.runInNewContext(SRC, w); return w.__stemJev.tree; })();
@@ -81,8 +82,8 @@ export function score(rs, labelsCsv) {
 }
 
 /* the Jev-model shadow: the body for one item's lines, sent through the caller's client only (client(body) → answer).
-   Two arms: MSD-1 (the default) and jev-1.14 (the 2nd arm). model = one slug to pick an arm; jevBench runs every arm (or the models given) */
-export const JEV_MODELS = ["microsoft/microsoft-decision-1", "typesafe/jev-1.14"];
+   Two arms: jevModel() (MSD-1 by default) and jev-1.14 (the 2nd arm). model = one slug to pick an arm; jevBench runs every arm (or the models given) */
+export const JEV_MODELS = [jevModel(), "typesafe/jev-1.14"];
 export const JEV_MODEL = JEV_MODELS[0];
 /* OpenRouter provider prefs on every Jev request body, both arms: zero data retention, no prompt collection. NOT checked against the live API
    here (no network): the slugs above and the zdr / data_collection field names still need one live check */
