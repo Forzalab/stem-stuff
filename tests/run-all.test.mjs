@@ -51,3 +51,28 @@ test("a failed unittest row names the failing test and its assertion", async () 
   assert.match(out, /ERROR: test_zz_boom \(test_fake_w138\.Fake\.test_zz_boom\)/, out);
   assert.match(out, /KeyError: 'w138-boom'/, out);
 });
+
+// W126: killing run-all.sh left serve.py servers behind holding ports: its trap killed only the main server, and the node spec it was
+// running (which spawns its own serve.py) was orphaned. Start one spec, SIGTERM run-all mid-run, and no serve.py of that run may survive.
+test("SIGTERM to run-all.sh leaves no serve.py behind (main server + the spec's own)", async () => {
+  const { spawn, execFileSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const alive = pid => { try { process.kill(pid, 0); return !readFileSync(`/proc/${pid}/stat`, "utf8").includes(") Z "); } catch { return false; } };
+  const kids = pid => { try { return execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" }).split("\n").filter(Boolean).map(Number); } catch { return []; } };
+  const tree = pid => kids(pid).flatMap(k => [k, ...tree(k)]);
+  const servers = pid => tree(pid).filter(p => { try { return readFileSync(`/proc/${p}/cmdline`, "utf8").includes("serve.py"); } catch { return false; } });
+  const ra = spawn("bash", ["tests/run-all.sh"], { cwd: root, env: { ...process.env, SPECS: "mock" }, stdio: "ignore" });
+  const seen = new Set();
+  try {
+    for (let i = 0; i < 150 && seen.size < 2; i++) { servers(ra.pid).forEach(p => seen.add(p)); await new Promise(r => setTimeout(r, 100)); }
+    assert.ok(seen.size >= 2, `want the main server + the spec's own serve.py, saw ${seen.size}`);
+    process.kill(ra.pid, "SIGTERM");
+    await new Promise(r => setTimeout(r, 2000));
+    const left = [...seen].filter(alive);
+    assert.deepEqual(left, [], `serve.py left running after SIGTERM: ${left}`);
+  } finally {
+    for (const p of [...seen, ...tree(ra.pid)]) try { process.kill(p, "SIGKILL"); } catch { /* gone */ }
+    try { process.kill(ra.pid, "SIGKILL"); } catch { /* gone */ }
+  }
+});
