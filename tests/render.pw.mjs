@@ -45,10 +45,10 @@ async function run(browserType, label, opts = {}) {
     const NOTICE = /^Viewport argument key "interactive-widget" not recognized and ignored\.$/;
     page.on("console", m => { if (m.type() === "error" && !/^Failed to load resource/.test(m.text()) && !(label === "webkit" && NOTICE.test(m.text()))) errors.push(m.text()); });
     // fresh document per problem, so dev grading state and hash navigation never leak between steps
-    /* pad: phones run it in diet, where the pad lives (phone sugar has none: Tony, Oct 14) */
+    /* pad: runs in diet, where the pad lives (phone sugar has none: Tony, Oct 14; desktop and iPad sugar neither: sugar-hides-notes, Nov 2) */
     const open = async (code, pad) => {
       await page.context().clearCookies();   // a new sid = fresh server tries (tries.json now outlives a page; design/DONE.md)
-      if (pad && vname === "phone") await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
+      if (pad) await page.context().addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
     await page.goto("about:blank");
       await page.goto(`${BASE}/#${code}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
       await page.waitForFunction(c => document.querySelector("#pcode")?.textContent === c, code, { timeout: 8000 });
@@ -235,7 +235,7 @@ async function run(browserType, label, opts = {}) {
 
     if (label === "chromium") await step(`${label} ${vname} paste: a code pasted elsewhere lands in the code box; paste button; placeholder`, async () => {
       await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
-      await open("CALC1_T6B");
+      await open("CALC1_T6B", vname !== "phone");   /* sugar-hides-notes: ipad + desktop paste into #scratch, so diet; phone keeps its sugar default */
       const clip = t => page.evaluate(x => navigator.clipboard.writeText(x), t);
       const code = page.locator("#code"), go = page.locator("#codeGo"), pasteBtn = page.locator("#codePaste");
       if (vname === "desktop") await page.click("#codeChip");                                            // C7: a lone question keeps the box as a label
@@ -607,7 +607,7 @@ async function run(browserType, label, opts = {}) {
     if (label === "chromium" && vname === "desktop") {
       await step(`${label} copy payload`, async () => {
         await ctx.grantPermissions(["clipboard-read", "clipboard-write"]);
-        await open(`CALC1_A9R`);
+        await open(`CALC1_A9R`, true);   /* sugar-hides-notes: copy payload fills #scratch, desktop sugar has none */
         await page.locator("#ans").fill("9/2"); await page.locator("#ans").press("Enter");
         await page.waitForFunction(() => window.__drill.state.tries.length > 0, null, { timeout: 8000 });   // /check is async: copying first raced it (CI, PR #100)
         await page.locator("#scratch").fill("area between: integrate (4x-x^2) - x from 0 to 3");

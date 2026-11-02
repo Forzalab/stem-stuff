@@ -11,7 +11,7 @@
 #                as SHARD; each block's lanes are joined by '|'. unittest + npm are not in it (CI runs them in their own job).
 #   SPECS="..."  run exactly these .pw specs (names, space-separated; a part like ux-flows@desk too) and nothing else: one CI lane.
 # Needs: python3 + sympy, node + tests/node_modules (cd tests && npm ci), Playwright's Chromium for the .pw scripts.
-# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-timeout /copy-math / why-chip / welcome-app / views-static / toast-note / twin-first / desk-layout / shotqa / expr / units / twist / fcard-clip, which take a port and start their own server.
+# The .pw scripts take a base URL, except bank / choose-all / done / katex-wrap / update / nav-stable / easy / rewards / blind / redo-note / queue-walk / blink-fx / reveal / next-reset / idle-peek / livefig / nudge / codeblock / seen / cluck-rise / incident / flight / cluck-more / dismiss / views-oui / part-feedback / noob / mock / proof / proof-timeout /copy-math / why-chip / welcome-app / views-static / toast-note / twin-first / desk-layout / desk-notes-off / shotqa / expr / units / twist / fcard-clip, which take a port and start their own server.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -96,6 +96,7 @@ weight() {
     fcard-clip) echo 20 ;;   # W115 formula card math not cut off, 4 sizes x chromium/firefox/webkit, own server, local run ~20 s (CI has chromium only)
     toast-note) echo 30 ;;   # W112 toast notes + desktop start line, local run ~30 s (estimate until CI timing)
     desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
+    desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
     twist) echo 22 ;;   # W133 Twist chip + one-time toast + popover, 3 screens + blocked storage, own server; local run ~20 s (estimate until CI timing)
     layers) echo 2 ;;   # W157 local run: layers.test.mjs ~0.1 s + layers.pw.mjs ~1.6 s (rounded up)
@@ -136,6 +137,7 @@ tags() {
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
     desk-layout@1|desk-layout@2|desk-layout@3) echo "@layout @real-time" ;;   # W129 L1-L6: the desktop columns, the pixel-diff gate on every tap
     expr) echo "@logic @real-time" ;;   # W137 expression answers: own 2 serve.py (EXPR_MODE on / off) + a fake Claude, 390 / 1440 / 1366
+    desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
     units) echo "@layout @real-time" ;;   # W132 the answer line's unit: colour, weight, gap, same line; real clipboard
     twist) echo "@layout @real-time" ;;   # W133 the Twist chip, its popover, the one-time toast and its cover rule (#q, Next) at 390 / 1366 / 1440
     fcard-clip) echo "@layout @real-time" ;;   # W115 todo 115: KaTeX ink vs the .fm scroll box at 4 sizes
@@ -266,7 +268,7 @@ if [ "${#specs[@]}" -gt 0 ]; then
     base_="${name%%@*}"; f="tests/$base_.pw.mjs"; penv=()   # a part runs its spec's file with the part's env
     [ "$base_" != "$name" ] && read -ra penv <<<"${PART_ENV[$name]}"
     case "$base_" in
-      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|copy-math|why-chip|welcome-app|views-static|toast-note|twin-first|desk-layout|shotqa|expr|units|twist|fcard-clip|reveal-box) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
+      bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo-note|queue-walk|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|incident|flight|cluck-more|dismiss|views-oui|part-feedback|noob|mock|proof|proof-timeout|copy-math|why-chip|welcome-app|views-static|toast-note|twin-first|desk-layout|desk-notes-off|shotqa|expr|units|twist|fcard-clip|reveal-box) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "$(free_port)" ;; # TO FUTURE CLAUDE: mrege conflcits happend twice, so check b4 pushing PR
       # bank|choose-all|done|katex-wrap|update|nav-stable|easy|choose-all-spam|rewards|blind|redo|blink-fx|reveal|next-reset|idle-peek|livefig|nudge|codeblock|seen|cluck-rise|cluck-more) run "$name" node "$f" "$(free_port)" ;;
       *) run "$name" env ${penv[@]+"${penv[@]}"} node "$f" "http://127.0.0.1:$PORT" "$TMP/shots" ;;
     esac

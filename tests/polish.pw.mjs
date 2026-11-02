@@ -27,7 +27,7 @@ for (const [W, H] of [[375, 667], [390, 844], [430, 932], [1920, 1080]]) {
   const phone = W < 1000;
   const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
   const ctx = await b.newContext({ viewport: { width: W, height: H }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
-  if (phone) await ctx.addCookies(DIET);
+  await ctx.addCookies(DIET);   // sugar-hides-notes: desktop sugar has no notes box; the 1920 steps focus #scratch (phones were already diet)
   const page = await ctx.newPage();
   const shot = async n => { if (SHOTS) await page.screenshot({ path: `${SHOTS}/${PREFIX}-${n}-${W}.png` }); };
   const kbUp = async () => { await page.setViewportSize({ width: W, height: Math.round(H * 0.55) }); await page.waitForTimeout(500); };
