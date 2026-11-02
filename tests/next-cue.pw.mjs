@@ -258,11 +258,11 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       const { check } = await close(page, type, outcome, { code });
       await page.waitForSelector("#q .nx"); await page.waitForTimeout(1500); await stopSampler(page);
       const g = await page.evaluate(() => {
-        const c = document.querySelector("#wish:not([hidden]) .cue-chip"), s = c && c.querySelector("span"), r = c && c.getBoundingClientRect();
+        const c = document.querySelector(":is(#wish:not([hidden]), .rbox) .cue-chip"), s = c && c.querySelector("span"), r = c && c.getBoundingClientRect();
         return { has: !!c, any: !!document.querySelector(".cue-chip, .g-nod, #wish:not([hidden])"), label: s && s.textContent, r: r && { l: r.left, r: r.right, h: r.height },
           lines: s ? Math.round(s.getBoundingClientRect().height / parseFloat(getComputedStyle(s).lineHeight === "normal" ? 16 : getComputedStyle(s).lineHeight)) : 0,
           sh: s ? s.getClientRects().length : 0, clip: c ? c.scrollWidth > c.clientWidth + 0.5 : false, vw: innerWidth,
-          duck: c && c.querySelector("img.dk")?.getAttribute("src"), dh: c && c.querySelector("img.dk")?.getBoundingClientRect().height,
+          duck: c && c.querySelector("img.dk")?.getAttribute("src"), dh: c && c.querySelector("img.dk")?.getBoundingClientRect().height, svg: c && c.querySelector("svg.dk")?.getBoundingClientRect().height,
           xp: window.Rewards && window.Rewards.state && window.Rewards.state() ? window.Rewards.state().xp : null };
       });
       if (mode === "diet") { assert.equal(g.any, false, "diet shows the chip / a duck / a nod"); return; }
@@ -271,9 +271,9 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       assert.equal(g.sh, 1, "the label wraps"); assert.equal(g.clip, false, "the label is cut");
       assert.ok(g.r.l >= 16 - 0.5 && g.r.r <= g.vw - 16 + 0.5, `chip outside the 16px gutter: ${g.r.l}-${g.r.r}`);
       assert.ok(g.r.h >= 44, `chip ${g.r.h} tall`);
-      assert.match(g.duck, outcome === "right" ? /duck-calm-nod-128\.webp$/ : /duck-out-shrug-128\.webp$/);
-      assert.ok(Math.abs(g.dh - 48) <= 0.5, `duck ${g.dh}px (48)`);
-      const nod = await page.evaluate(() => { const d = document.querySelector("#wish .cue-chip img.g-nod"), n = d && getComputedStyle(d);
+      if (type === "num") assert.ok(g.svg > 0 && g.svg <= 24, `the typed box's duck is the small inline SVG (114r v1f, Tony: simple duck, no overflow): ${g.svg}px`);   // W114f: Tony's design replaced the 48px official pose here
+      else { assert.match(g.duck, outcome === "right" ? /duck-calm-nod-128\.webp$/ : /duck-out-shrug-128\.webp$/); assert.ok(Math.abs(g.dh - 48) <= 0.5, `duck ${g.dh}px (48)`); }
+      const nod = await page.evaluate(() => { const d = document.querySelector(":is(#wish, .rbox) .cue-chip .g-nod"), n = d && getComputedStyle(d);
         return d ? { name: n.animationName, delay: parseFloat(n.animationDelay) * (n.animationDelay.endsWith("ms") ? 1 : 1000), iter: n.animationIterationCount } : null; });
       if (outcome === "right") {                                                   // a fresh browser: the first right of the day nods, once, after Next has landed (180 + 300 ms)
         assert.ok(nod && nod.name === "g-nod" && nod.iter === "1" && nod.delay >= 320, "the calm nod: " + JSON.stringify(nod));
@@ -282,7 +282,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       const xp0 = g.xp;
       assert.equal(typeof xp0, "number", "no rewards state to compare");
       const ls0 = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /rw|reward/i.test(k)).map(k => [k, localStorage.getItem(k)])));
-      await page.tap("#wish .cue-chip"); await page.waitForTimeout(800);
+      await page.tap(":is(#wish, .rbox) .cue-chip"); await page.waitForTimeout(800);
       const xp1 = await page.evaluate(() => window.Rewards && window.Rewards.state && window.Rewards.state() ? window.Rewards.state().xp : null);
       const ls1 = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /rw|reward/i.test(k)).map(k => [k, localStorage.getItem(k)])));
       assert.equal(xp1, xp0, `a chip tap paid XP: ${xp0} -> ${xp1}`);
