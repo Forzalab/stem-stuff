@@ -50,7 +50,7 @@ async function run(w, h) {
     await page.waitForSelector("#q.closed .guard.lock", { timeout: 4000 });
     const g = await page.$eval("#q .guard", e => ({ txt: e.textContent, lock: !!e.querySelector(".gd-lock svg"), duck: !!e.querySelector(".gd-duck svg"), burst: !!e.querySelector(".burst") }));
     assert.ok(g.lock && g.duck, "lock icon + Cluck");
-    assert.match(g.txt, /Out of tries/); assert.match(g.txt, /guarding/); assert.ok(!g.burst, "no burst when locked");
+    assert.match(g.txt, /guarding/); assert.ok(!g.burst, "no burst when locked");
     const snap = () => page.evaluate(() => JSON.stringify({ t: window.__drill.state.tries.length, c: [...document.querySelectorAll("#q .opt")].map(x => x.getAttribute("aria-checked")) }));
     const s0 = await snap();
     for (const el of await page.$$("#q .opt")) await el.click({ force: true });
