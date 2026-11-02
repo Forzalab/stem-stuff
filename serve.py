@@ -3811,6 +3811,7 @@ def note_block(n):
 # (no key, the hourly cap, credit, the network, bad JSON) is "busy": no try used, an S- code when it was a failure. The proof text never
 # goes in a log or incident line; the grader gets it with e-mail / phone shapes blanked, fenced in a random tag.
 PROOF_MAX, PROOF_TRIES, PROOF_FK_MAX, PROOF_TIMEOUT = 3000, 3, 5.0, 20
+PROOF_BUDGET = 25    # seconds in TOTAL across every model tried for one Check (Tony, Nov 2); mirrors the client's 25 s give-up in app.js, so a try is never recorded after the student saw "timed out"
 CHECK_MAX = 16384                            # /check's body cap: PROOF_MAX characters as UTF-8 + JSON escapes fit (every other item: far less)
 PROOF_ROWS = ("base", "assume", "prove")
 OPENROUTER_PROOF_MODELS = [m for m in os.environ.get("OPENROUTER_PROOF_MODELS", "deepseek/deepseek-v4.1-flash").split(",") if m.strip()]
@@ -3870,14 +3871,17 @@ def proof_judge(p, text, key, out=None):
     ref = pk["reference"]
     user = "\n\n".join([f"QUESTION:\n{q}", "RUBRIC:\n" + "\n".join(f"{r['id']}: {r['need']}" for r in pk["rubric"]),
                          "REFERENCE:\n" + ("\n".join(ref) if isinstance(ref, list) else ref), "PROOF:\n" + wrap(PII_RE.sub("[hidden]", text.strip()), tag)])
-    err = None
+    err, t_end = None, time.time() + PROOF_BUDGET
     for m in OPENROUTER_PROOF_MODELS:
+        left = t_end - time.time()
+        if left <= 0.05:
+            raise err or TimeoutError("proof budget spent")
         payload = dict(_model_params(m, 300), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
                        provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "proof", "strict": True, "schema": PROOF_SCHEMA}},
                        messages=[{"role": "system", "content": system_for(CLUCK_PROOF, p)}, {"role": "user", "content": user}])
         try:
-            with _or_post(payload, key, PROOF_TIMEOUT) as r:
+            with _or_post(payload, key, min(PROOF_TIMEOUT, left)) as r:
                 g = json.loads(json.loads(r.read())["choices"][0]["message"]["content"])
             if (not isinstance(g, dict) or any(g.get(k) not in ("ok", "missing", "wrong") for k in PROOF_ROWS)
                     or not isinstance(g.get("hint"), str)):
