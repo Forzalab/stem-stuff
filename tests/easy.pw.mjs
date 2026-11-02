@@ -378,7 +378,9 @@ try {
     await page.click("#cluck .cl-x");                                        // closed: the peek + CTA are the way back, then open again from the top
     assert.equal((await page.textContent(".cl-peek .cl-cta")).trim(), "okay, but how?", "E1 = T2, wording b (Tony, Oct 13)");
     assert.equal(await page.isVisible(".cl-peek .cl-cta"), true);
-    { const info = await page.$eval(".cl-peek .cl-cta", b => {   // W141: the CI red was never reproduced; if it reds again the message names the state
+    // W141 r3: the peek is rebuilt on every streamed piece (renderWish removes + re-inserts .cl-peek), so a handle taken by page.$eval can be detached by the time it
+    // is measured under load (CI 41398626028: isConnected false, rect 0x0). One page.evaluate looks the CTA up and measures it in the same task: nothing can redraw between.
+    { const info = await page.evaluate(() => { const b = document.querySelector(".cl-peek .cl-cta");
         const chain = []; for (let e = b; e; e = e.parentElement) { const c = getComputedStyle(e), r = e.getBoundingClientRect();
           chain.push({ el: e.tagName.toLowerCase() + "." + e.className, display: c.display, visibility: c.visibility, transform: c.transform, opacity: c.opacity, height: c.height, rectH: r.height }); if (e.matches(".cl-peek")) break; }
         const r = b.getBoundingClientRect();
@@ -391,8 +393,8 @@ try {
     await page.waitForFunction(() => /Egg-cellent/.test(document.querySelector(".cl-peek .cl-steps")?.textContent || ""), null, { timeout: 6000 });
     // W113: under 3-lane load the peek is redrawn a frame later (peekText: one draw a frame) and its fonts settle late, so one read right
     // after the text shows was red on main and branch alike (1 in 6 each, 6 parallel runs): wait for the overflow itself, then assert
-    const fade = () => page.$eval(".cl-peek .cl-steps", s => s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient"));
-    const diag = () => page.$eval(".cl-peek .cl-steps", s => `${s.scrollHeight}/${s.clientHeight} fonts=${document.fonts.status} katex=${!!s.querySelector(".katex")}`);
+    const fade = () => page.evaluate(() => { const s = document.querySelector(".cl-peek .cl-steps"); return !!s && s.scrollHeight > s.clientHeight && getComputedStyle(s, "::after").backgroundImage.includes("gradient"); });   // W141 r3: look up + read in one task (the peek is rebuilt per piece)
+    const diag = () => page.evaluate(() => { const s = document.querySelector(".cl-peek .cl-steps"); return s ? `${s.scrollHeight}/${s.clientHeight} fonts=${document.fonts.status} katex=${!!s.querySelector(".katex")}` : "no peek"; });
     try {
       await page.waitForFunction(() => { const s = document.querySelector(".cl-peek .cl-steps"); return !!s && s.scrollHeight > s.clientHeight; }, null, { timeout: 6000 });
     } catch (e) { throw new Error("the peek never overflowed: " + await diag()); }
