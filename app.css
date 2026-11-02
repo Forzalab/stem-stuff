@@ -526,6 +526,30 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .ff:hover { border-color: var(--edge); }
 .q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
+/* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
+   Locked: Cluck tilted on a --muted padlock, "zzZ", words in --muted with the lead in --ink. Redeemed: he sits up; the lead is the retry tag's
+   word in --correct at the same --w-em (no new size, no bold green). Feather burst: live redeem only, motion allowed only */
+.guard { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding-top: var(--s3); border-top: var(--bw) solid var(--edge); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
+.guard p { margin: 0; }
+.guard b { color: var(--ink); font-weight: var(--w-em); }
+.guard .gd-win { color: var(--correct); }
+.gd-duck { position: relative; flex: none; width: 2rem; height: 2rem; color: var(--help); }
+.gd-duck > .ico { width: 100%; height: 100%; }
+.guard.lock .gd-duck > .ico { transform: rotate(-12deg); opacity: 0.7; }
+.gd-z { position: absolute; right: -0.5rem; top: -0.4rem; font-size: var(--t-xs); color: var(--muted); }
+.gd-lock { flex: none; order: -1; width: 1.25rem; height: 1.25rem; color: var(--muted); }
+.gd-lock .ico { width: 100%; height: 100%; }
+.burst i { position: absolute; left: 50%; top: 50%; width: 6px; height: 10px; margin: -5px 0 0 -3px; border-radius: 50% 50% 50% 0; background: var(--reward); opacity: 0; }
+.burst i:nth-child(1) { --a: 0deg; } .burst i:nth-child(2) { --a: 45deg; } .burst i:nth-child(3) { --a: 90deg; } .burst i:nth-child(4) { --a: 135deg; }
+.burst i:nth-child(5) { --a: 180deg; } .burst i:nth-child(6) { --a: 225deg; } .burst i:nth-child(7) { --a: 270deg; } .burst i:nth-child(8) { --a: 315deg; }
+@media (prefers-reduced-motion: no-preference) {
+  .guard.won.live .gd-duck > .ico { animation: gd-jolt 500ms cubic-bezier(.2, 1.6, .4, 1) both; }
+  .guard.won.live .burst i { animation: gd-fl 700ms ease-out both; }
+  .gd-z { animation: gd-zz 1.4s ease-in-out infinite alternate; }
+}
+@keyframes gd-jolt { 0% { transform: rotate(-12deg) translateY(0); } 40% { transform: translateY(-0.5rem); } }
+@keyframes gd-fl { from { opacity: 1; transform: rotate(var(--a)) translateY(0); } to { opacity: 0; transform: rotate(var(--a)) translateY(-1.5rem); } }
+@keyframes gd-zz { from { opacity: 0.3; } to { opacity: 1; } }
 .how { margin: 0 0 var(--s2); color: var(--muted); font-size: var(--t-sm); line-height: 1.4; }
 .ptitle { margin: 0 0 var(--s3); color: var(--ink); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }   /* sugar: the question's title on top of the card (was the tip, design/EASY.md) */
 /* a snack's changed numbers (chg.mjs, Tony Oct 5): an underline in the site yellow, no fill, so the text keeps its own contrast.
