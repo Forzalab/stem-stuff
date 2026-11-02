@@ -1,6 +1,7 @@
-// Desktop has no notes box (todo 97, Tony Nov 1: "notes still show for sugar mode when it should be hidden ... the note box shows, but then
-// explain Cluck clicked, then note cannot be reopened no more. Fix: just disable the note on desktop"). From the side-by-side breakpoint
-// (min-width 720px, app.js sideMQ) up #scratch / #xb never render: normal mode, sugar mode, after Explain Cluck. Phones keep the notes.
+// Desktop notes box (#xb), kept (Tony, Nov 2: keep it, fix its 2 bugs). Diet keeps the box at every size. Sugar hides it on desktop (>= 720px,
+// app.js sideMQ) from the first paint, as a static rule on html.sugar (not padRule's layer toggle): "notes still show for sugar mode when it
+// should be hidden" = it leaked before a layer opened; "explain Cluck clicked, then note cannot be reopened" = the layer toggle hid it with
+// no way back. Hidden = visibility (the box height stays the column floor, W129 L4). Phones keep the notes in both modes.
 //   node tests/desk-notes-off.pw.mjs [port]
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
@@ -41,33 +42,41 @@ async function open(browser, w, h, mode) {
 }
 const browser = await pw.chromium.launch({ args: ["--no-sandbox"] });
 try {
-  for (const mode of ["diet", "sugar"]) {
-    await step(`1280x800 ${mode}: no notes box, before and after Explain Cluck`, async () => {
-      const { ctx, page } = await open(browser, 1280, 800, mode);
-      if (SHOT) await page.screenshot({ path: join(SHOT, `desk-${mode}-load.png`) });
-      assert.equal(await shown(page, "#scratch, #xb"), false, "notes visible on load");
+  const box = page => page.evaluate(() => { const e = document.querySelector("#xb"), r = e.getBoundingClientRect(); return { h: Math.round(r.height), vis: getComputedStyle(e).visibility, shown: r.height > 0 && getComputedStyle(e).visibility !== "hidden" }; });
+  for (const w of [720, 721, 1280]) for (const mode of ["diet", "sugar"]) {
+    await step(`${w}px ${mode}: notes ${mode === "diet" ? "stay (usable)" : "hidden, box height kept"}, load / Explain Cluck open / closed`, async () => {
+      const { ctx, page } = await open(browser, w, 800, mode);
+      const want = mode === "diet";
+      const check = async (when) => {
+        const b = await box(page);
+        assert.equal(b.shown, want, `notes ${want ? "missing" : "visible"} ${when}`);
+        if (when === "on load") assert.ok(b.h > 0, `#xb lost its height ${when} (display:none?)`);   // later: Cluck open fills #work, and X / Escape dismisses the column (cl-gone), both by design (DISMISS.md)
+      };
+      await check("on load");
+      if (SHOT) await page.screenshot({ path: join(SHOT, `desk-${w}-${mode}-load.png`) });
       await page.fill("#ans", "1"); await page.keyboard.press("Enter");
       if (mode === "sugar") {
         await page.waitForSelector(".cl-peek .cl-cta", { timeout: 8000 });
         await page.click(".cl-peek .cl-cta");
         await page.waitForSelector("#work.cl-on .cl-ft .ask", { timeout: 5000 });
+        await page.waitForTimeout(600);
+        await check("after Explain Cluck opened");
+        await page.keyboard.press("Escape"); await page.waitForTimeout(500);
+        await check("after Explain Cluck closed");
+      } else await check("after a wrong answer");
+      if (want) {
+        await page.fill("#xbField textarea", "my note"); await page.waitForTimeout(700);
+        assert.ok(await shown(page, "#xbLabel"), "notes label gone");
       }
-      await page.waitForTimeout(600);
-      if (SHOT) await page.screenshot({ path: join(SHOT, `desk-${mode}-explain.png`) });
-      assert.equal(await shown(page, "#scratch, #xb"), false, "notes visible after Explain Cluck");
-      await page.keyboard.press("Escape"); await page.waitForTimeout(500);
-      assert.equal(await shown(page, "#scratch, #xb"), false, "notes visible after Cluck closed");
       await ctx.close();
     });
   }
-  for (const [w, desk] of [[719, false], [720, true], [721, true]]) {
-    await step(`${w}px (diet): notes ${desk ? "absent" : "present, openable"}`, async () => {
-      const { ctx, page } = await open(browser, w, 800, "diet");
-      if (desk) assert.equal(await shown(page, "#scratch, #xb"), false);
-      else { await page.click("#padFab"); await page.waitForTimeout(500); assert.equal(await shown(page, "#scratch"), true, "phone pad does not open"); }
-      await ctx.close();
-    });
-  }
+  await step("719px (diet): phone pad opens", async () => {
+    const { ctx, page } = await open(browser, 719, 800, "diet");
+    await page.click("#padFab"); await page.waitForTimeout(500);
+    assert.equal(await shown(page, "#scratch"), true, "phone pad does not open");
+    await ctx.close();
+  });
   await step("390x844 diet: phone notes open, take text, close, reopen", async () => {
     const { ctx, page } = await open(browser, 390, 844, "diet");
     for (let i = 0; i < 2; i++) {

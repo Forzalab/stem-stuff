@@ -94,7 +94,7 @@ weight() {
     fcard-clip) echo 20 ;;   # W115 formula card math not cut off, 4 sizes x chromium/firefox/webkit, own server, local run ~20 s (CI has chromium only)
     toast-note) echo 30 ;;   # W112 toast notes + desktop start line, local run ~30 s (estimate until CI timing)
     desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
-    desk-notes-off) echo 14 ;;   # W97 desktop has no notes box, phone keeps it, own server, local run ~14 s (estimate until CI timing)
+    desk-notes-off) echo 14 ;;   # W97 desktop notes box kept: diet shows, sugar hides (static html.sugar), phone keeps it, own server, local run ~14 s (estimate until CI timing)
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
     twist) echo 22 ;;   # W133 Twist chip + one-time toast + popover, 3 screens + blocked storage, own server; local run ~20 s (estimate until CI timing)
     shotqa) echo 30 ;;   # W340 §0 the shot gate: 5 vet cards + every stepper step at 1440x900 + 390x844, own server, local run ~28 s (estimate until CI timing)
@@ -133,7 +133,7 @@ tags() {
     toast-note) echo "@layout @real-time" ;;   # W112 note placement + the cover rule across screen sizes
     desk-layout@1|desk-layout@2|desk-layout@3) echo "@layout @real-time" ;;   # W129 L1-L6: the desktop columns, the pixel-diff gate on every tap
     expr) echo "@logic @real-time" ;;   # W137 expression answers: own 2 serve.py (EXPR_MODE on / off) + a fake Claude, 390 / 1440 / 1366
-    desk-notes-off) echo "@layout @real-time" ;;   # W97 no notes box at >= 720, phone notes kept
+    desk-notes-off) echo "@layout @real-time" ;;   # W97 desktop notes: diet kept, sugar hidden from first paint, phone kept
     units) echo "@layout @real-time" ;;   # W132 the answer line's unit: colour, weight, gap, same line; real clipboard
     twist) echo "@layout @real-time" ;;   # W133 the Twist chip, its popover, the one-time toast and its cover rule (#q, Next) at 390 / 1366 / 1440
     fcard-clip) echo "@layout @real-time" ;;   # W115 todo 115: KaTeX ink vs the .fm scroll box at 4 sizes
