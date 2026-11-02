@@ -1,12 +1,12 @@
-/* split-app.mjs (W152): part 2 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: ln.<name>, defined by its own part at its top. tests/split-gate.test.mjs lints it. */
+/* split-app.mjs (W152): part 2 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 import { traceparent } from "./incident.mjs";
 import { modeOf } from "./mode.mjs";
 import { quack } from "./quack.mjs";
 import { clampPos, dimAt, progress, radiusAt, snapTo } from "./sheet.mjs";
 import { speakable } from "./speak.mjs";
 import { renumberSteps } from "./steps.mjs";
-import { $, S, cueRight, esc, frReq, icon, incHTML, ln, mockHold, painting, rboxSync, renderMath, reqInc, say, xInc } from "./app.js";
-Object.defineProperties(ln, {   // read (or set) from another part as ln.<name> (split-app.mjs)
+import { $, S, bridge, cueRight, esc, frReq, icon, incHTML, mockHold, painting, rboxSync, renderMath, reqInc, say, xInc } from "./app.js";
+Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   cl: { get: () => cl, enumerable: true },   // let
   clClose: { get: () => clClose, enumerable: true },
   clGone: { get: () => clGone, set: v => { clGone = v; }, enumerable: true },   // let
@@ -84,7 +84,7 @@ function wishOnWrong() {
   const w = wish;
   /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
-  const auto = () => { if (ln.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
+  const auto = () => { if (bridge.sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
   if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
   if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the "Explain my mistake" chip asks (no auto call)
   wishPaint();
@@ -287,7 +287,7 @@ function wishType(el, s) {
     let last = performance.now(), drawn = -1;
     const f = now => {
       if (!el.isConnected || s.off) return res();
-      s.pos = ln.reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
+      s.pos = bridge.reduceMQ.matches ? s.text.length : Math.max(s.pos, s.shown) + (now - last) * WISH_CPS / 1000; last = now;
       s.shown = Math.max(s.shown, wishCut(s.text, s.pos, s.done));
       const end = s.done && s.shown >= s.text.length;
       if (drawn !== s.shown || end) { el.innerHTML = wishHTML(s.text.slice(0, s.shown)) + (end ? "" : WCARET); wishFigs(el); drawn = s.shown; }
@@ -326,12 +326,12 @@ function wishFrame(now) {
     }
     w.tick = now; x.classList.toggle("wrun", !w.done || now < w.at); if (!w.done || now < w.at) wishText(); return; }
   const dt = now - (w.tick || now); w.tick = now;
-  w.pos = w.skip || ln.reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
+  w.pos = w.skip || bridge.reduceMQ.matches ? t.length : Math.min(t.length, Math.max(w.pos || 0, w.shown) + dt * WISH_CPS / 1000);
   w.shown = Math.max(w.shown, wishCut(t, w.pos, w.done));
   const end = w.done && w.shown >= t.length;
   if (w.drawn !== w.shown || end !== w.ended) {
     if (!w.quack && w.shown > 0) {   // D72: Cluck's message opens with a QUACK, as its first body line (not in the name row)
-      w.quack = ln.lastQuack = quack(w.code + ":cluck", ln.lastQuack);
+      w.quack = bridge.lastQuack = quack(w.code + ":cluck", bridge.lastQuack);
       const msg = x.parentElement;   // the reply's first line, above the body (x itself is re-set on every draw, so the QUACK sits beside it)
       if (msg) { msg.querySelector(".cl-quack")?.remove(); x.insertAdjacentHTML("beforebegin", `<p class="cl-quack">${esc(w.quack)}</p>`); }
     }
@@ -352,7 +352,7 @@ function peekText() {                                                       // t
     peekRaf = 0;
     const s = $(".cl-peek .cl-steps"); if (!s || !wish) return;
     const h = s.offsetHeight; s.innerHTML = peekHTML(wish);
-    if (s.offsetHeight !== h) ln.layoutFreeze();
+    if (s.offsetHeight !== h) bridge.layoutFreeze();
   });
 }
 /* E1 LOCKED (Tony, Oct 13: T2, "okay, but how?", i20): the duck glyph + label + chevron that opens Cluck's sheet. One small piece:
@@ -365,24 +365,24 @@ function wishPaint() {
   el.classList.remove("gone");
   if (!w || [404, 503].includes(w.failed)) {
     el.hidden = true;
-    if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (ln.origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
+    if (w && cl && cl.open && cl.tab === "explain" && !w.off) { if (bridge.origEl) clTab("steps", false); else clClose(); }   // the auto-open found nothing to explain (a press: the sheet says Cluck is off)
     clBackSync(); return;
   }
-  const off = ln.sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
-    : !!ln.origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
+  const off = bridge.sideMQ.matches ? w.open                                      // desktop: while the sheet shows Cluck, "Hide" is noise (Tony, Oct 5: variant a); closed, it is the way back
+    : !!bridge.origEl && w.started && !w.failed;                                   // phone + a snack: one way in, the "Compare with a similar solution" card (Tony, Oct 5, TODO C); "Explain my mistake" / "Try again" stay
   el.hidden = off;
   const cue = !!S && S.finished && S.code === w.code;                       // T17b-1: the question is closed, the duck chip under the answer (r5/B R3 REC)
   if (cue ? el.previousElementSibling !== $("#q") : el.previousElementSibling !== $("#fb")) (cue ? $("#q") : $("#fb")).after(el);
   el.classList.toggle("cue", cue);
   if (cue) {
-    const ok = cueRight(), nod = w.nod && !w.nodded, q = ln.FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
+    const ok = cueRight(), nod = w.nod && !w.nodded, q = bridge.FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
     if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
-    const keep = off && ln.sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
+    const keep = off && bridge.sideMQ.matches && room > 0;                         // desktop, the sheet open: no peek, no chip (Tony, Oct 5: variant a), but its room stays as an empty
     const into = host || el.querySelector(".cluck > div");                  // box (W129 L4: taking it out shortened the page, which a scrolled short window paid for with a jump)
     if (!off) into.insertAdjacentHTML("beforeend", `<div class="cl-peek"><div class="wtext cl-steps">${peekHTML(w)}</div>${ctaHTML("okay, but how?", w.open)}</div>`);
     else if (keep) into.insertAdjacentHTML("beforeend", `<div class="cl-room" aria-hidden="true" style="height:${room}px"></div>`);
@@ -403,7 +403,7 @@ function wishPaint() {
     clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ":is(#wish, .rbox) .wchip");
   });
   clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
-  ln.layoutFreeze();
+  bridge.layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
 }
 /* ---------- Cluck's sheet (Tony, Oct 5: alt's V1 side sheet; colours from his image 3): one home for everything Cluck shows ----------
@@ -425,7 +425,7 @@ function clEl() {
     <div class="cl-ft"><button type="button" class="cl-more" aria-label="Scroll down">${icon("i-down")}</button><div class="cl-fi"></div></div>`;   // .cl-fi: the ask field / done row (clAsk); the hint stays
   cl = { el, tab: "explain", open: false, from: null, fold: false };
   el.querySelector(".cl-fold").addEventListener("click", () => {
-    if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) ln.origPeeked();   // folded away after a solve: looking again is a peek
+    if (!cl.fold && S && S.orig && !S.orig.open && S.orig.lvl === 3) bridge.origPeeked();   // folded away after a solve: looking again is a peek
     cl.fold = !cl.fold; clTab(cl.fold ? "steps" : cl.tab, false);
   });
   el.querySelectorAll(".cl-x").forEach(b => b.addEventListener("click", () => clClose(true)));   // desktop: the X dismisses the column (design/DISMISS.md)
@@ -436,7 +436,7 @@ function clEl() {
   bd.addEventListener("scroll", clMore, { passive: true }); ro.observe(bd); [...bd.children].forEach(c => ro.observe(c));
   el.querySelector(".cl-more").addEventListener("click", () => {
     window.stemT?.("cluck_more", { act: "tap" });   // Jev (on device: telemetry.js never sends it)
-    bd.scrollBy({ top: bd.clientHeight * 0.8, behavior: ln.reduceMQ.matches ? "auto" : "smooth" });
+    bd.scrollBy({ top: bd.clientHeight * 0.8, behavior: bridge.reduceMQ.matches ? "auto" : "smooth" });
   });
   el.querySelector(".wtext").addEventListener("click", () => { const w = wish; if (w && w.open && !w.skip && !wishTyped(w)) { w.skip = true; w.at = 1; wishDraw(); } });   // a tap skips the typing
   clPlace();
@@ -449,7 +449,7 @@ function clEl() {
 function clDrag(el) {
   const root = document.documentElement, grab = el.querySelector(".cl-grab"), bar = el.querySelector(".cl-bar"), bd = el.querySelector(".cl-bd");
   let pos = 0, peek = 0, r0 = 30, raf = 0, full = false, d = null;
-  const phone = () => !ln.sideMQ.matches;
+  const phone = () => !bridge.sideMQ.matches;
   const paint = () => {
     const top = Math.min(pos, peek), down = Math.max(0, pos - peek);
     el.style.setProperty("--cl-top", top + "px"); el.style.setProperty("--rr", radiusAt(pos, peek, r0) + "px");
@@ -466,7 +466,7 @@ function clDrag(el) {
   };
   const go = (to, v0 = 0) => {                                              // a spring (stiffness 380, damping 34), the mock's; reduced motion: an instant snap
     cancelAnimationFrame(raf);
-    if (ln.reduceMQ.matches) { settle(to); return; }
+    if (bridge.reduceMQ.matches) { settle(to); return; }
     let vel = v0, last = performance.now(); el.dataset.state = "moving";
     const step = now => {
       let dt = Math.min(0.032, (now - last) / 1000); last = now;
@@ -526,23 +526,23 @@ function clDrag(el) {
 }
 function clPlace() {                                                        // side by side: the notes column; phone: over the page
   if (!cl) return;
-  const home = ln.sideMQ.matches ? $("#work") : document.body;
+  const home = bridge.sideMQ.matches ? $("#work") : document.body;
   if (cl.el.parentElement !== home) home.append(cl.el);
-  $("#work").classList.toggle("cl-on", cl.open && ln.sideMQ.matches);
-  window.stemBrainrot?.sheet(cl.open && ln.sideMQ.matches);
-  document.documentElement.classList.toggle("cl-open", cl.open && !ln.sideMQ.matches);
+  $("#work").classList.toggle("cl-on", cl.open && bridge.sideMQ.matches);
+  window.stemBrainrot?.sheet(cl.open && bridge.sideMQ.matches);
+  document.documentElement.classList.toggle("cl-open", cl.open && !bridge.sideMQ.matches);
 }
 function clOpen(tab, from, auto) {                                        // auto (the desktop default, Tony Oct 5): no focus, no scroll
-  if (clGone && ln.sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
+  if (clGone && bridge.sideMQ.matches) { if (auto) return; clGoneSet(false); }    // dismissed (DISMISS.md): an auto-open waits for the student; a tap brings the column back
   window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
   clEl(); if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
   cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
-  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); ln.padRule();
-  ln.layoutFreeze();
-  if (ln.sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
+  clPlace(); clTop(); clAsk(true); clTab(tab, !auto); bridge.padRule();
+  bridge.layoutFreeze();
+  if (bridge.sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
     const ft = cl.el.querySelector(".cl-ft"), r = ft.getBoundingClientRect();   // #work.cl-on), so the page moves only when the field is really off screen (W129 L4: "start" scrolled the page under the student)
-    if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: ln.reduceMQ.matches ? "auto" : "smooth" });
+    if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: bridge.reduceMQ.matches ? "auto" : "smooth" });
   }
 }
 function clClose(dismiss) {
@@ -550,10 +550,10 @@ function clClose(dismiss) {
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
   cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
-  clTab(cl.tab, false); clPlace(); ln.padRule();
-  ln.layoutFreeze();
-  if (!ln.sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
-  if (dismiss === true && ln.sideMQ.matches && !ln.origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
+  clTab(cl.tab, false); clPlace(); bridge.padRule();
+  bridge.layoutFreeze();
+  if (!bridge.sideMQ.matches && cl.y != null) scrollTo({ top: cl.y, behavior: "instant" });       // back where the student was (clTop moved the page)
+  if (dismiss === true && bridge.sideMQ.matches && !bridge.origEl) clGoneSet(true);      // desktop X / Esc: the whole column goes (DISMISS.md); with a snack's original in it, the card stays the way back
   if (cl.from && back) ($(cl.from) || $(".cl-peek .cl-cta"))?.focus({ preventScroll: true });   // the chip that opened it may be the CTA now
 }
 /* ---------- dismiss Cluck's column (desktop; design/DISMISS.md, Tony Oct 20: "B4 look with H humor") ----------
@@ -589,7 +589,7 @@ function clGoneSet(on) {
   if (clGone === on) return;
   clGone = on;
   if (on && cl && cl.open) { cl.auto = true; clClose(); }                  // the sash drag with the sheet open: it goes with the column
-  ln.applyMT(); ln.layoutFreeze();
+  bridge.applyMT(); bridge.layoutFreeze();
 }
 function hkStop() { clearInterval(hkT); hkT = 0; }
 function hkShow(b, roll) {
@@ -600,7 +600,7 @@ function hkShow(b, roll) {
 }
 function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok, .rbox .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
 function clBackSync() {
-  const show = clGone && ln.sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
+  const show = clGone && bridge.sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
   let b = $("#clBack");
   if (!show) { if (b) b.hidden = true; hkStop(); return; }
   if (!b) {
@@ -615,18 +615,18 @@ function clBackSync() {
   b.hidden = false; hkI = 0; hkShow(b, false);
   window.stemT?.("cluck_back_seen", { hk: hkKind() });                      // the A/B exposure (telemetry.js: a no-op when off)
   hkStop();
-  if (!ln.reduceMQ.matches) hkT = setInterval(() => { if (b.hidden || !b.isConnected) { hkStop(); return; } hkI++; hkShow(b, true); }, 3600);   // reduced motion: one static line
+  if (!bridge.reduceMQ.matches) hkT = setInterval(() => { if (b.hidden || !b.isConnected) { hkStop(); return; } hkI++; hkShow(b, true); }, 3600);   // reduced motion: one static line
 }
 function clBack() {
   const w = wish, said = !!w && !!S && w.code === S.code && w.started && !w.failed && ![404, 503].includes(w.failed);
   clGoneSet(false);
-  if (said || ln.origEl) clOpen(said ? "explain" : "steps", "#clBack");
+  if (said || bridge.origEl) clOpen(said ? "explain" : "steps", "#clBack");
 }
 /* T45 idle peek (peek.js): its timer waits while Cluck is open (AMA 9). A tap on the peeking duck = Cluck (AMA 4), with no new AI call
    (T34 budget) and no auto hint (T32 pry-guard): what Cluck already has (his steps, the reference solution) opens in the sheet; else
    his own way in on the page (the "Explain my mistake" chip, the hint card) gets the focus, and the student decides; nothing there = the duck just goes */
 window.stemCluckOpen = () => !!cl && cl.open;
-window.stemLayout = () => { if (S) ln.layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
+window.stemLayout = () => { if (S) bridge.layoutFreeze(); };                        // brainrot.js: the docked players folded / unfolded; the notes take the room in the same frame (W129 L4)
 window.stemIdleTap = () => {
   const w = wish;
   if (w && S && w.code === S.code && (!w.started || w.failed) && ![404, 503].includes(w.failed)) {   // B7 (Tony, Oct 19, pick b): no prefetch (or it failed): the duck
@@ -635,21 +635,21 @@ window.stemIdleTap = () => {
     clOpen("explain", null); return;
   }
   const said = !!wish && wish.started && !wish.failed;
-  if (said || ln.origEl) { clOpen(said ? "explain" : "steps", null); return; }
+  if (said || bridge.origEl) { clOpen(said ? "explain" : "steps", null); return; }
   const b = [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
-  if (b) { b.scrollIntoView({ block: "nearest", behavior: ln.reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
+  if (b) { b.scrollIntoView({ block: "nearest", behavior: bridge.reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
 };
 /* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
    sits over the question there), then the sheet's top sits two lines below the question text's first line (at most 45% down: the chat keeps room) */
 function clTop() {
-  if (ln.sideMQ.matches) return;
+  if (bridge.sideMQ.matches) return;
   scrollTo({ top: 0, behavior: "instant" });
   const t = $("#blocks > :not(.ptitle)") || $("#problem"); if (!t) return;
   const lh = parseFloat(getComputedStyle(t).lineHeight) || 28;
   cl.el.style.setProperty("--cl-top", Math.round(Math.min(Math.max(t.getBoundingClientRect().top + 2 * lh + 2, 48), innerHeight * 0.45)) + "px");
 }
 function clTab(tab, focus) {
-  const has = { explain: !!wish && (wish.off || ![404, 503].includes(wish.failed)) && wish.started, steps: !!ln.origEl };   // off: the sheet holds the one line
+  const has = { explain: !!wish && (wish.off || ![404, 503].includes(wish.failed)) && wish.started, steps: !!bridge.origEl };   // off: the sheet holds the one line
   if (!has[tab]) tab = has.explain ? "explain" : "steps";
   cl.tab = tab;
   if (!has.explain) cl.fold = true;                                         // nothing above it: the steps are the content
@@ -673,8 +673,8 @@ function clTab(tab, focus) {
   if (focus) {                                                              // a manual open: focus goes into the sheet (an auto open never moves it)
     const ta = cl.el.querySelector(".ask textarea");
     if (has.steps && tab === "steps") fold.focus();
-    else if (ln.sideMQ.matches && ta && !ta.disabled && !cl.el.querySelector(".cl-ft").hidden) ta.focus({ preventScroll: true });
-    else { cl.wantAsk = ln.sideMQ.matches; [...cl.el.querySelectorAll(".cl-x")].find(b => b.getClientRects().length)?.focus({ preventScroll: true }); }   // desktop: the ask field once the text is typed; phone: no keyboard pop
+    else if (bridge.sideMQ.matches && ta && !ta.disabled && !cl.el.querySelector(".cl-ft").hidden) ta.focus({ preventScroll: true });
+    else { cl.wantAsk = bridge.sideMQ.matches; [...cl.el.querySelectorAll(".cl-x")].find(b => b.getClientRects().length)?.focus({ preventScroll: true }); }   // desktop: the ask field once the text is typed; phone: no keyboard pop
   }
 }
 /* the thread reads like a chat (Lane 2, Oct 13): no name/time line; Cluck's text on the sheet (his avatar only beside it on desktop),

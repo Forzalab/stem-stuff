@@ -1,10 +1,10 @@
-/* split-app.mjs (W152): part 3 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: ln.<name>, defined by its own part at its top. tests/split-gate.test.mjs lints it. */
+/* split-app.mjs (W152): part 3 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
 import { markNums } from "./chg.mjs";
 import { build, stringify } from "./copy/payload.mjs";
 import { modeOf } from "./mode.mjs";
-import { $, S, bank, check, dock, drawFigures, esc, fitChoices, fromHash, hashCode, hideToast, icon, inflight, ln, mainEl, maxTries, md, noteAt, obToast, off, openBank, opts, partEls, retryLoad, root, say, select, snackChg, src, toast } from "./app.js";
+import { $, S, bank, bridge, check, dock, drawFigures, esc, fitChoices, fromHash, hashCode, hideToast, icon, inflight, mainEl, maxTries, md, noteAt, obToast, off, openBank, opts, partEls, retryLoad, root, say, select, snackChg, src, toast } from "./app.js";
 import { clBackSync, clEl, clGoneSet, clPlace } from "./cluck.js";
-Object.defineProperties(ln, {   // read (or set) from another part as ln.<name> (split-app.mjs)
+Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   FXL: { get: () => FXL, enumerable: true },
   applyMT: { get: () => applyMT, enumerable: true },
   barOpen: { get: () => barOpen, enumerable: true },
@@ -86,7 +86,7 @@ function rewardGo(mine, o) {
 let origEl = null;
 function origRender() {
   if (origEl) { origEl.remove(); origEl = null; }
-  if (ln.cl) { if (ln.cl.open && ln.cl.tab === "steps") ln.clClose(); ln.cl.el.querySelector("#clTabSP").innerHTML = ""; }
+  if (bridge.cl) { if (bridge.cl.open && bridge.cl.tab === "steps") bridge.clClose(); bridge.cl.el.querySelector("#clTabSP").innerHTML = ""; }
   const p = S && S.prob, o = p && p.original;
   if (modeOf() !== "sugar" || !p.snack || !o || !Array.isArray(o.body)) return;
   const R = RW(), live = !!R && R.on() && rewardOn(), lvl = live ? R.origLevel(o.q, S.code) : 1;
@@ -119,7 +119,7 @@ function origRender() {
   clEl().querySelector("#clTabSP").append(body);   // the solution reads in Cluck's sheet, "Similar steps" tab (so look it up via body, not el)
   origPlace();
   hintNudge(el.querySelector(".rw-hint"));
-  if (sideMQ.matches && lvl < 3) ln.clOpen("steps", "#origHd", true);           // desktop: the free steps open by default (Tony, Oct 5); folded (lvl 3) stays a peek
+  if (sideMQ.matches && lvl < 3) bridge.clOpen("steps", "#origHd", true);           // desktop: the free steps open by default (Tony, Oct 5); folded (lvl 3) stays a peek
 }
 /* the card's one nudge: a 600 ms lift + one shine, once per browser session, a beat after it is fully on screen; never with reduced motion */
 const HINT_BULB = `<span class="rw-hint-coin" aria-hidden="true"><svg viewBox="0 0 32 32"><defs><linearGradient id="hbA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c2"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#f5a623"/></linearGradient><linearGradient id="hbB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9c3d6"/><stop offset="1" stop-color="#6f7c94"/></linearGradient></defs><path d="M16 3C10.5 3 6.5 7.2 6.5 12.3c0 3.3 1.7 5.6 3.4 7.4 1.1 1.2 1.6 2.4 1.6 3.6h9c0-1.2.5-2.4 1.6-3.6 1.7-1.8 3.4-4.1 3.4-7.4C25.5 7.2 21.5 3 16 3z" fill="url(#hbA)"/><path d="M12 9.5c.9-1.6 2.4-2.6 4.2-2.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/><path d="M13.3 23.3v-4.6l2.7 2.2 2.7-2.2v4.6" fill="none" stroke="#c77800" stroke-width="1.4" stroke-linejoin="round"/><rect x="11" y="23" width="10" height="3.2" rx="1.2" fill="url(#hbB)"/><rect x="11.8" y="26" width="8.4" height="2.6" rx="1.2" fill="#5b6780"/><rect x="13.8" y="28.3" width="4.4" height="1.7" rx=".8" fill="#3e4859"/></svg></span>`;
@@ -137,7 +137,7 @@ function origPeeked() {
 }
 function origOpen(open) {
   if (!origEl) return;
-  if (open) ln.clOpen("steps", "#origHd"); else ln.clClose();
+  if (open) bridge.clOpen("steps", "#origHd"); else bridge.clClose();
 }
 function origPlace() {
   if (!origEl) return;
@@ -225,7 +225,7 @@ function mountBox() {
   ta.addEventListener("input", syncCopy); ta.addEventListener("xb-cap", syncCopy); syncCopy();
   /* the box stops growing at the bottom of the visible viewport (minus the bottom dock) and scrolls inside itself */
   S.box = ExplainBox.mount(ta, { bottomInset: dockRoom,
-    cap: () => ln.swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
+    cap: () => bridge.swapOn ? swapPadMax : mtCap });                                  // Swap: the room the peek leaves
   S.corner = ExplainBox.reserveCorner(ta, copyBtn);
   mounted = { box: S.box, corner: S.corner };
   /* typing at the end: keep the whole bottom band in view (browsers only scroll the caret itself in), so the caret stays clear of Copy
@@ -439,13 +439,13 @@ function layoutDock() {
   /* Swap (design/SWAP.md): keyboard up + a field in <main> has focus. Once on, it stays on while focus is anywhere in <main>
      (its buttons too) and for a moment after focus is lost (the keyboard is still sliding away), until the viewport grows back. */
   const a = document.activeElement, inMain = !!a && a !== document.body && mainEl.contains(a);
-  const grace = (!a || a === document.body) && performance.now() - ln.lostAt < 500;
-  const swapNext = !!S && !freeze.hidden && shrunk && !ln.mtOpen && !sideMQ.matches && ((inMain && (editing() || ln.swapOn)) || (ln.swapOn && grace));
+  const grace = (!a || a === document.body) && performance.now() - bridge.lostAt < 500;
+  const swapNext = !!S && !freeze.hidden && shrunk && !bridge.mtOpen && !sideMQ.matches && ((inMain && (editing() || bridge.swapOn)) || (bridge.swapOn && grace));
   root.classList.toggle("kbup", !!kb || swapNext);                    // keyboard up: no expand icon, no pill, no toggle (design/MULTITASK.md)
   /* keyboard up while typing elsewhere (scratchpad, answer): the box steps aside so it can't cover the caret */
-  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (ln.mtOpen && !!S));
+  root.classList.toggle("dock-away", (!!kb && !inDock) || swapNext || (bridge.mtOpen && !!S));
   root.classList.toggle("bar-off", !!a && a.id === "scratch");        // from where focus IS, not from focus events: the keyboard can go and come without them
-  if (swapNext !== ln.swapOn) setSwap(swapNext);
+  if (swapNext !== bridge.swapOn) setSwap(swapNext);
   /* keyboard up while typing the code: ride on top of the keyboard (iOS keeps fixed elements on the layout viewport) */
   const lift = kb && inDock && vv ? Math.max(0, innerHeight - (vv.offsetTop + vv.height)) : 0;
   root.style.setProperty("--kb-bottom", lift + "px");
@@ -462,8 +462,8 @@ new ResizeObserver(() => layoutDock()).observe(dock);
 function layoutFreeze() {
   layoutDock();
   if (!S || freeze.hidden) return;
-  if (ln.swapOn) { layoutSwap(); return; }
-  if (ln.mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes
+  if (bridge.swapOn) { layoutSwap(); return; }
+  if (bridge.mtOpen || sideMQ.matches) { layoutMT(); return; }                           // multitask: the panes own the sizes
   if (root.classList.contains("pad-off")) {                                      // phones, pad off: nothing below needs room, so no strip
     freeze.classList.remove("clipped", "stuck", "open"); more.hidden = true;     // cap, no fade, no pull-tab (Tony: "big ass dark space")
     root.style.setProperty("--freeze-h", "0px");
@@ -490,7 +490,7 @@ function layoutFreeze() {
   });
 }
 function stuck() {
-  if (!S || freeze.hidden || ln.swapOn || ln.mtOpen || sideMQ.matches || root.classList.contains("pad-off")) { freeze.classList.remove("stuck"); return; }
+  if (!S || freeze.hidden || bridge.swapOn || bridge.mtOpen || sideMQ.matches || root.classList.contains("pad-off")) { freeze.classList.remove("stuck"); return; }
   const top = parseFloat(getComputedStyle(freeze).top) || 0;
   const now = !freeze.classList.contains("open") && sentinel.getBoundingClientRect().top < top - 0.5;
   const was = freeze.classList.contains("stuck");
@@ -500,7 +500,7 @@ function stuck() {
 /* When the layer freezes, scroll its own box so the question (and any hint) sits at the bottom of the strip:
    the question is what you answer while writing; the problem start is one small scroll up. */
 function showQuestion() {
-  if (ln.swapOn || ln.mtOpen || sideMQ.matches) return;
+  if (bridge.swapOn || bridge.mtOpen || sideMQ.matches) return;
   const bottom = e => e.offsetHeight ? e.offsetTop + e.offsetHeight : 0;   // offsets are relative to .freeze-in
   const end = Math.max(bottom($("#q")), bottom($("#fb")));
   freezeIn.scrollTop = Math.max(0, end - freezeIn.clientHeight + 4);
@@ -518,8 +518,8 @@ addEventListener("scroll", edge, { passive: true }); edge();
 const topBar = $(".top");
 if (topBar && window.ResizeObserver) new ResizeObserver(() => root.style.setProperty("--top-h", topBar.offsetHeight + "px")).observe(topBar);
 document.addEventListener("focusin", onView);
-document.addEventListener("focusout", e => { if (!e.relatedTarget) ln.lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
-freezeIn.addEventListener("scroll", () => { if (ln.swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
+document.addEventListener("focusout", e => { if (!e.relatedTarget) bridge.lostAt = performance.now(); setTimeout(onView, 60); setTimeout(onView, 520); });
+freezeIn.addEventListener("scroll", () => { if (bridge.swapOn) { swapFade(); return; } const atEnd = freezeIn.scrollTop + freezeIn.clientHeight >= freezeIn.scrollHeight - 2; freeze.classList.toggle("clipped", !atEnd && !freeze.classList.contains("open")); }, { passive: true });
 swipeTab(more, d => { const open = freeze.classList.contains("open"); if (d === "tap" || (d === "down") !== open) toggleMore(); });
 function toggleMore() {
   const open = !freeze.classList.contains("open");
@@ -540,7 +540,7 @@ let pane = "problem", shownPane = "problem", swapY = 0, swapPadMax = null;
 const GAP = 8;                                                                   // between the peek and the scratchpad: small, the box has no outside ring
 const paneOf = el => !el || !el.closest ? null : work.contains(el) ? "scratch" : el.closest("#q, #fb") ? "problem" : null;
 function setSwap(on) {
-  ln.swapOn = on;
+  bridge.swapOn = on;
   if (on) {
     swapY = scrollY;
     root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");              // the page keeps its height, so its scroll position survives
@@ -571,11 +571,11 @@ function applyPane() {
 function setPane(p) {
   if (p === pane) return;
   pane = p;
-  if (!ln.swapOn) return;
+  if (!bridge.swapOn) return;
   if (document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyPane); else applyPane();
 }
 function layoutSwap() {
-  if (!ln.swapOn || !S) return;
+  if (!bridge.swapOn || !S) return;
   const h = vv ? vv.height : innerHeight;
   root.style.setProperty("--vv-h", Math.round(h) + "px");
   root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
@@ -597,7 +597,7 @@ function layoutSwap() {
 }
 /* subtle bottom fade on whichever box is scrolling (the peek, or the question in the problem pane) while it has more below */
 function swapFade() {
-  if (!ln.swapOn) return;
+  if (!bridge.swapOn) return;
   const sc = shownPane === "scratch" ? freezeIn : problemEl;
   freeze.classList.toggle("clipped", sc.scrollHeight > sc.clientHeight + 2 && sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2);
 }
@@ -608,7 +608,7 @@ function focusField(p) {
   if (p === "scratch") el = S.box && S.box.el;
   else {
     const ins = [...document.querySelectorAll("#q .ans")].filter(x => x.getClientRects().length && !x.disabled);   // a hidden fix box can't take focus
-    const back = ln.lastEdit && ins.includes(ln.lastEdit) ? ln.lastEdit : null;                                   // the field you were typing in
+    const back = bridge.lastEdit && ins.includes(bridge.lastEdit) ? bridge.lastEdit : null;                                   // the field you were typing in
     el = back || (ins.length ? ins.find(x => !x.value.trim() && !x.readOnly) || ins[0]
       : opts().find(o => o.getAttribute("aria-checked") === "true") || opts().find(o => !o.disabled && o.tabIndex === 0) || opts().find(o => !o.disabled));
   }
@@ -648,14 +648,14 @@ padPeek.addEventListener("click", () => {
 });
 document.addEventListener("input", e => {
   if (S && S.box && e.target === S.box.el) padPeekText();
-  if (e.target.matches && e.target.matches("#main input, #main textarea")) ln.lastEdit = e.target;
+  if (e.target.matches && e.target.matches("#main input, #main textarea")) bridge.lastEdit = e.target;
 });
 /* SCRATCHPAD pane: a tap on the question peek goes back to the answer, in the same tap */
-for (const ev of ["pointerdown", "mousedown"]) freeze.addEventListener(ev, e => { if (ln.swapOn && shownPane === "scratch") e.preventDefault(); });
-freeze.addEventListener("click", () => { if (ln.swapOn && shownPane === "scratch" && focusField("problem")) setPane("problem"); });
+for (const ev of ["pointerdown", "mousedown"]) freeze.addEventListener(ev, e => { if (bridge.swapOn && shownPane === "scratch") e.preventDefault(); });
+freeze.addEventListener("click", () => { if (bridge.swapOn && shownPane === "scratch" && focusField("problem")) setPane("problem"); });
 /* keyboard down (or Back with it up): the field last typed in comes back into view, without taking focus (it never gets scrollTop = 0) */
 function backInView() {
-  const el = ln.lastEdit;
+  const el = bridge.lastEdit;
   if (!el || !el.isConnected || !mainEl.contains(el)) return;
   requestAnimationFrame(() => requestAnimationFrame(() => { if (el.isConnected && el.offsetParent) el.scrollIntoView({ block: el.tagName === "TEXTAREA" ? "nearest" : "center", inline: "nearest" }); }));
 }
@@ -683,32 +683,32 @@ let dragR = null, mtFit = true;                                                 
    (Tony, Oct 5: "otherwise default to the scratchpad"; Oct 4's "NO SCRATCHPAD" held for questions with a layer). Diet keeps the pad.
    Phone sugar: no pad at all, so no Scratchpad button, no pad page, no pad peek (Tony, Oct 14: "HIDE THE SCRATCHPAD ON MOBILE SUGAR MODE"). */
 function padRule() {
-  root.classList.toggle("no-pad", !!S && modeOf() === "sugar" && (!sideMQ.matches || !!origEl || !!(ln.cl && ln.cl.open)));
+  root.classList.toggle("no-pad", !!S && modeOf() === "sugar" && (!sideMQ.matches || !!origEl || !!(bridge.cl && bridge.cl.open)));
 }
 const padGone = () => !sideMQ.matches && root.classList.contains("no-pad");   // phone sugar: the pad has no way in
 function applyMT() {
-  const side = sideMQ.matches && !!S, k = mtKind(), gone = side && ln.clGone;
-  if (sideMQ.matches || !S) ln.mtOpen = false;
-  const r = dragR != null ? dragR : mtRatio(k), on = side || ln.mtOpen;
+  const side = sideMQ.matches && !!S, k = mtKind(), gone = side && bridge.clGone;
+  if (sideMQ.matches || !S) bridge.mtOpen = false;
+  const r = dragR != null ? dragR : mtRatio(k), on = side || bridge.mtOpen;
   root.classList.toggle("side", side);
   root.classList.toggle("cl-gone", gone);                                      // Cluck's column dismissed: one centred column (DISMISS.md)
   padRule();
   root.classList.toggle("sugar", modeOf() === "sugar");                  // Cluck's world: sugar-only bits wear the AI skin (app.css)
-  root.classList.toggle("mt", ln.mtOpen);
-  const fit = ln.mtOpen && mtFit && dragR == null;
+  root.classList.toggle("mt", bridge.mtOpen);
+  const fit = bridge.mtOpen && mtFit && dragR == null;
   root.classList.toggle("mt-fit", fit);
   root.classList.toggle("mt-r0", on && !gone && !fit && dragR == null && r === 0);
   root.classList.toggle("mt-drag", dragR != null);
   root.style.setProperty("--r", r);
-  root.classList.toggle("mt-q", ln.mtOpen && ln.mtTile === "q");
-  root.classList.toggle("mt-a", ln.mtOpen && ln.mtTile === "a");
-  root.classList.toggle("pad-off", !!S && !sideMQ.matches && !ln.mtOpen);         // phones: no pad on the page, the button opens it
-  sash.hidden = !on || gone; mtMode.hidden = !ln.mtOpen; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
-  mtMode.dataset.pane = ln.mtTile === "q" ? "problem" : "scratch";
-  mtMode.setAttribute("aria-label", ln.mtTile === "q" ? "Show answer" : "Show question");
-  mtExp.hidden = side || !ln.mtOpen;                                               // the collapse corner of the pad page only
-  mtExp.querySelector("use").setAttribute("href", ln.mtOpen ? "#i-collapse" : "#i-expand");
-  mtExp.setAttribute("aria-label", ln.mtOpen ? "Close notes" : "Open notes");
+  root.classList.toggle("mt-q", bridge.mtOpen && bridge.mtTile === "q");
+  root.classList.toggle("mt-a", bridge.mtOpen && bridge.mtTile === "a");
+  root.classList.toggle("pad-off", !!S && !sideMQ.matches && !bridge.mtOpen);         // phones: no pad on the page, the button opens it
+  sash.hidden = !on || gone; mtMode.hidden = !bridge.mtOpen; pstrip.hidden = !(side && !gone && r === 0 && dragR == null);
+  mtMode.dataset.pane = bridge.mtTile === "q" ? "problem" : "scratch";
+  mtMode.setAttribute("aria-label", bridge.mtTile === "q" ? "Show answer" : "Show question");
+  mtExp.hidden = side || !bridge.mtOpen;                                               // the collapse corner of the pad page only
+  mtExp.querySelector("use").setAttribute("href", bridge.mtOpen ? "#i-collapse" : "#i-expand");
+  mtExp.setAttribute("aria-label", bridge.mtOpen ? "Close notes" : "Open notes");
   mtExp.title = mtExp.getAttribute("aria-label");
   /* a11y only (WAI-ARIA window splitter), never shown */
   sash.setAttribute("aria-orientation", side ? "vertical" : "horizontal");
@@ -726,12 +726,12 @@ let mtCap = null;
 function layoutMT() {
   if (!S || !S.box) return;
   const ta = S.box.el;
-  if (ln.mtOpen) {
+  if (bridge.mtOpen) {
     const h = vv ? vv.height : innerHeight;
     root.style.setProperty("--vv-h", Math.round(h) + "px");
     root.style.setProperty("--kb-top", (vv ? Math.max(0, vv.offsetTop) : 0) + "px");
     if (mtFit) {                                                                 // hug: what the tile shows, at most 1/3 of a short screen, 45% of a tall one
-      const parts = ln.mtTile === "q" ? [problemEl] : [$("#fb"), $("#q")];
+      const parts = bridge.mtTile === "q" ? [problemEl] : [$("#fb"), $("#q")];
       root.style.setProperty("--tile-h", "56px"); void problemEl.offsetHeight;  // measure from a small tile: scrollHeight never reports less than the box
       const need = parts.reduce((s, e) => s + (e && e.getClientRects().length ? e.scrollHeight : 0), 0);
       const cap = (innerHeight < 700 ? 1 / 3 : 0.45) * h;
@@ -739,9 +739,9 @@ function layoutMT() {
     }
   } else root.style.setProperty("--kb-top", "0px");
   const fill = () => {
-    if (!S || !S.box || (!ln.mtOpen && !sideMQ.matches)) return;
+    if (!S || !S.box || (!bridge.mtOpen && !sideMQ.matches)) return;
     if (sideMQ.matches) { padFoot(); pageTop(); root.style.setProperty("--cl-top", Math.max(0, Math.round(sentinel.getBoundingClientRect().top + scrollY)) + "px"); }   // where the notes column starts in the page: Cluck's sheet is capped to the window below it (its body scrolls), so the ask field is on screen when it opens
-    if (ln.mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
+    if (bridge.mtOpen) mtCap = Math.max(80, Math.floor(work.getBoundingClientRect().bottom - ta.getBoundingClientRect().top));
     else if (sideMQ.matches) mtCap = Math.max(96, Math.floor(innerHeight - dockRoom() - (ta.getBoundingClientRect().top - work.getBoundingClientRect().top + workRest()) - padFoot()));   // side: where the box sits with the page at its top, not where the sticky column happens to be now (a tap on a scrolled page re-sized it: W129 L6); down to 96px, so the column fits a short window (1366x768 at 150%, L3)
     else mtCap = Math.max(200, Math.floor((vv ? vv.height : innerHeight) - dockRoom() - ta.getBoundingClientRect().top - 24));   // a touch tablet's bottom bar must not cover Cut / Copy
     root.style.setProperty("--pad-max", mtCap + "px");
@@ -783,16 +783,16 @@ function setRatio(r, animate = true) {
 }
 const lastPeek = () => { const k = mtKind(), r = mtMem[k + "Last"]; return typeof r === "number" && r > 0 ? near(k, r) : mtDef(k); };
 function setTile(t, animate = true) {
-  if (ln.mtTile === t) return;
-  ln.mtTile = t;
+  if (bridge.mtTile === t) return;
+  bridge.mtTile = t;
   if (animate && document.startViewTransition && !reduceMQ.matches) document.startViewTransition(applyMT); else applyMT();
 }
 function openMT() {
-  if (ln.mtOpen || !S || sideMQ.matches || padGone()) return;
+  if (bridge.mtOpen || !S || sideMQ.matches || padGone()) return;
   swapY = scrollY;
   root.style.setProperty("--swap-doc-h", root.scrollHeight + "px");
-  if (ln.swapOn) setSwap(false);
-  ln.mtOpen = true; ln.mtTile = "q"; mtFit = true;
+  if (bridge.swapOn) setSwap(false);
+  bridge.mtOpen = true; bridge.mtTile = "q"; mtFit = true;
   if (noteAt() === fab) hideToast();
   mtMem.opens = (mtMem.opens || 0) + 1; mtSave();
   try { history.pushState({ mt: 1 }, "", location.href); } catch { /* sandboxed */ }
@@ -801,26 +801,26 @@ function openMT() {
 }
 let mtSkipPop = false;
 function shutMT() {
-  if (!ln.mtOpen) return;
-  ln.mtOpen = false;
+  if (!bridge.mtOpen) return;
+  bridge.mtOpen = false;
   applyMT(); layoutDock();
   if (scrollY !== swapY) scrollTo(0, swapY);
   requestAnimationFrame(() => { if (S && S.box) S.box.limit(); layoutFreeze(); });
 }
 function closeMT(toAnswer) {
-  if (!ln.mtOpen) return;
+  if (!bridge.mtOpen) return;
   shutMT();
   if (toAnswer) focusField("problem");                                            // after the close (on q the answer was hidden), still in the tap: the keyboard can stay
   if (history.state && history.state.mt) { mtSkipPop = true; history.back(); }
 }
-addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (ln.mtOpen) shutMT(); });   // Back closes it, never leaves the page
+addEventListener("popstate", () => { if (mtSkipPop) { mtSkipPop = false; return; } if (bridge.mtOpen) shutMT(); });   // Back closes it, never leaves the page
 for (const b of [mtExp, mtMode, pstrip]) for (const ev of ["pointerdown", "mousedown"]) b.addEventListener(ev, e => e.preventDefault());   // never takes focus (keyboard stays)
 mtExp.addEventListener("click", () => closeMT(false));
-mtMode.addEventListener("click", () => setTile(ln.mtTile === "q" ? "a" : "q"));
+mtMode.addEventListener("click", () => setTile(bridge.mtTile === "q" ? "a" : "q"));
 pstrip.addEventListener("click", () => setRatio(lastPeek()));
 /* tap the problem (not the answer) = close, caret in the answer */
-for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (ln.mtOpen) e.preventDefault(); });
-problemEl.addEventListener("click", () => { if (ln.mtOpen) closeMT(true); });
+for (const ev of ["pointerdown", "mousedown"]) problemEl.addEventListener(ev, e => { if (bridge.mtOpen) e.preventDefault(); });
+problemEl.addEventListener("click", () => { if (bridge.mtOpen) closeMT(true); });
 /* the handle: the pane follows the finger, release snaps to the nearest anchor; a tap (no move) goes to the next anchor */
 let mtDrag = null;
 sash.addEventListener("pointerdown", e => {
@@ -875,7 +875,7 @@ function fabSync() {
   const show = root.classList.contains("pad-off") && !typing && !padGone();
   root.classList.toggle("fab-on", show);
   if (fab.hidden === !show) return;
-  fab.hidden = !show; fab.setAttribute("aria-expanded", String(ln.mtOpen));
+  fab.hidden = !show; fab.setAttribute("aria-expanded", String(bridge.mtOpen));
   if (!show) return;
   fabPlace({ avoid: true }); requestAnimationFrame(() => requestAnimationFrame(() => fabPlace({ avoid: true })));        // again once the bottom bar is back in place
   if (!fabSeen) { fabSeen = true; setTimeout(() => obToast(1, "Quack up your thoughts here...", fab, { prefer: "above" }), 700); }   // Scratchpad tip A: above the button, caret down
@@ -964,8 +964,8 @@ new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w 
 function resume(fromCache) {
   const now = Date.now();
   for (const r of [...inflight]) if (fromCache || now - r.t0 >= r.ms) r.ctl.abort();
-  if (fromCache) ln.busy = false;
-  if (!editing()) { ln.lostAt = 0; if (ln.swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
+  if (fromCache) bridge.busy = false;
+  if (!editing()) { bridge.lostAt = 0; if (bridge.swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
   if (S && !S.finished) {
     const ins = [...document.querySelectorAll("#q .ans")], go = $("#ansGo");
     if (go && ins.length) { go.hidden = !!$("#ff .vk"); go.disabled = ins.some(x => !x.value.trim()); }   // a wrong mark holds the slot until typing
@@ -1009,12 +1009,12 @@ addEventListener("DOMContentLoaded", async () => {
 /* page.at (flight.js page(), flight recorder P1 §8): the app's state at a failure, as codes, counts and flags. Never a typed answer,
    notes, chat or Cluck's text: only their lengths */
 const pageState = () => {
-  const w = ln.wish;
+  const w = bridge.wish;
   return {
     q: S?.code ?? null, bank: bank?.code ?? null, mode: modeOf(), tries: S ? S.tries.length : null, left: S?.triesLeft ?? null, fin: !!S?.finished, hints: S ? S.hints.length : null,
     wish: w && { code: w.code, started: !!w.started, end: !!w.done, open: !!w.open, failed: w.failed || 0, capped: !!w.capped, chars: (w.text || "").length,
       shown: w.shown | 0, chat: (w.chat || []).length, busy: !!w.busy, out: !!w.out, inc: w.inc || null },
-    cl: ln.cl && { open: !!ln.cl.open, tab: ln.cl.tab ?? null, auto: !!ln.cl.auto }, inflight: [...inflight].map(r => [r.ep || null, Date.now() - r.t0]),
+    cl: bridge.cl && { open: !!bridge.cl.open, tab: bridge.cl.tab ?? null, auto: !!bridge.cl.auto }, inflight: [...inflight].map(r => [r.ep || null, Date.now() - r.t0]),
   };
 };
 window.__drill = { check, get state() { return S; }, get page() { return pageState(); } };   // for tests/e2e; page: flight.js

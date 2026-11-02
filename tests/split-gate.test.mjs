@@ -7,6 +7,8 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Linter } from "eslint";
+import * as espree from "espree";
+import * as eslintScope from "eslint-scope";
 import globals from "globals";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,11 +23,22 @@ const lint = (code, name) => new Linter().verify(code, config, name).map(m => `$
 
 test("the gate itself: a name no part declares or imports is an error", () => {
   assert.equal(lint("export const a = () => notDeclaredAnywhere();", "probe.js").length, 1);
-  assert.equal(lint('import { x } from "./y.js"; x = 1;', "probe.js").length, 1, "assigning an import (a cross-part write without ln) is an error");
+  assert.equal(lint('import { x } from "./y.js"; x = 1;', "probe.js").length, 1, "assigning an import (a cross-part write without the bridge) is an error");
 });
 
 for (const f of PARTS) test(`${f}: no undeclared name, no write to an import`, () => {
   assert.deepEqual(lint(readFileSync(join(ROOT, f), "utf8"), f), []);
+});
+
+// the bridge object (app.js export) that earlier parts reach later parts through: a local of the same name in any function makes
+// bridge.<x> there read the local (W152 CI: a local `ln` DOM line in xDiag ate ln.wish, Cluck never opened on a wrong working; no error)
+const BRIDGE = (readFileSync(join(ROOT, "app.js"), "utf8").match(/^export const (\w+) = \{\};\s+\/\/ the bridge/m) || [])[1];
+for (const f of PARTS) test(`${f}: nothing but app.js's export is named ${BRIDGE} (no shadowing)`, { skip: !BRIDGE && "app.js not split" }, () => {
+  const ast = espree.parse(readFileSync(join(ROOT, f), "utf8"), { ecmaVersion: "latest", sourceType: "module", range: true, loc: true });
+  const sm = eslintScope.analyze(ast, { ecmaVersion: 2022, sourceType: "module" });
+  const own = sm.scopes.flatMap(sc => sc.variables.filter(v => v.name === BRIDGE).map(v => [sc.type, v.defs[0]?.type, v.defs[0]?.name.loc.start.line]));
+  const ok = own.filter(([type, def]) => type === "module" && (f === "app.js" ? def === "Variable" : def === "ImportBinding"));
+  assert.deepEqual(own.filter(x => !ok.includes(x)), [], `${f}: a second ${BRIDGE} (scope, kind, line)`);
 });
 
 test("load order: index.html runs app.js, cluck.js, shell.js in a row; app.js imports neither later part", { skip: PARTS.length < 3 && "app.js not split" }, () => {

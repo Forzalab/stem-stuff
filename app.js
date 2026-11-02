@@ -12,9 +12,9 @@ import { changes } from "./chg.mjs";
 /* ./steps.mjs: used by cluck.js / shell.js only (split-app.mjs) */
 import { incident, debugOn, incLabel, incDiag, trackingOff, traceparent, traceOf } from "./incident.mjs";
 /* ./sheet.mjs: used by cluck.js / shell.js only (split-app.mjs) */
-/* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: ln.<name>, defined by its own part at its top. tests/split-gate.test.mjs lints it. */
-export const ln = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
-Object.defineProperties(ln, {   // read (or set) from another part as ln.<name> (split-app.mjs)
+/* split-app.mjs (W152): part 1 of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: bridge.<name>, defined by its own part at its top; never declare a local named bridge. tests/split-gate.test.mjs lints it. */
+export const bridge = {};   // the bridge to cluck.js + shell.js (split-app.mjs)
+Object.defineProperties(bridge, {   // read (or set) from another part as bridge.<name> (split-app.mjs)
   busy: { get: () => busy, set: v => { busy = v; }, enumerable: true },   // let
   lastEdit: { get: () => lastEdit, set: v => { lastEdit = v; }, enumerable: true },   // let
   lastQuack: { get: () => lastQuack, set: v => { lastQuack = v; }, enumerable: true },   // let
@@ -67,10 +67,10 @@ function obToast(n, text, at, o) {
 const noteAt = () => window.stemToast?.noteAt() || null;
 function hideToast() { window.stemToast?.noteHide(); }
 function placeToast() { window.stemToast?.notePlace(); }
-window.stemToast?.config({ foot: () => ln.dockRoom() });                              // a note keeps off the dock (phones: the code bar, the keyboard)
+window.stemToast?.config({ foot: () => bridge.dockRoom() });                              // a note keeps off the dock (phones: the code bar, the keyboard)
 function toast(text, at, o = {}) {
   const T = window.stemToast; if (!T || !at) return false;
-  if (mtOpen && mtTile === "q" && $("#q").contains(at)) ln.setTile("a", false);       // the note is about the answer: show it first
+  if (mtOpen && mtTile === "q" && $("#q").contains(at)) bridge.setTile("a", false);       // the note is about the answer: show it first
   return T.note({ text, at, ...o });
 }
 /* the entry line (#entryMsg): every upload / open outcome ends here. tone: bad (red, the default) | warn | ok. The class is reset
@@ -91,7 +91,7 @@ const incHTML = (c, card = true) => !c ? "" : ` <span class="inc" data-inc="${c}
 document.addEventListener("click", async e => {
   const b = e.target.closest?.(".inc[data-inc]"); if (!b || b.closest("button")) return;   // inside Cluck's chip, the tap is the chip's (try again)
   e.stopPropagation(); e.preventDefault();
-  say((await ln.copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
+  say((await bridge.copyText(b.dataset.inc)) ? `Copied ${b.dataset.inc}.` : b.dataset.inc);
 }, true);
 /* a classic script (offline.js: the SW reload loop) cannot import incident.mjs: it fires "stem:incident" { where, why } */
 addEventListener("stem:incident", e => { const d = e.detail || {}; incident(d.where, d.why); });
@@ -116,7 +116,7 @@ function note(text) {
   if (there && !(m && m.checkVisibility?.({ visibilityProperty: true, opacityProperty: true }))) toast(text, at, { loose: true });
 }
 addEventListener("drill:note", e => note(String(e.detail && e.detail.text || "")));
-addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (ln.cl && ln.cl.open) ln.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
+addEventListener("keydown", e => { if (e.key !== "Escape") return; if (noteAt()) hideToast(); else if (bridge.cl && bridge.cl.open) bridge.clClose(true); });   // Escape: the note, then Cluck's sheet (desktop: the X's dismiss, design/DISMISS.md)
 /* the verdict lives in the answer box, in the arrow's slot (the slot is always reserved, so nothing moves):
    i-ok right, i-x wrong with a try left (goes when the student types), i-lock out of tries. null clears it. */
 function vmark(box, id) {
@@ -395,7 +395,7 @@ const codeGo = $("#codeGo"), codePaste = $("#codePaste");
 function syncCode() { const empty = !codeIn.value; codePaste.hidden = !empty; codeGo.hidden = empty; }
 /* typing keeps the box up: clearing the message below must not hide a dock that only the message was holding open (focus would be lost) */
 codeIn.addEventListener("input", () => { entryMsg(""); root.classList.add("entry-open"); syncCode(); sugShow(); });
-function putCode(code) { if (code) ln.barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
+function putCode(code) { if (code) bridge.barOpen(true); codeIn.value = code; syncCode(); sugHide(); }   // a code landing in the box: the bar shows
 syncCode();
 /* suggestions (suggest.mjs): the codes this browser knows (opened here before, newest first; the live bank and its list; an
    uploaded file) that contain what is typed. Banks first, then questions. The server never lists codes (design/NAV.md).
@@ -427,7 +427,7 @@ function sugShow() {
    a CSS cap alone let it run past the top and over the field. Phones only; --sug-max feeds app.css .code-sug max-height. */
 function sugFit() {
   const vv = window.visualViewport;
-  if (sugEl.hidden || !vv || !ln.dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
+  if (sugEl.hidden || !vv || !bridge.dockMQ.matches) { root.style.removeProperty("--sug-max"); return; }
   const e = $("#entry").getBoundingClientRect(), gap = 16;
   const above = root.classList.contains("dock-bottom") && !root.classList.contains("start");
   const coding = root.classList.contains("coding");   // search mode hides the top bar + HUD: the list may rise to the top of the visual viewport
@@ -469,7 +469,7 @@ codeIn.addEventListener("blur", () => { sugHide(); codingOff(); });
    (app.css html.coding), so the list never sits on a peeking card. visibility keeps the layout, so nothing jumps; scrollY is restored on exit. */
 let codingY = null;
 function codingOn() {
-  if (!ln.dockMQ.matches || ln.sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
+  if (!bridge.dockMQ.matches || bridge.sideMQ.matches || root.classList.contains("start") || root.classList.contains("coding")) return;   // phones only: a touch tablet (iPad: pointer coarse, side by side) keeps its page
   if (root.classList.contains("ql-open")) return;   // the question list is open: it stays up with the keyboard (it hid #qlist; nav.js fit sizes it to the visual viewport)
   codingY = scrollY; root.classList.add("coding"); sugFit();
 }
@@ -480,7 +480,7 @@ function codingOff() {
   codingY = null;
 }
 codeIn.addEventListener("focus", codingOn);
-addEventListener("resize", () => { if (!ln.dockMQ.matches || ln.sideMQ.matches) codingOff(); });
+addEventListener("resize", () => { if (!bridge.dockMQ.matches || bridge.sideMQ.matches) codingOff(); });
 /* a whole problem code pasted into any other field lands in the code box instead (not opened: the user presses the arrow) */
 document.addEventListener("paste", e => {
   const t = e.target;
@@ -658,10 +658,10 @@ async function load(code) {
   putCode(""); codeIn.placeholder = code;   // the open problem's code is the placeholder
   remembered(code);
   if (location.hash !== "#" + code) history.replaceState(null, "", "#" + code);
-  if (!S || S.code !== code) ln.barOpen(false);                        // another problem opened: the bar goes back to its strip
-  if (!S || S.code !== code) ln.wishReset();                                  // a new question: Cluck's wish stops
+  if (!S || S.code !== code) bridge.barOpen(false);                        // another problem opened: the bar goes back to its strip
+  if (!S || S.code !== code) bridge.wishReset();                                  // a new question: Cluck's wish stops
   S = { code, prob, start: Date.now(), tries: [], hints: [], triesLeft: maxTries(prob), finished: false, selected: null, box: null, wl };
-  ln.qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
+  bridge.qSeen(code);                                                             // B7: the first questions this session get Cluck's prefetch
   root.classList.remove("start");   // leave the start page now: html.start hides main, so figures drawn under it measure 0 wide
   const rec =doneStore() ? doneStore().doneGet(code) : null;
   if (rec && off()) seedLocal(code, rec, prob);
@@ -673,11 +673,11 @@ async function load(code) {
   dispatchEvent(new CustomEvent("drill:problem", { detail: { code } }));   // nav.js (design/NAV.md)
   if (S.finished && !$("#q .nx")) { painting = true; try { cueNext(); } finally { painting = false; } }   // first load: the list came on after paint(), so a restored closed question gets its still Next now (T17b-1)
   $("#codeChipTx").textContent = code; root.classList.remove("entry-open");    // C7: the box rests as a label again
-  ln.rwSync();
-  ln.rwRedoTip();
+  bridge.rwSync();
+  bridge.rwRedoTip();
   twistToast();
-  ln.origRender();
-  ln.padRule();
+  bridge.origRender();
+  bridge.padRule();
   window.stemBrainrot?.sync();
 }
 
@@ -709,14 +709,14 @@ function render() {
   drawFigures();
   renderQuestion();
   $("#fb").innerHTML = "";
-  ln.mountBox();
+  bridge.mountBox();
   $("#freezeIn").scrollTop = 0;
   scrollTo({ top: 0 });
   $("#pstripCode").textContent = code;
-  lastEdit = null; ln.padPeekText();
-  ln.clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
-  ln.applyMT();
-  ln.layoutFreeze();
+  lastEdit = null; bridge.padPeekText();
+  bridge.clGone = false;                                                                 // a new question starts side by side again: the dismiss is for this question's column (DISMISS.md)
+  bridge.applyMT();
+  bridge.layoutFreeze();
 }
 /* ---------- the Twist chip + its one-time toast (W133, todo 133; copy LOCKED, Tony Oct 29, verbatim) ----------
    An item with `twist: true` (SCHEMA.md) gets a small "Twist" chip in the card's header, left of the title (the title row when sugar
@@ -917,7 +917,7 @@ function formulaCard() {
   sec.innerHTML = `<span class="fc-notch" aria-hidden="true">${icon("i-bulb")}Key formulas</span><ol>${fs.map((f, i) => {
     const arrow = steps.find(x => x.k === "arrow" && x.to === f.id);
     const q = f.doc ? `<button type="button" class="fq" data-i="${i}" aria-haspopup="dialog" aria-expanded="false" aria-label="What do the symbols in this formula mean?">?</button>` : "";
-    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}${ln.mathCopyBtn("Copy formula")}</li>`
+    return `${i ? `<li class="to" aria-hidden="true"${arrow ? ` data-to="${esc(f.id)}"${out(arrow) ? "" : " hidden"}` : ""}>${FC_ARROW}</li>` : ""}<li class="f"><span class="fm">${renderMath(f.tex, false)}</span>${q}${bridge.mathCopyBtn("Copy formula")}</li>`
       + steps.filter(m => m.k === "mid" && m.of === f.id).map(m => `<li class="f mid${m === cur ? " cur" : ""}" data-mid="${m.i}"${out(m) ? "" : " hidden"}><span class="fm">${renderMath(m.tex, false)}</span>${midNotes(m, m === cur)}</li>`).join("");
   }).join("")}</ol>`;
   sec.addEventListener("click", e => {
@@ -981,7 +981,7 @@ function fitChoices() {
   g.classList.toggle("inline", fits);
   fitMath(g);
   g.querySelectorAll(".fix").forEach(fitFix);
-  if (fits !== was) ln.layoutFreeze();
+  if (fits !== was) bridge.layoutFreeze();
 }
 /* inline math wider than its row (KaTeX can't wrap a fraction or a root): shrink it to fit, down to 85%; still too wide -> it
    scrolls sideways on its own (.kx-scroll), never clipped and never wider than the card. Re-run from scratch on every resize. */
@@ -1292,12 +1292,12 @@ function xLine(i, r) {                                                     // no
 }
 function xCluck(msg) {                                                     // Cluck's 6 moves, as his message; he opens (the wrong-answer prefetch path)
   if (!S || !msg) return;
-  if (ln.wish && ln.wish.ctl) ln.wish.ctl.abort();
-  ln.wish = ln.newWish();
-  Object.assign(ln.wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
-  ln.wishPaint();
-  ln.clOpen("explain", ":is(#wish, .rbox) .wchip", true);
-  if (ln.wish.open) ln.wishDraw();
+  if (bridge.wish && bridge.wish.ctl) bridge.wish.ctl.abort();
+  bridge.wish = bridge.newWish();
+  Object.assign(bridge.wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
+  bridge.wishPaint();
+  bridge.clOpen("explain", ":is(#wish, .rbox) .wchip", true);
+  if (bridge.wish.open) bridge.wishDraw();
 }
 async function xDiag(r, text, i) {                                         // a wrong working: underline + Cluck; L3 when L1 named no family
   const d = r.diag; if (!d) return;
@@ -1306,15 +1306,15 @@ async function xDiag(r, text, i) {                                         // a 
   if (ln) { ln.className = "xline"; ln.textContent = ""; }
   xCluck(d.msg);
   if (!d.pending) return;
-  const mine = S, w = ln.wish;
+  const mine = S, w = bridge.wish;
   try {
     const rd = window.stemRedo.has(S.code) ? { round: window.stemRedo.get().n } : {};
     const res = await net("diagnose", { method: "POST", headers: { "content-type": "application/json", traceparent: traceparent() }, credentials: "same-origin",
       body: JSON.stringify({ code: S.code, expr: text, ...(i == null ? {} : { part: i }), ...rd }) });
     const o = res.ok ? await res.json() : null;
-    if (!o || S !== mine || ln.wish !== w || !o.msg) return;
+    if (!o || S !== mine || bridge.wish !== w || !o.msg) return;
     Object.assign(w, { text: o.msg, shown: o.msg.length, pos: o.msg.length });
-    ln.wishPaint(); if (w.open) ln.wishDraw();
+    bridge.wishPaint(); if (w.open) bridge.wishDraw();
     if (pv && o.off?.span) xPreview(pv, text, o.off.span);
   } catch { /* the L1 moves stay */ }
 }
@@ -1371,7 +1371,7 @@ async function submitProof() {
     if (r.verdict === "correct") { $("#ff").classList.add("ok", "done"); finish(); }
     else if (r.verdict === "locked" || (r.verdict === "wrong" && r.triesLeft <= 0)) finish();
     else if (r.verdict === "wrong") pips(r, ...pipsAt());
-    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; ln.layoutFreeze(); return; }
+    if (r.verdict === "invalid") { $("#fb").innerHTML = `<p class="verdict bad">${icon("i-x")}<span>Write your proof here first (up to ${PROOF_MAX} letters).</span></p>`; bridge.layoutFreeze(); return; }
     feedback(r, "");
     if (r.verdict === "wrong" && r.triesLeft > 0) { const ff = $("#ff"); ff.classList.remove("bad"); vmark(ff, null); $("#ansGo").hidden = false; }   // the chips say what is wrong; the box stays open to edit, Check with it
   } finally { busy = false; }
@@ -1381,9 +1381,9 @@ function proofWait(r) {
   const why = { off: "Cluck can't check proofs right now.", hourly: "Cluck needs a short break. Try again soon.", upload: "Proof checks need the hosted bank. Open it by code." }[r.why]
     || (r.verdict === "timeout" ? "Cluck is taking too long. Tap to try again." : "Cluck could not check it. Tap to try again.");
   $("#fb").innerHTML = `<p class="verdict wait">${icon("i-wait")}<span>${esc(why)}</span>${incHTML(r.inc)}${r.why === "upload" || r.why === "off" ? "" : `<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button>`}</p>`;
-  const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; ln.layoutFreeze(); submitProof(); });
+  const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; bridge.layoutFreeze(); submitProof(); });
   say($("#fb").textContent.replace(/\s+/g, " ").trim());
-  ln.layoutFreeze();
+  bridge.layoutFreeze();
 }
 
 /* ---------- multi: every part has its own arrow, verdict, tries and lockout ---------- */
@@ -1421,7 +1421,7 @@ function partFeedback(i, r, typed) {
   hint.innerHTML = h;
   row.classList.toggle("hinted", !!h);
   const again = hint.querySelector(".retry");
-  if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); ln.layoutFreeze(); submitPart(i); });
+  if (again) again.addEventListener("click", () => { hint.innerHTML = ""; row.classList.remove("hinted"); bridge.layoutFreeze(); submitPart(i); });
   say((partEls(i).row.querySelector(".mk").textContent + " " + verdictWords(r) + " " + hint.textContent).replace(/\s+/g, " ").trim());
 }
 async function submitPart(i) {
@@ -1431,8 +1431,8 @@ async function submitPart(i) {
   try {
     const mine = S, r = await check(S.code, { part: i, answer: v });
     if (S !== mine) return;
-    if (r.verdict === "timeout") { partFeedback(i, r); ln.layoutFreeze(); return; }   // not a try: the text stays, retry resends it
-    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(i); xLine(i, r); ln.layoutFreeze(); return; }   // W137: not a try
+    if (r.verdict === "timeout") { partFeedback(i, r); bridge.layoutFreeze(); return; }   // not a try: the text stays, retry resends it
+    if (r.verdict === "expr_needed" || r.verdict === "unparsed") { xOpen(i); xLine(i, r); bridge.layoutFreeze(); return; }   // W137: not a try
     if (r.verdict !== "invalid") record({ a: v, part: i }, r);
     if (r.diag) xDiag(r, v, i);
     if (r.exprMode && r.verdict === "wrong" && r.triesLeft > 0) xOpen(i);
@@ -1440,9 +1440,9 @@ async function submitPart(i) {
     if (r.verdict === "correct") { shutPart(i, true); partFeedback(i, r, v); }
     else if (spent) { shutPart(i, false); partFeedback(i, r, v); const rv = reveal(r, i); if (rv) say(rv); }
     else { partFeedback(i, r, v); if (r.verdict === "wrong") pips(r, partEls(i).box, "afterend"); }
-    if (mine.parts.every(x => x.shut)) { settle(); ln.rewardMulti(mine); }
+    if (mine.parts.every(x => x.shut)) { settle(); bridge.rewardMulti(mine); }
     else if (r.verdict === "correct" || spent) { const nxt = S.parts.findIndex(x => !x.shut); if (nxt >= 0 && [document.body, inp].includes(document.activeElement)) partEls(nxt).inp.focus(); }   // inp: Chromium 153 keeps focus on the just-disabled box until the next frame, 141 blurred at once (W100)
-    ln.layoutFreeze();
+    bridge.layoutFreeze();
   } finally { busy = false; }
 }
 /* every part right or locked: the problem is finished. It counts as correct only if every part is right. */
@@ -1471,7 +1471,7 @@ function record(a, r) {
   if (r.verdict === "correct" || r.verdict === "wrong") saveDone(r);
   else if (r.verdict === "locked") syncServer(S);              // the server knows more than this page: ask it
   if (r.verdict === "correct" || r.verdict === "wrong") dispatchEvent(new CustomEvent("drill:answer", { detail: { code: S.code, right: r.verdict === "correct", ms: t - S.start } }));   // nav.js: the queue re-ranks
-  ln.rewardTry(a, r);
+  bridge.rewardTry(a, r);
   if (r.verdict === "wrong" && S.tries.filter(x => x.v === "wrong").length === 1) window.stemDuck?.wrong?.(S.code);   // T45: the question's first wrong answer starts Cluck's sunrise within ~0.8 s (peek.js)
 }
 
@@ -1511,8 +1511,8 @@ function doneExit(mine) {
   setTimeout(() => {
     if (S !== mine) return;                                                      // moved on already
     const a = document.activeElement; if (a && a !== document.body && a.blur && !a.matches(".nx") && !a.closest("#cluck")) a.blur();   // Next in the Check slot keeps focus (T17b-1); so does Cluck's sheet (opened in the beat)
-    if (mtOpen) ln.closeMT(false);
-    if (swapOn) ln.setSwap(false);
+    if (mtOpen) bridge.closeMT(false);
+    if (swapOn) bridge.setSwap(false);
     root.classList.remove("dock-away", "bar-off");
     /* no scroll to the top any more (A1 audit): Next sits in the Check slot where the eye already is, and the card never moves after Check */
   }, 900);
@@ -1580,7 +1580,7 @@ function repaint(rec) {
   Object.assign(S, { tries: [], hints: [], triesLeft: maxTries(S.prob), finished: false, selected: null });
   renderQuestion(); $("#fb").innerHTML = "";
   if (rec) paint(rec);
-  ln.layoutFreeze();
+  bridge.layoutFreeze();
 }
 /* server mode: the server is the source of truth for tries, the record is a display cache. Per unit:
    server further: it wins. Cache further: stay locked, unless the server's gen is newer (Tony deleted the entry = reset). */
@@ -1709,7 +1709,7 @@ function rboxSync() {
     ff.querySelectorAll(":scope > .wchip").forEach(x => x.remove());
     const img = btn.querySelector("img.dk");
     if (img) { const t = document.createElement("template"); t.innerHTML = DUCK; const svg = t.content.firstChild; if (img.classList.contains("g-nod")) svg.classList.add("g-nod"); img.replaceWith(svg); }
-    btn.hidden = ln.wishEl().hidden;
+    btn.hidden = bridge.wishEl().hidden;
     ff.insertBefore(btn, ff.querySelector(".nx"));
     wb.remove();
   }
@@ -1720,7 +1720,7 @@ function rboxSync() {
       if (u.type === "expr" && typeof math !== "undefined") { try { val = renderMath(math.parse(v).toTex({ parenthesis: "auto", implicit: "hide" }), false); } catch { /* the plain text stands */ } }
       const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b> <span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;
       host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden");
-      host.insertAdjacentHTML("beforeend", `<p class="ansl"><span>That's it! The answer is </span>${unit}${ln.mathCopyBtn("Copy answer", v)}</p>`);
+      host.insertAdjacentHTML("beforeend", `<p class="ansl"><span>That's it! The answer is </span>${unit}${bridge.mathCopyBtn("Copy answer", v)}</p>`);
       pvFit(host);
     }
   }
@@ -1741,7 +1741,7 @@ function cueNext() {
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
   if (!painting) nx.focus({ preventScroll: true });
   rboxSync();
-  if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => ln.fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
+  if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => bridge.fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
 }
 /* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
    after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
@@ -1793,7 +1793,7 @@ function reveal(r, part) {
   if (!multi) { host.classList.remove("spent"); host.innerHTML = ""; host.removeAttribute("aria-hidden"); }
   const unit = u.type === "num" && u.unit ? `<span class="ansv"><b>${val}</b>\u2009<span class="ansu">${esc(u.unit).replace(/\^(-?\d+)/g, "<sup>$1</sup>")}</span></span>` : `<b>${val}</b>`;   // W132: value green + thin space + unit in ink; copy = the value only
   const sentence = !multi && rboxOn();                       // 114r v1f: the line under the reveal box is a plain sentence, no check, no chip
-  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? "<span>Not it. The answer is\u00a0</span>" : `${icon("i-ok")}<span>Answer</span>`}${unit}${ln.mathCopyBtn("Copy answer", String(c))}</p>`);
+  host.insertAdjacentHTML("beforeend", `<p class="ansl">${sentence ? "<span>Not it. The answer is\u00a0</span>" : `${icon("i-ok")}<span>Answer</span>`}${unit}${bridge.mathCopyBtn("Copy answer", String(c))}</p>`);
   if (!multi) pvFit(host);                                   // W91: the reveal's line uses the preview's room (the same ratchet)
   if (multi) host.parentElement.classList.add("hinted");
   return "The answer: " + (host.querySelector(".ansl .ansv") || host.querySelector(".ansl b")).textContent.replace(/\s+/g, " ").trim() + ".";
@@ -1802,9 +1802,9 @@ function reveal(r, part) {
 function cueChip(still) {
   if (mockHold()) return;
   if (modeOf() !== "sugar" || !S || !S.finished || !S.prob.wish) return;
-  if (!ln.wish || ln.wish.code !== S.code) { ln.wish = Object.assign(ln.newWish(), { started: false }); ln.wishFromCache(ln.wish); }
-  if (!still && ln.wish.nod == null) { if (cueRight()) ln.wish.nod = nodGate(); else { ln.wish.nod = false; nodMiss(); } }
-  ln.wishPaint();
+  if (!bridge.wish || bridge.wish.code !== S.code) { bridge.wish = Object.assign(bridge.newWish(), { started: false }); bridge.wishFromCache(bridge.wish); }
+  if (!still && bridge.wish.nod == null) { if (cueRight()) bridge.wish.nod = nodGate(); else { bridge.wish.nod = false; nodMiss(); } }
+  bridge.wishPaint();
 }
 const cueRight = () => S.prob.type === "multi" ? !!S.solved : !!(document.querySelector("#q .opt.right:not(.reveal)") || $("#ff.ok"));   // a revealed row is the answer, not the student's pick
 /* the calm nod (r5 BRIEF reward rule 4): the first 3 rights of a PT day nod, then about 1 in 3, never twice in a row, and always on a
@@ -1849,12 +1849,12 @@ function feedback(r, typed) {
   }
   if (!inRow) fb.insertAdjacentHTML("beforeend", quackHtml);
   const again = $("#retry");
-  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; ln.layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
+  if (again) again.addEventListener("click", () => { fb.innerHTML = ""; bridge.layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
   const rev = reveal(r);
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
-  ln.layoutFreeze();
+  bridge.layoutFreeze();
   rboxSync();
-  if (r.verdict === "wrong") ln.wishOnWrong();
+  if (r.verdict === "wrong") bridge.wishOnWrong();
   window.stemBrainrot?.sync();
 }
 

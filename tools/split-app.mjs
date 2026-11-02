@@ -5,7 +5,8 @@
      shell.js = SHELL_MARK .. end             (rewards, original beside a snack, scratchpad + Copy, copy math, freeze, Swap, Multitask, resume, boot)
    Load order = the old text order: index.html runs app.js, cluck.js, shell.js as 3 module scripts in a row (app.js imports neither).
    A name read by a LATER part = a plain import (live binding). A name read by an EARLIER part, or assigned outside its own part,
-   goes through `ln` (app.js): accessors its own part defines at its top; every outside use becomes ln.<name>.
+   goes through `bridge` (app.js): accessors its own part defines at its top; every outside use becomes bridge.<name>.
+   The bridge name must be declared NOWHERE in the input (no local of that name can shadow it: W152 CI, a local `ln` in xDiag).
    usage: node tools/split-app.mjs [monolith.js] [outdir]       (defaults: app.js, .) -- at merge time:
           git show origin/main:app.js > /tmp/app-main.js && node tools/split-app.mjs /tmp/app-main.js .
    Also adds cluck.js + shell.js to index.html (right after app.js) and sw.js BASE, once. Gates after a split: tests/split-gate.test.mjs (no-undef) + tests/window-surface.pw.mjs (window names). */
@@ -71,9 +72,11 @@ for (const b of B.values()) {
   if (b.written.size || outside.some(p => p < b.part)) viaLn.add(b.name);
   else for (const p of outside) { exportsOf[b.part].add(b.name); if (!importsOf[p].has(b.part)) importsOf[p].set(b.part, new Set()); importsOf[p].get(b.part).add(b.name); }
 }
-if (B.has("ln")) throw new Error("app.js already declares a top-level `ln`: pick another name for the bridge");
+const BRIDGE = "bridge";
+if (sm.scopes.some(sc => sc.variables.some(v => v.name === BRIDGE)) || sm.scopes.some(sc => sc.through.some(r => r.identifier.name === BRIDGE)))
+  throw new Error(`the input already uses the name \`${BRIDGE}\`: a rewritten ${BRIDGE}.<name> could hit it. Pick another BRIDGE name`);
 
-/* rewrite: every use of an ln name outside its own part -> ln.<name> (a shorthand { x } -> { x: ln.x }) */
+/* rewrite: every use of a bridged name outside its own part -> bridge.<name> (a shorthand { x } -> { x: bridge.x }) */
 const edits = [];
 for (const n of viaLn) {
   const b = B.get(n);
@@ -81,8 +84,8 @@ for (const n of viaLn) {
     const id = r.identifier;
     if (partOf(id.start) === b.part) continue;
     const pa = parent.get(id);
-    if (pa && pa.type === "Property" && pa.shorthand && pa.value === id) edits.push([id.start, id.end, `${n}: ln.${n}`]);
-    else edits.push([id.start, id.end, `ln.${n}`]);
+    if (pa && pa.type === "Property" && pa.shorthand && pa.value === id) edits.push([id.start, id.end, `${n}: ${BRIDGE}.${n}`]);
+    else edits.push([id.start, id.end, `${BRIDGE}.${n}`]);
   }
 }
 /* app.js keeps only the import names it still uses (the moved parts import theirs straight from the source module) */
@@ -110,9 +113,9 @@ const lnBlock = p => {
   if (!names.length) return "";
   const prop = n => { const b = B.get(n); const kind = b.v.defs[0].type === "Variable" ? b.v.defs[0].parent.kind : "fn";
     return `  ${n}: { get: () => ${n}${b.written.size ? `, set: v => { ${n} = v; }` : ""}, enumerable: true },${kind === "let" ? "   // let" : ""}`; };
-  return `Object.defineProperties(ln, {   // read (or set) from another part as ln.<name> (split-app.mjs)\n${names.map(prop).join("\n")}\n});\n`;
+  return `Object.defineProperties(${BRIDGE}, {   // read (or set) from another part as ${BRIDGE}.<name> (split-app.mjs)\n${names.map(prop).join("\n")}\n});\n`;
 };
-const banner = p => `${SPLIT_MARK} (W152): part ${p + 1} of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: ln.<name>, defined by its own part at its top. tests/split-gate.test.mjs lints it. */\n`;
+const banner = p => `${SPLIT_MARK} (W152): part ${p + 1} of 3 of the drill page; index.html runs app.js, cluck.js, shell.js in that order. A name from an earlier part: import it. A name from a later part, or a write to another part's let: ${BRIDGE}.<name>, defined by its own part at its top; never declare a local named ${BRIDGE}. tests/split-gate.test.mjs lints it. */\n`;
 const out = [0, 1, 2].map(p => {
   let head = banner(p);
   if (p > 0) {
@@ -123,7 +126,7 @@ const out = [0, 1, 2].map(p => {
       for (const b of ns) head += `import * as ${b.name} from "${from}";\n`;
       if (named.length) head += `import { ${named.map(b => b.imp.kind === "ImportDefaultSpecifier" ? `default as ${b.name}` : b.imp.imported === b.name ? b.name : `${b.imp.imported} as ${b.name}`).sort().join(", ")} } from "${from}";\n`;
     }
-    const fromApp = new Set(importsOf[p].get(0) || []); fromApp.add("ln");
+    const fromApp = new Set(importsOf[p].get(0) || []); fromApp.add(BRIDGE);
     head += `import { ${list(fromApp)} } from "./app.js";\n`;
     for (const [q, ns] of importsOf[p]) if (q !== 0) head += `import { ${list(ns)} } from "./${file[q]}";\n`;
     head += lnBlock(p);
@@ -133,8 +136,8 @@ const out = [0, 1, 2].map(p => {
   const lastImport = ast.body.filter(s => s.type === "ImportDeclaration").pop();
   const split = lastImport ? shift(lastImport.end) : 0;
   const nl = chunk[0].indexOf("\n", split) + 1;
-  const exp = new Set(exportsOf[0]); exp.add("ln");
-  return chunk[0].slice(0, nl) + banner(0) + "export const ln = {};   // the bridge to cluck.js + shell.js (split-app.mjs)\n" + lnBlock(0) + chunk[0].slice(nl) + `\nexport { ${list(exportsOf[0])} };\n`;
+  const exp = new Set(exportsOf[0]); exp.add(BRIDGE);
+  return chunk[0].slice(0, nl) + banner(0) + `export const ${BRIDGE} = {};   // the bridge to cluck.js + shell.js (split-app.mjs)\n` + lnBlock(0) + chunk[0].slice(nl) + `\nexport { ${list(exportsOf[0])} };\n`;
 });
 for (const p of PARTS.keys()) fs.writeFileSync(path.join(outDir, file[p]), out[p]);
 
@@ -144,5 +147,5 @@ patch("index.html", /src="cluck\.js"/, `<script type="module" src="app.js"></scr
 patch("sw.js", /"cluck\.js"/, `"app.js", `, `"app.js", "cluck.js", "shell.js", `);
 
 const lines = out.map(s => s.split("\n").length);
-console.log(`split: app.js ${lines[0]} · cluck.js ${lines[1]} · shell.js ${lines[2]} lines; ln ${viaLn.size} names; exports app ${exportsOf[0].size} · cluck ${exportsOf[1].size}`);
-console.log(`ln: ${[...viaLn].sort().map(n => `${n}(${file[B.get(n).part]}${B.get(n).written.size ? ",set" : ""})`).join(" ")}`);
+console.log(`split: app.js ${lines[0]} · cluck.js ${lines[1]} · shell.js ${lines[2]} lines; bridge ${viaLn.size} names; exports app ${exportsOf[0].size} · cluck ${exportsOf[1].size}`);
+console.log(`bridge: ${[...viaLn].sort().map(n => `${n}(${file[B.get(n).part]}${B.get(n).written.size ? ",set" : ""})`).join(" ")}`);
