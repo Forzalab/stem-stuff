@@ -122,6 +122,26 @@ class Proof(unittest.TestCase):
         self.assertEqual(r["verdict"], "busy")
         self.assertEqual(r["triesLeft"], 3, "a busy reply never uses a try")
 
+    def test_the_total_budget_across_model_retries_is_one_number(self):
+        """Tony Nov 2: the server gets ONE total budget (the client's 25 s) across every model it tries; a slow grader never runs past it"""
+        import time
+        waits = []
+
+        def slow(payload, key, timeout):
+            waits.append(timeout)
+            time.sleep(timeout)                          # a grader that always takes the whole per-call timeout
+            raise TimeoutError("slow")
+        with unittest.mock.patch.object(serve, "PROOF_TIMEOUT", 0.3), unittest.mock.patch.object(serve, "PROOF_BUDGET", 0.4, create=True), \
+                unittest.mock.patch.object(serve, "OPENROUTER_PROOF_MODELS", ["m/a", "m/b", "m/c"]), unittest.mock.patch.object(serve, "_or_post", slow):
+            t0 = time.time()
+            r = serve.grade(P, self.sid, {"answer": GOOD})
+            took = time.time() - t0
+        self.assertEqual(r["verdict"], "busy")
+        self.assertEqual(r["triesLeft"], 3, "a timed-out Check records no try")
+        self.assertLess(took, 0.4 + 0.15, "the retries together stay inside the budget")
+        self.assertLessEqual(len(waits), 2)
+        self.assertEqual(serve.PROOF_BUDGET, 25, "mirrors the client's 25 s (app.js)")
+
     def test_the_hourly_cap_is_shared_with_cluck(self):
         with unittest.mock.patch.object(serve, "explain_allowed", lambda sid, auto: False):
             r, calls = self.check(GOOD)
