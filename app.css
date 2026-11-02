@@ -342,6 +342,61 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .fig { position: relative; width: 100%; margin: var(--s2) 0; }
 .fig svg { display: block; overflow: visible; }
 .fig svg * { vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+/* FIGURE shade steps (W157, Tony's amendment: figures only; app chrome never reads these). Per hue (the figure palette: ink c1 c2 c3 muted + ok bad mark)
+   three Tailwind-style steps --fig-<hue>-1|2|3: 1 = the hue's own token (so a mark with no layer is drawn exactly as before), 2 / 3 = real,
+   less-dim shades computed by tools/layer_steps.mjs on the figure bg (--body): label text >= 4.5:1 (WCAG 1.4.3, so strokes pass 1.4.11's 3:1),
+   adjacent steps dL* >= 12 where the 4.5:1 floor leaves the room (else the best equal split). tests/layers.test.mjs recomputes every hue x step x theme.
+   Dark navy page set here; Cluck's warm set under .ai-box .fig / .vw. The app is dark only today; a light theme adds its own set (1 = darkest). Never opacity. */
+:root, .fig, .vw { --fig-ink-1: var(--ink); --fig-muted-1: var(--muted); --fig-c1-1: var(--c1); --fig-c2-1: var(--c2); --fig-c3-1: var(--c3); --fig-ok-1: var(--correct); --fig-bad-1: var(--wrong); --fig-mark-1: var(--reward); --fig-sky-1: #5eb8ff; --fig-amber-1: #ffd23f; --fig-orange-1: #e0803a; --fig-violet-1: #8f78f5; --fig-pink-1: #f87fe0; --fig-cyan-1: #2fd9e6; }
+:root { --fig-ink-2: #c3c9d3; --fig-ink-3: #a1a8b3; --fig-muted-2: #8f9eb3; --fig-muted-3: #778599; --fig-c1-2: #7ba2d9; --fig-c1-3: #6385b3; --fig-c2-2: #d29a5f; --fig-c2-3: #a47d53; --fig-c3-2: #d97daf; --fig-c3-3: #b56b98; --fig-ok-2: #42c096; --fig-ok-3: #379b7f; --fig-bad-2: #e2576b; --fig-bad-3: #dc5569; --fig-mark-2: #d4ad81; --fig-mark-3: #ab8f70; --fig-sky-2: #52a1df; --fig-sky-3: #4789c0; --fig-amber-2: #d4b13c; --fig-amber-3: #ab9238; --fig-orange-2: #cf7839; --fig-orange-3: #bf7038; --fig-violet-2: #8a74ed; --fig-violet-3: #8672e7; --fig-pink-2: #d871c7; --fig-pink-3: #b964af; --fig-cyan-2: #29b5c3; --fig-cyan-3: #23919f; }
+/* a mark's layer picks step N of its own hue (every token is a hue): .ly2 / .ly3 on an svg <g>, a label span or a view element; tone="hue" (openui,
+   .tn-<hue>) paints the whole mark in that hue's step instead (--ink / --muted / --c1 are what its strokes and labels read). */
+.ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-muted-2); --c1: var(--fig-c1-2); --c2: var(--fig-c2-2); --c3: var(--fig-c3-2); }
+.ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-muted-3); --c1: var(--fig-c1-3); --c2: var(--fig-c2-3); --c3: var(--fig-c3-3); }
+.tn-ink { --ink: var(--fig-ink-1); --muted: var(--fig-ink-1); --c1: var(--fig-ink-1); }
+.tn-ink.ly2 { --ink: var(--fig-ink-2); --muted: var(--fig-ink-2); --c1: var(--fig-ink-2); }
+.tn-ink.ly3 { --ink: var(--fig-ink-3); --muted: var(--fig-ink-3); --c1: var(--fig-ink-3); }
+.tn-muted { --ink: var(--fig-muted-1); --muted: var(--fig-muted-1); --c1: var(--fig-muted-1); }
+.tn-muted.ly2 { --ink: var(--fig-muted-2); --muted: var(--fig-muted-2); --c1: var(--fig-muted-2); }
+.tn-muted.ly3 { --ink: var(--fig-muted-3); --muted: var(--fig-muted-3); --c1: var(--fig-muted-3); }
+.tn-c1 { --ink: var(--fig-c1-1); --muted: var(--fig-c1-1); --c1: var(--fig-c1-1); }
+.tn-c1.ly2 { --ink: var(--fig-c1-2); --muted: var(--fig-c1-2); --c1: var(--fig-c1-2); }
+.tn-c1.ly3 { --ink: var(--fig-c1-3); --muted: var(--fig-c1-3); --c1: var(--fig-c1-3); }
+.tn-c2 { --ink: var(--fig-c2-1); --muted: var(--fig-c2-1); --c1: var(--fig-c2-1); }
+.tn-c2.ly2 { --ink: var(--fig-c2-2); --muted: var(--fig-c2-2); --c1: var(--fig-c2-2); }
+.tn-c2.ly3 { --ink: var(--fig-c2-3); --muted: var(--fig-c2-3); --c1: var(--fig-c2-3); }
+.tn-c3 { --ink: var(--fig-c3-1); --muted: var(--fig-c3-1); --c1: var(--fig-c3-1); }
+.tn-c3.ly2 { --ink: var(--fig-c3-2); --muted: var(--fig-c3-2); --c1: var(--fig-c3-2); }
+.tn-c3.ly3 { --ink: var(--fig-c3-3); --muted: var(--fig-c3-3); --c1: var(--fig-c3-3); }
+.tn-ok { --ink: var(--fig-ok-1); --muted: var(--fig-ok-1); --c1: var(--fig-ok-1); }
+.tn-ok.ly2 { --ink: var(--fig-ok-2); --muted: var(--fig-ok-2); --c1: var(--fig-ok-2); }
+.tn-ok.ly3 { --ink: var(--fig-ok-3); --muted: var(--fig-ok-3); --c1: var(--fig-ok-3); }
+.tn-bad { --ink: var(--fig-bad-1); --muted: var(--fig-bad-1); --c1: var(--fig-bad-1); }
+.tn-bad.ly2 { --ink: var(--fig-bad-2); --muted: var(--fig-bad-2); --c1: var(--fig-bad-2); }
+.tn-bad.ly3 { --ink: var(--fig-bad-3); --muted: var(--fig-bad-3); --c1: var(--fig-bad-3); }
+.tn-mark { --ink: var(--fig-mark-1); --muted: var(--fig-mark-1); --c1: var(--fig-mark-1); }
+.tn-mark.ly2 { --ink: var(--fig-mark-2); --muted: var(--fig-mark-2); --c1: var(--fig-mark-2); }
+.tn-mark.ly3 { --ink: var(--fig-mark-3); --muted: var(--fig-mark-3); --c1: var(--fig-mark-3); }
+/* W163 auto-hue palette (tools/layer_steps.mjs PALETTE): six Tailwind-style hue families, no green or red; a figure mark with no tone / colour gets the next one,
+   keyed by its own name (views.js autoHue, graph.js), so each force / role reads as its own colour. tone="sky" etc. also works by hand. */
+.tn-sky { --ink: var(--fig-sky-1); --muted: var(--fig-sky-1); --c1: var(--fig-sky-1); }
+.tn-sky.ly2 { --ink: var(--fig-sky-2); --muted: var(--fig-sky-2); --c1: var(--fig-sky-2); }
+.tn-sky.ly3 { --ink: var(--fig-sky-3); --muted: var(--fig-sky-3); --c1: var(--fig-sky-3); }
+.tn-amber { --ink: var(--fig-amber-1); --muted: var(--fig-amber-1); --c1: var(--fig-amber-1); }
+.tn-amber.ly2 { --ink: var(--fig-amber-2); --muted: var(--fig-amber-2); --c1: var(--fig-amber-2); }
+.tn-amber.ly3 { --ink: var(--fig-amber-3); --muted: var(--fig-amber-3); --c1: var(--fig-amber-3); }
+.tn-orange { --ink: var(--fig-orange-1); --muted: var(--fig-orange-1); --c1: var(--fig-orange-1); }
+.tn-orange.ly2 { --ink: var(--fig-orange-2); --muted: var(--fig-orange-2); --c1: var(--fig-orange-2); }
+.tn-orange.ly3 { --ink: var(--fig-orange-3); --muted: var(--fig-orange-3); --c1: var(--fig-orange-3); }
+.tn-violet { --ink: var(--fig-violet-1); --muted: var(--fig-violet-1); --c1: var(--fig-violet-1); }
+.tn-violet.ly2 { --ink: var(--fig-violet-2); --muted: var(--fig-violet-2); --c1: var(--fig-violet-2); }
+.tn-violet.ly3 { --ink: var(--fig-violet-3); --muted: var(--fig-violet-3); --c1: var(--fig-violet-3); }
+.tn-pink { --ink: var(--fig-pink-1); --muted: var(--fig-pink-1); --c1: var(--fig-pink-1); }
+.tn-pink.ly2 { --ink: var(--fig-pink-2); --muted: var(--fig-pink-2); --c1: var(--fig-pink-2); }
+.tn-pink.ly3 { --ink: var(--fig-pink-3); --muted: var(--fig-pink-3); --c1: var(--fig-pink-3); }
+.tn-cyan { --ink: var(--fig-cyan-1); --muted: var(--fig-cyan-1); --c1: var(--fig-cyan-1); }
+.tn-cyan.ly2 { --ink: var(--fig-cyan-2); --muted: var(--fig-cyan-2); --c1: var(--fig-cyan-2); }
+.tn-cyan.ly3 { --ink: var(--fig-cyan-3); --muted: var(--fig-cyan-3); --c1: var(--fig-cyan-3); }
 .fig-off { color: var(--muted); font-size: var(--t-sm); height: auto !important; }
 .fig-alt { box-sizing: border-box; padding: var(--s3) var(--s4); border: var(--bw) solid var(--line); border-radius: 8px; }   /* graph.js degrade (U7): a figure figcheck could not fix shows its alt text in this plain box */
 .lbl { position: absolute; left: 0; top: 0; z-index: 1; white-space: nowrap; font-size: var(--t-sm); line-height: 1.2; padding: 0 3px; border-radius: 3px; background: var(--knock); }
@@ -871,7 +926,7 @@ html.side #work > .orig { margin: 0; }
 /* live figures inside Cluck (Tony, Oct 17: "all BLUE" on the warm sheet): graph.js reads --c1/--c2/--c3/--c1-hi/--body from the cascade, so the
    remap lives here, on Cluck's figures only; question-card figures keep the page tokens. Series = the --help ramp, fills (graph.js FILL .22) are
    those at low alpha, the sheet shows through the node fill. No new hex; --ink/--muted/--grid/--knock are already remapped by .ai-box */
-.ai-box .fig, .cluck .fig { --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); --bg: var(--help-sheet); }
+.ai-box .fig, .cluck .fig, .ai-box .vw { --fig-ink-2: #cac4be; --fig-ink-3: #a8a29c; --fig-muted-2: #978c7f; --fig-muted-3: #877c71; --fig-c1-2: #d88336; --fig-c1-3: #b26d2e; --fig-c2-2: #d8baa2; --fig-c2-3: #b29a86; --fig-c3-2: #d39965; --fig-c3-3: #a97b52; --fig-ok-2: #44c092; --fig-ok-3: #3b9c77; --fig-bad-2: #de5568; --fig-bad-3: #d45164; --fig-mark-2: #d5ac7c; --fig-mark-3: #ae8c65; --fig-sky-2: #539ed9; --fig-sky-3: #4783b2; --fig-amber-2: #d8b237; --fig-amber-3: #b0912f; --fig-orange-2: #cc7536; --fig-orange-3: #b86a31; --fig-violet-2: #8872e7; --fig-violet-3: #826ddc; --fig-pink-2: #d66fc1; --fig-pink-3: #b760a3; --fig-cyan-2: #2ab3bd; --fig-cyan-3: #269096; --c1: var(--help); --c1-hi: var(--help-on); --c2: var(--help-on); --c3: color-mix(in srgb, var(--help) 55%, var(--help-on)); --body: var(--help-sheet); --bg: var(--help-sheet); }
 /* the sheet (app.js clEl; Tony, Oct 5: alt's V1): tabs + X, the scrolling body, the ask field pinned at the bottom */
 .cl { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .cl::before { content: ""; position: absolute; inset: 0 0 auto; height: 220px; pointer-events: none; opacity: .6; transition: opacity .9s ease-out;   /* ref 1's ember light, top only */

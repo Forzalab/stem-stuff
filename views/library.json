@@ -416,7 +416,7 @@
         ]
       },
       "Graph": {
-        "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"",
+        "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"; figure-only emphasis props layer \"A:2 B-C:3\" (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone \"A:c2 B-C:bad\" (a figure palette hue: ink muted c1 c2 c3 ok bad mark)",
         "type": "object",
         "properties": {
           "nodes": {
@@ -434,6 +434,16 @@
           "marks": {
             "type": "string",
             "maxLength": 400
+          },
+          "layer": {
+            "type": "string",
+            "maxLength": 120,
+            "x-semantic": "figure"
+          },
+          "tone": {
+            "type": "string",
+            "maxLength": 120,
+            "x-semantic": "figure"
           }
         },
         "required": [
@@ -442,7 +452,7 @@
         ]
       },
       "Geometry": {
-        "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer",
+        "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
         "type": "object",
         "properties": {
           "pts": {
@@ -947,8 +957,8 @@
       }
     },
     "Graph": {
-      "signature": "Graph(nodes: string, edges: string, cols?: string, marks?: string)",
-      "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"",
+      "signature": "Graph(nodes: string, edges: string, cols?: string, marks?: string, layer?: string, tone?: string)",
+      "description": "A graph: nodes \"A 48 100, B 160 48\", edges \"A>B, A-C\" (> directed), column labels \"48 depth 0\", marks \"A:done u0:k1\"; figure-only emphasis props layer \"A:2 B-C:3\" (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone \"A:c2 B-C:bad\" (a figure palette hue: ink muted c1 c2 c3 ok bad mark)",
       "layer": "L2",
       "kind": "domain",
       "props": {
@@ -969,6 +979,16 @@
           "marks": {
             "type": "string",
             "maxLength": 400
+          },
+          "layer": {
+            "type": "string",
+            "maxLength": 120,
+            "x-semantic": "figure"
+          },
+          "tone": {
+            "type": "string",
+            "maxLength": 120,
+            "x-semantic": "figure"
           }
         },
         "required": [
@@ -979,7 +999,7 @@
     },
     "Geometry": {
       "signature": "Geometry(pts: string, marks: string[], alt?: string)",
-      "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer",
+      "description": "A to-scale geometry figure: named points \"A 0,0; B 3,0; C 3,4\" (y up), marks seg(A,B) circle(O,2) right(B,A,C) dim(A,B,3 m) angle(A,B,C,$\\theta$) arrow(A,C,$F$) label(C,top); at most 12 points, 12 marks, 6 labels; a number in a label is a given, never the answer; a mark may end with layer=1|2|3 (1 = what the question asks, the default; 2 = given; 3 = implied or context). Never put layer 2 or 3 on tone=bad (red stays layer 1). and tone=<ink|muted|c1|c2|c3|ok|bad|mark|sky|amber|orange|violet|pink|cyan> (figure palette hues only; an arrow with no tone gets its own hue automatically, keyed by its label, so leave tone off unless a force must be a given color; ok / bad mean right / wrong, use them only for that), e.g. arrow(A,C,$F$,tone=c1,layer=2)",
       "layer": "L1",
       "kind": "layout",
       "props": {

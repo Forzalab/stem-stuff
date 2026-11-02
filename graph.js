@@ -11,7 +11,9 @@
   const HATCH = { len: 10, gap: 8, inset: 4 };
   const OFF = 6, PAD = 16, FILL = 0.22;
   const deg = Math.PI / 180;
-  const col = c => `var(--${c || "ink"})`;
+  const AUTO = (root.FigCheck && root.FigCheck.AUTO_HUES) || ["sky", "amber", "orange", "violet", "pink", "cyan"];   // W163 palette hues: --fig-<hue>-<layer>
+  const FIGHUE = [...AUTO, "ok", "bad", "mark"];   // hues with real --fig-<hue>-1..3 steps (ok / bad / mark have no bare --ok token)
+  const col = (c, n = 1) => (FIGHUE.includes(c) ? `var(--fig-${c}-${n})` : `var(--${c || "ink"})`);
   const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 
   function tex(s) {
@@ -51,7 +53,7 @@
   const fin = p => Number.isFinite(p[0]) && Number.isFinite(p[1]);
   /* stroke recorder (U3, I-LBL-1): while a figure is built, every drawn stroke is kept as screen-px segments tagged with the mark
      that drew it, so mount() can place labels off them (figcheck.js place()). Grid lines are not obstacles. */
-  let REC = null, CUR = -1;
+  let REC = null, CUR = -1, LAY = 1;   // LAY: the emphasis layer (1 main, 2 given, 3 context) of the mark being drawn; its labels take it too
   function rec(pts, closed) {
     if (!REC) return;
     const q = pts.filter(fin);
@@ -95,16 +97,26 @@
     const a = (Math.atan2(-dy, dx) / deg + 360 + 22.5) % 360;
     return ["e", "ne", "n", "nw", "w", "sw", "s", "se"][Math.floor(a / 45)];
   }
-  const labelColor = c => ["c1", "c2", "c3", "ok", "bad", "mark"].includes(c) ? col(c) : col("ink");
-  /* Locked rule: every force arrow is c1. Only velocity (c2) and acceleration (c3) keep their own colour;
-     a "force" mark is treated as one of those only when its label is \vec v... or \vec a... */
+  /* emphasis layers (W157): `layer` 1 (default) draws as always; 2 / 3 wrap the mark in <g class="ly2|ly3">, which re-points the ink tokens
+     to their contrast-checked blends (app.css --*-mix2 / --*-mix3). Never opacity. Anything but 2 or 3 is layer 1. */
+  const layerOf = m => (m && (m.layer === 2 || m.layer === 3) ? m.layer : 1);
+  const lyr = (n, svg) => (n > 1 && svg ? `<g class="ly${n}">${svg}</g>` : svg);
+  const labelColor = (c, n = 1) => FIGHUE.includes(c) ? col(c, n) : ["c1", "c2", "c3"].includes(c) ? col(c) : col("ink");
+  /* Force arrows (W163, supersedes "every force arrow is c1"): a force / vector with no colour of its own gets its own palette hue, keyed by its
+     label (or id / name), so each force reads as its own colour. An explicit palette hue, ok, bad, mark, ink or muted wins; c1 / c2 / c3 on a force
+     were always ignored (the old locked rule), so they now mean "no opinion" and join the auto-hues. Velocity (\vec v) and acceleration (\vec a)
+     keep their c2 open / c3 double heads when they name that colour. data-kind stays "force" (filled head) unless the arrow is a c2 / c3 kinematic. */
   const KIN = /^\$?\\vec\s*\{?\s*[va](?![a-zA-Z])/;
-  function vecStyle(m) {
+  const LEGACY = ["c1", "c2", "c3"];
+  const forceKey = m => String(m.id ?? m.name ?? (typeof m.label === "string" && m.label.trim() ? sym(m.label) : `@${m.at}>${m.angle}:${m.len}`));
+  const wantsAuto = m => !(m.color && !LEGACY.includes(m.color));
+  function vecStyle(m, hues) {
     const kin = typeof m.label === "string" && KIN.test(m.label.trim());
     const c = kin ? (m.color || "c1") : "c1";
-    if (c === "c2") return { c, w: SW.vec, head: "open" };
-    if (c === "c3") return { c, w: SW.vec, head: "double" };
-    return { c, w: m.dash ? SW.out : SW.force, head: "fill" };
+    const hue = !wantsAuto(m) ? m.color : c === "c1" && hues && hues.get(forceKey(m));
+    if (c === "c2") return { c, hue: null, w: SW.vec, head: "open" };
+    if (c === "c3") return { c, hue: null, w: SW.vec, head: "double" };
+    return { c, hue: hue || null, w: m.dash ? SW.out : SW.force, head: "fill" };
   }
   const rot = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
   const add = (p, q) => [p[0] + q[0], p[1] + q[1]];
@@ -193,9 +205,9 @@
     force: {
       pts: m => [m.at, forceTip(m)],
       draw(m, k) {
-        const v = vecStyle(m), a = k.X(m.at), b = k.X(forceTip(m));
-        if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), v.c);
-        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}">${arrow(a, b, v.w, col(v.c), v.head, m.dash ? DASH.ghost : "")}</g>`;
+        const v = vecStyle(m, k.hues), a = k.X(m.at), b = k.X(forceTip(m)), n = layerOf(m), hue = v.hue || v.c;
+        if (m.label) k.label(m.label, b, m.anchor || dirAnchor(b[0] - a[0], b[1] - a[1]), hue);
+        return `<g data-mark="force" data-kind="${v.c === "c1" ? "force" : "kin"}"${v.hue ? ` data-hue="${v.hue}"` : ""}>${arrow(a, b, v.w, col(hue, n), v.head, m.dash ? DASH.ghost : "")}</g>`;
       }
     },
     arrow: {
@@ -474,7 +486,7 @@
     const pad = { l: PAD, r: PAD, t: PAD, b: PAD }, FC = root.FigCheck, axisMin = axisMinOf(el);
     for (let pass = 0; pass < 3; pass++) {
       const W = el.clientWidth, labels = [], strokes = [];
-      const k = { axisMin, label: (text, at, anchor, color, cls = "", html = false, dirs = null) => labels.push({ text, at, anchor, color, cls, html, dirs, id: CUR }) };
+      const k = { axisMin, label: (text, at, anchor, color, cls = "", html = false, dirs = null) => labels.push({ text, at, anchor, color, cls, html, dirs, id: CUR, layer: LAY }) };
       REC = strokes; CUR = -1;
       let built;
       try { built = build(W, pad, k); } finally { REC = null; }
@@ -486,8 +498,8 @@
       for (const L of labels) {
         if (!L.at || !fin(L.at)) continue;
         const sp = document.createElement("span");
-        sp.className = "lbl " + L.cls; sp.setAttribute("aria-hidden", "true");
-        sp.innerHTML = L.html ? L.text : tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color);
+        sp.className = "lbl " + L.cls + (L.layer > 1 ? " ly" + L.layer : ""); sp.setAttribute("aria-hidden", "true");
+        sp.innerHTML = L.html ? L.text : tex(L.text); sp.style.color = L.cls ? "" : labelColor(L.color, L.layer);
         el.appendChild(sp);
         const w = sp.offsetWidth, h = sp.offsetHeight, a = L.anchor || "c", o = a === "c" ? 0 : a.length === 2 ? OFF * 0.7 : OFF;
         const fx = a.includes("e") ? 0 : a.includes("w") ? -1 : -0.5, fy = a.includes("n") ? -1 : a.includes("s") ? 0 : -0.5;
@@ -521,8 +533,9 @@
   const DIRS8 = ["n", "e", "s", "w", "ne", "nw", "se", "sw"];
 
   function drawMarks(marks, k) {
+    if (root.FigCheck && root.FigCheck.autoHues) k.hues = root.FigCheck.autoHues(marks.filter(m => m.mark === "force" && wantsAuto(m)).map(forceKey));   // the whole figure's keys, not the draw order
     return marks.filter(m => S[m.mark]).map((m, i) => [LAYER[m.mark] ?? 5, i, m]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
-      .map(([, i, m]) => { CUR = i; try { return S[m.mark].draw(m, k); } catch (e) { console.warn("mark", m.mark, e); return ""; } }).join("");
+      .map(([, i, m]) => { CUR = i; LAY = layerOf(m); try { return lyr(LAY, S[m.mark].draw(m, k)); } catch (e) { console.warn("mark", m.mark, e); return ""; } finally { LAY = 1; } }).join("");
   }
 
   /* ---- axis crosses (todo 136): two or three arrows from one tail, at right angles, each named by a short text mark near its tip,
@@ -1034,12 +1047,13 @@
         let nx = -uy, ny = ux;   // one normal per pair (lo -> hi), so the bows of a group never cross
         const mid = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2];
         es.forEach((e, i) => {
+          LAY = layerOf(e);
           const bend = (i - (es.length - 1) / 2) * 1.6 * R, a = pos(e.from), b = pos(e.to), st = col(e.color);
           const c = [mid[0] + 2 * bend * nx, mid[1] + 2 * bend * ny];   // quadratic control: the curve peaks at bend
           const [sx, sy] = norm(c[0] - a[0], c[1] - a[1]), [tx, ty] = norm(b[0] - c[0], b[1] - c[1]);
           const p0 = [a[0] + R * sx, a[1] + R * sy], tip = [b[0] - R * tx, b[1] - R * ty];
           const p1 = dir ? [tip[0] - 0.6 * AH * tx, tip[1] - 0.6 * AH * ty] : tip;
-          svg += `<g data-edge="${esc(e.from)}-${esc(e.to)}"><path d="M${n2(p0[0])} ${n2(p0[1])}Q${n2(c[0])} ${n2(c[1])} ${n2(p1[0])} ${n2(p1[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, c, st) : ""}</g>`;
+          svg += lyr(LAY, `<g data-edge="${esc(e.from)}-${esc(e.to)}"><path d="M${n2(p0[0])} ${n2(p0[1])}Q${n2(c[0])} ${n2(c[1])} ${n2(p1[0])} ${n2(p1[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, c, st) : ""}</g>`);
           const t = tag(e);
           if (t != null) {
             const peak = [mid[0] + bend * nx, mid[1] + bend * ny];
@@ -1047,6 +1061,7 @@
             if (!bend && (peak[0] - cen[0]) * lx + (peak[1] - cen[1]) * ly < 0) { lx = -lx; ly = -ly; }   // straight edge: tag on the outer side
             k.label(t, peak, dirAnchor(lx, ly), e.color);
           }
+          LAY = 1;
         });
       }
       for (const [id, es] of loops) {
@@ -1054,20 +1069,24 @@
         const th = Math.atan2(dy, dx), u = a => [Math.cos(th + a), Math.sin(th + a)];
         es.forEach((e, j) => {
           /* a circle through two points on the node rim, centre pushed outward; nested loops grow */
+          LAY = layerOf(e);
           const rl = 0.75 * R * (1 + 0.5 * j), st = col(e.color), at = (r, a) => [c[0] + r * u(a)[0], c[1] + r * u(a)[1]];
           const p0 = at(R, -0.5), tip = at(R, 0.5), Q = at(R * Math.cos(0.5) + Math.sqrt(rl * rl - (R * Math.sin(0.5)) ** 2), 0);
           let [tx, ty] = [-(tip[1] - Q[1]), tip[0] - Q[0]];
           if (tx * (c[0] - tip[0]) + ty * (c[1] - tip[1]) < 0) { tx = -tx; ty = -ty; }   // tangent at the tip, heading into the node
-          svg += `<g data-edge="${esc(id)}-${esc(id)}"><path d="M${n2(p0[0])} ${n2(p0[1])}A${n2(rl)} ${n2(rl)} 0 1 1 ${n2(tip[0])} ${n2(tip[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, [tip[0] - tx, tip[1] - ty], st) : ""}</g>`;
+          svg += lyr(LAY, `<g data-edge="${esc(id)}-${esc(id)}"><path d="M${n2(p0[0])} ${n2(p0[1])}A${n2(rl)} ${n2(rl)} 0 1 1 ${n2(tip[0])} ${n2(tip[1])}" fill="none" style="stroke:${st}" stroke-width="${SW.out}"${e.dash ? ` stroke-dasharray="${DASH.asym}"` : ""}/>${dir ? head(tip, [tip[0] - tx, tip[1] - ty], st) : ""}</g>`);
           const t = tag(e);
           if (t != null) k.label(t, [Q[0] + rl * dx, Q[1] + rl * dy], dirAnchor(dx, dy), e.color);
+          LAY = 1;
         });
       }
       nodes.forEach((v, i) => {
         const [x, y] = X[i], st = col(v.color);
-        svg += `<g data-node="${esc(v.id)}"><circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>` +
-          (v.color ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:${st}" fill-opacity="${FILL}"/>` : "") + "</g>";
+        LAY = layerOf(v);
+        svg += lyr(LAY, `<g data-node="${esc(v.id)}"><circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:var(--body);stroke:${st}" stroke-width="${SW.out}"/>` +
+          (v.color ? `<circle cx="${n2(x)}" cy="${n2(y)}" r="${R}" style="fill:${st}" fill-opacity="${FILL}"/>` : "") + "</g>");
         k.label(v.label || texName(v.id), [x, y], "c", v.color);
+        LAY = 1;
       });
       return { svg, H };
     };

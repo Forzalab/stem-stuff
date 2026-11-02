@@ -626,7 +626,8 @@ The JSON is a graph block: {"type":"graph","kind":K,"alt":"one sentence, never t
 - "scene" (physics, y up, auto-fit): "marks": body {"at","shape":"box|dot|disk","w","h","r"}, force {"at","angle","len"} (degrees from +x), surface {"from","to","side":"left|right"}, incline {"at","base","angle"}, spring {"from","to"}, rope {"pts"}, pulley {"at","r"}, pivot {"at"}, point, seg, arrow, arc, text, right, dim, angle, circle.
 - "bars": "unit":"J","groups":[{"label":"before","bars":[{"label":"$K$","value":8}]}] (at most 3 groups of 4 bars).
 - "network": "nodes":["a","b"],"edges":[{"from":"a","to":"b","w":4,"color":"c1","label":"1"}] (at most 6 nodes: the key subgraph).
-Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted), "dash": true. At most 6 labels, 12 marks.
+Any mark may add "label" ("$F_N$"), "color" (c1 c2 c3 ink muted, or a hue sky amber orange violet pink cyan), "dash": true. A force with no "color" gets its own hue automatically: leave it off. At most 6 labels, 12 marks.
+Any mark (a network node or edge too) may add "layer": 1, 2 or 3: 1 = what the question asks about (the default), 2 = given forces / values, 3 = implied or context. Never put layer 2 or 3 on tone=bad (red stays layer 1). Layers 2 and 3 are drawn in dimmer shades of the same color, still readable; use them to keep a busy figure calm.
 The figure shows the SETUP: the objects, the forces or the given values, and the steps' inputs. Numbers in labels, text, values and expressions: copy them exactly as the QUESTION or the KEY writes them, never round or compute a new one; when unsure, use a symbol ("$mg$", "$d$") instead. Never the answer or the unknown's value, not even in another unit: label the unknown with its symbol and "?" ("$k = ?$")."""
 
 # RULE for the v4 letter (prompt audit R3/R4, Tony Oct 22): the letter decides WHEN to draw ("Draw readily"; words only needs a reason) and has

@@ -204,17 +204,17 @@ function md(text, inline = false, big = false) {
    Uploaded problems.json: the file is the student's own copy, so the same rules run here, on that file.
    No server and no file (static host): { verdict: "pending" }; Copy still sends the try to Tony.
    `answer` is { answer: "typed text" } or { choice: "b" } or, pick all, { choices: ["a", "c"] } (wrong adds struck?); a multi grades one part at a time: { part: i, answer: "typed text" }. */
-/* every request goes through net(): aborted after 8 s, so nothing can wait forever (design/RELOAD.md).
+/* every request goes through net(): aborted after 8 s (a call may pass its own ms: the proof Check waits 25 s), so nothing can wait forever (design/RELOAD.md).
    In-flight requests are kept so a resumed page (bfcache, a long-hidden tab) can abort the stale ones. */
-const TIMEOUT = 8000;
+const TIMEOUT = 8000, PROOF_TIMEOUT = 25000;   // PROOF_TIMEOUT: serve.py PROOF_TIMEOUT is 20 s per model; the proof Check waits 25 s (todo 109)
 const inflight = new Set();
 const timedOut = e => !!e && e.name === "AbortError";
 /* flight.js: one request's start / headers / first byte / end / error in the page's ring (on the device; only an incident carries it) */
 const FR_NONE = { h() {}, f() {}, e() {}, x() {} };
 const frReq = (ep, tp) => window.stemFR?.req(ep, tp) || FR_NONE;
-async function net(url, init = {}) {
-  const ctl = new AbortController(), req = { ctl, t0: Date.now(), ep: url.split(/[/?]/)[0] };
-  const t = setTimeout(() => ctl.abort(), TIMEOUT), fr = frReq(req.ep, init.headers?.traceparent);
+async function net(url, init = {}, ms = TIMEOUT) {
+  const ctl = new AbortController(), req = { ctl, ms, t0: Date.now(), ep: url.split(/[/?]/)[0] };
+  const t = setTimeout(() => ctl.abort(), ms), fr = frReq(req.ep, init.headers?.traceparent);
   inflight.add(req);
   try { const r = await fetch(url, { ...init, signal: ctl.signal }); fr.h(r); return r; }
   catch (e) { fr.x(e); throw e; }
@@ -233,7 +233,7 @@ async function check(code, answer) {
   try {
     const rd = window.stemRedo.has(code) ? { round: window.stemRedo.get().n } : {};   // a redo round grades in its own namespace
     const r = await net("check", { method: "POST", headers: { "content-type": "application/json", traceparent: tp }, credentials: "same-origin",
-                                     body: JSON.stringify({ code, ...answer, ...rd }) });
+                                     body: JSON.stringify({ code, ...answer, ...rd }) }, S?.prob?.code === code && S.prob.type === "proof" ? PROOF_TIMEOUT : TIMEOUT);
     if (r.ok) { try { return await r.json(); } catch (e) { inc = reqInc("check", "/check", t0, { e, phase: "parse", q: code, tp }); } }
     else if (r.status >= 500) inc = reqInc("check", "/check", t0, { r, q: code, tp });   // a 4xx: no grader here (a static host), not a failure
   } catch (e) {
@@ -1368,7 +1368,7 @@ async function submitProof() {
 /* the grader could not answer (no key, the hourly cap, a failure, an uploaded file): one wait line, with the S- code when there is one */
 function proofWait(r) {
   const why = { off: "Cluck can't check proofs right now.", hourly: "Cluck needs a short break. Try again soon.", upload: "Proof checks need the hosted bank. Open it by code." }[r.why]
-    || "Cluck could not check it. Tap to try again.";
+    || (r.verdict === "timeout" ? "Cluck is taking too long. Tap to try again." : "Cluck could not check it. Tap to try again.");
   $("#fb").innerHTML = `<p class="verdict wait">${icon("i-wait")}<span>${esc(why)}</span>${incHTML(r.inc)}${r.why === "upload" || r.why === "off" ? "" : `<button type="button" class="btn retry" id="retry" aria-label="Try again" title="Try again">${icon("i-retry")}</button>`}</p>`;
   const again = $("#retry"); if (again) again.addEventListener("click", () => { $("#fb").innerHTML = ""; layoutFreeze(); submitProof(); });
   say($("#fb").textContent.replace(/\s+/g, " ").trim());
@@ -3538,7 +3538,7 @@ new ResizeObserver(() => { const w = $("#q").clientWidth; if (S && w > 120 && w 
    throttled, so theirs may not have fired), busy is cleared, the controls that should be live are live again, the layout reruns. */
 function resume(fromCache) {
   const now = Date.now();
-  for (const r of [...inflight]) if (fromCache || now - r.t0 >= TIMEOUT) r.ctl.abort();
+  for (const r of [...inflight]) if (fromCache || now - r.t0 >= r.ms) r.ctl.abort();
   if (fromCache) busy = false;
   if (!editing()) { lostAt = 0; if (swapOn) setSwap(false); root.classList.remove("dock-away", "bar-off"); }
   if (S && !S.finished) {

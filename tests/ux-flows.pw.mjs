@@ -111,6 +111,7 @@ const opened = (page, code) => page.waitForFunction(c => (!c || document.querySe
 async function showCode(page) {   // easy.pw.mjs
   for (const s of ["#qlistBtn", "#codeChip", "#barTab"]) { if (await page.isVisible("#code")) return; if (await page.isVisible(s)) await page.click(s); }
 }
+const homeReady = page => page.waitForFunction(() => ["#code", "#qlistBtn", "#codeChip", "#barTab"].some(s => document.querySelector(s)?.getClientRects().length), null, { timeout: 6000 });   // the start page drew its code field or the chip that opens it (showCode needs one)
 const quiet = page => page.waitForFunction(() => !document.querySelector(".fx-ov"), null, { timeout: 9000 }).catch(() => {});
 const nTries = page => page.evaluate(() => window.__drill.state.tries.length);
 const lastV = page => page.evaluate(() => window.__drill.state.tries.at(-1)?.v);
@@ -737,8 +738,10 @@ flow(16, "free-form-num", async (page, w) => {
 
 flow(17, "multi-part", async (page, w) => {
   await go(page, "CALC1_D08");
-  await page.fill('#q .part[data-i="0"] .ans', "1"); await page.press('#q .part[data-i="0"] .ans', "Enter"); await page.waitForTimeout(400);
-  await page.fill('#q .part[data-i="1"] .ans', "3"); await page.press('#q .part[data-i="1"] .ans', "Enter"); await page.waitForTimeout(400);
+  await page.fill('#q .part[data-i="0"] .ans', "1"); await page.press('#q .part[data-i="0"] .ans', "Enter");
+  await page.waitForFunction(() => document.querySelector('#q .part[data-i="0"] .ans')?.disabled, null, { timeout: 4000 });
+  await page.fill('#q .part[data-i="1"] .ans', "3"); await page.press('#q .part[data-i="1"] .ans', "Enter");
+  await page.waitForFunction(() => /HINT-D08b/.test(document.querySelector('#q .part[data-i="1"] .phint')?.textContent || ""), null, { timeout: 4000 });
   assert.equal(await page.$eval('#q .part[data-i="0"] .ans', e => e.disabled), true, "part 1 right: done");
   assert.match(await page.$eval('#q .part[data-i="1"] .phint', e => e.textContent), /HINT-D08b/);
   return "fixture: part 1 right (locked), part 2 wrong with its hint";
@@ -865,7 +868,7 @@ flow(37, "split-rows-tf", async (page, w) => {
 flow(40, "silent-reload-idle", async () => skip("needs a stamped deploy (a new sw.js, controllerchange); serve.py dev always shows the bar. update.pw covers it with its own static server"));
 
 flow(41, "upload-bank", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await page.goto(BASE + "/"); await homeReady(page);
   await showCode(page);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles(UPLOAD);
@@ -875,7 +878,7 @@ flow(41, "upload-bank", async (page, w) => {
 });
 
 flow(42, "upload-survives-reload", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await page.goto(BASE + "/"); await homeReady(page);
   await showCode(page);
   const [fc] = await Promise.all([page.waitForEvent("filechooser"), page.click("#upload")]);
   await fc.setFiles(UPLOAD); await opened(page, "");
@@ -887,7 +890,7 @@ flow(42, "upload-survives-reload", async (page, w) => {
 
 flow(44, "notes-pad", async (page, w) => {
   await go(page, C.single);
-  if (w === 393) { assert.ok(await vis(page, "#padFab"), "the notes button"); await page.click("#padFab"); await page.waitForTimeout(500); }
+  if (w === 393) { assert.ok(await vis(page, "#padFab"), "the notes button"); await page.click("#padFab"); }
   await page.waitForSelector("#scratch", { state: "visible", timeout: 3000 });
   return w === 393 ? "button -> pad page" : "pad beside the question";
 }, { padPhone: true });
@@ -896,7 +899,8 @@ flow(47, "swap-keyboard", async (page, w) => {
   if (w === 1280) skip("phone-only (keyboard up); shot is the desktop free-form view");
   await go(page, C.num);
   await page.locator("#ans").focus();
-  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) }); await page.waitForTimeout(450);
+  await page.setViewportSize({ width: 393, height: Math.round(852 * 0.55) });
+  await page.waitForFunction(() => { const e = document.querySelector("#padPeek"); return !!e && !e.hidden && e.getClientRects().length > 0; }, null, { timeout: 4000 });
   assert.ok(await vis(page, "#padPeek"), "the pad peek");
   assert.ok(await vis(page, "#ans"), "the answer box in view");
   await page.screenshot({ path: join(OUT, `47-swap-keyboard-393-chromium.png`) });
@@ -905,12 +909,14 @@ flow(47, "swap-keyboard", async (page, w) => {
 }, { padPhone: true, noFinalShot393: true });
 
 flow(48, "onboarding-toasts", async (page, w) => {
-  await page.goto(`${BASE}/#${C.single}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" }); await page.waitForTimeout(1300);
+  await page.goto(`${BASE}/#${C.single}`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
+  await page.waitForFunction(() => document.querySelector("#toast")?.classList.contains("on"), null, { timeout: 1300 }).catch(() => {});   // desktop has no notes button, so no toast: that case waits the old 1.3 s
   const t1 = await toastText(page);
   if (w === 1280 && !t1) return skip("desktop: no notes button toast (padFab is phone-only); nothing to assert");
   assert.equal(t1, "Quack up your thoughts here...");
   await page.screenshot({ path: join(OUT, `48-onboarding-toasts-${w}-first-chromium.png`) });
-  await page.locator("#padFab").tap(); await page.waitForTimeout(900);
+  await page.locator("#padFab").tap();
+  await page.waitForFunction(() => document.querySelector("#toast")?.classList.contains("on") && /Switch question/.test(document.querySelector("#toast").textContent), null, { timeout: 4000 });
   const t2 = await toastText(page);
   assert.equal(t2, "Switch question/answer here.");
   return `'${t1}' (shot -first) then '${t2}'`;
@@ -926,7 +932,7 @@ flow(51, "telemetry-off", async (page, w, ctx) => {
 }, { gpc: true });
 
 flow(52, "ver-badge", async (page, w) => {
-  await page.goto(BASE + "/"); await page.waitForTimeout(800);
+  await page.goto(BASE + "/"); await page.waitForSelector("#ver[data-v]", { state: "attached", timeout: 6000 });
   const v = await page.$eval("#ver", e => [e.dataset.v, getComputedStyle(e, "::after").content]);
   assert.ok(v[0], "build tag set");
   return `#ver data-v=${v[0]} ::after ${v[1]}`;
@@ -935,7 +941,7 @@ flow(52, "ver-badge", async (page, w) => {
 flow(54, "reopen-finished", async (page, w) => {
   await go(page, C.single);
   assert.equal(await answerKey(page, C.single, true), "correct");
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => window.__drill.state.tries.at(-1)?.v === "correct", null, { timeout: 4000 });
   await go(page, C.single2);
   await page.evaluate(c => { location.hash = c; }, C.single); await opened(page, C.single);
   await page.waitForSelector("#q.closed", { timeout: 4000 });
