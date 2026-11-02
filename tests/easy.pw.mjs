@@ -70,17 +70,19 @@ writeFileSync(join(BANKS, "BANK_TRM.json"), JSON.stringify({ v: 1, problems: [te
 /* a stub OpenRouter: streams Cluck's text in 3 pieces, 150 ms apart (design/EASY.md Phase 4) */
 const parts = ["POOF! A wish is a wish.\n", "Use: $W = \\Delta K$\n", "$$\nv = 2\n$$\n", "Tick: a, c. Egg-cellent."];   // $$ on lines of their own: what live models send
 let asked = 0, gate = null, release = () => {};   // gate: a promise the next stream waits on before its first piece (one stream only)
+let hold = null, unhold = () => {};               // hold: the next stream waits on it after its first piece (one stream only), so "no typing" reads the stream mid-way, not on a clock
 const stub = createServer(async (req, res) => {
   let body = ""; for await (const c of req) body += c;
   if (!JSON.parse(body).stream) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ choices: [{ message: { content: '{"verdict": "on"}' } }] })); return; }   // the gate
   asked++;
   res.writeHead(200, { "Content-Type": "text/event-stream" });
-  const g = gate; gate = null; await g;
-  let i = 0;
-  const t = setInterval(() => {
-    if (i < parts.length) res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i++] } }] })}\n\n`);
-    else { res.end("data: [DONE]\n\n"); clearInterval(t); }
-  }, 150);
+  const g = gate, h = hold; gate = hold = null; await g;
+  const nap = () => new Promise(r => setTimeout(r, 150));
+  for (let i = 0; i < parts.length; i++) {
+    await nap(); res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: parts[i] } }] })}\n\n`);
+    if (i === 0) await h;
+  }
+  await nap(); res.end("data: [DONE]\n\n");
 });
 await new Promise(r => stub.listen(0, "127.0.0.1", r));
 const srv = spawn("python3", [join(ROOT, "serve.py"), String(PORT)], { env: { ...process.env, STEM_BANKS: BANKS, STEM_TRIES: join(TMP, "tries.json"),
@@ -349,6 +351,7 @@ try {
   });
 
   await step("nothing ticked is a real answer (a try, the miss hint)", async () => {
+    hold = new Promise(r => { unhold = r; });                               // ...and after its first piece, until that step has read the first draw
     gate = new Promise(r => { release = r; });                              // the next step checks the caret before any text is in (app.js WISH_DOTS is only 900 ms)
     await page.click("#mcGo");
     await page.waitForFunction(() => /Missing one/.test(document.querySelector("#q .chk .cluck")?.textContent || ""), null, { timeout: 4000 });   // short: left of Check (Tony, Oct 5)
@@ -366,6 +369,7 @@ try {
     await page.waitForFunction(() => document.querySelector("#cluck .wtext .wl"), null, { timeout: 3000 });
     const first = (await page.textContent("#cluck .wtext")).trim();
     assert.ok(!/Egg-cellent/.test(first), "no typing: " + first);
+    unhold();
     assert.equal(await page.isHidden("#wish"), true, "desktop, sheet open: no chip (Tony, Oct 5: variant a)");
     assert.equal(await page.$(".cl-peek"), null, "desktop, sheet open: no peek, no CTA");
     assert.equal(await page.isVisible("#cluck .cl-bar"), true, "B5 (Tony, Oct 18): bar visible at 1280, the Cluck / TUTOR header with its X");
@@ -430,7 +434,7 @@ try {
   });
 
   await step("past 5 auto wishes an hour, nothing fires until the Explain my mistake tap", async () => {
-    asked = 0; release();                                                     // here, so a red step above cannot fail this one too
+    asked = 0; release(); unhold();                                           // here, so a red step above cannot fail this one too
     await page.evaluate(() => localStorage.setItem("stem-wish", JSON.stringify(Array(5).fill(Date.now()))));
     await page.evaluate(() => { location.hash = "CALC1_E03"; }); await opened(page, "CALC1_E03");
     assert.equal(await page.$("#how"), null, "the tick line is for the first choose-all only (clutter C6)");
