@@ -135,7 +135,7 @@ try {
     assert.equal(S.log[1].correct, "2.02");
     await S.page.waitForSelector("#q .ansl");
     assert.equal(await S.page.textContent("#q .ansl b"), "2.02");
-    assert.match(await S.page.textContent("#q .ansl"), /^Answer/);
+    assert.match(await S.page.textContent("#q .ansl"), /^Not it\. The answer is/);   // W114f: Tony's 114r v1f reveal box: a plain sentence under the field (was "Answer 2.02")
     await S.page.waitForTimeout(1200);
     assert.equal(await xp(S.page), x, "0 XP on the revealed pick");
   });

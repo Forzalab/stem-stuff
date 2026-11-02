@@ -9,7 +9,9 @@ const require = createRequire(import.meta.url);
 let pw; try { pw = require("playwright"); } catch { pw = require("/opt/node22/lib/node_modules/playwright"); }
 const BASE = process.argv[2] || "http://localhost:8812";
 const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
-const page = await (await b.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true })).newPage();
+const ctx0 = await b.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });
+await ctx0.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // sugar-hides-notes: desktop sugar has no #scratch
+const page = await ctx0.newPage();
 await page.goto(`${BASE}/#CALC1_T6B`, { waitUntil: "load" }); await page.waitForSelector("#entry, #pcode", { state: "attached" });
 await page.waitForSelector("#scratch");
 await page.tap("#scratch");

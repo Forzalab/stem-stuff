@@ -1130,7 +1130,11 @@ def answer_of(u):
     return f"{m} \u00d7 10^{int(e)}" if e else t
 
 
-def grade(p, sid, body, reveal=False):
+def stage_off(stage, at):
+    """the `on` of a request that did not ask for stages"""
+
+
+def grade(p, sid, body, reveal=False, on=stage_off):
     """body: {choice} (mc) | {choices: [ids]} (mc pick all) | {answer} (num/expr/text) | {part: i, answer} (multi: ONE part; each part has its own tries and lockout).
     Reply {verdict, triesLeft, gen, error?, hint?, repeat?, families? (correct only: the item's distractor error families, sorted, no choice map; J6 trap_beaten)} (+ part: i for a multi). The answer is never in the reply, except
     (T19, Tony Oct 12) `correct` on the reply that shuts the question out of tries, and on a later "locked" one: reveal=True,
@@ -1143,7 +1147,7 @@ def grade(p, sid, body, reveal=False):
     if rnd is not None and (isinstance(rnd, bool) or not isinstance(rnd, int) or not 0 < rnd < 2 ** 31):
         return {"verdict": "invalid", "triesLeft": max_tries(p)}
     if p["type"] == "proof":                 # W107: Cluck's grader is a network call, so it runs outside the tries lock
-        return proof_grade(p, sid, body, rnd, reveal)
+        return proof_grade(p, sid, body, rnd, reveal, on)
     with _tries_lock:
         _load_tries()
         sid = _round_sid(sid, rnd)
@@ -2237,11 +2241,14 @@ def system_for(base, p):
     return base + "\n" + "Audience: " + aud.strip() + " Plain everyday words; explain a subject word the first time."
 
 
-def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
+def explain_stream(p, answer, key, scratch="", sid=None, turn=None, on=None):
     """yields text chunks (Claude: the editor's rewrite in one piece; OpenRouter: streamed), markdown stripped. Raises OSError on a dead
     connection. The NOTE call goes first, capped at NOTE_EXPLAIN_S (a pick has no gate to wait for)."""
     out = set()                                              # this request's out-of-credit providers (the NOTE's key is the chain's)
+    on = on or stage_off
+    on("note", "start")
     n = note_within(NOTE_EXPLAIN_S, p, answer, None, key, scratch=scratch, out=out)
+    on("note", "end")
     v4 = None
     if sid is not None and turn is not None and v4_on():     # T62: the letter prompt, first wish = a wrong pick and "hi cluck <3"
         xyz = xyz_block(n)
@@ -2249,8 +2256,10 @@ def explain_stream(p, answer, key, scratch="", sid=None, turn=None):
         solved = any(row_solved(r) for r in rows if r[0] == turn[0])
         v4 = dict(turns=[{"role": "user", "content": v4_user(p, answer, WISH_QUERY, turn[1], xyz, solved)}], reveal=turn[1], facts=leak_facts(p, pick_done(p, units_done(p, sid), answer)),
                   code=p["code"], arm=cluck_arm(sid), bank=bank_block(p), fig=fig_ctx(p, answer, reveal=turn[1]), imgs=fig_images(p))
+    on("write", "start")
     yield from _cluck_stream([{"role": "system", "content": system_for(CLUCK_GENIE, p)}, {"role": "user", "content": explain_prompt(p, answer) + note_block(n)}], key, 450,
                             fig_ctx(p, answer), edit=True, v4=v4, out=out)
+    on("write", "end")
 
 
 def _or_one(model, messages, key, max_tokens):
@@ -3587,6 +3596,72 @@ def emoji_strip(chunks):
         yield out
 
 
+# ---------------- stage events (W160a, Card 109-160): the wait shows the real steps ----------------
+# Opt-in: the JSON body says "stages": true (/explain, /check on a proof item). Nothing else changes for a client that does not ask: /explain stays
+# plain text, a Check stays one JSON. Why a body flag: it works the same on serve.py and the Vercel WSGI entry (no header plumbing), and an old client
+# never sends it. A staged stream is text/plain: one line per event, "\x1e" + JSON {"stage", "at": "start"|"end"}, sent when the step really starts or
+# ends (a step that fails never ends); /explain's text is the rest, and a Check ends on its own JSON line (today's body). The status is already 200
+# when the first line goes out, so an /explain failure is in-band: {"error": "S-XXXXX", "why"} then STOPPED.
+STAGES = ("note", "write", "read", "grade", "record")   # note: the NOTE call · write: Cluck's reply · read: the Check's pre-checks · grade: one grader call · record: the try
+RS = "\x1e"
+
+
+def stage_line(stage, at):
+    assert stage in STAGES, stage
+    return (RS + json.dumps({"stage": stage, "at": at}) + "\n").encode()
+
+
+def _pumped(work):
+    """work(emit) runs in a thread (the request's trace follows); this yields what it emits as it emits it: ("s", line) | ("v", value), then ("x", exc) if it raised"""
+    import queue
+    q, ctx = queue.Queue(), dict(vars(_trace))
+
+    def run():
+        vars(_trace).update(ctx)
+        try:
+            work(lambda kind, v: q.put((kind, v)))
+        except BaseException as e:  # noqa: BLE001
+            q.put(("x", e))
+        q.put(("end", None))
+    threading.Thread(target=run, daemon=True).start()
+    while True:
+        kind, v = q.get()
+        if kind == "end":
+            return
+        yield kind, v
+
+
+def _staged_relay(p, source, what):
+    """the staged /explain body: stage lines as the steps happen, the text through the same guards as _relay (no emoji, no prompt word, no leading blanks)"""
+    def work(emit):
+        for t in prompt_guard(emoji_strip(source(lambda s, at: emit("s", stage_line(s, at)))), what, p["code"]):
+            emit("v", t)
+    tr(q=p["code"])
+    t0, said = time.time(), False
+    for kind, v in _pumped(work):
+        if kind == "s":
+            yield v
+        elif kind == "v":
+            if not said:
+                v = re.sub(r"^(?:[ \t]*\n)+", "", v)
+                if not v.strip():
+                    continue
+                said = True
+            yield v.encode()
+        else:                                                  # "x": the reply broke
+            e = v
+            log(f"{what} {p['code']}: {e}")
+            why = "leak" if isinstance(e, PromptLeak) else "budget_cap" if is_budget(e) else "upstream"
+            code = incident(what, why, err=e, phase="stream" if said else "headers", ms=(time.time() - t0) * 1000, q=p["code"], status=getattr(e, "code", None))
+            yield (RS + json.dumps({"error": code, "why": why}) + "\n").encode()
+            yield STOPPED
+            return
+    if not said:
+        code = incident(what, "empty", phase="stream", ms=(time.time() - t0) * 1000, q=p["code"])
+        yield (RS + json.dumps({"error": code, "why": "empty"}) + "\n").encode()
+        yield STOPPED
+
+
 def _relay(p, chunks, what, head):
     """(status, headers, bytes iterator). The reply's first piece is read HERE, before any header goes out (Incidents): nothing came
     (a failure, or an empty reply) = an incident whose code rides in X-Incident ("S-XXXXX reason <trace id>"), 503 budget_cap when every provider
@@ -3639,6 +3714,8 @@ def explain(cookie_header, body):
         return 429, head, iter([b""])
     pick = wish_pick(p, b)
     turn = cluck_begin(p, sid, pick)
+    if b.get("stages") is True:
+        return 200, head, _staged_relay(p, lambda on: explain_stream(p, pick, key, b.get("scratch"), sid, turn, on), "explain")
     return _relay(p, lambda: explain_stream(p, pick, key, b.get("scratch"), sid, turn), "explain", head)
 
 
@@ -3811,6 +3888,7 @@ def note_block(n):
 # (no key, the hourly cap, credit, the network, bad JSON) is "busy": no try used, an S- code when it was a failure. The proof text never
 # goes in a log or incident line; the grader gets it with e-mail / phone shapes blanked, fenced in a random tag.
 PROOF_MAX, PROOF_TRIES, PROOF_FK_MAX, PROOF_TIMEOUT = 3000, 3, 5.0, 20
+PROOF_BUDGET = 25    # seconds in TOTAL across every model tried for one Check (Tony, Nov 2); mirrors the client's 25 s give-up in app.js, so a try is never recorded after the student saw "timed out"
 CHECK_MAX = 16384                            # /check's body cap: PROOF_MAX characters as UTF-8 + JSON escapes fit (every other item: far less)
 PROOF_ROWS = ("base", "assume", "prove")
 OPENROUTER_PROOF_MODELS = [m for m in os.environ.get("OPENROUTER_PROOF_MODELS", "deepseek/deepseek-v4.1-flash").split(",") if m.strip()]
@@ -3863,25 +3941,30 @@ def proof_hint(p, gap, said):
     return (pk["hints"][gap], "authored") if bad else (h, "model")
 
 
-def proof_judge(p, text, key, out=None):
+def proof_judge(p, text, key, out=None, on=stage_off):
     """the grader's rows {base, assume, prove, hint} for one proof; raises on any failure (the caller makes it busy)"""
     pk, tag = p["proof"], "student_" + secrets.token_hex(4)
     q = "\n".join("\n".join(m) if isinstance(m, list) else m for m in (b.get("md", "") for b in p.get("body", []) if b.get("type") == "text"))
     ref = pk["reference"]
     user = "\n\n".join([f"QUESTION:\n{q}", "RUBRIC:\n" + "\n".join(f"{r['id']}: {r['need']}" for r in pk["rubric"]),
                          "REFERENCE:\n" + ("\n".join(ref) if isinstance(ref, list) else ref), "PROOF:\n" + wrap(PII_RE.sub("[hidden]", text.strip()), tag)])
-    err = None
+    err, t_end = None, time.time() + PROOF_BUDGET
     for m in OPENROUTER_PROOF_MODELS:
+        left = t_end - time.time()
+        if left <= 0.05:
+            raise err or TimeoutError("proof budget spent")
         payload = dict(_model_params(m, 300), **({} if m.startswith(NO_TEMP) else {"temperature": 0}),
                        provider={"order": NOTE_PROVIDERS, "allow_fallbacks": False, "zdr": True, "data_collection": "deny", "require_parameters": True},
                        response_format={"type": "json_schema", "json_schema": {"name": "proof", "strict": True, "schema": PROOF_SCHEMA}},
                        messages=[{"role": "system", "content": system_for(CLUCK_PROOF, p)}, {"role": "user", "content": user}])
         try:
-            with _or_post(payload, key, PROOF_TIMEOUT) as r:
+            on("grade", "start")
+            with _or_post(payload, key, min(PROOF_TIMEOUT, left)) as r:
                 g = json.loads(json.loads(r.read())["choices"][0]["message"]["content"])
             if (not isinstance(g, dict) or any(g.get(k) not in ("ok", "missing", "wrong") for k in PROOF_ROWS)
                     or not isinstance(g.get("hint"), str)):
                 raise ValueError("not the schema")
+            on("grade", "end")
             return g
         except Exception as e:  # noqa: BLE001
             log(f"proof {p['code']}: {m} {type(e).__name__}")       # the type only: never the proof, never an echo of it
@@ -3909,9 +3992,10 @@ def _proof_sig(text):
     return "proof:" + hashlib.sha256(squash(text).encode()).hexdigest()[:20]
 
 
-def proof_grade(p, sid, body, rnd, reveal=False):
+def proof_grade(p, sid, body, rnd, reveal=False, on=stage_off):
     """grade() for a proof item: {verdict, triesLeft, gen, rubric?, gap?, hint?, repeat?, correct? (sugar lockout), why? + inc? (busy)}"""
     text = body.get("answer")
+    on("read", "start")
     with _tries_lock:
         _load_tries()
         k = (_round_sid(sid, rnd), p["code"])
@@ -3928,14 +4012,16 @@ def proof_grade(p, sid, body, rnd, reveal=False):
         return busy("off")
     if not explain_allowed(sid, False):                     # the hourly cap Cluck's /explain and /chat have, shared
         return busy("hourly")
+    on("read", "end")
     t0, out = time.time(), set()
     try:
-        g = proof_judge(p, text, key, out)
+        g = proof_judge(p, text, key, out, on)
     except Exception as e:  # noqa: BLE001
         why = "budget" if is_budget(e) else "upstream"
         return busy(why, incident("proof", "budget_cap" if why == "budget" else "upstream", provider="openrouter",
                                   err=type(e).__name__, ms=(time.time() - t0) * 1000, q=p["code"], status=getattr(e, "code", None)))
     rubric = {r: g[r] for r in PROOF_ROWS}
+    on("record", "start")
     with _tries_lock:
         _load_tries()
         st = _entry(k)
@@ -3956,6 +4042,7 @@ def proof_grade(p, sid, body, rnd, reveal=False):
             log(f"proof {p['code']}: " + " ".join(f"{r}={v}" for r, v in rubric.items()) + f" hint={src}")   # rows and a source, no free text
         res["gen"] = st["gen"]
         _save_tries()
+    on("record", "end")
     return res
 
 
@@ -4019,6 +4106,29 @@ def chat(cookie_header, body):
     return _relay(p, chunks, "chat", head)
 
 
+def check_stream(cookie_header, body):
+    """POST /check {..., stages: true} on a proof item: (200, headers, bytes iterator) = stage lines as the Check works, then the usual JSON on the last
+    line. None for anything else (no flag, not a proof, a bad body or code): the caller then runs dispatch(), byte for byte as before."""
+    b = _body(body, CHECK_MAX)
+    if not isinstance(b, dict) or b.get("stages") is not True:
+        return None
+    mode = mode_of(cookie_header)
+    p = lookup(str(b.get("code", "")), mode)
+    if p is None or hidden(p, mode) or p["type"] != "proof":
+        return None
+    sid, head = _stream_head(cookie_header)
+
+    def chunks():
+        for kind, v in _pumped(lambda emit: emit("v", grade(view(p, mode), sid, b, reveal=mode == "sugar", on=lambda s, at: emit("s", stage_line(s, at))))):
+            if kind == "x":
+                code = incident("api", "exception", err=v, path="/check", method="POST")
+                yield (json.dumps({"verdict": "busy", "why": "upstream", "inc": code}) + "\n").encode()
+            else:
+                yield v if kind == "s" else (json.dumps(v) + "\n").encode()
+    return 200, head, chunks()
+
+
+STAGED_POSTS = {"/check": check_stream}      # POST paths that stream only when asked (stages: true); the handler returns None = the plain dispatch() answer
 STREAMS = {k: traced(k, f) for k, f in (("/explain", explain), ("/chat", chat))}   # POST paths that answer as a text stream (serve.Handler, api/index.py)
 POST_MAX = CHAT_MAX                              # the most any POST body may be; each path checks its own limit
 
@@ -4159,9 +4269,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except ValueError:
             n = 0
         body = self.rfile.read(n) if n > 0 else b""
-        stream = STREAMS.get(self.path.split("?")[0])
-        if stream:
-            status, headers, chunks = stream(self.headers.get("Cookie", ""), body)
+        path = self.path.split("?")[0]
+        stream = STREAMS.get(path)
+        staged = None if stream else STAGED_POSTS.get(path, lambda *a: None)(self.headers.get("Cookie", ""), body)
+        if stream or staged:
+            status, headers, chunks = staged or stream(self.headers.get("Cookie", ""), body)
             self.send_response(status)
             for k, v in headers.items():
                 if k != "Cache-Control":

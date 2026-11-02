@@ -206,7 +206,7 @@ async function cluckOpen(page, w) {
 }
 
 /* ---------- the flows ---------- */
-// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly, padPhone (393 runs in diet: phone sugar has no pad, Tony Oct 14),
+// { n, slug, run(page, w, ctx) -> detail string, opts: { sw, ob (onboarding fresh), perms, mobileOnly, padPhone (runs in diet: sugar has no pad on phones (Tony Oct 14) or desktop (Nov 2)),
 //   time: "real" (default) | "fast" } }
 // time (CI plan PR 3, per-row time tag, CEO-arch Grill 5a): "fast" = the fixture installs page.clock (flowing) before the row's first load and
 // dwell() jumps the 2 s gate; "real" = the real clock. Rows 9 (slow-load-retry) and 43 (offline-sw) are real-time by design: they wait on the
@@ -1004,7 +1004,7 @@ try {
       serviceWorkers: f.opts.sw ? "allow" : "block", permissions: f.opts.perms || [], extraHTTPHeaders: f.opts.gpc ? { "Sec-GPC": "1", DNT: "1" } : undefined });
     await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
     if (!f.opts.ob) await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
-    if (f.opts.padPhone && phone) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);
+    if (f.opts.padPhone) await ctx.addCookies([{ name: "stem-mode", value: "diet", url: BASE }, { name: "stem-mode-v", value: "2", url: BASE }]);   // padPhone = the flow needs the notes pad: diet at every width (phone sugar has none, Tony Oct 14; desktop sugar neither, sugar-hides-notes Nov 2)
     if (f.opts.gpc) await ctx.addInitScript(() => { try { Object.defineProperty(navigator, "globalPrivacyControl", { value: true }); } catch { /* */ } });
     const page = await ctx.newPage();
     page.__time = f.opts.time;
