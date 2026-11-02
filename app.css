@@ -1513,3 +1513,26 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
 html.coding.dock-bottom:not(.start) body { background: var(--paper); }
 html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
 html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */
+
+/* ---------- 114r v1f REVEAL BOX (Tony Nov 2: "build + ship"; brain mock-opus/114r/v1f.html; app.js rboxSync) ----------
+   A closed typed single-field question in sugar: [ answer field (tinted by the verdict, keeps your answer, struck when wrong) | flush Ask Cluck ] [ Next ].
+   Ask Cluck = the field's right segment in Cluck's brown, its 1px border brown in EVERY state, 1px over the field's border, same top / right / bottom edges.
+   Next = the live .nx, outside the field, in the room the field gives up (its Check slot). The duck is the simple inline SVG, 22px beside the label (Tony 03:20: no overflow above the field). Nothing is
+   added under the field after Check (the chip row is gone), so nothing moves. Phones (.tight): the segment is the duck only. */
+.ff.rbox { --nxw: 88px; margin-right: calc(var(--nxw) + var(--s2)); padding-right: 0; gap: var(--s2); }
+@media (min-width: 40rem) { .ff.rbox { --nxw: calc(var(--btn) * 2); } }
+.ff.rbox > .nx { right: calc(-1 * (var(--bw) + var(--nxw) + var(--s2))); top: calc(-1 * var(--bw)); height: var(--fld); }
+.ff.rbox.ok { background: var(--correct-fill); border-color: var(--correct-rim); }
+.ff.rbox.cue:not(.ok) { background: var(--wrong-fill); border-color: var(--wrong-rim); border-style: solid; }
+.q .ff.rbox.cue.ok:focus-within { border-color: var(--correct-rim); }
+.ff.rbox.cue:not(.ok) input { color: var(--wrong-on); text-decoration: line-through; text-decoration-color: var(--wrong); }
+.ff.rbox.ok input { color: var(--correct-on); }
+.ff.rbox .vk { order: 1; position: static; flex: none; width: var(--ico); height: auto; margin-right: var(--s2); }
+.ff.rbox > .wchip { order: 2; position: relative; flex: none; align-self: stretch; box-sizing: border-box; height: auto; margin: calc(-1 * var(--bw)) calc(-1 * var(--bw)) calc(-1 * var(--bw)) auto; padding: 0 var(--s3);
+  display: inline-flex; align-items: center; gap: var(--s2);
+  background: var(--help-fill); color: var(--help-on); border: var(--bw) solid var(--help-line); border-radius: 0 10px 10px 0; z-index: 1; }
+.ff.rbox > .wchip:hover { background: color-mix(in srgb, var(--help-fill), var(--help-on) 8%); }
+.ff.rbox > .wchip .dk { flex: none; display: block; width: 22px; height: 19px; pointer-events: none; }   /* Tony 03:20: a small inline icon beside the label, nothing above the field */
+.ff.rbox.tight > .wchip { width: 56px; justify-content: center; padding: 0; }
+.ff.rbox.tight > .wchip > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the word stays for screen readers */
+#wish.cue:empty { display: none; }
