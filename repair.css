@@ -34,7 +34,7 @@
 .rp-in { box-sizing: border-box; width: 8rem; max-width: 100%; min-height: 44px; padding: 0 var(--s3); border: var(--bw) solid var(--edge); border-radius: 8px;
   background: var(--field); color: var(--ink); font: inherit; font-size: var(--t-md); }
 .rp-in:focus { outline: none; border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
-.rp-check, .rp-next { border-color: var(--c1); background: var(--c1); color: var(--field); font-weight: var(--w-em); }
+.rp-check, .rp-next { border-color: var(--action); background: var(--action); color: var(--field); font-weight: var(--w-em); }
 .rp-next:disabled { opacity: 0.45; cursor: default; }
 .rp-unit { color: var(--muted); }
 .rp-miss, .rp-because, .rp-done, .rp-later { margin: var(--s2) 0 0; }

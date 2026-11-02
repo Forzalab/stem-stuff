@@ -6,16 +6,19 @@
   --mono: ui-monospace, "Atkinson Hyperlegible Mono", Menlo, monospace;
   --w-em: 600;   /* emphasis, names, states, titles; Atkinson has no 600, so it renders its 700 (CSS font matching) */
   /* colour = unified v5 (brain chat-redesign-2026-10-13/unified-v5/TOKENS.md = round 5 PALETTE-v3.1 + THINLIGHT on the unified-v4 ladder;
-     Tony's round 7 PICKER 1, 2, 4, 8). Navy: page + 2 surfaces + 1 line (Tony: "count how many blues"). Every colour is a role */
-  --page: #050c16; --card: #101c2c; --float: #1b2b40; --line: #394a61; --ink: #e8edf5; --muted: #a7b7cd;
+     Tony's round 7 PICKER 1, 2, 4, 8). Ink (Tony, Nov 2): black page + surface, 1 control fill, 1 line. Every colour is a role */
+  --page: #000; --card: #000; --float: #1a1a1a; --line: #4d4d4d; --ink: #fff; --muted: #a3a3a3;
   /* the older surface names, each on its v4 role (unified-v4 TOKENS "Old -> new"): page, card, float, the one line, one muted */
-  --paper: var(--page); --field: var(--page); --qbox: var(--card); --sheet: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
+  --paper: var(--page); --field: var(--page); --qbox: var(--card); --raised: var(--float); --edge: var(--line); --hint: var(--muted);
   /* meaning roles. Blue = the commit (Go, Check, the selected row, focus); green = the confirmation after it; red = a wrong answer.
      A state is a 1px line + a trailing glyph in the solid colour on the unchanged row: no fill, the letter badge never changes.
      On a card: correct 10.8:1, wrong 5.1:1, action 9.2:1; Next's label --correct-ink on --correct 9.9:1, on --correct-press 6.8:1 */
-  --action: #92c0ff; --action-ink: #0c223e; --action-fill: #0f1e33; --action-on: #c9e0ff; --focus: var(--action);
-  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #042519; --correct-on: #bdead5; --correct-rim: #029e72;
-  --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #301417; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 2px dashed edge */
+  /* --sheet = the CONTROL fill (buttons, choice rows, the list card); --card / --qbox = the SURFACE (the question box). Same value today; split so
+     a theme can set the surface to the page and still give controls a shape (Ink, below; STYLE §2.1) */
+  --sheet: #161616;
+  --action: #3b9eff; --action-ink: #000; --action-fill: #0f1e33; --action-on: #70b8ff; --focus: var(--action);
+  --correct: #4ee6af; --correct-ink: #01291b; --correct-press: #43be96; --correct-fill: #14221c; --correct-on: #bdead5; --correct-rim: #029e72;
+  --wrong: #eb596e; --wrong-ink: #391418; --wrong-fill: #28191a; --wrong-on: #ffd1d3; --wrong-rim: #d14a5f;   /* --wrong-rim: only the typed box's 1px dashed edge; --wrong-fill / --correct-fill: soft (OKLCH chroma halved) */
   /* one warm family, hue 55-70, lightness is the role (PALETTE-v3 §1): help = Cluck, hints, bulb, send; reward = the HUD, floats, toast,
      bursts only (§4: never in a help surface, a CTA or a chip). --glow at alpha only. --help-deep never under text */
   --help-on: #ffdcc0; --reward: #ffcd94; --help: #ff9a3e; --glow: #ff8204; --help-deep: #b05a00; --help-muted: #a99c8e;
@@ -25,12 +28,12 @@
   --goldify: hue-rotate(-34deg) saturate(1.1);
   --duckgold: sepia(1) saturate(3.4) hue-rotate(-8deg) brightness(1.1) contrast(1.05);
   --online: #5fd394;   /* Cluck's status dot (H3a) */
-  --c1: var(--action); --c1-hi: var(--action-on); --c2: #ffb86b; --c3: #ff8fc8; --grid: var(--line);   /* --c2 / --c3: figure series only */
+  --c1: #92c0ff; --c1-hi: #c9e0ff; --c2: #ffb86b; --c3: #ff8fc8; --grid: #394a61;   /* figures only: --c1 is the locked force blue and --grid the decorative grid; neither follows --action / --line (a theme can retune those) */
   /* the codeblock's syntax colour (T43, Tony Oct 18): Tokyo Night (enkia/tokyo-night-vscode-theme, MIT). On the --page well:
      kw 8.5:1, str 10.7, num 9.7, fn 7.8, type 9.3, pre 11.4, com 4.7 (its own #565f89 is 3.2:1, so the theme's dark5 #737aa2) */
   --syn-kw: #bb9af7; --syn-str: #9ece6a; --syn-num: #ff9e64; --syn-com: #737aa2; --syn-fn: #7aa2f7; --syn-type: #2ac3de; --syn-pre: #7dcfff;
   --scrim: #000;   /* the hard dim behind Cluck's sheet as it opens to full screen: plain black at an alpha, no blur */
-  --body: var(--card); --ramp: var(--card); --knock: rgb(16 28 44 / 0.85);   /* figure fills and label knockouts sit on the question box */
+  --body: var(--card); --ramp: var(--card); --knock: rgb(0 0 0 / 0.85);   /* figure fills and label knockouts sit on the question box */
   /* the ladder (phone): --t-xs 13 status, ticks, tags · --t-sm 15 buttons, labels, the how line · --t-md 17 problem text, choices, typed answers
      · --t-lg 20 titles, q | a letters · --t-xl 28 the start page's title only (STYLE.md 2.2). Line height by role */
   --t-xs: 0.8125rem; --t-sm: 0.9375rem; --t-md: 1.0625rem; --t-lg: 1.25rem; --t-xl: 1.75rem;
@@ -42,16 +45,20 @@
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem;
   --gut: max(1.25rem, env(safe-area-inset-left), env(safe-area-inset-right));
   /* size tokens: button, the fields that hold one (button + 2 x 2px border), its icon, the column. Desktop raises them (see the end of this file) */
-  --bw: 1px; --bw-alarm: 2px; --bw-hair: 0.5px; --ring: 2px;   /* borders (STYLE.md 2.6): one line weight; only a wrong typed answer is heavier; answer rows rest on a hairline; one keyboard ring */
-  --bw-up: calc(var(--bw-alarm) - var(--bw));   /* what a wrong border adds: taken back from the padding / offsets, so nothing inside moves */
-  --bw-sel: calc(var(--bw) - var(--bw-hair));   /* the same for an answer row: its 1px state ring over the 0.5px rest hairline */
+  --bw: 1px; --ring: 2px;   /* borders (STYLE.md 2.6): ONE line weight, dashed or solid (tone carries meaning, not width); one keyboard ring (2px, an outline) */
   --btn: 48px; --fld: calc(var(--btn) + 4px); --ico: 24px; --col: 52rem;
   /* elevation: two-part shadow, tighter part fades as the layer rises (Refactoring UI, "Creating depth") */
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-2: 0 8px 16px -6px rgb(0 0 0 / 0.6), 0 1px 2px rgb(0 0 0 / 0.4);   /* the verdict drawer + finger bar (STYLE §2.7) */
   --shadow-3: 0 10px 24px -6px rgb(0 0 0 / 0.55), 0 2px 4px rgb(0 0 0 / 0.35);
   --shadow-4: 0 16px 36px -8px rgb(0 0 0 / 0.6), 0 3px 6px rgb(0 0 0 / 0.25);
   color-scheme: dark;
 }
+/* Ink is the site theme (strip ship spec; Tony Nov 2: "ink whole site"). One black ground, shapes drawn by line, a saturated blue action.
+   The surfaces (question box, freeze strip, docked videos) are black like the page, so each is outlined by a 1px inset --line instead of a
+   lighter slab; --sheet (the control fill) stays a step lighter so fill-first buttons keep their shape (STYLE §2.1). --sheet #161616 and
+   --action-fill are PROPOSALS (the mock had no control fill). */
+.p, .boxed .q, .rot.docked .duo, html.swap .freeze-in, html.mt .freeze-in { box-shadow: inset 0 0 0 1px var(--line); }
 @supports (font: -apple-system-body) {   /* WebKit only: SF is reachable here and nowhere else (Chromium maps -apple-system to the OS face everywhere) */
   :root { --font: -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; --kx: 1.2em; }
 }
@@ -111,8 +118,8 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 .code-box .btn { width: calc(var(--btn) - 4px); height: calc(var(--btn) - 4px); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
 .code-box .btn:hover { background: var(--raised); color: var(--ink); }
 .code-box .btn:focus-visible { outline-offset: -3px; }
-.code-box .btn-go { background: var(--c1); color: var(--field); }   /* the arrow: the one filled control, only once a code is typed */
-.code-box .btn-go:hover { background: var(--c1-hi); }
+.code-box .btn-go { background: var(--action); color: var(--field); }   /* the arrow: the one filled control, only once a code is typed */
+.code-box .btn-go:hover { background: var(--action-on); }
 /* suggestions (suggest.mjs): codes this browser knows that contain what is typed, banks first. Floats over the page
    (below the bar on desktop, above it when the bar is the bottom dock), so nothing moves */
 .code-sug {
@@ -131,7 +138,7 @@ html.dock-bottom:not(.start):not(.side) .top { position: sticky; top: 0; }   /* 
 }
 .code-sug li .ico { width: 1.25rem; height: 1.25rem; color: var(--muted); }
 .code-sug li:hover, .code-sug li[aria-selected="true"] { background: var(--raised); }
-.code-sug li[aria-selected="true"] .ico { color: var(--c1); }
+.code-sug li[aria-selected="true"] .ico { color: var(--action); }
 /* start page (html.start: no problem open). Like a search home page: the entry alone, centred, under one line of title.
    The upload and paste buttons sit inside one wide rounded field; it rests on --shadow-1 and lifts to --shadow-3 on hover / focus. */
 .start-title { display: none; }
@@ -159,8 +166,8 @@ html.start .code-box input::placeholder { text-transform: none; font-weight: 400
 html.start .entry .btn, html.start .code-box .btn { width: var(--btn); height: var(--btn); border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
 html.start .entry .btn:hover { background: var(--raised); color: var(--ink); }
 html.start .entry .btn:focus-visible { outline-offset: -3px; }
-html.start .code-box .btn-go { background: var(--c1); color: var(--field); }
-html.start .code-box .btn-go:hover { background: var(--c1-hi); }
+html.start .code-box .btn-go { background: var(--action); color: var(--field); }
+html.start .code-box .btn-go:hover { background: var(--action-on); }
 html.start .entry-msg { text-align: center; }
 /* phones: the bottom dock becomes the whole visible area, the field centred in it; with the keyboard up it is the area above
    the keyboard (--kb-top / --kb-bottom from visualViewport, app.js layoutDock), so the field stays in view */
@@ -245,11 +252,11 @@ html.bar-mini .xb-field textarea, html.bar-mini .xb-field textarea.xb-free { pad
 .btn:hover { background: var(--raised); }
 .btn:focus-visible, label.btn:focus-within { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .btn:active { transform: translateY(1px); }
-.btn-go { background: var(--c1); border-color: var(--c1); color: var(--field); }
-.btn-go:hover { background: var(--c1-hi); border-color: var(--c1-hi); }
+.btn-go { background: var(--action); border-color: var(--action); color: var(--field); }
+.btn-go:hover { background: var(--action-on); border-color: var(--action-on); }
 /* freeform arrow with nothing typed yet: visible, dimmed, not clickable */
 .btn-go:disabled { opacity: 0.45; cursor: default; }
-.btn-go:disabled:hover { background: var(--c1); border-color: var(--c1); }
+.btn-go:disabled:hover { background: var(--action); border-color: var(--action); }
 .btn[hidden] { display: none; }
 
 /* ---------- main column ---------- */
@@ -323,7 +330,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt .cb pre { padding-bottom: 0; }
 .opt .cb .t-com { color: var(--muted); }                            /* --syn-com is 4.1:1 on the row's --card; --muted 8.4:1 */
 .opt .txt > p { margin: 0; }
-.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 0 0 var(--cbx); border-bottom: var(--bw-hair) solid var(--line); }
+.cb-hd { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 0 0 var(--cbx); border-bottom: var(--bw) solid var(--line); }
 .cb-lang { color: var(--muted); font-size: var(--t-xs); font-weight: var(--w-em); line-height: 1; }
 .cb-act { margin-left: auto; display: flex; align-items: center; }
 .cb-slot { width: 0; }                                              /* T44 run / step / reset go here; empty in T43 */
@@ -409,7 +416,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt {
   width: 100%; min-height: var(--fld); display: flex; align-items: center; gap: var(--s3);
   padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); text-align: left; line-height: 1.4;
-  background: var(--sheet); border: var(--bw-hair) solid var(--line); border-radius: 8px; color: var(--ink);   /* PICKER 1: a 0.5px --line hairline at rest */
+  background: var(--sheet); border: var(--bw) solid var(--line); border-radius: 8px; color: var(--ink);   /* a 1px --line edge at rest; every state is the same 1px in its tone */
   transition: border-color .18s ease-out, background-color .18s ease-out;
 }
 .opt:hover:not(:disabled) { border-color: var(--muted); }
@@ -421,7 +428,7 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .opt .txt { min-width: 0; overflow-wrap: anywhere; }
 .opt .txt .katex { white-space: nowrap; }                          /* a choice's formula is one unit: "d =" never alone on a line; app.js fitMath shrinks it to fit */
 .opt .txt .kx-scroll { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; scrollbar-width: thin; }   /* app.js fitMath: too wide even at 85% */
-.opt[aria-checked="true"] { border: var(--bw) solid var(--action); padding: calc(var(--s2) - var(--bw-sel)) calc(var(--btn) + 8px - var(--bw-sel)) calc(var(--s2) - var(--bw-sel)) calc(var(--s3) - var(--bw-sel)); }
+.opt[aria-checked="true"] { border: var(--bw) solid var(--action); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); }
 .opt[aria-checked="true"] .badge { background: var(--action); border-color: var(--action); color: var(--action-ink); }
 /* lock-in (Tony, Sep 30: "who wants to be a millionaire"; no glow): the other choices fade, the rest of the page dims */
 /* only while open; never the question or the top bar. Picking also hides the code bar and the grab handle (Tony, Oct 2) */
@@ -431,7 +438,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .ch, .top, #problem, #work, #fb { transition: opacity .375s ease-out, filter .45s ease-out; }
 /* V1 thin light (PALETTE-v3-THINLIGHT §2): right / wrong = a 1px ring in the state colour + its glyph at the row's right end (.vg, app.js glyph());
    no fill, the badge keeps its rest look. The 1px ring takes its extra half pixel back from the padding: nothing moves */
-.opt:is(.right, .wrong) { border-width: var(--bw); padding: calc(var(--s2) - var(--bw-sel)) calc(var(--btn) + 8px - var(--bw-sel)) calc(var(--s2) - var(--bw-sel)) calc(var(--s3) - var(--bw-sel)); }
+.opt:is(.right, .wrong) { border-width: var(--bw); padding: var(--s2) calc(var(--btn) + 8px) var(--s2) var(--s3); }
 .opt.wrong { border-color: var(--wrong); color: var(--muted); }
 .opt.wrong .txt { text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness: 2px; }
 .opt.right { border-color: var(--correct); }
@@ -450,12 +457,12 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .opt.jolt { animation: opt-jolt .54s ease-out; }
 .opt.pop { animation: opt-pop .42s ease-out 2; }
 @media (prefers-reduced-motion: reduce) { .opt.jolt, .opt.pop { animation: none; } }
-.opt.pend { border-color: var(--c1); border-style: dashed; }
+.opt.pend { border-color: var(--action); border-style: dashed; }
 .ch .send { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }
 /* pick all (design/CHOOSE-ALL.md §4): a square check badge (empty until ticked), the letter beside it, no arrow in the row;
    one Check under the list. Never one row, no lock-in dimming (many rows can be ticked). */
 .choices.all .opt { padding-right: var(--s3); }
-.choices.all .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--s3) - var(--bw-sel)); }
+.choices.all .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: var(--s3); }
 .choices.all .opt.right .badge { background: none; border-color: var(--correct); color: var(--correct); }   /* pick-all: the square is the glyph slot */
 .choices.all .opt.right.reveal .badge { border-style: dashed; }
 .choices.all .opt.wrong .badge { background: none; border-color: var(--wrong); color: var(--wrong); }
@@ -467,11 +474,10 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 /* prove mode (fix): a row the student X'd: red x in the box, its text lightly struck, its fix box under it (indented to the text) */
 .choices.all .opt[data-mark="x"] .badge { border-color: var(--wrong); color: var(--wrong); }
 .choices.all .opt[data-mark="x"]:not(.wrong) .txt { text-decoration: line-through; text-decoration-color: var(--muted); }
-/* sugar kept rows (app.js keep(); look B, Tony Oct 20): ticked and right at a miss, fixed. A 2px (--bw-alarm) --correct ring (its 1.5px over the
-   rest hairline comes back from the padding: nothing moves), the --correct-fill wash, text --correct-on (12.4:1), the green check in the
+/* sugar kept rows (app.js keep(); look B, Tony Oct 20): ticked and right at a miss, fixed. A 1px --correct ring, the --correct-fill wash, text --correct-on (12.4:1), the green check in the
    square like .right. No dim, no tag; fresh ticks keep the blue. A 150 ms colour fade, no pop (a miss is a wrong try) */
-.choices.all .opt.kept, .choices.all .opt.kept:hover { border: var(--bw-alarm) solid var(--correct); background: var(--correct-fill); color: var(--correct-on); cursor: default;
-  padding: calc(var(--s2) - var(--bw-alarm) + var(--bw-hair)) calc(var(--s3) - var(--bw-alarm) + var(--bw-hair)); transition: border-color .15s ease-out, background-color .15s ease-out, color .15s ease-out; }
+.choices.all .opt.kept, .choices.all .opt.kept:hover { border: var(--bw) solid var(--correct); background: var(--correct-fill); color: var(--correct-on); cursor: default;
+  padding: var(--s2) var(--s3); transition: border-color .15s ease-out, background-color .15s ease-out, color .15s ease-out; }
 .choices.all .opt.kept .lt { color: var(--correct); }
 .choices.all .opt.kept .badge { background: none; border-color: var(--correct); color: var(--correct); }
 @media (prefers-reduced-motion: reduce) { .choices.all .opt.kept { transition: none; } }
@@ -496,8 +502,8 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline { display: flex; gap: var(--s2); }
 .choices.inline .ch { flex: 1 1 auto; min-width: 3rem; }
 .choices.inline .opt { justify-content: center; text-align: center; padding: var(--s2) var(--s3); }
-.choices.inline .opt:is(.right, .wrong, [aria-checked="true"]) { padding-left: calc(var(--s3) - var(--bw-sel)); padding-top: calc(var(--s2) - var(--bw-sel)); padding-bottom: calc(var(--s2) - var(--bw-sel)); }   /* the state ring takes its half pixel back: nothing moves */
-.choices.inline .opt:is(.right, .wrong):not([aria-checked="true"]) { padding-right: calc(var(--s3) - var(--bw-sel)); }
+.choices.inline .opt:is(.right, .wrong, [aria-checked="true"]) { padding-left: var(--s3); padding-top: var(--s2); padding-bottom: var(--s2); }   /* the state ring takes its half pixel back: nothing moves */
+.choices.inline .opt:is(.right, .wrong):not([aria-checked="true"]) { padding-right: var(--s3); }
 .choices.inline .opt.right { color: var(--correct); }   /* pills: no badge, the label carries the state colour (10.8:1) */
 .choices.inline .opt.wrong { color: var(--wrong); }   /* 5.1:1, bold-free 18px: AA */
 .choices.inline .opt .txt { white-space: nowrap; overflow-wrap: normal; }
@@ -506,7 +512,7 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .choices.inline .vg { right: 14px; }
 
 .ff {
-  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw-up));   /* the arrow's room is always reserved (it sits --bw-up inside the border) */
+  position: relative; display: flex; align-items: center; height: var(--fld); padding-left: var(--s3); padding-right: calc(var(--btn) + var(--bw));   /* the arrow's room is always reserved (it sits --bw inside the border) */
   background: var(--field); border: var(--bw) solid var(--edge); border-radius: 8px;
 }
 .ff:hover { border-color: var(--muted); }
@@ -574,12 +580,12 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .mparts .part.hinted { grid-template-areas: "mk pr" ". bx" ". ht"; }
 .mparts .part.nopr.hinted { grid-template-areas: "mk bx" ". ht"; }
 .mparts .part + .part { padding-top: var(--s4); border-top: 1px solid var(--line); }
-.mparts .mk { grid-area: mk; font-weight: var(--w-em); color: var(--c1); }
+.mparts .mk { grid-area: mk; font-weight: var(--w-em); color: var(--action); }
 .mparts .pr { grid-area: pr; min-width: 0; overflow-wrap: anywhere; }
 .mparts .ff { grid-area: bx; }
-.ff .send { position: absolute; right: var(--bw-up); top: var(--bw-up); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
+.ff .send { position: absolute; right: var(--bw); top: var(--bw); }   /* 48px centred in the 52px box, 2px from the outer edge with either border: nothing jumps */
 /* the verdict icon in the arrow's slot (app.js vmark): right, wrong with a try left, out of tries */
-.ff .vk { position: absolute; right: var(--bw-up); top: var(--bw-up); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
+.ff .vk { position: absolute; right: var(--bw); top: var(--bw); width: var(--btn); height: var(--btn); display: grid; place-items: center; pointer-events: none; }
 .ff .vk .ico { width: var(--ico); height: var(--ico); }
 .ff .vk[data-v="i-ok"] { color: var(--correct); }
 .ff .vk[data-v="i-x"] { color: var(--wrong); }
@@ -602,8 +608,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
   .mparts .part.nopr:has(> .pips).hinted { grid-template-areas: "mk bx bx" ". . pp" ". ht ht"; }
   .mparts .mk, .mparts .pr { padding-top: var(--s3); }   /* first text line centred on the 52px box */
 }
-.ff.bad { border: var(--bw-alarm) dashed var(--wrong-rim); padding-left: calc(var(--s3) - var(--bw-up)); padding-right: var(--btn); }
-.ff.bad :is(.send, .vk) { right: 0; top: 0; }
+.ff.bad { border: var(--bw) dashed var(--wrong-rim); }   /* 1px like every line: the dash is what says "not accepted" (survives greyscale) */
 /* one part closed (right, or out of tries) while the others stay live: the same disabled look as a closed question (.q.closed) */
 .ff.shut, .ff.shut input { cursor: not-allowed; }
 .ff.shut:not(.cue) { opacity: 0.5; }   /* right ones too: closed = looks disabled (the one with Next: not dimmed, T17b-1) */
@@ -617,7 +622,7 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .nx { flex: none; box-sizing: border-box; width: var(--nxw); height: var(--btn); margin: 0; padding: 2px; border: 0; border-radius: 8px; background: transparent;   /* a 92x44 face in the 96x48 hit: off the row's ring */
   color: var(--ink); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nx .nf { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: var(--s1);
-  padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw-hair) solid var(--line); color: var(--ink); }
+  padding: 0 var(--s2) 0 var(--s3); border-radius: 6px; background: var(--raised); border: var(--bw) solid var(--line); color: var(--ink); }
 :is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx .nf { background: var(--correct); border-color: var(--correct); color: var(--correct-ink); }
 :is(.ch.cue:has(.opt.right:not(.reveal)), .ff.cue.ok, .q:has(.opt.right:not(.reveal, .kept)) .chk.cue) .nx:active .nf { background: var(--correct-press); border-color: var(--correct-press); }
 .nx:active .nf { transform: translateY(1px); }
@@ -625,19 +630,18 @@ mark.chg, .chg { background: none; color: inherit; text-decoration: underline 2p
 .nx .ico { width: 20px; height: 20px; }
 .q.closed .nx { cursor: pointer; }
 .ch .nx { position: absolute; right: 2px; top: 50%; margin-top: calc(var(--btn) / -2); }   /* exactly on the row's Check */
-.ff .nx { position: absolute; right: var(--bw-up); top: var(--bw-up); }                       /* exactly on the box's Check */
-.ff.bad .nx { right: 0; top: 0; }
+.ff .nx { position: absolute; right: var(--bw); top: var(--bw); }                       /* exactly on the box's Check */
 /* the carrier makes room: its text stops short of Next, the verdict icon moves to the left of Next */
 .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
-.ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 8px - var(--bw-sel)); }
-.ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 8px + var(--vgw) - var(--bw-sel)); }   /* + the glyph left of Next */
-.ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw-up)); }
-.ff.cue .vk { right: calc(var(--nxw) + var(--bw-up)); }
+.ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 8px); }
+.ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 8px + var(--vgw)); }   /* + the glyph left of Next */
+.ff.cue { padding-right: calc(var(--btn) * 3 + var(--bw)); }
+.ff.cue .vk { right: calc(var(--nxw) + var(--bw)); }
 .q .ff.cue:focus-within { border-color: var(--edge); box-shadow: none; }   /* focus on Next is Next's ring, not the closed box's */
 .q .ff.cue.ok:focus-within { border-color: var(--correct); }
 .ff.cue:not(.ok) :is(input, .lead) { color: var(--muted); }   /* out of tries: the box with Next is not dimmed (Next is live); its text goes --muted */
 .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 8px); }
-.choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 8px - var(--bw-sel)); }
+.choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 8px); }
 .choices.inline .ch.cue .vg { display: none; }   /* the pill's check would sit under Next: the green ring says it (no reflow, the pill keeps its width) */
 /* the verdict snaps (no fade of the lock-in dim, no colour tween): Next is the one motion after Check (one blink) */
 .q.closed :is(.ch, .opt) { transition: none; }
@@ -648,11 +652,11 @@ html:has(.fx-ov) :is(.ch, .opt, .btn, #problem, #work, #fb) { transition: none; 
    Sugar moves the mc slot 4px in from the ring (Check too, so its rect stays inside Next) */
 html.sugar .ch :is(.send, .nx) { right: 6px; }
 html.sugar .ch.cue .opt, html.sugar .choices.inline .opt[aria-checked="true"], html.sugar .choices.inline .probe .opt { padding-right: calc(var(--nxw) + 12px); }
-html.sugar .ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 12px - var(--bw-sel)); }
-html.sugar .ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 12px + var(--vgw) - var(--bw-sel)); }
+html.sugar .ch.cue .opt[aria-checked="true"] { padding-right: calc(var(--nxw) + 12px); }
+html.sugar .ch.cue .opt:is(.wrong, .right) { padding-right: calc(var(--nxw) + 12px + var(--vgw)); }
 html.sugar .ch.cue .vg { right: calc(var(--nxw) + 14px); }
 html.sugar .choices.inline .ch.cue .opt { padding-right: calc(var(--nxw) + 12px); }
-html.sugar .choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 12px - var(--bw-sel)); }
+html.sugar .choices.inline .ch.cue .opt:is(.wrong, .right, [aria-checked="true"]) { padding-right: calc(var(--nxw) + 12px); }
 html.sugar .ch.cue:has(.opt.right) .nx .nf, html.sugar .ff.cue.ok .nx .nf { position: relative; border-radius: 6px; padding: 0 6px 0 10px; }
 /* the ring: a --field plate 1px outside Next's 96x48 box, under the face (2px in) = 3px of --field all round. Not a shadow (STYLE §2.7), not an outline (that is the keyboard ring) */
 html.sugar .ch.cue:has(.opt.right) .nx::before, html.sugar .ff.cue.ok .nx::before { content: ""; position: absolute; inset: -1px; border-radius: calc(6px + 3px); background: var(--field); }   /* the face radius + the ring */
@@ -823,16 +827,16 @@ html.side #work > .orig { margin: 0; }
 /* Key formulas (Tony, Oct 5: a textbook recap block, "hybrid of 4 and 5", design/mockups/formula-use.html ?v=7): the site's blue, a 1px
    --c1 frame on a 10% --c1 tint, the bulb + "Key formulas" notched into the top border (its background is the page above the line and the
    tint below, so the line breaks clean), the formulas centred in order of use, a thin arrow between. Not a field: no hover, no caret */
-.fcard { --fc-tint: color-mix(in srgb, var(--c1) 10%, var(--paper));
-  position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--c1); border-radius: 10px; background: var(--fc-tint); }
+.fcard { --fc-tint: color-mix(in srgb, var(--action) 10%, var(--paper));
+  position: relative; margin-top: var(--s5); padding: var(--s4) var(--s4) var(--s3); border: 1px solid var(--action); border-radius: 10px; background: var(--fc-tint); }
 .fc-notch { position: absolute; top: 0; left: var(--s3); transform: translateY(-50%); display: inline-flex; align-items: center; gap: var(--s2);
-  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--c1); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
+  padding: 0 var(--s2); background: linear-gradient(var(--paper) 50%, var(--fc-tint) 50%); color: var(--action); font-size: var(--t-sm); font-weight: var(--w-em); line-height: 1.4; }
 .fc-notch .ico { width: 1.125rem; height: 1.125rem; }
 .fcard ol { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; }   /* minmax(0, ...): a formula wider than the screen (BUOY, 529px at 390) shrinks its row to the box and scrolls in .fm; an auto column grew to it and pushed the "?" and the page sideways (Oct 26) */
 .fcard .f { max-width: 100%; font-size: var(--t-md); line-height: 1.4; }
 .fcard .f > .fm { overflow-x: auto; overflow-y: hidden; padding: .5em var(--s1); margin-block: -.5em; }   /* a long formula scrolls in its box, never the page (P2X Q7 snack was 477px wide at 390); the padding holds KaTeX's few-px overhang (a subscript), which made a short one scroll 2px on hover (Tony, Edge, Oct 19: 251 vs 249). The math scrolls, not the row, so the "?" tap area is not clipped. The .5em above and below holds a \frac / \tfrac12 / \sqrt that rises or drops past the 1.4 line (overflow-x: auto makes y clip too: the ½ in K = ½mv² lost its bottom, todo 115, Oct 29); the -.5em margin gives it back, so the rows sit where they did */
 .fcard .fm .katex { white-space: nowrap; }
-.fcard .to { color: var(--c1); opacity: .7; line-height: 1; padding: var(--s1) 0; }
+.fcard .to { color: var(--action); opacity: .7; line-height: 1; padding: var(--s1) 0; }
 .fcard .to svg { display: block; width: 16px; height: 16px; }
 /* thinking ladder + "?" docs (Tony, Oct 21; SCHEMA.md "Formula ladder"): a formula row is the math + a small "?"; the "?" opens the sheet's doc for it
    right under the row (static, no AI). Middle pieces pop inside the card, smaller, one per Jev hit. [hidden] must win over the display rules below */
@@ -860,8 +864,8 @@ html.side #work > .orig { margin: 0; }
 .fq { position: relative; flex: none; display: grid; place-items: center; width: 1rem; height: 1rem; padding: 0; border: 1px solid currentColor; border-radius: 50%;
   background: transparent; color: var(--muted); font: inherit; font-size: 0.6875rem; font-weight: var(--w-em); line-height: 1; cursor: pointer; }
 .fq::after { content: ""; position: absolute; inset: -14px; }                      /* the 44px tap target round a 16px mark */
-.fq:is(:hover, :focus-visible) { color: var(--c1); }
-.fq[aria-expanded="true"] { border-color: var(--c1); background: var(--c1); color: var(--paper); }
+.fq:is(:hover, :focus-visible) { color: var(--action); }
+.fq[aria-expanded="true"] { border-color: var(--action); background: var(--action); color: var(--paper); }
 .fq:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 /* tap-to-copy (todo 108): a formula card row and a revealed answer copy their math as plain, grader-exact text. Quiet like the "?":
    a 16px muted icon, blue on hover/focus, green when done; the tap area is its ::after, 44px square like the "?"'s. Each reaches 14px past its mark, so after
@@ -872,7 +876,7 @@ html.side #work > .orig { margin: 0; }
 .mcopy::after { content: ""; position: absolute; inset: -14px; }
 .fq + .mcopy { margin-left: 20px; }
 .fcard .fq { z-index: 1; }   /* rows sit ~24px apart, so areas meet across rows too: there the "?" wins (the copy is on top of nothing it shares) */
-.mcopy:is(:hover, :focus-visible) { color: var(--c1); }
+.mcopy:is(:hover, :focus-visible) { color: var(--action); }
 .mcopy.done { color: var(--correct); }
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 @media (hover: hover) and (pointer: fine) {   /* a formula card's copy shows only near its math (Tony, Oct 29): invisible at rest but still in the row (no shift) and still focusable; the row's hover or focus brings it back. Touch has no hover, so it stays visible there */
@@ -1190,7 +1194,7 @@ html.bar-off.dock-bottom .qnav, html.bar-off.dock-bottom .qlist {
 }
 .btn-tgl:hover { background: var(--sheet); }
 .btn-tgl .ico { position: relative; color: var(--muted); transition: color .33s ease, transform .33s ease; }
-.btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--c1); }
+.btn-tgl[data-pane="problem"] .t-doc, .btn-tgl[data-pane="scratch"] .t-pen { color: var(--action); }
 .btn-tgl[data-pane="scratch"]::before { transform: translateX(36px); }   /* one icon (24px) + the gap */
 
 html.swap { overflow: hidden; overscroll-behavior: none; }
@@ -1267,7 +1271,7 @@ html.kbup:not(.mt) #mtMode, html.kbup:not(.mt) #mtExp, html.kbup #swap { display
 .xb-field .mt-exp { right: calc(12px + var(--btn) + var(--xb-sb, 0px)); }
 .xb-field:has(#copy[hidden]) .mt-exp { right: calc(6px + var(--xb-sb, 0px)); }
 .xb-field .mt-exp .ico { width: var(--ico); height: var(--ico); }
-.mt-mode[data-pane="problem"] .t-doc, .mt-mode[data-pane="scratch"] .t-pen { color: var(--c1); }
+.mt-mode[data-pane="problem"] .t-doc, .mt-mode[data-pane="scratch"] .t-pen { color: var(--action); }
 .sash { display: none; }
 .pstrip { display: none; }
 
