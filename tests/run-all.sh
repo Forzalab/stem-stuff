@@ -96,6 +96,7 @@ weight() {
     desk-layout) echo 236 ;; desk-layout@1) echo 70 ;; desk-layout@2) echo 72 ;; desk-layout@3) echo 94 ;;   # W129 desktop column + pixel-diff gate, own server; whole = local run, parts = local estimates
     units) echo 12 ;;   # W132 answer units: value green + unit in ink, copy = value only, 3 screens, own server (estimate until CI timing)
     twist) echo 22 ;;   # W133 Twist chip + one-time toast + popover, 3 screens + blocked storage, own server; local run ~20 s (estimate until CI timing)
+    layers) echo 2 ;;   # W157 local run: layers.test.mjs ~0.1 s + layers.pw.mjs ~1.6 s (rounded up)
     shotqa) echo 30 ;;   # W340 §0 the shot gate: 5 vet cards + every stepper step at 1440x900 + 390x844, own server, local run ~28 s (estimate until CI timing)
     *) echo 5 ;;
   esac
