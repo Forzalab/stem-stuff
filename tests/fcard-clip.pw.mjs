@@ -104,6 +104,49 @@ for (const [label, type] of [["chromium", pw.chromium], ["firefox", pw.firefox],
   }
   await b.close();
 }
+
+/* todo 115 step 5 (Tony, Oct 29): on a hover + fine-pointer device the formula copy is invisible at rest (opacity 0, still in the row: no shift, still focusable), shown
+   while the pointer is over its row or focus is in it, with no fade under reduced motion; on touch it is always visible. Chromium. */
+{
+  const b = await pw.chromium.launch({ args: ["--no-sandbox"] });
+  const open = async (opts, motion) => {
+    const ctx = await b.newContext({ serviceWorkers: "block", reducedMotion: motion, ...opts });
+    await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); localStorage.setItem("stem-voice", "off"); } catch { /* */ } });
+    await ctx.route(/youtube|ytimg|googlevideo/, r => r.abort());
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/#BANK_FCC`);
+    await page.waitForFunction(() => !document.getElementById("splash") && !!(window.stemBank && window.stemBank.code) && /^#CALC1_/.test(location.hash), null, { timeout: 15000 });
+    await go(page, "CALC1_FC1");
+    return [ctx, page];
+  };
+  const st = page => page.$eval("#fcard li.f .mcopy", e => { const r = e.getBoundingClientRect(); return { o: +getComputedStyle(e).opacity, t: getComputedStyle(e).transitionDuration, x: r.x, y: r.y, w: r.width }; });
+  await step("desktop (hover + fine pointer): the formula copy is hidden at rest, in place, and shows on row hover and on keyboard focus; no fade under reduced motion", async () => {
+    let [ctx, page] = await open({ viewport: { width: 1440, height: 900 } }, "no-preference");
+    assert.ok(await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine)").matches), "headless desktop should be hover + fine");
+    const rest = await st(page); assert.equal(rest.o, 0, "copy visible at rest");
+    assert.ok(rest.w > 0, "copy must keep its box (no layout shift)");
+    await page.locator("#fcard li.f .fm").first().hover();
+    await page.waitForTimeout(400); const hov = await st(page); assert.equal(hov.o, 1, "copy not shown on row hover");
+    assert.deepEqual([hov.x, hov.y], [rest.x, rest.y], "the copy moved");
+    if (SHOTS) await page.locator("#fcard").screenshot({ path: join(SHOTS, "copy-hover-1440.png") });
+    await page.mouse.move(5, 5); await page.waitForTimeout(400); assert.equal((await st(page)).o, 0, "copy stays after the pointer leaves");
+    if (SHOTS) await page.locator("#fcard").screenshot({ path: join(SHOTS, "copy-rest-1440.png") });
+    await page.keyboard.press("Tab"); for (let i = 0; i < 30 && !(await page.evaluate(() => document.activeElement?.classList.contains("mcopy"))); i++) await page.keyboard.press("Tab");
+    assert.ok(await page.evaluate(() => document.activeElement?.classList.contains("mcopy")), "the copy is not focusable by keyboard");
+    await page.waitForTimeout(400); assert.equal((await st(page)).o, 1, "copy hidden under keyboard focus");
+    await ctx.close();
+    [ctx, page] = await open({ viewport: { width: 1440, height: 900 } }, "reduce");
+    assert.equal((await st(page)).t.split(",")[0], "0s", "the copy fades under reduced motion");
+    await ctx.close();
+  });
+  await step("touch (no hover): the formula copy is visible at rest", async () => {
+    const [ctx, page] = await open({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, "no-preference");
+    assert.equal(await page.evaluate(() => matchMedia("(hover: hover)").matches), false);
+    assert.equal((await st(page)).o, 1, "copy hidden on touch");
+    await ctx.close();
+  });
+  await b.close();
+}
 srv.kill();
 console.log(failures ? `${failures} FAIL` : "fcard-clip: all ok");
 process.exit(failures ? 1 : 0);

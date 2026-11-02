@@ -793,6 +793,11 @@ html.side #work > .orig { margin: 0; }
 .mcopy:is(:hover, :focus-visible) { color: var(--c1); }
 .mcopy.done { color: var(--correct); }
 .mcopy:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+@media (hover: hover) and (pointer: fine) {   /* a formula card's copy shows only near its math (Tony, Oct 29): invisible at rest but still in the row (no shift) and still focusable; the row's hover or focus brings it back. Touch has no hover, so it stays visible there */
+  .fcard li.f .mcopy { opacity: 0; transition: opacity .15s; }
+  .fcard li.f:is(:hover, :focus-within) .mcopy, .fcard li.f .mcopy.done { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .fcard li.f .mcopy { transition: none; } }
 /* the revealed answer's line sits in the preview's one-line room (overflow: hidden, W91); the copy's 44px tap area would be clipped to it, so the room shows
    its overflow while it holds the answer at full size (a scaled answer keeps the clip). The question is closed then: the box above is disabled */
 .preview:has(.ansl .mcopy):not(:has(> .pvi[style*="scale"])) { overflow: visible; }
