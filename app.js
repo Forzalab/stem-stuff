@@ -1285,7 +1285,7 @@ function xCluck(msg) {                                                     // Cl
   wish = newWish();
   Object.assign(wish, { text: msg, done: true, started: true, failed: 0, shown: msg.length, pos: msg.length, skip: true, at: 1, key: "expr|" + S.code, expr: true });
   wishPaint();
-  clOpen("explain", "#wish .wchip", true);
+  clOpen("explain", ":is(#wish, .rbox) .wchip", true);
   if (wish.open) wishDraw();
 }
 async function xDiag(r, text, i) {                                         // a wrong working: underline + Cluck; L3 when L1 named no family
@@ -1681,8 +1681,25 @@ function cueNext() {
   if (h0 && Math.abs(box.offsetHeight - h0) > 0.5) nx.style.top = h0 / 2 + "px";
   const g = box.closest(".choices.inline");                                     // pills: Next must fit its pill, else the rows stack
   if (g && (g.scrollWidth > g.clientWidth + 0.5 || [...g.querySelectorAll(".opt")].some(o => o.scrollWidth > o.clientWidth + 0.5))) g.classList.remove("inline");
+  rboxSync();
   if (!painting) nx.focus({ preventScroll: true });
   if ($("#padFab") && !$("#padFab").hidden) requestAnimationFrame(() => fabPlace({ avoid: true }));      // Open notes steps off Next (A1: it sat on the 4th multi box)
+}
+/* 114b (Tony Oct 28/30): the reveal row is ONE box. A closed single-field question's field becomes .rbox: the state label ("Correct!" / "Not quite"),
+   the revealed answer line, then the input, Ask Cluck (the duck chip, adopted from #wish) and Next, in that row order. No box inside the box. Idempotent */
+function rboxSync() {
+  const ff = document.querySelector("#q .ff.cue:not(.mparts .ff)");
+  if (!ff || !S || !S.finished) return;
+  const ok = ff.classList.contains("ok");
+  ff.classList.add("rbox");
+  let lab = ff.querySelector(":scope > .rlabel");
+  if (!lab) { lab = document.createElement("p"); lab.className = "rlabel"; ff.prepend(lab); }
+  lab.classList.toggle("no", !ok);
+  lab.innerHTML = `${icon(ok ? "i-ok" : "i-x")}<span>${ok ? "Correct!" : "Not quite"}</span>`;
+  const al = document.querySelector("#q .preview .ansl");
+  if (al && !ok) lab.after(al);
+  const wb = document.querySelector("#wish .wbar");
+  if (wb) { ff.querySelectorAll(":scope > .wbar").forEach(x => x.remove()); wb.hidden = wishEl().hidden; ff.insertBefore(wb, ff.querySelector(".nx")); }
 }
 /* keys (Tony, Oct 21 locks): Enter = Check (a picked choice, a typed box) and the chat send, and NEVER Next, even though Next keeps focus
    after Check and even under the level-up overlay. A held Space that sent Check never presses Next either (only its repeats drop). */
@@ -1791,6 +1808,7 @@ function feedback(r, typed) {
   const again = $("#retry");
   if (again) again.addEventListener("click", () => { fb.innerHTML = ""; layoutFreeze(); (S.prob.type === "mc" ? submitMC : S.prob.type === "proof" ? submitProof : submitFF)(); });
   const rev = reveal(r);
+  rboxSync();
   say((verdictWords(r) + " " + rev + " " + fb.textContent + " " + (inRow ? chk.querySelector(".cluck").textContent : "")).replace(/\s+/g, " ").trim());
   layoutFreeze();
   if (r.verdict === "wrong") wishOnWrong();
@@ -1860,7 +1878,7 @@ function wishOnWrong() {
   const w = wish;
   /* a wrong answer never opens Cluck by itself (B7 ii, Tony Oct 18): the duck's sunrise comes (peek.js) and a tap on it opens him.
      Desktop with the sheet already open (the free steps): it turns to Cluck's text, as before */
-  const auto = () => { if (sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", "#wish .wchip", true); };
+  const auto = () => { if (sideMQ.matches && cl && cl.open && !w.open) clOpen("explain", ":is(#wish, .rbox) .wchip", true); };
   if (wishFromCache(w)) { wishPaint(); auto(); return; }                   // a reply we already have: no call
   if (!shouldPrefetch(w.code)) w.started = false;                         // no prefetch: the "Explain my mistake" chip asks (no auto call)
   wishPaint();
@@ -2154,7 +2172,7 @@ function wishPaint() {
     const ok = cueRight(), nod = w.nod && !w.nodded, q = FXL().nod;         // the nod plays once, after Next has landed: fx.js queues it after the
     if (nod) w.nodded = true;                                               // answer step (one blink); no FX queue = app.css g-nod's own delay
     el.innerHTML = `<div class="wbar"><button type="button" class="wchip cue-chip${ok ? " cue-ok" : ""}" aria-expanded="${w.open}" aria-controls="cluck"><img class="dk${nod && !q ? " g-nod" : ""}" src="rewards/icons/duck-${ok ? "calm-nod" : "out-shrug"}-128.webp" width="${ok ? 45 : 57}" height="48" alt=""><span>${ok ? "See Cluck's steps" : "Ask Cluck"}</span></button></div>`;
-    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $("#wish .cue-chip .dk") : null); }
+    if (nod && q) { const mine = S; q(() => S === mine && wish === w ? $(":is(#wish, .rbox) .cue-chip .dk") : null); }
   } else if (w.started && !w.failed) {                                     // Q3 = C (Tony, Oct 13): Cluck's steps inline in the hint card, faded after ~3 lines, the CTA under the fade
     const host = $("#fb > .cluck > div");                                   // no hint card here (a hint in the Check row): the peek is its own card in #wish
     el.innerHTML = host ? "" : `<div class="cluck">${icon("i-duck")}<div></div></div>`;
@@ -2173,10 +2191,11 @@ function wishPaint() {
     w.tapped = true;                                                       // the ad wiggle stops for good on this question
     if (!w.started && wishFromCache(w)) { /* the reply is in this browser: finished, no call; the sheet draws it */ }
     else if (!w.started || w.failed) wishRetry(w);
-    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", "#wish .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
+    else if (btn.matches(".cue-ok") && w.key && w.key !== ckKey(w.code, S.tries.at(-1))) { clOpen("explain", ":is(#wish, .rbox) .wchip"); clCompare(w); return; }   // right after a miss: the text explains the miss
     else if (w.open) { clClose(); return; }
-    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : "#wish .wchip");
+    clOpen("explain", btn.matches(".cl-cta") ? ".cl-peek .cl-cta" : ":is(#wish, .rbox) .wchip");
   });
+  rboxSync();
   clBackSync();                                                            // one Cluck CTA at a time (E, Tony Oct 21): "okay, but how?" up = no "Show him" row
   layoutFreeze();
   window.stemBrainrot?.sync();                                             // the corner steps off the chip / text
@@ -2373,7 +2392,7 @@ function hkShow(b, roll) {
   t.textContent = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l;
   if (roll) { t.classList.remove("roll"); void t.offsetWidth; t.classList.add("roll"); }   // the line slides up into place (app.css hk-roll)
 }
-function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
+function ctaUp() { return [...document.querySelectorAll(".cl-peek .cl-cta, #wish .cue-ok, .rbox .cue-ok")].some(c => c.getClientRects().length > 0); }   // "okay, but how?" or "See Cluck's steps" on screen (Tony Oct 21: hide "Show him" beside either; a tap on either brings the column back)
 function clBackSync() {
   const show = clGone && sideMQ.matches && !!S && !ctaUp();             // E (Tony, Oct 21): only one Cluck CTA on screen; "okay, but how?" wins
   let b = $("#clBack");
@@ -2411,7 +2430,7 @@ window.stemIdleTap = () => {
   }
   const said = !!wish && wish.started && !wish.failed;
   if (said || origEl) { clOpen(said ? "explain" : "steps", null); return; }
-  const b = [...document.querySelectorAll("#wish .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
+  const b = [...document.querySelectorAll(":is(#wish, .rbox) .wchip, .cl-peek .cl-cta, #origHd")].find(x => x.getClientRects().length);
   if (b) { b.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" }); b.focus({ preventScroll: true }); }
 };
 /* K1 (Tony, Oct 13): on a phone the sheet docks under the question's first two lines. The page goes to its top (nothing sticky
@@ -3470,7 +3489,7 @@ function fabPlace({ avoid } = {}) {
   fab.style.transform = "";
   const r = fab.getBoundingClientRect();
   /* step off answer controls under it (up first, then down), a few tries at most */
-  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .cl-cta")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
+  const ctl = [...document.querySelectorAll("#q .opt, #q .ff, #q .send, #mcGo, #q .nx, #wish:not([hidden]) .wchip, .rbox .wchip, .cl-cta")].map(e => e.getBoundingClientRect()).filter(q => q.width && q.right > r.left && q.left < r.right);
   /* the question text (the body above the choices): stepping up never takes the button above its bottom edge (it climbed over every choice onto the text) */
   const textBottom = document.querySelector("#blocks")?.getBoundingClientRect().bottom ?? 0;
   for (let n = 0; avoid && n < 6; n++) {

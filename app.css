@@ -1493,3 +1493,27 @@ html.ck-room body { padding-bottom: var(--ck-room, 0px); }   /* peek.js room(): 
 html.coding.dock-bottom:not(.start) body { background: var(--paper); }
 html.coding.dock-bottom:not(.start) :is(#main, #padFab, #padPeek, #swap, #toast, #qnav, #qlist, #qlDim, .rw-hud) { visibility: hidden; }
 html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dvh); }   /* the freed room is the list's: no 22rem cap */
+
+/* ---------- 114b (todo 114; Tony Oct 28 "a major box for answer and ask cluck", Oct 29 "ask cluck ... left of the next button", vet Oct 30: no nested box, "Correct!") ----------
+   app.js rboxSync(): the closed single-field question's field is the one box. Row 1: the state label (+ the revealed answer when out); row 2: the (closed) input,
+   Ask Cluck, Next. Ask Cluck is a control, not a box: no rim of its own inside the box on a wide screen. Phone: Ask Cluck takes its own row directly above Next */
+.ff.rbox { height: auto; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s3); }
+.ff.rbox > :is(.rlabel, .ansl) { flex: 1 1 100%; margin: 0; display: flex; align-items: center; gap: var(--s2); }
+.ff.rbox > .rlabel { font-size: var(--t-md); font-weight: var(--w-em); color: var(--correct); }
+.ff.rbox > .rlabel.no { color: var(--wrong); }
+.ff.rbox > .rlabel .ico { flex: none; width: 1.25rem; height: 1.25rem; }
+.ff.rbox .vk { display: none; }
+.ff.rbox > input { flex: 1 1 6rem; order: 0; padding-left: 0; }
+.ff.rbox > .wbar { order: 1; flex: 0 1 auto; margin-left: auto; }
+.ff.rbox > .nx { order: 2; position: relative; right: auto; top: auto; }
+.ff.rbox .cue-chip { background: transparent; border-color: transparent; padding-right: var(--s3); }
+.ff.rbox .cue-chip:hover { background: var(--raised); }
+.ff.rbox.cue:not(.ok) { border-color: var(--wrong-rim); border-style: dashed; }
+@media (max-width: 600px) {
+  .ff.rbox > .wbar { flex: 1 1 100%; margin-left: 0; }
+  .ff.rbox > .wbar .cue-chip { width: 100%; justify-content: flex-start; }
+  .ff.rbox > .nx { margin-left: auto; }
+  .ff.rbox > input { flex: 1 1 100%; }
+}
+#q:has(.ff.rbox) .preview { display: none; }
+#wish.cue:empty { display: none; }
