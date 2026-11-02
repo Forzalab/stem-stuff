@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const src = readFileSync(new URL("./run-all.sh", import.meta.url), "utf8");
@@ -62,7 +63,16 @@ test("SIGTERM to run-all.sh leaves no serve.py behind (main server + the spec's 
   const kids = pid => { try { return execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" }).split("\n").filter(Boolean).map(Number); } catch { return []; } };
   const tree = pid => kids(pid).flatMap(k => [k, ...tree(k)]);
   const servers = pid => tree(pid).filter(p => { try { return readFileSync(`/proc/${p}/cmdline`, "utf8").includes("serve.py"); } catch { return false; } });
-  const ra = spawn("bash", ["tests/run-all.sh"], { cwd: root, env: { ...process.env, SPECS: "mock" }, stdio: "ignore" });
+  // a sandbox repo root, so the test needs no browser, playwright or real spec (the CI unit job has none): run-all.sh's copy, an empty
+  // stub for every real spec name (its schedule check wants them), a serve.py that only listens, and a "mock" spec that spawns one and sleeps
+  const { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, readdirSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const sb = mkdtempSync(join(tmpdir(), "runall-orphan-")); mkdirSync(join(sb, "tests"));
+  copyFileSync(join(root, "tests/run-all.sh"), join(sb, "tests/run-all.sh"));
+  for (const f of readdirSync(join(root, "tests")).filter(f => f.endsWith(".pw.mjs"))) writeFileSync(join(sb, "tests", f), "");
+  writeFileSync(join(sb, "serve.py"), "import socket, sys, time\ns = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('127.0.0.1', int(sys.argv[1]))); s.listen(); time.sleep(600)\n");
+  writeFileSync(join(sb, "tests/mock.pw.mjs"), 'import { spawn } from "node:child_process"; spawn("python3", ["serve.py", process.argv[2]], { stdio: "ignore" }); await new Promise(() => {});\n');
+  const ra = spawn("bash", ["tests/run-all.sh"], { cwd: sb, env: { ...process.env, SPECS: "mock" }, stdio: "ignore" });
   const seen = new Set();
   try {
     for (let i = 0; i < 150 && seen.size < 2; i++) { servers(ra.pid).forEach(p => seen.add(p)); await new Promise(r => setTimeout(r, 100)); }
