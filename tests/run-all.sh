@@ -210,7 +210,12 @@ fi
 # pre-sunset day for everything this script starts (unittest, npm, the servers the .pw specs spawn, and so CI, which calls this script).
 export STEM_TODAY=2026-10-23
 TMP="$(mktemp -d)"; export STEM_TRIES="$TMP/tries.json"      # never the real tries.json
-SRV=""; trap '[ -n "$SRV" ] && kill "$SRV" 2>/dev/null' EXIT
+# W126: a killed run left serve.py behind: the trap killed only $SRV, and the node spec running (it spawns its own serve.py) was orphaned.
+# On EXIT/TERM/INT/HUP, kill everything below this script, deepest first (so no parent is gone before its child is found).
+SRV=""
+killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; [ "$1" = "$$" ] || kill "$1" 2>/dev/null; return 0; }
+trap 'trap - EXIT; killtree $$' EXIT
+trap 'exit 143' TERM; trap 'exit 130' INT; trap 'exit 129' HUP
 fails=0
 free_port() { python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 
@@ -233,7 +238,8 @@ unit_fails() {
 }
 run() {   # run <name> <cmd...>: green = exit 0 AND no "FAIL" line (older scripts print FAIL and still exit 0). The result line ends with the spec's seconds (CI bench: bench job reads them)
   local name="$1" t0="$EPOCHREALTIME" s; shift
-  if "$@" >"$TMP/$name.log" 2>&1 && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
+  "$@" >"$TMP/$name.log" 2>&1 & wait $!   # background + wait: bash runs a TERM/INT trap at once during wait, not after a foreground child
+  if [ $? -eq 0 ] && ! grep -qE "$FAIL_RE" "$TMP/$name.log"; then
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "ok   $name $s s"
   else
     s="$(awk -v a="$t0" -v b="$EPOCHREALTIME" 'BEGIN { printf "%.1f", b - a }')"; echo "FAIL $name $s s"

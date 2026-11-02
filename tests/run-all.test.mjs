@@ -2,6 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const src = readFileSync(new URL("./run-all.sh", import.meta.url), "utf8");
@@ -50,4 +51,38 @@ test("a failed unittest row names the failing test and its assertion", async () 
   assert.match(out, /AssertionError: 'w138-left' != 'w138-right'/, out);
   assert.match(out, /ERROR: test_zz_boom \(test_fake_w138\.Fake\.test_zz_boom\)/, out);
   assert.match(out, /KeyError: 'w138-boom'/, out);
+});
+
+// W126: killing run-all.sh left serve.py servers behind holding ports: its trap killed only the main server, and the node spec it was
+// running (which spawns its own serve.py) was orphaned. Start one spec, SIGTERM run-all mid-run, and no serve.py of that run may survive.
+test("SIGTERM to run-all.sh leaves no serve.py behind (main server + the spec's own)", async () => {
+  const { spawn, execFileSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  const alive = pid => { try { process.kill(pid, 0); return !readFileSync(`/proc/${pid}/stat`, "utf8").includes(") Z "); } catch { return false; } };
+  const kids = pid => { try { return execFileSync("pgrep", ["-P", String(pid)], { encoding: "utf8" }).split("\n").filter(Boolean).map(Number); } catch { return []; } };
+  const tree = pid => kids(pid).flatMap(k => [k, ...tree(k)]);
+  const servers = pid => tree(pid).filter(p => { try { return readFileSync(`/proc/${p}/cmdline`, "utf8").includes("serve.py"); } catch { return false; } });
+  // a sandbox repo root, so the test needs no browser, playwright or real spec (the CI unit job has none): run-all.sh's copy, an empty
+  // stub for every real spec name (its schedule check wants them), a serve.py that only listens, and a "mock" spec that spawns one and sleeps
+  const { mkdtempSync, mkdirSync, writeFileSync, copyFileSync, readdirSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const sb = mkdtempSync(join(tmpdir(), "runall-orphan-")); mkdirSync(join(sb, "tests"));
+  copyFileSync(join(root, "tests/run-all.sh"), join(sb, "tests/run-all.sh"));
+  for (const f of readdirSync(join(root, "tests")).filter(f => f.endsWith(".pw.mjs"))) writeFileSync(join(sb, "tests", f), "");
+  writeFileSync(join(sb, "serve.py"), "import socket, sys, time\ns = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\ns.bind(('127.0.0.1', int(sys.argv[1]))); s.listen(); time.sleep(600)\n");
+  writeFileSync(join(sb, "tests/mock.pw.mjs"), 'import { spawn } from "node:child_process"; spawn("python3", ["serve.py", process.argv[2]], { stdio: "ignore" }); await new Promise(() => {});\n');
+  const ra = spawn("bash", ["tests/run-all.sh"], { cwd: sb, env: { ...process.env, SPECS: "mock" }, stdio: "ignore" });
+  const seen = new Set();
+  try {
+    for (let i = 0; i < 150 && seen.size < 2; i++) { servers(ra.pid).forEach(p => seen.add(p)); await new Promise(r => setTimeout(r, 100)); }
+    assert.ok(seen.size >= 2, `want the main server + the spec's own serve.py, saw ${seen.size}`);
+    process.kill(ra.pid, "SIGTERM");
+    await new Promise(r => setTimeout(r, 2000));
+    const left = [...seen].filter(alive);
+    assert.deepEqual(left, [], `serve.py left running after SIGTERM: ${left}`);
+  } finally {
+    for (const p of [...seen, ...tree(ra.pid)]) try { process.kill(p, "SIGKILL"); } catch { /* gone */ }
+    try { process.kill(ra.pid, "SIGKILL"); } catch { /* gone */ }
+  }
 });
