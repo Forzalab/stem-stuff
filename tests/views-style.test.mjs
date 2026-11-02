@@ -68,9 +68,10 @@ test("views.css: scoped to views (every selector names a .vw node), the .ai-box 
   assert.deepEqual(sels.flatMap(s => s.split(/,(?![^(]*\))/).map(x => x.trim())).filter(x => !/\.vw\b|\.vw-/.test(x)), []);
 });
 
+// W157 (Tony's figure amendment): `tone` (a palette hue NAME, validated) is a semantic figure prop on Graph / Geometry only, marked x-semantic "figure" in the registry
 const LOOK = /^(colou?r|bg|background|fill|stroke|size|width|height|icon|style|class|variant|theme|tone|look|font|weight|emphasis|accent|shadow|border|radius|align)$/i;
 test("views-lib.js: no look props on any component (F3: look is CSS by cascade, never model-decided)", () => {
-  const bad = Object.entries(LIB.components).flatMap(([n, c]) => Object.keys(c.props).filter(k => LOOK.test(k)).map(k => `${n}.${k}`));
+  const bad = Object.entries(LIB.components).flatMap(([n, c]) => Object.keys(c.props).filter(k => LOOK.test(k) && !(c.props[k]["x-semantic"] === "figure" && ["Graph", "Geometry"].includes(n))).map(k => `${n}.${k}`));
   assert.deepEqual(bad, []);
 });
 

@@ -110,7 +110,7 @@ weight() {
 tags() {
   case "$1" in
     blur|fab|flow|font|katex-wrap|measure-slots|overscroll|polish|reload|swap) echo "@engine @real-time" ;;
-    axis-cross|bar|blink-fx|cluck-more|codeblock|disabled|dismiss|geomarks|livefig|popover|privacy-reach|render|views|views-oui|views-static) echo "@layout @real-time" ;;
+    axis-cross|bar|blink-fx|cluck-more|codeblock|disabled|dismiss|geomarks|layers|livefig|popover|privacy-reach|render|views|views-oui|views-static) echo "@layout @real-time" ;;
     ux-flows@phone|ux-flows@desk|next-cue@1|next-cue@2) echo "@layout @real-time" ;;
     autosave|bank|blind|choose-all|choose-all-spam|done|easy|flight|incident|mcclick|mode-reset|nav-stable|next-dead|prefix) echo "@logic @real-time" ;;
     part-feedback|reveal|rewards|splash|telemetry|update|upload-replace@1|upload-replace@2) echo "@logic @real-time" ;;

@@ -22,6 +22,8 @@ GEO_MARKS = {"seg": 2, "circle": 2, "right": 3, "dim": 2, "angle": 3, "arrow": 2
 GEO_TEXT = {"dim", "angle", "arrow", "label"}
 PT_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9']{0,3})\s+(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$")
 MARK_RE = re.compile(r"^\s*([a-z]+)\s*\((.*)\)\s*$")
+TONES = {"ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark"}     # the figure palette (app.css --fig-<hue>-1..3); views.js TONES
+EMPH_RE = re.compile(r"^(layer|tone)\s*=\s*(\w+)$", re.I)
 _c = {}
 
 
@@ -74,6 +76,15 @@ def _caps(v, s, path):
     return None
 
 
+def graph_emph(props):
+    """None when a Graph's layer ("A:2 B-C:3") and tone ("A:c2 B-C:bad") props hold only 1|2|3 / palette hues, else the reason (W157)"""
+    for key, ok in (("layer", lambda v: v in ("1", "2", "3")), ("tone", lambda v: v.lower() in TONES)):
+        for tok in re.split(r"[\s,]+", str(props.get(key) or "").strip()):
+            if tok and (":" not in tok or not ok(tok.rsplit(":", 1)[1])):
+                return f"graph-{key}"
+    return None
+
+
 def geometry(props):
     """(None, label texts) when a Geometry's pts / marks parse within the caps, else (reason, [])"""
     pts = {}
@@ -99,6 +110,10 @@ def geometry(props):
         if not m or m.group(1) not in GEO_MARKS:
             return "geo-mark", []
         k, args = m.group(1), [a.strip() for a in m.group(2).split(",")]
+        while len(args) > 1 and (t := EMPH_RE.match(args[-1])):      # trailing layer=N / tone=hue (W157): figure emphasis, either order
+            if (t.group(1).lower() == "layer" and t.group(2) not in ("1", "2", "3")) or (t.group(1).lower() == "tone" and t.group(2).lower() not in TONES):
+                return "geo-emph", []
+            args.pop()
         n = GEO_MARKS[k]
         if len(args) < n:
             return "geo-mark", []
@@ -174,6 +189,10 @@ def check_element(el, ctx):
             return why
     key_ref = re.compile(reg["key_ref"])
     texts = _words(el, reg)
+    if name == "Graph":
+        why = graph_emph(el["props"])
+        if why:
+            return why
     if name == "Geometry":
         why, labels = geometry(el["props"])
         if why:

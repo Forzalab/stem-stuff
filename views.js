@@ -281,8 +281,15 @@ function graphModel(p) {
   }
   for (const t of String(p.cols || "").split(",")) { const m = /^\s*(-?[\d.]+)\s+(.+?)\s*$/.exec(t); if (m) cols.push([+m[1], m[2]]); }
   if (!Object.keys(pos).length) throw new Error("graph has no nodes");
-  return { pos, edges, cols, marks: Object.fromEntries(pairs(p.marks)) };
+  return { pos, edges, cols, marks: Object.fromEntries(pairs(p.marks)), layer: Object.fromEntries(pairs(p.layer).map(([k, v]) => [k, layerNo(v)])),
+    tone: Object.fromEntries(pairs(p.tone).map(([k, v]) => [k, toneOf(v)])) };
 }
+/** Emphasis layer (W157, semantic): 1 main (default), 2 given, 3 context. Anything else is layer 1. views.css / app.css .ly2 .ly3 re-point the ink tokens. */
+const layerNo = v => (+v === 2 || +v === 3 ? +v : 1);
+/** tone = a figure palette hue name (the app.css --fig-<hue>-1..3 scales); anything else is rejected (bad-value), never a free colour. */
+export const TONES = ["ink", "muted", "c1", "c2", "c3", "ok", "bad", "mark"];
+const toneOf = v => { if (!TONES.includes(v)) throw Object.assign(new Error(`tone "${String(v).slice(0, 12)}"`), { code: "bad-value" }); return v; };
+const lyc = (n, tone) => (tone ? ` tn-${tone}` : "") + (n > 1 ? ` ly${n}` : "");
 function drawGraph(doc, g, st = {}) {
   const nodes = { ...g.marks, ...(st.nodes || {}) }, emarks = st.edges || {}, tags = st.tags || {}, elab = st.labels || {};
   const colour = Object.values(nodes).some(m => /^k\d$/.test(m));
@@ -291,7 +298,7 @@ function drawGraph(doc, g, st = {}) {
   const W = Math.max(...xs) + Math.min(...xs), Hh = g.cols.length ? Math.max(...ys) + 70 : Math.max(...ys) + Math.min(...ys) + (Object.keys(tags).length ? 14 : 0);
   const kids = [];
   for (const e of g.edges) {
-    const m = emarks[e.key] || "idle", [x1, y1] = g.pos[e.a], [x2, y2] = g.pos[e.b];
+    const m = (emarks[e.key] || "idle") + lyc(g.layer[e.key], g.tone[e.key]), [x1, y1] = g.pos[e.a], [x2, y2] = g.pos[e.b];
     const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
     const sx = x1 + ux * R, sy = y1 + uy * R, tx = x2 - ux * (R + 2), ty = y2 - uy * (R + 2), bx = tx - ux * 10, by = ty - uy * 10;
     kids.push(h(doc, "line", { class: `ed ${m}`, x1: sx, y1: sy, x2: e.dir ? bx : tx, y2: e.dir ? by : ty }));
@@ -303,7 +310,7 @@ function drawGraph(doc, g, st = {}) {
   }
   for (const [id, [x, y]] of Object.entries(g.pos)) {
     const m = nodes[id] || "idle", k = /^k(\d)$/.exec(m);
-    kids.push(h(doc, "g", { class: `${k ? "cm" : "nd"} ${m}` }, h(doc, "circle", { cx: x, cy: y, r: R }),
+    kids.push(h(doc, "g", { class: `${k ? "cm" : "nd"} ${m}${lyc(g.layer[id], g.tone[id])}` }, h(doc, "circle", { cx: x, cy: y, r: R }),
       h(doc, "text", { x, y }, k ? k[1] : id), tags[id] != null && h(doc, "text", { class: "tg", x, y: y + R + 14 }, tags[id])));
   }
   for (const [x, t] of g.cols) kids.push(h(doc, "text", { class: "col", x, y: Hh - 8 }, t));
@@ -334,6 +341,10 @@ export function geoModel(p) {
     const m = /^\s*(seg|circle|right|dim|angle|arrow|label)\s*\((.*)\)\s*$/.exec(s);
     if (!m) throw badGeo(`mark "${s.slice(0, 20)}"`);
     const a = m[2].split(",").map(x => x.trim()), k = m[1], rest = i => a.slice(i).join(", ").trim();
+    let layer = 1, tone = null;                    // trailing `layer=2` / `tone=c2`, either order (W157): emphasis and palette hue, not geometry
+    for (let t; a.length > 1 && (t = /^(layer|tone)\s*=\s*(\w+)$/i.exec(a[a.length - 1])); a.pop()) {
+      if (t[1].toLowerCase() === "layer") layer = layerNo(t[2]); else tone = toneOf(t[2].toLowerCase());
+    }
     let o;
     if (k === "seg") o = { k, a: P(a[0]), b: P(a[1]) };
     else if (k === "circle") { if (!(+a[1] > 0)) throw badGeo("circle radius"); o = { k, c: P(a[0]), r: +a[1] }; }
@@ -346,7 +357,7 @@ export function geoModel(p) {
       o = { k, a: P(a[0]), b: P(a[1]), text: rest(2), side };
     }
     if (o.text) labels++;
-    out.push(o);
+    out.push(layer > 1 || tone ? { ...o, layer, tone } : o);
   }
   if (labels > GEO_CAPS.labels) throw tooLong(`${labels} > ${GEO_CAPS.labels} labels`);
   /* W340 §2 (I-ANG-1b-d, figcheck resolveAngles): each right / angle mark's vertex is checked against the drawing: the first point,
@@ -396,8 +407,11 @@ function drawGeometry(doc, g, t) {
   const cx = all.reduce((s, p) => s + X(p), 0) / all.length, cy = all.reduce((s, p) => s + Y(p), 0) / all.length;
   for (const [id, p] of Object.entries(g.pts)) { const x = X(p), y = Y(p); dots.push({ id: "pt:" + id, box: [x - 2.5, y - 2.5, 5, 5] }); label("pt:" + id, id, [x, y], x - cx, y - cy, "gm-t gm-name"); }
   const kids = [];
+  const lycOf = m => (m ? lyc(m.layer, m.tone) : "");
+  const layerOf = {};                               // mark id -> " tn-<hue> ly<N>" classes, for its strokes, its labels and their leaders
   g.marks.forEach((m, i) => {
-    const id = "m" + i;
+    const id = "m" + i, k0 = kids.length;
+    if (m.layer > 1 || m.tone) layerOf[id] = m;
     if (m.k === "seg") { kids.push(h(doc, "line", { class: "gm gm-seg", x1: X(m.a), y1: Y(m.a), x2: X(m.b), y2: Y(m.b) })); stroke(id, [X(m.a), Y(m.a)], [X(m.b), Y(m.b)]); }
     else if (m.k === "circle") {
       kids.push(h(doc, "circle", { class: "gm gm-circle", cx: X(m.c), cy: Y(m.c), r: m.r * k }));
@@ -452,6 +466,7 @@ function drawGeometry(doc, g, t) {
       const x = X(m.at), y = Y(m.at);
       label(id, m.text, [x, y], x - cx, y - cy);
     }
+    if (layerOf[id]) for (let j = k0; j < kids.length; j++) for (const c of lyc(m.layer, m.tone).trim().split(" ")) kids[j].classList.add(c);
   });
   const placed = place(reqs, segs, dots, { x: -GEO_PAD, y: -GEO_PAD, w: W + 2 * GEO_PAD, h: H + 2 * GEO_PAD }, null, { LH: GEO_LH, GAP: GEO_CLEAR + 3, clear: GEO_CLEAR });
   const vpts = Object.fromEntries(Object.entries(g.pts).map(([n, p]) => [n, [X(p), Y(p)]]));
@@ -460,13 +475,13 @@ function drawGeometry(doc, g, t) {
   for (const q of placed) {
     if (q.lead) {                                   // the leader stops 5 units short of the box: a glyph may stand past its estimated box (firefox θ)
       const [[ax, ay], [bx, by]] = q.lead, L = Math.hypot(bx - ax, by - ay) || 1, cut = Math.min(5, L / 2);
-      kids.push(h(doc, "line", { class: "gm-lead", x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
+      kids.push(h(doc, "line", { class: "gm-lead" + lycOf(layerOf[q.id]), x1: ax, y1: ay, x2: bx - (bx - ax) / L * cut, y2: by - (by - ay) / L * cut }));
     }
   }
   for (const [id, p] of Object.entries(g.pts)) kids.push(h(doc, "g", { class: "gm-pt", "data-pt": id }, h(doc, "circle", { cx: X(p), cy: Y(p), r: 2.5 })));
   for (const q of placed) {
     const x = +(q.box[0] + q.box[2] / 2).toFixed(2), y = +(q.box[1] + (q.box[3] - GEO_LH) / 2 + GEO_ASC).toFixed(2);
-    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : ""), x, y, "data-slot": q.slot, "data-at": q.vertex }, q.text));   // data-at: an angle label's vertex
+    kids.push(h(doc, "text", { class: q.cls + (q.knock ? " knock" : "") + lycOf(layerOf[q.id]), x, y, "data-slot": q.slot, "data-at": q.vertex }, q.text));   // data-at: an angle label's vertex
   }
   // the viewBox = the drawing + every placed label (+ a margin): a label is placed where it reads best, the frame follows it, centred
   const bx = [...segs.flatMap(s => s.pts), ...dots.flatMap(d => [[d.box[0], d.box[1]], [d.box[0] + d.box[2], d.box[1] + d.box[3]]]),
