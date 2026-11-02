@@ -45,11 +45,11 @@ async function run(w, h) {
   const fresh = async o => (await b.newContext({ viewport: { width: w, height: h }, ...o })).newPage();   // a new browser id = a fresh item (tries live on the server, per id)
   let page = await fresh();
   const shot = async n => { if (SHOTS) { await page.mouse.move(0, 0); await page.waitForTimeout(900); await page.screenshot({ path: `${SHOTS}/${n}-${w}.png` }); } };
-  await step(`${w} locked: guard shows lock + words + napping Cluck, choices take no click`, async () => {
+  await step(`${w} locked: guard shows lock + words (no duck), choices take no click`, async () => {
     await open(page); await pick(page, 1); await pick(page, 1);
     await page.waitForSelector("#q.closed .guard.lock", { timeout: 4000 });
-    const g = await page.$eval("#q .guard", e => ({ txt: e.textContent, lock: !!e.querySelector(".gd-lock svg"), duck: !!e.querySelector(".gd-duck svg"), burst: !!e.querySelector(".burst") }));
-    assert.ok(g.lock && g.duck, "lock icon + Cluck");
+    const g = await page.$eval("#q .guard", e => ({ txt: e.textContent, lock: !!e.querySelector(".gd-lock svg"), duck: !!e.querySelector(".gd-duck, .gd-z, use[href*=duck]"), burst: !!e.querySelector(".burst") }));
+    assert.ok(g.lock, "lock icon"); assert.ok(!g.duck && !/zz/i.test(g.txt), "no duck icon / zzZ in the locked guard (Tony Nov 2)");
     assert.match(g.txt, /guarding/); assert.ok(!g.burst, "no burst when locked");
     const snap = () => page.evaluate(() => JSON.stringify({ t: window.__drill.state.tries.length, c: [...document.querySelectorAll("#q .opt")].map(x => x.getAttribute("aria-checked")) }));
     const s0 = await snap();
@@ -59,10 +59,11 @@ async function run(w, h) {
     assert.ok((await page.$$eval("#q .opt", a => a.map(x => x.disabled && x.getAttribute("aria-disabled") === "true"))).every(Boolean), "every choice disabled");
     await shot("locked");
   });
-  await step(`${w} redeemed live: Cluck wakes, burst plays, word in the site's font`, async () => {
+  await step(`${w} redeemed live: burst plays, word in the site's font`, async () => {
     page = await fresh(); await open(page, true); await pick(page, 0);
     await page.waitForSelector("#q.closed .guard.won", { timeout: 4000 });
     assert.equal(await page.$$eval("#q .guard .burst i", a => a.length), 8, "8 feathers");
+    assert.equal(await page.$$eval("#q .guard .gd-duck, #q .guard use[href*=duck]", a => a.length), 0, "no duck icon on redeem");
     const same = await page.$eval("#q .guard .gd-win", e => getComputedStyle(e).fontFamily === getComputedStyle(document.querySelector("#rtag")).fontFamily);
     assert.ok(same, "site font family");
     await shot("live");
@@ -70,6 +71,7 @@ async function run(w, h) {
   await step(`${w} redeemed revisit: frozen, no burst, uneditable`, async () => {
     await page.reload(); await page.waitForSelector("#q.closed .guard.won", { timeout: 8000 });
     assert.equal(await page.$$eval("#q .guard .burst", a => a.length), 0, "no burst on a revisit");
+    assert.equal(await page.$$eval("#q .guard .gd-duck, #q .guard use[href*=duck]", a => a.length), 0, "no duck icon on a revisit");
     assert.match(await page.$eval("#q .guard", e => e.textContent), /locked in/i);
     const ctl = await page.$$eval("#q .opt", a => a.map(x => x.disabled || x.getAttribute("aria-disabled") === "true"));
     assert.ok(ctl.every(Boolean), "every choice disabled");

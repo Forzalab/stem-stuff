@@ -1638,8 +1638,8 @@ function guard() {
   if (won && !redeem) return;
   const burst = won && !painting && !matchMedia("(prefers-reduced-motion: reduce)").matches ? `<span class="burst" aria-hidden="true">${"<i></i>".repeat(8)}</span>` : "";
   $("#q").insertAdjacentHTML("beforeend", won
-    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-duck" aria-hidden="true">${icon("i-duck")}${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
-    : `<div class="guard lock"><span class="gd-duck" aria-hidden="true">${icon("i-duck")}<span class="gd-z">zzZ</span></span><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
+    ? `<div class="guard won${painting ? "" : " live"}"><span class="gd-burst" aria-hidden="true">${burst}</span><p><b class="gd-win">Avenged!</b> Locked in for good.</p></div>`
+    : `<div class="guard lock"><span class="gd-lock" aria-hidden="true">${icon("i-lock")}</span><p><b>I'm guarding this one.</b> It comes back for a revenge round.</p></div>`);
 }
 function finish() {
   S.finished = true;
