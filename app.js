@@ -2500,11 +2500,13 @@ function clAsk(build) {
      the chat (clSend). Only under a reply that explains the right try (the box text or Compare's), before any follow-up */
   const t = S && S.code === w.code ? S.tries.at(-1) : null, k = t && ckKey(w.code, t);
   const why = ready && t?.v === "correct" && !w.chat.length && (w.key === k || w.cmp?.key === k);
-  let wb = ft.querySelector(".cl-why");
+  let wb = cl.el.querySelector(".cl-why");
   if (why && !wb) {
-    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why"; wb.textContent = WHY_ASK;
+    wb = document.createElement("button"); wb.type = "button"; wb.className = "cl-why";
+    wb.innerHTML = `${icon("i-duck")}<span>${WHY_ASK}</span>${icon("i-right")}`;   // W118c (Tony, Nov 2): the reply's last line is the action, the CTA look under a --help-rule line
     wb.addEventListener("click", () => clSend(WHY_ASK));
-    ft.prepend(wb);
+    const pane = cl.el.querySelector("#clTabEP"), host = [...pane.querySelectorAll(".msg, .cl-cmp")].filter(m => m.offsetParent).at(-1);
+    if (host) host.append(wb); else pane.querySelector(".cl-thread").before(wb);
   } else if (!why && wb) wb.remove();
   ft.querySelector(".left").textContent = `${left} left`;
   ft.querySelector("textarea").disabled = !wishTyped(w);
