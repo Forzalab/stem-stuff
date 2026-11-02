@@ -53,6 +53,7 @@ html { background: #050c16; color: #e8edf5; }   /* --page, --ink */
 <script src="intent.js" defer></script><!-- Jev log + rule counters + nudges, on for all (?jev=0 = off on this device); after telemetry.js: it wraps window.stemT -->
 <script src="toast.js" defer></script><!-- the one toast (design/TOAST.md round 5): the stage lines + the notes (todo 112); before app.js, which shows the notes, and engine.js, which shows the stage lines -->
 <script type="module" src="app.js"></script>
+<script type="module" src="cluck.js"></script><script type="module" src="shell.js"></script><!-- W152: app.js split in 3 (tools/split-app.mjs); module scripts run in this order, so the old top-to-bottom order holds -->
 <script type="module" src="nav.js"></script>
 <!-- offline hook: offline.js (service worker registration, cache) is written separately; do not implement here -->
 <script src="offline.js" defer></script>
