@@ -82,6 +82,8 @@ for (const w of W.filter(w => w >= 720)) {
     const chips = await page.$$eval("#cluck .cl-starters .cl-starter", els => els.filter(e => e.getClientRects().length).map(e => e.textContent));
     assert.deepEqual(chips, ["What is this asking?", "Which formula fits?", "Check my setup"], "the 3 starters");
     assert.match(t, /5 left/, "the budget shows: " + t);
+    const fit = await page.evaluate(() => { const cs = [...document.querySelectorAll("#cluck .cl-starter")].map(e => e.getBoundingClientRect()), ft = document.querySelector("#cluck .cl-ft").getBoundingClientRect(); return { bottom: Math.max(...cs.map(r => r.bottom)), ft: ft.top, rot: document.querySelector("#rot")?.getBoundingClientRect().height }; });
+    assert.ok(fit.bottom <= fit.ft - 12, "all 3 chips sit above the ask field's fade, videos on: " + JSON.stringify(fit));
     await page.screenshot({ path: join(SHOTS, `cv2-idle-${w}.png`) });
     assert.deepEqual(page.errs, [], "no page errors");
     await page.context().close();
@@ -122,6 +124,21 @@ for (const w of W.filter(w => w >= 720)) {
     await page.click(".vdrawer .wchip");
     await page.waitForFunction(() => document.activeElement?.matches?.("#cluck .ask textarea"), null, { timeout: 3000 });
     assert.ok(await page.evaluate(() => window.stemCluckOpen()), "the box is still open");
+    await page.context().close();
+  });
+  await step(`@desk ${w}: after a wrong MC pick the tray covers no remaining answer row, and the next row is clickable with the tray open`, async () => {
+    const page = await open(w);
+    await wrong(page);
+    await page.waitForSelector(".vdrawer:not([hidden]) .wchip", { state: "visible", timeout: 6000 });
+    await page.waitForTimeout(700);                                     // the drawer's slide (380 ms) and the rows' room settle
+    const g = await page.evaluate(() => {
+      const d = document.querySelector(".vdrawer:not([hidden])").getBoundingClientRect();
+      const rows = [...document.querySelectorAll("#q .opt:not([data-id=\"b\"])")].map(o => ({ id: o.dataset.id, r: o.getBoundingClientRect() }));
+      return { d, rows: rows.map(o => [o.id, o.r.top, o.r.bottom]), cls: document.querySelector("#q .ch.strip")?.className, vd: document.documentElement.className, hits: rows.filter(o => o.r.width && o.r.bottom > d.top && o.r.top < d.bottom && o.r.right > d.left && o.r.left < d.right).map(o => o.id) };
+    });
+    assert.deepEqual(g.hits, [], "the tray overlaps these remaining rows " + JSON.stringify(g));
+    await page.click('.opt[data-id="c"]', { timeout: 3000 });           // no force, no closing the tray first
+    assert.ok(await page.evaluate(() => !!document.querySelector('.opt[data-id="c"].sel, .opt[data-id="c"][aria-checked="true"]')), "row C took the pick");
     await page.context().close();
   });
   await step(`@desk ${w}: right after a miss, "See Cluck's steps" is on the page`, async () => {

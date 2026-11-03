@@ -1573,9 +1573,9 @@ html.coding.dock-bottom:not(.start) .code-sug { max-height: var(--sug-max, 100dv
 .ff.rbox .vk { order: 1; position: static; flex: none; width: var(--ico); height: auto; margin-right: var(--s2); }
 #wish.cue:empty { display: none; }
 /* BIG PLAN V2: the permanent box's idle starters (app chrome, like .wchip; Tony Nov 2) and the no-key / done note. A starter is a quiet outlined pill in the help colours, wraps, min tap size */
-.cl-starters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.cl-starters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
 .cl-starters[hidden], .cl-note[hidden] { display: none; }
-.cl-starter { cursor: pointer; box-sizing: border-box; min-height: var(--btn); padding: 0 var(--s3); border: var(--bw) solid var(--help-line); border-radius: 16px; background: var(--help-fill); color: var(--help); font: inherit; font-size: var(--t-md); font-weight: var(--w-em); text-align: left; -webkit-tap-highlight-color: transparent; }
+.cl-starter { cursor: pointer; box-sizing: border-box; min-height: 36px; padding: 0 var(--s3); border: var(--bw) solid var(--help-line); border-radius: 16px; background: var(--help-fill); color: var(--help); font: inherit; font-size: var(--t-sm); font-weight: var(--w-em); text-align: left; -webkit-tap-highlight-color: transparent; }
 .cl-starter:hover { border-color: var(--help); }
 .cl-starter:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
 .cl-note { margin: var(--s4) 0 0; color: var(--help-muted); font-size: var(--t-md); line-height: 1.5; }
