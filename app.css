@@ -529,6 +529,18 @@ html:has(.q:not(.closed) .choices:not(.all) .opt[aria-checked="true"]) :is(#dock
 .q.closed .opt, .q.closed .ff, .q.closed .ff input, .q.closed .send { cursor: not-allowed; }
 .q.closed .ff:not(.cue) { opacity: 0.5; }   /* mc rows never dim (V1 thin light: the rings and the strike tell the story); a closed box dims even when right (Tony, Oct 2), its green edge + check stay. The box that carries Next (T17b-1 .cue) never dims: Next is live; out of tries its text goes --muted instead */
 .q.closed .ff:hover { border-color: var(--edge); }
+/* DOT-1 (Tony, Nov 2): the orange status dot on a WRONG answer element that has Cluck help; the top-right corner of its border, like .cl-dot.
+   Wrong = a struck choice row (.ch), a typed box (#ff) or a multi part whose verdict mark is the x / lock (one dot per wrong tick). Help = Cluck's chip or peek is on the page
+   (sugar + a key; a multi part gets it once the item closes). Gone for good once the question is right. Hides (fade) while Cluck's sheet is open, back on close.
+   Never inside a dimmed box: a closed mc row never dims, but a shut part does (.ff.shut), so a part's dot is on the .part, in the grid area of its box */
+:root { --dot-t: .18s; }
+@media (prefers-reduced-motion: reduce) { :root { --dot-t: 0s; } }
+.mparts .part { position: relative; }
+html:has(:is(#wish, .rbox) .wchip, .cl-peek) .q:not(:has(.opt.right:not(.reveal, .kept))) :is(.ch:has(> .opt.wrong), #ff.ff:has(> .vk:is([data-v="i-x"], [data-v="i-lock"])), .part:has(> .ff > .vk:is([data-v="i-x"], [data-v="i-lock"])))::after {
+  content: ""; position: absolute; grid-area: bx; z-index: 3; top: calc(var(--ring) * -1); right: calc(var(--ring) * -1); width: 10px; height: 10px; border-radius: 50%;
+  background: var(--help); box-shadow: 0 0 0 var(--ring) var(--card); pointer-events: none; transition: opacity var(--dot-t) ease-out, visibility var(--dot-t);
+}
+html:has(#cluck:not([hidden])) .q :is(.ch, .ff, .part)::after { opacity: 0; visibility: hidden; }
 .q.closed .ff.ok { border-color: var(--correct); }
 .q.closed .ff input:disabled { -webkit-text-fill-color: currentColor; opacity: 1; }
 /* W104 Sleeping guard (app.js guard; mock-opus/104 v4 = layout + motion only, type and colour are the site's): a quiet row under a closed MC's choices.
