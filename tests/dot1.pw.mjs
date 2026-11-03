@@ -117,7 +117,7 @@ const dots = page => page.evaluate(() => {
     const cs = getComputedStyle(el, "::after");
     if (cs.content === "none" || cs.content === "normal" || cs.position !== "absolute") continue;
     let dim = 1; for (let e = el; e && e.id !== "q"; e = e.parentElement) dim *= +getComputedStyle(e).opacity;
-    out.push({ host: el.className, on: el.dataset.id || el.closest(".part")?.dataset.i || "ff", bg: cs.backgroundColor, w: cs.width, h: cs.height, top: cs.top, right: cs.right, ring: cs.boxShadow, op: +cs.opacity, vis: cs.visibility, dim });
+    out.push({ host: el.className, on: el.dataset.id || el.closest(".part")?.dataset.i || "ff", bg: cs.backgroundColor, w: cs.width, h: cs.height, top: cs.top, right: cs.right, ring: cs.outlineWidth + " " + cs.outlineStyle + " " + cs.outlineColor, op: +cs.opacity, vis: cs.visibility, dim });
   }
   return out;
 });
@@ -147,7 +147,7 @@ for (const W of [393, 1280].filter(w => !WANT || +WANT === w)) {
       await step(`${T}: --help, 10px, 2px --card ring, -2px on the top-right corner`, async () => {
         for (const d of ds) {
           assert.equal(d.bg, HELP); assert.equal(d.w, "10px"); assert.equal(d.h, "10px"); assert.equal(d.top, "-2px"); assert.equal(d.right, "-2px");
-          assert.match(d.ring, /rgb\(11, 20, 34\) 0px 0px 0px 2px/);   // --card #0b1422
+          assert.equal(d.ring, "2px solid rgb(11, 20, 34)");   // the ring: 2px of --card #0b1422 (an outline: STYLE §2.7 allows no free shadow)
         }
       });
       await step(`${T}: not clipped (dot + ring inside the viewport, painted over the row) and never in a dimmed box`, async () => {
