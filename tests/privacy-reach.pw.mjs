@@ -85,6 +85,17 @@ await step("privacy.html: one plain line says which privacy signal this browser 
   await ctx2.close();
 });
 
+await step("privacy.html: names the Jev model vendor (Microsoft MSD-1 via OpenRouter, zero data retention) and the campus-network check (todo 20)", async () => {
+  const ctx = await phone(), page = await ctx.newPage();
+  await page.goto(BASE + "/privacy.html");
+  const tx = await page.textContent("main.pv");
+  assert.match(tx, /Microsoft.s MSD-1/, "vendor not named");
+  assert.match(tx, /OpenRouter/, "OpenRouter not named");
+  assert.match(tx, /zero data retention/i, "zero data retention not stated");
+  assert.match(tx, /campus/i, "campus-network check not described");
+  await ctx.close();
+});
+
 await browser.close();
 console.log(failures ? `${failures} FAIL` : "all ok");
 process.exit(failures ? 1 : 0);
