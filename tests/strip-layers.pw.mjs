@@ -222,6 +222,17 @@ await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced m
   }
 });
 
+/* doneExit's 900 ms beat blurs the active element after a right answer; it must leave the strip's own focus (verdict icon, drawer) alone.
+   Before: a close (or Esc) inside the beat put focus on the icon and the beat then blurred it (CI flake of "focus returns", PR #382 x #381). */
+await step("right answer: focus put on the verdict icon inside doneExit's beat survives it", async () => {
+  const pg = await pageFor(browser, 390, 844);
+  await goTo(pg, "STP_NUM"); await submit(pg, RIGHT.STP_NUM); await pg.waitForSelector("#q.closed");
+  await pg.evaluate(() => document.querySelector("#ff .vk").focus());
+  await pg.waitForTimeout(1300);
+  assert.equal(await pg.evaluate(() => document.activeElement && document.activeElement.matches("#ff .vk")), true, "the beat blurred the verdict icon");
+  await pg.ctx.close();
+});
+
 /* the status nudge: the sunrise duck is not an action. A tap only dismisses it; Ask Cluck in the drawer is the action */
 await step("duck: a tap on the sunrise duck only dismisses it (Cluck stays closed, no callback); Jev's away path runs", async () => {
   const pg = await pageFor(browser, 390, 844);
