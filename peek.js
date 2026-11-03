@@ -1,5 +1,6 @@
 /* Cluck's duck + sky, and the T45 idle peek (design/IDLE-PEEK.md; 20261015-T45, Tony Oct 15: "idling for more than 2-3min in a
    question/quiz (in a bank, not each question)? cluck slowly peeks up sunrise").
+   [Nov 2, B3 PR-B1: the duck is a status nudge. A tap dismisses it and nothing else; it no longer opens Cluck. The action is Ask Cluck in the verdict drawer (strip.js).]
    1. window.stemDuck: ONE duck and ONE sky for every Cluck rise. Every rise replays the same sunrise (same start, curve, end: the 🔒 SYNC);
       down = the duck goes and the sky goes back to night. The sun core always sits under the duck (🔒 position A). The P7 waiting duck
       (lane c) and the P8 ember (lane f) rise through this too once they land; nothing else draws a duck or a sky.
@@ -11,7 +12,7 @@
   var BLEED = 48;                                                          // 🔒 glow edge: the sky runs this far past its column, fading out (no hard cut)
 
   /* ---------- 1. the duck + the sky ---------- */
-  var box = null, onTap = null, onHollow = null, outT = 0;
+  var box = null, onDismiss = null, onHollow = null, outT = 0;
   function build() {
     if (box) return box;
     box = document.createElement("div");
@@ -19,7 +20,7 @@
     box.innerHTML = '<div class="ck-sky" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></div>' +
       '<p class="ck-say" aria-hidden="true"></p><button type="button" class="ck-peek"><span class="ck-duck"></span></button>' +
       '<button type="button" class="ck-hollow" aria-label="Felt hollow" hidden></button>';
-    box.querySelector(".ck-peek").addEventListener("click", function () { var f = onTap; down(); if (f) f(); });
+    box.querySelector(".ck-peek").addEventListener("click", function () { var f = onDismiss; down(); if (f) f(); });
     box.querySelector(".ck-hollow").addEventListener("click", function (e) {   // J6 seen: "felt hollow" (say's o.onHollow); not before it shows
       if (+getComputedStyle(e.currentTarget).opacity < 0.5) return;
       var f = onHollow; down(); if (f) f();
@@ -40,9 +41,9 @@
   function up() { return !!box && !box.hidden && !box.classList.contains("out"); }
   function rise(o) {
     build(); clearTimeout(outT);
-    onTap = o.onTap || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
+    onDismiss = o.onDismiss || null; onHollow = null; box.querySelector(".ck-hollow").hidden = true;   // only say() shows the hollow tap
     box.querySelector(".ck-say").textContent = o.line || "";
-    box.querySelector(".ck-peek").setAttribute("aria-label", o.label || "Cluck");
+    box.querySelector(".ck-peek").setAttribute("aria-label", (o.label || "Cluck") + " (dismiss)");
     box.classList.remove("on", "out"); box.hidden = false; place();
     void box.offsetWidth;                                                   // restart: every rise plays the sunrise from the top
     box.classList.add("on");
@@ -94,7 +95,7 @@
     if (!ok()) { last = performance.now(); return arm(wait()); }           // busy elsewhere (e.g. Cluck open): a fresh wait from now
     mine = true; n++; lastRise = performance.now();
     rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
-      onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
+      onDismiss: function () { mine = false; arm(wait()); } });
   }
   /* the question's first wrong answer (app.js record): the same peek, ~0.7 s after the feedback settles, once per question. Same rules as
      the idle one (ok()): sugar, a bank, Cluck's sheet closed, nothing else over the page, one duck. Plus a cooldown since the last peek. It
@@ -109,7 +110,7 @@
       if (document.visibilityState === "hidden" || !ok() || performance.now() - lastRise < COOL) return;
       mine = true; lastRise = performance.now();
       rise({ line: fine.matches ? "Stuck? Click me." : "Need help? Tap me.", label: "Cluck: want a hint?",
-        onTap: function () { mine = false; arm(wait()); if (window.stemIdleTap) window.stemIdleTap(); } });
+        onDismiss: function () { mine = false; arm(wait()); } });
     }, WRONG_MS);
   }
   window.stemDuck.wrong = wrong;
@@ -141,7 +142,8 @@
 
   /* ---------- 3. say: Jev's Cluck nudge (J5 Tier 0, intent.js, the one seam) ----------
      The same rise, carrying Jev's line. Jev decides when; this only checks the screen: the idle peek's rules (ok()) and no duck up now.
-     A tap = the idle peek's tap (stemIdleTap) + o.onTap; any other input puts it away = o.onAway (Jev doubles its back-off). It never
+     A tap on the duck only DISMISSES it (a status nudge, Tony Nov 2: not clickable except dismiss; Ask Cluck lives in the verdict drawer, strip.js) = the same as
+     any other input putting it away: o.onAway (Jev doubles its back-off); o.onTap is no longer called. It never
      touches the idle / wrong-answer timers above. Returns true when it showed.
    J6 seen: o.nod = the duck rises with no words (line ""); o.onHollow = a small "Felt hollow" tap target beside the duck (24 px min, shows
    with the duck's line). Outside input puts a seen peek away NEUTRAL (no onAway given → no back-off). */
@@ -151,7 +153,7 @@
     if ((!line && !o.nod) || document.visibilityState === "hidden" || up() || !ok()) return false;
     var me = said = { onAway: o.onAway };
     rise({ line: line || "", label: line ? "Cluck: " + line : "Cluck",
-      onTap: function () { if (said === me) said = null; if (o.onTap) o.onTap(); if (window.stemIdleTap) window.stemIdleTap(); } });
+      onDismiss: function () { if (said === me) { said = null; if (o.onAway) o.onAway(); } } });
     if (o.onHollow) { onHollow = function () { if (said === me) said = null; o.onHollow(); }; box.querySelector(".ck-hollow").hidden = false; }
     return true;
   }

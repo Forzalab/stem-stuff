@@ -217,6 +217,9 @@ for (const [tag, vp, touch] of [["1280", DESK, false], ["390", PHONE, true]]) {
       await page.waitForFunction(n => window.__drill.state.tries.length > n, n, { timeout: 6000 });
     }
     await page.waitForSelector("#preview .ansl .katex", { timeout: 6000 });
+    /* B3 PR-B1: the verdict drawer (a popover under the answer bar, STYLE §3) rests over this line until the student closes it (the close button, Esc, or a tap outside) */
+    const shut = page.locator("#q .vdrawer .vd-x");
+    if (await shut.isVisible()) { await shut.click(); await page.waitForTimeout(400); }
     assert.deepEqual(await tapArea(page, "#preview .ansl .mcopy"), [true, true, true], "the answer's copy keeps its 44px tap area (the preview's clip)");
     await page.locator("#preview .ansl .mcopy").click();
     await page.waitForSelector("#preview .ansl .mcopy.done");

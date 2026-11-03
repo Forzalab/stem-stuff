@@ -267,7 +267,7 @@ for (const [W, H] of [[393, 852]]) for (const mode of MODES) {   // one height: 
       });
       if (mode === "diet") { assert.equal(g.any, false, "diet shows the chip / a duck / a nod"); return; }
       assert.ok(g.has, "no duck chip");
-      assert.equal(g.label, outcome === "right" ? "See Cluck's steps" : "Ask Cluck");
+      assert.equal(g.label, outcome === "right" ? (type === "num" ? "See steps" : "See Cluck's steps") : "Ask Cluck");   // B3 PR-B1: a typed answer's chip lives in the verdict drawer, with the spec's short label (STYLE §5)
       assert.equal(g.sh, 1, "the label wraps"); assert.equal(g.clip, false, "the label is cut");
       assert.ok(g.r.l >= 16 - 0.5 && g.r.r <= g.vw - 16 + 0.5, `chip outside the 16px gutter: ${g.r.l}-${g.r.r}`);
       assert.ok(g.r.h >= 44, `chip ${g.r.h} tall`);
@@ -311,7 +311,7 @@ for (const mode of MODES) {
       await close(page, type, "right", { code });
       await page.waitForSelector("#q .nx"); await page.waitForTimeout(900);
       const [names, fx] = await page.evaluate(() => { clearInterval(window.__rmt); return [[...window.__rm], [...window.__fx]]; });
-      assert.deepEqual(names.filter(n => n !== "g-next-fade"), [], "motion besides the fade: " + names);
+      assert.deepEqual(names.filter(n => n !== "g-next-fade" && n !== "vd-fade"), [], "motion besides the fade: " + names);
       assert.ok(names.includes("g-next-fade"), "no g-next-fade: " + names);
       assert.ok(fx.every(n => /\[opacity\]$/.test(n)), "reduced motion: a reward overlay moves (B2): " + fx);
       if (fx.length) console.log("      note (B2): reward drop overlay faded in under reduced motion: " + fx.join(" "));

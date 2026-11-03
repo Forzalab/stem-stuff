@@ -879,7 +879,7 @@ try {
       await p.waitForFunction(() => document.getElementById("ff").classList.contains("ok"), null, { timeout: 6000 }); await p.waitForTimeout(400);
       const post = await g();
       assert.ok(Math.abs(post.ff - pre.ff) <= 1, `Check moved the answer box: ${pre.ff} -> ${post.ff}`);
-      const cmp = p.locator("#wish .cue-ok");
+      const cmp = p.locator(":is(#wish, .rbox) .cue-ok");   // B3 PR-B1: on a typed question the chip lives in the verdict drawer (class rbox)
       if (await cmp.isVisible()) { await cmp.click(); await p.waitForFunction(() => window.stemCluckOpen(), null, { timeout: 4000 }); await p.waitForTimeout(400); }
       const z = await g();
       assert.equal(z.wish, false, "the sheet is open: #wish hides (W90's rule)");
