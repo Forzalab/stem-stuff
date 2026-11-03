@@ -4,6 +4,7 @@ Run: python3 -m unittest discover -s tests -p 'test_*.py'"""
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -122,6 +123,25 @@ class Wsgi(unittest.TestCase):
         self.assertEqual(call("POST", "/repair/CALC1_T6B/check", b'{"value": "1"}')[0], 404)
         with open(os.path.join(ROOT, "vercel.json")) as f:
             self.assertIn({"source": "/repair/:code/check", "destination": "/api/index?path=/repair/:code/check"}, json.load(f)["rewrites"])
+
+    def test_mini_route_has_a_rewrite(self):                                         # POST /mini was an edge 404 on live: serve.py served it, vercel.json had no rewrite
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            self.assertIn({"source": "/mini", "destination": "/api/index?path=/mini"}, json.load(f)["rewrites"])
+
+    def test_every_post_path_has_a_rewrite(self):                                    # any exact POST path serve.py answers needs a vercel.json rewrite
+        with open(os.path.join(ROOT, "serve.py")) as f:
+            src = f.read()
+        post = src[src.index("def _dispatch("):]
+        post = post[:post.index('if path == "/health"')]                              # the POST block of _dispatch (GET routes follow it)
+        paths = set(re.findall(r'path == "(/[^"]+)"', post))
+        for tup in re.findall(r'path in \(([^)]*)\)', post):
+            paths |= set(re.findall(r'"(/[^"]+)"', tup))
+        paths |= set(serve.STREAMS) | set(serve.STAGED_POSTS)                        # the streamed POST paths (/chat, /explain, /check)
+        self.assertIn("/mini", paths)                                                # the scan itself works
+        with open(os.path.join(ROOT, "vercel.json")) as f:
+            rewrites = json.load(f)["rewrites"]
+        missing = [p for p in sorted(paths) if {"source": p, "destination": "/api/index?path=" + p} not in rewrites]
+        self.assertEqual(missing, [])
 
 
 class Kv(unittest.TestCase):
