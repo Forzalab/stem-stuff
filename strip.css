@@ -48,6 +48,11 @@
 .vdrawer > .wchip :is(.rw-coin2) { width: 28px; height: 28px; background: none; box-shadow: none; }
 .vdrawer > .wchip .rw-coin2 svg { width: 24px; height: 24px; }
 .vdrawer > .wchip .dk { flex: none; display: block; width: auto; height: 24px; pointer-events: none; }
+/* the reveal box's duck (app.js DUCK: its own orange art for Cluck's brown segment) on the tangerine chip was orange on orange, so the logo
+   vanished (Tony, Nov 3). In the drawer it wears the chip's ink, as the i-duck coin does: body + head --help-ink, beak --help-on, eye the chip */
+.vdrawer > .wchip svg.dk > :is(ellipse, circle:first-of-type) { fill: currentColor; }
+.vdrawer > .wchip svg.dk > path { fill: var(--help-on); }
+.vdrawer > .wchip svg.dk > circle:last-of-type { fill: var(--help); }
 .vdrawer > .wchip .inc { display: none; }
 .vdrawer > .vd-x {
   flex: none; width: var(--btn); height: var(--btn); padding: 0; display: grid; place-items: center; cursor: pointer;

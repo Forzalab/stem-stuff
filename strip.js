@@ -88,6 +88,20 @@
     d.style.width = dw + "px";
     if (!d.hidden && d.scrollWidth > d.clientWidth + 1) dw = Math.min(w, d.scrollWidth + 2);   // the label keeps its words: a narrow bar (360, Next beside it) widens the drawer past 2/3
     d.style.width = dw + "px"; d.style.left = at.offsetLeft + w - dw + "px"; d.style.top = at.offsetTop + at.offsetHeight - 8 + "px";
+    room(h, d);
+  }
+  /* REVEAL-TRAY (demo, Nov 3): the drawer lies over later content by design (0 reflow), but the line under a typed bar can be the answer itself
+     ("Not it. The answer is 1.38", "That's it! ..."): it steps down below the drawer's foot. Its room is kept while the drawer is shut (its
+     height is measured once, open), so closing / reopening still moves nothing; a bar with no such line gets its margin back */
+  function room(h, d) {
+    var pv = h.kind === "ff" && h.el.id === "ff" ? $("#q #preview") : null;
+    if (!d.hidden && d.offsetHeight) d._ht = d.offsetHeight;
+    if (!pv) return;
+    var line = pv.querySelector(".ansl");
+    if (pv.style.marginTop) pv.style.marginTop = "";
+    if (!line || !d._ht || pv.offsetParent !== d.offsetParent) return;
+    var foot = parseFloat(d.style.top) + d._ht, gap = parseFloat(getComputedStyle(pv).marginTop) || 0, need = Math.ceil(foot + 8 - pv.offsetTop);
+    if (need > 0) pv.style.marginTop = gap + need + "px";
   }
   function show(d, still) {
     clearTimeout(shutT);

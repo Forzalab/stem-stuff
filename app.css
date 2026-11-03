@@ -302,6 +302,10 @@ main { max-width: var(--col); margin: 0 auto; padding: var(--s5) var(--gut) var(
 .qtag .ico { width: 1em; height: 1em; }
 .qtag svg[viewBox] { width: 14px; height: 14px; }
 .rtag { margin: 0 0 var(--s2); }
+/* REVEAL-TRAY (Tony, Nov 3: "Pity roll" + "Twist" stacked): with a title row under it, the retry tag floats into that row, so the tags sit side
+   by side before the title and wrap only when out of room; it is one tag tall (24px) and the title row is at least that, so nothing after it moves in */
+#rtag:not([hidden]):has(+ .blocks > .ptitle:first-child) { float: left; margin: 0 var(--s2) 0 0; }
+#problem:has(> #rtag:not([hidden])) { display: flow-root; }
 .rtag.rt-owe .ico { color: var(--reward); }
 .rtag:is(.rt-won, .rt-kept) .ico { color: var(--correct); }
 .blocks > * + * { margin-top: var(--s3); }

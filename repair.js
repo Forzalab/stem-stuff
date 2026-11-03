@@ -132,7 +132,7 @@
       const st = s.st;
       if (right) { s.ok = true; s.val = v; if (welcome) s.missGone = true; else s.miss = ""; }   // welcome: the hint line keeps its room, emptied (a row never shrinks)
       else {
-        s.tried.add(String(v)); missed = true; s.missGone = false;
+        s.tried.add(String(v)); missed = true; s.missGone = false; s.missAt = "val";
         const h = welcome ? hint() : L().miss || "";
         s.miss = (st.miss && st.miss[v]) || said || h;
         if (!welcome && s.tried.size >= TRIES) fillIn(s);
@@ -143,7 +143,7 @@
       const w = s.st.why;
       if (i === w.ok) { s.why = i; if (welcome) s.missGone = true; else s.miss = ""; }
       else {
-        whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false;
+        whyOk = false; s.whyTried.add(i); missed = true; s.missGone = false; s.missAt = "why";
         s.miss = (w.miss && w.miss[i]) || (welcome ? hint() : L().miss || "");   // the chip's own line (todo 76), else the generic one
         if (!welcome && s.whyTried.size >= TRIES) fillIn(s);
       }
@@ -230,15 +230,19 @@
       if (s.state === "future") lock(val, "rp-ghost", null); else if (!live || s.ok) lock(val, "rp-locked", pick);
       body.append(val);
       /* the hint line sits right under the chips, ABOVE the why's unseen room (GAP-1: below it, the room was an empty band between them) */
-      if (s.miss && s.state !== "future") {
+      /* LADDER-UI (Tony's phone, Nov 3): a hint line answered by a right pick goes when that pick opens the why: the row grows there anyway,
+         so nothing moves up, and the why sits right under the chips (its hidden room was a ~60px band). A why's own hint keeps its room */
+      const spent = s.missGone && s.ask && s.missAt !== "why";
+      if (s.miss && s.state !== "future" && !spent) {
         const m = h("p", "rp-miss", s.miss);
         if (s.missGone) { m.style.visibility = "hidden"; m.setAttribute("aria-hidden", "true"); } else m.setAttribute("aria-live", "polite");
         body.append(m);
       }
       if (s.ask) {
         const w = whyUi(s);
-        if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.style.visibility = "hidden"; w.dataset.room = ""; }   // its room stays, unseen until its step's pick:
-        else if (s.why != null) lock(w, "rp-locked", s.why);                    // "Why half?" before d/2 gives the answer away (W129 shot QA)
+        if (s.state === "future" || (live && !s.ok)) { lock(w, "rp-ghost", null); w.hidden = true; }   // unseen until its step's pick: "Why half?" before d/2 gives
+        else if (s.why != null) lock(w, "rp-locked", s.why);                    // the answer away (W129 shot QA). It takes no room (LADDER-UI, Tony Nov 3: its kept room
+                                                                                 // was a ~200px empty band under the chips); the right pick opens it under them
         body.append(w);
       }
       li.append(body);
