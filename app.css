@@ -1022,6 +1022,7 @@ html.cl-drag, html.cl-drag * { cursor: grabbing !important; user-select: none; -
 .cl-bar .tag { padding: 1px 6px; border-radius: 4px; background: var(--ai-ct); color: var(--help-on); font-size: var(--t-xs); font-weight: var(--w-em); letter-spacing: 0.05em; line-height: var(--lh-xs); }
 .cl-bar .cl-x { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: 10px; background: var(--ai-tint); color: var(--ai-text); cursor: pointer; }
 .cl-bar .cl-x .ico { width: 24px; height: 24px; }
+html.side.sugar .cl-bar .cl-x { display: none; }                          /* BIG PLAN V1: desktop sugar has no close (app.js clPerm); phones and diet keep it */
 .cl-x2 { display: none; }                                                  /* B5 (Tony, Oct 18): the header bar + its X on desktop too; no corner X */
 /* one scroll, no tabs (Tony, Oct 5: variant a). The column label above the sheet is "Explain" */
 .cl-verify { display: none; margin: var(--s2) 0 0; color: var(--help-muted); font-size: var(--t-xs); }   /* Tony: under Cluck's own text only */

@@ -2364,7 +2364,7 @@ function clOpen(tab, from, auto) {                                        // aut
   window.stemT?.("cluck_open", { tab, auto: !!auto, hk: hkKind() });   // telemetry; hk = the back row's humour kind (DISMISS.md A/B)
   clEl(); if (!cl.open) cl.y = scrollY;
   cl.sheetReset?.();
-  cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
+  cl.perm = clPerm(); cl.open = true; cl.from = from; cl.auto = !!auto; cl.el.hidden = false; cl.fold = tab === "steps";   // opened for the steps: the fold opens; for a miss: it starts closed
   clPlace(); clTop(); clAsk(true); clTab(tab, !auto); padRule();
   layoutFreeze();
   if (sideMQ.matches && !auto) {                                            // its ask field lands in view. The sheet fits the window below the column's top (app.css
@@ -2372,8 +2372,9 @@ function clOpen(tab, from, auto) {                                        // aut
     if (r.top < 0 || r.bottom > innerHeight) ft.scrollIntoView({ block: "nearest", behavior: reduceMQ.matches ? "auto" : "smooth" });
   }
 }
-function clClose(dismiss) {
-  if (!cl || !cl.open) return;
+const clPerm = () => modeOf() === "sugar" && sideMQ.matches && !!S;           // BIG PLAN V1 (Tony Nov 2, 22:49): desktop sugar keeps Cluck's box open from the first paint, no X, no Escape, no dismiss. Phones and diet: unchanged
+function clClose(dismiss, force) {                                         // force: clReset only (a new question empties the box, applyMT opens it again)
+  if (!cl || !cl.open || (clPerm() && !force)) return;
   window.stemT?.("cluck_dwell");   // telemetry: ms + scrolled_pct are measured in telemetry.js
   const back = !cl.auto || cl.el.contains(document.activeElement);         // focus goes back to the opener, but an auto-open never pulls it
   cl.open = false; cl.wantAsk = false; cl.el.hidden = true; cl.sheetReset?.();
@@ -2511,7 +2512,7 @@ function clReset() {                                                        // a
   cl?.el.querySelector("#clTabEP .cl-quack")?.remove();                     // D72: the next explanation picks its own QUACK
   if (!cl) return;
   cl.y = null;                                                              // a new question: no scroll back to the old one
-  clClose();
+  clClose(false, true);
   cl.el.querySelector(".wtext").innerHTML = "";
   cl.el.querySelector(".cl-thread").innerHTML = "";
   cl.el.querySelector(".cl-fi").innerHTML = "";
@@ -3345,6 +3346,7 @@ function applyMT() {
   sash.setAttribute("aria-label", `Question size: ${anchorName(k, r)}. Tap for ${anchorName(k, nextDown(k, r))}`);
   if (on) layoutMT(); else mtCap = null;
   clBackSync();
+  if (clPerm()) { if (!(cl && cl.open)) clOpen("explain", null, true); } else if (cl && cl.open && cl.perm) clClose();   // the box opens by itself; it leaves when the window or mode no longer has the column
   if (noteAt() && !noteAt().getClientRects().length) hideToast();               // its anchor just went away (q | a when the page closes)
   fabSync();
 }
@@ -3473,7 +3475,7 @@ function sashEnd(e) {
   mtDrag = null;
   const k = mtKind();
   if (!d.moved) { dragR = null; setRatio(nextDown(k, mtRatio(k))); return; }
-  if (d.side && d.raw > 0.85) { dragR = null; clGoneSet(true); return; }       // the mirror of the strip: dragged to the right edge = dismissed, the ratio is kept
+  if (d.side && d.raw > 0.85 && !clPerm()) { dragR = null; clGoneSet(true); return; }       // the mirror of the strip: dragged to the right edge = dismissed, the ratio is kept
   let r = dragR; dragR = null;
   r = r < (d.side ? 0.2 : 1 / 6) ? 0 : near(k, r);                              // past 20% to the left (desktop) / a sixth (phone): the strip / sliver
   setRatio(r);
