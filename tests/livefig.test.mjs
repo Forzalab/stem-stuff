@@ -102,3 +102,18 @@ test("contact pre-pass: Python (livefig.fix) and JS give the same marks, to 1e-6
   };
   for (const c of C) { assert.ok(c.want, `${c.name}: no conformance vector`); close(G.fix(structuredClone(c.fig.marks)).marks, c.want, c.name); }
 });
+
+// I-BODY-1 (todo 124, W124): a small body on the floor beside a wall / piston face. The wall is a side contact: the pre-pass never turns
+// the body or pulls it off the floor onto the wall; it only pushes the body out of the wall, along the floor, so it keeps resting.
+test("contact pre-pass (I-BODY-1): a block at a corner stays flat on the floor; a wall only pushes it out, never turns or lifts it", () => {
+  const corner = C.filter(c => /^corner:/.test(c.name));
+  assert.equal(corner.length, 2, "both planted corner cases");
+  for (const c of corner) {
+    const { marks } = G.fix(structuredClone(c.fig.marks));
+    const body = marks.find(m => m.mark === "body"), wall = marks.find(m => m.mark === "seg").from[0];
+    assert.equal(body.angle, 0, `${c.name}: turned to ${body.angle}`);
+    assert.ok(Math.abs(body.at[1] - body.h / 2) < 1e-9, `${c.name}: off the floor at y ${body.at[1]}`);
+    assert.ok(body.at[0] + body.w / 2 <= wall + 1e-9, `${c.name}: cuts into the wall`);
+    for (const f of marks.filter(m => m.mark === "force")) assert.deepEqual(f.at, body.at, `${c.name}: ${f.label} left behind`);
+  }
+});
