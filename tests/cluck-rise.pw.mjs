@@ -47,6 +47,9 @@ const srv = spawn("python3", [join(ROOT, "serve.py"), PORT], { env: { ...process
 for (let i = 0; i < 80; i++) { try { if ((await fetch(BASE + "/")).ok) break; } catch { /* not up yet */ } await new Promise(r => setTimeout(r, 100)); }
 
 let failures = 0;
+/* Tony, Nov 2 (d): the drawer is a dismissable popup (tap-outside rule), so a tap on the duck peek closes it. A student who wants Cluck again taps the badge on the row's mark (.vkb), then the chip. */
+const drawerOpen = page => page.evaluate(() => !!document.querySelector(".vdrawer:not([hidden]):not(.vd-shut) .wchip"));
+const reopen = async page => { assert.equal(await drawerOpen(page), false, "the duck tap closed the drawer (tap-outside)"); await page.click("#q .vkb, #q .ff .vk[role=button]"); await page.waitForFunction(() => !!document.querySelector(".vdrawer:not([hidden]):not(.vd-shut) .wchip"), null, { timeout: 4000 }); };
 async function step(name, fn) {
   try { await fn(); console.log("ok  ", name); }
   catch (e) { failures++; console.log("FAIL", name, "\n     ", String(e.message).slice(0, 900)); }
@@ -148,6 +151,7 @@ for (const [tag, vp] of VPS) {
     await page.click(".ck-peek");                                       // B3 PR-B1: the duck only dismisses; the chip asks (it did the same request as the duck, Oct 19 pick b)
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), false, "the duck no longer opens Cluck");
+    await reopen(page);
     await page.click(":is(#wish, .rbox) .wchip");
     await page.clock.runFor(300);
     assert.equal(await cluckOpen(page), true, "the chip opens Cluck");
@@ -189,6 +193,7 @@ for (const [tag, vp] of VPS) await step(`${tag}: Q1 + Q2 wrong prefetch once eac
   await page.click(".ck-peek");                                         // B3 PR-B1: the duck only dismisses (no Cluck, no request); the chip asks (the same fresh request)
   await page.clock.runFor(300);
   assert.equal(await cluckOpen(page), false, "Q3: the duck no longer opens Cluck");
+  await reopen(page);
   await page.click(":is(#wish, .rbox) .wchip");
   await page.clock.runFor(300);
   assert.equal(await cluckOpen(page), true, "the chip opens Cluck");

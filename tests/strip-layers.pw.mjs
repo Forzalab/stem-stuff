@@ -202,7 +202,7 @@ for (const [W, H] of VPS) {
 }
 
 /* motion: the live drawer's computed animation (read mid-flight, so the class is on) */
-await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced motion = a fade", async () => {
+await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced motion = none (Tony Nov 2: no fade at all)", async () => {
   for (const reduced of [false, true]) {
     const pg = await pageFor(browser, 390, 844, { reduced });
     await goTo(pg, "STP_NUM"); await submit(pg, "2");
@@ -215,7 +215,7 @@ await step("motion: open 380ms and close 240ms on the iOS sheet curve; reduced m
       assert.equal(open.d, "0.38s"); assert.equal(open.f, "cubic-bezier(0.32, 0.72, 0, 1)"); assert.match(open.n, /vd-out/);
       assert.equal(shut.d, "0.24s"); assert.match(shut.n, /vd-in/);
     } else {
-      assert.match(open.n, /vd-fade/, "reduced motion: a fade, no slide: " + JSON.stringify(open));
+      assert.equal(open.n, "none", "reduced motion: no fade, no slide, the drawer just appears: " + JSON.stringify(open));
       assert.ok(!/vd-out|vd-in/.test(shut.n), "reduced motion close must not slide: " + JSON.stringify(shut));
     }
     await pg.ctx.close();

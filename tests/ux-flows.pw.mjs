@@ -354,6 +354,7 @@ flow(23, "cluck-errors", async (page, w) => {
   await page.unroute("**/explain");
   await stubCluck(page, { chat: 429, chatBody: "{}" });
   if (await vis(page, "#cluck")) { await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelector("#cluck").hidden, null, { timeout: 3000 }); }
+  console.error("DBG", JSON.stringify(await page.evaluate(() => ({ st: window.stemStrip && window.stemStrip.open, d: [...document.querySelectorAll(".vdrawer")].map(d => [d.hidden, d.className, d.outerHTML.slice(0, 300)]), wish: document.querySelector("#wish")?.outerHTML.slice(0, 300), ae: document.activeElement?.outerHTML.slice(0, 100), cl: document.querySelector("#cluck")?.hidden }))));
   await page.click(":is(#wish, .rbox) .wchip");                       // started=false after a 429: this asks again, now stubbed ok
   await page.waitForFunction(() => !document.querySelector("#cluck").hidden, null, { timeout: 4000 });
   await page.click("#cluck .wtext").catch(() => {});
