@@ -27,6 +27,7 @@ async function step(name, fn) { try { await fn(); console.log("ok  ", name); } c
 async function open() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, serviceWorkers: "block" });
   await ctx.addInitScript(() => { try { localStorage.setItem("stem-ob", "done"); for (const b of ["right", "miss", "three", "redo"]) localStorage.setItem("stem-ob-rw-" + b, "9"); } catch { /* blocked */ } });
+  await ctx.addInitScript(() => { for (let i = 0; i < 3000; i++) setInterval(() => {}, 20 + (i % 7)); });   // timer noise on purpose: it makes the clock race below hit ~30% of runs instead of ~3%, so an unfrozen jump goes red here, not only on a busy CI lane
   const page = await ctx.newPage(), held = [];
   await page.clock.install({ time: new Date("2026-10-28T12:00:00Z") });
   await page.route("**/check", r => { if (r.request().method() === "POST") held.push(r); else r.continue(); });
@@ -36,12 +37,22 @@ async function open() {
   await page.waitForFunction(() => document.querySelector("#ansGo") !== null);
   return { ctx, page, held };
 }
+/* Playwright's clock races itself: while time flows, a real-time tick (runTo) can still be running when fastForward lands, and its _advanceNow(old) then
+   rewinds the page clock, so the jump is lost and the 25 s abort never fires (CI-only red, W164; any busy page with many timers raises the odds).
+   Pause the clock a little ahead of its own Date.now() first (no real-time tick left to race), jump, then let time flow again. Same freeze as stages.pw. */
+async function freeze(page) {
+  for (let m = 300; ; m *= 2) {
+    const now = await page.evaluate(() => Date.now());
+    try { await page.clock.pauseAt(now + m); } catch (e) { if (m > 10000 || !/past/.test(e.message)) throw e; continue; }
+    await new Promise(r => setTimeout(r, m + 200)); return;
+  }
+}
 const tries = page => page.evaluate(() => window.__drill.state.tries.length);
 try {
   await step("a slow-but-valid proof (answer at 12 s) shows its verdict, not 'could not check it'", async () => {
     const { ctx, page, held } = await open();
     await page.waitForTimeout(300); assert.equal(held.length, 1, "Check sent no request");
-    await page.clock.fastForward(12000);
+    await freeze(page); await page.clock.fastForward(12000); await page.clock.resume();
     await held[0].fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(OK) });
     await page.waitForSelector("#rubric .rb", { timeout: 6000 });
     assert.doesNotMatch(await page.textContent("#fb"), /could not check|taking too long/i);
@@ -53,9 +64,10 @@ try {
     await page.waitForTimeout(300);
     for (let i = 0; i < 100 && !held.length; i++) await page.waitForTimeout(50);   // the 25 s timer starts when the request is sent: jump the clock only after that, or a slow runner's late send leaves the timer ahead of the jump
     assert.equal(held.length, 1, "Check sent no request");
+    await freeze(page);
     await page.clock.fastForward(24000);
     assert.equal(await page.locator("#fb .verdict.wait").count(), 0, "gave up before 25 s");
-    await page.clock.fastForward(1500);
+    await page.clock.fastForward(1500); await page.clock.resume();
     await page.waitForSelector("#fb .verdict.wait #retry, #fb .verdict.wait .retry", { timeout: 6000 });
     assert.match(await page.textContent("#fb"), /taking too long/i);
     assert.equal(await tries(page), 0, "a try was spent");
